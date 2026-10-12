@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -27,7 +28,7 @@ import schema from "~/database/catalog-migrations/0001-feeds.sql?raw";
  * feed rather than depending on the order they ran in.
  */
 function feedUrl(): string {
-	return `https://${crypto.randomUUID()}.example.com/feed.xml`;
+	return `https://${generateUUID()}.example.com/feed.xml`;
 }
 
 /** The catalog row behind an id, read without going through the registry's own SQL. */

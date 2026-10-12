@@ -9,6 +9,7 @@
 
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { Database } from "remix/data-table";
 import { beforeAll, describe, expect, test } from "vitest";
@@ -47,11 +48,11 @@ beforeAll(async () => {
 
 /** Writes a catalog row for a URL no other test uses, and answers its id. */
 async function feed(): Promise<string> {
-	let id = `feed_${crypto.randomUUID()}`;
+	let id = `feed_${generateUUID()}`;
 	unwrap(
 		await models.feeds.create({
 			id,
-			feed_url: `https://${crypto.randomUUID()}.example.com/feed.xml`,
+			feed_url: `https://${generateUUID()}.example.com/feed.xml`,
 			title: "Untitled",
 		}),
 	);
@@ -89,7 +90,7 @@ describe("a feed's catalog row", () => {
 
 describe("billing customers", () => {
 	test("are found by subject and by the platform's id, within one connection", async () => {
-		let subject = crypto.randomUUID();
+		let subject = generateUUID();
 		unwrap(
 			await models.billingCustomers.create({
 				subject,
@@ -108,7 +109,7 @@ describe("billing customers", () => {
 	});
 
 	test("page one connection in subject order, resuming after the last subject", async () => {
-		let connection = `conn_${crypto.randomUUID()}`;
+		let connection = `conn_${generateUUID()}`;
 		for (let subject of ["c", "a", "b"]) {
 			unwrap(
 				await models.billingCustomers.create({
@@ -129,7 +130,7 @@ describe("billing customers", () => {
 
 describe("billing deliveries", () => {
 	test("are marked processed, which a missing one shrugs off", async () => {
-		let id = crypto.randomUUID();
+		let id = generateUUID();
 		unwrap(
 			await models.billingDeliveries.create({
 				id,
@@ -142,7 +143,7 @@ describe("billing deliveries", () => {
 		);
 
 		await models.billingDeliveries.markProcessed(id);
-		await models.billingDeliveries.markProcessed(crypto.randomUUID());
+		await models.billingDeliveries.markProcessed(generateUUID());
 
 		let row = await models.billingDeliveries.find(id);
 		expect(row?.processed === true || Number(row?.processed) === 1).toBe(true);

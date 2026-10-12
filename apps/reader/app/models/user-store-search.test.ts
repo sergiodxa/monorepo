@@ -24,6 +24,7 @@ import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import { decodeCursor } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -116,7 +117,7 @@ afterEach(() => {
 async function createReader(
 	tier: Tier = "paid",
 ): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
-	let state = createDurableObjectState({ name: `sub-${crypto.randomUUID()}` });
+	let state = createDurableObjectState({ name: `sub-${generateUUID()}` });
 	let user = new UserDO(state, env);
 	await state.blockConcurrencyWhile(async () => undefined);
 

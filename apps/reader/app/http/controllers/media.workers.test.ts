@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -43,7 +44,7 @@ afterAll(() => server.close());
  * repeated address from what an earlier test stored, so each test gets its own.
  */
 function imageUrl(): string {
-	return `https://${crypto.randomUUID()}.example.com/photo.png`;
+	return `https://${generateUUID()}.example.com/photo.png`;
 }
 
 /** Requests an image through the route, by the signed address this app mints for it. */

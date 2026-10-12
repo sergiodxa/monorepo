@@ -14,6 +14,7 @@ import {
 	createDurableObjectState,
 	createKVNamespace,
 } from "@sdxc/cloudflare-mocks";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -74,7 +75,7 @@ afterEach(async () => {
  * address, which is what keeping, labelling and opening a post need.
  */
 async function createReader(tier: Tier): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
-	let state = createDurableObjectState({ name: `sub-${crypto.randomUUID()}` });
+	let state = createDurableObjectState({ name: `sub-${generateUUID()}` });
 	let user = new UserDO(state, env);
 	await state.blockConcurrencyWhile(async () => undefined);
 
@@ -110,7 +111,7 @@ async function createReader(tier: Tier): Promise<{ state: DurableObjectStateMock
 
 /** Writes a token row the way minting does, answering its id. */
 async function mint(user: UserDO, scope: "read" | "write"): Promise<string> {
-	let id = `tok_${crypto.randomUUID()}`;
+	let id = `tok_${generateUUID()}`;
 	let minted = await user.createAgentToken({ id, name: "agent", scope, hash: "digest" });
 	if (!minted.ok) throw new Error(`minting failed: ${minted.reason}`);
 

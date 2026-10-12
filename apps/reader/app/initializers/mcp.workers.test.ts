@@ -12,6 +12,7 @@
  */
 
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
@@ -25,7 +26,7 @@ const ENDPOINT = "https://reader.sergiodxa.com/mcp";
 
 /** A subject no other test in this file uses, since object storage outlives a test. */
 function subject(): string {
-	return `sub-${crypto.randomUUID()}`;
+	return `sub-${generateUUID()}`;
 }
 
 /** The router under test, built the way the worker builds it. */

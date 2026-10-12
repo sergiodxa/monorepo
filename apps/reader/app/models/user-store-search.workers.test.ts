@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env, runInDurableObject } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
@@ -20,7 +21,7 @@ import { limitsOf } from "~/app/services/entitlement";
 
 /** A reader no other test here uses, since a named object outlives the test that made it. */
 function subject(): string {
-	return `sub-${crypto.randomUUID()}`;
+	return `sub-${generateUUID()}`;
 }
 
 describe("FTS5 inside a reader's object", () => {

@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -46,7 +47,7 @@ afterAll(() => server.close());
  * depending on the order the tests ran in.
  */
 function origin(): string {
-	return `https://${crypto.randomUUID()}.example.com`;
+	return `https://${generateUUID()}.example.com`;
 }
 
 /** Serves an origin with no `robots.txt`, which permits everything. */

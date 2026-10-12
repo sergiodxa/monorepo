@@ -24,6 +24,7 @@ import {
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -209,7 +210,7 @@ interface ReaderOptions {
 async function createReader(
 	options: ReaderOptions = {},
 ): Promise<{ state: DurableObjectStateMock; user: UserDO }> {
-	let state = createDurableObjectState({ name: `sub-${crypto.randomUUID()}` });
+	let state = createDurableObjectState({ name: `sub-${generateUUID()}` });
 
 	/**
 	 * The migrations and the tier snapshot run through the same storage, so recording starts
@@ -693,7 +694,7 @@ describe("what a tier allows", () => {
 			limit: { limit: "rules", current: RULE_LIMIT, allowed: RULE_LIMIT, tier: PAID },
 		});
 
-		let free = createDurableObjectState({ name: `sub-${crypto.randomUUID()}` });
+		let free = createDurableObjectState({ name: `sub-${generateUUID()}` });
 		let reader = new UserDO(free, env);
 		await free.blockConcurrencyWhile(async () => undefined);
 

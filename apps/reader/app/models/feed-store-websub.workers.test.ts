@@ -13,6 +13,7 @@
 
 import { Hex, hmac } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -84,12 +85,12 @@ afterAll(() => server.close());
 
 /** A feed URL no other test in this file uses, since every store here outlives a test. */
 function feedUrl(): string {
-	return `https://${crypto.randomUUID()}.example.com/feed.xml`;
+	return `https://${generateUUID()}.example.com/feed.xml`;
 }
 
 /** A reader nobody else in this file subscribes as. */
 function reader(): string {
-	return `sub-${crypto.randomUUID()}`;
+	return `sub-${generateUUID()}`;
 }
 
 /** What one document declares, with a default for everything a test ignores. */

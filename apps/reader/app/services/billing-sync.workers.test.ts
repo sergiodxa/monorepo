@@ -14,6 +14,7 @@
 import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 
 import { isFailure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -106,7 +107,7 @@ async function sync() {
 
 /** A subject no other test in this file uses, since D1 keeps its rows for the whole run. */
 function subject(): string {
-	return `sub_${crypto.randomUUID()}`;
+	return `sub_${generateUUID()}`;
 }
 
 /**

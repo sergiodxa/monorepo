@@ -15,6 +15,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -61,12 +62,12 @@ afterAll(() => server.close());
  * reader rather than sharing one and depending on the order they ran in.
  */
 function subject(): string {
-	return `sub-${crypto.randomUUID()}`;
+	return `sub-${generateUUID()}`;
 }
 
 /** An origin no other test in this file publishes from, for the same reason. */
 function feedUrl(): string {
-	return `https://${crypto.randomUUID()}.example.com/feed.xml`;
+	return `https://${generateUUID()}.example.com/feed.xml`;
 }
 
 /** An RSS 2.0 document carrying one post per title. */
@@ -446,8 +447,8 @@ describe("the freshness index", () => {
 		let stub = env.USER.getByName(subject());
 
 		await seedFeeds(stub, [
-			{ id: "feed_behind", feedId: `feed_${crypto.randomUUID()}`, cursor: 7 },
-			{ id: "feed_level", feedId: `feed_${crypto.randomUUID()}`, cursor: 7 },
+			{ id: "feed_behind", feedId: `feed_${generateUUID()}`, cursor: 7 },
+			{ id: "feed_level", feedId: `feed_${generateUUID()}`, cursor: 7 },
 		]);
 
 		let rows = await stub.listFeeds();
@@ -465,8 +466,8 @@ describe("the freshness index", () => {
 		let stub = env.USER.getByName(subject());
 
 		await seedFeeds(stub, [
-			{ id: "feed_quiet", feedId: `feed_${crypto.randomUUID()}`, cursor: 0 },
-			{ id: "feed_read", feedId: `feed_${crypto.randomUUID()}`, cursor: 42 },
+			{ id: "feed_quiet", feedId: `feed_${generateUUID()}`, cursor: 0 },
+			{ id: "feed_read", feedId: `feed_${generateUUID()}`, cursor: 42 },
 		]);
 
 		// An absent key means "no reason to go and look". Reading it as stale would turn a
@@ -505,7 +506,7 @@ describe("the freshness index", () => {
 
 		let seeds = Array.from({ length: 250 }, (_, index) => ({
 			id: `feed_bulk_${index}`,
-			feedId: `feed_${crypto.randomUUID()}`,
+			feedId: `feed_${generateUUID()}`,
 			cursor: 0,
 		}));
 

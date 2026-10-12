@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -56,12 +57,12 @@ afterAll(() => server.close());
  * a feed of its own rather than depending on the order the tests ran in.
  */
 function feedUrl(): string {
-	return `https://${crypto.randomUUID()}.example.com/feed.xml`;
+	return `https://${generateUUID()}.example.com/feed.xml`;
 }
 
 /** A reader nobody else in this file subscribes as. */
 function reader(): string {
-	return `sub-${crypto.randomUUID()}`;
+	return `sub-${generateUUID()}`;
 }
 
 /** One entry of a published document, with a default for everything a test ignores. */
