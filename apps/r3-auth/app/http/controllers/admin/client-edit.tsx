@@ -114,6 +114,7 @@ export default createController(routes.admin.clientEdit, {
 
 			return ctx.render(
 				<ClientEditView
+					assets={ctx.assets}
 					chrome={chrome(ctx, client.name, clientId)}
 					labels={labels(ctx)}
 					client={toClientDetail(client, ctx.locale)}
@@ -141,6 +142,7 @@ export default createController(routes.admin.clientEdit, {
 				ctx.log.note("admin.client.update_invalid");
 				return ctx.render(
 					<ClientEditView
+						assets={ctx.assets}
 						chrome={chrome(ctx, existing.name, clientId)}
 						labels={labels(ctx)}
 						client={toClientDetail(existing, ctx.locale)}
@@ -172,6 +174,7 @@ export default createController(routes.admin.clientEdit, {
 			if (updated.newSecret) {
 				return ctx.render(
 					<ClientEditView
+						assets={ctx.assets}
 						chrome={chrome(ctx, updated.name, clientId)}
 						labels={labels(ctx)}
 						client={toClientDetail(updated, ctx.locale)}

@@ -85,7 +85,9 @@ export default createController(routes.admin.clientNew, {
 		/** GET /admin/clients/new — renders the empty registration form. */
 		index() {
 			let ctx = getContext();
-			return ctx.render(<ClientNewView chrome={chrome(ctx)} labels={labels(ctx)} />);
+			return ctx.render(
+				<ClientNewView assets={ctx.assets} chrome={chrome(ctx)} labels={labels(ctx)} />,
+			);
 		},
 
 		/**
@@ -99,7 +101,12 @@ export default createController(routes.admin.clientNew, {
 			if (isFailure(result)) {
 				ctx.log.note("admin.client.create_invalid");
 				return ctx.render(
-					<ClientNewView chrome={chrome(ctx)} labels={labels(ctx)} issues={result.error.issues} />,
+					<ClientNewView
+						assets={ctx.assets}
+						chrome={chrome(ctx)}
+						labels={labels(ctx)}
+						issues={result.error.issues}
+					/>,
 					{ status: 400 },
 				);
 			}
@@ -120,6 +127,7 @@ export default createController(routes.admin.clientNew, {
 
 			return ctx.render(
 				<ClientNewView
+					assets={ctx.assets}
 					chrome={chrome(ctx)}
 					labels={labels(ctx)}
 					created={{

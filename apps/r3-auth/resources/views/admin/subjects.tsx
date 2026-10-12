@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
@@ -38,6 +39,8 @@ namespace SubjectsView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		subjects: AdminView.SubjectRow[];
 		pagination: AdminView.Pagination;
@@ -51,10 +54,10 @@ namespace SubjectsView {
  */
 export default function SubjectsView(handle: Handle<SubjectsView.Props>) {
 	return () => {
-		let { chrome, labels, subjects, pagination } = handle.props;
+		let { chrome, assets, labels, subjects, pagination } = handle.props;
 
 		return (
-			<AdminLayout chrome={chrome}>
+			<AdminLayout chrome={chrome} assets={assets}>
 				<Description mix={[mbe(6)]}>{labels.description}</Description>
 
 				{subjects.length === 0 ? (

@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
@@ -45,6 +46,8 @@ namespace ClientDetailView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		client: AdminView.ClientDetail;
 		/** How many subjects have consented to this client. */
@@ -88,10 +91,10 @@ function Field(
 /** Renders a client's full registration with the edit and delete actions the viewer may take. */
 export default function ClientDetailView(handle: Handle<ClientDetailView.Props>) {
 	return () => {
-		let { chrome, labels, client, authorizedUsers, editHref, actions } = handle.props;
+		let { chrome, assets, labels, client, authorizedUsers, editHref, actions } = handle.props;
 
 		return (
-			<AdminLayout chrome={chrome}>
+			<AdminLayout chrome={chrome} assets={assets}>
 				<Card>
 					<Card.Header>
 						<Card.Title>{client.name}</Card.Title>

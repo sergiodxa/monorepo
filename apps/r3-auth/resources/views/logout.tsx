@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, flexCol, items, justify } from "@sdxc/u/layout";
@@ -20,6 +21,8 @@ import routes from "~/routes/web";
 
 namespace LogoutView {
 	export interface Setup {
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		/** Document title, translated by the caller. */
 		documentTitle: string;
 		/** The question above the button. */
@@ -37,10 +40,10 @@ namespace LogoutView {
  */
 export default function LogoutView(handle: Handle<LogoutView.Setup>) {
 	return () => {
-		let { documentTitle, title, cta } = handle.props;
+		let { assets, documentTitle, title, cta } = handle.props;
 
 		return (
-			<DocumentLayout title={documentTitle} clientRuntime={false}>
+			<DocumentLayout assets={assets} title={documentTitle} clientRuntime={false}>
 				<main mix={[flex(), flexCol(), items("center"), justify("center"), minBs("100dvh"), p(6)]}>
 					<Card mix={[is("100%"), maxIs("22.5rem")]}>
 						<Card.Header mix={[textAlign("center")]}>

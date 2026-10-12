@@ -32,6 +32,7 @@ async function grantsPage(ctx: RequestContext): Promise<Response> {
 
 	return await ctx.render(
 		<AccountLayout
+			assets={ctx.assets}
 			{...accountChrome(ctx, {
 				current: "grants",
 				heading: ctx.intl.t("grants.title"),

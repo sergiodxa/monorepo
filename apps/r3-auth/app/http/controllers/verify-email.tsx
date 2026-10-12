@@ -70,7 +70,7 @@ function outcomePage(
 	}
 
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("verifyEmail.documentTitle")}>
+		<DocumentLayout assets={ctx.assets} title={ctx.intl.t("verifyEmail.documentTitle")}>
 			<VerifyEmailView
 				title={ctx.intl.t(`verifyEmail.${outcome}.title`)}
 				description={ctx.intl.t(`verifyEmail.${outcome}.description`)}
@@ -84,7 +84,11 @@ function outcomePage(
 /** The page a token that is still unspent is answered with, offering the one button. */
 function confirmPage(ctx: RequestContext, token: string): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("verifyEmail.documentTitle")} clientRuntime={false}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("verifyEmail.documentTitle")}
+			clientRuntime={false}
+		>
 			<VerifyEmailConfirmView
 				title={ctx.intl.t("verifyEmail.confirm.title")}
 				description={ctx.intl.t("verifyEmail.confirm.description")}

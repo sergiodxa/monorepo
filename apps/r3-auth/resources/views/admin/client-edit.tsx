@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, flexCol, gap } from "@sdxc/u/layout";
@@ -69,6 +70,8 @@ namespace ClientEditView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		client: AdminView.ClientDetail;
 		/** Where cancel and the post-rotation link go. */
@@ -89,11 +92,11 @@ namespace ClientEditView {
  */
 export default function ClientEditView(handle: Handle<ClientEditView.Props>) {
 	return () => {
-		let { chrome, labels, client, detailHref, newSecret, issues } = handle.props;
+		let { chrome, assets, labels, client, detailHref, newSecret, issues } = handle.props;
 
 		if (newSecret) {
 			return (
-				<AdminLayout chrome={chrome}>
+				<AdminLayout chrome={chrome} assets={assets}>
 					<Alert color="warning">
 						<Alert.Content>
 							<Alert.Title>{labels.secretRegenerated}</Alert.Title>
@@ -121,7 +124,7 @@ export default function ClientEditView(handle: Handle<ClientEditView.Props>) {
 		}
 
 		return (
-			<AdminLayout chrome={chrome}>
+			<AdminLayout chrome={chrome} assets={assets}>
 				<Card>
 					<Card.Header>
 						<Card.Title>{labels.title}</Card.Title>

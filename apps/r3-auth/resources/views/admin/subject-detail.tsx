@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, flexCol, flexWrap, gap, grid, gridTemplate, items } from "@sdxc/u/layout";
@@ -60,6 +61,8 @@ namespace SubjectDetailView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		subject: AdminView.SubjectDetail;
 		sessions: AdminView.SessionRow[];
@@ -83,11 +86,11 @@ function Field(handle: Handle<{ label: string; value: string; mono?: boolean }>)
 /** Renders a subject's profile, sessions and provider links with their actions. */
 export default function SubjectDetailView(handle: Handle<SubjectDetailView.Props>) {
 	return () => {
-		let { chrome, labels, subject, sessions, connections, editHref } = handle.props;
+		let { chrome, assets, labels, subject, sessions, connections, editHref } = handle.props;
 		let roleLabel = subject.role === "admin" ? labels.roles.admin : labels.roles.user;
 
 		return (
-			<AdminLayout chrome={chrome}>
+			<AdminLayout chrome={chrome} assets={assets}>
 				<div mix={[flex(), flexCol(), gap(6)]}>
 					<Card>
 						<Card.Header>

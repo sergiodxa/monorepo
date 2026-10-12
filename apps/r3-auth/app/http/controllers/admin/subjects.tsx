@@ -43,6 +43,7 @@ export default createAction(routes.admin.subjects, {
 
 		return ctx.render(
 			<SubjectsView
+				assets={ctx.assets}
 				chrome={chrome}
 				subjects={subjects.map((subject) => toSubjectRow(subject, ctx.locale))}
 				pagination={toPagination(ctx.url, page, totalCount, {

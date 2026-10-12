@@ -54,6 +54,7 @@ export default createController(routes.admin.clients, {
 
 			return ctx.render(
 				<ClientsView
+					assets={ctx.assets}
 					chrome={chrome}
 					createHref={routes.admin.clientNew.index.href()}
 					clients={clients.map((client) =>

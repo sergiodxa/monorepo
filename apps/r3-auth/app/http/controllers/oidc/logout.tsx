@@ -46,6 +46,7 @@ const CLEAR_SITE_DATA: HeadersInit = { "Clear-Site-Data": '"*"' };
 function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
 		<LogoutView
+			assets={ctx.assets}
 			documentTitle={ctx.intl.t("logout.documentTitle")}
 			title={ctx.intl.t("logout.title")}
 			cta={ctx.intl.t("logout.cta")}
@@ -129,6 +130,7 @@ export default createController(routes.oidc.logout, {
 			if (logout.frontchannelUrls.length > 0) {
 				return ctx.render(
 					<LogoutFrontchannelView
+						assets={ctx.assets}
 						documentTitle={ctx.intl.t("logout.documentTitle")}
 						title={ctx.intl.t("logout.title")}
 						signingOut={ctx.intl.t("logout.signing_out")}

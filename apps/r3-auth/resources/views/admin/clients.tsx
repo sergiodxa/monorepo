@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, gap, items } from "@sdxc/u/layout";
@@ -35,6 +36,8 @@ namespace ClientsView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		createHref: string;
 		clients: AdminView.ClientRow[];
@@ -45,10 +48,11 @@ namespace ClientsView {
 /** Renders the paginated client list with the per-row actions the viewer may take. */
 export default function ClientsView(handle: Handle<ClientsView.Props>) {
 	return () => {
-		let { chrome, labels, clients, pagination, createHref } = handle.props;
+		let { chrome, assets, labels, clients, pagination, createHref } = handle.props;
 
 		return (
 			<AdminLayout
+				assets={assets}
 				chrome={chrome}
 				actions={<LinkButton href={createHref}>{labels.create}</LinkButton>}
 			>

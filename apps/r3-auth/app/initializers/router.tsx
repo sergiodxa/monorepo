@@ -11,6 +11,7 @@ import type { Billing } from "@sdxc/billing";
 import type { Transport } from "@sdxc/mail";
 import type { Database as DataTable } from "remix/data-table";
 
+import { assets } from "@sdxc/assets-middleware";
 import billing from "@sdxc/billing/middleware";
 import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -22,7 +23,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { render, renderWith } from "remix/middleware/render";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import type Limiters from "~/app/services/rate-limiters";
@@ -33,8 +34,7 @@ import i18n from "~/app/http/middleware/i18n";
 import { models } from "~/app/http/middleware/models";
 import { rateLimiters } from "~/app/http/middleware/rate-limiters";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
-import { withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
@@ -100,8 +100,11 @@ export function createWebRouter(options: WebRouterOptions) {
 				replyTo: MAIL_REPLY_TO,
 			}),
 			cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
-			render({ assets }),
-			renderWith(withDocumentAssets),
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
 		],
 		defaultHandler,
 	});

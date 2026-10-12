@@ -34,6 +34,7 @@ export default createAction(routes.account.profile, {
 
 		return ctx.render(
 			<AccountLayout
+				assets={ctx.assets}
 				{...accountChrome(ctx, {
 					current: "profile",
 					heading: ctx.intl.t("profile.title"),

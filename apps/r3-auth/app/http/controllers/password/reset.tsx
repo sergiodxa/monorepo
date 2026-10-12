@@ -56,7 +56,11 @@ function resetPage(
 	error: string | null,
 ): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("password.reset.documentTitle")} clientRuntime={false}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("password.reset.documentTitle")}
+			clientRuntime={false}
+		>
 			<ResetPasswordView
 				title={ctx.intl.t("password.reset.title")}
 				description={ctx.intl.t("password.reset.description")}
@@ -84,7 +88,11 @@ function resetPage(
  */
 function invalidPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("password.invalid.documentTitle")} clientRuntime={false}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("password.invalid.documentTitle")}
+			clientRuntime={false}
+		>
 			<PasswordNoticeView
 				title={ctx.intl.t("password.invalid.title")}
 				description={ctx.intl.t("password.invalid.description")}
@@ -101,7 +109,11 @@ function invalidPage(ctx: RequestContext): Response | Promise<Response> {
 /** The page a completed reset ends on, offering the way back to signing in. */
 function donePage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("password.done.documentTitle")} clientRuntime={false}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("password.done.documentTitle")}
+			clientRuntime={false}
+		>
 			<PasswordNoticeView
 				title={ctx.intl.t("password.done.title")}
 				description={ctx.intl.t("password.done.description")}
@@ -228,6 +240,7 @@ export default createController(routes.password.reset, {
 				ctx.log.fail(hash.error);
 				return ctx.render(
 					<DocumentLayout
+						assets={ctx.assets}
 						title={ctx.intl.t("password.invalid.documentTitle")}
 						clientRuntime={false}
 					>

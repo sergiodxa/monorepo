@@ -10,12 +10,12 @@
 
 import type { RemixNode } from "remix/component";
 
-import { render, renderWith } from "remix/middleware/render";
+import { assets } from "@sdxc/assets-middleware";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { CopyButton } from "~/resources/components/copy-button";
 import DocumentLayout from "~/resources/layouts/document";
@@ -23,12 +23,18 @@ import DocumentLayout from "~/resources/layouts/document";
 /** Answers a page composed into the document through the renderer chain production uses. */
 async function fetchPage(clientRuntime: boolean, body: RemixNode = <p>Body</p>) {
 	let router = createRouter({
-		middleware: [render({ assets }), renderWith(withDocumentAssets)],
+		middleware: [
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
+		],
 	});
 
 	router.get("/page", (ctx) =>
 		ctx.render(
-			<DocumentLayout title="Page" clientRuntime={clientRuntime}>
+			<DocumentLayout assets={ctx.assets} title="Page" clientRuntime={clientRuntime}>
 				{body}
 			</DocumentLayout>,
 		),

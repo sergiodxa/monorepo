@@ -88,6 +88,7 @@ export default createController(routes.admin.subjectEdit, {
 
 			return ctx.render(
 				<SubjectEditView
+					assets={ctx.assets}
 					chrome={chrome(ctx, subject.display_name, subjectId)}
 					labels={labels(ctx)}
 					subject={toSubjectDetail(subject, ctx.locale)}
@@ -116,6 +117,7 @@ export default createController(routes.admin.subjectEdit, {
 				ctx.log.note("admin.subject.update_invalid");
 				return ctx.render(
 					<SubjectEditView
+						assets={ctx.assets}
 						chrome={chrome(ctx, subject.display_name, subjectId)}
 						labels={labels(ctx)}
 						subject={toSubjectDetail(subject, ctx.locale)}

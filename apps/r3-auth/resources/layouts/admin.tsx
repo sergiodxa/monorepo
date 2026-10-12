@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg } from "@sdxc/u/color";
@@ -46,6 +47,8 @@ namespace AdminLayout {
 		chrome: AdminView.Chrome;
 		/** Controls belonging to the page itself, rendered at the header's inline end. */
 		actions?: RemixNode;
+		/** The request's document assets, handed to the document shell. */
+		assets: DocumentAssets;
 		children: RemixNode;
 	}
 }
@@ -86,11 +89,11 @@ function SectionLink(
  */
 export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 	return () => {
-		let { chrome, actions, children } = handle.props;
+		let { chrome, actions, assets, children } = handle.props;
 		let { nav, breadcrumbs } = chrome;
 
 		return (
-			<DocumentLayout title={chrome.documentTitle}>
+			<DocumentLayout assets={assets} title={chrome.documentTitle}>
 				<main
 					mix={[
 						is("100%"),

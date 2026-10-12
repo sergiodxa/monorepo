@@ -29,7 +29,7 @@ export interface AccountChromeInput {
 }
 
 /** Every layout prop but `children`, ready to spread onto the layout. */
-export type AccountChrome = Omit<AccountLayout.Props, "children">;
+export type AccountChrome = Omit<AccountLayout.Props, "children" | "assets">;
 
 /**
  * Translates the navigation and breadcrumb copy through the request's own translator, and

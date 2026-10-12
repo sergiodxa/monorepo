@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, flexCol, gap } from "@sdxc/u/layout";
@@ -64,6 +65,8 @@ namespace ClientNewView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		/** Set only on the render that follows a successful creation. */
 		created?: Created;
@@ -88,11 +91,11 @@ function CodeValue(handle: Handle<{ label: string; value: string }>) {
 /** Renders the registration form, or the created client's one-time secret reveal. */
 export default function ClientNewView(handle: Handle<ClientNewView.Props>) {
 	return () => {
-		let { chrome, labels, created, issues } = handle.props;
+		let { chrome, assets, labels, created, issues } = handle.props;
 
 		if (created) {
 			return (
-				<AdminLayout chrome={chrome}>
+				<AdminLayout chrome={chrome} assets={assets}>
 					<Alert color="success">
 						<Alert.Content>
 							<Alert.Title>{labels.success}</Alert.Title>
@@ -131,7 +134,7 @@ export default function ClientNewView(handle: Handle<ClientNewView.Props>) {
 		}
 
 		return (
-			<AdminLayout chrome={chrome}>
+			<AdminLayout chrome={chrome} assets={assets}>
 				<Card>
 					<Card.Header>
 						<Card.Title>{labels.title}</Card.Title>

@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
@@ -21,6 +22,7 @@ import NotFoundView from "~/resources/views/not-found";
 interface NotFoundContext {
 	render: Renderer<RemixNode>;
 	intl: I18n;
+	assets: DocumentAssets;
 }
 
 /** Responds `404` with the localized not-found document. */
@@ -30,7 +32,7 @@ export default function defaultHandler(ctx: NotFoundContext) {
 		description: ctx.intl.t("splat.notFound.description"),
 	});
 	return ctx.render(
-		<DocumentLayout title={props.title}>
+		<DocumentLayout assets={ctx.assets} title={props.title}>
 			<NotFoundView {...props} />
 		</DocumentLayout>,
 		{ status: 404 },

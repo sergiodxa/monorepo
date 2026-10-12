@@ -38,6 +38,7 @@ export default createAction(routes.admin.dashboard, {
 
 		return ctx.render(
 			<DashboardView
+				assets={ctx.assets}
 				chrome={chrome}
 				stats={{
 					clients: {

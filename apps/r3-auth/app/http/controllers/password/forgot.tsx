@@ -39,7 +39,11 @@ function requestPage(
 	error: string | null,
 ): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("password.forgot.documentTitle")} clientRuntime={false}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("password.forgot.documentTitle")}
+			clientRuntime={false}
+		>
 			<ForgotPasswordView
 				title={ctx.intl.t("password.forgot.title")}
 				description={ctx.intl.t("password.forgot.description")}
@@ -63,7 +67,11 @@ function requestPage(
  */
 function sentPage(ctx: RequestContext): Response | Promise<Response> {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("password.sent.documentTitle")} clientRuntime={false}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("password.sent.documentTitle")}
+			clientRuntime={false}
+		>
 			<PasswordNoticeView
 				title={ctx.intl.t("password.sent.title")}
 				description={ctx.intl.t("password.sent.description")}

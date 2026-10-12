@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { gap, grid, gridTemplate } from "@sdxc/u/layout";
@@ -28,6 +29,8 @@ namespace DashboardView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		/** The three counts, named rather than listed, so each card is rendered once. */
 		stats: { clients: Stat; subjects: Stat; sessions: Stat };
 	}
@@ -59,7 +62,7 @@ function StatCard(handle: Handle<DashboardView.Stat>) {
 /** Renders the dashboard's counts, one card per statistic. */
 export default function DashboardView(handle: Handle<DashboardView.Props>) {
 	return () => (
-		<AdminLayout chrome={handle.props.chrome}>
+		<AdminLayout chrome={handle.props.chrome} assets={handle.props.assets}>
 			<div
 				mix={[
 					grid(),

@@ -56,6 +56,7 @@ export default createController(routes.admin.client, {
 
 			return ctx.render(
 				<ClientDetailView
+					assets={ctx.assets}
 					chrome={chrome}
 					client={toClientDetail(client, ctx.locale)}
 					authorizedUsers={authorizedUsers}

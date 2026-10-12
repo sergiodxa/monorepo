@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { flex, flexCol, gap } from "@sdxc/u/layout";
@@ -47,6 +48,8 @@ namespace SubjectEditView {
 
 	export interface Props {
 		chrome: AdminView.Chrome;
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		labels: Labels;
 		subject: AdminView.SubjectDetail;
 		/** Where cancel returns to. */
@@ -66,10 +69,10 @@ namespace SubjectEditView {
  */
 export default function SubjectEditView(handle: Handle<SubjectEditView.Props>) {
 	return () => {
-		let { chrome, labels, subject, detailHref, issues } = handle.props;
+		let { chrome, assets, labels, subject, detailHref, issues } = handle.props;
 
 		return (
-			<AdminLayout chrome={chrome}>
+			<AdminLayout chrome={chrome} assets={assets}>
 				<Card>
 					<Card.Header>
 						<Card.Title>{labels.title}</Card.Title>

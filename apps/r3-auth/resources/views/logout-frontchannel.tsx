@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
@@ -30,6 +31,8 @@ const REDIRECT_DELAY_SECONDS = 2;
 
 namespace LogoutFrontchannelView {
 	export interface Setup {
+		/** The request's document assets. */
+		assets: DocumentAssets;
 		/** Document title, translated by the caller. */
 		documentTitle: string;
 		/** Heading above the progress copy. */
@@ -54,11 +57,20 @@ namespace LogoutFrontchannelView {
  */
 export default function LogoutFrontchannelView(handle: Handle<LogoutFrontchannelView.Setup>) {
 	return () => {
-		let { documentTitle, title, signingOut, redirecting, continueLabel, urls, redirectUri } =
-			handle.props;
+		let {
+			assets,
+			documentTitle,
+			title,
+			signingOut,
+			redirecting,
+			continueLabel,
+			urls,
+			redirectUri,
+		} = handle.props;
 
 		return (
 			<DocumentLayout
+				assets={assets}
 				title={documentTitle}
 				clientRuntime={false}
 				head={<meta httpEquiv="refresh" content={`${REDIRECT_DELAY_SECONDS};url=${redirectUri}`} />}

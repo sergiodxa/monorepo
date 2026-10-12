@@ -71,6 +71,7 @@ export default createController(routes.admin.subject, {
 
 			return ctx.render(
 				<SubjectDetailView
+					assets={ctx.assets}
 					chrome={chrome}
 					subject={toSubjectDetail(subject, ctx.locale)}
 					sessions={sessions.map((session) => toSessionRow(session, unknown, ctx.locale))}

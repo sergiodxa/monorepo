@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg, translucent } from "@sdxc/u/color";
@@ -71,6 +72,8 @@ export namespace AccountLayout {
 		/** Whether to offer the link into the admin area. */
 		isAdmin: boolean;
 		nav: Nav;
+		/** The request's document assets, handed to the document shell. */
+		assets: DocumentAssets;
 		children: RemixNode;
 	}
 }
@@ -109,11 +112,20 @@ function AccountNavLink(handle: Handle<{ href: string; label: string; isCurrent:
  */
 export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 	return () => {
-		let { documentTitle, heading, breadcrumbsLabel, breadcrumbs, current, isAdmin, nav, children } =
-			handle.props;
+		let {
+			documentTitle,
+			heading,
+			breadcrumbsLabel,
+			breadcrumbs,
+			current,
+			isAdmin,
+			nav,
+			assets,
+			children,
+		} = handle.props;
 
 		return (
-			<DocumentLayout title={documentTitle}>
+			<DocumentLayout assets={assets} title={documentTitle}>
 				<header
 					mix={[
 						sticky(),

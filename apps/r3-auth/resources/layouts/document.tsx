@@ -7,30 +7,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { container } from "@sdxc/u/layout";
 import { ImportMap } from "remix/component/server";
-
-import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
 import { DOCUMENT, THEME } from "~/resources/styles";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
 
-/**
- * Hands the document the assets the renderer looked up, which it reads where a component
- * cannot await them itself.
- */
-export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
-	handle.context.set(handle.props.value);
-	return () => handle.props.children;
-}
-
 namespace DocumentLayout {
 	export interface Props {
 		children: RemixNode;
+		/** The stylesheets and client entry the request resolved, published as `ctx.assets`. */
+		assets: DocumentAssets;
 		/** Document title. Omitted for pages whose whole body is a redirect mechanism. */
 		title?: string;
 		/**
@@ -56,8 +48,8 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { children, title, head, clientRuntime = true } = handle.props;
-		let { script, stylesheets } = handle.context.get(DocumentAssets);
+		let { children, assets, title, head, clientRuntime = true } = handle.props;
+		let { script, stylesheets } = assets;
 
 		return (
 			<html lang="en" class="system" mix={[THEME, DOCUMENT]}>

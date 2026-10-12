@@ -138,7 +138,10 @@ async function errorRedirect(
  */
 function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState, error?: string) {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("authorize.header.title", { client: client.name })}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("authorize.header.title", { client: client.name })}
+		>
 			<AuthorizeView
 				clientName={client.name}
 				clientDescription={client.description}

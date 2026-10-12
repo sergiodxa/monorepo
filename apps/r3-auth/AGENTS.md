@@ -112,6 +112,9 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST link built assets through `app/initializers/assets.ts`, which reads the manifest
   `@pitlane/vite-plugin-remix` writes, and import a stylesheet from the document layout as a
   side effect (`import "….css"`); MUST NOT link a path the build may rename by hand.
+- MUST render every page's document with the assets the router's `assets()` middleware
+  publishes, passed explicitly: `<DocumentLayout assets={ctx.assets}>`, or `assets={ctx.assets}`
+  on `AccountLayout`, `AdminLayout` and the views that wrap them.
 - MUST route every user-facing string through `ctx.intl.t(...)` and `resources/locales/en.ts`;
   MUST NOT hardcode English copy in a view.
 - MUST NOT use `as any`, and MUST NOT call `getContext()` inside a controller when `ctx` is
@@ -225,8 +228,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 
 - Entry points and initializers
   - `bootstrap/worker.ts` <- Worker entry: the only place Cloudflare-specific APIs are used
-  - `app/initializers/router.tsx` <- `createWebRouter`: global middleware, `cop()` bypass list, lazy route map
-  - `app/http/render.tsx` <- `withDocumentAssets`, the `renderWith()` wrapper every page renders through
+  - `app/initializers/router.tsx` <- `createWebRouter`: global middleware (including `assets()`, which publishes `ctx.assets`), `cop()` bypass list, lazy route map
   - `app/initializers/dispatcher.ts` <- The job dispatcher the cron and queue handlers delegate to
   - `app/initializers/logger.ts` <- The one logger the router and the dispatcher share
 - Configuration
@@ -235,7 +237,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   - `app/initializers/database.ts` <- The D1 connection every request and job reads
   - `app/initializers/mail.ts` <- The transport both mailers deliver through
   - `app/initializers/rate-limiters.ts` <- The five limiter bindings, wrapped in their policies
-  - `app/initializers/assets.ts` <- Built stylesheet and client-entry URLs the document links
+  - `app/initializers/assets.ts` <- `assetResolver`, the manifest lookup `render()` and `assets()` read
 - Auth core
   - `app/services/oidc-provider.ts` <- The storage-agnostic OAuth/OIDC engine
   - `app/models/oidc-storage.ts` <- The engine's storage binding (data-table + KV)
