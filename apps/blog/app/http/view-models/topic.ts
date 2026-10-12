@@ -169,6 +169,26 @@ export class TopicViewModel {
 		};
 	}
 
+	/**
+	 * Where each of a post's tags links: the topic listing exactly that tag when there is one,
+	 * else the search for the tag, so a reader always lands on every post carrying it.
+	 *
+	 * @param tags The post's tags.
+	 * @param topics The topics listing exactly one tag, keyed by the tag as the post stores it.
+	 */
+	static tagHrefs(
+		tags: ReadonlyArray<string>,
+		topics: ReadonlyMap<string, Pick<SelectTopic, "slug">>,
+	): Record<string, string> {
+		return Object.fromEntries(
+			tags.map((tag) => {
+				let topic = topics.get(tag);
+				if (topic) return [tag, topicPath(topic)];
+				return [tag, `${routes.search.href()}?${new URLSearchParams({ q: `tag:"${tag}"` })}`];
+			}),
+		);
+	}
+
 	/** One post's row, as its kind's listing draws it. */
 	private static item(post: TopicPost): TopicViewModel.Item {
 		let { hit } = post;

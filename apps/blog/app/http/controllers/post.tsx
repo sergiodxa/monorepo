@@ -24,6 +24,7 @@ import type { PublicTypePath } from "~/app/models/kinds";
 import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
+import { TopicViewModel } from "~/app/http/view-models/topic";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 import { isPublicTypePath, kindAt, POST_KINDS } from "~/app/models/kinds";
 import { isPublishedAt } from "~/app/models/post-values";
@@ -195,6 +196,8 @@ export default createAction(
 			validation.params.contentType,
 			mentions,
 		);
+		let tagTopics = await ctx.models.topics.findForTags(viewModel.post.tags);
+		viewModel.tagHrefs = TopicViewModel.tagHrefs(viewModel.post.tags, tagTopics);
 
 		// Only a published post is edge-cacheable. An admin previewing a draft reaches
 		// here too, and the middleware would refuse their session anyway, but the draft

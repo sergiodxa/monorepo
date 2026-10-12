@@ -38,6 +38,11 @@ export namespace PostViewModel {
 		title: string;
 		description: string;
 		activePath: string;
+		/**
+		 * Where each tag links, by tag: the topic listing exactly that tag, else a search for
+		 * it. A tag missing here links to the search.
+		 */
+		tagHrefs?: Record<string, string>;
 		/** Preferred URL for indexing; may differ from the request URL. */
 		canonical: string;
 		/** The post's ActivityStreams id, its permalink on the canonical origin. */

@@ -156,6 +156,12 @@ describe("an author's topic", () => {
 		]);
 	});
 
+	test("is where a post's tag links, while its kind label links to the kind's topic", async () => {
+		let page = await html(`/tutorials/${TOPIC_SLUG}-0`);
+		expect(page).toContain(`href="/topics/${TOPIC_SLUG}"`);
+		expect(page).toMatch(/href="\/tutorials"[^>]*>Tutorial<\/a>/);
+	});
+
 	test("is listed on /topics, and a slug no topic has answers 404", async () => {
 		let index = await html("/topics");
 		expect(index).toContain(`href="/topics/${TOPIC_SLUG}"`);

@@ -164,7 +164,10 @@ export function PostView() {
 										{model.post.tags.map((tag) => (
 											<a
 												key={tag}
-												href={`${routes.search.href()}?${new URLSearchParams({ q: `tag:"${tag}"` })}`}
+												href={
+													model.tagHrefs?.[tag] ??
+													`${routes.search.href()}?${new URLSearchParams({ q: `tag:"${tag}"` })}`
+												}
 												mix={[textDecoration("none")]}
 											>
 												<Badge color="brand" variant="secondary" mix={[mf("p-category")]}>
@@ -190,7 +193,12 @@ export function PostView() {
 											weight("bold"),
 										]}
 									>
-										{model.post.eyebrow}
+										<a
+											href={`/${model.post.typePath}`}
+											mix={[fg("inherit"), textDecoration("none")]}
+										>
+											{model.post.eyebrow}
+										</a>
 									</p>
 
 									<div mix={[hstack({ gap: 3, align: "center" }), shrink(0)]}>
