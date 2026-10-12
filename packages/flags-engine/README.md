@@ -2,33 +2,30 @@
 
 Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores.
 
-A flag here is a set of variants, an ordered list of rules about who sees which one, and a
-percentage. This package holds that definition format and resolves it: a definition set and an
-evaluation context in, a `ResolutionDetails` out. Every outcome travels back on those details,
-the failures included, so the evaluation path has one shape.
-
-Evaluation is a pure, synchronous function, which is what lets the same call answer a provider,
-an HTTP endpoint and an admin preview. Definitions arrive through a one-method `FlagStore`, so
-where they live stays yours to choose.
+A flag is a set of named variants plus an ordered list of rules choosing between them. This
+package parses a definition set into a snapshot and resolves flags against it with a pure,
+synchronous function, so the same call answers a provider, an HTTP endpoint and an admin
+preview. Definitions arrive through a one-method `FlagStore`, so where they live is yours to
+choose.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/flags-engine @sdxc/flags
 ```
 
 [`@sdxc/flags`](https://www.npmjs.com/package/@sdxc/flags) is what an application evaluates
-through, and it supplies the vocabulary this package answers in: the evaluation context, the
-resolution details, the reasons and the error codes.
-[`vitest`](https://www.npmjs.com/package/vitest) is an optional peer, needed by the conformance
-suite alone.
+through, and it supplies the evaluation context, resolution details, reasons and error codes this
+package answers in. Loads answer a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result). The `./conformance` entry point
+needs [`vitest`](https://www.npmjs.com/package/vitest).
 
 ## Usage
 
-### Resolving against a set in memory
+### Resolve a flag from a set in memory
 
-An engine reads a store once, keeps the parsed snapshot, and resolves every later flag against
-it:
+An engine reads its store once, keeps the parsed snapshot and resolves every later flag against
+it.
 
 ```typescript
 import { createEngine } from "@sdxc/flags-engine";
@@ -48,19 +45,37 @@ engine.evaluate("new-checkout", false);
 // { value: false, reason: "STATIC", variant: "off" }
 ```
 
-### Targeting a rule
+### Target subjects with rules and segments
 
-Rules are tried in the order they were written, and the first one whose condition holds decides
-the variant:
+Rules run in order and the first whose condition holds decides the variant. A segment is a
+condition declared once and referenced by name from any flag.
 
 ```typescript
+import { createEngine } from "@sdxc/flags-engine";
+import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
+
 let engine = createEngine({
 	store: new InMemoryFlagStore({
+		segments: {
+			internal: { op: "endsWith", field: "email", value: "@example.com" },
+		},
 		flags: {
 			"new-checkout": {
 				variants: { on: true, off: false },
 				defaultVariant: "off",
-				targeting: [{ when: { op: "eq", field: "plan.tier", value: "pro" }, serve: "on" }],
+				targeting: [
+					{ when: { op: "segment", name: "internal" }, serve: "on" },
+					{
+						when: {
+							op: "all",
+							of: [
+								{ op: "eq", field: "plan.tier", value: "pro" },
+								{ op: "semver", field: "appVersion", compare: ">=", value: "2.0.0" },
+							],
+						},
+						serve: "on",
+					},
+				],
 			},
 		},
 	}),
@@ -68,13 +83,21 @@ let engine = createEngine({
 
 await engine.load();
 
-engine.evaluate("new-checkout", false, { targetingKey: "user-1", plan: { tier: "pro" } });
+engine.evaluate("new-checkout", false, {
+	targetingKey: "user-1",
+	plan: { tier: "pro" },
+	appVersion: "2.3.0",
+});
 // { value: true, reason: "TARGETING_MATCH", variant: "on" }
+
+engine.evaluate("new-checkout", false, { targetingKey: "user-2", plan: { tier: "free" } });
+// { value: false, reason: "DEFAULT", variant: "off" }
 ```
 
-### Rolling out to a percentage
+### Roll out to a percentage
 
-A rule serving weights buckets its subjects among the arms instead of naming one:
+A rule serving `weights` buckets its subjects among the arms. The subject is hashed with the
+flag key, so the same subject lands in the same arm on every request and in every isolate.
 
 ```typescript
 let engine = createEngine({
@@ -92,15 +115,16 @@ let engine = createEngine({
 await engine.load();
 
 engine.evaluate("new-checkout", false, { targetingKey: "user-1" });
-// { value: …, reason: "SPLIT", variant: … } — the same arm for "user-1" on every request
+// { value: true or false, reason: "SPLIT", variant: "on" or "off" }, stable for "user-1"
 ```
 
-### Serving flags through `@sdxc/flags`
+### Serve flags through `@sdxc/flags`
 
-`EngineProvider` is the adapter from an engine onto the `Provider` interface an application
-evaluates through:
+`EngineProvider` adapts an engine to the `Provider` an `@sdxc/flags` client evaluates through.
+In a Cloudflare Worker, `WorkerKVFlagStore` reads the set from a KV namespace.
 
 ```typescript
+import { env } from "cloudflare:workers";
 import { createFlags } from "@sdxc/flags/client";
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
@@ -113,287 +137,113 @@ export let flags = createFlags({
 		),
 });
 
-let client = flags.getClient();
-
-await client.boolean("new-checkout", false, { targetingKey: "user-1" });
+await flags.getClient().boolean("new-checkout", false, { targetingKey: "user-1" });
 ```
 
 ## API
 
-A path says what a module is: everything under `/store` is the one storage contract, and
-`/provider` sits beside it because it consumes an engine rather than supplying one.
+| Entry point                          | Contains                                                        |
+| ------------------------------------ | --------------------------------------------------------------- |
+| `@sdxc/flags-engine`                 | Definition types, schemas, `flagConditions`, evaluation, engine |
+| `@sdxc/flags-engine/store`           | `FlagStore`, `StoredFlagSet`, `FlagStoreError`                  |
+| `@sdxc/flags-engine/store/memory`    | `InMemoryFlagStore`                                             |
+| `@sdxc/flags-engine/store/worker-kv` | `WorkerKVFlagStore`                                             |
+| `@sdxc/flags-engine/conformance`     | `conformance`, the Vitest suite every store passes              |
+| `@sdxc/flags-engine/provider`        | `EngineProvider`                                                |
 
-| Entry point                          | Contains                                                         |
-| ------------------------------------ | ---------------------------------------------------------------- |
-| `@sdxc/flags-engine`                 | The definition types, their schema, `evaluate` and `evaluateAll` |
-| `@sdxc/flags-engine/store`           | The `FlagStore` interface and `FlagStoreError`                   |
-| `@sdxc/flags-engine/store/memory`    | `InMemoryFlagStore`                                              |
-| `@sdxc/flags-engine/store/worker-kv` | A store over a Cloudflare KV namespace                           |
-| `@sdxc/flags-engine/conformance`     | The suite every store runs                                       |
-| `@sdxc/flags-engine/provider`        | `EngineProvider`, the adapter onto `@sdxc/flags`                 |
+### `createEngine(options: EngineOptions): Engine`
 
-### `FlagSet` and `FlagDefinition`
+Builds an engine over `options.store`. `options.maxAge` (a duration such as `"5 minutes"`) is
+how long a loaded snapshot counts as current; without it a snapshot stays current until the
+next load.
 
-```typescript
-interface FlagSet {
-	flags: Record<string, FlagDefinition>;
-	segments?: SegmentSet;
-}
+### `Engine`
 
-interface FlagDefinition {
-	variants: Record<string, FlagValue>;
-	defaultVariant?: string;
-	state?: "enabled" | "disabled";
-	targeting?: TargetingRule[];
-	metadata?: FlagMetadata;
-}
-```
+- `load(): MaybePromise<Result<FlagSnapshot, FlagStoreError>>` reads the store, parses the set
+  and keeps the snapshot. It is synchronous when the store is, and `await`-able either way.
+- `evaluate(key, defaultValue, context?)` resolves one flag against the held snapshot, answering
+  the default with `PROVIDER_NOT_READY` until a load succeeds.
+- `evaluateAll(context?)` resolves every held flag, and answers `{}` before the first load.
+- `snapshot` is the held `FlagSnapshot`, or `undefined` before a load succeeds.
+- `failures` lists the definitions the held set carried and the engine refused.
+- `stale` is `true` before the first load and once the snapshot has aged past `maxAge`.
 
-`variants` holds every value the flag can take, by name, and a flag declares at least one.
-`targeting` is tried in order and the first match decides; when none matches, `defaultVariant`
-is served. A flag declaring no `defaultVariant` answers with the value the caller passed, which
-is how a flag exists to target a few subjects and leave everyone else on their own default. A
-flag at `state: "disabled"` serves the caller's default too, so it is switched off with the
-rules describing its rollout still written down. `metadata` travels onto every resolution of the
-flag. The `state` union is exported as `FlagState`.
+The caller decides when to reload: on a request, inside `waitUntil` or from a cron trigger.
 
-### `SegmentSet`
+### `evaluate(snapshot, key, defaultValue, context?): ResolutionDetails<T>`
 
-```typescript
-type SegmentSet = Record<string, Condition>;
-```
+Resolves one flag for one context. `defaultValue` is both the fallback and the type every
+variant is checked against, so a string variant asked for as a boolean answers the default with
+`TYPE_MISMATCH`.
 
-Conditions declared once and referenced by name, so "is an internal user" is written in one
-place and read by twenty flags. A segment may reference another segment.
+### `evaluateAll(snapshot, context?): Record<string, ResolutionDetails<FlagValue>>`
 
-### `TargetingRule` and `Condition`
+Resolves every flag in the snapshot, refused ones included. A flag producing no value of its
+own reports `value: null` beside its reason.
 
-```typescript
-interface TargetingRule {
-	when: Condition;
-	serve: string | Split;
-}
-```
+### `parseFlagSet(stored: StoredFlagSet): FlagSnapshot`
 
-`serve` is a variant name or the weights the rule buckets its subjects among.
-
-A condition is written in the [`@sdxc/expression`](https://www.npmjs.com/package/@sdxc/expression)
-language as a typed union, so an editor completes the operator and a definition narrows on `op`:
-
-| Condition                                              | Holds when                                             |
-| ------------------------------------------------------ | ------------------------------------------------------ |
-| `{ op: "all", of: Condition[] }`                       | Every member holds                                     |
-| `{ op: "any", of: Condition[] }`                       | Some member holds                                      |
-| `{ op: "not", of: Condition }`                         | The member fails                                       |
-| `{ op: "eq" \| "ne", field, value }`                   | The field equals, or differs from, a JSON primitive    |
-| `{ op: "in" \| "notIn", field, values }`               | The list carries, or omits, the field's value          |
-| `{ op: "lt" \| "lte" \| "gt" \| "gte", field, value }` | The field is a number standing in that relation        |
-| `{ op: "startsWith" \| "endsWith", field, value }`     | The field is a string with that prefix or suffix       |
-| `{ op: "contains", field, value }`                     | The field is a string carrying that substring          |
-| `{ op: "matches", field, pattern }`                    | The field is a string the pattern matches              |
-| `{ op: "semver", field, compare, value }`              | The field is a version standing in that relation       |
-| `{ op: "exists", field }`                              | The path resolves to a value                           |
-| `{ op: "segment", name }`                              | The named segment's condition holds                    |
-| `{ op: "always" }`                                     | Every subject, which is what a blanket rollout matches |
-
-`field` is a dotted path into the merged evaluation context, so `plan.tier` reads a nested
-structure, `country` a scalar and `roles.0` an array element. A path that resolves to nothing
-makes every operator except `exists` false, which keeps a rule about a field the caller left out
-from matching everyone; `not` around such a rule holds, as it does around any condition that
-fails.
-
-Every operator compares within one type. `eq` on a string field against a number is false rather
-than coerced, and `lt` against a value that is not a number is false.
-
-The comparisons from `eq` to `gte` also accept `path` in place of `value` or `values`, comparing
-the field against another field of the same context: `{ op: "eq", field: "country", path:
-"billing.country" }`.
-
-`matches` compiles its pattern with the `v` flag, and a pattern that compiles elsewhere fails
-its own flag at parse time.
-
-### `SemVerComparison`
-
-```typescript
-type SemVerComparison = "=" | "!=" | "<" | "<=" | ">" | ">=" | "~" | "^";
-```
-
-How `semver` compares a version field against its value: `~` holds for a matching major and
-minor, `^` for a matching major, and the other six read as they do in arithmetic.
-
-### `Split`
-
-```typescript
-interface Split {
-	weights: Record<string, number>;
-	by?: string;
-	seed?: string;
-}
-```
-
-`weights` are whole, non-negative numbers taken against their own sum, so `{ on: 1, off: 1 }` is
-a half-and-half split and one arm widens while the rest stay as written. Subjects are read from
-`by`, defaulting to `targetingKey`, and hashed with the flag key — so the same subject lands in
-the same arm on every request, in every isolate, and two flags at ten percent cover different
-tenths. Two flags naming the same `seed` cover the same subjects instead.
-
-A split needs a subject to hash. When the field it buckets on carries nothing, the evaluation
-reports `TARGETING_KEY_MISSING` with the caller's default, so a rollout that reached nobody
-reads as one.
+Parses a stored set: segments resolved, patterns compiled, variant names checked. Each flag
+parses on its own, so a refused flag lands in `snapshot.failures` and answers `PARSE_ERROR`
+while its siblings resolve normally.
 
 ### Reasons
-
-Each outcome has exactly one cause, so a consumer reading `reason` alone tells a flag that is
-off from a flag system that is broken:
 
 | Outcome                                          | `reason`          | `errorCode`             |
 | ------------------------------------------------ | ----------------- | ----------------------- |
 | No targeting, and a `defaultVariant`             | `STATIC`          |                         |
 | A rule matched and named a variant               | `TARGETING_MATCH` |                         |
 | A rule matched and bucketed                      | `SPLIT`           |                         |
-| Targeting ran and no rule matched                | `DEFAULT`         |                         |
-| No `defaultVariant` to fall back to              | `DEFAULT`         |                         |
+| No rule matched, or no `defaultVariant`          | `DEFAULT`         |                         |
 | `state: "disabled"`                              | `DISABLED`        |                         |
 | No flag under that key                           | `ERROR`           | `FLAG_NOT_FOUND`        |
 | The definition was refused at parse time         | `ERROR`           | `PARSE_ERROR`           |
-| The variant holds another type                   | `ERROR`           | `TYPE_MISMATCH`         |
+| The variant holds another type than the default  | `ERROR`           | `TYPE_MISMATCH`         |
 | A split found no value under its bucketing field | `ERROR`           | `TARGETING_KEY_MISSING` |
-| An evaluation arrived before a load succeeded    | `ERROR`           | `PROVIDER_NOT_READY`    |
+| The engine has not loaded yet                    | `ERROR`           | `PROVIDER_NOT_READY`    |
 
-### `evaluate(snapshot, key, defaultValue, context?)`
+Every outcome without a `variant` answers the caller's default. A flag's `metadata` travels on
+every resolution as `flagMetadata`.
 
-Resolves one flag for one context, answering with the caller's own default whenever the
-definition serves no value of the requested type. `defaultValue` is both the fallback and the
-type every variant is checked against, so a string variant asked for as a boolean is
-`TYPE_MISMATCH`.
+### Conditions
 
-```typescript
-import { evaluate, parseFlagSet } from "@sdxc/flags-engine";
+A `Condition` is a JSON object narrowed on `op`, in the
+[`@sdxc/expression`](https://www.npmjs.com/package/@sdxc/expression) language.
 
-let snapshot = parseFlagSet({ flags: { beta: { variants: { on: true, off: false } } } });
+| Condition                                              | Holds when                                           |
+| ------------------------------------------------------ | ---------------------------------------------------- |
+| `{ op: "all" \| "any", of: Condition[] }`              | Every member holds, or some member holds             |
+| `{ op: "not", of: Condition }`                         | The member fails                                     |
+| `{ op: "eq" \| "ne", field, value }`                   | The field equals, or differs from, a JSON primitive  |
+| `{ op: "in" \| "notIn", field, values }`               | The list carries, or omits, the field's value        |
+| `{ op: "lt" \| "lte" \| "gt" \| "gte", field, value }` | The field is a number in that relation               |
+| `{ op: "startsWith" \| "endsWith", field, value }`     | The field is a string with that prefix or suffix     |
+| `{ op: "contains", field, value }`                     | The field is a string carrying that substring        |
+| `{ op: "matches", field, pattern }`                    | The field is a string the pattern matches (`v` flag) |
+| `{ op: "semver", field, compare, value }`              | The field is a version in that relation              |
+| `{ op: "exists", field }`                              | The path resolves to a value                         |
+| `{ op: "segment", name }`                              | The named segment's condition holds                  |
+| `{ op: "always" }`                                     | Every subject                                        |
 
-evaluate(snapshot, "beta", false, { targetingKey: "user-1" });
-```
-
-### `evaluateAll(snapshot, context?)`
-
-Resolves every flag the snapshot carries, the refused ones included, for a caller with no
-per-flag default to fall back on. A flag producing no value of its own reports `null` beside the
-reason.
-
-```typescript
-evaluateAll(snapshot, { targetingKey: "user-1" })["beta"];
-// { value: true, reason: "STATIC", variant: "on" }
-```
-
-### `parseFlagSet(stored)`
-
-Reads a `StoredFlagSet` into the `FlagSnapshot` evaluation runs against: segments resolved,
-patterns compiled, variant names checked. It answers for any input at all, because each flag is
-parsed on its own — a flag that is refused lands in `snapshot.failures` under its own key with
-the reason, and every sibling lands in `snapshot.flags` ready to evaluate.
-
-Parsing once per load is why the snapshot is a type of its own: evaluating a flag then walks a
-structure already known to be well formed.
-
-### `createEngine(options)`
-
-Builds an engine over a store, holding definitions once `load` succeeds.
-
-```typescript
-let engine = createEngine({ store: new WorkerKVFlagStore(env.FLAGS), maxAge: "5 minutes" });
-```
-
-- `options.store` — where definitions are read from, and the whole of what the engine knows
-  about storage.
-- `options.maxAge` — how long a loaded snapshot counts as current, which is what `stale` is
-  measured against. Given none, a snapshot stays current until a caller loads another.
-
-The options object is exported as `EngineOptions`.
-
-### `Engine`
-
-```typescript
-interface Engine {
-	readonly snapshot: FlagSnapshot | undefined;
-	readonly failures: readonly FlagParseFailure[];
-	readonly stale: boolean;
-
-	load(): MaybePromise<Result<FlagSnapshot, FlagStoreError>>;
-	evaluate<T extends FlagValue>(
-		key: string,
-		defaultValue: T,
-		context?: EvaluationContext,
-	): ResolutionDetails<T>;
-	evaluateAll(context?: EvaluationContext): Record<string, ResolutionDetails<FlagValue>>;
-}
-```
-
-`load` reads the store, parses the set once, and keeps the snapshot for every evaluation that
-follows; a store reading synchronously loads synchronously, and the answer is `await`-able
-either way. It reports a `FlagStoreError` when the store could not hand its set over, which is a
-configuration failure a caller reports rather than a flag falling back.
-
-`evaluate` and `evaluateAll` delegate to the pure functions against the held snapshot, answering
-with the caller's default under `PROVIDER_NOT_READY` until a load succeeds.
-
-`failures` lists what the held set carried and the engine refused, so a caller logs them once
-after a load. `stale` says whether the snapshot has aged past `maxAge`, and reads `true` on a
-fresh engine, so one that wants a load reads as one.
-
-Reloading is the caller's to schedule — on the next request, inside `waitUntil`, or from a cron
-trigger — because a Worker has a timer only while a request is in flight.
-
-### Snapshot types
-
-`FlagSnapshot` carries `flags` and `failures` as maps keyed by flag key, the resolved
-`segments`, the `version` the store called this revision, and the `createdAt` it was stamped at.
-`CompiledFlag`, `CompiledRule`, `CompiledCondition` and `CompiledSegments` are the forms inside
-it, and `FlagParseFailure` is a `{ key, message }` pair.
+`field` is a dotted path into the context (`plan.tier`, `roles.0`). A missing field makes every
+operator except `exists` false, and no operator coerces across types. The comparisons from `eq`
+to `gte` take `path` in place of `value` or `values` to compare two context fields:
+`{ op: "eq", field: "country", path: "billing.country" }`.
 
 ### `flagConditions`
 
-The targeting dialect itself: the built-in conditions in the operator table, the `semver`
-operator and references spelled `segment`. `flagConditions.compile(condition, { references: segments })` validates and
-compiles one condition the way `parseFlagSet` does, and `flagConditions.evaluate(compiled,
-context)` answers whether it holds, which is what an editor uses to check a rule before saving it.
-`flagConditions.parse(text)` and `flagConditions.stringify(condition)` convert between the stored
-JSON and a text form such as `ctx.plan.tier == "pro" and semver(ctx.appVersion, ">=", "2.0.0")`,
-where every context path starts with `ctx.`.
+The targeting language: `compile(condition, { references: segments })` validates and compiles
+one condition, answering a `Result`; `evaluate(compiled, context)` answers whether it holds;
+`parse(text)` and `stringify(condition)` convert between the JSON form and a text form such as
+`ctx.plan.tier == "pro" and semver(ctx.appVersion, ">=", "2.0.0")`. `schema` validates the JSON
+form.
 
 ### Schemas
 
 `FLAG_DEFINITION_SCHEMA`, `TARGETING_RULE_SCHEMA`, `CONDITION_SCHEMA`, `SPLIT_SCHEMA` and
-`SEGMENT_SET_SCHEMA` are the parsers that turn stored JSON into definitions, and they are the
-published contract for what a flag is. An admin UI validates a rule against the same schema
-before writing what the engine would refuse. Each is a
-[Standard Schema](https://standardschema.dev), so it reads through whichever validation library
-the caller already has.
-
-### `FlagStore` and `StoredFlagSet`
-
-`@sdxc/flags-engine/store` — the contract between the engine and wherever definitions live.
-
-```typescript
-interface FlagStore {
-	read(): MaybePromise<Result<StoredFlagSet, FlagStoreError>>;
-}
-
-interface StoredFlagSet {
-	flags: Record<string, unknown>;
-	segments?: Record<string, unknown>;
-	version?: string;
-}
-```
-
-One read that answers with the whole set, because segments are shared across flags and a store
-is read once per snapshot. Values arrive as `unknown`: producing the JSON is the store's job and
-deciding whether that JSON is a valid flag is the engine's, in one place against one schema.
-`read` may answer synchronously, so a store already holding its set costs no promise.
-
-Writing is each store's own business. Both shipped stores expose a `write`, which is where the
-capability is used, and a store that is read-only — a JSON file bundled with the worker, a
-remote endpoint — is a complete `FlagStore` as it stands.
+`SEGMENT_SET_SCHEMA` are the parsers the engine reads stored JSON with, as
+[Standard Schema](https://standardschema.dev) values. Validate an edit against them to refuse
+exactly what the engine would.
 
 ### `FlagStoreError`
 
@@ -401,240 +251,237 @@ remote endpoint — is a complete `FlagStore` as it stands.
 new FlagStoreError("KV refused the get", { code: "unavailable", location: "flags", cause });
 ```
 
-The normalized reason a store could not hand over its set, carried by every failed read.
-`code` is `"unavailable"` when the storage could not be reached or refused the read, and
-`"invalid_value"` when it answered with something that is not JSON. `location` names where the
-store looked, and whatever the underlying storage threw travels as `cause`.
+The failure every store read reports. `code` is `"unavailable"` when the storage could not be
+reached or refused, and `"invalid_value"` when it held something other than a JSON set;
+`location` names where the store looked. An empty store reads as a success holding `{ flags: {} }`.
 
-An empty store is a success holding an empty set, so reaching this type means the definitions
-exist somewhere and could not be obtained.
+### `new InMemoryFlagStore(set?: StoredFlagSet)`
 
-### `InMemoryFlagStore`
+Holds one set in memory, empty by default. `read()` answers a copy synchronously and always
+succeeds; `write(set)` replaces the whole set.
 
-`@sdxc/flags-engine/store/memory` — holds one definition set in an object, for tests and for a
-set compiled into the worker that reads it.
+### `new WorkerKVFlagStore(kv: KVNamespace, options?: { key?: string })`
+
+Keeps the whole set as one JSON value under `options.key` (default `"flags"`, readable as
+`store.key`) in a [Cloudflare KV](https://developers.cloudflare.com/kv/) namespace. A key holding
+nothing reads as an empty set. `write(set)` replaces the value and answers a
+`Result<void, FlagStoreError>`.
+
+### `conformance(options: ConformanceOptions): void`
+
+Registers Vitest tests that check a `FlagStore` behaves as the engine expects.
+
+- `name`: labels the suite.
+- `create`: builds an empty store; called per test, so give each one its own location.
+- `seed(store, set)`: puts a set where the store reads it from.
+- `write(store, set)`: optional; writes through the store and adds the round-trip tests.
+- `writeText(store, text)`: optional; puts raw text in storage and adds the tests for values the
+  store did not write.
+
+### `new EngineProvider(engine: Engine)`
+
+An `@sdxc/flags` `Provider` over an engine, named `"flags-engine"`. Its resolvers answer
+whatever `engine.evaluate` answers.
+
+- `initialize()` loads and emits `PROVIDER_READY`; when the store fails it emits
+  `PROVIDER_ERROR` and throws a `ProviderError` (`GENERAL` for `unavailable`, `PARSE_ERROR` for
+  `invalid_value`) with the `FlagStoreError` as `cause`.
+- `refresh()` loads again, emits `PROVIDER_CONFIGURATION_CHANGED` with every key either snapshot
+  answered for, and answers the load's `Result` without throwing. A failed refresh over a stale
+  snapshot emits `PROVIDER_STALE` once; the next success emits `PROVIDER_READY`.
+
+### Types
+
+- `FlagSet` is `{ flags: Record<string, FlagDefinition>; segments?: SegmentSet }`, and
+  `SegmentSet` is `Record<string, Condition>`; a segment may reference another segment.
+- `FlagDefinition` has `variants` (at least one), `defaultVariant?`, `state?: FlagState`
+  (`"enabled"` or `"disabled"`), `targeting?: TargetingRule[]` and `metadata?`. Without a
+  `defaultVariant`, a flag serves the caller's default to everyone no rule matches.
+- `TargetingRule` is `{ when: Condition; serve: string | Split }`.
+- `Split` is `{ weights; by?; seed? }`: whole, non-negative weights taken against their sum,
+  bucketing on `by` (default `targetingKey`). Two flags sharing a `seed` bucket the same subjects
+  together.
+- `SemVerComparison` is `"=" | "!=" | "<" | "<=" | ">" | ">=" | "~" | "^"`; `~` matches major
+  and minor, `^` matches major.
+- `FlagSnapshot` holds `flags` and `failures` maps keyed by flag key, the resolved `segments`,
+  the store's `version` and the `createdAt` time. `CompiledFlag`, `CompiledRule`,
+  `CompiledCondition` and `CompiledSegments` are its parts; `FlagParseFailure` is
+  `{ key, message }`.
+- `EngineOptions` and `Engine` are described above.
+- From `./store`: `FlagStore` is `{ read(): MaybePromise<Result<StoredFlagSet, FlagStoreError>> }`;
+  `StoredFlagSet` is `{ flags: Record<string, unknown>; segments?; version? }`, unvalidated JSON
+  the engine parses. `FlagStoreErrorCode` and `FlagStoreErrorOptions` type the error.
+- `WorkerKVFlagStoreOptions` from `./store/worker-kv` and `ConformanceOptions` from
+  `./conformance` type their options.
+
+## Pattern: Reloading On A Schedule You Own
+
+The engine reports `stale`; reloading behind the response keeps every request on the snapshot in
+hand.
 
 ```typescript
-let store = new InMemoryFlagStore({ flags: { beta: { variants: { on: true, off: false } } } });
-
-store.read(); // synchronous, always a success
-store.write({ flags: {} }); // replaces the whole set
-```
-
-Every read hands over a copy, so a caller walking a set keeps reading what it read while the
-store goes on being written to. Constructed without a set, it starts out empty.
-
-### `WorkerKVFlagStore`
-
-`@sdxc/flags-engine/store/worker-kv` — keeps the whole definition set as one JSON value under
-one key in a [Cloudflare KV](https://developers.cloudflare.com/kv/) namespace, so filling a
-snapshot is a single `get` served from the edge cache.
-
-```typescript
-let store = new WorkerKVFlagStore(env.FLAGS);
-let scoped = new WorkerKVFlagStore(env.FLAGS, { key: "flags:staging" });
-
-await store.read();
-await store.write({ flags: { beta: { variants: { on: true, off: false } } } });
-```
-
-- `options.key` — the key the whole set is stored under. Defaults to `"flags"`, and an
-  application holding more than one set gives each of them its own. It is readable back off the
-  instance as `store.key`.
-
-A key holding nothing reads as an empty set, so a namespace an admin has yet to write to is a
-working store. A value that is not a JSON object reports `invalid_value`, and a namespace that
-refused the call reports `unavailable`. `write` replaces the whole value and reports the same
-two codes.
-
-### `conformance(options)`
-
-`@sdxc/flags-engine/conformance` — registers the suite that says what a flag store is, as Vitest
-tests against whatever you construct. Run it against a store and the suite says whether it is
-one.
-
-```typescript
-import { conformance } from "@sdxc/flags-engine/conformance";
+import { env } from "cloudflare:workers";
+import { createEngine } from "@sdxc/flags-engine";
 import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
 
-conformance({
-	name: "WorkerKVFlagStore",
-	create: () => new WorkerKVFlagStore(env.FLAGS),
-	seed: (store, set) => env.FLAGS.put(store.key, JSON.stringify(set)),
-	write: (store, set) => store.write(set),
-	writeText: (store, text) => env.FLAGS.put(store.key, text),
-});
-```
-
-- `name` — labels the registered suite.
-- `create` — builds the store under test, holding nothing. Called for every test, so a store
-  over shared storage points each one at a location of its own.
-- `seed` — puts a set where the store reads it from, by whatever means the storage gives. A
-  read-only store seeds through the file, endpoint or object behind it.
-- `write` — stores a set through the store's own write. Supplying it registers the round trip
-  assertions, which say a store reads back what it was told to hold.
-- `writeText` — puts text where the store reads it from, in place of anything the store would
-  serialize. Supplying it registers the assertions about a value the store did not write.
-
-### `EngineProvider`
-
-`@sdxc/flags-engine/provider` — implements the `Provider` interface of
-[`@sdxc/flags`](https://www.npmjs.com/package/@sdxc/flags) over an engine and nothing else.
-
-```typescript
-let provider = new EngineProvider(createEngine({ store, maxAge: "5 minutes" }));
-
-await provider.initialize(); // PROVIDER_READY, or PROVIDER_ERROR and a throw
-await provider.refresh(); // Result<FlagSnapshot, FlagStoreError>
-```
-
-It holds no rules, no hash and no schema, which is the demonstration that the engine is usable
-on its own: the four resolvers hand their type to `engine.evaluate` and return what it answers,
-so a flag the engine reports as `PROVIDER_NOT_READY` or `TYPE_MISMATCH` arrives that way here.
-
-- `initialize` loads the store and emits `PROVIDER_READY`. A store it cannot read emits
-  `PROVIDER_ERROR` and throws a `ProviderError` carrying the `FlagStoreError` as its `cause`,
-  coded `PARSE_ERROR` for a value that is not a set and `GENERAL` for a store out of reach.
-- `refresh` loads again and emits `PROVIDER_CONFIGURATION_CHANGED`, naming every key either
-  snapshot answered for — definitions that failed to parse included, since those answer under
-  their own key too, so a per-key cache drops exactly what moved.
-- `refresh` answers with a `Result` rather than throwing, which is what makes it callable from a
-  scheduled reload where a failure is something to log rather than to propagate.
-- A reload that fails over an aged snapshot emits `PROVIDER_STALE` once, so an application reads
-  ageing definitions off the status channel. The next successful reload returns the provider to
-  `PROVIDER_READY`.
-
-`metadata.name` is `"flags-engine"`.
-
-## Pattern: Reloading on a schedule you own
-
-The engine holds a snapshot and reports `stale`; deciding when to read the store again is the
-caller's, so put the reload wherever the runtime gives you time for it. Answering the request
-from the snapshot in hand and refreshing behind the response keeps evaluation off the read:
-
-```typescript
 let engine = createEngine({ store: new WorkerKVFlagStore(env.FLAGS), maxAge: "5 minutes" });
 
 export default {
-	async fetch(request, env, ctx) {
+	async fetch(request: Request, _env: Env, ctx: ExecutionContext) {
 		if (engine.stale) ctx.waitUntil(Promise.resolve(engine.load()));
 
-		let enabled = engine.evaluate("new-checkout", false, { targetingKey: userId(request) });
+		let userId = request.headers.get("X-User-Id") ?? "anonymous";
+		let checkout = engine.evaluate("new-checkout", false, { targetingKey: userId });
 
-		return new Response(enabled.value ? "new" : "old");
+		return new Response(checkout.value ? "new checkout" : "old checkout");
+	},
+
+	async scheduled() {
+		await engine.load();
 	},
 };
 ```
 
-A cron trigger is the other placement: reload there, and every request reads a snapshot someone
-else already paid for.
+Until the first load finishes, evaluations answer the caller's default with
+`PROVIDER_NOT_READY`; await `engine.load()` first where that matters.
 
-## Pattern: Logging the definitions that were refused
+## Pattern: Logging Refused Definitions
 
-A definition that is refused costs its own flag and leaves every sibling resolving. The refusals
-sit on the engine after a load, which is where they are logged once rather than once per
-evaluation of the key:
+A refused definition costs only its own flag. Log the refusals once after each load instead of
+on every evaluation.
 
 ```typescript
-let loaded = await engine.load();
+import { createEngine } from "@sdxc/flags-engine";
+import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
+import { isFailure } from "@sdxc/result";
 
-if (isFailure(loaded)) logger.error("flags unavailable", { cause: loaded.error });
+let engine = createEngine({
+	store: new InMemoryFlagStore({
+		flags: {
+			beta: { variants: { on: true, off: false }, defaultVariant: "off" },
+			broken: { variants: { on: true }, defaultVariant: "missing" },
+		},
+	}),
+});
+
+let loaded = await engine.load();
+if (isFailure(loaded)) throw loaded.error;
 
 for (let failure of engine.failures) {
-	logger.warn("flag definition refused", { key: failure.key, reason: failure.message });
+	console.warn(`Flag ${failure.key} refused: ${failure.message}`);
 }
+
+engine.evaluate("broken", false); // { value: false, reason: "ERROR", errorCode: "PARSE_ERROR", ... }
+engine.evaluate("beta", false); // { value: false, reason: "STATIC", variant: "off" }
 ```
 
-`isFailure` comes from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is
-what `load` answers with.
+## Pattern: Multivariate Flags And A Kill Switch
 
-## Pattern: A store of your own
-
-The interface is one method, so a store against your own tables is a file rather than a project.
-Scoping belongs in the store while it is there — one constructed for a tenant reads that
-tenant's flags, and the engine never learns a tenant exists:
+Variants hold any JSON value. `state: "disabled"` serves the caller's default while the rules
+stay written down, and `metadata` reaches every resolution for analytics.
 
 ```typescript
-import type { FlagStore, StoredFlagSet } from "@sdxc/flags-engine/store";
-import type { Result } from "@sdxc/result";
+import { evaluate, parseFlagSet } from "@sdxc/flags-engine";
 
-import { FlagStoreError } from "@sdxc/flags-engine/store";
-import { failure, success } from "@sdxc/result";
-
-export class TenantFlagStore implements FlagStore {
-	constructor(readonly tenantId: string) {}
-
-	async read(): Promise<Result<StoredFlagSet, FlagStoreError>> {
-		try {
-			let row = await db.flagSets.findByTenant(this.tenantId);
-
-			return success(row?.set ?? { flags: {} });
-		} catch (cause) {
-			return failure(
-				new FlagStoreError(`The database refused the read for ${this.tenantId}`, {
-					code: "unavailable",
-					location: this.tenantId,
-					cause,
-				}),
-			);
-		}
-	}
-}
-```
-
-Then point the conformance suite at it, giving each test a tenant of its own:
-
-```typescript
-import { conformance } from "@sdxc/flags-engine/conformance";
-import { generateUUID } from "@sdxc/uuid/v4";
-
-conformance({
-	name: "TenantFlagStore",
-	create: () => new TenantFlagStore(generateUUID()),
-	seed: (store, set) => db.flagSets.upsert(store.tenantId, set),
+let snapshot = parseFlagSet({
+	flags: {
+		"checkout-layout": {
+			variants: {
+				classic: { columns: 1, upsell: false },
+				compact: { columns: 2, upsell: true },
+			},
+			defaultVariant: "classic",
+			targeting: [{ when: { op: "in", field: "country", values: ["US", "CA"] }, serve: "compact" }],
+			metadata: { owner: "payments" },
+		},
+		"holiday-banner": {
+			state: "disabled",
+			variants: { on: true, off: false },
+			targeting: [{ when: { op: "always" }, serve: "on" }],
+		},
+	},
 });
+
+let fallback = { columns: 1, upsell: false };
+
+evaluate(snapshot, "checkout-layout", fallback, { country: "US" });
+// { value: { columns: 2, upsell: true }, reason: "TARGETING_MATCH", variant: "compact", flagMetadata: { owner: "payments" } }
+
+evaluate(snapshot, "checkout-layout", "classic"); // reason: "ERROR", errorCode: "TYPE_MISMATCH"
+evaluate(snapshot, "holiday-banner", false); // { value: false, reason: "DISABLED" }
 ```
 
-## Pattern: Previewing a rule before it ships
+## Pattern: Publishing Edits From An Admin Endpoint
 
-Evaluation is pure, so an admin UI answers "who would this rule serve" by parsing the edited set
-and evaluating it against a context typed into a form — no store, no engine, nothing kept:
+Validate the edit with the engine's own schema, preview it against a sample context, then write
+the whole set and refresh the provider so the new definitions apply at once.
 
 ```typescript
 import type { EvaluationContext } from "@sdxc/flags";
 import type { StoredFlagSet } from "@sdxc/flags-engine/store";
 
-import { evaluateAll, parseFlagSet } from "@sdxc/flags-engine";
+import { env } from "cloudflare:workers";
+import {
+	createEngine,
+	evaluateAll,
+	FLAG_DEFINITION_SCHEMA,
+	parseFlagSet,
+} from "@sdxc/flags-engine";
+import { EngineProvider } from "@sdxc/flags-engine/provider";
+import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
+import { isFailure } from "@sdxc/result";
+import * as s from "remix/data-schema";
+
+let store = new WorkerKVFlagStore(env.FLAGS);
+let provider = new EngineProvider(createEngine({ store }));
 
 function preview(set: StoredFlagSet, context: EvaluationContext) {
 	return evaluateAll(parseFlagSet(set), context);
 }
 
-preview(edited, { targetingKey: "user-1", plan: { tier: "pro" } })["new-checkout"];
-// { value: true, reason: "TARGETING_MATCH", variant: "on" }
+async function publish(key: string, draft: unknown) {
+	let checked = s.parseSafe(FLAG_DEFINITION_SCHEMA, draft);
+	if (!checked.success) return { issues: checked.issues };
+
+	let current = await store.read();
+	if (isFailure(current)) return { error: current.error.message };
+
+	let next = { ...current.data, flags: { ...current.data.flags, [key]: checked.value } };
+	let sample = preview(next, { targetingKey: "user-1", plan: { tier: "pro" } })[key];
+
+	let written = await store.write(next);
+	if (isFailure(written)) return { error: written.error.message };
+
+	await provider.refresh();
+	return { sample };
+}
 ```
 
-Validating the edit before it is stored uses the same schemas the engine parses with, so the UI
-refuses exactly what the engine would:
+A second `WorkerKVFlagStore(env.FLAGS, { key: "flags:staging" })` holds a staging set in the
+same namespace.
+
+## Pattern: Editing Conditions As Text
+
+`flagConditions` shows a stored condition as text, reads edited text back into JSON with a line
+and column on failure, and compiles it against the set's segments to catch an unknown segment,
+a segment cycle or a pattern that does not compile.
 
 ```typescript
-import { FLAG_DEFINITION_SCHEMA } from "@sdxc/flags-engine";
-import * as s from "remix/data-schema";
+import type { Condition } from "@sdxc/flags-engine";
 
-let checked = s.parseSafe(FLAG_DEFINITION_SCHEMA, draft);
-```
-
-A rule's condition can be edited as text: `flagConditions.stringify` shows the stored JSON the way
-a person reads it, and `flagConditions.parse` turns what they typed back into that JSON, with a
-failure naming the line and column. Compiling against the set's segments then catches what the
-schema cannot — an unknown segment, a segment cycle, a pattern that does not compile:
-
-```typescript
 import { flagConditions } from "@sdxc/flags-engine";
 import { isFailure } from "@sdxc/result";
 
-flagConditions.stringify(rule.when);
-// `segment("internal") or semver(ctx.appVersion, ">=", "2.0.0")`
+let stored: Condition = {
+	op: "any",
+	of: [
+		{ op: "segment", name: "internal" },
+		{ op: "semver", field: "appVersion", compare: ">=", value: "2.0.0" },
+	],
+};
+
+flagConditions.stringify(stored);
+// 'segment("internal") or semver(ctx.appVersion, ">=", "2.0.0")'
 
 function readCondition(text: string, segments: Record<string, unknown>) {
 	let parsed = flagConditions.parse(text);
@@ -646,8 +493,63 @@ function readCondition(text: string, segments: Record<string, unknown>) {
 	let compiled = flagConditions.compile(parsed.data, { references: segments });
 	if (isFailure(compiled)) return { error: compiled.error.message, at: compiled.error.path };
 
-	return { when: parsed.data };
+	return {
+		when: parsed.data,
+		holds: flagConditions.evaluate(compiled.data, { appVersion: "2.1.0" }),
+	};
 }
+```
+
+Every context path in the text form starts with `ctx.`.
+
+## Pattern: A Store Of Your Own
+
+A store is one `read` method answering the whole set, so a store over your own database is a
+small class. Scoping lives in the store: one built for a tenant reads that tenant's flags.
+
+```typescript
+import type { FlagStore, StoredFlagSet } from "@sdxc/flags-engine/store";
+import type { Result } from "@sdxc/result";
+
+import { FlagStoreError } from "@sdxc/flags-engine/store";
+import { failure, success } from "@sdxc/result";
+
+import { db } from "./db.js";
+
+export class TenantFlagStore implements FlagStore {
+	constructor(readonly tenantId: string) {}
+
+	async read(): Promise<Result<StoredFlagSet, FlagStoreError>> {
+		try {
+			let row = await db.flagSets.findByTenant(this.tenantId);
+			return success(row?.set ?? { flags: {} });
+		} catch (cause) {
+			return failure(
+				new FlagStoreError(`Could not read flags for ${this.tenantId}`, {
+					code: "unavailable",
+					location: this.tenantId,
+					cause,
+				}),
+			);
+		}
+	}
+}
+```
+
+Then run the conformance suite against it, giving each test a tenant of its own:
+
+```typescript
+import { conformance } from "@sdxc/flags-engine/conformance";
+import { generateUUID } from "@sdxc/uuid/v4";
+
+import { db } from "./db.js";
+import { TenantFlagStore } from "./tenant-flag-store.js";
+
+conformance({
+	name: "TenantFlagStore",
+	create: () => new TenantFlagStore(generateUUID()),
+	seed: (store, set) => db.flagSets.upsert(store.tenantId, set),
+});
 ```
 
 ## Versioning
