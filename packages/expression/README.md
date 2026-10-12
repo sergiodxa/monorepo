@@ -2,17 +2,23 @@
 
 Boolean conditions over a context, stored as typed JSON or written as text, with operators you add.
 
+A language compiles a condition once and evaluates it synchronously against any object. The JSON
+form is what you store; the text form, like `ctx.plan.tier == "pro" and ctx.country in ["AR"]`,
+is what a person types into a form, a config file or an environment variable.
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/expression
 ```
 
-`compile()` reports failures as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and a dialect's schema is built with [`remix/data-schema`](https://www.npmjs.com/package/remix); both install alongside this package.
+Every step answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+and a custom operator's schema is built with `remix/data-schema` from
+[`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Evaluating a stored condition
+### Compile and evaluate a condition
 
 ```typescript
 import { createLanguage } from "@sdxc/expression";
@@ -30,20 +36,19 @@ let compiled = conditions.compile({
 
 if (isSuccess(compiled)) {
 	conditions.evaluate(compiled.data, { plan: { tier: "pro" }, country: "AR" }); // true
-	conditions.evaluate(compiled.data, { plan: { tier: "pro" } }); // false — no country
+	conditions.evaluate(compiled.data, { plan: { tier: "pro" } }); // false, no country
 }
 ```
 
-Compile once, when the condition is loaded, and evaluate as often as you like: evaluation is synchronous and pure.
+Compile once, when the condition is loaded, and evaluate as often as you like: evaluation is
+synchronous and pure. A leaf whose field is missing answers `false`.
 
-### Writing a condition as text
+### Write it as text
 
 ```typescript
-let conditions = createLanguage({ reference: "segment" });
+let conditions = createLanguage();
 
-let parsed = conditions.parse(
-	`ctx.plan.tier == "pro" and (ctx.country in ["AR", "UY"] or segment("internal"))`,
-);
+conditions.parse(`ctx.plan.tier == "pro" and ctx.country in ["AR", "UY"]`);
 // Success: the same JSON form compile() takes
 
 conditions.parse(`ctx.plan.tier == "pro" and`);
@@ -52,45 +57,22 @@ conditions.parse(`ctx.plan.tier == "pro" and`);
 conditions.stringify({ op: "not", of: { op: "exists", field: "beta" } }); // "not exists(ctx.beta)"
 ```
 
-Every path in the text form starts with `ctx.`, and everything else is a JSON literal. The JSON form stays the one to store, with `field: "plan.tier"` and no root; the text form is for people typing a rule into a form, a config file or an environment variable.
+Every path in the text form starts with `ctx.`, and every value is a JSON literal. The JSON form
+writes the same path without the root, as `field: "plan.tier"`.
 
-### Comparing two facts
+### Compare two values from the context
 
 ```typescript
 let rules = createLanguage();
 
-let parsed = rules.parse(`ctx.article.authorId == ctx.actor.id`);
+rules.parse(`ctx.article.authorId == ctx.actor.id`);
 // Success: { op: "eq", field: "article.authorId", path: "actor.id" }
-
-rules.parse(`intersects(ctx.article.teamIds, ctx.actor.teamIds)`);
-// Success: { op: "intersects", field: "article.teamIds", path: "actor.teamIds" }
 ```
 
-A rule that compares two values the caller supplies stays one document for every caller, instead of a copy per caller with its values written in.
+Write `path` in place of `value` or `values` and the right-hand side comes from the context too,
+so one stored rule serves every caller.
 
-### Failing closed with a strict language
-
-```typescript
-import { unwrap } from "@sdxc/result";
-
-let rules = createLanguage({ strict: true, reference: "condition" });
-
-let compiled = unwrap(rules.compile(unwrap(rules.parse(`ctx.article.authorId == ctx.actor.id`))));
-
-rules.evaluate(compiled, { article: { authorId: "u_1" } });
-// Failure: ExpressionError { path: "path", missing: "actor.id", message: 'Context has no "actor.id"' }
-
-rules.evaluate(compiled, { article: { authorId: "u_1" }, actor: { id: "u_1" } });
-// Success: true
-
-rules.paths(compiled); // Set { "article.authorId", "actor.id" }
-```
-
-A lenient language, the default, answers `false` for a leaf whose path is missing, so a targeting rule about a field the caller left out falls through to its default. A strict one fails the leaf instead, and also fails a comparison holding `null` across two paths or operands of the wrong type, such as `1 == true` or `lt` on a string. That is the answer an authorization rule needs: `not ctx.article.authorId == ctx.actor.id` refuses when `actor` is missing, where a lenient language would answer `true`.
-
-`all`, `any` and `not` combine failures in three-valued logic, so swapping operands never changes the answer: `any` is `true` when a member is `true`, a failure when a member failed, `false` otherwise; `all` mirrors it around `false`; `not` keeps a failure a failure. Evaluation still stops at the first deciding member, and `exists(ctx.a) and ctx.a == 1` guards the comparison, since `exists` answers `false` for a missing path.
-
-### Sharing conditions by name
+### Share conditions by name
 
 ```typescript
 let conditions = createLanguage({ reference: "segment" });
@@ -106,12 +88,174 @@ let segments = {
 	},
 };
 
-let compiled = conditions.compile({ op: "segment", name: "beta" }, { references: segments });
+conditions.compile({ op: "segment", name: "beta" }, { references: segments });
+conditions.parse(`segment("beta") and ctx.country == "AR"`);
 ```
 
-A reference resolves once per `references` object, so many conditions compiled against the same object share one compiled tree. A name nobody declared, or a cycle, fails the compile.
+Each name compiles once per `references` object, so conditions compiled against the same object
+share one tree. An unknown name or a cycle fails the compile.
 
-### Adding an operator
+## API
+
+### `createLanguage(options?: LanguageOptions): Language`
+
+Defines a dialect. Every option is optional:
+
+- `builtins`: the built-in operators kept, all of them by default.
+- `reference`: the operator name a reference is written under, as in
+  `{ op: "segment", name: "internal" }`. Without it the dialect has no references.
+- `operators`: operators made with `defineOperator`. One named like a built-in replaces it.
+- `strict`: fails an evaluation on a missing path, a `null` across two paths, or operands of the
+  wrong type, instead of answering `false`; `evaluate` then returns `Result<boolean, ExpressionError>`.
+
+It throws a `TypeError` when an operator or the reference is named after a keyword of the text
+form: `ctx`, `and`, `or`, `not`, `in`, `true`, `false`, `null`.
+
+### `Language`
+
+- `compile(expression: unknown, { references }?)`: validates the expression, runs every
+  operator's compile step and resolves references. Returns `Result<Compiled, ExpressionError>`.
+- `evaluate(compiled, context: object)`: whether the expression holds. Nested records, arrays and
+  `Date` values are read by path. Returns a `boolean`, or a `Result` in a strict language.
+- `paths(compiled): ReadonlySet<string>`: every context path the expression reads, references
+  included.
+- `parse(text: string)`: the text form read into the JSON form and validated, as
+  `Result<Expression, ExpressionError>`.
+- `stringify(expression): string`: the canonical text, which `parse` reads back to the same JSON.
+- `schema`: a Standard Schema for the dialect's JSON form.
+- `Expression`, `Compiled`: type-only members, read as `typeof language.Expression`.
+
+### Built-in operators
+
+| Operator                             | JSON form                       | Holds when the field…                           |
+| ------------------------------------ | ------------------------------- | ----------------------------------------------- |
+| `eq`, `ne`                           | `{ op, field, value }`          | is, or is not, exactly `value`                  |
+| `in`, `notIn`                        | `{ op, field, values }`         | is, or is not, one of `values`                  |
+| `lt`, `lte`, `gt`, `gte`             | `{ op, field, value }` (number) | is a number ordered against `value`             |
+| `includes`                           | `{ op, field, value }`          | is a list with a member equal to `value`        |
+| `intersects`                         | `{ op, field, values }`         | is a list sharing a member with `values`        |
+| `subsetOf`                           | `{ op, field, values }`         | is a list whose every member is one of `values` |
+| `startsWith`, `endsWith`, `contains` | `{ op, field, value }` (string) | is a string with `value` in place               |
+| `matches`                            | `{ op, field, pattern }`        | is a string the pattern matches                 |
+| `exists`                             | `{ op, field }`                 | resolves to anything, `null` too                |
+| `all`, `any`                         | `{ op, of: [...] }`             | every member, or some member, holds             |
+| `not`                                | `{ op, of }`                    | its operand does not hold                       |
+| `always`                             | `{ op }`                        | always                                          |
+
+`value` and `values` hold JSON primitives. Operators from `eq` to `subsetOf` take `path` in place
+of the literal, and two `Date`s from the context compare by time. `field` is a dotted path:
+`roles.0` reads an array element. Comparisons stay within one type, so `eq` between `"5"` and `5`
+is false and `ne` is true. `matches` compiles its pattern with the
+[`v` flag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets)
+at compile time.
+
+### Text form
+
+| Text                                         | JSON form                                                |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `a and b`, `a or b`, `not a`                 | `all`, `any`, `not`; `not` binds over `and` over `or`    |
+| `(a or b)`                                   | grouping, kept as its own node                           |
+| `true`                                       | `always`                                                 |
+| `ctx.field == v`, `!=`, `<`, `<=`, `>`, `>=` | `eq`, `ne`, `lt`, `lte`, `gt`, `gte`                     |
+| `ctx.field in [...]`, `not in [...]`         | `in`, `notIn`                                            |
+| `ctx.field == ctx.other`, `in ctx.list`      | the same operators, with `path` in place of the literal  |
+| `op(ctx.field, ...args)`                     | any other operator, arguments in the order of its `args` |
+| `segment("internal")`                        | a reference, under the dialect's spelling                |
+| `all(...)`, `any(...)`                       | a chain of fewer than two members                        |
+
+A path segment a bare word cannot spell is quoted in backticks: `` ctx.headers.`user-agent` ``.
+
+### `defineOperator(definition: OperatorDefinition): Operator`
+
+Declares an operator over one field. `op` names it, `args` lists its fields in call order starting
+with `field`, `schema` validates the fields beyond `op` and `field`, and
+`test(value, node, prepared)` answers for a value that is present. The optional `compile(node)`
+returns a `Result` whose data reaches `test` as `prepared`; a failure fails the compile.
+
+### `ExpressionError`
+
+The failure every step reports. `path` names the failing node in the JSON form, like
+`of.1.pattern`. A parse failure adds 1-based `line` and `column`; a strict evaluation failure adds
+`missing`, the context path that resolved to nothing, or `mismatch`, the two operand types refused.
+
+### `read(context: object, path: string): ContextValue`
+
+Reads a dotted path exactly as an expression does: `undefined` for a miss, a `Date` kept whole.
+
+### Types
+
+- `Language<E, C, Outcome>`, `LanguageOptions`, `CompileOptions`: a dialect, its options, and the
+  options `compile` takes.
+- `ExpressionOf<B, R, X>`, `CompiledOf<B, R, X>`: the JSON and compiled forms a dialect derives.
+- `AllNode`, `AnyNode`, `NotNode`, `ReferenceNode`, `CompiledReferenceNode`, `BuiltinLeaf`,
+  `CompiledBuiltinLeaf`, `BuiltinName`: the node shapes and built-in names.
+- `Operator`, `OperatorDefinition`, `AnyOperator`, `FieldNode`, `AnyFieldNode`, `FieldValue`: an
+  operator, its definition, and the node and value it reads.
+- `Context`, `ContextValue`: a JSON context with `Date` values, and what `read` returns.
+- `ExpressionErrorOptions`: the fields `new ExpressionError(message, options)` accepts.
+
+## Pattern: Authorization Rules That Fail Closed
+
+A strict language refuses when the context lacks what a rule reads, so a missing `actor` can never
+turn `not` into a grant.
+
+```typescript
+import { createLanguage } from "@sdxc/expression";
+import { isSuccess, unwrap } from "@sdxc/result";
+
+let rules = createLanguage({ strict: true });
+
+let canEdit = unwrap(rules.compile(unwrap(rules.parse(`ctx.article.authorId == ctx.actor.id`))));
+
+rules.evaluate(canEdit, { article: { authorId: "u_1" } });
+// Failure: ExpressionError { path: "path", missing: "actor.id" }
+
+rules.evaluate(canEdit, { article: { authorId: "u_1" }, actor: { id: "u_1" } });
+// Success: true
+
+function allowed(context: object) {
+	let answer = rules.evaluate(canEdit, context);
+	return isSuccess(answer) && answer.data;
+}
+```
+
+`all`, `any` and `not` combine failures in three-valued logic: `any` is `true` when a member is
+`true`, else a failure when a member failed; `all` mirrors it around `false`. Guard an optional
+path with `exists(ctx.a) and ctx.a == 1`, since `exists` answers `false` instead of failing.
+
+## Pattern: Loading Only The Facts A Rule Reads
+
+`paths` lists what a compiled rule reads, so you fetch only those values and `read` checks the
+same paths the rule will.
+
+```typescript
+import { createLanguage, read } from "@sdxc/expression";
+import { unwrap } from "@sdxc/result";
+
+declare function loadOrg(): Promise<{ plan: string }>;
+declare function loadUser(): Promise<{ verified: boolean }>;
+
+let rules = createLanguage();
+
+let rule = unwrap(
+	rules.compile(unwrap(rules.parse(`ctx.org.plan == "pro" and ctx.user.verified == true`))),
+);
+
+let roots = new Set([...rules.paths(rule)].map((path) => path.split(".")[0]));
+// Set { "org", "user" }
+
+let context: Record<string, unknown> = {};
+if (roots.has("org")) context.org = await loadOrg();
+if (roots.has("user")) context.user = await loadUser();
+
+read(context, "org.plan"); // the value the rule compares
+rules.evaluate(rule, context);
+```
+
+## Pattern: A Custom Operator With A Compile Step
+
+The compile step runs once per node, so a failure surfaces when the rule is saved and `test`
+receives the prepared value on every evaluation.
 
 ```typescript
 import { createLanguage, defineOperator } from "@sdxc/expression";
@@ -129,110 +273,40 @@ let olderThan = defineOperator({
 
 let accounts = createLanguage({ operators: [olderThan] });
 
-accounts.compile({ op: "olderThan", field: "createdAt", days: 30 });
+accounts.parse(`olderThan(ctx.createdAt, 30)`);
+// Success: { op: "olderThan", field: "createdAt", days: 30 }
+
+accounts.compile({ op: "olderThan", field: "createdAt", days: -1 });
+// Failure: ExpressionError { path: "", message: "Expected days ≥ 0" }
 ```
 
-The language reads the field before `test` runs and answers `false` when it is missing, so an operator only ever sees a value that is there.
+The language reads the field first and answers `false` when it is missing, so `test` only sees a
+value that is there.
 
-### Leaving operators out
+## Pattern: A Restricted Dialect For User-Written Rules
 
-```typescript
-let rules = createLanguage({ builtins: ["all", "any", "not", "contains"] });
-
-rules.compile({ op: "matches", field: "title", pattern: "(a+)+$" });
-// failure: ExpressionError { path: "op", message: '"matches" is not an operator of this language' }
-```
-
-A dialect evaluating conditions written by untrusted users can leave out `matches` and keep evaluation linear in the size of the context.
-
-## API
-
-### `createLanguage(options?)`
-
-Defines a dialect and returns a `Language`. Every option is optional:
-
-- `builtins`: the built-in operators kept, all of them by default.
-- `reference`: the operator name a reference is written under, as in `{ op: "segment", name: "internal" }`. Without it the dialect has no references.
-- `operators`: field operators made with `defineOperator`. One named like a built-in replaces it.
-- `strict`: fails an evaluation on a missing, `null` or mistyped operand instead of answering `false`. `evaluate` then returns `Result<boolean, ExpressionError>`.
-
-### `Language`
-
-- `schema`: a Standard Schema for the dialect's JSON form, to validate an expression before storing it.
-- `compile(expression, { references }?)`: validates an expression, runs every operator's compile step and resolves references. Returns `Result<Compiled, ExpressionError>`.
-- `evaluate(compiled, context)`: whether a compiled expression holds for a context. The context is any object: nested records, arrays and `Date` values are read by path. A lenient language returns a `boolean`, a strict one a `Result<boolean, ExpressionError>`.
-- `paths(compiled)`: every context path a compiled expression reads, through references, as a `ReadonlySet<string>`; each `field`, and each `path` a comparison reads.
-- `parse(text)`: reads the text form into the JSON form, validated against the schema. Returns `Result<Expression, ExpressionError>`, the error carrying the `line` and `column` the text broke at.
-- `stringify(expression)`: prints the canonical text, which `parse` reads back to the same JSON.
-- `Expression` and `Compiled`: type-only members; write `typeof language.Expression` for the JSON form's type and `typeof language.Compiled` for the compiled one.
-
-### Built-in operators
-
-| Operator                             | JSON form                                 | Holds when the field…                           |
-| ------------------------------------ | ----------------------------------------- | ----------------------------------------------- |
-| `eq`, `ne`                           | `{ op, field, value }` (a JSON primitive) | is, or is not, exactly `value`                  |
-| `in`, `notIn`                        | `{ op, field, values }`                   | is, or is not, one of `values`                  |
-| `lt`, `lte`, `gt`, `gte`             | `{ op, field, value }` (a number)         | is a number ordered against `value`             |
-| `includes`                           | `{ op, field, value }` (a JSON primitive) | is a list with a member equal to `value`        |
-| `intersects`                         | `{ op, field, values }`                   | is a list sharing a member with `values`        |
-| `subsetOf`                           | `{ op, field, values }`                   | is a list whose every member is one of `values` |
-| `startsWith`, `endsWith`, `contains` | `{ op, field, value }` (a string)         | is a string with `value` in place               |
-| `matches`                            | `{ op, field, pattern }`                  | is a string the pattern matches                 |
-| `exists`                             | `{ op, field }`                           | resolves to anything, `null` too                |
-| `all`, `any`                         | `{ op, of: [...] }`                       | —                                               |
-| `not`                                | `{ op, of }`                              | —                                               |
-| `always`                             | `{ op }`                                  | —                                               |
-
-Every operator from `eq` to `subsetOf` also takes its right-hand side from the context: write `path` in place of `value` or `values`, as in `{ op: "eq", field: "article.authorId", path: "actor.id" }`. A node carries one or the other, never both. A comparison between two paths is false when either holds `null`, and two `Date`s compare by time value.
-
-`field` is a dotted path: `plan.tier` reads a nested object and `roles.0` an array element. A path that resolves to nothing makes every operator except `exists` false. Every comparison stays within one type, so `eq` between `"5"` and `5` is false and `lt` on a string is false. `matches` compiles its pattern with the [`v` flag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets) at compile time, so a bad pattern fails the compile.
-
-### Text form
-
-| Text                                         | JSON form                                                |
-| -------------------------------------------- | -------------------------------------------------------- |
-| `a and b`, `a or b`, `not a`                 | `all`, `any`, `not`; `not` binds over `and` over `or`    |
-| `(a or b)`                                   | grouping, kept as its own node                           |
-| `true`                                       | `always`                                                 |
-| `ctx.field == v`, `!=`, `<`, `<=`, `>`, `>=` | `eq`, `ne`, `lt`, `lte`, `gt`, `gte`                     |
-| `ctx.field in [...]`, `not in [...]`         | `in`, `notIn`                                            |
-| `ctx.field == ctx.other`, `in ctx.list`      | the same operators, with `path` in place of the literal  |
-| `op(ctx.field, ...args)`                     | any other operator, arguments in the order of its `args` |
-| `segment("internal")`                        | a reference, under the dialect's spelling                |
-| `all(...)`, `any(...)`                       | a chain of fewer than two members                        |
-
-Values are JSON literals, written exactly as they are stored. A path is `ctx` followed by one or more segments, such as `ctx.plan.tier` or `ctx.roles.0`; a segment a bare word cannot spell, such as `user-agent`, is quoted in backticks: ``ctx.headers.`user-agent` == "bot"``. The left of a comparison is always a path. Its right is a literal or, for the operators from `eq` to `subsetOf`, a path, as in `includes(ctx.list, ctx.x)`; a path anywhere else fails naming the operator. `ctx` and the other keywords (`and`, `or`, `not`, `in`, `true`, `false`, `null`) cannot name an operator or a reference, and `createLanguage` throws a `TypeError` for one that does.
-
-### `defineOperator(definition)`
-
-Declares a field operator. `op` is its name, `args` lists its fields in call order starting with `field`, `schema` validates the fields beyond `op` and `field`, and `test(value, node, prepared)` answers for a value that is there. The optional `compile(node)` returns a `Result`; what it prepares is kept on the compiled node as `prepared` and passed to `test`.
-
-### `ExpressionError`
-
-The failure every step reports. `path` names the failing node in the JSON form, like `of.1.pattern`, and is empty for the root. A `parse` failure also sets `line` and `column`, both 1-based. A strict `evaluate` failure sets `missing` to the context path that resolved to nothing, or `mismatch` to the two operand types it refused, like `["string", "null"]`; one inside a reference is reported at the reference node with the inner failure as its `cause`.
-
-### `read(context, path)`
-
-Reads a dotted path out of a context exactly as an expression does, returning `undefined` for a miss and keeping a `Date` whole. Use it when code beside an expression reads the same fields.
-
-## Pattern: A sampling exemption from an environment variable
+Keep only the operators users need and leave out `matches`, so evaluation stays linear in the size
+of the context.
 
 ```typescript
 import { createLanguage } from "@sdxc/expression";
-import { isSuccess } from "@sdxc/result";
 
-let conditions = createLanguage();
+let filters = createLanguage({
+	builtins: ["all", "any", "not", "eq", "in", "contains", "exists"],
+});
 
-// KEEP_WHEN = `ctx.kind == "job" or ctx.status >= 500 or exists(ctx.error)`
-let parsed = conditions.parse(process.env.KEEP_WHEN ?? "true");
-let compiled = isSuccess(parsed) ? conditions.compile(parsed.data) : parsed;
+filters.compile({ op: "matches", field: "title", pattern: "(a+)+$" });
+// Failure: ExpressionError { path: "op", message: '"matches" is not an operator of this language' }
 
-function keep(fields: Record<string, string | number | boolean | null>) {
-	return isSuccess(compiled) && conditions.evaluate(compiled.data, fields);
-}
+type Filter = typeof filters.Expression;
+
+let byTitle: Filter = { op: "contains", field: "title", value: "release" };
 ```
 
-## Pattern: Validating a rule before storing it
+## Pattern: Validating A Rule Before Storing It
+
+Compiling against the shared references catches what a schema alone cannot: an unknown reference,
+a cycle, or a pattern that does not compile.
 
 ```typescript
 import { createLanguage } from "@sdxc/expression";
@@ -240,22 +314,48 @@ import { isFailure } from "@sdxc/result";
 
 let conditions = createLanguage({ reference: "segment" });
 
-async function saveRule(
+function saveRule(
 	store: Map<string, unknown>,
 	segments: Record<string, unknown>,
-	input: unknown,
+	name: string,
+	text: string,
 ) {
-	let compiled = conditions.compile(input, { references: segments });
-	if (isFailure(compiled)) {
-		return { error: compiled.error.message, at: compiled.error.path };
+	let parsed = conditions.parse(text);
+	if (isFailure(parsed)) {
+		return { error: parsed.error.message, line: parsed.error.line, column: parsed.error.column };
 	}
 
-	store.set("rule", input);
+	let compiled = conditions.compile(parsed.data, { references: segments });
+	if (isFailure(compiled)) return { error: compiled.error.message, at: compiled.error.path };
+
+	store.set(name, parsed.data);
 	return { ok: true };
 }
 ```
 
-Compiling before writing catches what a schema alone cannot: an unknown reference, a reference cycle, or a pattern that does not compile.
+## Pattern: A Rule From Configuration
+
+A text rule in an environment variable decides which events to keep, defaulting to every event.
+
+```typescript
+import { createLanguage } from "@sdxc/expression";
+import { isSuccess } from "@sdxc/result";
+
+let conditions = createLanguage();
+
+function sampler(text = "true") {
+	let parsed = conditions.parse(text);
+	let compiled = isSuccess(parsed) ? conditions.compile(parsed.data) : parsed;
+
+	return (event: Record<string, string | number | boolean | null>) =>
+		isSuccess(compiled) && conditions.evaluate(compiled.data, event);
+}
+
+let keep = sampler(`ctx.kind == "job" or ctx.status >= 500 or exists(ctx.error)`);
+
+keep({ kind: "request", status: 503 }); // true
+keep({ kind: "request", status: 200 }); // false
+```
 
 ## Versioning
 
