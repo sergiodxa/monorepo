@@ -1,36 +1,67 @@
 # @sdxc/web-push
 
-Send Web Push notifications from Cloudflare Workers or any runtime with WebCrypto: RFC 8291 payload encryption, RFC 8292 VAPID signing, subscription checks, and a browser helper to subscribe.
+Web Push from Workers or any runtime with WebCrypto: RFC 8291 encryption, VAPID signing, subscription checks and a browser subscribe helper.
 
-No push provider account or SDK is involved: each browser picks its vendor's push service and hands you an endpoint on it, and your server is identified only by a VAPID key pair you generate.
-
-Every send makes one `POST` with the global `fetch`, answers a `Result` and never throws. Failures carry a code that tells an app what to do with the stored subscription: delete it on `gone`, keep it on `unauthorized`, retry on `unavailable`. Where subscriptions live, and how many failures retire one, stay the app's decision.
+Each browser picks its vendor's push service and hands you an endpoint on it; your server is identified only by a VAPID key pair you generate, so no push provider account or SDK is involved. Every send makes one `POST` with the global `fetch` and answers a `Result` whose failure code tells you what to do with the stored subscription.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/web-push
 ```
 
-Every operation answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), installed with this package.
+Every operation answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), installed with this package. Registration routes validate with [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) and `remix/data-schema` from [`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Generating Keys
+### Generate a key pair
 
-A sender is identified by one P-256 key pair. Generate it once, publish the public key to your pages, and keep the private key secret:
+Generate one P-256 pair per deployment. The public key goes to your pages; store the private key as a secret.
 
-```bash
-bun -e 'import { WebPush } from "@sdxc/web-push"; console.log(await WebPush.generateKeys())'
+```typescript
+import { WebPush } from "@sdxc/web-push";
+
+let { publicKey, privateKey } = await WebPush.generateKeys();
 ```
 
-On Cloudflare Workers, store the private key as a secret:
+### Subscribe in the browser
 
-```bash
-cf workers secrets update VAPID_PRIVATE_KEY
+```typescript
+import { isSuccess } from "@sdxc/result";
+import { isSupported, subscribe } from "@sdxc/web-push/browser";
+
+button.hidden = !isSupported();
+button.addEventListener("click", async () => {
+	let subscribed = await subscribe({ worker: "/sw.js", applicationServerKey: vapidPublicKey });
+	if (!isSuccess(subscribed)) return;
+
+	await fetch("/push/subscriptions", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({ subscription: subscribed.data }),
+	});
+});
 ```
 
-### Sending A Message
+Call `subscribe` from a click or another user activation: Safari and Firefox refuse a permission prompt requested without one. On iOS and iPadOS, push works only in a web app added to the Home Screen.
+
+### Accept the subscription
+
+`SUBSCRIPTION_SCHEMA` applies the same checks a send applies, so a stored subscription is one `send` accepts.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
+import { SUBSCRIPTION_SCHEMA } from "@sdxc/web-push";
+import * as s from "remix/data-schema";
+
+let body = await validate(request, s.object({ subscription: SUBSCRIPTION_SCHEMA }));
+if (isFailure(body)) return Response.json({ errors: body.error.issues }, { status: 400 });
+
+await saveSubscription(body.data.subscription);
+```
+
+### Send a message
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -53,79 +84,42 @@ let sent = await push.send(subscription, JSON.stringify({ title: "Deploy finishe
 if (isFailure(sent) && sent.error.code === "gone") await deleteSubscription(subscription.endpoint);
 ```
 
-Build one `WebPush` per batch of sends: it caches one VAPID token per push service origin, so fifty browsers on Chrome's push service cost one signature.
-
-### Accepting A Subscription
-
-`SUBSCRIPTION_SCHEMA` is a [`remix/data-schema`](https://www.npmjs.com/package/remix) schema that applies the checks a send applies: the endpoint is a public `https:` host, `p256dh` is a P-256 point on the curve, and `auth` is 16 bytes.
-
-```typescript
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
-import { SUBSCRIPTION_SCHEMA } from "@sdxc/web-push";
-import * as s from "remix/data-schema";
-
-let body = await validate(request, s.object({ subscription: SUBSCRIPTION_SCHEMA }));
-if (isFailure(body)) return Response.json({ errors: body.error.issues }, { status: 400 });
-
-await saveSubscription(body.data.subscription);
-```
-
-### Subscribing In The Browser
-
-```typescript
-import { isSuccess } from "@sdxc/result";
-import { isSupported, subscribe } from "@sdxc/web-push/browser";
-
-button.hidden = !isSupported();
-button.addEventListener("click", async () => {
-	let subscribed = await subscribe({ worker: "/sw.js", applicationServerKey: vapidPublicKey });
-	if (!isSuccess(subscribed)) return;
-
-	await fetch("/push/subscriptions", {
-		method: "POST",
-		headers: { "content-type": "application/json" },
-		body: JSON.stringify({ subscription: subscribed.data }),
-	});
-});
-```
-
-Call `subscribe` from a click or another user activation: Safari and Firefox refuse a permission prompt requested without one. On iOS and iPadOS, push is offered only to a web app added to the Home Screen.
-
 ## API
 
 ### `new WebPush(options: WebPushOptions)`
 
-A sender for one VAPID identity. Constructing it does no I/O; the keys are imported and checked on the first send.
+A sender for one VAPID identity. Construction does no I/O: the keys are imported and checked on the first send, and one VAPID token per push service origin is cached for the instance's lifetime.
 
-- `options.vapid`: `{ publicKey, privateKey, subject }`. `subject` is a `mailto:` or `https:` URI; Apple's push service refuses one it cannot use, so name a real address on your domain.
-- `options.previous`: identities rotated out, kept until the subscriptions made under them re-subscribe. See [Rotating The VAPID Key](#pattern-rotating-the-vapid-key).
+- `options.vapid`: `{ publicKey, privateKey, subject }`. `subject` is a `mailto:` or `https:` URI; Apple's push service refuses one it cannot use, so name a real address.
+- `options.previous`: identities rotated out, still used for subscriptions made under them.
 - `options.allowedHosts`: hosts an endpoint must be on, where `*.` matches any subdomain. Omitted, any public `https:` host is accepted.
 
 ### `push.send(subscription, payload?, options?): Promise<Result<Pushed, WebPushError>>`
 
-Encrypts, signs and sends one message, answering `{ status }` for any `2xx`. One attempt only; retrying belongs to the caller. `payload` is a string (UTF-8 encoded), a `Uint8Array`, or omitted for a push the service worker answers by fetching.
+Encrypts, signs and sends one message in one attempt, answering `{ status }` for any `2xx`. `payload` is a string (UTF-8), a `Uint8Array`, or omitted for a push the service worker answers by fetching.
 
-| Option    | Default        | Meaning                                                                                       |
-| --------- | -------------- | --------------------------------------------------------------------------------------------- |
-| `ttl`     | `"4 weeks"`    | How long the push service holds the message for an offline device; a duration or milliseconds |
-| `urgency` | `"normal"`     | `"very-low"`, `"low"`, `"normal"` or `"high"`; a device on battery defers the lower levels    |
-| `topic`   | None           | Replaces an undelivered message with the same topic; up to 32 base64url characters            |
-| `padding` | `0`            | Bytes added inside the record, so the ciphertext length says less about the payload           |
-| `timeout` | `"10 seconds"` | Deadline for the `POST`                                                                       |
-| `signal`  | None           | Aborts the `POST`                                                                             |
+| Option    | Default        | Meaning                                                                                |
+| --------- | -------------- | -------------------------------------------------------------------------------------- |
+| `ttl`     | `"4 weeks"`    | How long the push service holds the message for an offline device; `0` for now-only    |
+| `urgency` | `"normal"`     | `"very-low"`, `"low"`, `"normal"` or `"high"`; a device on battery defers lower levels |
+| `topic`   | None           | Replaces an undelivered message with the same topic; 1–32 base64url characters         |
+| `padding` | `0`            | Bytes added inside the record, so the ciphertext length says less about the payload    |
+| `timeout` | `"10 seconds"` | Deadline for the `POST`                                                                |
+| `signal`  | None           | Aborts the `POST`                                                                      |
+
+`ttl` and `timeout` take a duration string or milliseconds.
 
 ### `push.request(subscription, payload?, options?): Promise<Result<Request, WebPushError>>`
 
-The `Request` `send` would make, for a caller that sends through something other than the global `fetch`. It never follows a redirect.
+The encrypted, signed `Request` that `send` would make, with `redirect: "manual"`, for sending through your own transport.
 
 ### `WebPush.generateKeys(): Promise<VapidKeyPair>`
 
 A new P-256 pair, both halves base64url: the 65-byte public point and the 32-byte private scalar.
 
-### `SUBSCRIPTION_SCHEMA` and `subscriptionSchema(policy?)`
+### `subscriptionSchema(policy?: SubscriptionPolicy)` and `SUBSCRIPTION_SCHEMA`
 
-A schema whose output is a `Subscription`. `subscriptionSchema({ allowedHosts })` builds one with an allow list. Unknown keys, such as the browser's `expirationTime`, are dropped.
+A `remix/data-schema` schema whose output is a `Subscription`: the endpoint is a public `https:` host (on `policy.allowedHosts` when given), `p256dh` and `applicationServerKey` are P-256 points, and `auth` is 16 bytes. Unknown keys, such as the browser's `expirationTime`, are dropped. `SUBSCRIPTION_SCHEMA` is the one without an allow list.
 
 ### `PUSH_SERVICE_HOSTS`
 
@@ -137,55 +131,51 @@ The hosts of the push services Chrome, Firefox, Safari and Edge subscribe throug
 
 ### `WebPushError`
 
-Every failure: `code`, `retryable`, the endpoint's `host` (never the endpoint, which is a credential), `status` when the push service answered, and `retryAfter` in milliseconds from `Retry-After`.
+Every failure, returned and never thrown: `code`, `retryable`, the endpoint's `host` (never the full endpoint, which is a credential), `status` when the push service answered, and `retryAfter` in milliseconds from `Retry-After`.
 
-| `code`                 | Retryable | When                                                                                     |
-| ---------------------- | --------- | ---------------------------------------------------------------------------------------- |
-| `invalid-subscription` | No        | Endpoint not public `https:`, malformed keys, or a key this sender no longer holds       |
-| `invalid-vapid`        | No        | Keys that do not import or do not form a pair; `subject` not `mailto:` or `https:`       |
-| `invalid-options`      | No        | A topic over 32 characters or outside base64url, a negative `ttl`, or impossible padding |
-| `payload-too-large`    | No        | Payload plus padding over `MAX_PAYLOAD_BYTES`                                            |
-| `gone`                 | No        | `404` or `410`: the subscription no longer exists; stop sending to it                    |
-| `unauthorized`         | No        | `401` or `403`: the VAPID credential was refused, which is the sender's fault            |
-| `rejected`             | No        | Any other `4xx`, or a redirect                                                           |
-| `rate-limited`         | Yes       | `429`                                                                                    |
-| `unavailable`          | Yes       | `5xx`                                                                                    |
-| `timeout`              | Yes       | The deadline passed                                                                      |
-| `network`              | Yes       | `fetch` rejected                                                                         |
+| `code`                 | Retryable | When                                                                                    |
+| ---------------------- | --------- | --------------------------------------------------------------------------------------- |
+| `invalid-subscription` | No        | Endpoint not an allowed public `https:` URL, malformed keys, or a key this sender lacks |
+| `invalid-vapid`        | No        | Keys that do not import or do not form a pair; `subject` not `mailto:` or `https:`      |
+| `invalid-options`      | No        | A bad `topic`, a negative `ttl`, or `padding` outside 0 to `MAX_PAYLOAD_BYTES` bytes    |
+| `payload-too-large`    | No        | Payload plus padding over `MAX_PAYLOAD_BYTES`                                           |
+| `gone`                 | No        | `404` or `410`: the subscription no longer exists; delete it                            |
+| `unauthorized`         | No        | `401` or `403`: the push service refused the VAPID credential, the sender's fault       |
+| `rejected`             | No        | Any other `4xx`, or a redirect                                                          |
+| `rate-limited`         | Yes       | `429`                                                                                   |
+| `unavailable`          | Yes       | `5xx`                                                                                   |
+| `timeout`              | Yes       | The deadline passed                                                                     |
+| `network`              | Yes       | `fetch` rejected                                                                        |
 
-The `invalid-*` codes and `payload-too-large` are answered before any request.
+The `invalid-*` codes and `payload-too-large` are answered before any request. A push service has no idempotency key, so retrying a `timeout` whose request landed shows the notification twice.
 
-### `@sdxc/web-push/browser`
-
-#### `isSupported(): boolean`
+### `isSupported(): boolean` from `./browser`
 
 Whether this browser has service workers, the Push API and notifications.
 
-#### `subscribe(options: SubscribeOptions): Promise<Result<BrowserSubscription, WebPushBrowserError>>`
+### `subscribe(options: SubscribeOptions): Promise<Result<BrowserSubscription, WebPushBrowserError>>` from `./browser`
 
-Asks for permission unless it is granted, registers `options.worker` (under `options.scope` when given), and reuses the existing subscription or replaces it when it was made under another key. Answers the subscription with the `applicationServerKey` it was made under. A `WebPushBrowserError` has the code `unsupported`, `denied` or `failed`.
+Asks for permission unless it is granted, registers `options.worker` (under `options.scope` when given), and reuses the existing subscription or replaces one made under another key. Answers the subscription with the `applicationServerKey` it was made under.
+
+### `WebPushBrowserError` from `./browser`
+
+The failure `subscribe` returns, with `code` `unsupported` (no Push API), `denied` (permission refused) or `failed` (anything the browser threw, or a key that is not base64url).
 
 ### Types
 
-#### `Subscription`
+`Subscription` is `{ endpoint, keys: { p256dh, auth }, applicationServerKey? }`, the shape of `PushSubscription.toJSON()` plus the VAPID public key it was made under; `SubscriptionKeys` is its `keys`. `BrowserSubscription` is a `Subscription` whose `applicationServerKey` is always set. `VapidKeyPair` is `{ publicKey, privateKey }` and `VapidKeys` adds `subject`. `WebPushOptions`, `PushOptions`, `SubscriptionPolicy` and `SubscribeOptions` are the option objects above; `Payload`, `Urgency` and `Pushed` are `send`'s payload, urgency and success. `WebPushErrorCode`, `WebPushErrorOptions` and `WebPushBrowserErrorCode` name the error codes and constructor options.
 
-`{ endpoint, keys: { p256dh, auth }, applicationServerKey? }`: the shape of `PushSubscription.toJSON()`, plus the VAPID public key the browser subscribed under.
+## Pattern: Applying A Failure To The Stored Row
 
-#### `VapidKeys` and `VapidKeyPair`
-
-`{ publicKey, privateKey, subject }` and the same without `subject`, every key base64url.
-
-## Patterns
-
-### Pattern: Applying A Failure To The Stored Row
+Map each code to what happens to the subscription: delete on `gone`, log the non-retryable ones, and retire a row after too many retryable failures.
 
 ```typescript
-import type { Subscription, WebPushError } from "@sdxc/web-push";
+import type { Subscription } from "@sdxc/web-push";
 
 import { isFailure } from "@sdxc/result";
 import { WebPush } from "@sdxc/web-push";
 
-const FAILURE_LIMIT = 10;
+let failureLimit = 10;
 
 async function deliver(push: WebPush, row: SubscriptionRow, payload: string) {
 	let subscription: Subscription = {
@@ -197,33 +187,99 @@ async function deliver(push: WebPush, row: SubscriptionRow, payload: string) {
 	let sent = await push.send(subscription, payload, { topic: "summary" });
 	if (!isFailure(sent)) return await markDelivered(row.id);
 
-	let error: WebPushError = sent.error;
+	let error = sent.error;
 	if (error.code === "gone") return await deleteSubscription(row.id);
 	if (!error.retryable) return await logRejected(row.id, error.code);
-	if (row.failures + 1 >= FAILURE_LIMIT) return await deleteSubscription(row.id);
-	await countFailure(row.id);
+	if (row.failures + 1 >= failureLimit) return await deleteSubscription(row.id);
+	await scheduleRetry(row.id, error.retryAfter ?? 60_000);
 }
 ```
 
-### Pattern: Rotating The VAPID Key
+## Pattern: Fanning Out To Many Devices
 
-A subscription is bound to the public key it was made with, and a push service refuses a message signed by any other. Store the key beside each subscription, then rotate in three steps:
+One `WebPush` signs one token per push service origin, so a thousand browsers on the same service cost one signature. A `topic` keeps only the latest message for an offline device, and `padding` hides the payload's length.
 
-1. Generate a new pair. Deploy it as `vapid`, and the old one in `previous`:
+```typescript
+import { isFailure } from "@sdxc/result";
+import { WebPush } from "@sdxc/web-push";
+
+let push = new WebPush({ vapid });
+let payload = JSON.stringify({ title: "Build #42 failed", url: "/builds/42" });
+
+let results = await Promise.all(
+	subscriptions.map((subscription) =>
+		push.send(subscription, payload, { topic: "build-status", urgency: "high", padding: 64 }),
+	),
+);
+
+let gone = subscriptions.filter((_, index) => {
+	let result = results[index];
+	return isFailure(result) && result.error.code === "gone";
+});
+await deleteSubscriptions(gone.map((subscription) => subscription.endpoint));
+```
+
+## Pattern: Accepting Only Known Push Services
+
+Pass `PUSH_SERVICE_HOSTS` to both the registration schema and the sender, so neither stores nor posts to an endpoint on any other host.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
+import { PUSH_SERVICE_HOSTS, subscriptionSchema, WebPush } from "@sdxc/web-push";
+import * as s from "remix/data-schema";
+
+let schema = s.object({ subscription: subscriptionSchema({ allowedHosts: PUSH_SERVICE_HOSTS }) });
+let push = new WebPush({ vapid, allowedHosts: PUSH_SERVICE_HOSTS });
+
+let body = await validate(request, schema);
+if (isFailure(body)) return Response.json({ errors: body.error.issues }, { status: 400 });
+
+await saveSubscription(body.data.subscription);
+await push.send(body.data.subscription, JSON.stringify({ title: "Notifications on" }));
+```
+
+## Pattern: Rotating The VAPID Key
+
+A subscription is bound to the public key it was made with, and a push service refuses a message signed by any other. Store `applicationServerKey` beside each subscription, then rotate in three steps:
+
+1. Generate a new pair and deploy it as `vapid`, with the old one in `previous`. Each send signs with the identity whose public key the subscription names, or `vapid` when it names none.
 
    ```typescript
+   import { WebPush } from "@sdxc/web-push";
+
    let push = new WebPush({ vapid: current, previous: [old] });
    await push.send({ ...subscription, applicationServerKey: row.vapidKey }, payload);
    ```
 
-2. Pages now hand the new public key to `subscribe`, which replaces a subscription made under the old key the next time it runs, and the app stores the new subscription and key.
+2. Pages hand the new public key to `subscribe`, which replaces a subscription made under the old key the next time it runs; store the new subscription and key.
 3. Once no stored subscription names the old key, drop it from `previous`.
 
-A subscription without `applicationServerKey` signs with `vapid`.
+## Pattern: Sending Through Your Own Transport
 
-### Pattern: A Service Worker For A JSON Payload
+`request` answers the encrypted, signed `Request` without sending it, so a queue, a proxy or a custom `fetch` can deliver it. Classifying the response is then yours.
 
-```javascript
+```typescript
+import { isFailure } from "@sdxc/result";
+import { WebPush } from "@sdxc/web-push";
+
+let push = new WebPush({ vapid });
+
+let built = await push.request(subscription, JSON.stringify({ title: "Hello" }), { ttl: 0 });
+if (isFailure(built)) return logRejected(built.error.code);
+
+let response = await proxiedFetch(built.data);
+if (response.status === 404 || response.status === 410)
+	await deleteSubscription(subscription.endpoint);
+```
+
+## Pattern: A Service Worker For A JSON Payload
+
+The service worker that `subscribe` registers shows the notification the server's JSON describes and opens its URL on click.
+
+```typescript
+declare let self: ServiceWorkerGlobalScope;
+
 self.addEventListener("push", (event) => {
 	let payload = event.data?.json();
 	if (!payload?.title) return;
