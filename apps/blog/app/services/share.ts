@@ -11,6 +11,10 @@ import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
 
+import type { Kind as RegistryKind } from "~/app/models/kinds";
+
+import { POST_KINDS } from "~/app/models/kinds";
+
 /** The most a post on X may weigh. */
 export const X_LIMIT = 280;
 
@@ -37,18 +41,12 @@ const EMOJI_PATTERN = /\p{Extended_Pictographic}|\p{Regional_Indicator}/u;
 /** A stand-in permalink for a budget: every URL weighs the same, so any URL measures it. */
 const ANY_URL = "https://x.com";
 
-/** The emoji the index leads each shared kind's row with, which its share text opens with. */
-const KIND_EMOJI: Record<PostShare.Kind, string> = {
-	article: "📝",
-	tutorial: "🛠️",
-};
-
 /**
  * Prop types for the share-text builders.
  */
 export namespace PostShare {
 	/** The kinds shared as a titled post with a teaser line. */
-	export type Kind = "article" | "tutorial";
+	export type Kind = Extract<RegistryKind, "article" | "tutorial">;
 
 	/** What a titled post's share text is built from. */
 	export interface Post {
@@ -126,12 +124,12 @@ function oneLine(text: string | null | undefined): string {
 
 /** The share text of a titled post with `line` between the title and the permalink. */
 function titled(post: PostShare.Post, line: string): string {
-	return `${KIND_EMOJI[post.kind]} ${oneLine(post.title)}\n\n${line}\n\n${post.permalink}`;
+	return `${POST_KINDS[post.kind].icon} ${oneLine(post.title)}\n\n${line}\n\n${post.permalink}`;
 }
 
 /** The share text of a titled post the title leaves no room in for a line under it. */
 function titleOnly(post: PostShare.Post): string {
-	return `${KIND_EMOJI[post.kind]} ${oneLine(post.title)}\n\n${post.permalink}`;
+	return `${POST_KINDS[post.kind].icon} ${oneLine(post.title)}\n\n${post.permalink}`;
 }
 
 /**
