@@ -19,7 +19,7 @@ that sign them. [`@sdxc/well-known`](/api/well-known) serves the key set at
 [`@sdxc/result`](/api/result) turns a failed verification into a value.
 
 ```bash
-npm add @sdxc/jwt @sdxc/well-known @sdxc/http @sdxc/result
+npm add @sdxc/jwt @sdxc/well-known @sdxc/http @sdxc/result @sdxc/uuid
 ```
 
 ## Describe the token
@@ -107,6 +107,7 @@ built, so the lifetime reads as what it is:
 
 ```typescript {% title="app/services/reports.ts" %}
 import { JWK } from "@sdxc/jwt";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 
 import { ServiceToken } from "~/app/services/auth/service-token";
@@ -120,7 +121,7 @@ export async function requestReport(userId: string, invoiceIds: string[]) {
 		sub: userId,
 		aud: REPORTS_API,
 		scope: "reports:write",
-		jti: crypto.randomUUID(),
+		jti: generateUUID(),
 		iat: "0s",
 		exp: "5 minutes",
 	});

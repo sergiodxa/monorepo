@@ -30,7 +30,7 @@ legacy `Digest`. [`@sdxc/crypto`](/api/crypto) reads PEM keys, and every call an
 
 ```bash
 npm add @sdxc/http-signatures @sdxc/digest-fields @sdxc/crypto @sdxc/result \
-	@sdxc/validate @sdxc/http remix
+	@sdxc/uuid @sdxc/validate @sdxc/http remix
 ```
 
 ## Make a key pair
@@ -84,6 +84,7 @@ body without hashing a stream it cannot read twice:
 ```typescript {% title="app/services/partner-orders.ts" %}
 import { sign } from "@sdxc/http-signatures";
 import { isFailure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import { signingKey } from "~/app/services/signing-key";
 
@@ -104,7 +105,7 @@ export async function sendOrder(order: { id: string; total: number }) {
 		scheme: "rfc9421",
 		key: key.data,
 		body,
-		nonce: crypto.randomUUID(),
+		nonce: generateUUID(),
 		tag: "orders",
 	});
 	if (isFailure(signed)) return signed;

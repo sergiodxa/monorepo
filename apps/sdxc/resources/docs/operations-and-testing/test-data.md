@@ -236,7 +236,7 @@ test.each(["invoice-card", "invoice-card-2", "invoice-card-5"])(
 The seeds are the ones worth keeping: browse the preview until one renders a case you care
 about, such as a void invoice with long notes, and add it to the list. Each part of the markup
 holds still for its own reason. The names and amounts come from the
-seed, the ids from the seeded `string.uuid()` rather than `crypto.randomUUID()`, and the
+seed, the ids from the seeded `string.uuid()` rather than a fresh random UUID, and the
 dates from `REFERENCE` rather than the clock. What is left is the component, so a failing
 snapshot is a change you made. Format dates with an explicit `timeZone` in the component too,
 or the same instant renders differently on a laptop and in CI.
