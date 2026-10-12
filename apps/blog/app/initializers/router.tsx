@@ -477,6 +477,10 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		),
 	);
 	router.map(
+		routes.cms.topics,
+		lazy(() => import("~/app/http/controllers/cms/topics"), CMS_WRITE_GUARDS),
+	);
+	router.map(
 		routes.cms.redirects,
 		lazy(() => import("~/app/http/controllers/cms/redirects"), CMS_GUARDS),
 	);

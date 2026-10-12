@@ -73,7 +73,17 @@ export namespace SearchViewModel {
 				items: Array<Item>;
 				/** `null` when every match fits on one page. */
 				pager: Pager | null;
+				/** What the signed-in author can do with this search as a topic; `null` for readers. */
+				topic: TopicLink | null;
 		  };
+
+	/**
+	 * The author's way from a search to its topic: the CMS form prefilled with the query, or
+	 * the topic already saving this search, whatever spelling it was typed in.
+	 */
+	export type TopicLink =
+		| { type: "save"; href: string }
+		| { type: "saved"; title: string; href: string };
 
 	/**
 	 * One tab over the dialog's matches: "All" when `kind` is `null`, otherwise one kind with
@@ -137,13 +147,15 @@ export class SearchViewModel {
 	 * A page of results, highlighted against the query that found them, with pager links
 	 * built from the request URL so every other parameter, `q` included, carries over.
 	 *
-	 * @param input The typed text, its parsed query, the page of results, and the request URL.
+	 * @param input The typed text, its parsed query, the page of results, the request URL, and
+	 * the author's topic link, omitted for a reader.
 	 */
 	static results(input: {
 		query: string;
 		parsed: ParsedQuery;
 		page: Page<PostSearch.Hit>;
 		url: URL;
+		topic?: SearchViewModel.TopicLink | null;
 	}): SearchViewModel.Model {
 		let { pagination } = input.page;
 
@@ -155,6 +167,7 @@ export class SearchViewModel {
 			to: pagination.to,
 			items: input.page.items.map((result) => this.item(result, input.parsed)),
 			pager: pagination.pages > 1 ? this.pager(pagination, input.url) : null,
+			topic: input.topic ?? null,
 		};
 	}
 

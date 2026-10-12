@@ -12,7 +12,11 @@ import { createPaging } from "@sdxc/pagination";
 import { isFailure, succeeded } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import type { BlogModels } from "~/app/models";
+
+import { isAdmin } from "~/app/http/middleware/auth";
 import { SearchViewModel } from "~/app/http/view-models/search";
+import { topicPath } from "~/app/http/view-models/topic";
 import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 import { PostSearch } from "~/app/models/search";
 import { SearchView } from "~/resources/views/search";
@@ -22,10 +26,24 @@ import routes from "~/routes/web";
 const PAGING = createPaging({ perPage: 10, maxPerPage: 50 });
 
 /**
+ * The author's link from a search to its topic: the topic saving it when one does, else the
+ * CMS's new-topic form with the query prefilled.
+ */
+async function topicLink(models: BlogModels, text: string): Promise<SearchViewModel.TopicLink> {
+	let topic = await models.topics.findByQuery(text);
+	if (topic !== null) return { type: "saved", title: topic.title, href: topicPath(topic) };
+	return {
+		type: "save",
+		href: `${routes.cms.topics.new.href()}?${new URLSearchParams({ q: text })}`,
+	};
+}
+
+/**
  * Serves the search page. A blank box renders the form alone; a query with nothing to
  * search for, or over a limit, answers 400 with the reason beside the field; malformed
  * paging redirects to the query's first page; anything else renders the requested page,
- * clamped to the last one. Previews never appear, whoever is signed in.
+ * clamped to the last one. Previews never appear, whoever is signed in; the author also sees
+ * a link to save the search as a topic, or to the topic already saving it.
  *
  * @returns HTML response for `GET /search`.
  */
@@ -56,13 +74,16 @@ export default createAction(routes.search, async (ctx) => {
 	succeeded(page, "Searching posts failed");
 
 	let headers = PAGING.paginate(new Headers(), page.data, { url: ctx.url });
-	ctx.cache(PUBLIC_PAGE, TAGS.postList());
+	/** The author's page carries the topic link, so only a reader's reaches a shared cache. */
+	let author = isAdmin();
+	if (!author) ctx.cache(PUBLIC_PAGE, TAGS.postList());
 
 	let model = SearchViewModel.results({
 		query: text,
 		parsed: parsed.data,
 		page: page.data,
 		url: ctx.url,
+		topic: author ? await topicLink(ctx.models, text) : null,
 	});
 	return ctx.render(SearchView, model, { headers });
 });

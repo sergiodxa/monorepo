@@ -29,7 +29,7 @@ import { m, mbs, p, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
 import { font, nowrap, tabularNums, text } from "@sdxc/u/typography";
-import { FieldError, Heading } from "@sdxc/ui";
+import { FieldError, Heading, Link } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
@@ -209,6 +209,17 @@ export function SearchView() {
 					/>
 					<SyntaxHelp />
 				</div>
+				{model.state === "results" && model.topic ? (
+					<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+						{model.topic.type === "save" ? (
+							<Link href={model.topic.href}>Save as topic</Link>
+						) : (
+							<>
+								Saved as the topic <Link href={model.topic.href}>{model.topic.title}</Link>.
+							</>
+						)}
+					</p>
+				) : null}
 				{model.state === "results" && model.items.length === 0 ? (
 					<p mix={[m(0), text("lg"), fg("neutral")]}>No posts match “{model.query}”.</p>
 				) : null}

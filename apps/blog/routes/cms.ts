@@ -22,6 +22,8 @@ export default route({
 	glossary: resources("/glossary", { exclude: ["show"] }),
 	/** The weekly job writes every releases post, so the CMS edits and deletes them only. */
 	releases: resources("/releases", { only: ["index", "edit", "update", "destroy"] }),
+	/** Saved searches; a kind's topic edits its title and description only, and stays. */
+	topics: resources("/topics", { exclude: ["show"] }),
 	redirects: resources("/redirects", { only: ["index", "new", "create", "destroy"] }),
 	webmentions: resources("/webmentions", { only: ["index", "update"] }),
 });
