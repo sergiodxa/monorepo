@@ -1,7 +1,7 @@
 /**
  * View for the blog post detail page, marked up as an `h-entry` (name, byline, date,
- * content) so IndieWeb readers see who wrote it and when, followed by a sponsor
- * call-to-action and, for tutorials, an embedded related-posts frame.
+ * content) so IndieWeb readers see who wrote it and when, with a link to discuss it on X,
+ * then a sponsor call-to-action and, for tutorials, an embedded related-posts frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,6 +32,7 @@ import { Frame, unsafeHTML } from "remix/component";
 
 import type { PostViewModel } from "~/app/http/view-models/post";
 
+import { discussIntent } from "~/app/services/share";
 import { PROFILE } from "~/config/profile";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -212,6 +213,14 @@ export function PostView() {
 											mix={[text("sm")]}
 										>
 											Download EPUB
+										</Link>
+										<Link
+											href={discussIntent({ title: model.post.title, permalink: model.post.url })}
+											target="_blank"
+											rel="noopener"
+											mix={[text("sm")]}
+										>
+											Discuss on X
 										</Link>
 									</div>
 								</div>
