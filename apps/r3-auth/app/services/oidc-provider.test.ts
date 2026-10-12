@@ -14,6 +14,8 @@ import { scryptSync } from "node:crypto";
 import { Base64Url, Hex, password, randomBytes, sha256 } from "@sdxc/crypto";
 import { JWK } from "@sdxc/jwt";
 import { unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
@@ -709,7 +711,7 @@ describe("OAuth2Provider", () => {
 				exp: now + AccessToken.ttl,
 				iat: now,
 				iss: ISSUER,
-				jti: crypto.randomUUID(),
+				jti: generateUUID(),
 				sub: testSubject.id,
 			}).sign(JWK.Algorithm.ES256, testKeyPair);
 
@@ -907,7 +909,7 @@ describe("OIDC", () => {
 				sub: testSubject.id,
 				iss: ISSUER,
 				aud: testClient.id,
-				jti: crypto.randomUUID(),
+				jti: generateUUID(),
 				iat: expiredAt - 60,
 				exp: expiredAt,
 			});
@@ -956,7 +958,7 @@ describe("OIDC", () => {
 				sub: testSubject.id,
 				iss: "https://elsewhere.example.com",
 				aud: testClient.id,
-				jti: crypto.randomUUID(),
+				jti: generateUUID(),
 				iat: Math.floor(Date.now() / 1000),
 				exp: Math.floor(Date.now() / 1000) + 600,
 			});
@@ -1814,5 +1816,46 @@ describe("generateAuthzCode", () => {
 			subjectId: testSubject.id,
 			error: "D1_ERROR: no such table: sessions",
 		});
+	});
+
+	/** The code alone redeems tokens, so it carries 256 random bits instead of a UUID's 122. */
+	test("issues a random token as the authorization code", async () => {
+		let storeAuthorizationCode = vi.fn(async () => {});
+		let repo = {
+			...createMockRepository(),
+			createSession: vi.fn(async () => ({ id: "session-123" })),
+			findOrCreateGrant: vi.fn(async () => ({ id: "grant-123" })),
+			storeAuthorizationCode,
+		} as unknown as OIDC.Repository;
+
+		let result = unwrap(await new OIDC(ISSUER, repo, createMockLog()).generateAuthzCode(INPUT));
+		let code = result.params.code ?? "";
+
+		expect(code).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(code)).toBe(false);
+		expect(storeAuthorizationCode).toHaveBeenCalledWith(code, expect.anything());
+	});
+
+	/**
+	 * Codes and client secrets issued before both became random tokens are UUIDs, and a
+	 * relying party mid-flight or holding an old secret keeps redeeming with them.
+	 */
+	test("redeems a UUID code with a client holding a UUID secret", async () => {
+		let legacyClient = { ...testClient, secret: generateUUID() };
+		let repo = createMockRepository();
+		repo.findClientById = vi.fn(async (id: string) =>
+			id === legacyClient.id ? legacyClient : null,
+		);
+		let provider = new OIDC(ISSUER, repo, createMockLog());
+
+		let result = (await provider.token({
+			type: "authorization_code",
+			code: generateUUID(),
+			redirectUri: legacyClient.redirectUri,
+			clientId: legacyClient.id,
+			clientSecret: legacyClient.secret,
+		})) as OIDCTokenResponse;
+
+		expect(result.access_token).toBeDefined();
 	});
 });

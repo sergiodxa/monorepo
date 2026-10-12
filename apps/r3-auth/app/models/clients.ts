@@ -11,6 +11,7 @@ import type { ModelRow, NotFound } from "@sdxc/data-model";
 import type { Result } from "@sdxc/result";
 import type { ValidationError } from "@sdxc/validate";
 
+import { randomToken } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { isFailure, success } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -79,7 +80,7 @@ export const Clients = createModel(clients, {
 			input: ClientEdit,
 		): Promise<Result<EditedClient, ValidationError | NotFound>> {
 			let { regenerateSecret, ...changes } = input;
-			let newSecret = regenerateSecret ? generateUUID() : undefined;
+			let newSecret = regenerateSecret ? randomToken() : undefined;
 
 			let updated = await this.update(
 				id,
@@ -121,7 +122,7 @@ export const Clients = createModel(clients, {
 			return {
 				...values,
 				id: values.id ?? generateUUID(),
-				secret: values.secret ?? generateUUID(),
+				secret: values.secret ?? randomToken(),
 			};
 		},
 	},

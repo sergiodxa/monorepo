@@ -12,11 +12,11 @@
 
 import type { RequestContext } from "remix/router";
 
+import { randomToken } from "@sdxc/crypto";
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
 import { addressKey } from "@sdxc/rate-limit";
 import { isFailure, unwrap } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
@@ -184,7 +184,7 @@ function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState
  */
 async function selfRedirect(ctx: RequestContext): Promise<Response> {
 	let client = unwrap(await ctx.models.clients.ensureAuthServerClient(ctx.url));
-	let state = generateUUID();
+	let state = randomToken();
 
 	setAuthz({ clientId: client.id, state, redirectUri: client.redirect_uri });
 

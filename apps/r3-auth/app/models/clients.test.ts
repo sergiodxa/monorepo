@@ -11,6 +11,7 @@ import type { CreateValues } from "@sdxc/data-model";
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AuthModels } from "~/app/models";
@@ -56,6 +57,14 @@ describe("clients.create", () => {
 		let second = await createClient({ redirect_uri: "https://other.example.com/callback" });
 
 		expect(first.secret).not.toBe(second.secret);
+	});
+
+	/** A client secret authenticates the client, so it is a random token, never a UUID. */
+	test("mints the secret as a random token", async () => {
+		let client = await createClient();
+
+		expect(client.secret).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(client.secret)).toBe(false);
 	});
 
 	test('defaults the logout-session-required flags to the string "false"', async () => {
@@ -123,6 +132,7 @@ describe("clients.edit", () => {
 		expect(updated.newSecret).toBeTypeOf("string");
 		expect(updated.secret).toBe(updated.newSecret as string);
 		expect(updated.secret).not.toBe(client.secret);
+		expect(isUUID(updated.secret)).toBe(false);
 	});
 
 	test("stores the back- and front-channel logout settings", async () => {

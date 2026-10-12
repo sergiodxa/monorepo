@@ -11,6 +11,7 @@
 import { toUnixSeconds } from "@sdxc/dates";
 import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import { ID_TOKEN_TTL, ISSUER } from "~/config/oidc";
 
@@ -90,7 +91,7 @@ export default class IdToken extends JWT {
 			sub: subject.id,
 			iss: ISSUER,
 			aud: client.id,
-			jti: crypto.randomUUID(),
+			jti: generateUUID(),
 			exp: expiresAt,
 			iat: now,
 			...(options?.authTime && { auth_time: options.authTime }),

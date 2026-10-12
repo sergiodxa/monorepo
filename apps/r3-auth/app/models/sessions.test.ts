@@ -10,6 +10,8 @@
 import type { Database } from "remix/data-table";
 
 import { isFailure, unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AuthModels } from "~/app/models";
@@ -89,6 +91,27 @@ describe("sessions.find", () => {
 	test("resolves a presented refresh token to its session", async () => {
 		let session = await openSession();
 		expect((await models.sessions.find(session.id))?.subject_id).toBe(subjectId);
+	});
+
+	/** The id is the refresh token, so it is a random token, never a UUID. */
+	test("mints the refresh token as a random token", async () => {
+		let session = await openSession();
+
+		expect(session.id).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(session.id)).toBe(false);
+	});
+
+	/** Sessions opened before refresh tokens became random tokens carry UUID ids. */
+	test("resolves a refresh token issued as a UUID", async () => {
+		let legacy = unwrap(
+			await models.sessions.create({
+				id: generateUUID(),
+				subject_id: subjectId,
+				client_id: clientId,
+			}),
+		);
+
+		expect((await models.sessions.find(legacy.id))?.subject_id).toBe(subjectId);
 	});
 
 	test("returns null for a revoked or invented token", async () => {

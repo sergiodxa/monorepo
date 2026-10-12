@@ -11,7 +11,15 @@
 import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Result } from "@sdxc/result";
 
-import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@sdxc/crypto";
+import {
+	Base64Url,
+	Hex,
+	password,
+	randomBytes,
+	randomToken,
+	sha256,
+	timingSafeEqual,
+} from "@sdxc/crypto";
 import { elapsed, subtract, toUnixSeconds } from "@sdxc/dates";
 import { JWK, JWT } from "@sdxc/jwt";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
@@ -840,7 +848,7 @@ export class OIDC {
 				this.repository.findOrCreateGrant(input.subjectId, input.clientId),
 			]);
 
-			let code = crypto.randomUUID();
+			let code = randomToken();
 			await this.repository.storeAuthorizationCode(code, {
 				clientId: input.clientId,
 				subjectId: input.subjectId,

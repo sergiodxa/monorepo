@@ -12,6 +12,7 @@
 import { toUnixSeconds } from "@sdxc/dates";
 import { toMs, toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import { ISSUER } from "~/config/oidc";
 
@@ -65,7 +66,7 @@ export default class LogoutToken extends JWT {
 			aud: clientId,
 			iat: now,
 			exp: now + toSeconds(LOGOUT_TOKEN_TTL),
-			jti: crypto.randomUUID(),
+			jti: generateUUID(),
 			...(sessionId && { sid: sessionId }),
 			events: {
 				"http://schemas.openid.net/event/backchannel-logout": {},

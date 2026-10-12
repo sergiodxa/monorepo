@@ -11,6 +11,7 @@
 import { fromUnixSeconds, toUnixSeconds } from "@sdxc/dates";
 import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import { ACCESS_TOKEN_TTL, ISSUER } from "~/config/oidc";
 
@@ -96,7 +97,7 @@ export default class AccessToken extends JWT {
 			exp: expiresAt,
 			iat: now,
 			iss: ISSUER,
-			jti: crypto.randomUUID(),
+			jti: generateUUID(),
 			sub: claims.subjectId,
 			...(claims.scope && { scope: claims.scope.join(" ") }),
 		});

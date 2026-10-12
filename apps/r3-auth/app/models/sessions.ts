@@ -11,9 +11,9 @@ import type { ModelRow, NotFound } from "@sdxc/data-model";
 import type { Result } from "@sdxc/result";
 import type { ValidationError } from "@sdxc/validate";
 
+import { randomToken } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { toMs } from "@sdxc/duration";
-import { generateUUID } from "@sdxc/uuid/v4";
 import { gt, lte } from "remix/data-table";
 
 import type { SelectClient, SelectSession } from "~/database/schema";
@@ -100,7 +100,7 @@ export const Sessions = createModel(sessions, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
+				id: values.id ?? randomToken(),
 				expires_at: values.expires_at ?? Date.now() + SESSION_TTL,
 			};
 		},
