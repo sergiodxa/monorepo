@@ -4,56 +4,60 @@ QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/com
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/qr
 ```
 
-The main entry point depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and runs anywhere `TextEncoder` does: Workers, Bun, Node and the browser. `@sdxc/qr/ui` renders through [`remix/component`](https://www.npmjs.com/package/remix); install `remix` to use it.
+The main entry point depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and runs anywhere `TextEncoder` does: Workers, Bun, Node and the browser. `@sdxc/qr/ui` renders through `remix/component`; install [`remix`](https://www.npmjs.com/package/remix) to use it.
 
 ## Usage
 
-### Encoding Text
+### Encode text
 
 ```typescript
-import { isSuccess } from "@sdxc/result";
-
 import { QR } from "@sdxc/qr";
+import { isSuccess } from "@sdxc/result";
 
 let encoded = QR.encode("https://example.com/device?user_code=WDJB-MJHT");
 
 if (isSuccess(encoded)) {
-	encoded.data.version; // 4
+	encoded.data.version; // 4, the smallest version that holds the text
 	encoded.data.size; // 33 modules a side
-	encoded.data.isDark(0, 0); // true: the top-left finder
+	encoded.data.level; // "Q": raised from the default "M" because the version had room
 }
 ```
 
-### Rendering With remix/component
+A string is split into numeric, alphanumeric and UTF-8 byte segments with the fewest total bits, so a URI around an upper-case token takes fewer modules than it would as bytes alone.
+
+### Render it with remix/component
 
 ```tsx
 import { QrCode } from "@sdxc/qr/ui";
 
-<QrCode path={qr.toSVGPath()} label="Scan to add this account to your authenticator app" />;
+<QrCode path={encoded.data.toSVGPath()} label="Scan to open this page on your phone" />;
 ```
 
-The component takes path data, so the handler that has the text encodes it and decides what to render when encoding fails. The path data is plain JSON, so it also works as a prop of a hydrated component.
+`QrCode` takes path data, which is plain JSON, so the code that encodes decides what to render on failure and the component also works as a prop of a hydrated island.
 
-### Drawing Into Your Own Markup
+### Draw into your own markup
 
 ```typescript
-let { d, viewBox } = qr.toSVGPath({ margin: 4 });
-// <svg viewBox={viewBox}><path d={d} /></svg>
+let { d, viewBox } = encoded.data.toSVGPath({ margin: 2 });
+// <svg viewBox={viewBox}><rect width="100%" height="100%" fill="#fff" /><path d={d} /></svg>
 ```
 
-### Reading Modules Directly
-
-`isDark` answers `false` outside the symbol, so a loop that runs one module past each edge draws the quiet zone without bounds checks:
+### Handle a failure
 
 ```typescript
-for (let y = -1; y <= qr.size; y++) {
-	let line = "";
-	for (let x = -1; x <= qr.size; x++) line += qr.isDark(x, y) ? "██" : "  ";
-	console.log(line);
+import { QR } from "@sdxc/qr";
+import { isFailure } from "@sdxc/result";
+
+let encoded = QR.encode(payload, { maxVersion: 10 });
+
+if (isFailure(encoded)) {
+	if (encoded.error.code === "too-long")
+		encoded.error.bits; // { needed, available }
+	else encoded.error.message; // which option was out of range
 }
 ```
 
@@ -61,21 +65,17 @@ for (let y = -1; y <= qr.size; y++) {
 
 ### `QR`
 
-One encoded symbol. `QR.encode` is the only way to get one, so every instance holds a valid symbol: `version` (1–40), `level` (the level applied, after any boost), `mask` (0–7) and `size` (`17 + 4 * version` modules a side, quiet zone excluded).
+One encoded symbol, with `version` (1–40), `level` (the level applied, after any boost), `mask` (0–7) and `size` (`17 + 4 * version` modules a side, quiet zone excluded). `QR.encode` is the only way to get one, so every instance holds a valid symbol.
 
 #### `QR.encode(data: string | Uint8Array, options?: QrOptions): Result<QR, QrTooLongError | QrOptionsError>`
 
-Encode text or bytes as the smallest symbol that holds them. A string is split into numeric, alphanumeric and byte segments with the fewest total bits, so a URI around an upper-case token takes fewer modules than it would as bytes alone. A `Uint8Array` is encoded as bytes as given.
+Encodes text or bytes as the smallest symbol that holds them. Text goes into byte segments as UTF-8; a `Uint8Array` is encoded as bytes as given.
 
-| Option       | Default  | Meaning                                                                                      |
-| ------------ | -------- | -------------------------------------------------------------------------------------------- |
-| `level`      | `"M"`    | The minimum error correction level: `"L"` (7%), `"M"` (15%), `"Q"` (25%) or `"H"` (30%)      |
-| `minVersion` | `1`      | The smallest version to try                                                                  |
-| `maxVersion` | `40`     | The largest version to try; data that does not fit it fails with `too-long`                  |
-| `mask`       | Computed | A fixed mask, 0–7; omitted, every mask is scored and the lowest penalty wins                 |
-| `boostLevel` | `true`   | Raises the level as far as the chosen version still fits, since the extra correction is free |
-
-Text goes into byte segments as UTF-8, with no ECI designator. Phone scanners read UTF-8 this way, and ASCII, which covers every URI, reads the same under any interpretation.
+- `options.level`: the minimum error correction level. Default `"M"`.
+- `options.minVersion`: the smallest version to try. Default `1`.
+- `options.maxVersion`: the largest version to try; data that does not fit fails with `too-long`. Default `40`.
+- `options.mask`: a fixed mask, 0–7. Omitted, every mask is scored and the lowest penalty wins.
+- `options.boostLevel`: raises the level as far as the chosen version still holds the data, since the extra correction costs no modules. Default `true`.
 
 #### `qr.isDark(x: number, y: number): boolean`
 
@@ -83,37 +83,43 @@ Whether a module is dark. Coordinates outside the symbol answer `false`, so a re
 
 #### `qr.toSVGPath(options?: SvgPathOptions): SvgPath`
 
-Path data for one `<path>`: each horizontal run of dark modules is one rectangle, one unit per module. `viewBox` and `size` include the quiet zone, which `margin` sets in modules and defaults to the standard's 4; a smaller margin suits a code inside a light container that already provides one.
+Path data for one `<path>`: each horizontal run of dark modules is one rectangle, one unit per module. `viewBox` and `size` include the quiet zone, whose width `margin` sets in modules (default `4`, the standard's).
 
 ### `QrCode` from `@sdxc/qr/ui`
 
-An inline `<svg role="img">` with a light background rectangle and one dark path.
+An inline `<svg role="img">` with a light background and one dark path. Its colors stay as given under dark and forced-color themes, since scanners need a dark code on a light margin; show the text the code carries beside it, because the payload stays out of the accessibility tree.
 
-| Prop    | Default  | Notes                                                    |
-| ------- | -------- | -------------------------------------------------------- |
-| `path`  | Required | Path data from `qr.toSVGPath()`, quiet zone included     |
-| `label` | Required | The accessible name, saying what the code is for         |
-| `size`  | `12rem`  | A CSS length for the rendered width and height           |
-| `dark`  | `#000`   | Module color                                             |
-| `light` | `#fff`   | Background and quiet zone color                          |
-| `mix`   | None     | Mixins applied to the `<svg>`, after the component's own |
-
-The colors stay as given under a dark theme, and the SVG sets `forced-color-adjust: none` so a high-contrast theme keeps them too: scanners need a dark code on a light margin. A brand pair passed through `dark` and `light` needs the same strong contrast. The payload stays out of the accessibility tree, so show the text the code carries, or an equivalent, beside it.
+- `path`: path data from `qr.toSVGPath()`, quiet zone included.
+- `label`: the accessible name, saying what the code is for.
+- `size`: a CSS length for the rendered width and height. Default `"12rem"`.
+- `dark`: module color. Default `"#000"`.
+- `light`: background and quiet zone color. Default `"#fff"`. A brand pair needs the same strong contrast.
+- `mix`: mixins applied to the `<svg>`, after the component's own.
 
 ### `QrError`
 
-The `Error` every failure extends, with a `code`. `QR.encode` fails with one of two subclasses, and checking `code` narrows to it:
+The `Error` every failure extends, with a `code`. Checking `code` narrows to the subclass.
 
-- `QrTooLongError`, code `too-long`: the data does not fit `maxVersion` at `level`. `error.bits` holds `{ needed, available }`. Version 40 at level L holds 2,953 bytes, so this comes from a capped `maxVersion` in practice.
-- `QrOptionsError`, code `invalid-options`: a version outside 1–40, `minVersion` above `maxVersion`, a mask outside 0–7, or an unknown level.
+### `QrTooLongError`
+
+Code `too-long`: the data does not fit `maxVersion` at `level`. `bits` holds `{ needed, available }`.
+
+### `QrOptionsError`
+
+Code `invalid-options`: a version outside 1–40, `minVersion` above `maxVersion`, a mask outside 0–7, or an unknown level.
 
 ### Types
 
-`QrLevel` is `"L" | "M" | "Q" | "H"`. `QrOptions`, `SvgPathOptions` and `SvgPath` are the option and return shapes above.
+- `QrLevel`: `"L" | "M" | "Q" | "H"`, recovering about 7%, 15%, 25% and 30% of codewords.
+- `QrOptions`: the options of `QR.encode`.
+- `SvgPathOptions`: `{ margin?: number }`.
+- `SvgPath`: `{ d: string; viewBox: string; size: number }`.
+- `QrError.Code`: `"too-long" | "invalid-options"`.
+- `QrError.Bits`: `{ needed: number; available: number }`.
 
 ## Pattern: An Authenticator Enrolment Page
 
-Encode in the handler, which can log a failure, and render the code above the setup key, which stays as the text alternative.
+Encode where a failure can be logged, and render the code above the setup key, which stays as the text alternative.
 
 ```tsx
 import { QR } from "@sdxc/qr";
@@ -139,7 +145,7 @@ function EnrolPage(handle: Handle<{ uri: string; setupKey: string; qr: QR | null
 
 let uri =
 	"otpauth://totp/Acme:ada%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Acme";
-let encoded = QR.encode(uri, { level: "M" });
+let encoded = QR.encode(uri);
 
 let page = (
 	<EnrolPage
@@ -162,9 +168,46 @@ let encoded = QR.encode(url, { level: "L", maxVersion: 6 });
 
 if (isFailure(encoded) && encoded.error.code === "too-long") {
 	let { needed, available } = encoded.error.bits;
-	console.warn(
-		`Shorten the URL by ${Math.ceil((needed - available) / 8)} bytes to fit a version 6 code`,
-	);
+	let overBy = Math.ceil((needed - available) / 8);
+	// Show the link alone, and shorten the URL by `overBy` bytes to fit a version 6 code
+}
+```
+
+## Pattern: A Printed Label That Survives Damage
+
+A label on a box gets scuffed, so ask for level `H` and give it a wider quiet zone. Encode an identifier as bytes when it is not text.
+
+```typescript
+import { QR } from "@sdxc/qr";
+import { isSuccess } from "@sdxc/result";
+
+let encoded = QR.encode(new TextEncoder().encode("PKG-000123"), { level: "H" });
+
+if (isSuccess(encoded)) {
+	let { d, viewBox } = encoded.data.toSVGPath({ margin: 6 });
+	// <svg viewBox={viewBox} width="30mm" height="30mm"><path d={d} /></svg>
+}
+```
+
+## Pattern: Rendering In A Terminal
+
+`isDark` answers `false` past the edge, so a loop that starts one module outside the symbol draws a quiet zone without bounds checks.
+
+```typescript
+import { QR } from "@sdxc/qr";
+import { isSuccess } from "@sdxc/result";
+
+let encoded = QR.encode("https://example.com/pair?code=7F3K");
+
+if (isSuccess(encoded)) {
+	let qr = encoded.data;
+	let lines: string[] = [];
+	for (let y = -2; y < qr.size + 2; y++) {
+		let line = "";
+		for (let x = -2; x < qr.size + 2; x++) line += qr.isDark(x, y) ? "██" : "  ";
+		lines.push(line);
+	}
+	process.stdout.write(lines.join("\n") + "\n");
 }
 ```
 
