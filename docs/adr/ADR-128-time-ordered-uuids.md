@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-09
+**Implemented** - 2026-10-12
 
 ## Background
 
@@ -50,15 +50,15 @@ external TypeID form stays as it is and becomes time-ordered automatically.
 Each version is its own entry point, and each exports the same `generateUUID(): UUID`. Code
 picks a version by its import path, and switching versions changes only that path.
 
-| Entry point     | `generateUUID()` produces         | Use for                                          |
-| --------------- | --------------------------------- | ------------------------------------------------ |
-| `@sdxc/uuid/v7` | Monotonic UUIDv7                  | Every entity ID by default                       |
-| `@sdxc/uuid/v4` | UUIDv4 from `crypto.randomUUID()` | Entity IDs whose creation time must stay private |
-| `@sdxc/uuid`    | No generator                      | The `UUID` type, `isUUID`, `assertUUID`, errors  |
+| Entry point     | `generateUUID()` produces         | Use for                                         |
+| --------------- | --------------------------------- | ----------------------------------------------- |
+| `@sdxc/uuid/v7` | Monotonic UUIDv7                  | Every entity ID by default                      |
+| `@sdxc/uuid/v4` | UUIDv4 from `crypto.randomUUID()` | Identifiers that are not record IDs             |
+| `@sdxc/uuid`    | No generator                      | The `UUID` type, `isUUID`, `assertUUID`, errors |
 
 ```typescript
 import { generateUUID } from "@sdxc/uuid/v7";
-import { generateUUID as generatePrivateUUID } from "@sdxc/uuid/v4";
+import { generateUUID as generateTokenId } from "@sdxc/uuid/v4";
 ```
 
 The root entry point keeps validation only, so every module that creates IDs names its
@@ -102,7 +102,6 @@ in a URL-safe encoding.
 | Value                                                         | Generator                         |
 | ------------------------------------------------------------- | --------------------------------- |
 | Row primary keys (users, posts, monitors, tenants, ...)       | `@sdxc/uuid/v7`                   |
-| Rows whose creation time is private                           | `@sdxc/uuid/v4`                   |
 | JWT `jti`, correlation and request IDs, leases, test fixtures | `@sdxc/uuid/v4`                   |
 | Authorization codes, client secrets, OAuth `state`, tickets   | `randomToken` from `@sdxc/crypto` |
 | Report, unsubscribe, invite and reset tokens                  | `randomToken` from `@sdxc/crypto` |
@@ -142,9 +141,8 @@ it: it fails on any other reference to `randomUUID` in an app, a package or one 
 
 ### Negative
 
-- **Creation time is public** - anyone holding a TypeID can decode when the entity was
-  created. Entities where that matters must import from `@sdxc/uuid/v4`, which relies on the
-  author noticing
+- **Creation time is public** - anyone holding a record's id or TypeID can decode when the
+  record was created, including the signup time behind a user's `sub`
 - **Fewer random bits** - 74 instead of 122. This is ample for uniqueness, but rules out v7
   for anything used as a bearer secret
 - **Mixed history** - tables keep a v4 prefix of old rows, so `id` order is only chronological
@@ -182,8 +180,9 @@ one app at a time.
 1. auth-saas: import `generateUUID` from `@sdxc/uuid/v7` in place of `generateUUIDv7()`
 2. blog: replace `crypto.randomUUID()` with `generateUUID()` from `@sdxc/uuid/v7` in the `post`, `post-meta`,
    `user`, `webmention`, and `webmention-send` repositories
-3. uptime, r3-auth, reader, demo: move each `generateUUID` import to `@sdxc/uuid/v7`, or to
-   `@sdxc/uuid/v4` for an entity whose creation time is private
+3. uptime, r3-auth, reader, demo: move every record id to `@sdxc/uuid/v7`, users and subjects
+   included, and keep JWT `jti`, request and correlation ids, problem instances, job ids and
+   object-storage keys on `@sdxc/uuid/v4`
 
 ### Phase 3: Repo rule
 
@@ -240,5 +239,5 @@ so the ordering guarantee would fail exactly where batches of related rows are c
 
 - [x] Phase 1: `@sdxc/uuid`
 - [x] Phase 2a: Apps import from the version entry points, keeping their current versions
-- [ ] Phase 2b: Apps switch entity IDs to `@sdxc/uuid/v7`
-- [ ] Phase 3: Repo rule
+- [x] Phase 2b: Apps switch record IDs to `@sdxc/uuid/v7`
+- [x] Phase 3: Repo rule
