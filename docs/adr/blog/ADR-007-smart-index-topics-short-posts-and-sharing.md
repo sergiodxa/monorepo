@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-12
+**Implemented** - 2026-10-12
 
 ## Background
 
@@ -391,7 +391,7 @@ builders.
 - [x] Phase 1: Sharing on X
 - [x] Phase 2: Search Order
 - [x] Phase 3: Kind Registry
-- [ ] Phase 4: Topics
-- [ ] Phase 5: Notes and TILs
-- [ ] Phase 6: Weekly Releases
+- [x] Phase 4: Topics
+- [x] Phase 5: Notes and TILs
+- [x] Phase 6: Weekly Releases
 - [x] Phase 7: Footer
