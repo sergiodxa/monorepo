@@ -96,6 +96,7 @@ const SYNTAX: ReadonlyArray<{ example: string; meaning: string }> = [
 	{ example: 'tag:"remix@3.0.0"', meaning: "a tag at that version or a newer compatible one" },
 	{ example: "kind:tutorial", meaning: "article, tutorial, glossary or bookmark" },
 	{ example: "lang:es", meaning: "posts in a language" },
+	{ example: "order:asc", meaning: "oldest first; order:desc for newest first" },
 ];
 
 /**

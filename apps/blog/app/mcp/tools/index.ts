@@ -25,11 +25,11 @@ export default tools({
 	searchPosts: tool("search_posts", {
 		title: "Search posts",
 		description:
-			"Search this blog's published articles, tutorials, glossary entries and bookmarks, best match first; get_post reads an article or tutorial in full.",
+			"Search this blog's published articles, tutorials, glossary entries and bookmarks, best match first unless the query sets order:; get_post reads an article or tutorial in full.",
 		input: s.object({
 			query: s.string().pipe(checks.minLength(1), checks.maxLength(200)).meta({
 				description:
-					'Lucene-style query: all words must match; "exact phrase", -word or NOT word to exclude, a OR b, title:word, tag:"react router", kind:tutorial or kind:bookmark, lang:es.',
+					'Lucene-style query: all words must match; "exact phrase", -word or NOT word to exclude, a OR b, title:word, tag:"react router", kind:tutorial or kind:bookmark, lang:es, order:desc or order:asc to sort by publish date.',
 			}),
 			kind: s.optional(
 				s

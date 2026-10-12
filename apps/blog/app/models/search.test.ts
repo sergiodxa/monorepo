@@ -512,6 +512,48 @@ describe("PostSearch.query", () => {
 	});
 });
 
+describe("order:", () => {
+	beforeEach(async () => {
+		await article({
+			slug: "middle",
+			title: "Remix routing",
+			published_at: "2026-02-01T10:00:00.000Z",
+		});
+		await article({
+			slug: "oldest",
+			title: "Notes",
+			content: "Remix",
+			published_at: "2025-06-01T10:00:00.000Z",
+		});
+		await article({ slug: "newest", title: "Remix", published_at: null });
+	});
+
+	test("keeps relevance by default, ranking a title match first", async () => {
+		expect((await slugsFor({ query: "remix" }))[2]).toBe("oldest");
+		expect(await slugsFor({ query: "remix order:relevance" })).toEqual(
+			await slugsFor({ query: "remix" }),
+		);
+	});
+
+	test("sorts matching text by publish date, a post without one by its creation", async () => {
+		expect(await slugsFor({ query: "remix order:asc" })).toEqual(["oldest", "middle", "newest"]);
+		expect(await slugsFor({ query: "remix order:desc" })).toEqual(["newest", "middle", "oldest"]);
+	});
+
+	test("sorts a query of filters alone, newest first by default", async () => {
+		expect(await slugsFor({ query: "kind:article" })).toEqual(["newest", "middle", "oldest"]);
+		expect(await slugsFor({ query: "kind:article order:asc" })).toEqual([
+			"oldest",
+			"middle",
+			"newest",
+		]);
+	});
+
+	test("keeps exclusions while sorting by date", async () => {
+		expect(await slugsFor({ query: "remix -routing order:asc" })).toEqual(["oldest", "newest"]);
+	});
+});
+
 describe("PostSearch.page", () => {
 	test("pages published matches with a total", async () => {
 		for (let index = 1; index <= 5; index++) {

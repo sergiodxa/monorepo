@@ -86,7 +86,9 @@ with it empty, is answered with a 500.
   `remix@` tag at that version or a newer one with the same major), `kind:tutorial` (`article`, `tutorial`,
   `glossary`, `bookmark`, plural accepted, `like` for bookmarks too) and `lang:es` (also `locale:` and `language:`; `es` matches
   `es-AR`, and `spanish`/`español`/`english` work too). An article's language is its `locale`;
-  tutorials and glossary entries are English. A search of filters alone lists newest first.
+  tutorials and glossary entries are English. Results rank by relevance, and a search of
+  filters alone lists newest first; `order:desc` and `order:asc` sort any search by publish date
+  (its creation for a post published on creation), newest or oldest first.
   `/search` explains the syntax under its form.
 - Search from any page: on a screen at least 40rem wide, the navigation's "Search ⌘K" pill,
   ⌘K / Ctrl+K, or `/` (outside a field) opens a panel near the top of the screen with a large

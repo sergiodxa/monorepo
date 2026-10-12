@@ -231,11 +231,11 @@ export class PostSearch {
 	}
 
 	/**
-	 * Finds published posts matching `query`, best match first.
+	 * Finds published posts matching `query`, best match first unless it asks for `order:`.
 	 *
 	 * @param db Database connection holding `post_search` and the posts it projects.
 	 * @param options The query, and any narrowing by kind, tag or count.
-	 * @returns Hits in relevance order. Empty when the query is blank or holds nothing to
+	 * @returns Hits in the query's order. Empty when the query is blank or holds nothing to
 	 * search for, since every post would otherwise match.
 	 * @example
 	 * let hits = await PostSearch.query(db, { query: "remix", kind: "tutorial", limit: 5 });
@@ -253,8 +253,8 @@ export class PostSearch {
 	}
 
 	/**
-	 * One numbered page of published posts matching a parsed query, best match first. A
-	 * page past the end resolves to the last one, as `Pagination` clamps it.
+	 * One numbered page of published posts matching a parsed query, in the order it asks
+	 * for. A page past the end resolves to the last one, as `Pagination` clamps it.
 	 *
 	 * @param db Database connection holding `post_search` and the posts it projects.
 	 * @param options The parsed query, the page wanted, and any narrowing.
@@ -337,8 +337,9 @@ export class PostSearch {
 	/**
 	 * Every match for `query` whose post is live, of a searchable kind (or the one asked for)
 	 * and published by now, read from `posts` on every query so no projection can drift from
-	 * it, and narrowed by the query's filters and the caller's. A query of filters alone has
-	 * no relevance to rank by, so it lists newest first.
+	 * it, and narrowed by the query's filters and the caller's. `order:asc` and `order:desc`
+	 * sort by publication; under relevance, a query of filters alone has nothing to rank by,
+	 * so it lists newest first.
 	 */
 	private static async matching(
 		db: Database,
@@ -346,8 +347,10 @@ export class PostSearch {
 		filters: PostSearch.Filters,
 	): Promise<OffsetQuery<MatchedRow>> {
 		let conditions = await this.conditions(db, query, filters);
-		if (!query.clauses.some((clause) => !clause.exclude)) {
-			return new NewestFirst(db, [POST_SEARCH.predicate(query), ...conditions]);
+		let ranked = query.clauses.some((clause) => !clause.exclude);
+		if (query.order !== "relevance" || !ranked) {
+			let direction: "asc" | "desc" = query.order === "asc" ? "asc" : "desc";
+			return new ByPublication(db, [POST_SEARCH.predicate(query), ...conditions], direction);
 		}
 
 		let found = POST_SEARCH.query(db, query);
@@ -647,34 +650,37 @@ function narrowKinds(kinds: Set<PostSearch.Kind>, filter: SearchFilter): Set<Pos
 }
 
 /**
- * The rows matching a query of filters alone, newest publication first, as a page reads
- * them. A query of filters has no relevance to rank by, and the date lives in `posts`, so
- * the statement joins it; ties fall back to the projection's id.
+ * The rows matching a query in publication order, as a page reads them: the date lives in
+ * `posts`, so the statement joins it (`coalesce(published_at, created_at)`), and ties fall
+ * back to the projection's id in the same direction, so paging stays stable.
  */
-class NewestFirst implements OffsetQuery<MatchedRow> {
+class ByPublication implements OffsetQuery<MatchedRow> {
 	#db: Database;
 	#conditions: ReadonlyArray<SqlStatement>;
+	#direction: "asc" | "desc";
 	#limit: number | null;
 	#offset: number;
 
 	constructor(
 		db: Database,
 		conditions: ReadonlyArray<SqlStatement>,
+		direction: "asc" | "desc",
 		limit: number | null = null,
 		offset = 0,
 	) {
 		this.#db = db;
 		this.#conditions = conditions;
+		this.#direction = direction;
 		this.#limit = limit;
 		this.#offset = offset;
 	}
 
-	limit(value: number): NewestFirst {
-		return new NewestFirst(this.#db, this.#conditions, value, this.#offset);
+	limit(value: number): ByPublication {
+		return new ByPublication(this.#db, this.#conditions, this.#direction, value, this.#offset);
 	}
 
-	offset(value: number): NewestFirst {
-		return new NewestFirst(this.#db, this.#conditions, this.#limit, value);
+	offset(value: number): ByPublication {
+		return new ByPublication(this.#db, this.#conditions, this.#direction, this.#limit, value);
 	}
 
 	async count(): Promise<number> {
@@ -693,7 +699,7 @@ class NewestFirst implements OffsetQuery<MatchedRow> {
 				: ` limit ${Math.max(0, Math.trunc(this.#limit))} offset ${Math.max(0, Math.trunc(this.#offset))}`;
 		let result = await this.#db.exec(
 			rawSql(
-				`select "post_search"."id", "post_search"."post_id", "post_search"."tags", "post_search"."content" from "post_search" join "posts" on "posts"."id" = "post_search"."post_id" where ${where.text} order by (${PUBLICATION_MS}) desc, "post_search"."id" desc${window}`,
+				`select "post_search"."id", "post_search"."post_id", "post_search"."tags", "post_search"."content" from "post_search" join "posts" on "posts"."id" = "post_search"."post_id" where ${where.text} order by (${PUBLICATION_MS}) ${this.#direction}, "post_search"."id" ${this.#direction}${window}`,
 				where.values,
 			),
 		);
