@@ -41,6 +41,13 @@ with it empty, is answered with a 500.
 ## Features
 
 - Server-rendered public articles, tutorials, bookmarks, feeds, and sitemap.
+- Topics: saved searches with a title and a Markdown description, each a page listing its
+  query's posts newest first (or in the `order:` it asks for) and three feeds that run the
+  same query newest first. Every kind is a topic at its own root path (`/articles`,
+  `/articles.rss`, …), seeded by migration and kept at its slug and query; an author's topics
+  live under `/topics/`. The query is stored canonical, so one search is one topic. The CMS
+  manages them at `/cms/topics`, and `/search` offers the signed-in author "Save as topic". A
+  post's tags link to the topic saving exactly that tag, else to the search for it.
 - CMS layout and authenticated routes for content management. Opening a CMS page without a
   session sends you to `/login?next=<path and query>`, and signing in lands back on that page,
   so a link such as `/cms/bookmarks/new?url=…` survives an expired session. `next` accepts
@@ -143,27 +150,25 @@ with it empty, is answered with a 500.
 | Route                    | Description                                           |
 | ------------------------ | ----------------------------------------------------- |
 | `/`                      | Homepage                                              |
-| `/articles`              | Articles listing                                      |
+| `/articles`              | Articles topic                                        |
 | `/articles/:slug`        | Article detail page                                   |
 | `/articles/:slug.epub`   | Article as an EPUB ebook                              |
-| `/tutorials`             | Tutorials listing                                     |
+| `/tutorials`             | Tutorials topic                                       |
 | `/tutorials/:slug`       | Tutorial detail page                                  |
 | `/tutorials/:slug.epub`  | Tutorial as an EPUB ebook                             |
-| `/bookmarks`             | Saved bookmarks                                       |
+| `/bookmarks`             | Bookmarks topic                                       |
+| `/glossary`              | Glossary topic, every entry at `#<slug>`              |
+| `/topics`                | Every topic                                           |
+| `/topics/:slug`          | An author's topic                                     |
+| `/topics/:slug.rss`      | An author's topic as RSS (also `.atom`, `.json`)      |
 | `/search`                | Full-text search over published posts                 |
 | `/frames/search`         | Search dialog body and top matches for `q`            |
 | `/rss`                   | Main RSS feed                                         |
 | `/atom.xml`              | Main feed as Atom                                     |
 | `/feed.json`             | Main feed as JSON Feed                                |
-| `/articles.rss`          | Articles RSS feed                                     |
-| `/tutorials.rss`         | Tutorials RSS feed                                    |
-| `/bookmarks.rss`         | Bookmarks RSS feed                                    |
-| `/articles.atom`         | Articles Atom feed                                    |
-| `/tutorials.atom`        | Tutorials Atom feed                                   |
-| `/bookmarks.atom`        | Bookmarks Atom feed                                   |
-| `/articles.json`         | Articles JSON Feed                                    |
-| `/tutorials.json`        | Tutorials JSON Feed                                   |
-| `/bookmarks.json`        | Bookmarks JSON Feed                                   |
+| `/:topic.rss`            | A kind's topic as RSS, e.g. `/articles.rss`           |
+| `/:topic.atom`           | A kind's topic as Atom                                |
+| `/:topic.json`           | A kind's topic as JSON Feed                           |
 | `/sitemap.xml`           | Sitemap for search engines                            |
 | `/webmention`            | Webmention endpoint (POST)                            |
 | `/activitypub/actor`     | ActivityPub actor (`@hello@sergiodxa.com`)            |

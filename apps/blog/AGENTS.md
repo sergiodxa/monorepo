@@ -10,6 +10,8 @@ This document defines app-specific rules for `apps/blog`.
 - MUST pass a CMS route's guards as `lazy()`'s second argument (`CMS_GUARDS` / `CMS_WRITE_GUARDS`), never as a `middleware` field wrapping the loader: a stand-in is an object, not a function, so it cannot be an action object's `handler`.
 - MUST read and write data through `ctx.models` (the `@sdxc/data-model` models in `app/models/`, published by the `models()` middleware in requests and jobs), never ad-hoc DB queries in controllers. Logic that spans post types lives in `app/services/posts.ts` and takes `ctx.models`; a pure rule over post values lives in `app/models/post-values.ts`, which no model imports back.
 - MUST read anything that varies by post kind — stored type, `kind:` names, topic and permalink, index emoji and labels, ActivityPub object type — from the registry in `app/models/kinds.ts`, never from a list of kinds of its own; a new kind is one registry entry plus the code that genuinely treats it differently.
+- MUST serve a kind's listing as its topic through the shared topic controller, never a controller or view of its own: the kind's topic row is seeded by migration (query `kind:<name>` in the form `PostSearch.canonical` writes, built-in through the registry's `topic` slug), its page is `<topic>: get("/<topic>")` in `routes/web.ts` mapped with `router.map(routes.<topic>, kindTopic("<topic>"))`, and its feeds answer at `/<topic>.rss`, `.atom` and `.json` through the `topic` routes in `routes/rss.ts`, `atom.ts` and `json-feed.ts` with no route of their own. A kind whose rows need their own look adds a case to `TopicPost` in `app/services/topics.ts` and to `TopicViewModel`; otherwise it lists as an activity row.
+- MUST store a topic's query only through `ctx.models.topics`, which canonicalizes it, and look a topic up by query with `findByQuery`/`findForTags`, never by comparing raw query text.
 - MUST write a post through its type's model (`ctx.models.articles`, `tutorials`, `likes`, `glossary`), whose callbacks keep the post's search document current; a delete is `tombstone(id)`, which every read then skips through the base model's default scope.
 - MUST treat post publish state as:
   - `published_at === null` => published
@@ -102,9 +104,8 @@ This document defines app-specific rules for `apps/blog`.
   - `app/http/middleware/view-renderer.tsx` (the `ctx.render` controllers reach)
 - Public controllers
   - `app/http/controllers/feed.tsx`
-  - `app/http/controllers/articles.tsx`
-  - `app/http/controllers/tutorials.tsx`
-  - `app/http/controllers/bookmarks.tsx`
+  - `app/http/controllers/topic.tsx` (every kind's listing and every author's topic)
+  - `app/http/controllers/topics.tsx`
   - `app/http/controllers/post.tsx`
   - `app/http/controllers/colors.tsx`
 - UI components
@@ -128,6 +129,8 @@ This document defines app-specific rules for `apps/blog`.
   - `app/models/articles.ts`, `app/models/tutorials.ts`, `app/models/likes.ts`, `app/models/glossary.ts`
   - `app/models/post-values.ts` (publish state, ordering, bookmark URLs, tutorial tags)
   - `app/models/kinds.ts` (the post kind registry)
+  - `app/models/topics.ts` (saved searches; a kind's topic is built in)
+  - `app/services/topics.ts` (a topic's query and the posts behind its matches)
   - `app/services/posts.ts` (reads across post types)
   - `app/models/feed.ts`, `app/models/search.ts`, `app/models/follower.ts`, `app/models/redirect.ts` (stores outside the data-model registry)
 - Federation
