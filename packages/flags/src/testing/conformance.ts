@@ -8,6 +8,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test, vi } from "vitest";
 
 import type { EvaluationContext } from "../core/context.js";
@@ -120,7 +121,7 @@ function fixtures(flags: FlagSet): Map<FlagValueType, Fixture> {
 
 /** A key nothing has a flag for, fresh every call so a shared backend cannot collide. */
 function absent(): string {
-	return `conformance-absent-${crypto.randomUUID()}`;
+	return `conformance-absent-${generateUUID()}`;
 }
 
 /**
