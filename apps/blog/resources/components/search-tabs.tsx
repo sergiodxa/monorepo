@@ -10,12 +10,14 @@
 import type { Handle } from "remix/component";
 
 import { bg, colorMix, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { opacity, rounded, transition } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
 import { flex, gap, inlineFlex, items, shrink } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
+import { startingStyle } from "@sdxc/u/responsive";
 import { bs, m, p, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
+import { translateProperty } from "@sdxc/u/transform";
 import { nowrap, text, textDecoration } from "@sdxc/u/typography";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
@@ -30,7 +32,17 @@ export function SearchTabs(handle: Handle<{ tabs: Array<SearchViewModel.Tab> }>)
 	return () => (
 		<ul
 			aria-label="Narrow by kind"
-			mix={[m(0), p(0), pi(1), listStyle("none"), flex(), gap(2), overflowX("auto")]}
+			mix={[
+				m(0),
+				p(0),
+				pi(1),
+				listStyle("none"),
+				flex(),
+				gap(2),
+				overflowX("auto"),
+				transition("opacity, translate", { duration: 200 }),
+				startingStyle([opacity(0), translateProperty("0 -0.25rem")]),
+			]}
 		>
 			{handle.props.tabs.map((tab) => (
 				<li key={tab.kind ?? "all"} mix={[shrink(0)]}>

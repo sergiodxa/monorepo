@@ -10,7 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
-import { opacity, rounded, transition, transitionDelay, visibility } from "@sdxc/u/effects";
+import { rounded, visibility } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, hidden, items } from "@sdxc/u/layout";
 import { dark, light, startingStyle } from "@sdxc/u/responsive";
@@ -19,7 +19,7 @@ import { hover, when } from "@sdxc/u/state";
 import { text, textDecoration } from "@sdxc/u/typography";
 
 import { SEARCH_QUICK_LINKS_ID, searchQuickLinkId } from "~/resources/components/search-box";
-import { searchSurface } from "~/resources/components/search-surface";
+import { searchSurface, searchSurfaceMotion } from "~/resources/components/search-surface";
 import { SEARCH_DIALOG_INPUT_ID } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
 
@@ -61,9 +61,8 @@ export function SearchQuickLinks(handle: Handle<{ currentPath?: string }>) {
 				grid(),
 				gap(1),
 				when(`:is(dialog:has(#${SEARCH_DIALOG_INPUT_ID}:not(:placeholder-shown))) &`, hidden()),
-				transition("opacity, visibility", { duration: 150 }),
-				transitionDelay("300ms"),
-				startingStyle([opacity(0), visibility("hidden")]),
+				searchSurfaceMotion(300),
+				startingStyle(when(":is(dialog[open]) &", visibility("hidden"))),
 			]}
 		>
 			{QUICK_LINKS.filter((link) => link.href !== handle.props.currentPath).map((link, index) => (

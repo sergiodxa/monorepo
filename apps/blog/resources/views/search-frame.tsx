@@ -9,24 +9,26 @@
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { opacity, rounded, transition, transitionDelay } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid, shrink } from "@sdxc/u/layout";
 import { overflowY } from "@sdxc/u/overflow";
 import { m, minBs, p, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { Link } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
 import {
+	SEARCH_CARD_ATTRIBUTE,
 	SEARCH_LISTBOX_ID,
 	SEARCH_RESULTS_ID,
 	SearchBox,
 	searchOptionId,
 } from "~/resources/components/search-box";
 import { SearchResult } from "~/resources/components/search-result";
-import { searchSurface } from "~/resources/components/search-surface";
+import { searchSurface, searchSurfaceMotion } from "~/resources/components/search-surface";
 import { SearchTabs } from "~/resources/components/search-tabs";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import routes from "~/routes/web";
@@ -62,7 +64,7 @@ export function SearchFrameView() {
 
 		return (
 			<>
-				<search mix={[searchSurface(), rounded("full"), shrink(0)]}>
+				<search mix={[searchSurface(), searchSurfaceMotion(), rounded("full"), shrink(0)]}>
 					<form method="get" action={routes.search.href()}>
 						<SearchBox
 							id={SEARCH_DIALOG_INPUT_ID}
@@ -77,10 +79,12 @@ export function SearchFrameView() {
 				</search>
 				<div
 					id={SEARCH_RESULTS_ID}
+					{...(hasRows || status !== "" ? { [SEARCH_CARD_ATTRIBUTE]: "" } : {})}
 					mix={
 						hasRows || status !== ""
 							? [
 									searchSurface(),
+									searchSurfaceMotion(40),
 									rounded("1.75rem"),
 									minBs(0),
 									overflowY("auto"),
@@ -109,7 +113,18 @@ export function SearchFrameView() {
 								// oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- HTML allows an ordered list to take the listbox role, which keeps the rows a list of links without script.
 								role="listbox"
 								aria-label="Top matches"
-								mix={[m(0), p(0), listStyle("none"), grid(), gap(1)]}
+								mix={[
+									m(0),
+									p(0),
+									listStyle("none"),
+									grid(),
+									gap(1),
+									transition("opacity", { duration: 150 }),
+									when(`:is(#${SEARCH_RESULTS_ID}[aria-busy="true"]) &`, [
+										opacity(55),
+										transitionDelay("150ms"),
+									]),
+								]}
 							>
 								{model.items.map((item, index) => (
 									<SearchResult

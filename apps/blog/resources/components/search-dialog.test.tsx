@@ -19,6 +19,7 @@ import { pageRenderer } from "~/app/test/renderer";
 import { WIDE_SCREEN } from "~/resources/components/nav-pill";
 import {
 	SEARCH_DEBOUNCE_MS,
+	SEARCH_FOLLOW_ATTRIBUTE,
 	SEARCH_QUICK_LINKS_ID,
 	SEARCH_RESULTS_ID,
 	SPINNER_DELAY_MS,
@@ -790,6 +791,60 @@ describe("the search dialog's quick links", () => {
 		await settle();
 		pressInBox("ArrowDown");
 		await vi.waitFor(() => expect(chosen()).toBe("/articles/remix"));
+	});
+});
+
+describe("following a link from the search dialog", () => {
+	/** The open dialog, after hydrating the home page and opening it. */
+	async function openDialog(): Promise<HTMLDialogElement> {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		dialog.showModal();
+		return dialog;
+	}
+
+	test("lifts the dialog away toward the reader while the chosen page loads", async () => {
+		let dialog = await openDialog();
+		input().focus();
+
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(input().getAttribute("aria-activedescendant")).not.toBeNull());
+		pressInBox("Enter");
+
+		expect(followed).toEqual(["/articles"]);
+		expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(true);
+		expect(dialog.open).toBe(true);
+	});
+
+	test("leaves the dialog as it is for a link opened in another tab", async () => {
+		let dialog = await openDialog();
+
+		clickWith(document.querySelector(`#${SEARCH_QUICK_LINKS_ID} a`) as Element, { metaKey: true });
+		expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(false);
+	});
+
+	test("closes the dialog for a link into the page already showing", async () => {
+		let dialog = await openDialog();
+		history.replaceState(null, "", "/articles");
+
+		clickWith(document.querySelector(`#${SEARCH_QUICK_LINKS_ID} a[href="/articles"]`) as Element);
+		expect(dialog.open).toBe(false);
+		expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(false);
+		history.replaceState(null, "", "/");
+	});
+
+	test("closes a dialog the back/forward cache restored mid-follow", async () => {
+		let dialog = await openDialog();
+		clickWith(document.querySelector(`#${SEARCH_QUICK_LINKS_ID} a`) as Element);
+		expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(true);
+
+		let restored = new Event("pageshow");
+		Object.defineProperty(restored, "persisted", { value: true });
+		window.dispatchEvent(restored);
+		expect(dialog.open).toBe(false);
+		await vi.waitFor(() => expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(false));
 	});
 });
 

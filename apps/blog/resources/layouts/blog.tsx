@@ -13,7 +13,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { mf } from "@sdxc/microformats/ui";
 import { bg, fg, radialGradient } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { rounded, transition, transitionBehavior } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, gridArea, gridTemplate, hstack, items, self } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
@@ -22,7 +22,7 @@ import { is, m, maxBs, maxIs, mbe, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/si
 import { when } from "@sdxc/u/state";
 import { color } from "@sdxc/u/tokens";
 import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
-import { Modal } from "@sdxc/ui";
+import { Dialog } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
 import { PROFILE } from "~/config/profile";
@@ -30,6 +30,7 @@ import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
 import { PillLabel } from "~/resources/components/pill-label";
 import { searchFrameSrc } from "~/resources/components/search-box";
 import { SearchQuickLinks } from "~/resources/components/search-quick-links";
+import { SEARCH_EXIT_MS } from "~/resources/components/search-surface";
 import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -190,7 +191,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							})}
 						</nav>
 						<SearchTrigger mix={[gridArea("search"), media(WIDE_SCREEN, self("start"))]} />
-						<Modal
+						<Dialog
 							id={SEARCH_DIALOG_ID}
 							aria-label="Search"
 							closedby="any"
@@ -201,6 +202,8 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								rounded("none"),
 								overflow("visible"),
 								raw({ boxShadow: "none" }),
+								transitionBehavior("allow-discrete"),
+								transition("display, overlay", { duration: SEARCH_EXIT_MS }),
 								light(when("&::backdrop", bg("rgb(0 0 0 / 0.12)"))),
 								is("min(40rem, 100% - 2rem)"),
 								maxIs("none"),
@@ -213,7 +216,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								src={searchFrameSrc(routes.searchFrame.href(), searchQuery ?? "")}
 							/>
 							<SearchQuickLinks currentPath={insideSection ? undefined : activePath} />
-						</Modal>
+						</Dialog>
 					</header>
 					{children}
 				</div>
