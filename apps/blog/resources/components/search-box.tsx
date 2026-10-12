@@ -26,12 +26,6 @@ export const SEARCH_DEBOUNCE_MS = 200;
  */
 export const SPINNER_DELAY_MS = 350;
 
-/**
- * How long arrows must pause on a tab before its results load, so pressing through several
- * tabs loads only the one the reader stops on.
- */
-export const TAB_DEBOUNCE_MS = 150;
-
 /** How long the panel takes to grow or shrink to the new results. */
 const RESIZE_MS = 160;
 
@@ -49,9 +43,17 @@ export function searchOptionId(index: number): string {
 	return `${SEARCH_LISTBOX_ID}-${index}`;
 }
 
-/** Every result row on screen, in order. */
-function options(): Array<HTMLElement> {
-	let listbox = document.getElementById(SEARCH_LISTBOX_ID);
+/** The listbox of quick links the combobox controls while the box is empty. */
+export const SEARCH_QUICK_LINKS_ID = "site-search-links";
+
+/** The id of the quick link at `index`, which `aria-activedescendant` names. */
+export function searchQuickLinkId(index: number): string {
+	return `${SEARCH_QUICK_LINKS_ID}-${index}`;
+}
+
+/** Every row of the listbox `id` on screen, in order. */
+function optionsOf(id: string): Array<HTMLElement> {
+	let listbox = document.getElementById(id);
 	return listbox ? Array.from(listbox.querySelectorAll<HTMLElement>('[role="option"]')) : [];
 }
 
@@ -130,6 +132,10 @@ export const SearchBox = clientEntry(
 		let pending = false;
 		/** The chosen row's index, or `-1` while the box itself is the choice. */
 		let selected = -1;
+		/** The chosen row's id, which `aria-activedescendant` names. */
+		let activeId: string | undefined;
+		/** Whether the box is empty, which points the combobox at the quick links. */
+		let blank = handle.props.query === "";
 		/** Counts keystrokes, so a reload only settles the state when no newer one is pending. */
 		let latest = 0;
 		/** The tab marked ahead of its results, or `null` once the frame shows the tab it marks. */
@@ -172,10 +178,16 @@ export const SearchBox = clientEntry(
 			void handle.update();
 		}
 
+		/** The rows the arrows move through: the quick links while the box is empty, else the results. */
+		function options(): Array<HTMLElement> {
+			return optionsOf(blank ? SEARCH_QUICK_LINKS_ID : SEARCH_LISTBOX_ID);
+		}
+
 		/** Chooses the row at `index`, or the box itself for `-1`, keeping focus in the box. */
 		function choose(index: number): void {
 			selected = index;
 			let rows = options();
+			activeId = rows[index]?.id;
 			rows.forEach((row, at) => row.setAttribute("aria-selected", at === index ? "true" : "false"));
 			rows[index]?.scrollIntoView?.({ block: "nearest" });
 			void handle.update();
@@ -210,10 +222,11 @@ export const SearchBox = clientEntry(
 		}
 
 		/**
-		 * Marks `kind`'s tab current at once and loads its results after `delay`, so the tab
-		 * follows every press while the results load only for the tab the reader stops on.
+		 * Marks `kind`'s tab current and starts loading its results at once. A newer reload
+		 * cancels the one in flight before it renders, so quick presses end on the last tab
+		 * pressed and never flash back to one passed on the way.
 		 */
-		function switchTab(kind: string, chooseFirst: boolean, delay: number): void {
+		function switchTab(kind: string, chooseFirst: boolean): void {
 			let box = document.getElementById(handle.props.id);
 			if (!(box instanceof HTMLInputElement)) return;
 			markedKind = kind;
@@ -226,15 +239,12 @@ export const SearchBox = clientEntry(
 			clearTimeout(debounce);
 			let keystroke = ++latest;
 			begin();
-			let text = box.value;
-			debounce = setTimeout(() => {
-				void load(
-					searchFrameSrc(handle.props.frameSrc, text, kind),
-					box.closest("dialog"),
-					keystroke,
-					chooseFirst,
-				);
-			}, delay);
+			void load(
+				searchFrameSrc(handle.props.frameSrc, box.value, kind),
+				box.closest("dialog"),
+				keystroke,
+				chooseFirst,
+			);
 		}
 
 		/**
@@ -249,7 +259,7 @@ export const SearchBox = clientEntry(
 				return;
 			}
 			event.preventDefault();
-			switchTab(kind, false, 0);
+			switchTab(kind, false);
 			document.getElementById(handle.props.id)?.focus();
 		}
 
@@ -262,6 +272,7 @@ export const SearchBox = clientEntry(
 			let keystroke = ++latest;
 			let box = document.getElementById(handle.props.id);
 			if (box instanceof HTMLInputElement) box.value = initialQuery;
+			blank = initialQuery === "";
 			choose(-1);
 			void load(initialSrc, null, keystroke);
 		}
@@ -285,7 +296,7 @@ export const SearchBox = clientEntry(
 				event.preventDefault();
 				let step = event.key === "ArrowRight" ? 1 : -1;
 				let at = Math.max(0, kinds.indexOf(currentKind()));
-				switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true, TAB_DEBOUNCE_MS);
+				switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true);
 			} else if (event.key === "ArrowDown" && rows.length > 0) {
 				event.preventDefault();
 				choose(selected + 1 >= rows.length ? 0 : selected + 1);
@@ -319,9 +330,9 @@ export const SearchBox = clientEntry(
 					role="combobox"
 					list={undefined}
 					aria-autocomplete="list"
-					aria-controls={SEARCH_LISTBOX_ID}
-					aria-expanded={handle.props.optionCount > 0 ? "true" : "false"}
-					aria-activedescendant={selected >= 0 ? searchOptionId(selected) : undefined}
+					aria-controls={blank ? SEARCH_QUICK_LINKS_ID : SEARCH_LISTBOX_ID}
+					aria-expanded={blank || handle.props.optionCount > 0 ? "true" : "false"}
+					aria-activedescendant={selected >= 0 ? activeId : undefined}
 					aria-label="Search articles, tutorials and the glossary"
 					placeholder="Search articles, tutorials and the glossary"
 					autocomplete="off"
@@ -333,6 +344,10 @@ export const SearchBox = clientEntry(
 							let box = event.currentTarget;
 							let text = box.value;
 							let keystroke = ++latest;
+							if ((text === "") !== blank) {
+								choose(-1);
+								blank = text === "";
+							}
 
 							clearTimeout(debounce);
 							begin();

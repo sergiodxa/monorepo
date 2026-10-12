@@ -14,6 +14,7 @@ import { rounded } from "@sdxc/u/effects";
 import { dark, light } from "@sdxc/u/responsive";
 import { p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
+import { truncate } from "@sdxc/u/typography";
 import { Highlight } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
@@ -26,7 +27,8 @@ interface SearchResultProps {
 	size?: "sm" | "lg";
 	/**
 	 * Makes the row an `option` with this id, filled with a rounded tint while hovered or
-	 * chosen, so a combobox can point at it.
+	 * chosen, so a combobox can point at it; its title keeps to one line, so every row is
+	 * the same height and the dialog's matches fit on screen.
 	 */
 	optionId?: string;
 }
@@ -46,6 +48,7 @@ export function SearchResult(handle: Handle<SearchResultProps>) {
 				id={optionId}
 				role={optionId ? "option" : undefined}
 				aria-selected={optionId ? "false" : undefined}
+				titleMix={optionId ? [truncate()] : undefined}
 				mix={
 					optionId
 						? [

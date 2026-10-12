@@ -148,6 +148,7 @@ export function PostView() {
 				title={model.title}
 				description={model.description}
 				activePath={model.activePath}
+				insideSection
 				canonical={model.canonical}
 				activity={model.activity}
 				meta={model.meta}

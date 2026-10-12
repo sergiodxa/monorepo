@@ -19,6 +19,7 @@ import { pageRenderer } from "~/app/test/renderer";
 import { WIDE_SCREEN } from "~/resources/components/nav-pill";
 import {
 	SEARCH_DEBOUNCE_MS,
+	SEARCH_QUICK_LINKS_ID,
 	SEARCH_RESULTS_ID,
 	SPINNER_DELAY_MS,
 } from "~/resources/components/search-box";
@@ -129,8 +130,43 @@ function application() {
 		ctx.render(
 			() =>
 				({ assets }) => (
-					<BlogLayout assets={assets} title="Home" description="Home">
+					<BlogLayout assets={assets} title="Home" description="Home" activePath="/">
 						<main id="page">Page</main>
+					</BlogLayout>
+				),
+			null,
+		),
+	);
+
+	router.get("/articles", (ctx) =>
+		ctx.render(
+			() =>
+				({ assets }) => (
+					<BlogLayout
+						assets={assets}
+						title="Articles"
+						description="Articles"
+						activePath="/articles"
+					>
+						<main id="page">Articles</main>
+					</BlogLayout>
+				),
+			null,
+		),
+	);
+
+	router.get("/articles/post", (ctx) =>
+		ctx.render(
+			() =>
+				({ assets }) => (
+					<BlogLayout
+						assets={assets}
+						title="Post"
+						description="Post"
+						activePath="/articles"
+						insideSection
+					>
+						<main id="page">Post</main>
 					</BlogLayout>
 				),
 			null,
@@ -686,6 +722,77 @@ describe("the search dialog's keyboard", () => {
 	});
 });
 
+describe("the search dialog's quick links", () => {
+	/** The quick links' destinations, in order. */
+	function quickLinks(): Array<string> {
+		return Array.from(document.querySelectorAll(`#${SEARCH_QUICK_LINKS_ID} a`)).map(
+			(link) => link.getAttribute("href") ?? "",
+		);
+	}
+
+	/** Hydrates the page at `path`. */
+	async function open(path: string): Promise<void> {
+		let router = application();
+		await loadPage(router, path);
+		await hydrate(router);
+	}
+
+	test("lists the sections and Sponsor under the empty box, leaving out the page the reader is on", async () => {
+		await open("/");
+
+		expect(quickLinks()).toEqual([
+			"/articles",
+			"/tutorials",
+			"/bookmarks",
+			"/glossary",
+			"/sponsors",
+		]);
+		expect(input().getAttribute("aria-controls")).toBe(SEARCH_QUICK_LINKS_ID);
+		expect(input().getAttribute("aria-expanded")).toBe("true");
+	});
+
+	test("leaves out a section on its own page, and keeps it on a page inside it", async () => {
+		await open("/articles");
+		expect(quickLinks()).not.toContain("/articles");
+		expect(quickLinks()).toContain("/");
+
+		runtime?.dispose();
+		await open("/articles/post");
+		expect(quickLinks()).toContain("/articles");
+	});
+
+	test("ArrowDown chooses through them from the box and Enter follows the chosen one", async () => {
+		await open("/");
+		input().focus();
+
+		pressInBox("ArrowDown", 2);
+		await vi.waitFor(() =>
+			expect(input().getAttribute("aria-activedescendant")).toBe(`${SEARCH_QUICK_LINKS_ID}-1`),
+		);
+		expect(document.activeElement).toBe(input());
+
+		pressInBox("Enter");
+		expect(followed).toEqual(["/tutorials"]);
+	});
+
+	test("typing points the box at the results and drops the chosen link", async () => {
+		await open("/");
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(input().getAttribute("aria-activedescendant")).not.toBeNull());
+
+		type("remix");
+		await vi.waitFor(() =>
+			expect(input().getAttribute("aria-controls")).toBe("site-search-options"),
+		);
+		expect(
+			document.querySelectorAll(`#${SEARCH_QUICK_LINKS_ID} [aria-selected="true"]`),
+		).toHaveLength(0);
+		await settle();
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/remix"));
+	});
+});
+
 describe("the search dialog's kind tabs", () => {
 	/** Hydrates a page and types `text`, waiting for its results to land. */
 	async function searchFor(text: string): Promise<void> {
@@ -714,7 +821,7 @@ describe("the search dialog's kind tabs", () => {
 
 	/** The links of every result row on screen. */
 	function rows(): Array<string> {
-		return Array.from(document.querySelectorAll('[role="option"] a')).map(
+		return Array.from(document.querySelectorAll('#site-search-options [role="option"] a')).map(
 			(link) => link.getAttribute("href") ?? "",
 		);
 	}
@@ -758,7 +865,7 @@ describe("the search dialog's kind tabs", () => {
 		await vi.waitFor(() => expect(requests.at(-1)?.src).toBe("/frames/search?q=mix"));
 	});
 
-	test("follows every quick press with the tab mark, loading only the tab the reader stops on", async () => {
+	test("follows every quick press with the tab mark, cancelling the load of a tab passed on the way", async () => {
 		await searchFor("mix");
 		pressInBox("ArrowDown");
 		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
@@ -768,9 +875,13 @@ describe("the search dialog's kind tabs", () => {
 		expect(currentTab()).toBe("Tutorials");
 
 		await vi.waitFor(() => expect(rows()).toEqual(["/tutorials/mix-1"]));
-		expect(requests.slice(sent).map((request) => request.src)).toEqual([
+		let loads = requests.slice(sent);
+		expect(loads.map((request) => request.src)).toEqual([
+			"/frames/search?q=mix&kind=article",
 			"/frames/search?q=mix&kind=tutorial",
 		]);
+		expect(loads[0]?.signal?.aborted).toBe(true);
+		expect(currentTab()).toBe("Tutorials");
 		await vi.waitFor(() => expect(chosen()).toBe("/tutorials/mix-1"));
 	});
 

@@ -54,6 +54,8 @@ export namespace ActivityRow {
 		"aria-selected"?: "true" | "false";
 		/** Extra mixins on the title link. */
 		linkMix?: TagProps<"a">["mix"];
+		/** Extra mixins on the paragraph holding the title, such as cutting it to one line. */
+		titleMix?: TagProps<"p">["mix"];
 		/** Extra mixins on the `<time>`. */
 		dateMix?: TagProps<"time">["mix"];
 	}
@@ -102,8 +104,19 @@ function isoDate(value: string) {
  */
 export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 	return () => {
-		let { badge, children, date, dateMix, description, href, kind, kindLabel, linkMix, mix } =
-			handle.props;
+		let {
+			badge,
+			children,
+			date,
+			dateMix,
+			description,
+			href,
+			kind,
+			kindLabel,
+			linkMix,
+			mix,
+			titleMix,
+		} = handle.props;
 		let { id, role, "aria-selected": selected } = handle.props;
 		let compact = handle.props.size === "sm";
 		let icon = KIND_ICONS[kind];
@@ -138,7 +151,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 					{icon.icon}
 				</span>
 				<div mix={[minIs(0)]}>
-					<p mix={[m(0), text(compact ? "base" : "lg"), fg("neutral.emphasis")]}>
+					<p mix={[m(0), text(compact ? "base" : "lg"), fg("neutral.emphasis"), titleMix]}>
 						<Link href={href} mix={linkMix}>
 							{children}
 						</Link>

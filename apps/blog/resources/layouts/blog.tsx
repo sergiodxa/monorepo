@@ -29,6 +29,7 @@ import { PROFILE } from "~/config/profile";
 import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
 import { PillLabel } from "~/resources/components/pill-label";
 import { searchFrameSrc } from "~/resources/components/search-box";
+import { SearchQuickLinks } from "~/resources/components/search-quick-links";
 import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -55,6 +56,11 @@ export namespace BlogLayout {
 		/** BCP 47 tag for the page's own language, defaulting to the site's English. */
 		locale?: string;
 		activePath?: string;
+		/**
+		 * Marks a page inside `activePath`'s section rather than the section's own page, so
+		 * the search dialog keeps offering the section among its quick links.
+		 */
+		insideSection?: boolean;
 		canonical?: string;
 		/** The page's ActivityStreams representation, advertised as an `alternate` link. */
 		activity?: string;
@@ -103,6 +109,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 			canonical,
 			children,
 			description,
+			insideSection,
 			locale,
 			meta = [],
 			searchQuery,
@@ -197,7 +204,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								light(when("&::backdrop", bg("rgb(0 0 0 / 0.12)"))),
 								is("min(40rem, 100% - 2rem)"),
 								maxIs("none"),
-								maxBs("calc(100dvh - 2 * min(12vh, 6rem))"),
+								maxBs("calc(100dvh - min(12vh, 6rem) - 1rem)"),
 								raw({ marginBlock: "min(12vh, 6rem) auto" }),
 							]}
 						>
@@ -205,6 +212,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								name="search"
 								src={searchFrameSrc(routes.searchFrame.href(), searchQuery ?? "")}
 							/>
+							<SearchQuickLinks currentPath={insideSection ? undefined : activePath} />
 						</Modal>
 					</header>
 					{children}
