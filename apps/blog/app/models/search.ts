@@ -9,14 +9,14 @@
 
 import type { OffsetQuery, Page, PaginationError } from "@sdxc/pagination";
 import type { Result } from "@sdxc/result";
-import type { ParsedQuery, SearchFilter } from "@sdxc/search";
-import type { ValidationError } from "@sdxc/validate";
+import type { ParsedQuery, SearchClause, SearchFilter } from "@sdxc/search";
 import type { Database, SqlStatement } from "remix/data-table";
 
 import { Pagination } from "@sdxc/pagination";
-import { isFailure, success } from "@sdxc/result";
-import { defineSearch, parseQuery } from "@sdxc/search";
+import { failure, isFailure, success } from "@sdxc/result";
+import { defineSearch, formatQuery, parseQuery } from "@sdxc/search";
 import { satisfies } from "@sdxc/semver";
+import { ValidationError } from "@sdxc/validate";
 import { and, inList, rawSql, sql } from "remix/data-table";
 
 import type { BlogModels } from "~/app/models";
@@ -85,6 +85,8 @@ export namespace PostSearch {
 	 * shown where a match sits in a post whose summary does not hold it.
 	 */
 	export interface Hit extends Result {
+		/** The post's id, which a caller loads the post by to show more than a result holds. */
+		id: string;
 		/**
 		 * The post's searchable body: Markdown for a post, a glossary entry's definition, a
 		 * bookmark's address without its scheme, then its description on the next line if any.
@@ -193,6 +195,50 @@ export class PostSearch {
 	}
 
 	/**
+	 * The canonical text of a search: parsed, then folded the way the search compares it —
+	 * words, tags and languages without case, a kind by its registry name, a filter by its
+	 * own name over an alias — with clauses, filters and their values sorted. Two spellings
+	 * of one search write the same text, so a topic's query can be unique.
+	 *
+	 * @param text The search as typed.
+	 * @returns The canonical text, or a `ValidationError` for text that cannot run, blank
+	 * text included.
+	 * @example
+	 * PostSearch.canonical("tag:Remix kind:Tutorials"); // success("kind:tutorial tag:remix")
+	 */
+	static canonical(text: string): Result<string, ValidationError> {
+		let parsed = this.parse(text);
+		if (isFailure(parsed)) return parsed;
+		if (parsed.data === null) {
+			return failure(new ValidationError([{ message: "A search needs a query.", path: ["q"] }]));
+		}
+
+		let clauses = parsed.data.clauses
+			.map((clause) => ({
+				...clause,
+				terms: clause.terms.map((term) => ({ ...term, text: term.text.toLowerCase() })),
+			}))
+			.sort((a, b) => compareText(formatClause(a), formatClause(b)));
+		let filters = parsed.data.filters
+			.map((filter) => canonicalFilter(filter))
+			.sort((a, b) => compareText(formatFilter(a), formatFilter(b)));
+
+		return success(formatQuery({ ...parsed.data, clauses, filters }));
+	}
+
+	/**
+	 * Every published post matching a parsed query, in the order it asks for, for a listing
+	 * that shows them all at once, such as a feed.
+	 *
+	 * @param db Database connection holding `post_search` and the posts it projects.
+	 * @param query The parsed query, as {@link PostSearch.page} takes it.
+	 */
+	static async all(db: Database, query: ParsedQuery): Promise<Array<PostSearch.Hit>> {
+		let rows = await (await this.matching(db, query, {})).all();
+		return this.hits(db, rows);
+	}
+
+	/**
 	 * Finds published posts matching `query`, best match first unless it asks for `order:`.
 	 *
 	 * @param db Database connection holding `post_search` and the posts it projects.
@@ -211,7 +257,7 @@ export class PostSearch {
 
 		let rows = await (await this.matching(db, parsed.data, options)).limit(limit).all();
 		let hits = await this.hits(db, rows);
-		return hits.map(({ body: _body, ...result }) => result);
+		return hits.map(({ body: _body, id: _id, ...result }) => result);
 	}
 
 	/**
@@ -392,7 +438,7 @@ export class PostSearch {
 			let postMeta = post ? metaByPost.get(post.id) : undefined;
 			if (!post || kind === null || postMeta === undefined || isBlankMeta(postMeta)) return [];
 			let result = this.result(kind, post, postMeta, row.tags);
-			return [{ ...result, body: row.content }];
+			return [{ ...result, id: post.id, body: row.content }];
 		});
 	}
 
@@ -498,6 +544,38 @@ function permalinkOf(kind: Kind, slug: string): string {
 	if (permalink === "entry") return `/${topic}#${encodeURIComponent(slug)}`;
 	if (permalink === "page") return `/${topic}/${slug}`;
 	return "";
+}
+
+/** Compares two texts by code point, so sorting never depends on the runtime's locale. */
+function compareText(a: string, b: string): number {
+	if (a === b) return 0;
+	return a < b ? -1 : 1;
+}
+
+/** One clause as {@link formatQuery} writes it, which canonical clauses are sorted by. */
+function formatClause(clause: SearchClause): string {
+	return formatQuery({ text: "", clauses: [clause], filters: [], order: "relevance" });
+}
+
+/** One filter as {@link formatQuery} writes it, which canonical filters are sorted by. */
+function formatFilter(filter: SearchFilter): string {
+	return formatQuery({ text: "", clauses: [], filters: [filter], order: "relevance" });
+}
+
+/**
+ * A filter named by the filter it applies, its values folded the way it compares them and
+ * sorted without repeats: a kind by its registry name (a name no kind accepts stays as typed,
+ * lowercased), a language by its tag.
+ */
+function canonicalFilter(filter: SearchFilter): SearchFilter {
+	let name = FILTER_NAMES[filter.name] ?? filter.name;
+	let values = filter.values.map((value) => {
+		let folded = value.trim().toLowerCase();
+		if (name === "kind") return kindNamed(folded) ?? folded;
+		if (name === "lang") return LANGUAGE_NAMES[folded] ?? folded.replaceAll("_", "-");
+		return folded;
+	});
+	return { ...filter, name, values: [...new Set(values)].sort(compareText) };
 }
 
 /**

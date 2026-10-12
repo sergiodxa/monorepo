@@ -22,6 +22,7 @@ export const models = createModels({
 	tutorials: () => import("./tutorials"),
 	likes: () => import("./likes"),
 	glossary: () => import("./glossary"),
+	topics: () => import("./topics"),
 });
 
 /** The registry bound to one request or job, for code handed `ctx.models`. */
