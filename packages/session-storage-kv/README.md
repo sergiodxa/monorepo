@@ -2,42 +2,35 @@
 
 A `remix/session` `SessionStorage` backed by a Cloudflare Workers KV store.
 
-Remix ships cookie, filesystem, memory, Redis and Memcache session stores. This one
-persists a session as JSON in a key-value store, under a key prefix and an expiration you
-choose, so a Workers app keeps its sessions on
-[Workers KV](https://developers.cloudflare.com/kv/) while the cookie carries only the id.
-
-The store is reached through a four-method `KVStore` contract rather than Cloudflare's
-`KVNamespace` type, so the same adapter runs against the real binding in production and
-against an in-memory object in tests, with no Workers runtime involved.
+The cookie carries only the session id; the values live as JSON in
+[Workers KV](https://developers.cloudflare.com/kv/) under a key prefix and an expiration you
+choose. The store is any object with KV's `get`/`put`/`delete`/`list` methods, so the same
+storage runs on a real `KVNamespace` binding in production and on an in-memory object in tests.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/session-storage-kv
 ```
 
-The session types and the middleware that uses this storage come from
-[`remix`](https://www.npmjs.com/package/remix). Session lifetimes may be written as
-duration strings from [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration).
-Both install alongside this package.
+The session middleware and cookies come from [`remix`](https://www.npmjs.com/package/remix);
+lifetimes may be written as duration strings from
+[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration).
 
 ## Usage
 
-### Create The Storage
+### Create the storage
 
 ```typescript
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 
-let storage = new KVSessionStorage(env.KV);
+let storage = new KVSessionStorage(env.SESSIONS);
 ```
 
-Every session is written under `session:${sessionId}` and expires after 365 days.
+A `KVNamespace` binding passes straight through. Each session is stored under
+`session:<id>` and expires 365 days after its last save.
 
-### Wire It Into A Router
-
-`session()` reads and saves through whichever storage it is handed, so a handler works the
-same against KV as against any other backend:
+### Wire it into a router
 
 ```typescript
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
@@ -54,7 +47,7 @@ let cookie = createCookie("__session", {
 });
 
 let router = createRouter({
-	middleware: [session(cookie, new KVSessionStorage(env.KV))],
+	middleware: [session(cookie, new KVSessionStorage(env.SESSIONS))],
 });
 
 router.get("/", (ctx) => {
@@ -63,24 +56,22 @@ router.get("/", (ctx) => {
 });
 ```
 
-The cookie holds the session id and is signed; the values live in KV.
+The middleware reads the session before the handler and saves it after, so handlers only
+touch `ctx.session`.
 
-### Choose A Key Prefix And A Lifetime
+### Choose a key prefix and a lifetime
 
 ```typescript
-let storage = new KVSessionStorage(env.KV, {
+let storage = new KVSessionStorage(env.SESSIONS, {
 	prefix: "web:session:",
 	ttlSeconds: "30 days",
 });
 ```
 
-A prefix keeps sessions apart from anything else in the same namespace. `ttlSeconds`
-accepts whole seconds as a number, so `2_592_000` and `"30 days"` set the same expiration.
+`ttlSeconds` takes whole seconds or a duration string, so `2_592_000` and `"30 days"` are the
+same lifetime.
 
-### Type The Session Data
-
-Both type parameters describe the payload: the values a session keeps, and the flash
-values that survive one request.
+### Type the session data
 
 ```typescript
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
@@ -93,51 +84,42 @@ interface Flash {
 	error: string;
 }
 
-let storage = new KVSessionStorage<Values, Flash>(env.KV);
+let storage = new KVSessionStorage<Values, Flash>(env.SESSIONS);
 
 let session = await storage.read(cookieValue);
 session.get("userId"); // string | undefined
 ```
 
+The first type parameter describes the values a session keeps, the second the flash values
+that survive one read.
+
 ## API
 
 ### `new KVSessionStorage<Values, Flash>(kv: KVStore, options?: KVSessionStorage.Options)`
 
-Creates the storage over a KV-like store. A Cloudflare `KVNamespace` satisfies `KVStore`
-as it is, so the binding can be passed straight through.
+Creates a `SessionStorage` over a KV-like store. Pass it to `session()` from
+`remix/middleware/session`, or call `read` and `save` yourself.
 
-### `storage.read(cookie: string | null): Promise<Session>`
+- `options.prefix`: prepended to every key. Default `"session:"`.
+- `options.ttlSeconds`: lifetime of a saved session, as whole seconds or a duration string.
+  Default `"365 days"`.
 
-Restores the session named by a cookie value. A `null` cookie starts a new session with a
-fresh id; a cookie whose KV entry is absent, or whose stored value has a shape other than
-the `[values, flash]` tuple this storage writes, reads as an empty session under that same
-id.
+### `storage.read(cookie: string | null): Promise<Session<Values, Flash>>`
 
-### `storage.save(session: Session): Promise<string | null>`
+Restores the session named by a cookie value. `null` starts a new session with a fresh id; a
+missing or unreadable entry reads as an empty session under the same id.
 
-Writes the session's current state and returns the value the cookie should carry: the
-session id after a write, `""` after `session.destroy()`, and `null` when the session was
-left untouched. A session whose id was regenerated with `regenerateId(true)` also has its
-previous key deleted.
+### `storage.save(session: Session<Values, Flash>): Promise<string | null>`
 
-### `KVSessionStorage.Options`
+Writes the session and returns the cookie value: the id after a write, `""` after
+`session.destroy()` (the entry is deleted), and `null` when nothing changed. After
+`session.regenerateId(true)` the previous key is deleted too.
 
-```typescript
-interface Options {
-	/** Lifetime of a saved session. A number is whole seconds; a string states its own unit. Default `"365 days"`. */
-	ttlSeconds?: DurationInput;
-	/** Prefix prepended to every KV key. Default `"session:"`. */
-	prefix?: string;
-}
-```
+### Types
 
-### `KVSessionStorage.Data`
+#### `KVStore`
 
-The `Record<string, unknown>` shape both type parameters extend.
-
-### `KVStore`
-
-What this package needs from a key-value store, and the whole of it:
+The store contract. A Cloudflare `KVNamespace` satisfies it as is.
 
 ```typescript
 interface KVStore {
@@ -152,14 +134,34 @@ interface KVStore {
 }
 ```
 
+#### `KVSessionStorage.Options`
+
+The `prefix` and `ttlSeconds` options above.
+
+#### `KVSessionStorage.Data`
+
+`Record<string, unknown>`, the shape both type parameters extend.
+
 ## Pattern: Sign In And Sign Out
 
-Rotating the id on sign-in gives the visitor a new key in KV and drops the old one, so a
-session id captured before authentication is worthless afterwards. `destroy()` removes the
-entry and clears the cookie:
+Rotating the id on sign-in moves the session to a new key and deletes the old one, so an id
+captured before authentication stops working. `destroy()` deletes the entry and clears the
+cookie.
 
 ```typescript
+import { KVSessionStorage } from "@sdxc/session-storage-kv";
+import { createCookie } from "remix/cookie";
+import { session } from "remix/middleware/session";
 import { redirect } from "remix/response/redirect";
+import { createRouter } from "remix/router";
+
+import { authenticate } from "./auth.js";
+
+let cookie = createCookie("__session", { httpOnly: true, secrets: [env.COOKIE_SECRET] });
+
+let router = createRouter({
+	middleware: [session(cookie, new KVSessionStorage(env.SESSIONS))],
+});
 
 router.post("/login", async ({ session, request }) => {
 	let form = await request.formData();
@@ -172,8 +174,12 @@ router.post("/login", async ({ session, request }) => {
 
 	session.regenerateId(true);
 	session.set("userId", user.id);
-
 	return redirect("/dashboard");
+});
+
+router.get("/login", ({ session }) => {
+	let error = session.get("error");
+	return new Response(error ?? "Sign in");
 });
 
 router.post("/logout", ({ session }) => {
@@ -182,13 +188,42 @@ router.post("/logout", ({ session }) => {
 });
 ```
 
-Passing `true` to `regenerateId` is what asks the storage to delete the previous key; the
-middleware calls `save` for you once the handler returns.
+The flashed error is read once on the next `GET /login` and gone after that.
 
-## Pattern: Testing Without A KV Binding
+## Pattern: Separate Sessions In One Namespace
 
-`KVStore` is small enough to satisfy with a `Map`, which makes session behavior testable in
-a plain test runner:
+Two storages with different prefixes share one KV namespace without touching each other's
+keys, each with its own cookie and lifetime.
+
+```typescript
+import { KVSessionStorage } from "@sdxc/session-storage-kv";
+import { createCookie } from "remix/cookie";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
+
+let visitors = new KVSessionStorage(env.SESSIONS, {
+	prefix: "visitor:",
+	ttlSeconds: "30 days",
+});
+
+let admins = new KVSessionStorage(env.SESSIONS, {
+	prefix: "admin:",
+	ttlSeconds: "8 hours",
+});
+
+let site = createRouter({
+	middleware: [session(createCookie("__visitor", { secrets: [env.COOKIE_SECRET] }), visitors)],
+});
+
+let admin = createRouter({
+	middleware: [session(createCookie("__admin", { secrets: [env.COOKIE_SECRET] }), admins)],
+});
+```
+
+## Pattern: Testing With An In-Memory Store
+
+A `Map` satisfies `KVStore`, so session behavior runs in a plain test runner. Recording the
+`expirationTtl` each `put` receives checks a configured lifetime without waiting for it.
 
 ```typescript
 import type { KVStore } from "@sdxc/session-storage-kv";
@@ -196,15 +231,17 @@ import type { KVStore } from "@sdxc/session-storage-kv";
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { expect, test } from "vitest";
 
-function createFakeKV(): KVStore {
+function createMemoryKV() {
 	let values = new Map<string, string>();
+	let ttls = new Map<string, number | undefined>();
 
-	return {
+	let kv: KVStore = {
 		async get(key) {
 			return values.get(key) ?? null;
 		},
-		async put(key, value) {
+		async put(key, value, options) {
 			if (typeof value === "string") values.set(key, value);
+			ttls.set(key, options?.expirationTtl);
 		},
 		async delete(key) {
 			values.delete(key);
@@ -213,10 +250,13 @@ function createFakeKV(): KVStore {
 			return { keys: [...values.keys()].map((name) => ({ name })) };
 		},
 	};
+
+	return { kv, ttls };
 }
 
-test("a session round-trips", async () => {
-	let storage = new KVSessionStorage(createFakeKV(), { prefix: "test:" });
+test("a session round-trips under its prefix and lifetime", async () => {
+	let { kv, ttls } = createMemoryKV();
+	let storage = new KVSessionStorage(kv, { prefix: "test:", ttlSeconds: "1 hour" });
 
 	let session = await storage.read(null);
 	session.set("userId", "user-123");
@@ -225,11 +265,9 @@ test("a session round-trips", async () => {
 	let loaded = await storage.read(cookie);
 
 	expect(loaded.get("userId")).toBe("user-123");
+	expect(ttls.get(`test:${cookie}`)).toBe(3600);
 });
 ```
-
-The same fake records the `expirationTtl` each `put` receives, which is how a configured
-lifetime is checked without waiting for one.
 
 ## Versioning
 
