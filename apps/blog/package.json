@@ -27,7 +27,6 @@
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/diagram": "workspace:*",
 		"@sdxc/distill": "workspace:*",
-		"@sdxc/duration": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
 		"@sdxc/epub": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",

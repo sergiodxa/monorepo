@@ -9,7 +9,9 @@
 
 import type { Database } from "remix/data-table";
 
+import { randomToken } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { createCookie } from "remix/cookie";
 
@@ -31,10 +33,10 @@ const LIFETIME_SECONDS = 60 * 60;
  * @returns The new admin's id.
  */
 export async function seedAdmin(db: Database): Promise<string> {
-	let suffix = crypto.randomUUID().slice(0, 8);
+	let suffix = generateUUID().slice(0, 8);
 	let user = unwrap(
 		await bindModels(db).users.create({
-			subject_id: crypto.randomUUID(),
+			subject_id: generateUUID(),
 			role: "admin",
 			email: `admin-${suffix}@example.com`,
 			avatar: "https://example.com/avatar.png",
@@ -57,7 +59,7 @@ export async function seedAdmin(db: Database): Promise<string> {
  * @returns The `name=value` pair a browser would send back.
  */
 export async function signedInCookie(userId: string, secret: string): Promise<string> {
-	let id = crypto.randomUUID();
+	let id = randomToken();
 	let tokens = {
 		idToken: "id-token",
 		accessToken: "access-token",

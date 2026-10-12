@@ -12,6 +12,7 @@ import type { Result } from "@sdxc/result";
 import { findItem, parse } from "@sdxc/microformats";
 import { readCard, readEntry, readFeed } from "@sdxc/microformats/vocabulary";
 import { succeeded, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -22,7 +23,7 @@ import { bindModels } from "~/app/test/models";
 import { PROFILE } from "~/config/profile";
 
 const ORIGIN = "https://blog.test";
-const SLUG = `microformats-${crypto.randomUUID().slice(0, 8)}`;
+const SLUG = `microformats-${generateUUID().slice(0, 8)}`;
 const PUBLISHED_AT = "2026-09-01T12:00:00.000Z";
 const BOOKMARK_URL = `https://example.com/saved-${SLUG}`;
 const UNTITLED_URL = `https://example.com/untitled-${SLUG}`;

@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import { bindModels } from "~/app/test/models";
 
@@ -74,10 +75,10 @@ export async function applyMigrations(
  * @returns The new user's id.
  */
 export async function seedAuthor(db: Database): Promise<string> {
-	let suffix = crypto.randomUUID().slice(0, 8);
+	let suffix = generateUUID().slice(0, 8);
 	let user = unwrap(
 		await bindModels(db).users.create({
-			subject_id: crypto.randomUUID(),
+			subject_id: generateUUID(),
 			email: `author-${suffix}@example.com`,
 			avatar: "https://example.com/avatar.png",
 			username: `author-${suffix}`,

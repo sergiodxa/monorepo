@@ -13,6 +13,7 @@ import { Atom } from "@sdxc/atom";
 import { JSONFeed } from "@sdxc/json-feed";
 import { succeeded, unwrap } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -22,7 +23,7 @@ import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
 
 const ORIGIN = "https://blog.test";
-const SLUG = `syndication-${crypto.randomUUID().slice(0, 8)}`;
+const SLUG = `syndication-${generateUUID().slice(0, 8)}`;
 const ARTICLE_URL = `${ORIGIN}/articles/${SLUG}`;
 const BOOKMARK_URL = `https://example.com/saved-${SLUG}`;
 const BOOKMARK_DESCRIPTION = "What the page says about itself.";

@@ -10,6 +10,7 @@
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { parseLinkHeader } from "@sdxc/pagination";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -22,7 +23,7 @@ import { bindModels } from "~/app/test/models";
 const ORIGIN = "https://blog.test";
 
 /** A word no other test file writes, so this file's matches are exactly its own posts. */
-const TOKEN = `zq${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+const TOKEN = `zq${generateUUID().replaceAll("-", "").slice(0, 10)}`;
 
 const PAST = "2026-03-01T12:00:00.000Z";
 

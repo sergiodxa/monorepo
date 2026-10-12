@@ -10,6 +10,7 @@
 
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -22,7 +23,7 @@ import { bindModels } from "~/app/test/models";
 const ORIGIN = "https://blog.test";
 
 /** A word no other test file writes, so this file's matches are exactly its own posts. */
-const TOKEN = `zl${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+const TOKEN = `zl${generateUUID().replaceAll("-", "").slice(0, 10)}`;
 
 /** A tag only this file's tutorials carry. */
 const TAG = `tag${TOKEN}`;

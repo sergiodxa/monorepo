@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -19,7 +20,7 @@ import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
 
 const ORIGIN = "https://blog.test";
-const RUN = crypto.randomUUID().slice(0, 8);
+const RUN = generateUUID().slice(0, 8);
 const LIVE = `mentioned-${RUN}`;
 const DELETED = `deleted-${RUN}`;
 const WITHDRAWN = `withdrawn-${RUN}`;

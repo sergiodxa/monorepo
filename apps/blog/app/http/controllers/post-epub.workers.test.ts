@@ -8,6 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -18,7 +19,7 @@ import { bindModels } from "~/app/test/models";
 import { seedAdmin } from "~/app/test/session";
 
 /** A suffix keeping these slugs apart from other files sharing the storage. */
-const SUFFIX = crypto.randomUUID().slice(0, 8);
+const SUFFIX = generateUUID().slice(0, 8);
 
 /** A full `App.Env` over the real bindings, with the secrets a local run cannot read. */
 function environment(): App.Env {

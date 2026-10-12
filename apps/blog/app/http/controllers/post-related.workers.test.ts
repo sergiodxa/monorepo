@@ -8,6 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -20,7 +21,7 @@ import { bindModels } from "~/app/test/models";
 const ORIGIN = "https://blog.test";
 
 /** A slug prefix no other test file writes. */
-const TOKEN = `zr${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+const TOKEN = `zr${generateUUID().replaceAll("-", "").slice(0, 10)}`;
 
 /** A tag only this file's tutorials carry, which is what relates them to each other. */
 const TAG = `tag${TOKEN}`;
