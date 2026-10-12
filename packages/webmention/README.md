@@ -2,47 +2,31 @@
 
 Receive, verify, discover and send Webmentions.
 
+[Webmention](https://www.w3.org/TR/webmention/) tells a page it was linked to: the linking site
+discovers the page's endpoint and POSTs a `source` and a `target`; the receiver fetches `source`,
+confirms it links to `target`, and shows it as a reply, like, repost, bookmark or mention. This
+package holds the protocol; storage, moderation and queueing stay with you.
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/webmention
 ```
 
-Fallible functions return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values.
-It installs alongside this package with [`@sdxc/microformats`](https://www.npmjs.com/package/@sdxc/microformats),
-which reads a source's entry, author and response type, and
-[`@sdxc/html`](https://www.npmjs.com/package/@sdxc/html), which parses sources once and
-sanitizes their content.
+Fallible functions answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+Sources are parsed with [`@sdxc/html`](https://www.npmjs.com/package/@sdxc/html) and read with
+[`@sdxc/microformats`](https://www.npmjs.com/package/@sdxc/microformats); both install with it.
 
-[Webmention](https://www.w3.org/TR/webmention/) tells a page it was linked to. The linking site
-discovers the linked page's endpoint and POSTs two URLs, `source` and `target`; the receiver
-fetches `source`, confirms it links to `target`, and shows it as a reply, a like, a repost, a
-bookmark or a plain mention. This package holds the protocol; storage, moderation and queueing
-stay with you.
-
-- **`@sdxc/webmention/receiver`** reads the endpoint's request without fetching anything,
-  answers it `202` or `400`, and verifies a queued pair in a background task: a bounded fetch of
-  `source`, an exact link check, and a display-ready summary read from the source's
-  microformats.
-- **`@sdxc/webmention/discover`** finds a page's endpoint (`Link` header first, then the first
-  `<link>` or `<a>` in document order) and writes the values advertising your own. `endpointOf`
-  passes all 23 [webmention.rocks](https://webmention.rocks/) discovery tests.
-- **`@sdxc/webmention/sender`** lists an entry's outbound links, plans which targets a create,
-  update or delete notifies, and discovers and POSTs one mention.
-- **`@sdxc/webmention`** holds the shared `Webmention` types and the three errors.
-
-Every outbound fetch is bounded: HTTP(S) to public hosts only, every redirect hop re-checked,
-five hops, one megabyte and five seconds by default. A public host is a name, never an address
-literal, outside the reserved suffixes (`localhost`, `local`, `internal`, `test`, `example` and
-the like), and a URL carrying credentials is refused. The five seconds cover the redirect chain
-and the body read after it.
+Every outbound fetch is bounded: HTTP(S) to public host names only (no address literals, reserved
+suffixes such as `localhost`, `internal` or `test`, or URLs carrying credentials), each redirect
+hop re-checked, and by default five hops, one megabyte and five seconds for the whole fetch.
 
 ## Usage
 
 ### Receive
 
-Queue verification rather than running it inside the endpoint's request, so an anonymous POST
-cannot make your server fetch a URL of the caller's choosing while it waits.
+The endpoint only reads and checks the request, then queues verification, so an anonymous POST
+never makes your server fetch a URL while the caller waits.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -60,9 +44,9 @@ export async function webmentionEndpoint(request: Request) {
 }
 ```
 
-### Verify In The Background
+### Verify in the background
 
-Key stored mentions on the pair: a `linked` outcome upserts, `gone` and `unlinked` delete.
+A mention is keyed by its pair: `linked` upserts it, `gone` and `unlinked` delete it.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -70,13 +54,20 @@ import { verify } from "@sdxc/webmention/receiver";
 
 let pair = { source: new URL(message.source), target: new URL(message.target) };
 let outcome = await verify(pair, { userAgent: "Example/1.0 (+https://example.com)" });
-if (isFailure(outcome)) {
-	if (outcome.error.retryable) return message.retry();
-	return message.ack();
-}
+if (isFailure(outcome)) return outcome.error.retryable ? message.retry() : message.ack();
 
 if (outcome.data.status === "linked") await mentions.upsert(pair, outcome.data.mention);
 else await mentions.delete(pair);
+```
+
+### Advertise your endpoint
+
+```typescript
+import { advertise } from "@sdxc/webmention/discover";
+
+let { header, link } = advertise("https://example.com/webmention");
+response.headers.append("Link", header); // <https://example.com/webmention>; rel="webmention"
+// in the page head: <link rel={link.rel} href={link.href} />
 ```
 
 ### Send
@@ -85,60 +76,44 @@ else await mentions.delete(pair);
 import { outboundLinks, plan, send } from "@sdxc/webmention/sender";
 
 let current = outboundLinks(post.html, post.url);
-let previous = await sentTargets(post.url);
-for (let target of plan(current, previous).targets) {
-	let delivery = await send(
-		{ source: new URL(post.url), target },
-		{ userAgent: "Example/1.0 (+https://example.com)" },
-	);
+for (let target of plan(current, await sentTargets(post.url)).targets) {
+	await send({ source: new URL(post.url), target }, { userAgent: "Example/1.0" });
 }
-```
-
-### Advertise
-
-```typescript
-import { advertise } from "@sdxc/webmention/discover";
-
-let { header, link } = advertise("https://example.com/webmention");
-response.headers.append("Link", header); // <https://example.com/webmention>; rel="webmention"
-<link rel={link.rel} href={link.href} />;
 ```
 
 ## API
 
 ### `@sdxc/webmention`
 
-#### `Webmention` namespace
+#### `Webmention`
 
-`Pair` (`source`, `target` as `URL`s; a repeated pair is an update), `Kind` (`reply`, `like`,
-`repost`, `bookmark`, `mention`), `Author` (`name`, `url`, `photo`, each nullable) and
-`Mention` (`kind`, `url`, `author`, `content: { html, text } | null`, `name`, `published`).
-`Mention.content.html` is already sanitized, with the source as its base URL.
+Types only. `Pair` is `{ source: URL; target: URL }`; sending a pair again updates the same
+mention. `Kind` is `"reply" | "like" | "repost" | "bookmark" | "mention"`. `Author` has `name`,
+`url` and `photo`, each nullable. `Mention` has `kind`, `url` (the entry's `u-url`, else the
+source), `author`, `content: { html, text } | null` (`html` already sanitized against the source),
+`name` and `published: Date | null`.
 
 #### `WebmentionRequestError`
 
-A request the specification answers with `400`. `reason` (a `WebmentionRequestReason`) is
-`media-type`, `missing`, `invalid-url`, `same-url` or `target-not-accepted`; `message` is the
-text `rejected` sends.
+A request answered `400`. `reason` (a `WebmentionRequestReason`) is `"media-type"`, `"missing"`,
+`"invalid-url"`, `"same-url"` or `"target-not-accepted"`; `message` is the body `rejected` sends.
 
 #### `WebmentionFetchError`
 
-A fetch that did not finish. `retryable` is `true` for a timeout, a network failure (a body
-that broke off mid-read included), or a `5xx`/`429` answer, and `false` for a refused host, a
-redirect chain over the limit, or a body over the cap.
+A fetch that did not finish. `retryable` is `true` for a timeout, a network failure or a `5xx`
+or `429` answer, and `false` for a refused host, too many redirects or a body over the cap.
 
 #### `WebmentionSendError`
 
-An endpoint that answered a send outside 2xx; `status` is what it answered.
+An endpoint that answered a send outside 2xx, with that `status`.
 
 ### `@sdxc/webmention/receiver`
 
 #### `parseRequest(request: Request, options: Receiver.ParseOptions): Promise<Result<Webmention.Pair, WebmentionRequestError>>`
 
-Reads `source` and `target` from `options.formData`, the body your framework already read
-(the request stream is consumed by then), and checks them in the specification's order: a form-encoded body, both URLs
-present, both HTTP(S), `source` on a public host, the two different, and `options.accepts(target)`
-true. It fetches nothing.
+Checks, in the specification's order, a form-encoded `Content-Type`, both URLs present and
+HTTP(S), `source` on a public host, the two different, and `options.accepts(target)`. Pass the
+already-read body as `options.formData`. It fetches nothing.
 
 #### `accepted(location?: string | URL): Response`
 
@@ -150,122 +125,200 @@ true. It fetches nothing.
 
 #### `verify(pair: Webmention.Pair, options: Receiver.VerifyOptions): Promise<Result<Receiver.Outcome, WebmentionFetchError>>`
 
-Fetches `source` under bounds (`userAgent` required; `maxBytes` 1 MiB, `timeoutMs` 5000 and
-`maxRedirects` 5 by default) and answers:
-
-- `{ status: "linked", mention, document, finalUrl }`: the source links to the target;
-  `document` is its microformats, `finalUrl` where the redirects ended.
-- `{ status: "gone" }`: the source answered `410`.
-- `{ status: "unlinked" }`: any other 4xx, a body without the link, or a format that
-  carries no links (an image, say).
-
-HTML is parsed once for `linksTo`, the microformats and the `<title>`. A JSON source links
-when a string in it is the target, and is summarized like HTML when it is a microformats
-document; a text source links when it contains the target.
+Fetches `source` under the bounds and answers `{ status: "linked", mention, document, finalUrl }`
+(`document` is the source's microformats, `finalUrl` where redirects ended), `{ status: "gone" }`
+for a `410`, or `{ status: "unlinked" }` for any other 4xx, a body without the link, or a format
+that carries no links. HTML links by attribute, JSON when a string in it is the target (and is
+summarized when it is a microformats document), text when it contains the target.
 
 #### `linksTo(document: DOMDocument, baseUrl: string, target: URL): boolean`
 
-Whether a parsed page links to `target` from an `href`, `src`, `poster` or `data`
-attribute, each resolved against the page's `<base href>` or `baseUrl`. Fragments are
-ignored on both sides; the URL as plain text, in a comment or in escaped markup is no link.
+Whether a parsed page links to `target` from an `href`, `src`, `poster` or `data` attribute,
+resolved against the page's `<base href>` or `baseUrl`, ignoring fragments on both sides.
 
 #### `summarize(document: MF2.Document, source: URL, target: URL, title?: string | null): Webmention.Mention`
 
-The mention from the entry that responds to `target`, found with `responseTo` from
-[`@sdxc/microformats/vocabulary`](https://www.npmjs.com/package/@sdxc/microformats): its
-kind, `u-url`, author by the authorship algorithm, sanitized content (or its `summary` as
-text), `published` instant, and its name when it is an article. A page with no such entry
-is a `mention` named by `title` and authored by the page's representative `h-card`.
-
-#### `Receiver`
-
-Types only: `ParseOptions` (`formData`, `accepts`), `VerifyOptions` (`userAgent`, `maxBytes`,
-`timeoutMs`, `maxRedirects`) and `Outcome`.
+The mention from the entry responding to `target`: its kind, `u-url`, author by the authorship
+algorithm, sanitized content, `published` instant, and its name when it is an article. A page with
+no such entry is a `mention` named `title` and authored by its representative `h-card`.
 
 ### `@sdxc/webmention/discover`
 
-#### `endpointOf(response: Response, finalUrl: string): Promise<URL | null>`
-
-The endpoint a response advertises: the first `Link` value whose `rel` holds `webmention`,
-else, for an HTML body, the first `<link href>` or `<a href>` in document order whose `rel`
-holds it. Resolved against `finalUrl`, query string kept; an empty `href` is the page itself.
-
 #### `discover(target: string | URL, options: Discover.Options): Promise<Result<URL | null, WebmentionFetchError>>`
 
-Fetches `target` under the same bounds as `verify` and runs discovery. A 4xx target has no
-endpoint (`null`); a `5xx` or `429` is a retryable failure; an endpoint on a private host is
-a non-retryable failure, so a page cannot point a sender at an internal address.
+Fetches `target` under the bounds and answers its endpoint, or `null` when it advertises none or
+answers 4xx. An endpoint on a private host is a non-retryable failure.
+
+#### `endpointOf(response: Response, finalUrl: string): Promise<URL | null>`
+
+The endpoint a response you already fetched advertises: the first `Link` value with
+`rel="webmention"`, else the first such `<link>` or `<a>` in an HTML body, resolved against
+`finalUrl`. An empty `href` names the page itself.
 
 #### `advertise(endpoint: string | URL): Discover.Advertisement`
 
-`{ header, link }`: the `Link` header value and the `<link>` attributes for your endpoint. A
-`URL` is written absolute, a string as given.
-
-#### `Discover`
-
-Types only: `Options` (the same bounds as `Receiver.VerifyOptions`) and `Advertisement`.
+`{ header, link }`: the `Link` header value and the `<link>` attributes for your endpoint. A `URL`
+is written absolute, a string as given.
 
 ### `@sdxc/webmention/sender`
 
 #### `send(pair: Webmention.Pair, options: Sender.Options): Promise<Result<Sender.Delivery, WebmentionFetchError | WebmentionSendError>>`
 
-Discovers the target's endpoint and POSTs the pair form-encoded, following no redirect.
-Answers `{ status: "sent", endpoint, code, location }` for any 2xx (`location` absolute, or
-`null`), or `{ status: "no-endpoint" }`.
+Discovers the target's endpoint and POSTs the pair form-encoded, following no redirect. Answers
+`{ status: "sent", endpoint, code, location }` for any 2xx (`location` absolute or `null`), or
+`{ status: "no-endpoint" }`.
 
 #### `outboundLinks(html: string, baseUrl: string | URL): URL[]`
 
-The `<a>` and `<area>` links in an entry's content, resolved against its URL, HTTP(S) only,
-each once in document order, leaving out the entry's own origin.
+The `<a>` and `<area>` links in an entry's content, resolved against its URL, HTTP(S) only, each
+once in document order, leaving out the entry's own origin.
 
 #### `plan(current: URL[], previous: URL[]): Sender.Plan`
 
-`{ targets }`: the current links, then every previously notified target the post no longer
-links to, since the specification has removed links notified too.
+`{ targets }`: the current links, then every previously notified target the post no longer links
+to, so receivers learn a link was removed.
 
-#### `Sender`
+### Types
 
-Types only: `Options` (the same bounds), `Delivery` and `Plan`.
+- `Receiver.ParseOptions`: `formData` and `accepts(target)`, which may be async.
+- `Receiver.VerifyOptions`, `Discover.Options`, `Sender.Options`: `userAgent` (required),
+  `maxBytes` (default 1 MiB), `timeoutMs` (default 5000) and `maxRedirects` (default 5).
+- `Receiver.Outcome`, `Sender.Delivery`, `Sender.Plan`, `Discover.Advertisement`: the results
+  described above.
+
+## Pattern: An Endpoint And Its Verification Job
+
+The request handler answers at once; the job verifies, stores the mention as pending moderation,
+and retries only what can succeed later.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { accepted, parseRequest, rejected, verify } from "@sdxc/webmention/receiver";
+
+let USER_AGENT = "Example/1.0 (+https://example.com)";
+
+export async function endpoint(request: Request) {
+	let parsed = await parseRequest(request, {
+		formData: await request.formData(),
+		accepts: async (target) =>
+			target.origin === "https://example.com" && (await posts.exists(target)),
+	});
+	if (isFailure(parsed)) return rejected(parsed.error);
+	await queue.send({ source: parsed.data.source.href, target: parsed.data.target.href });
+	return accepted();
+}
+
+export async function verifyJob(message: { source: string; target: string }) {
+	let pair = { source: new URL(message.source), target: new URL(message.target) };
+	let outcome = await verify(pair, { userAgent: USER_AGENT, timeoutMs: 10_000 });
+	if (isFailure(outcome)) {
+		if (outcome.error.retryable) throw outcome.error;
+		return;
+	}
+	if (outcome.data.status === "linked") {
+		await mentions.upsert(pair, { ...outcome.data.mention, approved: false });
+	} else {
+		await mentions.delete(pair);
+	}
+}
+```
+
+`mention.content.html` is safe to render as it stands. Rate-limit the endpoint per client IP and
+verification per source host, and render author photos with `referrerpolicy="no-referrer"` and
+fixed dimensions.
+
+## Pattern: Notify On Create And Update
+
+Record which targets each post notified, so the next update also notifies links you removed.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { outboundLinks, plan, send } from "@sdxc/webmention/sender";
+
+export async function notify(post: { url: string; html: string }) {
+	let source = new URL(post.url);
+	let current = outboundLinks(post.html, source);
+	let { targets } = plan(current, await sent.targetsOf(post.url));
+
+	for (let target of targets) {
+		let delivery = await send({ source, target }, { userAgent: "Example/1.0" });
+		if (isFailure(delivery)) continue;
+		if (delivery.data.status === "sent") await sent.record(post.url, target);
+	}
+}
+```
 
 ## Pattern: Delete A Post
 
 Serve `410 Gone` from the post's URL first, then notify every past target, so each receiver's
-verification sees the deletion and removes its mention:
+verification sees the deletion and removes its mention.
 
 ```typescript
 import { plan, send } from "@sdxc/webmention/sender";
 
-let { targets } = plan([], await sentTargets(post.url));
+let { targets } = plan([], await sent.targetsOf(post.url));
 for (let target of targets) {
-	await send({ source: new URL(post.url), target }, { userAgent });
+	await send({ source: new URL(post.url), target }, { userAgent: "Example/1.0" });
 }
 ```
 
-## Pattern: Retry Or Acknowledge
+## Pattern: Retry Or Acknowledge A Send
 
-`WebmentionFetchError.retryable` and `WebmentionSendError.status` are what a background task
-reads:
+A fetch error carries `retryable`; an endpoint's refusal carries its `status`.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 import { WebmentionFetchError } from "@sdxc/webmention";
 import { send } from "@sdxc/webmention/sender";
 
-let delivery = await send(pair, { userAgent });
+let delivery = await send(pair, { userAgent: "Example/1.0" });
 if (isFailure(delivery)) {
 	let error = delivery.error;
 	let retry =
 		error instanceof WebmentionFetchError
 			? error.retryable
 			: error.status >= 500 || error.status === 429;
-	if (retry) return message.retry();
-	return message.ack();
+	return retry ? message.retry() : message.ack();
 }
 ```
 
-Rate-limit the endpoint per client IP and verification per source host. Store mentions as
-pending and show them once approved; `content.html` is safe to render, and author photos render
-best with `referrerpolicy="no-referrer"` and fixed dimensions.
+## Pattern: Check A Source You Already Parsed
+
+When you fetch and parse the source yourself, `linksTo` and `summarize` give the same answer
+`verify` would.
+
+```typescript
+import { parseDocument } from "@sdxc/html/document";
+import { fromDocument } from "@sdxc/microformats";
+import { isFailure } from "@sdxc/result";
+import { linksTo, summarize } from "@sdxc/webmention/receiver";
+
+let source = new URL("https://example.org/reply");
+let target = new URL("https://example.com/post");
+
+let document = parseDocument(html);
+if (isFailure(document)) return null;
+if (!linksTo(document.data, source.href, target)) return null;
+
+let title = document.data.querySelector("title")?.textContent ?? null;
+let mention = summarize(fromDocument(document.data, source), source, target, title);
+```
+
+## Pattern: Discover Without Sending
+
+`discover` answers whether a page takes Webmentions; `endpointOf` reads a response you fetched
+through your own client.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { discover, endpointOf } from "@sdxc/webmention/discover";
+
+let found = await discover("https://example.org/post", { userAgent: "Example/1.0" });
+let acceptsMentions = !isFailure(found) && found.data !== null;
+
+let response = await fetch("https://example.org/post");
+let endpoint = await endpointOf(response, response.url);
+```
 
 ## Versioning
 
