@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Meter } from "@sdxc/cloudflare-pricing";
+import type { RateCardQuantities, RateCardResource } from "@sdxc/cloudflare-pricing";
 
-import { centsPerGbDay, centsPerUnit } from "@sdxc/cloudflare-pricing";
+import { centsPerGbDay, centsPerUnit, defineRateCard } from "@sdxc/cloudflare-pricing";
 import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
 import * as D1 from "@sdxc/cloudflare-pricing/d1";
 import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
@@ -23,20 +23,11 @@ import * as Workers from "@sdxc/cloudflare-pricing/workers";
 export const RATE_CARD_VERSION = "2026-09-28";
 
 /**
- * Cents per unit of an Analytics Engine meter: its list price once Cloudflare invoices the
- * service, zero until then, so the ledger keeps counting points and queries while their cost
- * matches the bill.
+ * The rate card, at Workers Paid overage rates. **Key order is the Analytics Engine `double`
+ * order** ({@link COST_RESOURCES}): a resource may be appended but never reordered or removed
+ * without orphaning every point already written.
  */
-function analyticsEngineCents(meter: Meter): number {
-	return AnalyticsEngine.BILLING_ACTIVE ? centsPerUnit(meter) : 0;
-}
-
-/**
- * Cents per unit, at Workers Paid overage rates. **Key order is the Analytics Engine
- * `double` order** ({@link COST_RESOURCES}): a resource may be appended but never
- * reordered or removed without orphaning every point already written.
- */
-export const RATES = {
+export const COST_RATE_CARD = defineRateCard({
 	workerRequest: centsPerUnit(Workers.REQUESTS),
 	workerCpuMs: centsPerUnit(Workers.CPU_MS),
 	queueOperation: centsPerUnit(Queues.OPERATIONS),
@@ -50,34 +41,32 @@ export const RATES = {
 	doRequest: centsPerUnit(DurableObjects.REQUESTS),
 	/** One millisecond of one active object, at the 128 MB Cloudflare bills every object for. */
 	doDurationMs: DurableObjects.centsPerActiveMs(),
-	aeDataPoint: analyticsEngineCents(AnalyticsEngine.DATA_POINTS_WRITTEN),
-	aeQuery: analyticsEngineCents(AnalyticsEngine.READ_QUERIES),
+	/** Analytics Engine prices at zero until Cloudflare invoices it, while the ledger keeps counting. */
+	aeDataPoint: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN),
+	aeQuery: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.READ_QUERIES),
 	emailSent: centsPerUnit(EmailService.EMAILS_SENT),
 	doSqliteStorageGbDay: centsPerGbDay(DurableObjects.SQLITE_STORAGE),
 	doRowRead: centsPerUnit(DurableObjects.SQLITE_ROWS_READ),
 	doRowWritten: centsPerUnit(DurableObjects.SQLITE_ROWS_WRITTEN),
 	/** Workers Logs events: the worker enables `observability`, and every invocation writes one. */
 	workerLogEvent: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
-};
+});
+
+/** Cents per unit of every resource the ledger counts. */
+export const RATES = COST_RATE_CARD.rates;
 
 /** A resource the ledger can be asked to count. */
-export type CostResource = keyof typeof RATES;
+export type CostResource = RateCardResource<typeof COST_RATE_CARD>;
 
-/**
- * Every resource, in the order recorded data points position their `double` fields by.
- * Derived from {@link RATES} rather than repeated, so adding a resource is one edit,
- * and object key order for string keys keeps this list stable across reads.
- */
-export const COST_RESOURCES: readonly CostResource[] = Object.keys(RATES) as CostResource[];
+/** Every resource, in the order recorded data points position their `double` fields by. */
+export const COST_RESOURCES = COST_RATE_CARD.resources;
 
 /** How many units of each resource one unit of work consumed. */
-export type CostQuantities = Record<CostResource, number>;
+export type CostQuantities = RateCardQuantities<CostResource>;
 
 /** A fresh, fully-zeroed set of quantities — every resource present, so pricing is a sum. */
 export function createCostQuantities(): CostQuantities {
-	let quantities = {} as CostQuantities;
-	for (let resource of COST_RESOURCES) quantities[resource] = 0;
-	return quantities;
+	return COST_RATE_CARD.zero();
 }
 
 /**
@@ -89,9 +78,7 @@ export function createCostQuantities(): CostQuantities {
  * @returns The total cost in cents.
  */
 export function priceCostQuantities(quantities: CostQuantities): number {
-	let cents = 0;
-	for (let resource of COST_RESOURCES) cents += quantities[resource] * RATES[resource];
-	return cents;
+	return COST_RATE_CARD.price(quantities);
 }
 
 /**
