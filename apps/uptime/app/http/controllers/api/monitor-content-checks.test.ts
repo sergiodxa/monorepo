@@ -12,6 +12,7 @@
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -49,10 +50,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -70,9 +71,9 @@ async function createMonitorRow(db: Db, teamId: string) {
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
-			author_id: crypto.randomUUID(),
+			author_id: generateUUID(),
 			name: "Example",
 			url: "https://example.com",
 			method: "HEAD",
@@ -101,7 +102,7 @@ async function createContentCheckRow(
 	return await db.create(
 		monitorContentChecks,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitorId,
 			type: "contains",
 			value: "OK",
@@ -189,7 +190,7 @@ describe("GET /api/v1/monitors/:monitorId/content-checks", () => {
 			request(
 				"GET",
 				routes.api.v1.monitors.contentChecks.index.href({
-					monitorId: encodeId("mon", crypto.randomUUID()),
+					monitorId: encodeId("mon", generateUUID()),
 				}),
 			),
 		);
@@ -369,7 +370,7 @@ describe("POST /api/v1/monitors/:monitorId/content-checks", () => {
 			request(
 				"POST",
 				routes.api.v1.monitors.contentChecks.create.href({
-					monitorId: encodeId("mon", crypto.randomUUID()),
+					monitorId: encodeId("mon", generateUUID()),
 				}),
 				{ body: { type: "contains", value: "ok" } },
 			),
@@ -483,8 +484,8 @@ describe("DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId", ()
 			request(
 				"DELETE",
 				routes.api.v1.monitors.contentChecks.destroy.href({
-					monitorId: encodeId("mon", crypto.randomUUID()),
-					contentCheckId: encodeId("chk", crypto.randomUUID()),
+					monitorId: encodeId("mon", generateUUID()),
+					contentCheckId: encodeId("chk", generateUUID()),
 				}),
 			),
 		);

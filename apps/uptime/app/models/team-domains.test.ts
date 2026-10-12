@@ -8,6 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import { createTestDatabase } from "~/app/test/db";
@@ -33,7 +34,7 @@ async function addDomain(
 describe("teamDomains.create", () => {
 	test("adds a domain for a team, pending verification", async () => {
 		let { models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 
 		let domain = await addDomain(models, teamId, "acme.com");
 
@@ -45,7 +46,7 @@ describe("teamDomains.create", () => {
 	test("queues the domain's verification once it is written", async () => {
 		let { models, sent } = setup();
 
-		let domain = await addDomain(models, crypto.randomUUID(), "acme.com");
+		let domain = await addDomain(models, generateUUID(), "acme.com");
 
 		expect(sent).toEqual([{ job: "verifyDomainOwnership", input: { teamDomainId: domain.id } }]);
 	});
@@ -55,7 +56,7 @@ describe("teamDomains.create", () => {
 
 		await models
 			.transaction(async (scoped) => {
-				await scoped.teamDomains.create({ team_id: crypto.randomUUID(), hostname: "acme.com" });
+				await scoped.teamDomains.create({ team_id: generateUUID(), hostname: "acme.com" });
 				throw new Error("abort");
 			})
 			.catch(() => {});
@@ -65,7 +66,7 @@ describe("teamDomains.create", () => {
 
 	test("queues nothing for an update", async () => {
 		let { models, sent } = setup();
-		let domain = await addDomain(models, crypto.randomUUID(), "acme.com");
+		let domain = await addDomain(models, generateUUID(), "acme.com");
 		sent.length = 0;
 
 		unwrap(await models.teamDomains.update(domain.id, { verified_at: Date.now() }));
@@ -77,33 +78,33 @@ describe("teamDomains.create", () => {
 describe("teamDomains.inTeam", () => {
 	test("finds a domain by hostname on its team only", async () => {
 		let { models } = setup();
-		let teamA = crypto.randomUUID();
+		let teamA = generateUUID();
 		let domain = await addDomain(models, teamA, "acme.com");
 
 		expect(
 			(await models.teamDomains.inTeam(teamA).where({ hostname: "acme.com" }).first())?.id,
 		).toBe(domain.id);
 		expect(
-			await models.teamDomains.inTeam(crypto.randomUUID()).where({ hostname: "acme.com" }).first(),
+			await models.teamDomains.inTeam(generateUUID()).where({ hostname: "acme.com" }).first(),
 		).toBeNull();
 	});
 
 	test("finds a domain by id on its team only", async () => {
 		let { models } = setup();
-		let teamA = crypto.randomUUID();
+		let teamA = generateUUID();
 		let domain = await addDomain(models, teamA, "acme.com");
 
 		expect((await models.teamDomains.inTeam(teamA).where({ id: domain.id }).first())?.id).toBe(
 			domain.id,
 		);
 		expect(
-			await models.teamDomains.inTeam(crypto.randomUUID()).where({ id: domain.id }).first(),
+			await models.teamDomains.inTeam(generateUUID()).where({ id: domain.id }).first(),
 		).toBeNull();
 	});
 
 	test("lists a team's domains newest first and none of another team's", async () => {
 		let { db, models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let first = await addDomain(models, teamId, "a.example.com");
 		/**
 		 * Force a distinct `created_at` so the ordering assertion stays deterministic when two
@@ -116,7 +117,7 @@ describe("teamDomains.inTeam", () => {
 			{ touch: false },
 		);
 		let second = await addDomain(models, teamId, "b.example.com");
-		await addDomain(models, crypto.randomUUID(), "c.example.com");
+		await addDomain(models, generateUUID(), "c.example.com");
 
 		let rows = await models.teamDomains.inTeam(teamId).orderBy("created_at", "desc").all();
 
@@ -127,8 +128,8 @@ describe("teamDomains.inTeam", () => {
 describe("teamDomains.unverified", () => {
 	test("lists every unverified domain across every team", async () => {
 		let { models } = setup();
-		let unverified = await addDomain(models, crypto.randomUUID(), "unverified.com");
-		let verified = await addDomain(models, crypto.randomUUID(), "verified.com");
+		let unverified = await addDomain(models, generateUUID(), "unverified.com");
+		let verified = await addDomain(models, generateUUID(), "verified.com");
 		unwrap(await models.teamDomains.update(verified.id, { verified_at: Date.now() }));
 
 		let ids = (await models.teamDomains.unverified().all()).map((row) => row.id);
@@ -141,7 +142,7 @@ describe("teamDomains.unverified", () => {
 describe("teamDomains.verifiedHostnames", () => {
 	test("answers only the team's verified hostnames", async () => {
 		let { models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let verified = await addDomain(models, teamId, "verified.com");
 		await addDomain(models, teamId, "pending.com");
 		unwrap(await models.teamDomains.update(verified.id, { verified_at: Date.now() }));
@@ -153,8 +154,8 @@ describe("teamDomains.verifiedHostnames", () => {
 describe("teamDomains.verifiedHostnamesByTeam", () => {
 	test("groups verified hostnames by team and leaves out teams with none", async () => {
 		let { models } = setup();
-		let teamA = crypto.randomUUID();
-		let teamB = crypto.randomUUID();
+		let teamA = generateUUID();
+		let teamB = generateUUID();
 		let a = await addDomain(models, teamA, "a.com");
 		await addDomain(models, teamB, "b.com");
 		unwrap(await models.teamDomains.update(a.id, { verified_at: Date.now() }));
@@ -174,7 +175,7 @@ describe("teamDomains.verifiedHostnamesByTeam", () => {
 describe("teamDomains.delete", () => {
 	test("removes a domain", async () => {
 		let { models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let domain = await addDomain(models, teamId, "acme.com");
 
 		unwrap(await models.teamDomains.delete(domain.id));

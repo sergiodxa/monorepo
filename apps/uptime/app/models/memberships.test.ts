@@ -10,6 +10,7 @@
 import { IdToken } from "@sdxc/auth/id-token";
 import { NotFound } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
@@ -26,7 +27,7 @@ function setup() {
 /** An `IdToken` for a new subject, with any claim overridable per test. */
 function buildIdToken(overrides: Partial<{ subject: string; email: string }> = {}) {
 	return new IdToken({
-		sub: overrides.subject ?? crypto.randomUUID(),
+		sub: overrides.subject ?? generateUUID(),
 		name: "Jane Doe",
 		email: overrides.email ?? "jane@example.com",
 		picture: "https://example.com/avatar.png",
@@ -35,7 +36,7 @@ function buildIdToken(overrides: Partial<{ subject: string; email: string }> = {
 }
 
 /** A team owned by a new subject, who becomes its admin member. */
-async function createTeam(models: UptimeModels, ownerId: string = crypto.randomUUID()) {
+async function createTeam(models: UptimeModels, ownerId: string = generateUUID()) {
 	return unwrap(await models.teams.createPersonal(buildIdToken({ subject: ownerId })));
 }
 
@@ -55,7 +56,7 @@ async function addDomain(models: UptimeModels, teamId: string, hostname: string,
 describe("memberships.findFor", () => {
 	test("finds a subject's membership on a team", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let team = await createTeam(models, subjectId);
 
 		expect((await models.memberships.findFor(team.id, subjectId))?.role).toBe("admin");
@@ -65,14 +66,14 @@ describe("memberships.findFor", () => {
 		let { models } = setup();
 		let team = await createTeam(models);
 
-		expect(await models.memberships.findFor(team.id, crypto.randomUUID())).toBeNull();
+		expect(await models.memberships.findFor(team.id, generateUUID())).toBeNull();
 	});
 });
 
 describe("memberships.inTeam", () => {
 	test("lists every membership row for a team", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let team = await createTeam(models, subjectId);
 
 		let rows = await models.memberships.inTeam(team.id).all();
@@ -142,7 +143,7 @@ describe("memberships.setRole", () => {
 	test("changes a subject's role on a team", async () => {
 		let { models } = setup();
 		let team = await createTeam(models);
-		let memberId = crypto.randomUUID();
+		let memberId = generateUUID();
 		await addMember(models, team.id, memberId);
 
 		unwrap(await models.memberships.setRole(team.id, memberId, "admin"));
@@ -154,7 +155,7 @@ describe("memberships.setRole", () => {
 		let { models } = setup();
 		let team = await createTeam(models);
 
-		let result = await models.memberships.setRole(team.id, crypto.randomUUID(), "admin");
+		let result = await models.memberships.setRole(team.id, generateUUID(), "admin");
 
 		expect(isFailure(result) && result.error).toBeInstanceOf(NotFound);
 	});
@@ -163,7 +164,7 @@ describe("memberships.setRole", () => {
 describe("memberships.remove", () => {
 	test("removes a subject's membership from a team", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let team = await createTeam(models, subjectId);
 
 		await models.memberships.remove(team.id, subjectId);
@@ -175,7 +176,7 @@ describe("memberships.remove", () => {
 		let { models } = setup();
 		let team = await createTeam(models);
 
-		await models.memberships.remove(team.id, crypto.randomUUID());
+		await models.memberships.remove(team.id, generateUUID());
 
 		expect(await models.memberships.inTeam(team.id).count()).toBe(1);
 	});

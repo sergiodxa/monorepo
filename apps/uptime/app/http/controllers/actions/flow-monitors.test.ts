@@ -19,6 +19,7 @@ import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
@@ -104,19 +105,19 @@ async function createFixture(options: { verified?: boolean } = {}) {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 	if (options.verified !== false) {
 		await db.create(
 			teamDomains,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				hostname: DOMAIN,
 				verified_at: Date.now(),
@@ -258,7 +259,7 @@ describe("updateFlowMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Sign in", source: flowWith(1) },
+			{ id: generateUUID(), team_id: team.id, name: "Sign in", source: flowWith(1) },
 			{ touch: true, returnRow: true },
 		);
 
@@ -288,7 +289,7 @@ describe("updateFlowMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Sign in", source: flowWith(1) },
+			{ id: generateUUID(), team_id: team.id, name: "Sign in", source: flowWith(1) },
 			{ touch: true, returnRow: true },
 		);
 
@@ -315,12 +316,12 @@ describe("updateFlowMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let other = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
+			{ id: generateUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
 			{ touch: true, returnRow: true },
 		);
 		let monitor = await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: other.id, name: "Theirs", source: flowWith(1) },
+			{ id: generateUUID(), team_id: other.id, name: "Theirs", source: flowWith(1) },
 			{ touch: true, returnRow: true },
 		);
 
@@ -343,13 +344,13 @@ describe("deleteFlowMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Sign in", source: flowWith(1) },
+			{ id: generateUUID(), team_id: team.id, name: "Sign in", source: flowWith(1) },
 			{ touch: true, returnRow: true },
 		);
 		await db.create(
 			flowMonitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				flow_monitor_id: monitor.id,
 				status: "up",
 				checked_at: Date.now(),
@@ -378,12 +379,12 @@ describe("deleteFlowMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let other = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
+			{ id: generateUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
 			{ touch: true, returnRow: true },
 		);
 		let monitor = await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: other.id, name: "Theirs", source: flowWith(1) },
+			{ id: generateUUID(), team_id: other.id, name: "Theirs", source: flowWith(1) },
 			{ touch: true, returnRow: true },
 		);
 
@@ -408,7 +409,7 @@ describe("checkFlowMonitor", () => {
 		server.use(http.get(`${ORIGIN}/step`, () => HttpResponse.json({ ok: true })));
 		return await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: teamId, name: "Sign in", source: flowWith(count) },
+			{ id: generateUUID(), team_id: teamId, name: "Sign in", source: flowWith(count) },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -535,12 +536,12 @@ describe("checkFlowMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let other = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
+			{ id: generateUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
 			{ touch: true, returnRow: true },
 		);
 		let monitor = await db.create(
 			flowMonitors,
-			{ id: crypto.randomUUID(), team_id: other.id, name: "Theirs", source: flowWith(1) },
+			{ id: generateUUID(), team_id: other.id, name: "Theirs", source: flowWith(1) },
 			{ touch: true, returnRow: true },
 		);
 

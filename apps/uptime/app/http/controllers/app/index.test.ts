@@ -11,6 +11,7 @@
 import type { Middleware } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -62,7 +63,7 @@ describe("GET /app", () => {
 		let team = await db.create(
 			teams,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				owner_id: VIEWER.id,
 				name: "Ada's Team",
 				slug: "ada-team",
@@ -72,7 +73,7 @@ describe("GET /app", () => {
 		);
 		await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), subject_id: VIEWER.id, team_id: team.id, role: "admin" },
+			{ id: generateUUID(), subject_id: VIEWER.id, team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
 

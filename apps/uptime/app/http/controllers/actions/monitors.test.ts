@@ -23,6 +23,7 @@ import { jobEnqueuer } from "@sdxc/jobs/router";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -82,12 +83,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -206,7 +207,7 @@ describe("updateMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -245,7 +246,7 @@ describe("updateMonitor", () => {
 			routes.actions.monitor.http.update,
 			updateMonitor as RequestHandler<any>,
 			"POST",
-			{ monitor_id: crypto.randomUUID(), name: "Renamed", url: "https://new.example.com" },
+			{ monitor_id: generateUUID(), name: "Renamed", url: "https://new.example.com" },
 		);
 
 		expect(response.status).toBe(404);
@@ -261,12 +262,12 @@ describe("deleteMonitor", () => {
 		 */
 		let membership = await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
+			{ id: generateUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -297,12 +298,12 @@ describe("deleteMonitor", () => {
 		let { db, team } = await createFixture();
 		let otherMembership = await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
+			{ id: generateUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
 			{ touch: true, returnRow: true },
 		);
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "member-1",
 				enabled_at: Date.now(),
@@ -335,7 +336,7 @@ describe("deleteMonitor", () => {
 			routes.actions.monitor.http.delete,
 			deleteMonitor as RequestHandler<any>,
 			"DELETE",
-			{ monitor_id: crypto.randomUUID() },
+			{ monitor_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);
@@ -347,7 +348,7 @@ describe("playMonitor", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -415,7 +416,7 @@ describe("playMonitor", () => {
 		await createRevokedSubscription(db, team.owner_id);
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -448,7 +449,7 @@ describe("playMonitor", () => {
 			routes.actions.monitor.http.play,
 			playMonitor as RequestHandler<any>,
 			"POST",
-			{ monitor_id: crypto.randomUUID() },
+			{ monitor_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);
@@ -466,7 +467,7 @@ describe("playMonitor billing", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -495,7 +496,7 @@ describe("playMonitor billing", () => {
 		await createRevokedSubscription(db, team.owner_id);
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -570,7 +571,7 @@ describe("playMonitor for a caller asking for JSON", () => {
 	) {
 		return unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),

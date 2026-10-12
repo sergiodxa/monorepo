@@ -11,6 +11,7 @@
 
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -37,10 +38,10 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -111,7 +112,7 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 				email: "accepted@example.com",
 			}),
 		);
-		unwrap(await bindModels(db).invites.accept(invite.id, crypto.randomUUID()));
+		unwrap(await bindModels(db).invites.accept(invite.id, generateUUID()));
 
 		let response = await dispatch(
 			db,

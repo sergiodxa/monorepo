@@ -17,6 +17,7 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ContentCheckRule } from "~/app/models/content-checks";
@@ -121,7 +122,7 @@ function quantity(point: AnalyticsEngineDataPoint | undefined, resource: CostRes
 async function seedMonitor(db: Db, overrides: Record<string, unknown> = {}) {
 	return unwrap(
 		await bindModels(db).monitors.create({
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: "team-1",
 			author_id: "author-1",
 			name: "Example site",

@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
@@ -260,7 +261,7 @@ describe("cronJobPings.recent", () => {
 			await db.create(
 				cronJobPings,
 				{
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					cron_job_monitor_id: monitor.id,
 					was_on_time: true,
 					source_ip: null,

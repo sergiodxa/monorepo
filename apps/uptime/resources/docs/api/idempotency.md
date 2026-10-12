@@ -24,7 +24,9 @@ Idempotency-Key: "8e03978e-40d5-43e8-bc93-6894a57f9324"
 The quotes are part of the header's syntax ([RFC 9651](https://www.rfc-editor.org/rfc/rfc9651) sf-string). A key without them answers `400 idempotency-key-invalid`.
 
 ```javascript
-let idempotencyKey = `"${crypto.randomUUID()}"`;
+import { generateUUID } from "@sdxc/uuid/v4";
+
+let idempotencyKey = `"${generateUUID()}"`;
 
 async function createMonitor(data) {
 	return fetch("https://uptime.sergiodxa.com/api/v1/monitors", {

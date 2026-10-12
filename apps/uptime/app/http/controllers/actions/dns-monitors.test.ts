@@ -18,6 +18,7 @@ import { database } from "@sdxc/database-middleware";
 import { CLOUDFLARE } from "@sdxc/doh";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
@@ -220,10 +221,10 @@ async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -236,7 +237,7 @@ async function createMembershipRow(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: crypto.randomUUID(), role: "admin" },
+		{ id: generateUUID(), team_id: teamId, subject_id: generateUUID(), role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -250,7 +251,7 @@ async function createMonitorRow(
 	return await db.create(
 		dnsMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name: "Example domain",
 			domain: "example.com",
@@ -279,7 +280,7 @@ async function createRecordRow(
 	return await db.create(
 		dnsMonitorRecords,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			dns_monitor_id: monitorId,
 			name: overrides.name ?? "example.com",
 			record_type: overrides.record_type ?? "A",

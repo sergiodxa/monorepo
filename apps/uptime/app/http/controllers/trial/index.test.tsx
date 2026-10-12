@@ -25,6 +25,7 @@ import {
 import { database } from "@sdxc/database-middleware";
 import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -180,17 +181,17 @@ async function signIn(subscription: "active" | "revoked" | "unknown"): Promise<A
 	let team = await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
 	);
 	await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: viewer.id, team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: viewer.id, team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 

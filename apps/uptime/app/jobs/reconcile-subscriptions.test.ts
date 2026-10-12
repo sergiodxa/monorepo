@@ -19,6 +19,7 @@ import { Database } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { success, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -73,7 +74,7 @@ let ownerId: string;
 
 beforeEach(() => {
 	snapshot = null;
-	ownerId = `owner-${crypto.randomUUID()}`;
+	ownerId = `owner-${generateUUID()}`;
 	({ db } = createTestDatabase());
 });
 
@@ -116,10 +117,10 @@ async function createTeamWithMonitor(nextDueAt: number | null) {
 	let team = await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: ownerId,
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -128,7 +129,7 @@ async function createTeamWithMonitor(nextDueAt: number | null) {
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			author_id: "author-1",
 			name: "Site",

@@ -11,6 +11,7 @@ import type { ModelRow, NotFound } from "@sdxc/data-model";
 import type { Result } from "@sdxc/result";
 import type { ValidationError } from "@sdxc/validate";
 
+import { randomToken } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
@@ -366,7 +367,7 @@ export const TrialWatches = createModel(trialWatches, {
 				...values,
 				id: values.id ?? generateUUID(),
 				normalized_url: normalizeTrialUrl(values.url),
-				report_token: generateUUID(),
+				report_token: randomToken(),
 				expires_at: now + TRIAL_WATCH_DURATION_DAYS * DAY_MS,
 				converts_until: now + TRIAL_WATCH_CONVERSION_WINDOW_DAYS * DAY_MS,
 				next_due_at: now + TRIAL_WATCH_INTERVAL_SECONDS * 1000,

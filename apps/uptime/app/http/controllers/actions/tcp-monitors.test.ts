@@ -19,6 +19,7 @@ import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -110,12 +111,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -215,7 +216,7 @@ describe("updateTcpMonitor", () => {
 		let monitor = await db.create(
 			tcpMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Original",
 				host: "old.internal",
@@ -254,7 +255,7 @@ describe("updateTcpMonitor", () => {
 			routes.actions.monitor.tcp.update,
 			updateTcpMonitor as RequestHandler<any>,
 			"POST",
-			{ monitor_id: crypto.randomUUID(), name: "Renamed", host: "new.internal", port: "2222" },
+			{ monitor_id: generateUUID(), name: "Renamed", host: "new.internal", port: "2222" },
 		);
 
 		expect(response.status).toBe(404);
@@ -267,7 +268,7 @@ describe("deleteTcpMonitor", () => {
 		let monitor = await db.create(
 			tcpMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "To delete",
 				host: "old.internal",
@@ -276,7 +277,7 @@ describe("deleteTcpMonitor", () => {
 			{ touch: true, returnRow: true },
 		);
 		await db.create(tcpMonitorResults, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			tcp_monitor_id: monitor.id,
 			status: "up",
 			response_time_ms: 10,
@@ -314,7 +315,7 @@ describe("deleteTcpMonitor", () => {
 			routes.actions.monitor.tcp.delete,
 			deleteTcpMonitor as RequestHandler<any>,
 			"DELETE",
-			{ monitor_id: crypto.randomUUID() },
+			{ monitor_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);
@@ -327,7 +328,7 @@ describe("checkTcpMonitor", () => {
 		let monitor = await db.create(
 			tcpMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Redis",
 				host: "redis.internal",
@@ -370,7 +371,7 @@ describe("checkTcpMonitor", () => {
 			routes.actions.monitor.tcp.check,
 			checkTcpMonitor as RequestHandler<any>,
 			"POST",
-			{ monitor_id: crypto.randomUUID() },
+			{ monitor_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);
@@ -383,7 +384,7 @@ describe("checkTcpMonitor billing", () => {
 		return await db.create(
 			tcpMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: teamId,
 				name: "Redis",
 				host: "redis.internal",
@@ -458,7 +459,7 @@ describe("checkTcpMonitor billing", () => {
 			routes.actions.monitor.tcp.check,
 			checkTcpMonitor as RequestHandler<any>,
 			"POST",
-			{ monitor_id: crypto.randomUUID() },
+			{ monitor_id: generateUUID() },
 		);
 
 		expect(await ingestedEvents()).toEqual([]);
@@ -492,7 +493,7 @@ describe("checkTcpMonitor analytics", () => {
 		return await db.create(
 			tcpMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: teamId,
 				name: "Redis",
 				host: "redis.internal",

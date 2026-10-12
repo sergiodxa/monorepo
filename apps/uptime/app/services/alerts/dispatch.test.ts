@@ -16,6 +16,7 @@ import { createQueue } from "@sdxc/cloudflare-mocks";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
@@ -111,7 +112,7 @@ async function onlyRecorded(db: Db): Promise<SelectAlertEvent> {
 /** Builds a fixture alert row; defaults to an unconditional, cooldown-free email alert. */
 function makeAlert(overrides: Partial<SelectAlert> = {}): SelectAlert {
 	return {
-		id: crypto.randomUUID(),
+		id: generateUUID(),
 		created_at: Date.now(),
 		updated_at: Date.now(),
 		team_id: "team-1",
@@ -399,7 +400,7 @@ async function seedEvent(
 	status: SelectAlertEvent["status"] = "sent",
 ): Promise<void> {
 	await db.create(alertEvents, {
-		id: crypto.randomUUID(),
+		id: generateUUID(),
 		created_at: sentAt,
 		sent_at: sentAt,
 		alert_id: alertId,
@@ -1357,7 +1358,7 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 /** A tracked record row; only the columns a finding is built from are meaningful. */
 function makeDnsRecord(overrides: Partial<SelectDnsMonitorRecord> = {}): SelectDnsMonitorRecord {
 	return {
-		id: crypto.randomUUID(),
+		id: generateUUID(),
 		created_at: Date.now(),
 		updated_at: Date.now(),
 		dns_monitor_id: "dns-monitor-1",

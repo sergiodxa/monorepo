@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
@@ -61,7 +62,7 @@ async function seedMonitor(
 	type: DailyStatsMonitorType,
 	options: { teamId?: string; name?: string; enabled?: boolean } = {},
 ): Promise<Seeded> {
-	let id = crypto.randomUUID();
+	let id = generateUUID();
 	let name = options.name ?? `${type} monitor`;
 	let enabled = options.enabled ?? true;
 	let shared = { id, team_id: options.teamId ?? TEAM, name };
@@ -72,7 +73,7 @@ async function seedMonitor(
 			monitors,
 			{
 				...shared,
-				author_id: crypto.randomUUID(),
+				author_id: generateUUID(),
 				url: "https://example.com/health",
 				enabled_at: enabled ? Date.now() : null,
 			},
@@ -156,7 +157,7 @@ async function seedWindow(
 	await db.create(
 		maintenanceWindows,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: TEAM,
 			name: "Maintenance",
 			monitor_type: null,
@@ -174,10 +175,10 @@ async function seedStatusPage(attached: Seeded[], teamId = TEAM) {
 	let page = await db.create(
 		statusPages,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name: "Client",
-			slug: `client-${crypto.randomUUID()}`,
+			slug: `client-${generateUUID()}`,
 			title: "Client status",
 		},
 		{ touch: true, returnRow: true },
@@ -190,14 +191,14 @@ async function seedStatusPage(attached: Seeded[], teamId = TEAM) {
 	for (let id of idsOf("dns")) {
 		await db.create(statusPageDnsMonitors, {
 			...link,
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			dns_monitor_id: id,
 		});
 	}
 	for (let id of idsOf("tcp")) {
 		await db.create(statusPageTcpMonitors, {
 			...link,
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			tcp_monitor_id: id,
 		});
 	}
@@ -207,7 +208,7 @@ async function seedStatusPage(attached: Seeded[], teamId = TEAM) {
 	for (let id of idsOf("flow")) {
 		await db.create(statusPageFlowMonitors, {
 			...link,
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			flow_monitor_id: id,
 		});
 	}

@@ -13,6 +13,7 @@ import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -39,12 +40,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -121,7 +122,7 @@ describe("dnsMonitors", () => {
 		let models = bindModels(db);
 		unwrap(
 			await models.dnsMonitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Production DNS",
 				domain: "example.com",
@@ -141,7 +142,7 @@ describe("dnsMonitors", () => {
 		let models = bindModels(db);
 		unwrap(
 			await models.dnsMonitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Expiring DNS",
 				domain: "example.com",
@@ -151,7 +152,7 @@ describe("dnsMonitors", () => {
 		);
 		unwrap(
 			await models.dnsMonitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "New DNS",
 				domain: "example.org",
@@ -177,7 +178,7 @@ describe("dnsMonitors", () => {
 
 		let watched = unwrap(
 			await models.dnsMonitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme DNS",
 				domain: "acme.test",
@@ -185,7 +186,7 @@ describe("dnsMonitors", () => {
 		);
 		unwrap(
 			await models.dnsMonitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Spare DNS",
 				domain: "spare.test",
@@ -199,7 +200,7 @@ describe("dnsMonitors", () => {
 		] as const) {
 			unwrap(
 				await models.dnsMonitorRecords.create({
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					dns_monitor_id: watched.id,
 					name: "acme.test",
 					record_type: "A",

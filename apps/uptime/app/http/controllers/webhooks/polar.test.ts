@@ -17,6 +17,7 @@ import type { Middleware } from "remix/router";
 import { database } from "@sdxc/database-middleware";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -60,7 +61,7 @@ let db: Db;
 let ownerId: string;
 
 beforeEach(() => {
-	ownerId = `owner-${crypto.randomUUID()}`;
+	ownerId = `owner-${generateUUID()}`;
 	({ db } = createTestDatabase());
 });
 
@@ -103,10 +104,10 @@ async function createTeamWithMonitor(ownerId: string, nextDueAt: number | null) 
 	let team = await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: ownerId,
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -115,7 +116,7 @@ async function createTeamWithMonitor(ownerId: string, nextDueAt: number | null) 
 	let monitor = await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			author_id: "author-1",
 			name: "Site",

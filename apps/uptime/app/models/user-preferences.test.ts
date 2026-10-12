@@ -17,6 +17,7 @@
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import { wantsEmail } from "~/app/models/user-preferences";
@@ -48,12 +49,12 @@ function setup() {
 describe("userPreferences.findBy", () => {
 	test("returns null when the subject has never set any preferences", async () => {
 		let { models } = setup();
-		expect(await models.userPreferences.findBy({ subject_id: crypto.randomUUID() })).toBeNull();
+		expect(await models.userPreferences.findBy({ subject_id: generateUUID() })).toBeNull();
 	});
 
 	test("finds a subject's preferences row once one exists", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		unwrap(await models.userPreferences.setLanguage(subjectId, "es"));
 
 		expect(
@@ -63,16 +64,16 @@ describe("userPreferences.findBy", () => {
 
 	test("never returns a different subject's preferences", async () => {
 		let { models } = setup();
-		unwrap(await models.userPreferences.setLanguage(crypto.randomUUID(), "es"));
+		unwrap(await models.userPreferences.setLanguage(generateUUID(), "es"));
 
-		expect(await models.userPreferences.findBy({ subject_id: crypto.randomUUID() })).toBeNull();
+		expect(await models.userPreferences.findBy({ subject_id: generateUUID() })).toBeNull();
 	});
 });
 
 describe("userPreferences.setLanguage", () => {
 	test("creates a preferences row on first use", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 
 		let row = unwrap(await models.userPreferences.setLanguage(subjectId, "fr"));
 
@@ -82,7 +83,7 @@ describe("userPreferences.setLanguage", () => {
 
 	test("updates the existing row in place on a second call, instead of creating another", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let first = unwrap(await models.userPreferences.setLanguage(subjectId, "fr"));
 
 		let second = unwrap(await models.userPreferences.setLanguage(subjectId, "de"));
@@ -96,7 +97,7 @@ describe("userPreferences.setLanguage", () => {
 
 	test("clears the language back to null", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		unwrap(await models.userPreferences.setLanguage(subjectId, "ja"));
 
 		let cleared = unwrap(await models.userPreferences.setLanguage(subjectId, null));
@@ -106,7 +107,7 @@ describe("userPreferences.setLanguage", () => {
 
 	test("leaves a stored opt-out alone", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		unwrap(await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamWeeklyDigest"]));
 
 		let row = unwrap(await models.userPreferences.setLanguage(subjectId, "es"));
@@ -124,7 +125,7 @@ describe("wantsEmail", () => {
 	/** A row exists for the language alone far more often than for an opt-out. */
 	test("sends every optional email to a subject whose row has no list", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let row = unwrap(await models.userPreferences.setLanguage(subjectId, "es"));
 
 		expect(row.unsubscribed_emails).toBeNull();
@@ -133,7 +134,7 @@ describe("wantsEmail", () => {
 
 	test("sends every optional email to a subject who has turned nothing off", async () => {
 		let { models } = setup();
-		let row = unwrap(await models.userPreferences.setUnsubscribedEmails(crypto.randomUUID(), []));
+		let row = unwrap(await models.userPreferences.setUnsubscribedEmails(generateUUID(), []));
 
 		expect(wantsEmail(row, "teamDailyDigest")).toBe(true);
 		expect(wantsEmail(row, "teamWeeklyDigest")).toBe(true);
@@ -142,7 +143,7 @@ describe("wantsEmail", () => {
 	test("stops only the email the stored list names", async () => {
 		let { models } = setup();
 		let row = unwrap(
-			await models.userPreferences.setUnsubscribedEmails(crypto.randomUUID(), ["teamDailyDigest"]),
+			await models.userPreferences.setUnsubscribedEmails(generateUUID(), ["teamDailyDigest"]),
 		);
 
 		expect(wantsEmail(row, "teamDailyDigest")).toBe(false);
@@ -152,7 +153,7 @@ describe("wantsEmail", () => {
 	test("stops both when both are named", async () => {
 		let { models } = setup();
 		let row = unwrap(
-			await models.userPreferences.setUnsubscribedEmails(crypto.randomUUID(), [
+			await models.userPreferences.setUnsubscribedEmails(generateUUID(), [
 				"teamDailyDigest",
 				"teamWeeklyDigest",
 			]),
@@ -169,7 +170,7 @@ describe("wantsEmail", () => {
 	 */
 	test("a retired email left in the stored list mutes nothing that is still sent", async () => {
 		let { db, models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		await storeRawUnsubscribed(db, subjectId, '["teamMonthlyRecap"]');
 
 		let row = await models.userPreferences.findBy({ subject_id: subjectId });
@@ -181,7 +182,7 @@ describe("wantsEmail", () => {
 
 	test("still honours a live refusal stored beside a retired one", async () => {
 		let { db, models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		await storeRawUnsubscribed(db, subjectId, '["teamMonthlyRecap","teamDailyDigest"]');
 
 		let row = await models.userPreferences.findBy({ subject_id: subjectId });
@@ -194,7 +195,7 @@ describe("wantsEmail", () => {
 describe("userPreferences.setUnsubscribedEmails", () => {
 	test("creates a preferences row for a subject who has none", async () => {
 		let { db, models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 
 		let row = unwrap(
 			await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamDailyDigest"]),
@@ -211,7 +212,7 @@ describe("userPreferences.setUnsubscribedEmails", () => {
 	 */
 	test("replaces the whole stored list instead of adding to it", async () => {
 		let { db, models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let first = unwrap(
 			await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamDailyDigest"]),
 		);
@@ -227,7 +228,7 @@ describe("userPreferences.setUnsubscribedEmails", () => {
 
 	test("re-subscribes to everything when the list comes back empty", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		unwrap(
 			await models.userPreferences.setUnsubscribedEmails(subjectId, [
 				"teamDailyDigest",
@@ -244,7 +245,7 @@ describe("userPreferences.setUnsubscribedEmails", () => {
 	/** The two settings live on one row and are saved by two different forms. */
 	test("never clobbers a language chosen earlier", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		unwrap(await models.userPreferences.setLanguage(subjectId, "ja"));
 
 		let row = unwrap(
@@ -259,8 +260,8 @@ describe("userPreferences.setUnsubscribedEmails", () => {
 
 	test("stores the opt-out against one subject only", async () => {
 		let { models } = setup();
-		let optedOut = crypto.randomUUID();
-		let other = crypto.randomUUID();
+		let optedOut = generateUUID();
+		let other = generateUUID();
 		unwrap(await models.userPreferences.setLanguage(other, "es"));
 
 		unwrap(await models.userPreferences.setUnsubscribedEmails(optedOut, ["teamDailyDigest"]));
@@ -280,8 +281,8 @@ describe("userPreferences.findBySubjectIds", () => {
 
 	test("keys each subject's row by their subject id", async () => {
 		let { models } = setup();
-		let one = crypto.randomUUID();
-		let two = crypto.randomUUID();
+		let one = generateUUID();
+		let two = generateUUID();
 		unwrap(await models.userPreferences.setLanguage(one, "es"));
 		unwrap(await models.userPreferences.setUnsubscribedEmails(two, ["teamDailyDigest"]));
 
@@ -298,8 +299,8 @@ describe("userPreferences.findBySubjectIds", () => {
 	 */
 	test("leaves out a subject who has never set any preferences", async () => {
 		let { models } = setup();
-		let known = crypto.randomUUID();
-		let unknown = crypto.randomUUID();
+		let known = generateUUID();
+		let unknown = generateUUID();
 		unwrap(await models.userPreferences.setLanguage(known, "fr"));
 
 		let found = await models.userPreferences.findBySubjectIds([known, unknown]);
@@ -311,18 +312,17 @@ describe("userPreferences.findBySubjectIds", () => {
 
 	test("returns an empty map when none of the subjects has a row", async () => {
 		let { models } = setup();
-		unwrap(await models.userPreferences.setLanguage(crypto.randomUUID(), "es"));
+		unwrap(await models.userPreferences.setLanguage(generateUUID(), "es"));
 
 		expect(
-			(await models.userPreferences.findBySubjectIds([crypto.randomUUID(), crypto.randomUUID()]))
-				.size,
+			(await models.userPreferences.findBySubjectIds([generateUUID(), generateUUID()])).size,
 		).toBe(0);
 	});
 
 	/** One person in three teams appears three times in the due list. */
 	test("asks once for a subject listed several times", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		unwrap(await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamWeeklyDigest"]));
 
 		let found = await models.userPreferences.findBySubjectIds([subjectId, subjectId, subjectId]);
@@ -334,8 +334,8 @@ describe("userPreferences.findBySubjectIds", () => {
 	/** The pairing the digest job uses: one lookup, then the predicate per recipient. */
 	test("feeds wants for a subject with a row and for one without", async () => {
 		let { models } = setup();
-		let optedOut = crypto.randomUUID();
-		let never = crypto.randomUUID();
+		let optedOut = generateUUID();
+		let never = generateUUID();
 		unwrap(await models.userPreferences.setUnsubscribedEmails(optedOut, ["teamDailyDigest"]));
 
 		let found = await models.userPreferences.findBySubjectIds([optedOut, never]);

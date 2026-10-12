@@ -12,6 +12,7 @@
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { render } from "remix/middleware/render";
@@ -181,17 +182,17 @@ async function createHarness(options: createHarness.Options = {}) {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 	let monitor = await db.create(
 		dnsMonitors,
-		{ id: crypto.randomUUID(), team_id: team.id, name: "Production DNS", domain: "example.com" },
+		{ id: generateUUID(), team_id: team.id, name: "Production DNS", domain: "example.com" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -205,7 +206,7 @@ async function createHarness(options: createHarness.Options = {}) {
 		await db.create(
 			dnsMonitorRecords,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				dns_monitor_id: monitor.id,
 				name: "example.com",
 				record_type: record.record_type,
@@ -271,7 +272,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		await harness.db.create(
 			dnsMonitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				dns_monitor_id: harness.monitor.id,
 				status: "changed",
 				checked_at: Date.now(),
@@ -304,7 +305,7 @@ describe("the DNS monitor detail page's frames, resolved server-side", () => {
 		await harness.db.create(
 			monitorDailyStats,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: harness.monitor.id,
 				monitor_type: "dns",
 				date: new Date().toISOString().slice(0, 10),

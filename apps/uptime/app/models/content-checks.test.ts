@@ -9,6 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
@@ -36,7 +37,7 @@ async function createCheck(monitorId: string, overrides: Partial<SelectMonitorCo
 	return await db.create(
 		monitorContentChecks,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitorId,
 			type: "contains",
 			value: "OK",

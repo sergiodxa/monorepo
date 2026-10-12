@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
@@ -37,10 +38,10 @@ async function createTeam(db: Db, ownerId: string) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: ownerId,
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -51,7 +52,7 @@ async function createMonitor(db: Db, teamId: string, changes: Record<string, unk
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			author_id: "author-1",
 			name: "Site",
@@ -188,7 +189,7 @@ describe("subscriptions.applyEntitlement", () => {
 		let tcp = await db.create(
 			tcpMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "SSH",
 				host: "example.com",
@@ -200,7 +201,7 @@ describe("subscriptions.applyEntitlement", () => {
 		let dns = await db.create(
 			dnsMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Apex",
 				domain: "example.com",

@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { AlertConfig, SelectTeam } from "~/database/schema";
@@ -44,10 +45,10 @@ async function createTeamRow(db: Database, overrides: Partial<SelectTeam> = {}) 
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: SUBJECT.id,
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 			...overrides,
 		},
@@ -63,7 +64,7 @@ async function addMember(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: subjectId, role },
+		{ id: generateUUID(), team_id: teamId, subject_id: subjectId, role },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -72,7 +73,7 @@ async function addAlert(db: Database, teamId: string, config: AlertConfig) {
 	return await db.create(
 		alerts,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			monitor_id: null,
 			name: "On failure",
@@ -89,7 +90,7 @@ async function addDnsMonitor(db: Database, teamId: string, name = "example.com")
 	return await db.create(
 		dnsMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name,
 			domain: name,
@@ -112,7 +113,7 @@ async function addDnsRecord(
 	return await db.create(
 		dnsMonitorRecords,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			dns_monitor_id: monitorId,
 			record_type: "A",
 			source: "zone_file",
@@ -149,7 +150,7 @@ describe("buildAccountExport", () => {
 		await db.create(
 			userPreferences,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: SUBJECT.id,
 				preferred_language: "es",
 				unsubscribed_emails: ["teamDailyDigest"],
@@ -174,7 +175,7 @@ describe("buildAccountExport", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: owned.id,
 				author_id: SUBJECT.id,
 				name: "Homepage",
@@ -184,7 +185,7 @@ describe("buildAccountExport", () => {
 		);
 		await db.create(
 			monitorContentChecks,
-			{ id: crypto.randomUUID(), monitor_id: monitor.id, type: "contains", value: "welcome" },
+			{ id: generateUUID(), monitor_id: monitor.id, type: "contains", value: "welcome" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -230,7 +231,7 @@ describe("buildAccountExport", () => {
 		await db.create(
 			apiKeys,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "CI",
 				key_hash: "hash-must-not-leak",
@@ -317,7 +318,7 @@ describe("buildAccountExport", () => {
 		await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sender_id: SUBJECT.id,
 				team_id: team.id,
 				email: "invitee-must-not-leak@example.com",
@@ -338,7 +339,7 @@ describe("buildAccountExport", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: SUBJECT.id,
 				name: "API",
@@ -349,10 +350,10 @@ describe("buildAccountExport", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Public",
-				slug: `public-${crypto.randomUUID()}`,
+				slug: `public-${generateUUID()}`,
 				title: "Acme Status",
 			},
 			{ touch: true, returnRow: true },

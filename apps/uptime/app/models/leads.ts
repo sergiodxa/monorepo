@@ -11,6 +11,7 @@ import type { ModelRow, NotFound } from "@sdxc/data-model";
 import type { Result } from "@sdxc/result";
 import type { ValidationError } from "@sdxc/validate";
 
+import { randomToken } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { startOfDay, toDayKey } from "@sdxc/dates";
 import { failure, success } from "@sdxc/result";
@@ -121,7 +122,7 @@ export const Leads = createModel(leads, {
 					now,
 					input.email,
 					normalizeLeadEmail(input.email),
-					generateUUID(),
+					randomToken(),
 					input.locale,
 					input.consented ? now : null,
 				],
@@ -260,7 +261,7 @@ export const Leads = createModel(leads, {
 			return {
 				...values,
 				id: values.id ?? generateUUID(),
-				unsubscribe_token: values.unsubscribe_token ?? generateUUID(),
+				unsubscribe_token: values.unsubscribe_token ?? randomToken(),
 			};
 		},
 	},

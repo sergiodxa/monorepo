@@ -12,6 +12,7 @@ import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -53,10 +54,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -73,7 +74,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 async function createTeamDomainRow(db: Db, teamId: string, hostname: string = "example.com") {
 	return await db.create(
 		teamDomains,
-		{ id: crypto.randomUUID(), team_id: teamId, hostname, verified_at: null },
+		{ id: generateUUID(), team_id: teamId, hostname, verified_at: null },
 		{ touch: true, returnRow: true },
 	);
 }

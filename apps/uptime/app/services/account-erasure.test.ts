@@ -16,6 +16,7 @@ import type { Billing } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
@@ -68,10 +69,10 @@ async function createTeamRow(db: Database, overrides: Partial<SelectTeam> = {}) 
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: SUBJECT,
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 			...overrides,
 		},
@@ -87,7 +88,7 @@ async function addMember(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: subjectId, role },
+		{ id: generateUUID(), team_id: teamId, subject_id: subjectId, role },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -152,7 +153,7 @@ describe("eraseAccount", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "owner-2",
 				name: "Homepage",
@@ -187,7 +188,7 @@ describe("eraseAccount", () => {
 		await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: SUBJECT,
 				name: "Homepage",
@@ -291,7 +292,7 @@ describe("eraseAccount", () => {
 		await addMember(db, team.id, SUBJECT);
 		await db.create(
 			userPreferences,
-			{ id: crypto.randomUUID(), subject_id: SUBJECT, preferred_language: "es" },
+			{ id: generateUUID(), subject_id: SUBJECT, preferred_language: "es" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -310,13 +311,13 @@ describe("eraseAccount", () => {
 		let otherTeam = await createTeamRow(db, { owner_id: "owner-2" });
 		await db.create(
 			userPreferences,
-			{ id: crypto.randomUUID(), subject_id: SUBJECT, preferred_language: "es" },
+			{ id: generateUUID(), subject_id: SUBJECT, preferred_language: "es" },
 			{ touch: true, returnRow: true },
 		);
 		await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sender_id: "owner-2",
 				team_id: otherTeam.id,
 				email: EMAIL,
@@ -327,7 +328,7 @@ describe("eraseAccount", () => {
 		await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sender_id: SUBJECT,
 				team_id: otherTeam.id,
 				email: "someone@example.com",

@@ -14,6 +14,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -42,17 +43,17 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 	let monitor = unwrap(
 		await bindModels(db).monitors.create({
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			author_id: "member-1",
 			enabled_at: Date.now(),
@@ -146,7 +147,7 @@ describe("updateSsl", () => {
 		let { db, team, membership } = await createFixture();
 
 		let response = await send(db, team, membership, {
-			monitor_id: crypto.randomUUID(),
+			monitor_id: generateUUID(),
 			ssl_monitoring_enabled: "true",
 		});
 

@@ -13,6 +13,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -43,12 +44,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -141,7 +142,7 @@ describe("createMaintenanceWindow", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(
 			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
+			{ id: generateUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -224,7 +225,7 @@ describe("updateMaintenanceWindow", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Original",
@@ -274,7 +275,7 @@ describe("updateMaintenanceWindow", () => {
 			updateMaintenanceWindow as RequestHandler<any>,
 			"POST",
 			{
-				window_id: crypto.randomUUID(),
+				window_id: generateUUID(),
 				name: "Renamed",
 				starts_at: "2026-08-01T00:00",
 				ends_at: "2026-08-01T02:00",
@@ -289,7 +290,7 @@ describe("updateMaintenanceWindow", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Original",
@@ -335,7 +336,7 @@ describe("deleteMaintenanceWindow", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "To delete",
@@ -379,7 +380,7 @@ describe("deleteMaintenanceWindow", () => {
 			routes.actions.maintenanceWindow.delete,
 			deleteMaintenanceWindow as RequestHandler<any>,
 			"DELETE",
-			{ window_id: crypto.randomUUID() },
+			{ window_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);
@@ -390,7 +391,7 @@ describe("deleteMaintenanceWindow", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Untouched",
@@ -428,7 +429,7 @@ describe("endMaintenanceWindow", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Active window",
@@ -472,7 +473,7 @@ describe("endMaintenanceWindow", () => {
 			routes.actions.maintenanceWindow.end,
 			endMaintenanceWindow as RequestHandler<any>,
 			"POST",
-			{ window_id: crypto.randomUUID() },
+			{ window_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);

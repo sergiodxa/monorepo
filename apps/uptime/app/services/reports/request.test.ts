@@ -7,6 +7,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import { isSubmitted, resolveReportRequest } from "~/app/services/reports/request";
@@ -25,12 +26,12 @@ async function createFixture() {
 	let write = { touch: true, returnRow: true } as const;
 	let own = await db.create(
 		statusPages,
-		{ id: crypto.randomUUID(), team_id: TEAM, name: "Ours", slug: "ours", title: "Ours" },
+		{ id: generateUUID(), team_id: TEAM, name: "Ours", slug: "ours", title: "Ours" },
 		write,
 	);
 	let foreign = await db.create(
 		statusPages,
-		{ id: crypto.randomUUID(), team_id: "team-b", name: "Theirs", slug: "theirs", title: "T" },
+		{ id: generateUUID(), team_id: "team-b", name: "Theirs", slug: "theirs", title: "T" },
 		write,
 	);
 	return { db, own, foreign };

@@ -13,6 +13,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
@@ -59,13 +60,13 @@ async function seedWatch(db: Db, overrides: Partial<InsertTrialWatch> = {}) {
 	return await db.create(
 		trialWatches,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			created_at: WEEK_START,
 			updated_at: WEEK_END,
 			lead_id: "lead-1",
 			url: "https://example.com/status",
 			normalized_url: "https://example.com/status",
-			report_token: `token-${crypto.randomUUID()}`,
+			report_token: `token-${generateUUID()}`,
 			next_due_at: null,
 			expires_at: WEEK_END,
 			converts_until: FAR_FUTURE,
@@ -91,7 +92,7 @@ async function seedResult(
 	await db.create(
 		trialWatchResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			trial_watch_id: watchId,
 			status,
 			response_time_ms: responseTimeMs,
@@ -277,7 +278,7 @@ describe("GET /try/report/:token", () => {
 		let { db } = createTestDatabase();
 		let watch = await seedWatch(db, {
 			converted_at: WEEK_END,
-			converted_monitor_id: crypto.randomUUID(),
+			converted_monitor_id: generateUUID(),
 		});
 
 		let { body } = await visit(db, watch.report_token);

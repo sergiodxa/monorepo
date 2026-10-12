@@ -15,6 +15,7 @@ import { createTranslator } from "@sdxc/i18n";
 import { parse } from "@sdxc/icalendar";
 import { stringifyRecurrence } from "@sdxc/icalendar/rrule";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -51,13 +52,13 @@ async function createFixture(options: { isPublic?: boolean } = {}) {
 	let { db } = createTestDatabase();
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let monitor = await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			author_id: "member-1",
 			enabled_at: Date.now(),
@@ -69,7 +70,7 @@ async function createFixture(options: { isPublic?: boolean } = {}) {
 	let page = await db.create(
 		statusPages,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Acme Status",
 			slug: "acme-status",

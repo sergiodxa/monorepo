@@ -12,6 +12,7 @@
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -47,10 +48,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -68,9 +69,9 @@ async function createMonitorRow(db: Db, teamId: string, overrides: Record<string
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
-			author_id: crypto.randomUUID(),
+			author_id: generateUUID(),
 			name: "Example",
 			url: "https://example.com",
 			method: "HEAD",
@@ -100,7 +101,7 @@ async function createMonitorResultRow(
 	return await db.create(
 		monitorResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitorId,
 			completed_at: Date.now(),
 			response_status: 200,
@@ -177,7 +178,7 @@ describe("GET /api/v1/monitors/:monitorId", () => {
 			db,
 			request(
 				"GET",
-				routes.api.v1.monitors.show.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+				routes.api.v1.monitors.show.href({ monitorId: encodeId("mon", generateUUID()) }),
 			),
 		);
 		expect(response.status).toBe(401);
@@ -316,7 +317,7 @@ describe("PUT /api/v1/monitors/:monitorId", () => {
 			db,
 			request(
 				"PUT",
-				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+				routes.api.v1.monitors.update.href({ monitorId: encodeId("mon", generateUUID()) }),
 				{
 					body: { name: "x" },
 				},
@@ -392,7 +393,7 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 			db,
 			request(
 				"DELETE",
-				routes.api.v1.monitors.destroy.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+				routes.api.v1.monitors.destroy.href({ monitorId: encodeId("mon", generateUUID()) }),
 			),
 		);
 		expect(response.status).toBe(401);
@@ -462,7 +463,7 @@ describe("GET /api/v1/monitors/:monitorId/stats", () => {
 			db,
 			request(
 				"GET",
-				routes.api.v1.monitors.itemStats.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+				routes.api.v1.monitors.itemStats.href({ monitorId: encodeId("mon", generateUUID()) }),
 			),
 		);
 		expect(response.status).toBe(401);
@@ -567,7 +568,7 @@ describe("GET /api/v1/monitors/:monitorId/results", () => {
 			db,
 			request(
 				"GET",
-				routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", crypto.randomUUID()) }),
+				routes.api.v1.monitors.results.href({ monitorId: encodeId("mon", generateUUID()) }),
 			),
 		);
 		expect(response.status).toBe(401);
@@ -601,9 +602,9 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 		await db.create(
 			alertEvents,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sent_at: Date.now(),
-				alert_id: crypto.randomUUID(),
+				alert_id: generateUUID(),
 				monitor_id: monitor.id,
 				event_type: "down",
 				status: "sent",
@@ -655,7 +656,7 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 			request(
 				"GET",
 				routes.api.v1.monitors.alertEvents.href({
-					monitorId: encodeId("mon", crypto.randomUUID()),
+					monitorId: encodeId("mon", generateUUID()),
 				}),
 			),
 		);

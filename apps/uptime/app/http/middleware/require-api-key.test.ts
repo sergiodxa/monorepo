@@ -13,6 +13,7 @@
 import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
 import { database } from "@sdxc/database-middleware";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { parse as parseMetadata } from "@sdxc/well-known/oauth-protected-resource";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -33,10 +34,10 @@ async function seedTeam(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },

@@ -15,6 +15,7 @@ import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { failure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -126,7 +127,7 @@ function costRow(teamId: string, overrides: Record<string, unknown> = {}) {
 async function createBilledTeam(ownerId: string) {
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: ownerId, name: "Acme", slug: `acme-${ownerId}` } as never,
+		{ id: generateUUID(), owner_id: ownerId, name: "Acme", slug: `acme-${ownerId}` } as never,
 		{ touch: true, returnRow: true },
 	);
 	await createActiveSubscription(db, ownerId);
@@ -233,7 +234,7 @@ describe("reportCosts", () => {
 	test("skips a team whose owner the projection has never heard of, and says how much that was", async () => {
 		let team = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "owner-nobody", name: "Acme", slug: "acme" } as never,
+			{ id: generateUUID(), owner_id: "owner-nobody", name: "Acme", slug: "acme" } as never,
 			{ touch: true, returnRow: true },
 		);
 		serve([costRow(team.id)]);
@@ -261,7 +262,7 @@ describe("reportCosts", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "author-1",
 				name: "Homepage",

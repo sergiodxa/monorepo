@@ -24,6 +24,7 @@ import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
@@ -190,10 +191,10 @@ async function createTeamRow(db: Database, overrides: Partial<SelectTeam> = {}) 
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: "subject-1",
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 			...overrides,
 		},
@@ -209,7 +210,7 @@ async function addMember(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: subjectId, role },
+		{ id: generateUUID(), team_id: teamId, subject_id: subjectId, role },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -245,7 +246,7 @@ describe("deleteAccounts", () => {
 		await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "subject-1",
 				name: "Homepage",

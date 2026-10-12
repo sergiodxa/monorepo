@@ -21,6 +21,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { JWK, JWT } from "@sdxc/jwt";
 import { log } from "@sdxc/logger/middleware";
 import { failure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToString } from "remix/component/server";
@@ -330,12 +331,12 @@ async function seedExistingTeam(
 	let { memberships } = await import("~/database/schema");
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "user-1", name: "Ada's Team", slug, logo: null },
+		{ id: generateUUID(), owner_id: "user-1", name: "Ada's Team", slug, logo: null },
 		{ touch: true, returnRow: true },
 	);
 	await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "user-1", team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: "user-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -657,12 +658,12 @@ describe("GET /auth trial conversion", () => {
 		] as const) {
 			let team = await db.create(
 				teams,
-				{ id: crypto.randomUUID(), owner_id: ownerId, name: slug, slug, logo: null },
+				{ id: generateUUID(), owner_id: ownerId, name: slug, slug, logo: null },
 				{ touch: true, returnRow: true },
 			);
 			await db.create(
 				memberships,
-				{ id: crypto.randomUUID(), subject_id: "user-1", team_id: team.id, role: "member" },
+				{ id: generateUUID(), subject_id: "user-1", team_id: team.id, role: "member" },
 				{ touch: true, returnRow: true },
 			);
 		}

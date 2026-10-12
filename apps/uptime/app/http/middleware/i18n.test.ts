@@ -11,6 +11,7 @@
 
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
@@ -151,7 +152,7 @@ describe("i18n middleware", () => {
 		await db.create(
 			userPreferences,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: viewer.id,
 				preferred_language: "pt" as never,
 			},

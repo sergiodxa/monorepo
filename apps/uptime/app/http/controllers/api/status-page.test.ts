@@ -10,6 +10,7 @@
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -46,10 +47,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -64,11 +65,11 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function createStatusPageRow(db: Db, teamId: string, overrides: { slug?: string } = {}) {
-	let slug = overrides.slug ?? `status-${crypto.randomUUID()}`;
+	let slug = overrides.slug ?? `status-${generateUUID()}`;
 	return await db.create(
 		statusPages,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name: "Public Status",
 			slug,
@@ -87,9 +88,9 @@ async function createMonitorRow(db: Db, teamId: string, name: string = "Homepage
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
-			author_id: crypto.randomUUID(),
+			author_id: generateUUID(),
 			name,
 			url: "https://example.com",
 			enabled_at: Date.now(),

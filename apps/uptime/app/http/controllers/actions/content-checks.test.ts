@@ -12,6 +12,7 @@
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -78,10 +79,10 @@ async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -94,7 +95,7 @@ async function createMembershipRow(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: crypto.randomUUID(), role: "admin" },
+		{ id: generateUUID(), team_id: teamId, subject_id: generateUUID(), role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -207,7 +208,7 @@ describe("POST /actions/:team/create-content-check", () => {
 		for (let i = 0; i < 10; i++) {
 			unwrap(
 				await bindModels(db).contentChecks.create({
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					monitor_id: monitor.id,
 					type: "contains",
 					value: `check-${i}`,
@@ -239,7 +240,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let monitor = await createMonitorRow(db, team.id);
 		let check = unwrap(
 			await bindModels(db).contentChecks.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitor.id,
 				type: "contains",
 				value: "to delete",
@@ -272,7 +273,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let monitor = await createMonitorRow(db, otherTeam.id);
 		let check = unwrap(
 			await bindModels(db).contentChecks.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitor.id,
 				type: "contains",
 				value: "not yours",
@@ -302,7 +303,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let otherMonitor = await createMonitorRow(db, team.id);
 		let check = unwrap(
 			await bindModels(db).contentChecks.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: otherMonitor.id,
 				type: "contains",
 				value: "wrong monitor",
@@ -331,7 +332,7 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let monitor = await createMonitorRow(db, team.id);
 		let check = unwrap(
 			await bindModels(db).contentChecks.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitor.id,
 				type: "contains",
 				value: "still here",

@@ -21,6 +21,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
@@ -184,17 +185,17 @@ async function createHarness() {
 	let team = await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 

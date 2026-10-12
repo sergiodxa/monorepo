@@ -10,6 +10,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { InsertStatusPage } from "~/database/schema";
@@ -27,7 +28,7 @@ async function createFlowMonitor(
 	return await db.create(
 		flowMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name: overrides.name ?? "Sign in and read back",
 			source: overrides.source ?? 'post "/session" { body: { password: "hunter2" } }',
@@ -45,7 +46,7 @@ async function createFlowMonitor(
 function statusPageInput(overrides: Partial<InsertStatusPage> = {}) {
 	return {
 		name: "Public Status",
-		slug: `status-${crypto.randomUUID()}`,
+		slug: `status-${generateUUID()}`,
 		title: "Acme Status",
 		...overrides,
 	};
@@ -69,7 +70,7 @@ async function createPage(
 describe("statusPages.create", () => {
 	test("creates a status page for a team", async () => {
 		let { models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 
 		let page = await createPage(models, teamId, statusPageInput({ slug: "acme" }));
 
@@ -86,7 +87,7 @@ describe("statusPages.create", () => {
 describe("statusPages.inTeam ordered newest first", () => {
 	test("lists a team's status pages, most recently created first", async () => {
 		let { db, models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let first = await createPage(models, teamId, statusPageInput());
 		/**
 		 * Force a distinct `created_at` so the ordering assertion below is
@@ -101,8 +102,8 @@ describe("statusPages.inTeam ordered newest first", () => {
 
 	test("never returns another team's status pages", async () => {
 		let { models } = setup();
-		let teamA = crypto.randomUUID();
-		let teamB = crypto.randomUUID();
+		let teamA = generateUUID();
+		let teamB = generateUUID();
 		await createPage(models, teamA, statusPageInput());
 
 		expect(await models.statusPages.inTeam(teamB).orderBy("created_at", "desc").all()).toEqual([]);
@@ -112,8 +113,8 @@ describe("statusPages.inTeam ordered newest first", () => {
 describe("statusPages.inTeam", () => {
 	test("selects the team's status pages and none of another team's", async () => {
 		let { models } = setup();
-		let teamA = crypto.randomUUID();
-		let teamB = crypto.randomUUID();
+		let teamA = generateUUID();
+		let teamB = generateUUID();
 		let mine = await createPage(models, teamA, statusPageInput());
 		await createPage(models, teamB, statusPageInput());
 
@@ -125,7 +126,7 @@ describe("statusPages.inTeam", () => {
 describe("statusPages.inTeam lookup", () => {
 	test("finds a page scoped to its team", async () => {
 		let { models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let page = await createPage(models, teamId, statusPageInput());
 
 		expect((await models.statusPages.inTeam(teamId).where({ id: page.id }).first())?.id).toBe(
@@ -135,8 +136,8 @@ describe("statusPages.inTeam lookup", () => {
 
 	test("returns null when the page belongs to a different team", async () => {
 		let { models } = setup();
-		let teamA = crypto.randomUUID();
-		let teamB = crypto.randomUUID();
+		let teamA = generateUUID();
+		let teamB = generateUUID();
 		let page = await createPage(models, teamA, statusPageInput());
 
 		expect(await models.statusPages.inTeam(teamB).where({ id: page.id }).first()).toBeNull();
@@ -145,10 +146,7 @@ describe("statusPages.inTeam lookup", () => {
 	test("returns null when the id doesn't exist", async () => {
 		let { models } = setup();
 		expect(
-			await models.statusPages
-				.inTeam(crypto.randomUUID())
-				.where({ id: crypto.randomUUID() })
-				.first(),
+			await models.statusPages.inTeam(generateUUID()).where({ id: generateUUID() }).first(),
 		).toBeNull();
 	});
 });
@@ -158,7 +156,7 @@ describe("statusPages.findPublic", () => {
 		let { models } = setup();
 		let page = await createPage(
 			models,
-			crypto.randomUUID(),
+			generateUUID(),
 			statusPageInput({ slug: "public-page", is_public: true }),
 		);
 
@@ -169,7 +167,7 @@ describe("statusPages.findPublic", () => {
 		let { models } = setup();
 		await createPage(
 			models,
-			crypto.randomUUID(),
+			generateUUID(),
 			statusPageInput({ slug: "private-page", is_public: false }),
 		);
 
@@ -190,30 +188,30 @@ describe("statusPages.isSlugTaken", () => {
 
 	test("is true when a different page already uses the slug", async () => {
 		let { models } = setup();
-		await createPage(models, crypto.randomUUID(), statusPageInput({ slug: "taken" }));
+		await createPage(models, generateUUID(), statusPageInput({ slug: "taken" }));
 
 		expect(await models.statusPages.isSlugTaken("taken")).toBe(true);
 	});
 
 	test("is false when the only page using the slug is the one being excluded", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput({ slug: "mine" }));
+		let page = await createPage(models, generateUUID(), statusPageInput({ slug: "mine" }));
 
 		expect(await models.statusPages.isSlugTaken("mine", page.id)).toBe(false);
 	});
 
 	test("is true when a different page uses the slug, even with an excludeId set", async () => {
 		let { models } = setup();
-		await createPage(models, crypto.randomUUID(), statusPageInput({ slug: "taken" }));
+		await createPage(models, generateUUID(), statusPageInput({ slug: "taken" }));
 
-		expect(await models.statusPages.isSlugTaken("taken", crypto.randomUUID())).toBe(true);
+		expect(await models.statusPages.isSlugTaken("taken", generateUUID())).toBe(true);
 	});
 });
 
 describe("statusPages.update", () => {
 	test("updates a page's editable fields", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
+		let page = await createPage(models, generateUUID(), statusPageInput());
 
 		let updated = unwrap(await models.statusPages.update(page.id, { title: "Renamed" }));
 		expect(updated.title).toBe("Renamed");
@@ -223,12 +221,12 @@ describe("statusPages.update", () => {
 describe("statusPages.delete", () => {
 	test("deletes the page and every row attaching monitors to it", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let monitorId = crypto.randomUUID();
-		let dnsMonitorId = crypto.randomUUID();
-		let tcpMonitorId = crypto.randomUUID();
-		let flowMonitorId = crypto.randomUUID();
-		let cronJobId = crypto.randomUUID();
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let monitorId = generateUUID();
+		let dnsMonitorId = generateUUID();
+		let tcpMonitorId = generateUUID();
+		let flowMonitorId = generateUUID();
+		let cronJobId = generateUUID();
 
 		await models.statusPages.setMonitors(page.id, [monitorId]);
 		await models.statusPages.setDnsMonitors(page.id, [dnsMonitorId]);
@@ -252,8 +250,8 @@ describe("statusPages.delete", () => {
 describe("statusPages.setMonitors", () => {
 	test("replaces the full set of attached monitors in the given order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [monitorA, monitorB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [monitorA, monitorB] = [generateUUID(), generateUUID()];
 
 		await models.statusPages.setMonitors(page.id, [monitorA, monitorB]);
 		let attachments = await models.statusPages.listAttachments(page.id);
@@ -266,8 +264,8 @@ describe("statusPages.setMonitors", () => {
 
 	test("clears the set entirely when given an empty array", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		await models.statusPages.setMonitors(page.id, [crypto.randomUUID()]);
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		await models.statusPages.setMonitors(page.id, [generateUUID()]);
 
 		await models.statusPages.setMonitors(page.id, []);
 
@@ -278,8 +276,8 @@ describe("statusPages.setMonitors", () => {
 describe("statusPages.setDnsMonitors", () => {
 	test("replaces the full set of attached DNS monitors in the given order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [dnsA, dnsB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [dnsA, dnsB] = [generateUUID(), generateUUID()];
 
 		await models.statusPages.setDnsMonitors(page.id, [dnsA, dnsB]);
 		expect((await models.statusPages.getAttachedIds(page.id)).dnsMonitorIds).toEqual([dnsA, dnsB]);
@@ -292,8 +290,8 @@ describe("statusPages.setDnsMonitors", () => {
 describe("statusPages.setTcpMonitors", () => {
 	test("replaces the full set of attached TCP monitors in the given order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [tcpA, tcpB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [tcpA, tcpB] = [generateUUID(), generateUUID()];
 
 		await models.statusPages.setTcpMonitors(page.id, [tcpA, tcpB]);
 		expect((await models.statusPages.getAttachedIds(page.id)).tcpMonitorIds).toEqual([tcpA, tcpB]);
@@ -306,8 +304,8 @@ describe("statusPages.setTcpMonitors", () => {
 describe("statusPages.setFlowMonitors", () => {
 	test("replaces the full set of attached flow monitors in the given order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [flowA, flowB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [flowA, flowB] = [generateUUID(), generateUUID()];
 
 		await models.statusPages.setFlowMonitors(page.id, [flowA, flowB]);
 		expect((await models.statusPages.getAttachedIds(page.id)).flowMonitorIds).toEqual([
@@ -321,8 +319,8 @@ describe("statusPages.setFlowMonitors", () => {
 
 	test("orders the attachments as curated, so the public page renders them in that order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [flowA, flowB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [flowA, flowB] = [generateUUID(), generateUUID()];
 
 		await models.statusPages.setFlowMonitors(page.id, [flowB, flowA]);
 
@@ -335,7 +333,7 @@ describe("statusPages.setFlowMonitors", () => {
 describe("statusPages.listPublicFlowMonitors", () => {
 	test("returns a team's flow monitors with the status the page renders", async () => {
 		let { db, models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let flow = await createFlowMonitor(db, teamId, { name: "Checkout", last_status: "down" });
 
 		let rows = await models.statusPages.listPublicFlowMonitors(teamId);
@@ -349,7 +347,7 @@ describe("statusPages.listPublicFlowMonitors", () => {
 	 */
 	test("never returns the spec source, in any form", async () => {
 		let { db, models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		await createFlowMonitor(db, teamId, { source: 'header "Authorization" "Bearer s3cr3t"' });
 
 		let rows = await models.statusPages.listPublicFlowMonitors(teamId);
@@ -360,18 +358,18 @@ describe("statusPages.listPublicFlowMonitors", () => {
 
 	test("never returns another team's flow monitors", async () => {
 		let { db, models } = setup();
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		await createFlowMonitor(db, teamId);
 
-		expect(await models.statusPages.listPublicFlowMonitors(crypto.randomUUID())).toEqual([]);
+		expect(await models.statusPages.listPublicFlowMonitors(generateUUID())).toEqual([]);
 	});
 });
 
 describe("statusPages.setCronJobs", () => {
 	test("replaces the full set of attached cron jobs in the given order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [cronA, cronB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [cronA, cronB] = [generateUUID(), generateUUID()];
 
 		await models.statusPages.setCronJobs(page.id, [cronA, cronB]);
 		expect((await models.statusPages.getAttachedIds(page.id)).cronJobIds).toEqual([cronA, cronB]);
@@ -384,7 +382,7 @@ describe("statusPages.setCronJobs", () => {
 describe("statusPages.getAttachedIds", () => {
 	test("returns every attached id, empty lists when nothing is attached", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
+		let page = await createPage(models, generateUUID(), statusPageInput());
 
 		expect(await models.statusPages.getAttachedIds(page.id)).toEqual({
 			monitorIds: [],
@@ -399,8 +397,8 @@ describe("statusPages.getAttachedIds", () => {
 describe("statusPages.listAttachments", () => {
 	test("returns each kind's rows ordered by their curated order", async () => {
 		let { models } = setup();
-		let page = await createPage(models, crypto.randomUUID(), statusPageInput());
-		let [monitorA, monitorB] = [crypto.randomUUID(), crypto.randomUUID()];
+		let page = await createPage(models, generateUUID(), statusPageInput());
+		let [monitorA, monitorB] = [generateUUID(), generateUUID()];
 		await models.statusPages.setMonitors(page.id, [monitorA, monitorB]);
 
 		let attachments = await models.statusPages.listAttachments(page.id);

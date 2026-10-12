@@ -10,6 +10,7 @@
  */
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
@@ -37,13 +38,13 @@ let outsider: Viewer = {
 async function seedTeam(db: Db) {
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: owner.id, name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: owner.id, name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 
 	await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: owner.id, team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: owner.id, team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 

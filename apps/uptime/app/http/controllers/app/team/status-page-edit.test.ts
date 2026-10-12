@@ -24,6 +24,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -119,12 +120,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -136,7 +137,7 @@ async function createFlowMonitor(db: Database, teamId: string, name = "Sign in a
 	return await db.create(
 		flowMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name,
 			source: 'post "/session" { body: { password: "hunter2-secret" } }',
@@ -155,10 +156,10 @@ async function createStatusPage(db: Database, teamId: string) {
 	return await db.create(
 		statusPages,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name: "Acme Status",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			title: "Acme Status",
 			description: null,
 			logo_url: null,
@@ -208,7 +209,7 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "acme-status",
@@ -239,7 +240,7 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "acme-status",
@@ -283,7 +284,7 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 		let page = await createStatusPage(db, team.id);
 
 		await db.create(statusPageFlowMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			status_page_id: page.id,
 			flow_monitor_id: attached.id,
 			display_name: null,
@@ -299,7 +300,7 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 	test("responds 404 for a status page id that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let response = await get(db, team, membership, crypto.randomUUID());
+		let response = await get(db, team, membership, generateUUID());
 
 		expect(response.status).toBe(404);
 	});
@@ -309,13 +310,13 @@ describe("GET /app/:team/status-pages/:statusPageId/edit", () => {
 
 		let otherTeam = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
+			{ id: generateUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
 			{ touch: true, returnRow: true },
 		);
 		let otherPage = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: otherTeam.id,
 				name: "Other Status",
 				slug: "other-status",

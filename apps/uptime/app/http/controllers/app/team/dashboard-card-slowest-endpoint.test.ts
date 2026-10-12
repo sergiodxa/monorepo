@@ -24,6 +24,7 @@ import {
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToStream } from "remix/component/server";
@@ -108,12 +109,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -169,7 +170,7 @@ describe("dashboard-card-slowest-endpoint", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),

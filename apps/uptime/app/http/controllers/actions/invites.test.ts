@@ -15,6 +15,7 @@ import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -47,12 +48,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -155,7 +156,7 @@ describe("createInvite", () => {
 		let existing = await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				sender_id: membership.subject_id,
 				email: "pending@example.com",
@@ -192,7 +193,7 @@ describe("createInvite", () => {
 		await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				sender_id: membership.subject_id,
 				email: "member@example.com",
@@ -316,7 +317,7 @@ describe("revokeInvite", () => {
 		let invite = await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				sender_id: membership.subject_id,
 				email: "revoke-me@example.com",
@@ -351,13 +352,13 @@ describe("revokeInvite", () => {
 
 		let otherTeam = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
+			{ id: generateUUID(), owner_id: "owner-2", name: "Other", slug: "other", logo: null },
 			{ touch: true, returnRow: true },
 		);
 		let invite = await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: otherTeam.id,
 				sender_id: "owner-2",
 				email: "foreign@example.com",
@@ -390,7 +391,7 @@ describe("revokeInvite", () => {
 		let invite = await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				sender_id: membership.subject_id,
 				email: "accepted@example.com",
@@ -424,7 +425,7 @@ describe("revokeInvite", () => {
 		let invite = await db.create(
 			invites,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				sender_id: membership.subject_id,
 				email: "untouched@example.com",

@@ -8,6 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { DailyStatsInput } from "~/app/models/monitor-daily-stats";
@@ -46,7 +47,7 @@ function dateDaysAgo(daysAgo: number): string {
 /** A valid `upsertDay` input, with any field overridable per test. */
 function dailyStatsInput(overrides: Partial<DailyStatsInput> = {}) {
 	return {
-		monitor_id: crypto.randomUUID(),
+		monitor_id: generateUUID(),
 		monitor_type: "http" as const,
 		date: "2026-03-01",
 		total_checks: 100,
@@ -99,7 +100,7 @@ describe("monitorDailyStats.upsertDay", () => {
 
 	test("leaves a different date's row for the same monitor untouched", async () => {
 		let { db, models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let dayOne = await upsertDay(
 			models,
 			dailyStatsInput({ monitor_id: monitorId, date: "2026-03-01" }),
@@ -116,7 +117,7 @@ describe("monitorDailyStats.upsertDay", () => {
 	/** Flow monitors roll up into this same table, so their days round-trip like any other's. */
 	test("stores a flow monitor's day under its own type", async () => {
 		let { models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 
 		let row = await upsertDay(
 			models,
@@ -130,7 +131,7 @@ describe("monitorDailyStats.upsertDay", () => {
 
 	test("leaves a different monitor_type's row for the same monitor/date untouched", async () => {
 		let { db, models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let httpRow = await upsertDay(
 			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "tcp", date: "2026-03-01" }),
@@ -150,7 +151,7 @@ describe("monitorDailyStats.upsertDay", () => {
 describe("monitorDailyStats.listRecentDays", () => {
 	test("returns the window's rows oldest first, so the bars read left to right", async () => {
 		let { models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 
 		let older = await upsertDay(
 			models,
@@ -171,7 +172,7 @@ describe("monitorDailyStats.listRecentDays", () => {
 
 	test("excludes rows older than the window, however much history the monitor has", async () => {
 		let { models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 
 		await upsertDay(
 			models,
@@ -192,7 +193,7 @@ describe("monitorDailyStats.listRecentDays", () => {
 
 	test("honors a narrower window than the default", async () => {
 		let { models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 
 		await upsertDay(models, dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(20) }));
 		let recent = await upsertDay(
@@ -206,13 +207,13 @@ describe("monitorDailyStats.listRecentDays", () => {
 
 	test("returns an empty array when the monitor has no stats", async () => {
 		let { models } = setup();
-		expect(await models.monitorDailyStats.listRecentDays(crypto.randomUUID(), "http")).toEqual([]);
+		expect(await models.monitorDailyStats.listRecentDays(generateUUID(), "http")).toEqual([]);
 	});
 
 	test("never mixes another monitor's rows in", async () => {
 		let { models } = setup();
-		let monitorA = crypto.randomUUID();
-		let monitorB = crypto.randomUUID();
+		let monitorA = generateUUID();
+		let monitorB = generateUUID();
 		await upsertDay(models, dailyStatsInput({ monitor_id: monitorA, date: dateDaysAgo(1) }));
 
 		expect(await models.monitorDailyStats.listRecentDays(monitorB, "http")).toEqual([]);
@@ -220,7 +221,7 @@ describe("monitorDailyStats.listRecentDays", () => {
 
 	test("never mixes another monitor_type's rows in", async () => {
 		let { models } = setup();
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let dnsRow = await upsertDay(
 			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "dns", date: dateDaysAgo(1) }),

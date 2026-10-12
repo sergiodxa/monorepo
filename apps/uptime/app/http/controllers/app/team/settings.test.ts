@@ -18,6 +18,7 @@ import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { failure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
@@ -90,12 +91,12 @@ async function createFixture() {
 	let { db } = createTestDatabase();
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let ownerMembership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 	return { db, team, ownerMembership };
@@ -237,7 +238,7 @@ describe("settings page", () => {
 
 		let nonOwnerMembership = await db.create(
 			memberships,
-			{ id: crypto.randomUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
+			{ id: generateUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
 			{ touch: true, returnRow: true },
 		);
 

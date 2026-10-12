@@ -19,6 +19,7 @@ import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { failure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -106,10 +107,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -356,7 +357,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id);
 
-		let response = await dispatch(db, ping(crypto.randomUUID(), { key }));
+		let response = await dispatch(db, ping(generateUUID(), { key }));
 		expect(response.status).toBe(404);
 		await expectProblem(response, "notFound");
 	});
@@ -577,7 +578,7 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id);
 
-		let response = await dispatch(db, ping(crypto.randomUUID(), { key, address: "203.0.113.33" }));
+		let response = await dispatch(db, ping(generateUUID(), { key, address: "203.0.113.33" }));
 
 		expect(response.status).toBe(404);
 		expect(await billedEvents(testBilling)).toHaveLength(0);

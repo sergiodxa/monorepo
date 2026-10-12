@@ -13,6 +13,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -46,18 +47,18 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 	let monitor = await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			author_id: "member-1",
 			enabled_at: Date.now(),
@@ -70,7 +71,7 @@ async function createFixture() {
 	let flowMonitor = await db.create(
 		flowMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Sign in and check out",
 			source: 'post "/session" { body: { password: "hunter2" } }',
@@ -185,7 +186,7 @@ describe("createStatusPage", () => {
 		await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Existing",
 				slug: "taken",
@@ -253,7 +254,7 @@ describe("updateStatusPage", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Original",
 				slug: "original",
@@ -299,7 +300,7 @@ describe("updateStatusPage", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Original",
 				slug: "flow-original",
@@ -358,7 +359,7 @@ describe("updateStatusPage", () => {
 			updateStatusPage as RequestHandler<any>,
 			"POST",
 			[
-				["status_page_id", crypto.randomUUID()],
+				["status_page_id", generateUUID()],
 				["name", "Renamed"],
 				["slug", "renamed"],
 				["title", "Renamed"],
@@ -373,7 +374,7 @@ describe("updateStatusPage", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Page A",
 				slug: "page-a",
@@ -387,7 +388,7 @@ describe("updateStatusPage", () => {
 		await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Page B",
 				slug: "page-b",
@@ -430,7 +431,7 @@ describe("deleteStatusPage", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "To delete",
 				slug: "to-delete",
@@ -477,7 +478,7 @@ describe("deleteStatusPage", () => {
 			routes.actions.statusPage.delete,
 			deleteStatusPage as RequestHandler<any>,
 			"DELETE",
-			[["status_page_id", crypto.randomUUID()]],
+			[["status_page_id", generateUUID()]],
 		);
 
 		expect(response.status).toBe(404);
@@ -488,7 +489,7 @@ describe("deleteStatusPage", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Untouched",
 				slug: "untouched",

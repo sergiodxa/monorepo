@@ -18,6 +18,7 @@ import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { failure, isSuccess, success, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -126,10 +127,10 @@ async function seedTeam(db: Database, name: string): Promise<SelectTeam> {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			owner_id: "owner-1",
 			name,
-			slug: `${name.toLowerCase()}-${crypto.randomUUID()}`,
+			slug: `${name.toLowerCase()}-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -145,7 +146,7 @@ async function seedMember(db: Database, teamId: string, subjectId: string, email
 
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: subjectId, role: "member" },
+		{ id: generateUUID(), team_id: teamId, subject_id: subjectId, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -167,7 +168,7 @@ async function seedFlowMonitor(db: Database, teamId: string, name: string) {
 	return await db.create(
 		flowMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name,
 			source: 'get "https://example.com"',
@@ -188,7 +189,7 @@ async function seedDay(
 	await db.create(
 		monitorDailyStats,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitorId,
 			monitor_type: type,
 			date,
@@ -384,7 +385,7 @@ describe("sendTeamDigests recipients", () => {
 		await db.create(
 			userPreferences,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: "subject-1",
 				unsubscribed_emails: ["teamDailyDigest"],
 			},

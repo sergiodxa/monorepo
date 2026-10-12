@@ -15,6 +15,7 @@ import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -79,12 +80,12 @@ async function createFixture() {
 	let { db } = createTestDatabase();
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 	return { db, team, membership };
@@ -188,7 +189,7 @@ describe("account page", () => {
 		await db.create(
 			userPreferences,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: membership.subject_id,
 				unsubscribed_emails: ["teamDailyDigest"],
 			},
@@ -211,13 +212,13 @@ describe("account page", () => {
 
 		let otherTeam = await db.create(
 			teams,
-			{ id: crypto.randomUUID(), owner_id: "someone-else", name: "Beta", slug: "beta", logo: null },
+			{ id: generateUUID(), owner_id: "someone-else", name: "Beta", slug: "beta", logo: null },
 			{ touch: true, returnRow: true },
 		);
 		await db.create(
 			memberships,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: membership.subject_id,
 				team_id: otherTeam.id,
 				role: "member",
@@ -256,7 +257,7 @@ describe("account page — Language", () => {
 		await db.create(
 			userPreferences,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: membership.subject_id,
 				preferred_language: "es",
 			},
@@ -346,7 +347,7 @@ describe("account page — Delete Account", () => {
 		for (let subjectId of ["colleague-1", "colleague-2"]) {
 			await db.create(
 				memberships,
-				{ id: crypto.randomUUID(), subject_id: subjectId, team_id: team.id, role: "member" },
+				{ id: generateUUID(), subject_id: subjectId, team_id: team.id, role: "member" },
 				{ touch: true, returnRow: true },
 			);
 		}

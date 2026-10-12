@@ -12,6 +12,7 @@ import type { Database } from "remix/data-table";
 import { parse } from "@sdxc/csv";
 import { database } from "@sdxc/database-middleware";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -111,10 +112,10 @@ beforeEach(() => {
 	db = createTestDatabase().db;
 });
 
-async function createTeamRow(slug = `acme-${crypto.randomUUID().slice(0, 8)}`) {
+async function createTeamRow(slug = `acme-${generateUUID().slice(0, 8)}`) {
 	return await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: crypto.randomUUID(), name: "Acme", slug, logo: null },
+		{ id: generateUUID(), owner_id: generateUUID(), name: "Acme", slug, logo: null },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -132,7 +133,7 @@ async function seedMonitor(
 	type: DailyStatsMonitorType,
 	name = `${type} monitor`,
 ): Promise<Seeded> {
-	let id = crypto.randomUUID();
+	let id = generateUUID();
 	let shared = { id, team_id: teamId, name };
 	let write = { touch: true, returnRow: true } as const;
 
@@ -141,7 +142,7 @@ async function seedMonitor(
 			monitors,
 			{
 				...shared,
-				author_id: crypto.randomUUID(),
+				author_id: generateUUID(),
 				url: "https://example.com/health",
 				enabled_at: NOW,
 			},
@@ -241,7 +242,7 @@ describe.each([
 		["an unknown monitor type", "monitor_type=ssl", "/monitor_type"],
 		[
 			"a status page id of another resource",
-			`status_page_id=${encodeId("mon", crypto.randomUUID())}`,
+			`status_page_id=${encodeId("mon", generateUUID())}`,
 			"/status_page_id",
 		],
 	])("refuses %s as a validation error", async (_case, query, message) => {
@@ -263,7 +264,7 @@ describe.each([
 			await bindModels(db).statusPages.create({
 				team_id: other.id,
 				name: "Other",
-				slug: `other-${crypto.randomUUID()}`,
+				slug: `other-${generateUUID()}`,
 				title: "Other",
 			}),
 		);
@@ -360,7 +361,7 @@ describe("GET /api/v1/reports/uptime-summary", () => {
 			await bindModels(db).statusPages.create({
 				team_id: team.id,
 				name: "Client",
-				slug: `client-${crypto.randomUUID()}`,
+				slug: `client-${generateUUID()}`,
 				title: "Client",
 			}),
 		);

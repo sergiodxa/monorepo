@@ -12,6 +12,7 @@
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -52,10 +53,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -89,7 +90,7 @@ async function createAlertRow(db: Db, teamId: string, name: string) {
 	return await db.create(
 		alerts,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			monitor_id: null,
 			name,
@@ -141,7 +142,7 @@ describe("GET /api/v1/alerts", () => {
 		await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "On-call",
@@ -401,7 +402,7 @@ describe("POST /api/v1/alerts", () => {
 
 		let response = await dispatch(
 			db,
-			post(key, emailAlertBody({ monitorId: encodeId("mon", crypto.randomUUID()) })),
+			post(key, emailAlertBody({ monitorId: encodeId("mon", generateUUID()) })),
 		);
 		expect(response.status).toBe(404);
 		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
@@ -418,9 +419,9 @@ describe("POST /api/v1/alerts", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
-				author_id: crypto.randomUUID(),
+				author_id: generateUUID(),
 				name: "Homepage",
 				url: "https://example.com",
 			},
@@ -460,7 +461,7 @@ describe("POST /api/v1/alerts", () => {
 		let key = await createApiKey(db, team.id, ["alerts:write"]);
 		let monitor = await db.create(
 			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
+			{ id: generateUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -482,9 +483,9 @@ describe("POST /api/v1/alerts", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
-				author_id: crypto.randomUUID(),
+				author_id: generateUUID(),
 				name: "Homepage",
 				url: "https://example.com",
 			},
@@ -518,7 +519,7 @@ describe("POST /api/v1/alerts", () => {
 			await db.create(
 				alerts,
 				{
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					team_id: team.id,
 					monitor_id: null,
 					name: `Alert ${i}`,

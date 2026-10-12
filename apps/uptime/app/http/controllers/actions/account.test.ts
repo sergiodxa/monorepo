@@ -15,6 +15,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Session as SessionType } from "remix/session";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -108,7 +109,7 @@ async function postAccountAction(
 
 function createViewer(overrides: Partial<Viewer> = {}): Viewer {
 	return {
-		id: crypto.randomUUID(),
+		id: generateUUID(),
 		name: "Ada",
 		email: "ada@example.com",
 		avatar: "",
@@ -123,10 +124,10 @@ async function createTeamRow(
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 			...overrides,
 		},
@@ -142,7 +143,7 @@ async function createMembershipRow(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: subjectId, role },
+		{ id: generateUUID(), team_id: teamId, subject_id: subjectId, role },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -341,7 +342,7 @@ describe("POST /actions/update-emails", () => {
 		await db.create(
 			userPreferences,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				subject_id: viewer.id,
 				unsubscribed_emails: ["teamDailyDigest", "teamWeeklyDigest"],
 			},
@@ -362,7 +363,7 @@ describe("POST /actions/update-emails", () => {
 		let viewer = createViewer();
 		await db.create(
 			userPreferences,
-			{ id: crypto.randomUUID(), subject_id: viewer.id, preferred_language: "es" },
+			{ id: generateUUID(), subject_id: viewer.id, preferred_language: "es" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -419,7 +420,7 @@ describe("POST /actions/update-language", () => {
 		let viewer = createViewer();
 		await db.create(
 			userPreferences,
-			{ id: crypto.randomUUID(), subject_id: viewer.id, preferred_language: "es" },
+			{ id: generateUUID(), subject_id: viewer.id, preferred_language: "es" },
 			{ touch: true, returnRow: true },
 		);
 

@@ -15,6 +15,7 @@ import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { NotFound } from "@sdxc/data-model";
 import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
 import { describe, expect, test, vi } from "vitest";
 
@@ -145,10 +146,10 @@ async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> 
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: overrides.ownerId ?? crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: overrides.ownerId ?? generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -276,7 +277,7 @@ describe("monitors.inTeam().find", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 
-		expect(await bindModels(db).monitors.inTeam(team.id).find(crypto.randomUUID())).toBeNull();
+		expect(await bindModels(db).monitors.inTeam(team.id).find(generateUUID())).toBeNull();
 	});
 });
 
@@ -310,7 +311,7 @@ describe("monitors.delete", () => {
 
 	test("answers NotFound for a monitor that doesn't exist", async () => {
 		let { db } = createTestDatabase();
-		let deleted = await bindModels(db).monitors.delete(crypto.randomUUID());
+		let deleted = await bindModels(db).monitors.delete(generateUUID());
 
 		expect(isFailure(deleted) && deleted.error instanceof NotFound).toBe(true);
 	});
@@ -318,7 +319,7 @@ describe("monitors.delete", () => {
 
 describe("scheduledJobId", () => {
 	test("gives two cron deliveries in the same minute one shared job id", () => {
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let first = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 		let second = Date.UTC(2026, 6, 28, 12, 34, 15, 0);
 
@@ -326,7 +327,7 @@ describe("scheduledJobId", () => {
 	});
 
 	test("gives consecutive minutes distinct job ids", () => {
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let minute = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 		let nextMinute = Date.UTC(2026, 6, 28, 12, 35, 8, 0);
 
@@ -346,7 +347,7 @@ describe("scheduledJobId", () => {
 	 * colliding with a scheduled one would make one of the two checks free.
 	 */
 	test("never gives a scheduled check an id an on-demand check uses", () => {
-		expect(scheduledJobId(crypto.randomUUID(), Date.now())).not.toContain(":manual:");
+		expect(scheduledJobId(generateUUID(), Date.now())).not.toContain(":manual:");
 	});
 });
 
@@ -602,7 +603,7 @@ describe("monitors.countConsumedPingsByTeam", () => {
 		let result = await db.create(
 			monitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitorId,
 				response_status: 200,
 				response_time_ms: 100,
@@ -624,7 +625,7 @@ describe("monitors.countConsumedPingsByTeam", () => {
 		await db.create(
 			monitorDailyStats,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitorId,
 				monitor_type: monitorType,
 				date: day,
@@ -649,7 +650,7 @@ describe("monitors.countConsumedPingsByTeam", () => {
 		let dns = await db.create(
 			dnsMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: teamId,
 				name: "DNS",
 				domain: "example.com",
@@ -658,12 +659,12 @@ describe("monitors.countConsumedPingsByTeam", () => {
 		);
 		let tcp = await db.create(
 			tcpMonitors,
-			{ id: crypto.randomUUID(), team_id: teamId, name: "TCP", host: "example.com", port: 443 },
+			{ id: generateUUID(), team_id: teamId, name: "TCP", host: "example.com", port: 443 },
 			{ touch: true, returnRow: true },
 		);
 		let cron = await db.create(
 			cronJobMonitors,
-			{ id: crypto.randomUUID(), team_id: teamId, name: "Nightly", cron_expression: "0 0 * * *" },
+			{ id: generateUUID(), team_id: teamId, name: "Nightly", cron_expression: "0 0 * * *" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -684,7 +685,7 @@ describe("monitors.countConsumedPingsByTeam", () => {
 		await createHttpResult(db, http.id, insideRawWindow);
 		await createHttpResult(db, http.id, insideRawWindow + 60_000);
 		await db.create(dnsMonitorResults, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			dns_monitor_id: dns.id,
 			status: "ok",
 			response_time_ms: 10,
@@ -692,7 +693,7 @@ describe("monitors.countConsumedPingsByTeam", () => {
 			checked_at: insideRawWindow,
 		});
 		await db.create(tcpMonitorResults, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			tcp_monitor_id: tcp.id,
 			status: "up",
 			response_time_ms: 10,
@@ -701,7 +702,7 @@ describe("monitors.countConsumedPingsByTeam", () => {
 		});
 		let ping = await db.create(
 			cronJobPings,
-			{ id: crypto.randomUUID(), cron_job_monitor_id: cron.id, was_on_time: true },
+			{ id: generateUUID(), cron_job_monitor_id: cron.id, was_on_time: true },
 			{ touch: true, returnRow: true },
 		);
 		await db.update(cronJobPings, ping.id, { created_at: insideRawWindow }, { touch: false });
@@ -787,7 +788,7 @@ describe("monitors.countConsumedPingsByMonitor", () => {
 		let result = await db.create(
 			monitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitorId,
 				response_status: 200,
 				response_time_ms: 100,
@@ -808,7 +809,7 @@ describe("monitors.countConsumedPingsByMonitor", () => {
 		await db.create(
 			monitorDailyStats,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitorId,
 				monitor_type: "http",
 				date: day,
@@ -925,7 +926,7 @@ describe("monitors.estimateConsumedPingsByTeam", () => {
 			interval_seconds: 3600,
 		});
 		await db.create(dnsMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "DNS",
 			domain: "example.com",
@@ -933,7 +934,7 @@ describe("monitors.estimateConsumedPingsByTeam", () => {
 			is_enabled: true,
 		});
 		await db.create(tcpMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "TCP",
 			host: "example.com",
@@ -942,7 +943,7 @@ describe("monitors.estimateConsumedPingsByTeam", () => {
 			is_enabled: true,
 		});
 		await db.create(cronJobMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Nightly job",
 			cron_expression: "0 0 * * *",
@@ -966,7 +967,7 @@ describe("monitors.estimateConsumedPingsByTeam", () => {
 		});
 		await updateMonitor(db, monitor.id, { enabled_at: null });
 		await db.create(dnsMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "DNS",
 			domain: "example.com",
@@ -974,7 +975,7 @@ describe("monitors.estimateConsumedPingsByTeam", () => {
 			is_enabled: false,
 		});
 		await db.create(cronJobMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Disabled job",
 			cron_expression: "0 0 * * *",
@@ -1006,7 +1007,7 @@ describe("monitors.estimateConsumedPingsByTeam", () => {
 		let date = new Date("2026-07-15T12:00:00.000Z");
 
 		await db.create(cronJobMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Broken job",
 			cron_expression: "not a cron expression",
@@ -1024,7 +1025,7 @@ describe("monitors.statsForTeam and statsForMonitor", () => {
 		await db.create(
 			monitorResults,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				monitor_id: monitorId,
 				response_status: responseStatus,
 				response_time_ms: 100,

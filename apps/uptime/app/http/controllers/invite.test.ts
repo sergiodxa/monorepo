@@ -15,6 +15,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -73,13 +74,13 @@ async function getInvite(db: TestDb, viewer: Viewer | null, inviteId: string) {
 async function createFixture(db: TestDb, options?: { acceptedAt?: number | null; email?: string }) {
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let invite = await db.create(
 		invites,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			sender_id: "owner-1",
 			email: options?.email ?? "ada@example.com",
@@ -130,7 +131,7 @@ describe("GET /invite/:inviteId", () => {
 	test("renders an error page for an unknown invite id, without creating a membership", async () => {
 		let { db } = createTestDatabase();
 
-		let response = await getInvite(db, VIEWER, crypto.randomUUID());
+		let response = await getInvite(db, VIEWER, generateUUID());
 
 		expect(response.status).toBe(400);
 		let body = await response.text();

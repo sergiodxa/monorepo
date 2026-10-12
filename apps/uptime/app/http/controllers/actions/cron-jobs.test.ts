@@ -9,6 +9,7 @@
  */
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -73,10 +74,10 @@ async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -89,7 +90,7 @@ async function createMembershipRow(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: crypto.randomUUID(), role: "admin" },
+		{ id: generateUUID(), team_id: teamId, subject_id: generateUUID(), role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -201,7 +202,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Old name",
 				description: null,
@@ -244,7 +245,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: otherTeam.id,
 				name: "Someone else's",
 				description: null,
@@ -281,7 +282,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Original",
 				description: null,
@@ -325,7 +326,7 @@ describe("POST /actions/:team/update-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Original",
 				description: null,
@@ -366,7 +367,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "To delete",
 				description: null,
@@ -406,7 +407,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: otherTeam.id,
 				name: "Not yours",
 				description: null,
@@ -442,7 +443,7 @@ describe("DELETE /actions/:team/delete-cron-job", () => {
 		let monitor = await db.create(
 			cronJobMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Still here",
 				description: null,

@@ -11,6 +11,7 @@
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -42,10 +43,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -67,9 +68,9 @@ async function createMonitorRow(
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
-			author_id: crypto.randomUUID(),
+			author_id: generateUUID(),
 			name: overrides.name ?? "Homepage",
 			url: "https://example.com",
 			enabled_at: "enabled_at" in overrides ? (overrides.enabled_at ?? null) : Date.now(),
@@ -88,7 +89,7 @@ async function createMonitorResultRow(
 	return await db.create(
 		monitorResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitorId,
 			completed_at: completedAt,
 			response_status: responseStatus,

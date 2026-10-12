@@ -14,6 +14,7 @@
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -73,10 +74,10 @@ async function createTeamRow(db: Db, options: { verified?: boolean } = {}): Prom
 	let team = await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -85,7 +86,7 @@ async function createTeamRow(db: Db, options: { verified?: boolean } = {}): Prom
 	if (options.verified !== false) {
 		await db.create(
 			teamDomains,
-			{ id: crypto.randomUUID(), team_id: team.id, hostname: DOMAIN, verified_at: Date.now() },
+			{ id: generateUUID(), team_id: team.id, hostname: DOMAIN, verified_at: Date.now() },
 			{ touch: true, returnRow: true },
 		);
 	}
@@ -113,7 +114,7 @@ async function createResultRow(
 	return await db.create(
 		flowMonitorResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			flow_monitor_id: monitorId,
 			status: "up",
 			tests_total: 1,

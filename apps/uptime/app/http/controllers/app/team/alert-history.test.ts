@@ -16,6 +16,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { database } from "@sdxc/database-middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -41,12 +42,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -127,7 +128,7 @@ describe("alertHistory", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "CTO Alert",
@@ -140,10 +141,10 @@ describe("alertHistory", () => {
 		await db.create(
 			alertEvents,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sent_at: Date.now(),
 				alert_id: alert.id,
-				monitor_id: crypto.randomUUID(),
+				monitor_id: generateUUID(),
 				event_type: "down",
 				status: "sent",
 				monitor_type: "http",
@@ -167,7 +168,7 @@ describe("alertHistory", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "CTO Alert",
@@ -180,10 +181,10 @@ describe("alertHistory", () => {
 		await db.create(
 			alertEvents,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sent_at: Date.now(),
 				alert_id: alert.id,
-				monitor_id: crypto.randomUUID(),
+				monitor_id: generateUUID(),
 				event_type: "down",
 				status: "skipped_cap",
 				monitor_type: "http",
@@ -202,7 +203,7 @@ describe("alertHistory", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "CTO Alert",
@@ -215,10 +216,10 @@ describe("alertHistory", () => {
 		await db.create(
 			alertEvents,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sent_at: Date.now(),
 				alert_id: alert.id,
-				monitor_id: crypto.randomUUID(),
+				monitor_id: generateUUID(),
 				event_type: "down",
 				status: "pending",
 				monitor_type: "http",
@@ -242,7 +243,7 @@ describe("alertHistory", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "CTO Alert",
@@ -255,10 +256,10 @@ describe("alertHistory", () => {
 		await db.create(
 			alertEvents,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				sent_at: Date.now(),
 				alert_id: alert.id,
-				monitor_id: crypto.randomUUID(),
+				monitor_id: generateUUID(),
 				event_type: "up",
 				status: "failed",
 				error_message: "Webhook timed out",

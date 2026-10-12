@@ -11,6 +11,7 @@ import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -94,10 +95,10 @@ async function createTeamRow(db: ReturnType<typeof createTestDatabase>["db"]) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -110,7 +111,7 @@ async function createMembershipRow(
 ) {
 	return await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), team_id: teamId, subject_id: crypto.randomUUID(), role: "admin" },
+		{ id: generateUUID(), team_id: teamId, subject_id: generateUUID(), role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 }
@@ -338,7 +339,7 @@ describe("POST /actions/:team/create-alert", () => {
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await db.create(
 			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
+			{ id: generateUUID(), team_id: team.id, name: "Domain", domain: "example.com" },
 			{ touch: true, returnRow: true },
 		);
 
@@ -366,7 +367,7 @@ describe("POST /actions/:team/create-alert", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 
-		for (let scope of [`monitor:dns:${crypto.randomUUID()}`, "type:pigeon", "monitor:dns:"]) {
+		for (let scope of [`monitor:dns:${generateUUID()}`, "type:pigeon", "monitor:dns:"]) {
 			let response = await postAlertAction(
 				createAlert,
 				routes.actions.alert.create,
@@ -394,7 +395,7 @@ describe("POST /actions/:team/create-alert", () => {
 			await db.create(
 				alerts,
 				{
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					team_id: team.id,
 					monitor_id: null,
 					name: `Alert ${i}`,
@@ -428,7 +429,7 @@ describe("POST /actions/:team/update-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Old name",
@@ -465,7 +466,7 @@ describe("POST /actions/:team/update-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Old name",
@@ -500,7 +501,7 @@ describe("POST /actions/:team/update-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: otherTeam.id,
 				monitor_id: null,
 				name: "Someone else's alert",
@@ -532,7 +533,7 @@ describe("POST /actions/:team/update-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Original",
@@ -566,7 +567,7 @@ describe("POST /actions/:team/delete-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "To delete",
@@ -601,7 +602,7 @@ describe("POST /actions/:team/delete-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: otherTeam.id,
 				monitor_id: null,
 				name: "Not yours",
@@ -632,7 +633,7 @@ describe("POST /actions/:team/delete-alert", () => {
 		let alert = await db.create(
 			alerts,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Still here",

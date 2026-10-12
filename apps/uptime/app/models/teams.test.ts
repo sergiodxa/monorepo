@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import { IdToken } from "@sdxc/auth/id-token";
 import { NotFound } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
@@ -66,7 +67,7 @@ async function seedMonitor(db: Database, teamId: string, authorId: string) {
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			author_id: authorId,
 			name: "Homepage",
@@ -87,7 +88,7 @@ function buildIdToken(
 	}> = {},
 ) {
 	return new IdToken({
-		sub: overrides.subject ?? crypto.randomUUID(),
+		sub: overrides.subject ?? generateUUID(),
 		name: overrides.name ?? "Jane Doe",
 		email: overrides.email ?? "jane@example.com",
 		picture: overrides.picture ?? "https://example.com/avatar.png",
@@ -107,7 +108,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let monitorResult = await db.create(
 		monitorResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitor.id,
 			completed_at: Date.now(),
 			response_status: 200,
@@ -117,13 +118,13 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	);
 	let contentCheck = await db.create(
 		monitorContentChecks,
-		{ id: crypto.randomUUID(), monitor_id: monitor.id, type: "contains", value: "OK" },
+		{ id: generateUUID(), monitor_id: monitor.id, type: "contains", value: "OK" },
 		{ touch: true, returnRow: true },
 	);
 	let dailyStats = await db.create(
 		monitorDailyStats,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitor.id,
 			monitor_type: "http",
 			date: "2026-03-01",
@@ -140,7 +141,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let dnsMonitor = await db.create(
 		dnsMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "DNS",
 			domain: "example.com",
@@ -150,7 +151,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let dnsResult = await db.create(
 		dnsMonitorResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			dns_monitor_id: dnsMonitor.id,
 			status: "ok",
 			checked_at: Date.now(),
@@ -160,13 +161,13 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 
 	let tcpMonitor = await db.create(
 		tcpMonitors,
-		{ id: crypto.randomUUID(), team_id: team.id, name: "TCP", host: "db.example.com", port: 5432 },
+		{ id: generateUUID(), team_id: team.id, name: "TCP", host: "db.example.com", port: 5432 },
 		{ touch: true, returnRow: true },
 	);
 	let tcpResult = await db.create(
 		tcpMonitorResults,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			tcp_monitor_id: tcpMonitor.id,
 			status: "up",
 			checked_at: Date.now(),
@@ -177,7 +178,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let cronJob = await db.create(
 		cronJobMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Nightly job",
 			cron_expression: "0 0 * * *",
@@ -186,14 +187,14 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	);
 	let cronPing = await db.create(
 		cronJobPings,
-		{ id: crypto.randomUUID(), cron_job_monitor_id: cronJob.id, was_on_time: true },
+		{ id: generateUUID(), cron_job_monitor_id: cronJob.id, was_on_time: true },
 		{ touch: true, returnRow: true },
 	);
 
 	let alert = await db.create(
 		alerts,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			monitor_id: monitor.id,
 			name: "Downtime alert",
@@ -212,7 +213,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let alertEvent = await db.create(
 		alertEvents,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			sent_at: Date.now(),
 			alert_id: alert.id,
 			monitor_id: monitor.id,
@@ -226,7 +227,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let maintenanceWindow = await db.create(
 		maintenanceWindows,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Planned maintenance",
 			starts_at: Date.now(),
@@ -238,10 +239,10 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let statusPage = await db.create(
 		statusPages,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "Public status",
-			slug: `status-${crypto.randomUUID()}`,
+			slug: `status-${generateUUID()}`,
 			title: "Status",
 		},
 		{ touch: true, returnRow: true },
@@ -251,7 +252,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let apiKey = await db.create(
 		apiKeys,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			name: "CI key",
 			key_hash: "hash",
@@ -272,7 +273,7 @@ async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: 
 	let invite = await db.create(
 		invites,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: team.id,
 			sender_id: ownerSubjectId,
 			email: "invitee@example.com",
@@ -379,7 +380,7 @@ describe("teams.findByIdOrSlug", () => {
 
 	test("returns null for an id that doesn't exist", async () => {
 		let { models } = setup();
-		expect(await models.teams.findByIdOrSlug(crypto.randomUUID())).toBeNull();
+		expect(await models.teams.findByIdOrSlug(generateUUID())).toBeNull();
 	});
 
 	test("returns null for a slug that doesn't exist", async () => {
@@ -392,7 +393,7 @@ describe("teams.findByIds", () => {
 	test("keys each listed team by id and leaves out an id that names none", async () => {
 		let { models } = setup();
 		let team = await createPersonal(models);
-		let missing = crypto.randomUUID();
+		let missing = generateUUID();
 
 		let found = await models.teams.findByIds([team.id, team.id, missing]);
 
@@ -409,10 +410,10 @@ describe("teams.findByIds", () => {
 describe("teams.ownerIdsByTeamIds", () => {
 	test("maps each team to its owner's subject id", async () => {
 		let { models } = setup();
-		let ownerId = crypto.randomUUID();
+		let ownerId = generateUUID();
 		let team = await createPersonal(models, buildIdToken({ subject: ownerId }));
 
-		let owners = await models.teams.ownerIdsByTeamIds([team.id, crypto.randomUUID()]);
+		let owners = await models.teams.ownerIdsByTeamIds([team.id, generateUUID()]);
 
 		expect([...owners]).toEqual([[team.id, ownerId]]);
 	});
@@ -421,7 +422,7 @@ describe("teams.ownerIdsByTeamIds", () => {
 describe("teams.listForSubject", () => {
 	test("lists every team a subject belongs to", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let team = await createPersonal(models, buildIdToken({ subject: subjectId }));
 
 		let rows = await models.teams.listForSubject(subjectId);
@@ -430,14 +431,14 @@ describe("teams.listForSubject", () => {
 
 	test("returns an empty array for a subject with no memberships", async () => {
 		let { models } = setup();
-		expect(await models.teams.listForSubject(crypto.randomUUID())).toEqual([]);
+		expect(await models.teams.listForSubject(generateUUID())).toEqual([]);
 	});
 });
 
 describe("teams.createPersonal", () => {
 	test("creates a personal team named after the subject and makes them its owning admin", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let idToken = buildIdToken({
 			subject: subjectId,
 			name: "Jane Doe",
@@ -465,7 +466,7 @@ describe("teams.createPersonal", () => {
 describe("teams.create", () => {
 	test("makes the owner of any created team its admin member", async () => {
 		let { models } = setup();
-		let ownerId = crypto.randomUUID();
+		let ownerId = generateUUID();
 
 		let team = unwrap(
 			await models.teams.create({ owner_id: ownerId, name: "Ops", slug: "ops", logo: null }),
@@ -479,7 +480,7 @@ describe("teams.create", () => {
 describe("teams.createAdditional", () => {
 	test("creates a team owned by the given subject with a slug derived from its name", async () => {
 		let { models } = setup();
-		let ownerId = crypto.randomUUID();
+		let ownerId = generateUUID();
 
 		let team = await createAdditional(models, ownerId, "Ops Team");
 
@@ -491,8 +492,8 @@ describe("teams.createAdditional", () => {
 
 	test("appends a suffix when the derived slug collides with an existing team", async () => {
 		let { models } = setup();
-		let first = await createAdditional(models, crypto.randomUUID(), "Ops Team");
-		let second = await createAdditional(models, crypto.randomUUID(), "Ops Team");
+		let first = await createAdditional(models, generateUUID(), "Ops Team");
+		let second = await createAdditional(models, generateUUID(), "Ops Team");
 
 		expect(second.slug).not.toBe(first.slug);
 		expect(second.slug.startsWith("ops-team-")).toBe(true);
@@ -507,7 +508,7 @@ describe("teams.uniqueSlug", () => {
 
 	test("appends a suffix until the slug no longer collides", async () => {
 		let { models } = setup();
-		await createAdditional(models, crypto.randomUUID(), "Taken");
+		await createAdditional(models, generateUUID(), "Taken");
 
 		let slug = await models.teams.uniqueSlug("taken");
 		expect(slug).not.toBe("taken");
@@ -519,10 +520,10 @@ describe("teams.uniqueSlug", () => {
 describe("teams.listWithRoleForSubject", () => {
 	test("lists every team with the subject's role and owner status", async () => {
 		let { models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let ownedTeam = await createPersonal(models, buildIdToken({ subject: subjectId }));
 
-		let memberTeam = await createAdditional(models, crypto.randomUUID(), "Other Co");
+		let memberTeam = await createAdditional(models, generateUUID(), "Other Co");
 		unwrap(
 			await models.memberships.create({
 				subject_id: subjectId,
@@ -540,7 +541,7 @@ describe("teams.listWithRoleForSubject", () => {
 
 	test("returns an empty array for a subject with no memberships", async () => {
 		let { models } = setup();
-		expect(await models.teams.listWithRoleForSubject(crypto.randomUUID())).toEqual([]);
+		expect(await models.teams.listWithRoleForSubject(generateUUID())).toEqual([]);
 	});
 });
 
@@ -557,8 +558,8 @@ describe("teams.update", () => {
 describe("teams.delete", () => {
 	test("cascades to every row the team owns, without touching another team's data", async () => {
 		let { db, models } = setup();
-		let toDelete = await seedFullTeam(db, models, crypto.randomUUID());
-		let untouched = await seedFullTeam(db, models, crypto.randomUUID());
+		let toDelete = await seedFullTeam(db, models, generateUUID());
+		let untouched = await seedFullTeam(db, models, generateUUID());
 
 		await expectSeedIntact(db, toDelete);
 		await expectSeedIntact(db, untouched);
@@ -581,7 +582,7 @@ describe("teams.delete", () => {
 	test("answers NotFound for a team that does not exist", async () => {
 		let { models } = setup();
 
-		let deleted = await models.teams.delete(crypto.randomUUID());
+		let deleted = await models.teams.delete(generateUUID());
 
 		expect(isFailure(deleted) && deleted.error).toBeInstanceOf(NotFound);
 	});
@@ -593,7 +594,7 @@ describe("teams.countMonitorsByTeam", () => {
 		return await db.create(
 			flowMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: teamId,
 				name: "Sign in and load the dashboard",
 				source:
@@ -616,7 +617,7 @@ describe("teams.countMonitorsByTeam", () => {
 
 	test("adds flow monitors to a team's other types rather than replacing them", async () => {
 		let { db, models } = setup();
-		let subjectId = crypto.randomUUID();
+		let subjectId = generateUUID();
 		let team = await createPersonal(models, buildIdToken({ subject: subjectId }));
 
 		await seedMonitor(db, team.id, subjectId);

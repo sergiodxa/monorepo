@@ -23,6 +23,7 @@ import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import featureFlags from "@sdxc/flags/middleware/router";
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
@@ -145,10 +146,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -167,9 +168,9 @@ async function seedMonitor(db: Db, teamId: string) {
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
-			author_id: crypto.randomUUID(),
+			author_id: generateUUID(),
 			name: "Example site",
 			url: "https://example.com",
 			method: "GET",

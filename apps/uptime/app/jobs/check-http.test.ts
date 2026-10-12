@@ -26,6 +26,7 @@ import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -179,7 +180,7 @@ async function seedMonitor(db: Database, overrides: Record<string, unknown> = {}
 	return await db.create(
 		monitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: "team-1",
 			author_id: "author-1",
 			name: "Example site",
@@ -201,7 +202,7 @@ async function seedAlert(db: Database, monitorId: string) {
 	return await db.create(
 		alerts,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: "team-1",
 			monitor_id: monitorId,
 			name: "On call",
@@ -217,7 +218,7 @@ async function seedContentCheck(db: Database, monitorId: string, value: string) 
 	return await db.create(
 		monitorContentChecks,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitorId,
 			type: "contains",
 			value,

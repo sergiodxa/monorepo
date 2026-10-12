@@ -11,6 +11,7 @@
 
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -44,10 +45,10 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -81,7 +82,7 @@ async function createRecordRow(
 	return await db.create(
 		dnsMonitorRecords,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			dns_monitor_id: monitorId,
 			name: "example.com",
 			record_type: "A",
@@ -278,7 +279,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/records", () => {
 
 	test("returns 401 with a missing Authorization header", async () => {
 		let { db } = createTestDatabase();
-		let response = await dispatch(db, listRequest(crypto.randomUUID()));
+		let response = await dispatch(db, listRequest(generateUUID()));
 		expect(response.status).toBe(401);
 	});
 
@@ -443,7 +444,7 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 
 		let response = await dispatch(
 			db,
-			updateRequest(monitor.id, crypto.randomUUID(), { isEnabled: false }, key),
+			updateRequest(monitor.id, generateUUID(), { isEnabled: false }, key),
 		);
 
 		expect(response.status).toBe(404);
@@ -453,7 +454,7 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId/records/:recordId", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(
 			db,
-			updateRequest(crypto.randomUUID(), crypto.randomUUID(), { isEnabled: false }),
+			updateRequest(generateUUID(), generateUUID(), { isEnabled: false }),
 		);
 		expect(response.status).toBe(401);
 	});

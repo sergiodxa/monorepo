@@ -16,6 +16,7 @@ import type { Route } from "remix/routes";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { jobEnqueuer } from "@sdxc/jobs/router";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -63,12 +64,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
+		{ id: generateUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -149,7 +150,7 @@ describe("addDomain", () => {
 		await db.create(
 			teamDomains,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				hostname: "verified.com",
 				verified_at: Date.now(),
@@ -206,7 +207,7 @@ describe("removeDomain", () => {
 		let { db, team, membership } = await createFixture();
 		let domain = await db.create(
 			teamDomains,
-			{ id: crypto.randomUUID(), team_id: team.id, hostname: "remove-me.com", verified_at: null },
+			{ id: generateUUID(), team_id: team.id, hostname: "remove-me.com", verified_at: null },
 			{ touch: true, returnRow: true },
 		);
 
@@ -238,7 +239,7 @@ describe("removeDomain", () => {
 			routes.teamAdminActions.domain.remove,
 			removeDomain as RequestHandler<any>,
 			"DELETE",
-			{ domain_id: crypto.randomUUID() },
+			{ domain_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);
@@ -250,7 +251,7 @@ describe("retryDomainVerification", () => {
 		let { db, team, membership } = await createFixture();
 		let domain = await db.create(
 			teamDomains,
-			{ id: crypto.randomUUID(), team_id: team.id, hostname: "pending.com", verified_at: null },
+			{ id: generateUUID(), team_id: team.id, hostname: "pending.com", verified_at: null },
 			{ touch: true, returnRow: true },
 		);
 
@@ -278,7 +279,7 @@ describe("retryDomainVerification", () => {
 		let domain = await db.create(
 			teamDomains,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				hostname: "verified.com",
 				verified_at: Date.now(),
@@ -310,7 +311,7 @@ describe("retryDomainVerification", () => {
 			routes.teamAdminActions.domain.retryVerification,
 			retryDomainVerification as RequestHandler<any>,
 			"POST",
-			{ domain_id: crypto.randomUUID() },
+			{ domain_id: generateUUID() },
 		);
 
 		expect(response.status).toBe(404);

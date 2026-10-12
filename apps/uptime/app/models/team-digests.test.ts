@@ -9,6 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { DigestMonitorType, DigestPeriod } from "~/app/models/team-digests";
@@ -57,9 +58,9 @@ async function seedMembership(
 	let membership = await db.create(
 		memberships,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
-			subject_id: overrides.subjectId ?? crypto.randomUUID(),
+			subject_id: overrides.subjectId ?? generateUUID(),
 			role: "member",
 			last_daily_digest_at: overrides.lastDailyDigestAt ?? null,
 			last_weekly_digest_at: overrides.lastWeeklyDigestAt ?? null,
@@ -93,7 +94,7 @@ async function seedMonitor(
 	teamId: string,
 	options: { id?: string; name?: string; enabled?: boolean } = {},
 ) {
-	let id = options.id ?? crypto.randomUUID();
+	let id = options.id ?? generateUUID();
 	let name = options.name ?? `${type} monitor`;
 	let enabled = options.enabled ?? true;
 	let shared = { id, team_id: teamId, name };
@@ -104,7 +105,7 @@ async function seedMonitor(
 			monitors,
 			{
 				...shared,
-				author_id: crypto.randomUUID(),
+				author_id: generateUUID(),
 				url: "https://example.com",
 				enabled_at: enabled ? Date.now() : null,
 			},
@@ -155,7 +156,7 @@ async function seedDay(
 	return await db.create(
 		monitorDailyStats,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			monitor_id: monitor.id,
 			monitor_type: monitor.type,
 			date,
@@ -418,7 +419,7 @@ describe("listDigestMonitors", () => {
 	 * tells a pair-keyed join apart from an id-keyed one.
 	 */
 	test("never gives one monitor's days to another type sharing its id", async () => {
-		let shared = crypto.randomUUID();
+		let shared = generateUUID();
 		let http = await seedMonitor("http", "team-a", { id: shared, name: "Http" });
 		await seedMonitor("dns", "team-a", { id: shared, name: "Dns" });
 		await seedDay(http, since);

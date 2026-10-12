@@ -11,6 +11,7 @@ import type { CreateValues } from "@sdxc/data-model";
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { TcpMonitors } from "~/app/models/tcp-monitors";
@@ -37,7 +38,7 @@ describe("tcpMonitors.create", () => {
 	test("creates a TCP monitor for a team, enabled immediately", async () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 
 		let monitor = unwrap(
 			await models.tcpMonitors.create({ team_id: teamId, ...tcpMonitorInput() }),
@@ -61,7 +62,7 @@ describe("tcpMonitors.create", () => {
 
 		let monitor = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ is_enabled: false }),
 			}),
 		);
@@ -74,7 +75,7 @@ describe("tcpMonitors.inTeam listing", () => {
 	test("lists a team's TCP monitors, most recently created first", async () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let first = unwrap(await models.tcpMonitors.create({ team_id: teamId, ...tcpMonitorInput() }));
 		/**
 		 * Force a distinct `created_at` so the ordering assertion below is
@@ -97,8 +98,8 @@ describe("tcpMonitors.inTeam listing", () => {
 	test("never returns another team's TCP monitors", async () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
-		let teamA = crypto.randomUUID();
-		let teamB = crypto.randomUUID();
+		let teamA = generateUUID();
+		let teamB = generateUUID();
 		unwrap(await models.tcpMonitors.create({ team_id: teamA, ...tcpMonitorInput() }));
 
 		expect(await models.tcpMonitors.inTeam(teamB).orderBy("created_at", "desc").all()).toEqual([]);
@@ -121,7 +122,7 @@ describe("tcpMonitors.claimDue", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		let claimed = await models.tcpMonitors.claimDue(Date.now() + 1000);
@@ -133,7 +134,7 @@ describe("tcpMonitors.claimDue", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		let disabled = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ is_enabled: false }),
 			}),
 		);
@@ -148,7 +149,7 @@ describe("tcpMonitors.claimDue", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ interval_seconds: 60 }),
 			}),
 		);
@@ -163,7 +164,7 @@ describe("tcpMonitors.claimDue", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ interval_seconds: 3600 }),
 			}),
 		);
@@ -185,7 +186,7 @@ describe("tcpMonitors.claimDue", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ interval_seconds: 300 }),
 			}),
 		);
@@ -201,7 +202,7 @@ describe("tcpMonitors.claimDue", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		let [claimed] = await models.tcpMonitors.claimDue(Date.now() + 1000);
@@ -223,7 +224,7 @@ describe("tcpMonitors.update scheduling", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ interval_seconds: 3600 }),
 			}),
 		);
@@ -248,7 +249,7 @@ describe("tcpMonitors.update scheduling", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ interval_seconds: 60 }),
 			}),
 		);
@@ -269,7 +270,7 @@ describe("tcpMonitors.update scheduling", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		let disabled = unwrap(await models.tcpMonitors.update(monitor.id, { is_enabled: false }));
@@ -285,7 +286,7 @@ describe("tcpMonitors.update scheduling", () => {
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
 			await models.tcpMonitors.create({
-				team_id: crypto.randomUUID(),
+				team_id: generateUUID(),
 				...tcpMonitorInput({ is_enabled: false, interval_seconds: 60 }),
 			}),
 		);
@@ -300,7 +301,7 @@ describe("tcpMonitors.inTeam lookup", () => {
 	test("finds a monitor scoped to its team", async () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let monitor = unwrap(
 			await models.tcpMonitors.create({ team_id: teamId, ...tcpMonitorInput() }),
 		);
@@ -313,8 +314,8 @@ describe("tcpMonitors.inTeam lookup", () => {
 	test("returns null when the monitor belongs to a different team", async () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
-		let teamA = crypto.randomUUID();
-		let teamB = crypto.randomUUID();
+		let teamA = generateUUID();
+		let teamB = generateUUID();
 		let monitor = unwrap(await models.tcpMonitors.create({ team_id: teamA, ...tcpMonitorInput() }));
 
 		expect(await models.tcpMonitors.inTeam(teamB).where({ id: monitor.id }).first()).toBeNull();
@@ -324,10 +325,7 @@ describe("tcpMonitors.inTeam lookup", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		expect(
-			await models.tcpMonitors
-				.inTeam(crypto.randomUUID())
-				.where({ id: crypto.randomUUID() })
-				.first(),
+			await models.tcpMonitors.inTeam(generateUUID()).where({ id: generateUUID() }).first(),
 		).toBeNull();
 	});
 });
@@ -337,7 +335,7 @@ describe("tcpMonitors.update", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		let updated = unwrap(await models.tcpMonitors.update(monitor.id, { port: 6379 }));
@@ -349,7 +347,7 @@ describe("tcpMonitors.delete", () => {
 	test("deletes the monitor and its check-result history", async () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
-		let teamId = crypto.randomUUID();
+		let teamId = generateUUID();
 		let monitor = unwrap(
 			await models.tcpMonitors.create({ team_id: teamId, ...tcpMonitorInput() }),
 		);
@@ -367,7 +365,7 @@ describe("tcpMonitors.delete", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		unwrap(await models.tcpMonitors.delete(monitor.id));
@@ -379,7 +377,7 @@ describe("tcpMonitorResults.recent", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 		let now = Date.now();
 		/**
@@ -387,14 +385,14 @@ describe("tcpMonitorResults.recent", () => {
 		 * is deterministic.
 		 */
 		await db.create(tcpMonitorResults, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			tcp_monitor_id: monitor.id,
 			status: "up",
 			response_time_ms: 10,
 			checked_at: now - 1000,
 		});
 		await db.create(tcpMonitorResults, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			tcp_monitor_id: monitor.id,
 			status: "down",
 			response_time_ms: null,
@@ -409,10 +407,10 @@ describe("tcpMonitorResults.recent", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitorA = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 		let monitorB = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 		await models.tcpMonitors.recordCheckResult(monitorA.id, { status: "up", responseTimeMs: 10 });
 
@@ -425,7 +423,7 @@ describe("tcpMonitors.recordCheckResult", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		await models.tcpMonitors.recordCheckResult(monitor.id, {
@@ -452,7 +450,7 @@ describe("tcpMonitors.recordCheckResult", () => {
 		let { db } = createTestDatabase();
 		let models = bindModels(db, recordJobs().jobs);
 		let monitor = unwrap(
-			await models.tcpMonitors.create({ team_id: crypto.randomUUID(), ...tcpMonitorInput() }),
+			await models.tcpMonitors.create({ team_id: generateUUID(), ...tcpMonitorInput() }),
 		);
 
 		await models.tcpMonitors.recordCheckResult(monitor.id, { status: "up", responseTimeMs: 8 });

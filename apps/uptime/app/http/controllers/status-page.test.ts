@@ -22,6 +22,7 @@ import {
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToStream } from "remix/component/server";
@@ -123,7 +124,7 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 
@@ -158,7 +159,7 @@ async function createPublicPage(db: Database, teamId: string, slug: string) {
 	return await db.create(
 		statusPages,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name: "Acme Status",
 			slug,
@@ -183,7 +184,7 @@ async function createFlowMonitor(
 	return await db.create(
 		flowMonitors,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			name,
 			source: 'post "/session" { body: { password: "hunter2-secret" } }',
@@ -212,7 +213,7 @@ describe("GET /status/:slug", () => {
 		await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Private Status",
 				slug: "private-status",
@@ -237,7 +238,7 @@ describe("GET /status/:slug", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "member-1",
 				enabled_at: Date.now(),
@@ -250,7 +251,7 @@ describe("GET /status/:slug", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "acme-status",
@@ -301,7 +302,7 @@ describe("GET /status/:slug", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "member-1",
 				enabled_at: Date.now(),
@@ -314,7 +315,7 @@ describe("GET /status/:slug", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "labelled-status",
@@ -353,7 +354,7 @@ describe("GET /status/:slug", () => {
 		let monitor = await db.create(
 			monitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: "member-1",
 				enabled_at: Date.now(),
@@ -366,7 +367,7 @@ describe("GET /status/:slug", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "blank-label-status",
@@ -405,7 +406,7 @@ describe("GET /status/:slug", () => {
 		let dnsMonitor = await db.create(
 			dnsMonitors,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Corporate DNS",
 				domain: "internal-zone.example",
@@ -422,7 +423,7 @@ describe("GET /status/:slug", () => {
 		await db.create(
 			dnsMonitorRecords,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				dns_monitor_id: dnsMonitor.id,
 				name: "vpn.internal-zone.example",
 				record_type: "A",
@@ -440,7 +441,7 @@ describe("GET /status/:slug", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "acme-dns",
@@ -455,7 +456,7 @@ describe("GET /status/:slug", () => {
 		);
 
 		await db.create(statusPageDnsMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			status_page_id: page.id,
 			dns_monitor_id: dnsMonitor.id,
 			display_name: null,
@@ -486,7 +487,7 @@ describe("GET /status/:slug", () => {
 		let page = await createPublicPage(db, team.id, "acme-flow");
 
 		await db.create(statusPageFlowMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			status_page_id: page.id,
 			flow_monitor_id: flow.id,
 			display_name: null,
@@ -517,7 +518,7 @@ describe("GET /status/:slug", () => {
 		let page = await createPublicPage(db, team.id, "acme-flow-error");
 
 		await db.create(statusPageFlowMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			status_page_id: page.id,
 			flow_monitor_id: flow.id,
 			display_name: null,
@@ -544,7 +545,7 @@ describe("GET /status/:slug", () => {
 		let page = await createPublicPage(db, team.id, "acme-flow-label");
 
 		await db.create(statusPageFlowMonitors, {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			status_page_id: page.id,
 			flow_monitor_id: flow.id,
 			display_name: "Checkout",
@@ -571,7 +572,7 @@ describe("GET /status/:slug", () => {
 		let page = await db.create(
 			statusPages,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				name: "Acme Status",
 				slug: "acme-seo",

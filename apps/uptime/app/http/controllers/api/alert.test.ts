@@ -11,6 +11,7 @@
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
@@ -50,10 +51,10 @@ async function createTeamRow(db: Db) {
 	return await db.create(
 		teams,
 		{
-			id: crypto.randomUUID(),
-			owner_id: crypto.randomUUID(),
+			id: generateUUID(),
+			owner_id: generateUUID(),
 			name: "Acme",
-			slug: `acme-${crypto.randomUUID()}`,
+			slug: `acme-${generateUUID()}`,
 			logo: null,
 		},
 		{ touch: true, returnRow: true },
@@ -71,7 +72,7 @@ async function createAlertRow(db: Db, teamId: string, overrides: Record<string, 
 	return await db.create(
 		alerts,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			team_id: teamId,
 			monitor_id: null,
 			name: "Site down",
@@ -88,9 +89,9 @@ async function createAlertEventRow(db: Db, alertId: string, overrides: Record<st
 	return await db.create(
 		alertEvents,
 		{
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			alert_id: alertId,
-			monitor_id: crypto.randomUUID(),
+			monitor_id: generateUUID(),
 			event_type: "up",
 			status: "sent",
 			error_message: null,
@@ -235,7 +236,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		let response = await dispatch(
 			db,
 			req("PUT", alertRoutes.alertUpdate.href({ alertId: encodeId("alt", alert.id) }), key, {
-				monitorId: crypto.randomUUID(),
+				monitorId: generateUUID(),
 			}),
 		);
 		expect(response.status).toBe(404);
@@ -267,7 +268,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		let key = await createApiKey(db, team.id, ["alerts:write"]);
 		let alert = await createAlertRow(db, team.id, {
 			monitor_type: "http",
-			monitor_id: crypto.randomUUID(),
+			monitor_id: generateUUID(),
 		});
 
 		await dispatch(
@@ -289,7 +290,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		let key = await createApiKey(db, team.id, ["alerts:write"]);
 		let alert = await createAlertRow(db, team.id, {
 			monitor_type: "dns",
-			monitor_id: crypto.randomUUID(),
+			monitor_id: generateUUID(),
 		});
 
 		await dispatch(
@@ -308,7 +309,7 @@ describe("PUT /api/v1/alerts/:alertId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["alerts:write"]);
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let alert = await createAlertRow(db, team.id, { monitor_type: "dns", monitor_id: monitorId });
 
 		await dispatch(
@@ -584,7 +585,7 @@ describe("PATCH /api/v1/alerts/:alertId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["alerts:write"]);
-		let monitorId = crypto.randomUUID();
+		let monitorId = generateUUID();
 		let alert = await createAlertRow(db, team.id, {
 			cooldown_minutes: 30,
 			monitor_type: "dns",

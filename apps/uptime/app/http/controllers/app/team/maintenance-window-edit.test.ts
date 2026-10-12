@@ -16,6 +16,7 @@ import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -46,12 +47,12 @@ async function createFixture() {
 
 	let team = await db.create(
 		teams,
-		{ id: crypto.randomUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+		{ id: generateUUID(), owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
 		{ touch: true, returnRow: true },
 	);
 	let membership = await db.create(
 		memberships,
-		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
+		{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
 
@@ -118,7 +119,7 @@ describe("maintenanceWindowEdit", () => {
 	test("responds 404 for a window that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let response = await send(db, team, membership, crypto.randomUUID());
+		let response = await send(db, team, membership, generateUUID());
 		expect(response.status).toBe(404);
 	});
 
@@ -128,7 +129,7 @@ describe("maintenanceWindowEdit", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Database upgrade",
@@ -160,7 +161,7 @@ describe("maintenanceWindowEdit", () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = unwrap(
 			await bindModels(db).monitors.create({
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
@@ -172,7 +173,7 @@ describe("maintenanceWindowEdit", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: monitor.id,
 				name: "Scoped upgrade",
@@ -201,7 +202,7 @@ describe("maintenanceWindowEdit", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_type: "dns",
 				monitor_id: "deleted-monitor",
@@ -228,7 +229,7 @@ describe("maintenanceWindowEdit", () => {
 			let window = await db.create(
 				maintenanceWindows,
 				{
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					team_id: team.id,
 					monitor_id: null,
 					name: "Database upgrade",
@@ -269,7 +270,7 @@ describe("maintenanceWindowEdit", () => {
 		let window = await db.create(
 			maintenanceWindows,
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				team_id: team.id,
 				monitor_id: null,
 				name: "Live migration",
