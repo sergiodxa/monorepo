@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { Billing } from "../core/contract.js";
@@ -102,7 +103,7 @@ export interface ConformanceOptions {
 
 /** Unique enough that two runs against the same organization stay distinct. */
 function uniqueSuffix(): string {
-	return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+	return generateUUID().replaceAll("-", "").slice(0, 12);
 }
 
 /** Reads the email factory the caller supplied, or the unique default. */
@@ -112,7 +113,7 @@ function emailFrom(options: ConformanceOptions): string {
 
 /** Reads the absent id the caller named for one resource, or a fresh UUID. */
 function missingId(options: ConformanceOptions, resource: keyof ConformanceMissingIds): string {
-	return options.missing?.[resource] ?? crypto.randomUUID();
+	return options.missing?.[resource] ?? generateUUID();
 }
 
 /** A provider with every optional group present, which is what a probe needs. */
