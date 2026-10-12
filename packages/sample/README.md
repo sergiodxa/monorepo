@@ -1,68 +1,57 @@
 # @sdxc/sample
 
-Seeded generation of believable people, places, prose, numbers, and identifiers.
+Seeded generation of believable people, places, prose, numbers and identifiers.
 
-A generator opens on a seed and draws every value from it, so the same seed and
-the same sequence of calls produce the same values on any machine, on any day.
+A generator opens on a seed and draws every value from it, so the same seed and the same sequence
+of calls produce the same values on any machine, on any day. Contact details are unroutable:
+addresses and links land on the domains [RFC 2606](https://datatracker.ietf.org/doc/html/rfc2606)
+reserves, and phone numbers come from the `555-01xx` range reserved for fiction.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/sample
 ```
 
-Seeds and streams come from [`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random), which installs alongside this package.
+Seeds and streams come from [`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random), which
+installs alongside this package.
 
 ## Usage
 
-### Basic Example
+### Open a generator on a seed
 
 ```typescript
 import { createSample } from "@sdxc/sample";
 
 let sample = createSample({ seed: "signup-suite" });
 
-sample.person.record();
-// { firstName: "Jisoo", lastName: "Esposito", fullName: "Jisoo Esposito",
-//   email: "jisoo.esposito57@example.net", username: "jisoo.esposito",
-//   sex: "female", jobTitle: "Corporate Group Consultant", phone: "(555) 555-0159" }
+let person = sample.person.record();
+// { firstName, lastName, fullName, email, username, sex, jobTitle, phone }, all agreeing
 
-sample.helpers.multiple(() => sample.person.record(), { count: 50 });
+let people = sample.helpers.multiple(() => sample.person.record(), { count: 50 });
+let roll = sample.number.int({ min: 1, max: 6 });
 ```
 
-### Fresh Values Each Run
+The seed is text or a number, and the same seed replays the same values.
 
-Draw a seed at start-up, put it where a failure shows it, and accept it back to
-replay a failed run down to the last field:
+### Fix the reference instant
 
-```typescript
-import { systemSeed } from "@sdxc/random";
-import { createSample } from "@sdxc/sample";
-import { describe } from "vitest";
-
-const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
-
-describe(`checkout (SAMPLE_SEED=${SEED})`, () => {
-	let sample = createSample({ seed: SEED });
-	// …tests drawing from sample
-});
-```
-
-### A Fixed Reference Instant
-
-The `date` module measures from an instant the caller supplies, so dates stay
+The `date` module, and the timestamp inside a ULID, measure from `now`. Pass one to keep dates
 put across days:
 
 ```typescript
-let sample = createSample({
-	seed: 42,
-	now: new Date("2026-06-15T12:00:00Z"),
-});
+import { createSample } from "@sdxc/sample";
 
-sample.date.past({ days: 30 }); // always the same instant for this seed
+let sample = createSample({ seed: 42, now: new Date("2026-06-15T12:00:00Z") });
+
+sample.date.past({ days: 30 }); // the same instant for this seed, every day
+sample.date.birthdate({ min: 21, max: 65 });
 ```
 
-### Your Own Vocabulary
+### Bring your own vocabulary
+
+Every list a generator reads comes from a `Dataset`. Spread the English one from
+`@sdxc/sample/data/en` and replace the lists you want:
 
 ```typescript
 import type { Dataset } from "@sdxc/sample";
@@ -73,11 +62,8 @@ import { en } from "@sdxc/sample/data/en";
 let data: Dataset = { ...en, companySuffixes: [...en.companySuffixes, "Cooperative"] };
 
 let sample = createSample({ seed: "docs", data });
+sample.company.name();
 ```
-
-Contact details are unroutable by construction: addresses and links land on the
-domains [RFC 2606](https://datatracker.ietf.org/doc/html/rfc2606) reserves, and
-phone numbers come from the `555-01xx` range reserved for fiction.
 
 ## API
 
@@ -85,195 +71,154 @@ phone numbers come from the `555-01xx` range reserved for fiction.
 
 Builds a generator: one stream, one dataset, and the modules that read them.
 
-- `seed`: The stream to draw from — text, a number, or an open `SeededRandom` from `@sdxc/random`. Required.
-- `data`: The lists to draw from. Defaults to the English dataset.
-- `now`: The instant the `date` module measures from. Defaults to the current time.
-
-```typescript
-let sample = createSample({ seed: 42 });
-sample.number.int({ min: 1, max: 6 }); // 6, every time
-```
+- `seed`: a `Seed` (text or a number) to open a stream on, or a `SeededRandom` already open from
+  `@sdxc/random`. Required.
+- `data`: the lists to draw from. Defaults to the English dataset.
+- `now`: the instant `date` and `string.ulid()` measure from. Defaults to the current time.
 
 ### `Sample`
 
-`sample.seed` is the seed this generator replays from.
+`sample.seed` is the seed this generator replays from. Each module below is a property of the
+generator.
 
 #### `sample.derive(label: string): Sample`
 
-An independent generator named by `label`, on the same dataset and reference
-instant. Values follow the order calls are made in, so inserting a call shifts
-everything drawn after it; a derived generator holds still as calls are added to
-the parent, which keeps one part of a fixture from moving another.
+An independent generator named by `label`, on the same dataset and reference instant. Its values
+hold still as calls are added to the parent.
 
 #### `sample.person`
 
-Names, titles, work, and the person that ties them together: `firstName`,
-`lastName`, `middleName`, `fullName`, `prefix`, `suffix`, `sex`, `sexType`,
-`gender`, `zodiacSign`, `jobArea`, `jobDescriptor`, `jobType`, `jobTitle`,
-`bio`, `phone`, `record`. `record()` returns one person whose email, handle,
-and phone agree with the name. `firstName` and `middleName` take `{ sex }`;
-`fullName` also takes `firstName`, `lastName`, `withPrefix`, `withSuffix`.
+`firstName`, `lastName`, `middleName`, `fullName`, `prefix`, `suffix`, `sex`, `sexType`, `gender`,
+`zodiacSign`, `jobArea`, `jobDescriptor`, `jobType`, `jobTitle`, `bio`, `phone`, `record`.
+`record()` returns a `PersonRecord` whose email, username and phone agree with the name.
+`firstName` and `middleName` take `{ sex }`; `fullName` takes `firstName`, `lastName`, `sex`,
+`withPrefix` and `withSuffix`.
 
 #### `sample.internet`
 
-Addresses, handles, domains, links, and protocol values: `email`, `username`,
-`displayName`, `domainName`, `domainSuffix`, `domainWord`, `url`, `password`,
-`emoji`, `httpMethod`, `httpStatusCode`, `ip`, `ipv4`, `ipv6`, `mac`, `port`,
-`protocol`, `jwtAlgorithm`, `jwt`, `userAgent`. `jwt()` returns three base64url
-segments with claims a reader can decode; its signature is drawn from the
-stream, so it fills a header, and a test that verifies wants a token signed
-with a key it controls.
+`email`, `username`, `displayName`, `domainName`, `domainSuffix`, `domainWord`, `url`, `password`,
+`emoji`, `httpMethod`, `httpStatusCode`, `ip`, `ipv4`, `ipv6`, `mac`, `port`, `protocol`,
+`jwtAlgorithm`, `jwt`, `userAgent`. `email`, `username` and `displayName` take
+`{ firstName, lastName }`; `password` takes `{ length }` (16). `jwt({ payload, algorithm })`
+returns a decodable token with a drawn signature: it fills a header, and a test that verifies
+signs its own token.
 
 #### `sample.location`
 
-Places down to the unit number: `city`, `country`, `countryCode`, `continent`,
-`county`, `state`, `street`, `buildingNumber`, `streetAddress`,
-`secondaryAddress`, `zipCode`, `postalAddress`, `direction`,
-`cardinalDirection`, `ordinalDirection`, `language`, `timeZone`, `latitude`,
-`longitude`, `nearbyGPSCoordinate`. Read the country first and pass it back to
-`city({ country })` to keep an address internally consistent;
-`nearbyGPSCoordinate({ origin, radius })` returns a `[latitude, longitude]`
-pair within `radius` km.
+`city`, `country`, `countryCode`, `continent`, `county`, `state`, `street`, `buildingNumber`,
+`streetAddress`, `secondaryAddress`, `zipCode`, `postalAddress`, `direction`, `cardinalDirection`,
+`ordinalDirection`, `language`, `timeZone`, `latitude`, `longitude`, `nearbyGPSCoordinate`.
+`city({ country })` draws from the named country and throws a `RangeError` for a name the dataset
+lacks; `state({ abbreviated })` returns the postal code; `nearbyGPSCoordinate({ origin, radius })`
+returns a `[latitude, longitude]` within `radius` km (10).
 
 #### `sample.company`
 
-Company names and jargon: `name`, `catchPhrase`, `catchPhraseAdjective`,
-`catchPhraseDescriptor`, `catchPhraseNoun`, `buzzPhrase`, `buzzAdjective`,
-`buzzNoun`, `buzzVerb`.
+`name`, `catchPhrase`, `catchPhraseAdjective`, `catchPhraseDescriptor`, `catchPhraseNoun`,
+`buzzPhrase`, `buzzAdjective`, `buzzNoun`, `buzzVerb`.
 
 #### `sample.lorem`
 
-Placeholder prose: `word`, `words`, `sentence`, `sentences`, `paragraph`,
-`paragraphs`, `lines`, `slug`, `text`.
+`word`, `words(count)`, `sentence`, `sentences(count)`, `paragraph({ sentences })`,
+`paragraphs({ count, sentences, separator })`, `lines(count)`, `slug(count?)`, `text`.
 
 #### `sample.date`
 
-Instants around the reference, and the calendar words for them: `past`,
-`future`, `recent`, `soon`, `anytime`, `between`, `betweens`, `birthdate`,
-`month`, `weekday`, `timeZone`. `past` and `future` reach `days` from the
-reference, 30 by default; `between` takes `{ from, to }`; `birthdate` takes ages
-as `{ min, max }`; `month` and `weekday` take `{ abbreviated }`.
+`past`, `future`, `recent`, `soon`, `anytime`, `between`, `betweens`, `birthdate`, `month`,
+`weekday`, `timeZone`. `past` and `future` reach `{ days }` (30) from the reference;
+`between({ from, to })` and `betweens({ from, to, count })` stay inside the range, the latter in
+ascending order; `birthdate({ min, max })` takes ages (18–80); `month` and `weekday` take
+`{ abbreviated }`.
 
 #### `sample.string`
 
-Identifiers and character runs: `uuid`, `ulid`, `nanoid`, `alpha`,
-`alphanumeric`, `numeric`, `hexadecimal`, `binary`, `octal`, `symbol`,
-`sample`, `fromCharacters`. The character runs take a length, and
-`fromCharacters(characters, length)` draws from your own alphabet; `alpha` and
-`hexadecimal` take `{ casing }`, and `hexadecimal` a `prefix` such as `"0x"`.
+`uuid`, `ulid`, `nanoid(length?)`, `alpha`, `alphanumeric`, `numeric`, `hexadecimal`, `binary`,
+`octal`, `symbol`, `sample`, `fromCharacters(characters, length)`. The character runs take a
+length; `alpha` and `hexadecimal` take `{ casing }`, and `hexadecimal` a `prefix` such as `"0x"`.
+A seeded `uuid()` has the UUID format and none of its unpredictability.
 
 #### `sample.number`
 
-Numbers in any base: `int`, `float`, `hex`, `binary`, `octal`, `romanNumeral`,
-`bigInt`. All of them take `{ min, max }`; `int` runs `0`–`100` by default,
-`float` rounds to `fractionDigits` (2), and the base methods run `0`–`255`.
+`int`, `float`, `hex`, `binary`, `octal`, `romanNumeral`, `bigInt`, each taking `{ min, max }`.
+`int` covers `0`–`100` inclusive and throws a `RangeError` for unsafe or reversed bounds; `float`
+covers `[0, 1)` rounded to `fractionDigits` (2); the base methods cover `0`–`255`; `bigInt` takes
+`bigint` bounds.
 
 #### `sample.color`
 
-Colors as names, channels, or CSS notation: `human`, `rgb`, `hsl`, `hwb`,
-`lab`, `lch`, `cmyk`, `space`, `cssSupportedSpace`, `cssSupportedFunction`,
-`colorByCSSColorSpace`. `rgb()` returns `#rrggbb` by default;
-`{ format: "css" }` returns CSS notation and `{ format: "values" }` the
-channels.
+`human`, `rgb`, `hsl`, `hwb`, `lab`, `lch`, `cmyk`, `space`, `cssSupportedSpace`,
+`cssSupportedFunction`, `colorByCSSColorSpace`. `rgb()` returns `#rrggbb`, with `includeAlpha` for
+a fourth channel; the others return channel numbers. `{ format: "css" }` returns CSS notation and
+`{ format: "values" }` the numbers.
 
 #### `sample.datatype`
 
-`boolean(options?)` returns `true` with `probability`, half the time by default.
+`boolean({ probability })` returns `true` with that probability, 0.5 by default.
 
 #### `sample.git`
 
-Repository furniture: `branch`, `commitSha`, `commitMessage`, `commitDate`,
-`commitEntry`. `commitSha()` returns 40 hex characters, or `{ length: 7 }` for
-the short form.
+`branch`, `commitSha`, `commitMessage`, `commitDate`, `commitEntry`. `commitSha()` returns 40 hex
+characters, or `{ length: 7 }` for the short form.
 
 #### `sample.hacker`
 
-Technical filler: `abbreviation`, `adjective`, `noun`, `verb`, `ingverb`,
-`phrase`.
+`abbreviation`, `adjective`, `noun`, `verb`, `ingverb`, `phrase`.
 
 #### `sample.phone`
 
-`number(options?)` returns `555-0182`, with `{ style: "national" }` and
-`{ style: "international" }` for the longer forms. `imei()` returns 15 digits
-closing with a valid Luhn check digit.
+`number({ style })` writes `"human"` (`555-0142`), `"national"` or `"international"`. `imei()`
+returns 15 digits closing with a Luhn check digit.
 
 #### `sample.system`
 
-Files, paths, and machine furniture: `fileName`, `commonFileName`, `fileExt`,
-`commonFileExt`, `fileType`, `commonFileType`, `mimeType`, `directoryPath`,
-`filePath`, `networkInterface`, `semver`, `cron`.
+`fileName`, `commonFileName`, `fileExt`, `commonFileExt`, `fileType`, `commonFileType`,
+`mimeType`, `directoryPath`, `filePath`, `networkInterface`, `semver`, `cron`. The file name
+methods take `{ extension }`.
 
 #### `sample.helpers`
 
-The shapes that turn one value into fifty: `pick`, `pickMany`, `shuffle`,
-`multiple`, `maybe`, `weightedPick`, `uniqueArray`, `objectKey`, `objectValue`,
-`objectEntry`, `enumValue`, `rangeToNumber`, `slugify`, `replaceSymbols`,
-`replaceCreditCardSymbols`, `fromRegExp`, `mustache`, `fake`.
-
-```typescript
-sample.helpers.weightedPick([
-	{ weight: 9, value: "common" },
-	{ weight: 1, value: "rare" },
-]);
-
-sample.helpers.maybe(() => sample.internet.url(), { chance: 0.3 }); // the value, or null
-sample.helpers.replaceSymbols("??-####"); // `#` a digit, `?` a letter, `*` either
-sample.helpers.fromRegExp("SKU-[A-Z]{2}[0-9]{4}"); // "SKU-JW3212"
-sample.helpers.fake("{{person.firstName}} of {{location.city}}"); // "Jing of Madrid"
-```
-
-### `Random`
-
-The stream a generator draws from, usable on its own.
-
-```typescript
-interface Random {
-	readonly seed: Seed;
-	next(): number;
-	int(min: number, max: number): number;
-	float(min?: number, max?: number): number;
-	bool(chance?: number): boolean;
-	pick<T>(items: readonly T[]): T;
-	shuffle<T>(items: readonly T[]): T[];
-	derive(label: string): Random;
-}
-```
-
-`int()` includes both bounds and raises a `RangeError` when a bound is not a
-safe integer or `max` is below `min`; `pick()` raises one on an empty list.
+- `pick(items)`, `pickMany(items, { count })`, `shuffle(items)`: draw from your own list;
+  `pick` and `pickMany` throw a `RangeError` when the list runs short.
+- `multiple(build, { count })`: `count` values, `build` receiving each index.
+- `maybe(build, { chance })`: the value, or `null` (chance 0.5).
+- `weightedPick(choices)`: one `{ weight, value }`, as likely as its weight.
+- `uniqueArray(source, count)`: distinct values from a list or a generator; throws a `RangeError`
+  when it cannot find that many.
+- `enumValue`, `objectKey`, `objectValue`, `objectEntry`: draw from an object.
+- `rangeToNumber(range)`: a number as given, or one drawn from `{ min, max }`.
+- `slugify(text)`: lowercase words joined by dashes.
+- `replaceSymbols(pattern)`: `#` a digit, `?` a letter, `*` either.
+  `replaceCreditCardSymbols(pattern?)` adds `L` for the Luhn check digit.
+- `fromRegExp(pattern)`: a string matching literals, character classes and counts.
+- `mustache(text, values)`: `{{key}}` replaced from strings or functions.
+- `fake(template)`: `{{module.method}}` replaced by that generator's value; an unknown path throws
+  a `RangeError`.
 
 ### Types
 
-```typescript
-type Seed = number | string;
-
-interface SampleOptions {
-	seed: Seed | Random;
-	data?: Dataset;
-	now?: Date;
-}
-```
-
-`Dataset` is a plain object of word lists — names, countries and their cities,
-street and company words, prose, colors, file extensions, and the rest. Spread
-`en` from `@sdxc/sample/data/en` to change one list and keep the others.
-`PersonRecord`, every module type, and their options are exported as well.
+`SampleOptions`, `Sample`, `Dataset`, `Country`, `FirstNames` and `PersonRecord`, plus each
+module's interface (`PersonModule`, `InternetModule`, …) and options type (`IntOptions`,
+`SpanOptions`, `WeightedChoice`, …). `Dataset` is a plain object of word lists — names, countries
+with their cities, street and company words, prose, colors, file extensions — and
+`@sdxc/sample/data/en` exports the English one as `en`.
 
 ## Pattern: Reproducing A Failed Run
 
-Open the generator on a seed the run reports, and accept the same seed back. In
-a test, the suite's name is where a failure reports it:
+Draw a seed per run, put it where a failure shows it, and accept it back to replay the run down to
+the last field:
 
 ```typescript
 import { systemSeed } from "@sdxc/random";
 import { createSample } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
-const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
+import { slugify } from "./slugify.js";
 
-describe(`slugs (SAMPLE_SEED=${SEED})`, () => {
-	test("every generated title slugs to URL-safe text", () => {
-		let sample = createSample({ seed: SEED });
+let seed = Number(process.env.SAMPLE_SEED) || systemSeed();
+
+describe(`slugify (SAMPLE_SEED=${seed})`, () => {
+	test("every title slugs to URL-safe text", () => {
+		let sample = createSample({ seed });
 		let titles = sample.helpers.multiple(() => sample.lorem.sentence(), { count: 100 });
 
 		for (let title of titles) expect(slugify(title)).toMatch(/^[a-z0-9-]*$/);
@@ -281,14 +226,10 @@ describe(`slugs (SAMPLE_SEED=${SEED})`, () => {
 });
 ```
 
-`slugify` is the function under test. The failing run replays under the reported
-seed, identical down to the last field.
-
 ## Pattern: A Fixture That Keeps Growing
 
-Values follow the order calls are made in, so inserting a call shifts everything
-drawn after it. Give each part of a fixture its own stream and they stop moving
-each other:
+Values follow the order calls are made in, so inserting a call shifts everything drawn after it.
+Give each part of a fixture its own derived generator and they stop moving each other:
 
 ```typescript
 import { createSample } from "@sdxc/sample";
@@ -304,8 +245,8 @@ let reference = orders.string.uuid(); // unchanged when a customer call is added
 
 ## Pattern: Seeding A Development Database
 
-One seed per environment gives every developer the same rows. Read the country
-first and pass it back so each address stays internally consistent:
+One seed per environment gives every developer the same rows. Read the country first and pass it
+back so each address stays consistent:
 
 ```typescript
 import { createSample } from "@sdxc/sample";
@@ -315,7 +256,12 @@ let sample = createSample({ seed: "local-dev" });
 let users = sample.helpers.multiple(
 	() => {
 		let country = sample.location.country();
-		return { ...sample.person.record(), country, city: sample.location.city({ country }) };
+		return {
+			...sample.person.record(),
+			address: sample.location.streetAddress(),
+			city: sample.location.city({ country }),
+			country,
+		};
 	},
 	{ count: 25 },
 );
@@ -333,27 +279,55 @@ let posts = users.flatMap((user) =>
 );
 ```
 
-## Pattern: A Weighted Field
+## Pattern: Optional And Weighted Fields
 
-`maybe()` and `datatype.boolean()` cover the fields that are usually, but not always,
-filled:
+Real data is uneven: some fields are usually empty, some values far more common than others.
 
 ```typescript
 import { createSample } from "@sdxc/sample";
 
-let sample = createSample({ seed: "local-dev" });
+let sample = createSample({ seed: "profiles" });
+
+let tags = ["design", "billing", "api", "mobile", "security"];
 
 let profile = {
-	name: sample.person.fullName(),
+	name: sample.person.fullName({ withPrefix: true }),
 	website: sample.helpers.maybe(() => sample.internet.url(), { chance: 0.3 }),
 	verified: sample.datatype.boolean({ probability: 0.8 }),
+	plan: sample.helpers.weightedPick([
+		{ weight: 8, value: "free" },
+		{ weight: 2, value: "pro" },
+	]),
+	tags: sample.helpers.pickMany(tags, { count: 2 }),
+	handles: sample.helpers.uniqueArray(() => sample.internet.username(), 3),
+};
+```
+
+## Pattern: Codes, Identifiers And Templates
+
+Build values to a format with symbols, a regular expression, or a template over the generators:
+
+```typescript
+import { createSample } from "@sdxc/sample";
+
+let sample = createSample({ seed: "inventory" });
+
+let product = {
+	id: sample.string.uuid(),
+	sku: sample.helpers.fromRegExp("SKU-[A-Z]{2}[0-9]{4}"),
+	batch: sample.helpers.replaceSymbols("??-####"),
+	card: sample.helpers.replaceCreditCardSymbols(),
+	color: sample.color.rgb(),
+	label: sample.helpers.fake("{{company.name}} {{hacker.noun}}"),
+	greeting: sample.helpers.mustache("Hi {{name}}", { name: () => sample.person.firstName() }),
+	release: `v${sample.system.semver()} (${sample.git.commitSha({ length: 7 })})`,
 };
 ```
 
 ## Pattern: One Seed For Fake Data And Other Draws
 
-Pass an open stream as the seed, and fake data and the rest of a test draw from
-one seed while staying independent of each other:
+Pass an open stream as the seed, and fake data and the rest of a test draw from one seed while
+staying independent of each other:
 
 ```typescript
 import { createRandom } from "@sdxc/random";
