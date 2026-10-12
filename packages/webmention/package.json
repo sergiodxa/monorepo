@@ -18,7 +18,6 @@
 		"@sdxc/microformats": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
-		"@sdxc/result": "workspace:*",
-		"remix": "3.0.0"
+		"@sdxc/result": "workspace:*"
 	}
 }
