@@ -34,6 +34,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"http-signatures",
 			"server-timing",
 			"catch-response-middleware",
+			"assets-middleware",
 			"trailing-slash-middleware",
 			"no-www-middleware",
 			"well-known",

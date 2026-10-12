@@ -155,7 +155,7 @@ function is read the first time a check needs it, and only once.
 import { access } from "@sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
-import { renderDenied } from "~/app/http/render";
+import { renderDenied } from "~/app/http/denied";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -288,7 +288,7 @@ type that left it undecided), and its `as` is `notFound` or `forbidden`. Being p
 refusal crosses a Durable Object RPC intact. The `onDenied` responder turns it into your app's
 own page:
 
-```tsx {% title="app/http/render.tsx" %}
+```tsx {% title="app/http/denied.tsx" %}
 import type { Refusal } from "@sdxc/authz";
 import type { RequestContext } from "remix/router";
 
@@ -351,7 +351,7 @@ import { fromEntitlements } from "@sdxc/authz/facts/billing";
 import { access } from "@sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
-import { renderDenied } from "~/app/http/render";
+import { renderDenied } from "~/app/http/denied";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],

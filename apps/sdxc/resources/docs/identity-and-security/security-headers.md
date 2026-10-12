@@ -77,12 +77,12 @@ response the chain returns, keeping any header the response set itself. Place it
 the renderer, so it decorates the rendered page and the renderer can read the nonce.
 
 ```typescript {% title="app/initializers/router.ts" %}
+import { assets } from "@sdxc/assets-middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
-import { render, renderWith } from "remix/middleware/render";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import { withDocument } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { SECURITY_POLICY } from "~/config/security-policy";
 
 export function createWebRouter() {
@@ -90,8 +90,11 @@ export function createWebRouter() {
 		middleware: [
 			// …the middleware your app already runs
 			securityHeaders(SECURITY_POLICY),
-			render({ assets }),
-			renderWith(withDocument),
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
 		],
 	});
 	// router.map(…) for each route
@@ -100,9 +103,9 @@ export function createWebRouter() {
 ```
 
 The comment stands for whatever your app already runs ahead of it, from
-[Wire the router](/docs/building-remix-apps/wire-the-router), and `withDocument` for the
-`renderWith()` wrapper in `app/http/render.tsx` that wraps every page in your document. The
-order among the rest does not matter to the headers.
+[Wire the router](/docs/building-remix-apps/wire-the-router), and `assets()` from
+`@sdxc/assets-middleware` publishes the stylesheets and entry script each page passes to its
+document as `ctx.assets`. The order among the rest does not matter to the headers.
 
 ## Nonces for the scripts you render
 
