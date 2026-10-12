@@ -429,3 +429,13 @@ export function glass() {
 export function glyph() {
 	return raw({ inlineSize: "5rem", blockSize: "5rem" });
 }
+
+/**
+ * The outline `debug()` draws in a development build. This site is a production build,
+ * where `debug()` resolves to no styles, so its examples draw the development result
+ * with this and print the `debug()` call they stand for.
+ */
+export function debugOutline(nested = false) {
+	let host = { outline: "2px solid red", outlineOffset: "-2px" };
+	return raw(nested ? { ...host, "& *": host } : host);
+}
