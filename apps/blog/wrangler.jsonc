@@ -131,9 +131,10 @@
 	// posts whose scheduled publish date has arrived. Mondays at 05:00 UTC `sponsors.refresh`
 	// stores the sponsor roster (GitHub's sponsorship webhook queues it on every change), at
 	// 06:00 UTC `bookmarks.sweep` checks every bookmarked page, and daily at 14:00 UTC
-	// `bookmarks.digest` mails what it flagged.
+	// `bookmarks.digest` mails what it flagged. Fridays at 17:00 UTC `releases.weekly` writes
+	// the weekly releases post.
 	// Kept equal to the jobs' `cron`, which `app/jobs/dispatcher.test.ts` checks.
-	"triggers": { "crons": ["*/15 * * * *", "0 5 * * 1", "0 6 * * 1", "0 14 * * *"] },
+	"triggers": { "crons": ["*/15 * * * *", "0 5 * * 1", "0 6 * * 1", "0 14 * * *", "0 17 * * 5"] },
 
 	"d1_databases": [
 		{

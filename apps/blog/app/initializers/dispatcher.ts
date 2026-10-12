@@ -49,6 +49,7 @@ dispatcher.map(jobs.bookmarks.digest, () => import("~/app/jobs/bookmarks/digest"
 dispatcher.map(jobs.activityPub.process, () => import("~/app/jobs/activitypub/process"));
 dispatcher.map(jobs.activityPub.publish, () => import("~/app/jobs/activitypub/publish"));
 dispatcher.map(jobs.activityPub.scheduled, () => import("~/app/jobs/activitypub/scheduled"));
+dispatcher.map(jobs.releases.weekly, () => import("~/app/jobs/releases/weekly"));
 dispatcher.map(jobs.sponsors.refresh, () => import("~/app/jobs/sponsors/refresh"));
 
 declare module "@sdxc/jobs" {

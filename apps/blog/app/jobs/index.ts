@@ -60,6 +60,13 @@ export default jobs({
 		/** Federates posts whose scheduled publish date has arrived since the last run. */
 		scheduled: job({ cron: "*/15 * * * *" }),
 	},
+	releases: {
+		/**
+		 * Writes the weekly releases post from the week's GitHub releases, Fridays at 17:00 UTC
+		 * (noon in Peru), so each run covers the seven days since the previous one.
+		 */
+		weekly: job({ cron: "0 17 * * 5" }),
+	},
 	sponsors: {
 		/**
 		 * Stores the public sponsor roster `/sponsors` renders. GitHub's sponsorship webhook
