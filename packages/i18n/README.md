@@ -1,45 +1,41 @@
 # @sdxc/i18n
 
-Language detection, translators for [Unicode MessageFormat 2](https://messageformat.unicode.org) messages, a Remix middleware that publishes one per request, and `remix/component` components that render messages containing markup.
-
-Messages format through [`@sdxc/messageformat`](https://www.npmjs.com/package/@sdxc/messageformat).
+Language detection and [Unicode MessageFormat 2](https://messageformat.unicode.org) translators for Remix routers and `remix/component`.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/i18n
 ```
 
-Requires `remix` (v3) as a companion; the `remix/component` exports are only needed when rendering through `remix/component`.
+Requires [`remix`](https://www.npmjs.com/package/remix) v3. Messages format through [`@sdxc/messageformat`](https://www.npmjs.com/package/@sdxc/messageformat), and the middleware logs through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger).
 
-The package ships three entry points:
+The package has three entry points:
 
-- `@sdxc/i18n` — `createI18n`, `createTranslator`, `LanguageDetector`, `getClientLocales`, and the `I18n`/`Translate`/`Messages` types. No router or logger dependency, so it runs in the browser.
-- `@sdxc/i18n/middleware` — the default-exported `i18n` middleware for `remix/router`.
-- `@sdxc/i18n/ui` — `IntlProvider`, `intl`, `setIntl`, and `Trans` for `remix/component`. Browser-safe.
+- `@sdxc/i18n`: translators, the language detector and `getClientLocales`; runs in the browser too.
+- `@sdxc/i18n/middleware`: the `i18n` middleware for `remix/router`.
+- `@sdxc/i18n/ui`: `IntlProvider`, `intl`, `setIntl` and `Trans` for `remix/component`.
 
-## Messages
+## Usage
 
-Bundles are plain objects, one per language, nested by dotted key segment, with MessageFormat 2 strings as leaves:
+### Write a bundle per language
+
+A bundle is a plain object nested by dotted key segment, with MessageFormat 2 strings as leaves.
 
 ```typescript
 export default {
 	greeting: "Hello {$name}",
-	feeds: {
+	inbox: {
 		unread:
-			".input {$count :number}\n.match $count\none {{{$count} unread}}\n* {{{$count} unread}}",
-		article: "Read {#articleLink}{$title}{/articleLink}",
+			".input {$count :number}\n.match $count\none {{{$count} message}}\n* {{{$count} messages}}",
+		article: "Read {#link}{$title}{/link}",
 	},
 };
 ```
 
-- Variables are `{$name}`. Values interpolate raw, with no escaping: JSX escapes text nodes.
-- Plurals are one key with a `.match` on a `:number` input; the variant is picked by the language's CLDR plural category (`one`, `few`, `many`, `other`, …) or an exact number, and `*` catches the rest.
-- Markup is `{#name}…{/name}` or standalone `{#name/}`, rendered by `Trans`. Any name works, `link` and `br` included.
+Variables are `{$name}` and interpolate unescaped. Plurals `.match` a `:number` input on the language's CLDR categories (`one`, `few`, `other`, …) or exact numbers, with `*` catching the rest. Markup is `{#name}…{/name}` or `{#name/}`, rendered by `Trans`.
 
-## Usage
-
-### Translating
+### Translate
 
 ```typescript
 import { createI18n } from "@sdxc/i18n";
@@ -49,12 +45,14 @@ import es from "./locales/es.js";
 
 let intl = createI18n({ locale: "es-MX", fallbackLanguage: "en", resources: { en, es } });
 
-intl.t("greeting", { name: "Ada" }); // "Hola Ada"
-intl.t("feeds.unread", { count: 1200 }); // the English copy when neither es-MX nor es has the key
-intl.t("feeds.missing"); // "feeds.missing"
+intl.t("greeting", { name: "Ada" }); // "Hola Ada", read from es
+intl.t("inbox.unread", { count: 3 }); // from en when es lacks the key
+intl.t("inbox.missing"); // "inbox.missing"
 ```
 
-### Per-request translation in a router
+A key resolves through the locale, its primary subtag, the fallback language and its primary subtag, so `es-MX` reads `es-MX`, then `es`, then `en`. A key found nowhere returns itself.
+
+### Translate per request
 
 ```typescript
 import i18n from "@sdxc/i18n/middleware";
@@ -73,25 +71,44 @@ let router = createRouter({
 });
 
 router.get("/", (context) => {
-	// context.locale is the detected language, e.g. "es"
-	return new Response(context.intl.t("greeting", { name: "Ada" }));
+	return new Response(context.intl.t("greeting", { name: "Ada" }), {
+		headers: { "Content-Language": context.locale },
+	});
 });
 ```
 
-### Standalone detection
+The middleware detects the language from `?lng=`, a cookie, the session and `Accept-Language`, then publishes `context.locale` and `context.intl`.
 
-```typescript
-import { LanguageDetector } from "@sdxc/i18n";
+### Render with `remix/component`
 
-let detector = new LanguageDetector({
-	supportedLanguages: ["en", "es"],
-	fallbackLanguage: "en",
-});
+```tsx
+import type { Handle } from "remix/component";
 
-let locale = await detector.detect(request); // always a supported language
+import { intl, IntlProvider, Trans } from "@sdxc/i18n/ui";
+
+router.get("/", (context) =>
+	context.render(
+		<IntlProvider intl={context.intl}>
+			<Teaser title="Hello MF2" href="/posts/mf2" />
+		</IntlProvider>,
+	),
+);
+
+function Teaser(handle: Handle<{ title: string; href: string }>) {
+	return () => (
+		<article>
+			<h2>{intl(handle).t("greeting", { name: "Ada" })}</h2>
+			<Trans
+				i18nKey="inbox.article"
+				values={{ title: handle.props.title }}
+				components={{ link: <a href={handle.props.href} /> }}
+			/>
+		</article>
+	);
+}
 ```
 
-### Translating without a request
+### Translate without a request
 
 ```typescript
 import { createTranslator } from "@sdxc/i18n";
@@ -102,215 +119,111 @@ let translate = createTranslator({
 	fallbackLanguage: "en",
 });
 
-// In a job, a consumer, a browser bootstrap, or anywhere `context.intl` does not exist:
-let { locale, t } = translate(user.language);
-```
-
-### Rendering with `remix/component`
-
-```tsx
-import { intl, IntlProvider } from "@sdxc/i18n/ui";
-
-router.get("/", (context) =>
-	context.render(
-		<IntlProvider intl={context.intl}>
-			<Greeting />
-		</IntlProvider>,
-	),
-);
-
-function Greeting(handle: Handle) {
-	return () => <p>{intl(handle).t("greeting", { name: "Ada" })}</p>;
-}
-```
-
-### Messages with markup
-
-```tsx
-import { Trans } from "@sdxc/i18n/ui";
-
-// feeds.article: "Read {#articleLink}{$title}{/articleLink}"
-<Trans
-	i18nKey="feeds.article"
-	values={{ title: item.title }}
-	components={{ articleLink: <a href={item.link} /> }}
-/>;
-```
-
-### Hydrated islands
-
-```typescript
-import { createTranslator } from "@sdxc/i18n";
-import { setIntl } from "@sdxc/i18n/ui";
-
-let { intl } = createTranslator({ resources, supportedLanguages, fallbackLanguage })(
-	document.documentElement.lang,
-);
-setIntl(intl);
+let { locale, t } = translate(user.language); // locale is "en" when user.language is unsupported
 ```
 
 ## API
 
-### `createI18n(options: I18nOptions<Resources, Fallback>): I18n<Resources[Fallback]>`
+### `createI18n(options: I18nOptions): I18n`
 
-From `@sdxc/i18n`. Creates a translator fixed to `options.locale`. It is synchronous and does no work up front.
+From `@sdxc/i18n`. A translator fixed to `options.locale`, built synchronously; messages compile on first use and are cached per `resources` object, so keep one bundle object per app.
 
 - `options.locale`: The language to translate into
-- `options.fallbackLanguage`: The language whose bundle answers keys the locale lacks
+- `options.fallbackLanguage`: The language whose bundle answers keys the locale lacks, and types the keys
 - `options.resources`: Bundles keyed by language
-- `options.onError`: `(error: Error, key: string) => void`, receiving syntax and formatting errors; without it errors are discarded
+- `options.onError`: `(error, key) => void`, receiving syntax and formatting errors; errors are discarded without it
 
-A key resolves through `[locale, primary(locale), fallbackLanguage, primary(fallbackLanguage)]`, deduplicated and limited to languages in `resources`, so an `en-US` request reads an `en-US` bundle first and then `en`. The first string leaf at the dotted key wins, and a key with no message anywhere returns the key itself.
+A placeholder that fails to format renders its fallback, such as `{$name}`, and a message that fails to compile renders its key.
 
-Each message compiles on first use for the language it was found in, and is cached per `resources` object, language and key, so concurrent requests share compiled messages and two apps with different bundles never collide. Keep one `resources` object per app to benefit from the cache.
+### `createTranslator(options: TranslatorOptions): Translator`
 
-A placeholder that fails to format shows as its MessageFormat 2 fallback, such as `{$name}`; a message that fails to compile renders its key. Both reach `onError` and neither throws.
+From `@sdxc/i18n`. A factory for code with no request behind it. Calling it with a language returns a cached `Translation` (`{ locale, t, intl }`); an unsupported or missing language binds to `fallbackLanguage`, so record `translation.locale`.
 
-### `I18n<R>`
+- `options.resources`, `options.fallbackLanguage`, `options.onError`: As in `createI18n`
+- `options.supportedLanguages`: The languages a translation may bind to
+
+### `LanguageDetector`
+
+From `@sdxc/i18n`. `new LanguageDetector(options: LanguageDetectorOptions)` creates a detector; `detector.detect(request: Request, session?: Session): Promise<string>` runs each method in order and returns the first supported match, or the fallback language. A candidate matches a supported language exactly first, then by primary subtag, so `es-AR` matches `es`. A method missing its option, such as `cookie`, is skipped, and a live `Session` passed to `detect` is read directly.
+
+### `getClientLocales(requestOrHeaders: Request | Headers): string | undefined`
+
+From `@sdxc/i18n`. The highest-quality `Accept-Language` tag that `Intl` can represent, or `undefined`. It keeps the client's exact region (`en-GB`) for `Intl` formatting even when the app ships only `en` copy.
+
+### `i18n(options: I18nMiddlewareOptions): Middleware`
+
+Default export of `@sdxc/i18n/middleware`. Sets `context.locale` and `context.intl` per request, and logs message errors as `i18n.error` warnings on the request's `@sdxc/logger` log. Importing it adds `locale: string` and `intl: I18n` to `RequestContext` from `remix/router`.
+
+- `options.detection`: A `LanguageDetectorOptions`; its `fallbackLanguage` also answers missing keys
+- `options.resources`: Bundles keyed by language
+
+### `IntlProvider`
+
+From `@sdxc/i18n/ui`. Publishes its `intl` prop to every descendant and renders `children`; render it with a new `I18n` to switch language.
+
+### `intl(handle: Handle): I18n`
+
+From `@sdxc/i18n/ui`. The `I18n` from the nearest `IntlProvider`, else the `setIntl` default; it throws when neither exists.
+
+### `setIntl(intl: I18n): void`
+
+From `@sdxc/i18n/ui`. Registers the default `I18n` for `intl` in the browser; call it before mounting. It throws on the server, where a module-scoped translator would serve every request.
+
+### `Trans`
+
+From `@sdxc/i18n/ui`. Renders a message with markup: `{#name}…{/name}` becomes `components[name]` with the enclosed content as children, and `{#name/}` the element alone.
+
+- `i18nKey`: The message key (`key` is reserved by `remix/component`)
+- `values`: The message's variables
+- `components`: Elements keyed by markup name; markup without an entry renders its content unwrapped and reports through `onError`
+- `intl`: The translator to use; defaults to `intl(handle)`
+
+### Types
+
+#### `I18n<R>`
 
 ```typescript
 interface I18n<R = Messages> {
 	readonly locale: string;
 	t: Translate<R>; // (key, values?) => string
 	parts: TranslateParts<R>; // (key, values?) => MessagePart[]
-	onError: I18nErrorHandler;
+	onError: I18nErrorHandler; // (error: Error, key: string) => void
 }
 ```
 
-An `I18n` is immutable. `parts` returns `@sdxc/messageformat` parts, markup included, for a renderer of its own; a missing key yields a single text part holding the key. `onError` is where `Trans` reports markup it cannot match.
+`parts` returns `@sdxc/messageformat` parts, markup included, for a renderer of your own; a missing key yields one text part holding the key.
 
-### `i18n(options: I18nMiddlewareOptions): Middleware`
+#### `Messages` and `MessageKey<R>`
 
-Default export of `@sdxc/i18n/middleware`. Detects the request language and sets `context.locale` and `context.intl`, an `I18n` for that language. Message errors are logged as `i18n.error` warnings on the invocation's [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) log.
+`Messages` is a bundle: `{ [key: string]: string | Messages }`. `MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles `t("inbox.unraed")` is a type error. Keys are typed by `resources[fallbackLanguage]` when the fallback is a literal; bundles typed as `Record<string, Messages>` give string keys. `IntlProvider`, `setIntl` and `Trans` accept `I18n<any>`. Variables are untyped.
 
-- `options.detection`: See `LanguageDetectorOptions`; `fallbackLanguage` also answers missing keys
-- `options.resources`: Bundles keyed by language
-
-Importing the module augments `RequestContext` from `remix/router` with `locale: string` and `intl: I18n`.
-
-### `LanguageDetector`
-
-From `@sdxc/i18n`. Detects the user's preferred language server-side from a `Request`, validating every candidate against the supported languages: an exact subtag match first, then loosely by primary language code, so `es-AR` matches a supported `es`. The fallback language is returned when nothing matches.
-
-#### `new LanguageDetector(options: LanguageDetectorOptions)`
-
-Creates a detector. A method missing its required option — cookie detection without a `cookie`, say — is skipped rather than treated as an error, so detection always resolves to a supported language.
-
-#### `detector.detect(request: Request, session?: Session): Promise<string>`
-
-Probes each configured method in order and returns the first supported match, or the fallback language. Passing a live `Session` makes the `session` method read it directly instead of loading from storage.
-
-### `getClientLocales(requestOrHeaders: Request | Headers): string | undefined`
-
-From `@sdxc/i18n`. Returns the client's best-quality locale from the `Accept-Language` header, filtered to tags the JavaScript `Intl` APIs can represent, or `undefined` when the header is missing or unusable. This is the right input for `Intl` formatters: it honors the client's exact regional preference (`en-GB` dates) even for an app that only ships `en` translations.
-
-```typescript
-import { getClientLocales } from "@sdxc/i18n";
-
-let date = new Date().toLocaleDateString(getClientLocales(request));
-```
-
-### `createTranslator(options: TranslatorOptions): Translator`
-
-From `@sdxc/i18n`. Creates a translator over a fixed set of bundles, for code with no request behind it. The returned `Translator` takes a language and returns a `Translation` synchronously: the language it bound to, its `t`, and the `I18n` behind it.
-
-A language outside `supportedLanguages` resolves to `fallbackLanguage` first, so record `translation.locale` rather than the language you asked for: they differ exactly when the app does not ship the requested one. Translations are cached per resolved language and per translator.
-
-- `options.resources`: Every language's bundle
-- `options.supportedLanguages`: The languages the caller ships
-- `options.fallbackLanguage`: The default language, and the one missing keys resolve through
-- `options.onError`: Receives message errors; pass one that logs them, since the entry point stays free of a logger so it can run in the browser
-
-### `IntlProvider`
-
-`remix/component` context provider, from `@sdxc/i18n/ui`. Publishes the `intl` prop to every descendant through context and renders `children` unchanged. To switch language on the client, render it with a new `I18n`.
-
-### `setIntl(intl: I18n): void`
-
-From `@sdxc/i18n/ui`. Registers a module-scoped default `I18n` for `intl` to fall back to when there is no ancestor `IntlProvider`. Call it once from the client bootstrap, before mounting or hydrating anything. Browser-only: it throws when called from server code, where a module-scoped translator would be shared by every concurrent request.
-
-### `intl(handle: Handle<unknown, any>): I18n`
-
-From `@sdxc/i18n/ui`. Reads the `I18n` published by the nearest ancestor `IntlProvider`, falling back to the `setIntl` default, and throws when neither exists.
-
-### `Trans`
-
-`remix/component` component, from `@sdxc/i18n/ui`, for a message containing markup. Each `{#name}…{/name}` pair renders as the `components[name]` element with the content between them, nested markup included, as its children; a standalone `{#name/}` renders the element with no children.
-
-- `intl`: Translator to format through, typed or not; defaults to the nearest ancestor `IntlProvider`'s (via `intl`)
-- `i18nKey`: Message key. Named `i18nKey` because `key` is `remix/component`'s own reconciliation prop and never reaches the component
-- `values`: Values for the message's variables
-- `components`: Elements keyed by markup name
-
-Markup with no `components` entry renders its children unwrapped and reports an error through the translator's `onError`, so under the middleware it lands on the request log.
-
-### Types
-
-#### `Messages`, `Translate`, `TranslateParts`, `MessageKey`
-
-```typescript
-interface Messages {
-	[key: string]: string | Messages;
-}
-
-type Translate<R = Messages> = (key: MessageKey<R>, values?: Record<string, unknown>) => string;
-type TranslateParts<R = Messages> = (
-	key: MessageKey<R>,
-	values?: Record<string, unknown>,
-) => MessagePart[];
-```
-
-`MessageKey<R>` is the union of dotted paths to `R`'s string leaves, so with typed bundles a typo such as `t("feeds.unraed")` is a type error. `createI18n` types its keys by the bundle at `resources[fallbackLanguage]` when the fallback is a literal; other languages may hold any subset of those keys. Resources typed as `Record<string, Messages>`, or a fallback typed as `string`, give an untyped translator. `IntlProvider`, `setIntl` and `Trans` take `I18n<any>`, so a typed translator passes there; a function of your own that takes any translator does the same. Variables are not typed; a locale test that parses every message is the way to catch a missing one.
-
-#### `LanguageDetectorOptions`
-
-```typescript
-interface LanguageDetectorOptions {
-	supportedLanguages: string[];
-	fallbackLanguage: string;
-	cookie?: Cookie;
-	sessionCookie?: Cookie;
-	sessionStorage?: SessionStorage;
-	sessionKey?: string; // default "lng"
-	searchParamKey?: string; // default "lng"
-	order?: DetectionMethod[];
-	findLocale?(request: Request): Promise<string | string[] | null>;
-}
-```
-
-- `supportedLanguages` / `fallbackLanguage`: The languages detection may return, and the one returned when nothing matches; the middleware also resolves missing keys through `fallbackLanguage`
-- `cookie`: `Cookie` (from `remix/cookie`) storing the preferred language as its plain value
-- `sessionCookie` + `sessionStorage`: Pair used to load the session outside middleware; unnecessary when a live `Session` is passed to `detect`
-- `order`: Which methods run and in what order; defaults to `searchParams`, `cookie`, `session`, `header`, with `custom` prepended when `findLocale` is set
-- `findLocale`: Custom lookup for the `custom` method, such as a locale in the URL pathname; returning `null` defers to later methods
-
-#### `DetectionMethod`
+#### `LanguageDetectorOptions` and `DetectionMethod`
 
 ```typescript
 type DetectionMethod = "searchParams" | "cookie" | "session" | "header" | "custom";
-```
 
-#### `I18nMiddlewareOptions`, `I18nOptions`, and `TranslatorOptions`
-
-The option objects taken by the middleware, `createI18n`, and `createTranslator`, field by field above.
-
-#### `Translation` and `Translator`
-
-```typescript
-interface Translation {
-	locale: string; // the language the copy is produced in
-	t: Translate;
-	intl: I18n; // the translator t belongs to
-}
-
-interface Translator {
-	(language?: string): Translation;
+interface LanguageDetectorOptions {
+	supportedLanguages: string[];
+	fallbackLanguage: string;
+	cookie?: Cookie; // holds the language as its plain value
+	sessionCookie?: Cookie; // with sessionStorage, loads the session outside middleware
+	sessionStorage?: SessionStorage;
+	sessionKey?: string; // default "lng"
+	searchParamKey?: string; // default "lng"
+	order?: DetectionMethod[]; // default searchParams, cookie, session, header
+	findLocale?(request: Request): Promise<string | string[] | null>; // the "custom" method
 }
 ```
 
-## Pattern: Reusing the session from the session middleware
+Setting `findLocale` puts `custom` first in the default order; returning `null` defers to the next method.
 
-Order the i18n middleware after `remix/middleware/session` so the detector reads the language from the live request session: it needs no `sessionCookie`/`sessionStorage` configuration and performs no second storage read. Ordered before the session middleware, the `session` detection method is skipped instead.
+#### `Translate`, `TranslateParts`, `I18nErrorHandler`, `I18nOptions`, `I18nMiddlewareOptions`, `TranslatorOptions`, `Translation`, `Translator`
+
+The function and option types used above. `I18nMiddlewareOptions` comes from `@sdxc/i18n/middleware`; the rest from `@sdxc/i18n`.
+
+## Pattern: Reading The Language From The Session
+
+Order `i18n` after Remix's session middleware so the `session` method reads the live session, with no `sessionCookie` or `sessionStorage` needed.
 
 ```typescript
 import i18n from "@sdxc/i18n/middleware";
@@ -323,22 +236,21 @@ import en from "./locales/en.js";
 import es from "./locales/es.js";
 
 let sessionCookie = createCookie("__session", { secrets: ["s3cr3t"] });
-let sessionStorage = createCookieSessionStorage();
 
 let router = createRouter({
 	middleware: [
-		session(sessionCookie, sessionStorage),
+		session(sessionCookie, createCookieSessionStorage()),
 		i18n({
-			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en" },
+			detection: { supportedLanguages: ["en", "es"], fallbackLanguage: "en", sessionKey: "lng" },
 			resources: { en, es },
 		}),
 	],
 });
 ```
 
-## Pattern: Letting the user pick a language
+## Pattern: Letting The User Pick A Language
 
-Store the choice in a dedicated cookie and hand that cookie to the detector. The `searchParams` method still runs first, so a `?lng=` link overrides the stored choice for one request.
+Store the choice in a cookie the detector reads. `?lng=` still runs first, so a link overrides the stored choice for one request.
 
 ```typescript
 import i18n from "@sdxc/i18n/middleware";
@@ -348,7 +260,7 @@ import { createRouter } from "remix/router";
 import en from "./locales/en.js";
 import es from "./locales/es.js";
 
-let localeCookie = createCookie("lng", { maxAge: 60 * 60 * 24 * 365 });
+let languageCookie = createCookie("lng", { maxAge: 60 * 60 * 24 * 365 });
 
 let router = createRouter({
 	middleware: [
@@ -356,7 +268,7 @@ let router = createRouter({
 			detection: {
 				supportedLanguages: ["en", "es"],
 				fallbackLanguage: "en",
-				cookie: localeCookie,
+				cookie: languageCookie,
 			},
 			resources: { en, es },
 		}),
@@ -368,17 +280,14 @@ router.post("/language", async (context) => {
 	if (typeof language !== "string") return new Response(null, { status: 400 });
 	return new Response(null, {
 		status: 302,
-		headers: {
-			Location: "/",
-			"Set-Cookie": await localeCookie.serialize(language),
-		},
+		headers: { Location: "/", "Set-Cookie": await languageCookie.serialize(language) },
 	});
 });
 ```
 
-## Pattern: Locale from the URL pathname
+## Pattern: Locale In The URL Path
 
-`findLocale` covers path-based locales like `/es/dashboard`. Setting it prepends the `custom` method to the default order, so it runs before every other method; returning `null` defers to them.
+`findLocale` reads `/es/dashboard`; an unsupported segment falls through to the other methods.
 
 ```typescript
 import { LanguageDetector } from "@sdxc/i18n";
@@ -389,6 +298,70 @@ let detector = new LanguageDetector({
 	async findLocale(request) {
 		return new URL(request.url).pathname.split("/").at(1) ?? null;
 	},
+});
+
+let locale = await detector.detect(request);
+```
+
+## Pattern: Translating In A Background Job
+
+One translator serves every run; `onError` sends broken messages somewhere visible, and the email records the language it was actually written in.
+
+```typescript
+import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
+
+import en from "./locales/en.js";
+import es from "./locales/es.js";
+
+let translate = createTranslator({
+	resources: { en, es },
+	supportedLanguages: ["en", "es"],
+	fallbackLanguage: "en",
+	onError: (error, key) => currentLog()?.warn("i18n.error", { key, message: error.message }),
+});
+
+export async function sendDigest(user: { email: string; language: string; unread: number }) {
+	let { locale, t } = translate(user.language);
+	await sendEmail({
+		to: user.email,
+		language: locale,
+		subject: t("inbox.unread", { count: user.unread }),
+	});
+}
+```
+
+## Pattern: Hydrating Islands In The Browser
+
+Register one translator before hydrating, so every island's `intl(handle)` and `Trans` resolve without a provider. Read the language from the server-rendered `<html lang>`.
+
+```typescript
+import { createTranslator } from "@sdxc/i18n";
+import { setIntl } from "@sdxc/i18n/ui";
+
+import en from "./locales/en.js";
+import es from "./locales/es.js";
+
+let { intl } = createTranslator({
+	resources: { en, es },
+	supportedLanguages: ["en", "es"],
+	fallbackLanguage: "en",
+})(document.documentElement.lang);
+
+setIntl(intl);
+```
+
+## Pattern: Formatting Dates In The Client's Region
+
+Copy follows the detected language; dates and numbers follow the client's exact locale from `getClientLocales`.
+
+```typescript
+import { getClientLocales } from "@sdxc/i18n";
+
+router.get("/orders/:id", (context) => {
+	let region = getClientLocales(context.request) ?? context.locale; // "en-GB" for an en-only app
+	let placed = new Intl.DateTimeFormat(region, { dateStyle: "long" }).format(order.placedAt);
+	return new Response(context.intl.t("orders.placed", { date: placed }));
 });
 ```
 
