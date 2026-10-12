@@ -12,7 +12,7 @@ import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { ACTOR_ID } from "~/config/activitypub";
-import { BlogFooter, FEDIVERSE_HANDLE, FOOTER_COLUMNS } from "~/resources/components/blog-footer";
+import { BlogFooter, FEDIVERSE_HANDLE, FOOTER_TRACKS } from "~/resources/components/blog-footer";
 import routes from "~/routes/web";
 
 /** The footer's HTML, parsed so a test queries elements rather than matching strings. */
@@ -29,11 +29,25 @@ describe("BlogFooter", () => {
 		let landmarks = Array.from(footer.querySelectorAll("nav"));
 
 		expect(landmarks.map((nav) => nav.getAttribute("aria-label"))).toEqual(
-			FOOTER_COLUMNS.map((column) => column.title),
+			FOOTER_TRACKS.flat().map((column) => column.title),
 		);
 		for (let nav of landmarks) {
 			expect(nav.querySelector("h2")?.textContent).toBe(nav.getAttribute("aria-label"));
 		}
+	});
+
+	test("stacks Elsewhere under Support in the last of four tracks", async () => {
+		let footer = await renderFooter();
+		let tracks = Array.from(footer.querySelector("footer")?.children ?? []).filter(
+			(child) => child.querySelector("nav") !== null,
+		);
+
+		expect(tracks).toHaveLength(4);
+		expect(
+			Array.from(tracks[3]?.querySelectorAll("nav") ?? []).map((nav) =>
+				nav.getAttribute("aria-label"),
+			),
+		).toEqual(["Support", "Elsewhere"]);
 	});
 
 	test("links the global feeds and the Fediverse actor", async () => {

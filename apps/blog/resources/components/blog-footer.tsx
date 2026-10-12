@@ -50,46 +50,55 @@ export namespace BlogFooter {
 export const FEDIVERSE_HANDLE = `@${PROFILE.canonical.resource.replace(/^acct:/, "")}`;
 
 /**
- * The footer's columns in reading order. "Read" lists every kind's topic from the registry; any
- * other destination is one entry in its column's `links`, and a new column one entry here.
+ * The footer's tracks in reading order, each a stack of columns, so the short "Support" and
+ * "Elsewhere" share one track and a wide screen holds every track on one row. "Read" lists
+ * every kind's topic from the registry; any other destination is one entry in its column's `links`.
  */
-export const FOOTER_COLUMNS: Array<BlogFooter.Column> = [
-	{
-		title: "Read",
-		links: KINDS.map((kind) => ({
-			label: POST_KINDS[kind].plural,
-			href: `/${POST_KINDS[kind].topic}`,
-		})),
-	},
-	{
-		title: "Topics",
-		links: [{ label: "All topics", href: routes.topics.href() }],
-	},
-	{
-		title: "Follow",
-		links: [
-			{ label: "RSS", href: routes.rss.feed.href() },
-			{ label: "Atom", href: routes.atom.feed.href() },
-			{ label: "JSON Feed", href: routes.jsonFeed.feed.href() },
-			{ label: FEDIVERSE_HANDLE, href: ACTOR_ID, caption: "Fediverse" },
-		],
-	},
-	{
-		title: "Support",
-		links: [{ label: "Sponsors", href: routes.sponsors.href() }],
-	},
-	{
-		title: "Elsewhere",
-		links: [
-			{ label: "X", href: PROFILE.x.profile },
-			{ label: "GitHub", href: PROFILE.github.profile },
-			{ label: "sdxc.sergiodxa.com", href: "https://sdxc.sergiodxa.com" },
-		],
-	},
+export const FOOTER_TRACKS: Array<Array<BlogFooter.Column>> = [
+	[
+		{
+			title: "Read",
+			links: KINDS.map((kind) => ({
+				label: POST_KINDS[kind].plural,
+				href: `/${POST_KINDS[kind].topic}`,
+			})),
+		},
+	],
+	[
+		{
+			title: "Topics",
+			links: [{ label: "All topics", href: routes.topics.href() }],
+		},
+	],
+	[
+		{
+			title: "Follow",
+			links: [
+				{ label: "RSS", href: routes.rss.feed.href() },
+				{ label: "Atom", href: routes.atom.feed.href() },
+				{ label: "JSON Feed", href: routes.jsonFeed.feed.href() },
+				{ label: FEDIVERSE_HANDLE, href: ACTOR_ID, caption: "Fediverse" },
+			],
+		},
+	],
+	[
+		{
+			title: "Support",
+			links: [{ label: "Sponsors", href: routes.sponsors.href() }],
+		},
+		{
+			title: "Elsewhere",
+			links: [
+				{ label: "X", href: PROFILE.x.profile },
+				{ label: "GitHub", href: PROFILE.github.profile },
+				{ label: "sdxc.sergiodxa.com", href: "https://sdxc.sergiodxa.com" },
+			],
+		},
+	],
 ];
 
 /**
- * Renders the footer. Columns flow into as many tracks as the width holds, so a phone gets
+ * Renders the footer. Tracks flow into as many grid columns as the width holds, so a phone gets
  * two side by side and a wide screen gets them all on one row.
  */
 export function BlogFooter(_handle: Handle) {
@@ -104,8 +113,12 @@ export function BlogFooter(_handle: Handle) {
 				gridTemplate({ columns: repeat("auto-fit", "minmax(min(100%, 9rem), 1fr)") }),
 			]}
 		>
-			{FOOTER_COLUMNS.map((column) => (
-				<FooterColumn key={column.title} column={column} />
+			{FOOTER_TRACKS.map((track) => (
+				<div key={track[0]?.title} mix={[vstack({ gap: 6, align: "start" })]}>
+					{track.map((column) => (
+						<FooterColumn key={column.title} column={column} />
+					))}
+				</div>
 			))}
 			<p mix={[m(0), raw({ gridColumn: "1 / -1" })]}>
 				<NavLink href={routes.cms.dashboard.href()} mix={[text("xs")]}>
