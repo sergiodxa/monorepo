@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { TypedEventTarget } from "remix/component";
 
 const DEFAULT_PRIORITY: Announcer.Priority = "polite";
@@ -109,7 +110,7 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 	 * announcer.announce("5 results found");
 	 */
 	announce(text: string, priority: Announcer.Priority = DEFAULT_PRIORITY): string {
-		let message: Announcer.Message = { id: crypto.randomUUID(), text, priority };
+		let message: Announcer.Message = { id: generateUUID(), text, priority };
 
 		if (priority === "assertive") {
 			let index = this.#queue.findIndex((queued) => queued.priority !== "assertive");

@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { TypedEventTarget } from "remix/component";
 
 import { dispatchChange } from "../utils/dispatch-change.js";
@@ -154,7 +155,7 @@ export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	 * toaster.add({ title: "Saved" }, { duration: 3000 })
 	 */
 	add(data: Data, options: Toaster.AddOptions = {}): string {
-		let id = options.id ?? crypto.randomUUID();
+		let id = options.id ?? generateUUID();
 		let duration = options.duration === undefined ? this.#defaultDuration : options.duration;
 
 		let existing = this.#toasts.get(id);
