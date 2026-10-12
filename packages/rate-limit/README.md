@@ -2,26 +2,29 @@
 
 Adapter-based rate limiting with standard response headers.
 
-An `Adapter` counts attempts against a key and answers a decision; the middleware spends that budget for a request and serializes the decision into the `RateLimit` and `RateLimit-Policy` fields of [draft-ietf-httpapi-ratelimit-headers-07](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-07). Because the counting sits behind one interface, the same limit runs on a platform binding, on a key-value store, on a SQL table, or in process — chosen per endpoint.
+An adapter counts attempts against a key and answers a decision; the middleware spends that
+budget for each request and writes the decision into the `RateLimit` and `RateLimit-Policy`
+fields of
+[draft-ietf-httpapi-ratelimit-headers-07](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-07).
+The same limit runs on a Cloudflare rate limiter binding, Workers KV, a SQL table or in process,
+chosen per endpoint.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/rate-limit
 ```
 
-The middleware mounts on a [`remix`](https://www.npmjs.com/package/remix) (v3) fetch router, which installs alongside this package, together with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), [`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields) and [`@sdxc/uuid`](https://www.npmjs.com/package/@sdxc/uuid).
-
-Two entry points:
-
-- `@sdxc/rate-limit` — the `Adapter` contract, the four backends, `RateLimitError`, header serialization, the `429` builder, and `addressKey`. No router dependency.
-- `@sdxc/rate-limit/middleware` — the `rateLimit` middleware for `remix/router`.
+Windows are [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) values, adapters
+answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and the
+`./middleware` entry point mounts on a [`remix`](https://www.npmjs.com/package/remix) v3 router.
 
 ## Usage
 
-### Counting An Attempt
+### Count an attempt
 
-An adapter needs no request, so jobs, queue consumers, and outbound-call budgets use it directly. Windows are [`DurationInput`](https://www.npmjs.com/package/@sdxc/duration) values, and failures come back as a [`Result`](https://www.npmjs.com/package/@sdxc/result) rather than an exception.
+An adapter needs no request, so a job, a queue consumer or an outbound-call budget uses it
+directly.
 
 ```typescript
 import { MemoryAdapter } from "@sdxc/rate-limit";
@@ -29,25 +32,33 @@ import { isSuccess } from "@sdxc/result";
 
 let adapter = new MemoryAdapter({ limit: 100, window: "1 minute" });
 
-let result = await adapter.consume(`alerts:${teamId}`);
-if (isSuccess(result) && !result.data.allowed) return skipDelivery();
+async function sendAlert(teamId: string) {
+	let result = await adapter.consume(`alerts:${teamId}`);
+	if (isSuccess(result) && !result.data.allowed) return; // over budget until result.data.reset
+	await deliverAlert(teamId);
+}
 ```
 
-### Limiting Routes
+### Limit a router
 
-Every request in scope is counted before the handler runs, and the response carries the quota it saw.
+`rateLimit` counts every request in scope before the handler runs and writes the quota onto the
+response. `key` says what one budget belongs to: an authenticated identity is the strongest
+choice — a token id, a client id, a tenant.
 
 ```typescript
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { createRouter } from "remix/router";
 
-router.use(
-	rateLimit({
-		adapter: new CloudflareAdapter(env.TOKEN_RATE_LIMITER, { limit: 20, window: "1 minute" }),
-		prefix: "token",
-		key: (context) => context.request.headers.get("X-Client-Id") ?? "anonymous",
-	}),
-);
+let router = createRouter({
+	middleware: [
+		rateLimit({
+			adapter: new CloudflareAdapter(env.API_RATE_LIMITER, { limit: 20, window: "1 minute" }),
+			prefix: "api",
+			key: (context) => context.request.headers.get("X-Client-Id") ?? "anonymous",
+		}),
+	],
+});
 ```
 
 A denied request never reaches the handler:
@@ -62,201 +73,179 @@ Retry-After: 37
 {"error":"too_many_requests","error_description":"Rate limit exceeded. Please try again later."}
 ```
 
-`key` says what one budget belongs to, and every registration states it. There is no default,
-because the wrong answer is expensive in both directions: too broad a key lets one caller
-spend another's budget, and a key the caller controls lets it mint fresh budgets. An identity
-the request already authenticated is the strongest choice — a token id, a client id, a tenant.
-An anonymous endpoint has the connecting address, which Cloudflare reports in the
-`CF-Connecting-IP` header. Parse it with
-[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) and key on it with
-`addressKey`, which widens an IPv6 address to its `/64`, since an IPv6 client holds a whole
-`/64` and rotates through it:
+### Key anonymous callers by address
+
+An anonymous endpoint keys on the connecting address. `addressKey` keeps an IPv4 address whole
+and widens an IPv6 address to its `/64`, since one IPv6 client holds a whole `/64`; a missing
+address lands in one shared `"unknown"` bucket.
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
-import { addressKey } from "@sdxc/rate-limit";
+import { addressKey, MemoryAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 
-rateLimit({
-	adapter,
+let limiter = rateLimit({
+	adapter: new MemoryAdapter({ limit: 60, window: "1 minute" }),
 	prefix: "public",
 	key: (context) => addressKey(getClientIP(context.request)),
 });
 ```
 
-A request you cannot identify, or one whose header is not an address, lands in one shared
-`"unknown"` bucket, so it still spends something. Callers sharing an egress address then
-share a budget, which is the cost of keying on an address at all.
+### Answer a denial yourself
+
+Outside the middleware, `tooManyRequests` builds the `429` with the same quota fields, and
+`applyRateLimitHeaders` writes them onto any other response.
+
+```typescript
+import { applyRateLimitHeaders, MemoryAdapter, tooManyRequests } from "@sdxc/rate-limit";
+import { isFailure } from "@sdxc/result";
+
+let adapter = new MemoryAdapter({ limit: 5, window: "10 seconds" });
+
+async function handle(request: Request, clientId: string): Promise<Response> {
+	let result = await adapter.consume(`export:${clientId}`);
+	if (isFailure(result)) return runExport(request);
+	if (!result.data.allowed) {
+		return tooManyRequests(result.data, adapter.window, JSON.stringify({ error: "slow_down" }), {
+			headers: { "Content-Type": "application/json" },
+		});
+	}
+	return applyRateLimitHeaders(await runExport(request), result.data, adapter.window);
+}
+```
 
 ## API
 
 ### `Adapter`
 
-The contract every backend implements, and the type a call site programs against. Nothing in it knows about HTTP.
+The contract every backend implements: `limit`, `window`, `consume(key, cost?)` and
+`reset(key)`, both answering a `Result` with a `RateLimitError` failure.
 
-```typescript
-interface Adapter {
-	readonly limit: number;
-	readonly window: DurationInput;
-	consume(key: string, cost?: number): Promise<Result<RateLimitDecision, RateLimitError>>;
-	reset(key: string): Promise<Result<void, RateLimitError>>;
-}
-```
-
-`consume` spends `cost` units of the key's budget, defaulting to 1; a cost below 1 or fractional is raised to a whole 1. A denied attempt spends nothing, so a client that keeps hammering a limited key cannot push its own reset further away. Keys are namespaced by the caller, never raw user input alone.
-
-### `RateLimitDecision`
-
-What one `consume` call answers. Every field except `remaining` is always populated, so a caller can report a limit and a reset without knowing which storage produced them.
-
-```typescript
-interface RateLimitDecision {
-	allowed: boolean;
-	limit: number;
-	/** `null` when the backend cannot report it. */
-	remaining: number | null;
-	reset: Date;
-	/** Seconds until the window resets; used for `Retry-After`. */
-	retryAfter: number;
-}
-```
+`consume` spends `cost` units (default 1, raised to a whole number of at least 1) and answers a
+`RateLimitDecision`. A denied attempt spends nothing, so a client hammering a limited key never
+pushes its own reset further away. `reset` clears the key so its next attempt starts a fresh
+budget.
 
 ### Adapters
 
-| Adapter             | Counting                | Accuracy                          | Cost per request | Reports `remaining` |
-| ------------------- | ----------------------- | --------------------------------- | ---------------- | ------------------- |
-| `CloudflareAdapter` | Platform binding        | Per-location, platform-defined    | None             | No                  |
-| `KVAdapter`         | Fixed window in KV      | Approximate under concurrency     | One read + write | Yes                 |
-| `DataTableAdapter`  | Sliding window in SQL   | Exact except for in-flight writes | One write        | Yes                 |
-| `MemoryAdapter`     | Fixed window in process | Exact, per isolate                | None             | Yes                 |
+| Adapter             | Counting                | Accuracy                          | Reports `remaining` | `reset` |
+| ------------------- | ----------------------- | --------------------------------- | ------------------- | ------- |
+| `CloudflareAdapter` | Platform binding        | Per location, platform-defined    | No                  | Fails   |
+| `KVAdapter`         | Fixed window in KV      | Approximate under concurrency     | Yes                 | Yes     |
+| `DataTableAdapter`  | Sliding window in SQL   | Exact except for in-flight writes | Yes                 | Yes     |
+| `MemoryAdapter`     | Fixed window in process | Exact, per isolate                | Yes                 | Yes     |
 
-The choice belongs per endpoint: a fixed window frees every client's budget at once, while a sliding one frees it gradually, so the same limit behaves differently on each.
+A fixed window frees every client's budget at once; a sliding one frees it gradually.
 
 #### `new MemoryAdapter({ limit, window })`
 
-Fixed-window counters in a `Map` held by the instance. Counters are per process and per isolate, so this is for tests and local development, not for a deployed limit. `adapter.clear()` drops every counter, keeping one test's traffic out of the next.
+Counters in a `Map` held by the instance, for tests and local development. `clear()` drops every
+counter.
 
 #### `new CloudflareAdapter(binding, { limit, window })`
 
-Wraps a Cloudflare rate limiter binding, which does the counting. The binding answers only `{ success }`, so `limit` and `window` are declared metadata mirroring the binding's own `limit` and `period`: from them the adapter computes `reset` and `retryAfter`, `remaining` stays `null`, and `reset()` always fails because the binding cannot clear a key. Drift between the declared metadata and the binding leaves limiting correct and every header wrong.
-
-A cost above 1 issues that many binding calls and stops at the first refusal, since the binding counts exactly one request per call.
+Counts through a Cloudflare rate limiter binding. `limit` and `window` must match the binding's
+own `limit` and `period`: the adapter derives `reset` and `retryAfter` from them, so a mismatch
+keeps limiting correct and makes every header wrong. A cost above 1 calls the binding once per
+unit.
 
 #### `new KVAdapter(kv, { limit, window, prefix? })`
 
-Fixed-window counters in a Workers KV namespace, keyed `prefix:key:window-start` and expiring through a TTL. `prefix` defaults to `"rate-limit"`, so unrelated limiters can share one namespace. A rollover needs no cleanup: the new window writes a different key and the old entry expires on its own. The counter is read, incremented, and written back, so concurrent requests can double-count. A window shorter than KV's minimum TTL still writes with that minimum, which is harmless because the expired-but-present entry is never read again.
+Fixed-window counters in a Workers KV namespace under `prefix:key:window-start`, expiring by TTL
+(at least KV's 60-second minimum). `prefix` defaults to `"rate-limit"`.
 
 #### `new DataTableAdapter(db, { limit, window })`
 
-Sliding-window counters stored as rows through `remix/data-table`, so the same limiter runs on any dialect the query layer speaks. The window slides with the clock, so there is no shared boundary to stampede, and the rows are inspectable — an admin screen can show who is being limited and why. It costs a write per counted attempt. `db` is a database whose schema includes the `rate_limit_hits` table. Aged-out rows are deleted when their bucket is next consumed, so a bucket that goes quiet keeps its last rows until a periodic sweep removes them.
+Sliding-window counters as rows in `rate_limit_hits` through `remix/data-table`, one row per
+counted attempt. Aged-out rows are deleted when their bucket is next consumed.
 
-#### `rateLimitHits`
+#### `rateLimitHits` and `RATE_LIMIT_HITS_SCHEMA_SQL`
 
-The `table()` definition `DataTableAdapter` queries — `id`, `bucket`, `cost` and `created_at` (epoch milliseconds, so the window is integer arithmetic on every dialect). Exported so a host app can query the rows itself. `RateLimitHitRow` is one loaded row.
+The `table()` definition the adapter queries (`id`, `bucket`, `cost`, `created_at` in epoch
+milliseconds), and the `create table` plus `(bucket, created_at)` index to paste into your own
+migration.
 
-#### `RATE_LIMIT_HITS_SCHEMA_SQL`
+### `rateLimit(options): Middleware`
 
-The `create table` statement for those columns, plus a `create index` over `(bucket, created_at)` in query order, as a string for a host app to paste into its own migration. The package ships the column contract and the queries; the migration belongs to the app.
+From `@sdxc/rate-limit/middleware`. Counts the request before `next()`, refuses it when the
+budget is gone, and writes the decision onto whatever response comes back.
+
+- `adapter`: the backend that counts
+- `key(context)`: what one budget belongs to; required
+- `prefix?`: namespace prepended as `prefix:key`; defaults to a name from registration order, so
+  pass one whenever keys are persisted or inspected
+- `cost?`: units one request spends, a number or a function of the context; defaults to `1`
+- `skip?(context)`: lets a request through uncounted
+- `onLimit?(context, decision)`: builds the denial response; the rate limit headers are added to it
+- `failurePolicy?`: `"open"` (default) lets a request through when the backend cannot answer,
+  `"closed"` refuses it with a `429` carrying no rate limit headers
+
+It logs `rate_limit.exceeded` on a denial and `rate_limit.unavailable` on a backend failure
+through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger); the key stays out of the
+log.
 
 ### `rateLimitHeaders(decision, window): [string, string][]`
 
-Serializes a decision into header name and value pairs, in the order they should be written. `RateLimit` is an RFC 9651 Dictionary and `RateLimit-Policy` an Item with a `w` parameter, both written in canonical form.
+The header pairs for a decision, in write order. A field the backend cannot report is left out,
+and `Retry-After` appears only on a denial.
 
 ```typescript
 rateLimitHeaders(decision, "10 seconds");
 // [["RateLimit", "limit=10, remaining=0, reset=7"], ["RateLimit-Policy", "10;w=10"], ["Retry-After", "7"]]
 ```
 
-A field the adapter cannot compute is left out entirely, so every number that ships is one the backend measured: `remaining` is absent when the decision reports `null`, `RateLimit-Policy` needs a finite limit and a positive window, and `Retry-After` appears only on a denied attempt, since that is the only time "try again" applies. A field holding an Integer beyond 15 digits, which RFC 9651 cannot represent, is left out as well. The result may be empty.
-
 ### `applyRateLimitHeaders(response, decision, window): Response`
 
-Writes those fields onto a response, falling back to an equivalent response when the original's headers reject mutation, as platform-produced responses do.
+Writes those headers onto a response, answering an equivalent copy when its headers are
+immutable.
 
 ### `tooManyRequests(decision, window, body?, init?): Response`
 
-Builds the `429` a denied request answers with, carrying the quota fields the decision
-supports. The decision travels with the response because those fields are what a client
-reads to back off, so no denial this builds can omit them. The status holds against an `init`
-that disagrees, and no media type is added, so the body arrives labelled the way the caller
-labelled it — which is what lets a limited page answer HTML where a limited API answers JSON.
-
-```typescript
-tooManyRequests(decision, adapter.window, JSON.stringify({ error: "too_many_requests" }), {
-	headers: { "Content-Type": "application/json" },
-});
-
-tooManyRequests(decision, adapter.window, "<h1>Slow down</h1>", {
-	headers: { "Content-Type": "text/html" },
-});
-```
-
-The fields it writes are the ones `rateLimitHeaders` would: a number the backend cannot
-report stays absent rather than being invented.
+A `429 Too Many Requests` with the decision's headers. The status always wins over `init`, and
+the body keeps whatever `Content-Type` the caller set.
 
 ### `addressKey(address): string`
 
-The budget key for an anonymous caller's connecting address: the canonical text of the
-network it sits in, a `/32` for IPv4 and a `/64` for IPv6, so every spelling of one address
-and every address in one IPv6 `/64` spend the same budget. A `null` or `undefined` address
-answers `UNKNOWN_ADDRESS_KEY`, the single `"unknown"` bucket every unidentified request shares.
-
-```typescript
-addressKey(getClientIP(request)); // "203.0.113.42/32"
-addressKey(ctx.ip); // "2001:db8:85a3::/64", for any address in that /64
-addressKey(null); // "unknown"
-```
-
-`address` is a `RateLimitAddress`: anything with a `network({ v4, v6 })` method answering a
-range whose text is canonical. The `IP` that
-[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) and
-[`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip) parse is one, and importing this package
-needs neither.
+The budget key for a parsed address: its `/32` (IPv4) or `/64` (IPv6) network in canonical text,
+or `UNKNOWN_ADDRESS_KEY` (`"unknown"`) for `null` or `undefined`. Any value with
+`network({ v4, v6 })`, such as the `IP` from
+[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) or
+[`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip), fits.
 
 ### `RateLimitError`
 
-The failure value adapters report when their backend cannot answer. It carries `backend` (`"memory"`, `"cloudflare"`, `"kv"` or `"data-table"`) and `key` so an outage is diagnosable from one log line, plus the underlying error as `cause`.
+The failure an adapter answers when its backend cannot, with `backend` (`"memory"`,
+`"cloudflare"`, `"kv"` or `"data-table"`), the prefixed `key` and the original error as `cause`.
+It carries no decision: whether to let the request through is the caller's call.
 
-It means "unknown", not "denied": it carries no decision, because whether an unavailable backend lets a request through is the caller's policy.
+### Types
 
-### `RateLimiterBinding` and `RateLimitKVNamespace`
+- `RateLimitDecision`: `allowed`, `limit`, `remaining` (`null` when the backend cannot report it),
+  `reset` (a `Date`) and `retryAfter` (seconds).
+- `FailurePolicy`: `"open" | "closed"`, from `./middleware`.
+- `RateLimiterBinding` and `RateLimitKVNamespace`: the slice of a rate limiter binding and a KV
+  namespace the adapters use, so a real binding or a test double fits.
+- `RateLimitAddress`: what `addressKey` accepts. `RateLimitHitRow`: one loaded
+  `rate_limit_hits` row. `RateLimitBackend`: the backend names.
+- `MemoryAdapterOptions`, `CloudflareAdapterOptions`, `KVAdapterOptions`,
+  `DataTableAdapterOptions`, `RateLimitErrorOptions` and, from `./middleware`,
+  `RateLimitMiddlewareOptions`.
 
-The parts of a rate limiter binding (`limit({ key })`, answering `{ success }`) and of a KV namespace (`get`, `put` with `expirationTtl`, `delete`) the adapters use, declared structurally so a test can pass a double and importing this package needs no platform types.
+## Pattern: One Limiter Per Protected Surface
 
-### `rateLimit(options): Middleware`
-
-From `@sdxc/rate-limit/middleware`. Counts the request before `next()`, refuses it when the budget is gone, and annotates whatever response comes back with the decision.
-
-- `adapter`: Backend that counts the attempts and owns the policy
-- `key`: Derives the identifier to limit on from the context. Required
-- `prefix?`: Namespace for this registration's keys, prepended as `prefix:key`; defaults to a name derived from registration order
-- `cost?`: Budget units one request spends, as a number or a function of the context; defaults to `1`
-- `skip?`: Predicate for requests to let through without counting
-- `onLimit?`: Builds the response for a denied request, replacing the default JSON body and its media type; the headers are applied to it either way
-- `failurePolicy?`: `"open"` (default) or `"closed"`, applied when the backend cannot answer
-
-The limited key stays out of the log, since it may carry a token or a client identifier; the limit, the remaining budget, and a `rate_limit.exceeded` warning are recorded.
-
-### `FailurePolicy`
-
-`"open" | "closed"` — what happens when the backend cannot answer.
-
-### Option Types
-
-Each constructor's options ship as a named type — `MemoryAdapterOptions`, `CloudflareAdapterOptions`, `KVAdapterOptions`, `DataTableAdapterOptions`, `RateLimitMiddlewareOptions` from `./middleware` — alongside `RateLimitErrorOptions` and `RateLimitBackend`, the closed union of backend names a `RateLimitError` reports.
-
-## Pattern: One Registration Per Protected Surface
-
-Each limit is a registration, so the policy lives next to the routes it protects instead of inside them. Keys are prefixed per registration, so two limiters over one backend keep independent counters even when they derive the same key.
+Each registration has its own prefix, so two limiters over one backend keep separate counters
+even when they derive the same key.
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { createRouter } from "remix/router";
 
 let tokenLimiter = rateLimit({
 	adapter: new CloudflareAdapter(env.TOKEN_RATE_LIMITER, { limit: 20, window: "1 minute" }),
 	prefix: "token",
-	key: (context) => context.get(ClientId),
+	key: (context) => context.request.headers.get("X-Client-Id") ?? "anonymous",
 });
 
 let loginLimiter = rateLimit({
@@ -264,28 +253,124 @@ let loginLimiter = rateLimit({
 	prefix: "login",
 	key: (context) => addressKey(getClientIP(context.request)),
 });
+
+let router = createRouter();
+router.map(routes.token, { middleware: [tokenLimiter], handler: issueToken });
+router.map(routes.login, { middleware: [loginLimiter], handler: logIn });
 ```
 
-Pass an explicit `prefix` whenever the keys are persisted or inspected. The default is derived from registration order, which is stable within a process but says nothing useful in a KV browser or a SQL query.
+## Pattern: Weighted Costs, Exemptions And An HTML Denial
 
-## Pattern: Failing Closed On A Surface That Must Not Leak
+`cost` charges expensive requests more, `skip` exempts trusted ones, and `onLimit` answers a page
+instead of JSON while the middleware still adds the headers.
 
-The default is fail open, so a storage outage cannot lock every client out. A surface where an uncounted request is worse than a refused one flips the policy per registration.
+```typescript
+import { KVAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
+
+let searchLimiter = rateLimit({
+	adapter: new KVAdapter(env.RATE_LIMITS, { limit: 100, window: "1 hour", prefix: "search" }),
+	prefix: "search",
+	key: (context) => context.request.headers.get("X-Account-Id") ?? "anonymous",
+	cost: (context) => (new URL(context.request.url).searchParams.has("export") ? 10 : 1),
+	skip: (context) => context.request.headers.get("X-Health-Check") === "1",
+	onLimit: (_context, decision) =>
+		new Response(`<h1>Slow down</h1><p>Try again in ${decision.retryAfter} seconds.</p>`, {
+			status: 429,
+			headers: { "Content-Type": "text/html" },
+		}),
+});
+```
+
+## Pattern: Failing Closed
+
+The default lets traffic through when the backend is down, so an outage never locks every
+client out. A surface where an uncounted request is worse than a refused one flips it.
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
-import { addressKey } from "@sdxc/rate-limit";
+import { addressKey, KVAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
-rateLimit({
-	adapter,
-	prefix: "credentials",
+let passwordResetLimiter = rateLimit({
+	adapter: new KVAdapter(env.RATE_LIMITS, { limit: 5, window: "15 minutes" }),
+	prefix: "password-reset",
 	key: (context) => addressKey(getClientIP(context.request)),
 	failurePolicy: "closed",
 });
 ```
 
-Either way the outage is logged as `rate_limit.unavailable` with the backend and the policy that was applied, so the log says whether traffic was let through. A fail-closed refusal carries no rate limit headers, because there is no decision to describe.
+The `rate_limit.unavailable` log entry names the backend and the policy applied, so the log
+says whether traffic flowed.
+
+## Pattern: A Sliding Window In SQL
+
+`DataTableAdapter` runs on any database `remix/data-table` speaks, and its rows can be queried
+to show who is being limited. Add the schema to a migration, and sweep buckets that went quiet,
+since rows are pruned only when their bucket is consumed again.
+
+```typescript
+import { DataTableAdapter, RATE_LIMIT_HITS_SCHEMA_SQL, rateLimitHits } from "@sdxc/rate-limit";
+import { eq, lt } from "remix/data-table";
+
+// migrations/0007_rate_limit_hits.sql holds RATE_LIMIT_HITS_SCHEMA_SQL verbatim
+
+let adapter = new DataTableAdapter(db, { limit: 30, window: "1 minute" });
+
+let recent = await db.findMany(rateLimitHits, { where: eq("bucket", "login:203.0.113.42/32") });
+
+await db.deleteMany(rateLimitHits, { where: lt("created_at", Date.now() - 60_000) });
+```
+
+## Pattern: Lifting A Limit After Success
+
+`reset` clears a key, so a successful login can forgive the failed attempts before it.
+
+```typescript
+import { KVAdapter } from "@sdxc/rate-limit";
+import { isSuccess } from "@sdxc/result";
+
+let failedLogins = new KVAdapter(env.RATE_LIMITS, { limit: 5, window: "15 minutes" });
+
+async function logIn(email: string, password: string): Promise<Response> {
+	let key = `login:${email.toLowerCase()}`;
+	let attempt = await failedLogins.consume(key);
+	if (isSuccess(attempt) && !attempt.data.allowed) return new Response(null, { status: 429 });
+
+	if (!(await verifyPassword(email, password))) return new Response(null, { status: 401 });
+
+	await failedLogins.reset(key);
+	return startSession(email);
+}
+```
+
+## Pattern: Testing A Limited Route
+
+`MemoryAdapter` counts exactly within one process, and `clear()` keeps one test's traffic
+out of the next.
+
+```typescript
+import { MemoryAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { createRouter } from "remix/router";
+import { afterEach, expect, test } from "vitest";
+
+let adapter = new MemoryAdapter({ limit: 2, window: "1 minute" });
+let router = createRouter({
+	middleware: [rateLimit({ adapter, prefix: "test", key: () => "client" })],
+});
+router.get("/", () => new Response("ok"));
+
+afterEach(() => adapter.clear());
+
+test("the third request is refused", async () => {
+	await router.fetch(new Request("https://example.com/"));
+	await router.fetch(new Request("https://example.com/"));
+	let response = await router.fetch(new Request("https://example.com/"));
+	expect(response.status).toBe(429);
+	expect(response.headers.get("RateLimit-Policy")).toBe("2;w=60");
+});
+```
 
 ## Versioning
 
