@@ -4,31 +4,31 @@ Seeded and system random streams with integer, float, pick and shuffle draws, an
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/random
 ```
 
-The main entry point has no dependencies. `@sdxc/random/schema` exports `RANDOM_STATE_SCHEMA`, a [`remix/data-schema`](https://www.npmjs.com/package/remix) schema; install `remix` to use it.
+The main entry point has no dependencies. The `@sdxc/random/schema` entry point needs [`remix`](https://www.npmjs.com/package/remix) for `remix/data-schema`.
 
 ## Usage
 
-### Rolling From A Seed
+### Roll from a seed
 
 ```typescript
 import { createRandom } from "@sdxc/random";
 
 let dice = createRandom("battle-42");
 
-dice.int(1, 6); // the same six numbers, in the same order, on every run
+dice.int(1, 6); // the same values, in the same order, on every run
 dice.float(0.85, 1);
 dice.bool(0.1);
 dice.pick(["rock", "paper", "scissors"]);
 dice.shuffle([1, 2, 3, 4, 5]);
 ```
 
-### Accepting Randomness In Your Own API
+### Accept randomness in your own API
 
-Declare the parameter as `Random` and default it to `systemRandom()`. Production passes nothing, and a test passes a seeded stream instead of stubbing `Math.random`.
+Type the parameter as `Random` and default it to `systemRandom()`. Production passes nothing; a test passes a seeded stream instead of stubbing `Math.random`.
 
 ```typescript
 import type { Random } from "@sdxc/random";
@@ -39,13 +39,13 @@ function shouldSample(rate: number, random: Random = systemRandom()): boolean {
 	return random.bool(rate);
 }
 
-shouldSample(0.1); // crypto-backed
+shouldSample(0.1); // Web Crypto backed
 shouldSample(0.1, createRandom("sampler-test")); // reproducible
 ```
 
-### Saving And Resuming A Stream
+### Save and resume a stream
 
-`state()` is plain JSON. `restoreRandom` continues from the next draw the original would have taken.
+`state()` is plain JSON, and `restoreRandom` continues with the draw the original would have taken next.
 
 ```typescript
 import { createRandom, restoreRandom } from "@sdxc/random";
@@ -59,9 +59,9 @@ let resumed = restoreRandom(JSON.parse(saved));
 resumed.int(1, 100) === encounters.int(1, 100); // true
 ```
 
-### Independent Streams From One Seed
+### Split one seed into independent streams
 
-`derive(label)` opens a stream seeded from the parent's seed and the label, so extra draws in one part of a program never shift the values another part sees.
+`derive(label)` opens a stream seeded from the parent's seed and the label, so extra draws in one part of a program leave the values of another part unchanged.
 
 ```typescript
 import { createRandom, systemSeed } from "@sdxc/random";
@@ -76,56 +76,64 @@ let loot = session.derive("loot");
 
 ### `createRandom(seed: Seed): SeededRandom`
 
-Open a stream on a seed. The same seed produces the same values in the same order on any machine; `42` and `"42"` name the same stream.
+Opens a stream on a seed. The same seed produces the same values in the same order on any machine; `42` and `"42"` name the same stream.
 
 ### `restoreRandom(state: RandomState): SeededRandom`
 
-Rebuild a stream from a `state()` snapshot, positioned exactly where the snapshot was taken.
+Rebuilds a stream from a `state()` snapshot, positioned exactly where the snapshot was taken.
 
 ### `systemRandom(): Random`
 
-An unseeded stream drawing from `crypto.getRandomValues`, for jitter, sampling and short tie-breakers. It has no seed and no state, so it cannot be replayed. Use Web Crypto directly, or a token library, for keys and secrets.
+An unseeded stream drawing from `crypto.getRandomValues`, for jitter, sampling and tie-breakers. It has no seed or state, so it never replays. Generate keys and secrets with Web Crypto directly.
 
 ### `systemSeed(): number`
 
-A fresh 32-bit seed from `crypto.getRandomValues`. Log it, and the run replays by passing it back to `createRandom`.
+A fresh 32-bit seed from `crypto.getRandomValues`. Log it, and passing it back to `createRandom` replays the run.
 
-### `RANDOM_STATE_SCHEMA` from `@sdxc/random/schema`
+### `RANDOM_STATE_SCHEMA: Schema<unknown, RandomState>`
 
-A `remix/data-schema` schema for a `RandomState` read from storage. It checks the seed's type and that each of the four words is an unsigned 32-bit integer.
+From `@sdxc/random/schema`. A `remix/data-schema` schema for a `RandomState` read from storage: the seed is a string or number, and each of the four words is an unsigned 32-bit integer.
 
-### `Random`
+### Types
+
+#### `Random`
 
 The draws every stream offers:
 
 - `next()`: the raw draw, in `[0, 1)`
-- `int(min, max)`: an integer with both ends included; throws `RangeError` on non-integer bounds or `max < min`
+- `int(min, max)`: an integer with both ends included; throws `RangeError` when a bound is not a safe integer or `max < min`
 - `float(min = 0, max = 1)`: a number in `[min, max)`
 - `bool(chance = 0.5)`: `true` with probability `chance`
 - `pick(items)`: one element, each equally likely; throws `RangeError` on an empty list
-- `shuffle(items)`: a shuffled copy, leaving the input untouched
+- `shuffle(items)`: a shuffled copy, leaving the input in its order
 
-### `SeededRandom`
+#### `SeededRandom`
 
-A `Random` with `seed`, `derive(label)` and `state()`.
+A `Random` plus `seed`, `derive(label: string): SeededRandom` and `state(): RandomState`.
 
-### `Seed` and `RandomState`
+#### `Seed`
 
-`Seed` is `number | string`. `RandomState` is `{ seed, words }`, where `words` holds the generator's four unsigned 32-bit words.
+`number | string`.
 
-## Pattern: A Reproducible Fuzz Run
+#### `RandomState`
 
-Draw a fresh seed per run unless one is supplied, and name the suite after it, so a failure reports the number that replays it.
+`{ seed: Seed; words: [number, number, number, number] }`, the seed and the generator's four unsigned 32-bit words.
+
+## Pattern: A Reproducible Fuzz Test
+
+Draw a fresh seed per run unless one is supplied, and put it in the suite name, so a failure reports the number that replays it.
 
 ```typescript
 import { createRandom, systemSeed } from "@sdxc/random";
 import { describe, expect, test } from "vitest";
 
-const SEED = Number(process.env.FUZZ_SEED) || systemSeed();
+import { parseCron } from "./cron.js";
 
-describe(`cron parsing (FUZZ_SEED=${SEED})`, () => {
+let seed = Number(process.env.FUZZ_SEED) || systemSeed();
+
+describe(`cron parsing (FUZZ_SEED=${seed})`, () => {
 	test("every generated expression parses", () => {
-		let random = createRandom(SEED);
+		let random = createRandom(seed);
 
 		for (let index = 0; index < 1000; index++) {
 			let minute = random.int(0, 59);
@@ -137,11 +145,39 @@ describe(`cron parsing (FUZZ_SEED=${SEED})`, () => {
 });
 ```
 
-`parseCron` is the function under test.
+## Pattern: Stable Procedural Generation
+
+Give each feature of a generated world its own derived stream. Adding a draw to the terrain generator later keeps every existing world's loot exactly as it was.
+
+```typescript
+import type { Random } from "@sdxc/random";
+
+import { createRandom } from "@sdxc/random";
+
+function terrain(random: Random): string[] {
+	return Array.from({ length: 8 }, () => random.pick(["plains", "forest", "hills", "lake"]));
+}
+
+function loot(random: Random): { gold: number; items: string[] } {
+	let gold = random.int(10, 100);
+	let items = random.shuffle(["sword", "shield", "potion", "map"]).slice(0, random.int(1, 3));
+	return { gold, items };
+}
+
+function generateWorld(seed: string) {
+	let world = createRandom(seed);
+	return {
+		terrain: terrain(world.derive("terrain")),
+		loot: loot(world.derive("loot")),
+	};
+}
+
+generateWorld("world-7"); // identical output for "world-7" on every machine
+```
 
 ## Pattern: Persisting A Simulation
 
-Store each stream's state next to the world it shaped, and validate it on load, since a save file is untrusted input.
+Store the stream's state next to the data it shaped, and validate it on load, since a save file is untrusted input.
 
 ```typescript
 import * as s from "remix/data-schema";
@@ -149,7 +185,7 @@ import * as s from "remix/data-schema";
 import { createRandom, restoreRandom } from "@sdxc/random";
 import { RANDOM_STATE_SCHEMA } from "@sdxc/random/schema";
 
-const SAVE_SCHEMA = s.object({ turn: s.number(), random: RANDOM_STATE_SCHEMA });
+let saveSchema = s.object({ turn: s.number(), random: RANDOM_STATE_SCHEMA });
 
 let random = createRandom("campaign");
 let turn = 0;
@@ -159,7 +195,7 @@ function save(): string {
 }
 
 function load(text: string): boolean {
-	let parsed = s.parseSafe(SAVE_SCHEMA, JSON.parse(text));
+	let parsed = s.parseSafe(saveSchema, JSON.parse(text));
 	if (!parsed.success) return false;
 
 	turn = parsed.value.turn;
@@ -168,7 +204,7 @@ function load(text: string): boolean {
 }
 ```
 
-A save that fails the schema leaves the running game as it was, and `load` answers `false` so the caller can say the file was unreadable.
+A save that fails the schema leaves the running simulation untouched, and `load` answers `false`.
 
 ## Versioning
 
