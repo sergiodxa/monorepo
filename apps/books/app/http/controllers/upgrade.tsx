@@ -47,7 +47,12 @@ const MAX_ORDER_PAGES = 5;
  */
 function renderUpgrade(ctx: RequestContext, options: { error?: string; status?: number } = {}) {
 	return ctx.render(
-		<DocumentLayout title={TITLE} description={DESCRIPTION} canonical={seo.canonical(ctx.url)}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={TITLE}
+			description={DESCRIPTION}
+			canonical={seo.canonical(ctx.url)}
+		>
 			<UpgradeView action={routes.upgrade.action.href()} error={options.error} />
 		</DocumentLayout>,
 		options.status ? { status: options.status } : undefined,

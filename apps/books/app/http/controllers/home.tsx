@@ -34,6 +34,7 @@ export function renderHome(
 ) {
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={TITLE}
 			description={seo.site.description}
 			canonical={seo.canonical(ctx.url)}

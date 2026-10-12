@@ -1,15 +1,14 @@
-import type { RemixNode } from "remix/component";
-import type { Renderer } from "remix/middleware/render";
 /**
- * Router context values installed by globally-applied middleware.
- * `bootstrap/app.tsx` installs `formData()` and `renderWith(createHtmlRenderer)`
- * in its global middleware chain; both populate the context through a
- * transform, giving route handlers typed access to `render` and `formData`
- * beyond the router's plain default context.
+ * Router context values installed by the global middleware in `app/initializers/router.tsx`:
+ * `formData()` and Remix's `render()` populate the context through a transform, and this
+ * declaration gives route handlers typed access to `render` and `formData`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { RemixNode } from "remix/component";
+import type { Renderer } from "remix/middleware/render";
 import type {} from "remix/router";
 
 declare module "remix/router" {

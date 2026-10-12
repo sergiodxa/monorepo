@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@pitlane/assets": "0.1.0",
+		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/attribution": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/crypto": "workspace:*",

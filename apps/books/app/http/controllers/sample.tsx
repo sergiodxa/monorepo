@@ -57,7 +57,12 @@ function renderForm(
 	options: { error?: string; status?: number; confirmEmail?: string } = {},
 ) {
 	return ctx.render(
-		<DocumentLayout title={TITLE} description={DESCRIPTION} canonical={seo.canonical(ctx.url)}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={TITLE}
+			description={DESCRIPTION}
+			canonical={seo.canonical(ctx.url)}
+		>
 			<SampleView
 				action={routes.sample.action.href()}
 				confirmEmail={options.confirmEmail}
@@ -101,6 +106,7 @@ async function renderChapter(ctx: RequestContext) {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={TITLE}
 			description={DESCRIPTION}
 			canonical={seo.canonical(ctx.url)}

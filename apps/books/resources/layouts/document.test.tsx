@@ -1,5 +1,5 @@
 /**
- * Covers the asset tags the document shell writes through the renderer production uses: every
+ * Covers the asset tags the document shell writes through the middleware production uses: every
  * page links the stylesheet the asset manifest names, since a build renames it with every
  * change to its contents, and a hydrating page declares the import map before any module.
  *
@@ -7,22 +7,35 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { render, renderWith } from "remix/middleware/render";
+import { assets } from "@sdxc/assets-middleware";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import DocumentLayout from "~/resources/layouts/document";
 
 /** Renders an empty page composed into the document, hydrating it when asked. */
 async function renderPage(hydrates: boolean) {
-	let router = createRouter({ middleware: [render({ assets }), renderWith(withDocumentAssets)] });
+	let router = createRouter({
+		middleware: [
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
+		],
+	});
 
 	router.get("/", (ctx) =>
 		ctx.render(
-			<DocumentLayout title="Books" canonical="https://books.test/" hydrates={hydrates}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title="Books"
+				canonical="https://books.test/"
+				hydrates={hydrates}
+			>
 				<main />
 			</DocumentLayout>,
 		),

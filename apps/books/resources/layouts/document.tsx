@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { SchemaOrg } from "@sdxc/seo";
 import type { Handle, RemixNode } from "remix/component";
 
@@ -19,8 +20,6 @@ import { dark } from "@sdxc/u/responsive";
 import { minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
-
-import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
 import { OG_IMAGE_URL, seo } from "~/app/initializers/seo";
 
@@ -39,15 +38,6 @@ import "~/resources/css/highlight.css";
  */
 const CF_BEACON_TOKEN = "4037e619e61b4e5a894789c3c98da9ab";
 
-/**
- * Hands the document the assets the renderer looked up, which it reads where a component
- * cannot await them itself.
- */
-export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
-	handle.context.set(handle.props.value);
-	return () => handle.props.children;
-}
-
 namespace DocumentLayout {
 	export interface Props {
 		/**
@@ -55,6 +45,8 @@ namespace DocumentLayout {
 		 * column so each section can cap its own width without a wrapper element.
 		 */
 		children: RemixNode;
+		/** The stylesheets and client entry the request resolved, passed as `ctx.assets`. */
+		assets: DocumentAssets;
 		/** The document title. */
 		title: string;
 		/** Meta description for this page. Falls back to the site's default. */
@@ -84,6 +76,7 @@ namespace DocumentLayout {
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let {
+			assets,
 			canonical,
 			children,
 			description,
@@ -93,7 +86,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			schema,
 			title,
 		} = handle.props;
-		let { script, stylesheets } = handle.context.get(DocumentAssets);
+		let { script, stylesheets } = assets;
 
 		return (
 			<html lang="en" class="system" mix={[colorScheme("light dark")]}>

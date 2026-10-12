@@ -130,6 +130,7 @@ export default createAction(routes.release, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={TITLE}
 			description={DESCRIPTION}
 			canonical={canonical}

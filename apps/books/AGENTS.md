@@ -110,13 +110,16 @@ would link both copies.
 
 ## Assets
 
-The document links its stylesheets and the client entry through `documentAssets()` in
-`app/initializers/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes. A build
+The router's `assets(assetResolver, …)` middleware (`@sdxc/assets-middleware`) resolves the
+document's stylesheets and client entry once per request through the resolver in
+`app/initializers/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes, and
+publishes them as `ctx.assets`. Every page passes them to its layout explicitly:
+`<DocumentLayout assets={ctx.assets} …>`; a helper without `ctx` takes them as an argument. A build
 hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a
 file the next build renames. A stylesheet joins by a side-effect `import "….css"` in
-`resources/layouts/document.tsx`, in cascade order. The renderer in `app/http/render.tsx` looks the assets up per
-render, since a Worker may not await at module scope; tests read the fixed manifest in
-`app/test/assets-manifest.ts`, aliased in the root Vitest config.
+`resources/layouts/document.tsx`, in cascade order. A test rendering pages through its own router
+installs `assets(...)` too; tests read the fixed manifest in `app/test/assets-manifest.ts`,
+aliased in the root Vitest config.
 
 ## Cross-origin protection
 

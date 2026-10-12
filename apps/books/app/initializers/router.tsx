@@ -1,7 +1,7 @@
 /**
  * The books fetch-router: the global middleware stack (async context, request logging and
  * tracing, campaign attribution, form data, cross-origin protection, billing, newsletter,
- * HTML rendering) and every route mapped onto its controller. The worker builds it per
+ * document assets, HTML rendering) and every route mapped onto its controller. The worker builds it per
  * request and the router tests build the same one over an in-memory platform and list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,6 +11,7 @@
 import type { Billing } from "@sdxc/billing";
 import type { Newsletter } from "@sdxc/newsletter";
 
+import { assets } from "@sdxc/assets-middleware";
 import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -22,12 +23,11 @@ import { trace } from "@sdxc/trace-context/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
-import { render, renderWith } from "remix/middleware/render";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { attributionCookie } from "~/app/initializers/cookies";
 import { logger } from "~/app/initializers/logger";
@@ -71,8 +71,16 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 
 			billing({ provider }),
 			newsletter({ provider: list }),
-			render({ assets }),
-			renderWith(withDocumentAssets),
+
+			/**
+			 * Resolves the document's stylesheets and client entry once per request, as
+			 * `ctx.assets`, which every page hands its document layout.
+			 */
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
 		],
 		defaultHandler,
 	});

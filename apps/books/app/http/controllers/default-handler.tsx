@@ -16,11 +16,12 @@ import NotFoundView from "~/resources/views/not-found";
  * Renders the 404 document for unmatched routes. Takes only the members it reads, since the
  * router infers its context from the very options this handler is passed in.
  */
-export default function defaultHandler(ctx: Pick<RequestContext, "render" | "url">) {
+export default function defaultHandler(ctx: Pick<RequestContext, "assets" | "render" | "url">) {
 	let description = "The requested page could not be found.";
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title="404"
 			description={description}
 			canonical={seo.canonical(ctx.url)}
