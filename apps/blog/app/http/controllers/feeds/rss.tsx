@@ -62,8 +62,8 @@ export default createController(routes.rss, {
 		/** The whole site's activity, glossary terms included, in one timeline. */
 		async feed(ctx) {
 			let self = new URL(routes.rss.feed.href(), ctx.url).toString();
-			let entries = await syndicationEntries(ctx.models, ctx.url, "feed");
-			return rssResponse(self, syndicationChannel("feed", ctx.url), entries);
+			let entries = await syndicationEntries(ctx.models, ctx.url);
+			return rssResponse(self, syndicationChannel(ctx.url), entries);
 		},
 
 		/**

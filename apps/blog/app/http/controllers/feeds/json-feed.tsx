@@ -71,8 +71,8 @@ export default createController(routes.jsonFeed, {
 		/** The whole site's activity, glossary terms included, in one timeline. */
 		async feed(ctx) {
 			let self = new URL(routes.jsonFeed.feed.href(), ctx.url).toString();
-			let entries = await syndicationEntries(ctx.models, ctx.url, "feed");
-			return jsonFeedResponse(self, syndicationChannel("feed", ctx.url), entries, ctx.url.origin);
+			let entries = await syndicationEntries(ctx.models, ctx.url);
+			return jsonFeedResponse(self, syndicationChannel(ctx.url), entries, ctx.url.origin);
 		},
 
 		/**

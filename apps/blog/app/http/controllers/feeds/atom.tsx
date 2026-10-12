@@ -76,8 +76,8 @@ export default createController(routes.atom, {
 		/** The whole site's activity, glossary terms included, in one timeline. */
 		async feed(ctx) {
 			let self = new URL(routes.atom.feed.href(), ctx.url).toString();
-			let entries = await syndicationEntries(ctx.models, ctx.url, "feed");
-			return atomResponse(self, syndicationChannel("feed", ctx.url), entries, ctx.url.origin);
+			let entries = await syndicationEntries(ctx.models, ctx.url);
+			return atomResponse(self, syndicationChannel(ctx.url), entries, ctx.url.origin);
 		},
 
 		/**

@@ -17,12 +17,17 @@ import { respond } from "@sdxc/well-known/response";
 import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
 import { createController } from "remix/router";
 
+import { POST_KINDS } from "~/app/models/kinds";
 import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
 /** The kinds' topics whose feeds WebFinger advertises beside the site's own, in all three formats. */
-const FEED_TOPICS = ["articles", "tutorials", "bookmarks"] as const;
+const FEED_TOPICS = [
+	POST_KINDS.article.topic,
+	POST_KINDS.tutorial.topic,
+	POST_KINDS.bookmark.topic,
+] as const;
 
 /** The site's feed and each advertised topic's, as RSS, Atom and JSON Feed paths. */
 function feedPaths(): Array<{ rss: string; atom: string; json: string }> {

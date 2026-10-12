@@ -282,9 +282,9 @@ export function topicFeeds(topic: Pick<SelectTopic, "slug">): TopicViewModel.Fee
 function feedEntry(post: TopicPost, base: URL): Syndication.Entry {
 	switch (post.kind) {
 		case "article":
-			return pageEntry(post.post, "articles", base);
+			return pageEntry(post.post, "article", base);
 		case "tutorial":
-			return pageEntry(post.post, "tutorials", base);
+			return pageEntry(post.post, "tutorial", base);
 		case "bookmark":
 			return bookmarkEntry(post.post);
 		case "glossary":

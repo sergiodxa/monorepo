@@ -1,7 +1,7 @@
 /**
- * View model for the syndication feeds. Describes each feed stream's channel and loads
- * its published items into one format-neutral, newest-first entry list, so the RSS, Atom,
- * and JSON Feed documents for a stream carry the same items with the same links.
+ * View model for the syndication feeds. Describes the site feed's channel, loads its published
+ * items, and builds each kind's entry, so the RSS, Atom, and JSON Feed documents of the site
+ * and of every topic carry the same items with the same links.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,17 +15,12 @@ import type { Note } from "~/app/models/notes";
 import type { Til } from "~/app/models/tils";
 import type { Tutorial } from "~/app/models/tutorials";
 
+import { POST_KINDS } from "~/app/models/kinds";
 import { bookmarkLabel, noteTitle, plainText } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /** Type contracts shared by the feed controllers. */
 export namespace Syndication {
-	/**
-	 * A feed's content: `feed` is the whole site, notes, TILs and glossary terms included;
-	 * the others carry one content type each.
-	 */
-	export type Stream = "feed" | "articles" | "tutorials" | "bookmarks";
-
 	/** A feed's own metadata, identical across formats. */
 	export interface Channel {
 		title: string;
@@ -54,74 +49,48 @@ export namespace Syndication {
 }
 
 /**
- * The channel metadata for a stream, with `home` resolved against the request.
+ * The site feed's channel metadata, with `home` resolved against the request.
  *
- * @param stream The feed's content stream.
  * @param base The request URL.
  */
-export function syndicationChannel(stream: Syndication.Stream, base: URL): Syndication.Channel {
-	switch (stream) {
-		case "feed":
-			return {
-				title: "Sergio Xalambrí",
-				description:
-					"Articles, tutorials, notes, TILs, bookmarks, and glossary terms by Sergio Xalambrí.",
-				home: base.origin,
-			};
-		case "articles":
-			return {
-				title: "Articles — Sergio Xalambrí",
-				description: "Articles by Sergio Xalambrí.",
-				home: new URL(routes.articles.href(), base).toString(),
-			};
-		case "tutorials":
-			return {
-				title: "Tutorials — Sergio Xalambrí",
-				description: "Tutorials by Sergio Xalambrí.",
-				home: new URL(routes.tutorials.href(), base).toString(),
-			};
-		case "bookmarks":
-			return {
-				title: "Bookmarks — Sergio Xalambrí",
-				description: "Bookmarks by Sergio Xalambrí.",
-				home: new URL(routes.bookmarks.href(), base).toString(),
-			};
-	}
+export function syndicationChannel(base: URL): Syndication.Channel {
+	return {
+		title: "Sergio Xalambrí",
+		description:
+			"Articles, tutorials, notes, TILs, bookmarks, and glossary terms by Sergio Xalambrí.",
+		home: base.origin,
+	};
 }
 
 /**
- * Loads a stream's public items, newest first, querying only the content types the stream
- * carries. Future-dated articles and tutorials stay out, following `isPublishedAt`.
+ * Loads every public item of the site feed, newest first. Future-dated posts stay out,
+ * following `isPublishedAt`.
  *
- * @param db The tenant database.
+ * @param models The request's models.
  * @param base The request URL, which item links resolve against.
- * @param stream The feed's content stream.
  * @returns The entries, sorted by publish date descending.
  */
 export async function syndicationEntries(
 	models: BlogModels,
 	base: URL,
-	stream: Syndication.Stream,
 ): Promise<Syndication.Entry[]> {
-	let carries = (type: Syndication.Stream) => stream === "feed" || stream === type;
-
 	let [articles, tutorials, likes, glossary, notes, tils, releases] = await Promise.all([
-		carries("articles") ? models.articles.findAll({ includePreview: false }) : [],
-		carries("tutorials") ? models.tutorials.findAll({ includePreview: false }) : [],
-		carries("bookmarks") ? models.likes.findAll() : [],
-		stream === "feed" ? models.glossary.findAll() : [],
-		stream === "feed" ? models.notes.findAll({ includePreview: false }) : [],
-		stream === "feed" ? models.tils.findAll({ includePreview: false }) : [],
-		stream === "feed" ? models.releases.findAll({ includePreview: false }) : [],
+		models.articles.findAll({ includePreview: false }),
+		models.tutorials.findAll({ includePreview: false }),
+		models.likes.findAll(),
+		models.glossary.findAll(),
+		models.notes.findAll({ includePreview: false }),
+		models.tils.findAll({ includePreview: false }),
+		models.releases.findAll({ includePreview: false }),
 	]);
 
 	let entries: Syndication.Entry[] = [];
 
-	for (let [postType, posts] of [
-		["articles", articles],
-		["tutorials", tutorials],
+	for (let [kind, posts] of [
+		["article", articles],
+		["tutorial", tutorials],
 	] as const) {
-		for (let post of posts) entries.push(pageEntry(post, postType, base));
+		for (let post of posts) entries.push(pageEntry(post, kind, base));
 	}
 
 	for (let note of notes) entries.push(noteEntry(note, base));
@@ -134,7 +103,7 @@ export async function syndicationEntries(
 			title: `${release.meta.title} (${release.meta.slug.toUpperCase()})`,
 			summary: plainText(release.meta.content),
 			url: new URL(
-				routes.post.href({ postType: "releases", postSlug: release.meta.slug }),
+				routes.post.href({ postType: POST_KINDS.release.topic, postSlug: release.meta.slug }),
 				base,
 			).toString(),
 			published: iso(release.published_at ?? release.created_at),
@@ -154,15 +123,16 @@ export async function syndicationEntries(
  * that link while it has none.
  *
  * @param post The article or tutorial.
- * @param postType The topic its page lives under.
+ * @param kind Which of the two it is, whose topic its page lives under.
  * @param base The request URL, which the link resolves against.
  */
 export function pageEntry(
 	post: Article | Tutorial,
-	postType: "articles" | "tutorials",
+	kind: "article" | "tutorial",
 	base: URL,
 ): Syndication.Entry {
-	let url = new URL(routes.post.href({ postType, postSlug: post.meta.slug }), base).toString();
+	let path = routes.post.href({ postType: POST_KINDS[kind].topic, postSlug: post.meta.slug });
+	let url = new URL(path, base).toString();
 	return {
 		id: post.id,
 		title: post.meta.title,
@@ -181,7 +151,7 @@ export function pageEntry(
  * @param base The request URL, which the link resolves against.
  */
 export function noteEntry(note: Note, base: URL): Syndication.Entry {
-	let path = routes.post.href({ postType: "notes", postSlug: note.meta.slug });
+	let path = routes.post.href({ postType: POST_KINDS.note.topic, postSlug: note.meta.slug });
 	return {
 		id: note.id,
 		title: noteTitle(note.meta.content),
@@ -199,7 +169,7 @@ export function noteEntry(note: Note, base: URL): Syndication.Entry {
  * @param base The request URL, which the link resolves against.
  */
 export function tilEntry(til: Til, base: URL): Syndication.Entry {
-	let path = routes.post.href({ postType: "til", postSlug: til.meta.slug });
+	let path = routes.post.href({ postType: POST_KINDS.til.topic, postSlug: til.meta.slug });
 	return {
 		id: til.id,
 		title: `TIL ${til.meta.title}`,
