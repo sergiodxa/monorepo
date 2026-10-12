@@ -388,10 +388,10 @@ builders.
 
 ## Current Progress
 
-- [ ] Phase 1: Sharing on X
-- [ ] Phase 2: Search Order
-- [ ] Phase 3: Kind Registry
+- [x] Phase 1: Sharing on X
+- [x] Phase 2: Search Order
+- [x] Phase 3: Kind Registry
 - [ ] Phase 4: Topics
 - [ ] Phase 5: Notes and TILs
 - [ ] Phase 6: Weekly Releases
-- [ ] Phase 7: Footer
+- [x] Phase 7: Footer
