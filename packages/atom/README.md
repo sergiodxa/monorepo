@@ -2,72 +2,61 @@
 
 Atom 1.0 feed parser and builder.
 
-It reads [RFC 4287](https://www.rfc-editor.org/rfc/rfc4287) documents into an `Atom`
-instance and serializes that instance back into XML. It is a faithful reader rather than a
-helpful one: every link keeps its relation, dates stay the text the source held, and an entry
-that omits an author is reported as omitting one.
-
-That matters because Atom leaves several choices to the consumer. Which link is "the" link,
-whether an entry inherits its author from the feed, and how a date should be interpreted are
-decisions a reader makes differently from an archiver. Both get the same complete picture
-here, and pick from it.
-
-Elements outside the Atom namespace are preserved through `extensions`, so a document
-carrying a foreign module survives a read and a write unchanged.
+It reads [RFC 4287](https://www.rfc-editor.org/rfc/rfc4287) documents into an `Atom` instance
+and writes that instance back as XML. Every link keeps its relation, dates stay the text the
+source held, and authors stay where the document put them, so the consumer picks the precedence
+it wants. Elements outside the Atom namespace are kept as `extensions` and survive a round trip.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/atom
 ```
 
-The statics report failures as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and `Atom.fromXML` takes a
-document from [`@sdxc/xml`](https://www.npmjs.com/package/@sdxc/xml). Both install alongside
-this package.
+Parsing answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+and `Atom.fromXML` reads a document from [`@sdxc/xml`](https://www.npmjs.com/package/@sdxc/xml).
+Both install alongside this package.
 
 ## Usage
 
-### Parse A Feed
+### Parse a feed
 
 ```typescript
 import { Atom } from "@sdxc/atom";
 import { isFailure } from "@sdxc/result";
 
-let result = Atom.parse(xml);
+let result = Atom.parse(xml, "https://example.com/feed.xml");
 if (isFailure(result)) throw result.error;
 
 let atom = result.data;
-console.log(atom.feed.title);
+atom.feed.title; // "Example Blog"
 for (let entry of atom.entries) console.log(entry.id, entry.updated);
 ```
 
-Pass the document's own URL as the second argument, and the references the feed leaves
-relative resolve against it:
+The second argument is the document's own URL; relative `href`, `uri`, `src`, `icon` and `logo`
+values resolve against it and any `xml:base` the document declares.
+
+### Fetch a feed
 
 ```typescript
-let result = Atom.parse(xml, "https://example.com/feed.xml");
-```
+import { Atom } from "@sdxc/atom";
+import { isFailure } from "@sdxc/result";
 
-### Fetch A Feed
-
-```typescript
 let result = await Atom.fetch(new URL("https://example.com/feed.xml"));
+if (isFailure(result)) return result.error.message;
 ```
 
-`Atom.fetch` places no constraint on the response's `Content-Type`, because feeds are
-routinely served as `text/xml`, `application/octet-stream`, and worse. Relative references
-resolve against the URL the response finally came from, so a redirected feed still yields
-absolute links.
+Any `Content-Type` is accepted, and relative references resolve against the URL the response
+finally came from, so a redirected feed still yields absolute links.
 
-### Build A Feed
+### Build a feed
 
 ```typescript
 import { Atom } from "@sdxc/atom";
 
 let atom = new Atom({
 	id: "tag:example.com,2026:feed",
-	title: "My Blog",
+	title: "Example Blog",
 	updated: new Date().toISOString(),
 	link: [
 		{ href: "https://example.com/", rel: "alternate", type: "text/html" },
@@ -89,39 +78,41 @@ atom.addEntry({
 let xml = atom.toString();
 ```
 
+The feed and every entry require `id`, `title` and `updated`; the constructor and `addEntry`
+throw an `AtomParseError` naming the first one missing.
+
 ## API
 
 ### `new Atom(feed: Atom.Feed)`
 
-Creates a feed from its metadata, with no entries. RFC 4287 §4.1.1 requires `id`, `title`,
-and `updated`, and an `AtomParseError` is thrown when one is missing.
+Creates a feed from its metadata with no entries. Throws `AtomParseError` when `id`, `title` or
+`updated` is missing.
 
 ### `atom.feed`
 
-The feed-level metadata, as a clone. Assigning a new `Atom.Feed` replaces it and leaves the
-entries in place.
+The feed-level metadata, as a clone. Assigning a new `Atom.Feed` validates and replaces it,
+leaving the entries in place.
 
 ### `atom.entries`
 
 The entries, as clones, in the order they were added.
 
-### `atom.addEntry(entry: Atom.Entry)`
+### `atom.addEntry(entry: Atom.Entry): void`
 
-Appends one entry. Each entry requires `id`, `title`, and `updated`, on the same terms as the
-feed.
+Appends one entry. Throws `AtomParseError` when `id`, `title` or `updated` is missing.
 
-### `atom.removeEntry(id: string)`
+### `atom.removeEntry(id: string): void`
 
-Removes the entry carrying an id. RFC 4287 makes entry ids unique within a feed, so at most
-one entry matches.
+Removes the entry carrying `id`; an unknown id leaves the feed unchanged.
 
-### `atom.toJSON()`
+### `atom.toJSON(): Atom.Document`
 
 Returns `{ feed, entries }` as plain serializable data.
 
-### `atom.toString()`
+### `atom.toString(): string`
 
-Serializes the feed to Atom 1.0 XML.
+Serializes the feed to Atom 1.0 XML with the Atom namespace as the default. Throws
+`AtomStringifyError` when the data cannot form a valid document.
 
 ### `Atom.parse(source: string, base?: string): Result<Atom, AtomParseError>`
 
@@ -129,94 +120,213 @@ Parses XML text, resolving relative references against `base`.
 
 ### `Atom.fromXML(xml: XML, base?: string): Result<Atom, AtomParseError>`
 
-Reads a feed out of an already-parsed document, for a caller that parsed the text for some
-other purpose first.
+Reads a feed out of a document already parsed with `XML.parse`.
 
-### `Atom.fetch(input, init?): Promise<Result<Atom, AtomFetchError | AtomParseError>>`
+### `Atom.fetch(input: URL | RequestInfo, init?: RequestInit): Promise<Result<Atom, AtomFetchError | AtomParseError>>`
 
-Retrieves a document and parses it, so a failed request, an error status, and an unparseable
-body are all values rather than exceptions.
+Retrieves a document with the global `fetch` and parses it. A rejected request or a non-2xx
+status answers `AtomFetchError`; an unparseable body answers `AtomParseError`.
 
 ### Errors
 
-`AtomParseError` reports a document that is not a feed, or metadata missing a required
-field. `AtomFetchError` reports a request that failed or answered with an error status.
-`AtomStringifyError` reports a feed that cannot be written as XML.
+- `AtomParseError`: the document is not an Atom feed, or metadata lacks a required field.
+- `AtomFetchError`: the request failed or answered with an error status.
+- `AtomStringifyError`: the feed cannot be written as XML.
 
-## Reading The Data
+### Types
 
-### Text Constructs
+All types live on the `Atom` namespace. A field that may repeat holds one value when the
+document had one and an array when it had several.
 
-`title`, `subtitle`, `summary`, and `rights` carry a `type` of `text`, `html`, or `xhtml`. A
-construct with no type collapses to a plain string; the other two arrive as
-`{ value, type }`:
+- `Atom.Feed`: feed metadata. `id`, `title` and `updated` are required; `subtitle`, `rights`,
+  `author`, `contributor`, `link`, `category`, `generator`, `icon` and `logo` are optional.
+  `lang` and `base` hold the root's `xml:lang` and `xml:base`, `namespaces` its prefix
+  declarations, and `attributes` any other root attributes.
+- `Atom.Entry`: one entry. `id`, `title` and `updated` are required; it adds `published`,
+  `summary`, `content` and `source`, plus its own `lang` and `base` when they differ from the
+  feed's.
+- `Atom.Text` / `Atom.TextInput`: a text construct, `{ value, type? }` with `type` of `text`,
+  `html` or `xhtml`, or a bare string for plain text.
+- `Atom.Content`: an entry body with any media `type`, an inline `value`, or a `src` for a body
+  held elsewhere.
+- `Atom.Person` (`name`, `uri?`, `email?`), `Atom.Link` (`href`, `rel?`, `type?`, `hreflang?`,
+  `title?`, `length?`), `Atom.Category` (`term`, `scheme?`, `label?`), `Atom.Generator`
+  (`value`, `uri?`, `version?`) and `Atom.Source`, the metadata of the feed an entry was copied
+  from.
+- `Atom.PersonInput`, `Atom.LinkInput`, `Atom.CategoryInput`: one value or an array; a category
+  may be a bare term string.
+- `Atom.Element` / `Atom.Node`: a foreign element `{ name, attributes?, children? }`, kept in
+  the `extensions` array of a feed, entry, person, link, category or source.
+- `Atom.Document`: `{ feed, entries }`, the shape `toJSON` returns.
 
-```typescript
-atom.feed.title; // "My Blog"
-entry.summary; // { value: "<em>Recap</em>", type: "html" }
-```
+## Pattern: Reading Entries For Display
 
-An `xhtml` construct is serialized back into a markup string while parsing, and the `<div>`
-wrapper RFC 4287 requires is dropped, so reading a title never means walking a second tree.
-
-### Links
-
-Every `<link>` is kept with its attributes. RFC 4287 defaults an absent `rel` to
-`alternate`, and that default is left absent rather than filled in, because applying it is a
-reader's concern:
-
-```typescript
-let links = Array.isArray(entry.link) ? entry.link : entry.link ? [entry.link] : [];
-let page = links.find((link) => (link.rel ?? "alternate") === "alternate");
-```
-
-### Dates
-
-`updated` and `published` are the raw RFC 3339 strings the document held, so a malformed date
-is visible to you rather than becoming an `Invalid Date` inside the parser. Convert at the
-point of use:
-
-```typescript
-let publishedAt = new Date(entry.published ?? entry.updated);
-```
-
-### Authors
-
-RFC 4287 §4.1.2 lets an entry omit its author when the feed supplies one, or when `<source>`
-does. All three positions are recorded and no fallback is applied, so a consumer picks the
-precedence it wants:
+Links keep `rel` absent when the document left it out, text constructs arrive as a string or
+`{ value, type }`, dates are the raw RFC 3339 text, and an entry's author may sit on the entry,
+its `source` or the feed. A reader applies the defaults it wants at the point of use.
 
 ```typescript
-let author = entry.author ?? entry.source?.author ?? atom.feed.author;
+import { Atom } from "@sdxc/atom";
+import { isFailure } from "@sdxc/result";
+
+function list<T>(value: T | T[] | undefined): T[] {
+	if (value === undefined) return [];
+	return Array.isArray(value) ? value : [value];
+}
+
+function text(value: Atom.TextInput | undefined): string {
+	if (value === undefined) return "";
+	return typeof value === "string" ? value : value.value;
+}
+
+let result = await Atom.fetch(new URL("https://example.com/feed.xml"));
+if (isFailure(result)) throw result.error;
+
+let atom = result.data;
+let items = atom.entries.map((entry) => {
+	let page = list(entry.link).find((link) => (link.rel ?? "alternate") === "alternate");
+	let author = list(entry.author ?? entry.source?.author ?? atom.feed.author)[0];
+	return {
+		title: text(entry.title),
+		url: page?.href,
+		author: author?.name,
+		publishedAt: new Date(entry.published ?? entry.updated),
+	};
+});
 ```
 
-### Relative References
+An `html` or `xhtml` value is the publisher's markup, unsanitized; escape or sanitize it before
+rendering.
 
-`xml:base` is inherited, and a relative base composes with the one enclosing it. Every
-`href`, `uri`, `src`, `icon`, and `logo` resolves against the base in scope while parsing. A
-reference with no base in scope, or one that cannot form a URL with it, is left as the
-document wrote it.
+## Pattern: Serving A Feed From A Request Handler
 
-### Namespaces
-
-The Atom namespace identifies the format; the prefix a document binds it to does not.
-`<feed xmlns="…">` and `<a:feed xmlns:a="…">` both parse, and an element counts as Atom only
-when its prefix resolves to `http://www.w3.org/2005/Atom`. Anything else is preserved:
+Build the feed from your records and answer it with the Atom media type.
 
 ```typescript
-atom.feed.extensions;
-// [{ name: "media:rating", attributes: { scheme: "urn:simple" }, children: ["adult"] }]
+import { Atom } from "@sdxc/atom";
+
+interface Post {
+	slug: string;
+	title: string;
+	excerpt: string;
+	html: string;
+	publishedAt: Date;
+	updatedAt: Date;
+}
+
+function feedResponse(posts: Post[]): Response {
+	let atom = new Atom({
+		id: "https://example.com/",
+		title: "Example Blog",
+		updated: (posts[0]?.updatedAt ?? new Date()).toISOString(),
+		link: { href: "https://example.com/feed.xml", rel: "self" },
+		author: { name: "Ada Lovelace", uri: "https://example.com/about" },
+		generator: { value: "Example CMS", version: "1.0" },
+	});
+
+	for (let post of posts) {
+		atom.addEntry({
+			id: `https://example.com/posts/${post.slug}`,
+			title: post.title,
+			updated: post.updatedAt.toISOString(),
+			published: post.publishedAt.toISOString(),
+			summary: post.excerpt,
+			content: { type: "html", value: post.html },
+			link: { href: `https://example.com/posts/${post.slug}` },
+			category: ["writing"],
+		});
+	}
+
+	return new Response(atom.toString(), {
+		headers: { "Content-Type": "application/atom+xml; charset=utf-8" },
+	});
+}
 ```
 
-## Notes
+## Pattern: Editing A Feed In Place
 
-1. An `xhtml` text construct re-serializes as `type="html"`. Its value is a markup string by
-   then, and re-parsing it to rebuild a wrapper would fail on any fragment the XML parser
-   rejects, so the payload is kept and the typing narrows.
-2. Text is never sanitized. An `html` or `xhtml` construct holds whatever the publisher
-   wrote, and escaping it is the responsibility of whatever renders it.
-3. `length` on a link parses like the rest of the package's numbers: a non-numeric value
-   reads as `NaN` rather than failing the document.
+Parse an existing document, change its entries and metadata, and write it back. Everything the
+methods leave alone, foreign elements included, comes out as it went in.
+
+```typescript
+import { Atom } from "@sdxc/atom";
+import { isFailure } from "@sdxc/result";
+
+let result = Atom.parse(xml, "https://example.com/feed.xml");
+if (isFailure(result)) throw result.error;
+
+let atom = result.data;
+atom.removeEntry("tag:example.com,2026:post-1");
+atom.addEntry({
+	id: "tag:example.com,2026:post-2",
+	title: { value: "Second <em>post</em>", type: "html" },
+	updated: "2026-05-01T08:00:00Z",
+});
+atom.feed = { ...atom.feed, updated: "2026-05-01T08:00:00Z" };
+
+let updated = atom.toString();
+```
+
+An `xhtml` text construct or body is written back as `html`, carrying the same markup.
+
+## Pattern: Foreign Elements And Namespaces
+
+An element counts as Atom when its prefix resolves to `http://www.w3.org/2005/Atom`, whatever
+the prefix is; every other element lands in `extensions` with its qualified name. To write one,
+declare its prefix in the feed's `namespaces`.
+
+```typescript
+import { Atom } from "@sdxc/atom";
+import { isFailure } from "@sdxc/result";
+
+let atom = new Atom({
+	id: "tag:example.com,2026:podcast",
+	title: "Example Podcast",
+	updated: "2026-04-14T10:30:00Z",
+	namespaces: { media: "http://search.yahoo.com/mrss/" },
+	extensions: [
+		{ name: "media:rating", attributes: { scheme: "urn:simple" }, children: ["nonadult"] },
+	],
+});
+
+atom.addEntry({
+	id: "tag:example.com,2026:episode-1",
+	title: "Episode 1",
+	updated: "2026-04-14T10:30:00Z",
+	link: {
+		href: "https://example.com/episode-1.mp3",
+		rel: "enclosure",
+		type: "audio/mpeg",
+		length: 12345678,
+	},
+	extensions: [{ name: "media:thumbnail", attributes: { url: "https://example.com/1.jpg" } }],
+});
+
+let result = Atom.parse(atom.toString());
+if (isFailure(result)) throw result.error;
+
+result.data.feed.extensions;
+// [{ name: "media:rating", attributes: { scheme: "urn:simple" }, children: ["nonadult"] }]
+```
+
+## Pattern: Parsing An Already-Parsed Document
+
+When the XML is parsed for another purpose first, such as sniffing whether it is Atom or RSS,
+hand the document to `Atom.fromXML` instead of parsing the text twice.
+
+```typescript
+import { Atom } from "@sdxc/atom";
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
+
+let parsed = XML.parse(text);
+if (isFailure(parsed)) throw parsed.error;
+
+let result = Atom.fromXML(parsed.data, "https://example.com/feed.xml");
+if (isFailure(result)) {
+	// not an Atom feed: try another format with parsed.data
+}
+```
 
 ## Versioning
 
