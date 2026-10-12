@@ -100,6 +100,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 		title: "Data & storage",
 		packages: [
 			"data-model",
+			"database-middleware",
 			"cache",
 			"workers-cache",
 			"search",
