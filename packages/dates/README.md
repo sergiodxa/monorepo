@@ -1,28 +1,28 @@
 # @sdxc/dates
 
-Calendar operations over the platform `Date`, with every human-facing string formatted by `Intl` and every time zone passed in explicitly.
+Zone-aware date operations over the platform `Date`, with every human-facing string formatted by `Intl`.
+
+Every operation that answers a calendar question takes its time zone as an argument, and every formatter takes its locale, so a result is always about a stated reader rather than the server's clock.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/dates
 ```
 
-Durations are expressed with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), and the parsers return the `Result` value from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result). Both install alongside this package.
+Durations are written with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), and the parsers return a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result); both install alongside this package.
 
 ## Usage
 
-### Formatting For A Reader
-
-Every formatter takes the locale, and every formatter that renders an instant takes the zone.
+### Format for a reader
 
 ```typescript
 import { formatDate, formatDateTime, formatRelative, formatTime } from "@sdxc/dates";
 
 let publishedAt = new Date("2026-07-29T10:00:00Z");
+let now = new Date("2026-08-01T10:00:00Z");
 let locale = "en-US";
 let timeZone = "America/New_York";
-let now = new Date("2026-08-01T10:00:00Z");
 
 formatDate(publishedAt, { locale, timeZone }); // "Jul 29, 2026"
 formatTime(publishedAt, { locale, timeZone }); // "6:00 AM"
@@ -30,99 +30,68 @@ formatDateTime(publishedAt, { locale, timeZone }); // "Jul 29, 2026 at 6:00 AM"
 formatRelative(publishedAt, { locale, now }); // "3 days ago"
 ```
 
-### Calendar Operations
-
-Operations that answer a calendar question take the zone as a required argument, so the answer is always about a stated calendar.
+### Ask a calendar question in a zone
 
 ```typescript
-import {
-	addMonths,
-	diffInDays,
-	eachDayOfInterval,
-	isSameDay,
-	startOfDay,
-	startOfMonth,
-	toDayKey,
-} from "@sdxc/dates";
+import { addMonths, diffInDays, isSameDay, startOfDay, toDayKey } from "@sdxc/dates";
 
 let timeZone = "America/New_York";
+let instant = new Date("2026-07-29T02:00:00Z");
 
-startOfDay(new Date(), timeZone);
-startOfMonth(new Date(), timeZone);
-addMonths(new Date("2026-01-31T15:00:00Z"), 1, timeZone); // 2026-02-28, same wall-clock time
-isSameDay(a, b, timeZone);
-diffInDays(b, a, timeZone);
-eachDayOfInterval({ start, end }, timeZone);
-toDayKey(new Date("2026-07-29T02:00:00Z"), timeZone); // "2026-07-28"
+toDayKey(instant, timeZone); // "2026-07-28", the day a New York clock shows
+startOfDay(instant, timeZone); // 2026-07-28T04:00:00Z
+addMonths(new Date("2026-01-31T15:00:00Z"), 1, timeZone); // 2026-02-28T15:00:00Z
+isSameDay(instant, new Date("2026-07-28T12:00:00Z"), timeZone); // true
+diffInDays(new Date("2026-07-30T12:00:00Z"), instant, timeZone); // 2
 ```
 
-### Instant Arithmetic
+### Move an instant by a length of time
 
-Operations that move an instant by a fixed length take no zone, because a length of time is the same length everywhere.
+A length of time is the same everywhere, so these take no zone.
 
 ```typescript
-import { add, addDays, elapsed, subtract } from "@sdxc/dates";
+import { add, addDays, elapsed, subtract, toUnixSeconds } from "@sdxc/dates";
 
 let expiresAt = add(new Date(), "30 days");
-let retryAt = add(new Date(), "250ms");
 let cutoff = subtract(new Date(), "1 hour");
 let lastWeek = addDays(new Date(), -7);
+let exp = toUnixSeconds(expiresAt); // a JWT `exp` claim
 
 let startedAt = Date.now();
-await fetchUser(id);
-console.log("finished", elapsed(startedAt)); // milliseconds
+await doWork();
+let tookMs = elapsed(startedAt);
 ```
 
-### A Day Grid
+### Read untrusted input
+
+Parsers return a `Result` instead of throwing or producing an `Invalid Date`.
 
 ```typescript
-import { formatWeekday, groupByWeek, lastNDays } from "@sdxc/dates";
+import { fromDayKey, isValidTimeZone, parseDate } from "@sdxc/dates";
+import { isFailure } from "@sdxc/result";
 
-let timeZone = "America/New_York";
+function readInput(input: { day: string; sentAt: string; timeZone: string }) {
+	let timeZone = isValidTimeZone(input.timeZone) ? input.timeZone : "UTC";
 
-let days = lastNDays(90, { timeZone });
-let weeks = groupByWeek(days, { weekStartsOn: 0, timeZone });
-let headers = [0, 1, 2, 3, 4, 5, 6].map((weekday) => formatWeekday(weekday, { locale: "en-US" }));
+	let day = fromDayKey(input.day, timeZone); // "2026-07-29" → the day's first instant
+	if (isFailure(day)) return day; // day.error.text is the rejected key
 
-for (let week of weeks) {
-	for (let day of week) render(day.key, countsByDay.get(day.key));
+	let sentAt = parseDate(input.sentAt);
+	if (isFailure(sentAt)) return sentAt;
+
+	return { day: day.data, sentAt: sentAt.data };
 }
-```
-
-### A Month Calendar
-
-```typescript
-import { monthGrid, systemTimeZone } from "@sdxc/dates";
-
-let weeks = monthGrid(new Date(), { weekStartsOn: 0, timeZone: systemTimeZone() });
-
-for (let week of weeks) {
-	for (let day of week) render(day.key, day.date.getDate(), { muted: !day.inMonth });
-}
-```
-
-### A Report Range
-
-```typescript
-import { monthRange, quarterRange, validateDayRange } from "@sdxc/dates";
-
-monthRange(new Date("2026-08-15T12:00:00Z"), "UTC"); // { from: "2026-08-01", to: "2026-08-31" }
-quarterRange(new Date("2026-05-15T12:00:00Z"), "UTC"); // { from: "2026-04-01", to: "2026-06-30" }
-validateDayRange({ from: "2026-09-10", to: "2026-09-01" }); // failure, error.problem "reversed"
 ```
 
 ## API
 
 ### Formatting
 
+Formatters reuse one cached `Intl` instance per locale and options.
+
 #### `formatDate(date: Date, options: FormatDateOptions): string`
 
-Renders the calendar date an instant falls on, in a zone. `dateStyle` defaults to `"medium"`.
-
-```typescript
-formatDate(date, { locale: "en-US", timeZone: "UTC" }); // "Jul 29, 2026"
-formatDate(date, { locale: "es-AR", timeZone: "UTC", dateStyle: "long" }); // "29 de julio de 2026"
-```
+The calendar date an instant falls on in `options.timeZone`; `dateStyle` defaults to `"medium"`.
 
 ```typescript
 formatDate(date, { locale, timeZone });
@@ -130,759 +99,325 @@ formatDate(date, { locale, timeZone });
 new Intl.DateTimeFormat(locale, { timeZone, dateStyle: "medium" }).format(date);
 ```
 
-Every formatter below reuses one cached `Intl` instance per locale and options pair, so the shorthand also skips rebuilding the formatter on each call.
-
 #### `formatTime(date: Date, options: FormatTimeOptions): string`
 
-Renders the time of day an instant reads as on a clock in a zone. `timeStyle` defaults to `"short"`.
-
-```typescript
-formatTime(date, { locale, timeZone });
-// same as
-new Intl.DateTimeFormat(locale, { timeZone, timeStyle: "short" }).format(date);
-```
+The time of day a clock in the zone shows; `timeStyle` defaults to `"short"`.
 
 #### `formatDateTime(date: Date, options: FormatDateTimeOptions): string`
 
-Renders an instant as a date and a time of day, joined the way the locale joins them. `dateStyle` defaults to `"medium"` and `timeStyle` to `"short"`.
-
-```typescript
-formatDateTime(date, { locale: "en-US", timeZone: "UTC" }); // "Jul 29, 2026 at 10:00 AM"
-```
-
-```typescript
-formatDateTime(date, { locale, timeZone });
-// same as
-new Intl.DateTimeFormat(locale, { timeZone, dateStyle: "medium", timeStyle: "short" }).format(date);
-```
+A date and a time joined the way the locale joins them; `dateStyle` defaults to `"medium"`, `timeStyle` to `"short"`.
 
 #### `formatRange(start: Date, end: Date, options: FormatRangeOptions): string`
 
-Renders the span between two instants as one range, collapsing whatever the two ends share. The time half appears once `timeStyle` is given.
-
-```typescript
-formatRange(start, end, { locale: "en-US", timeZone: "UTC" }); // "Jul 29 – 31, 2026"
-```
-
-```typescript
-formatRange(start, end, { locale, timeZone });
-// same as
-new Intl.DateTimeFormat(locale, { timeZone, dateStyle: "medium" }).formatRange(start, end);
-```
+The span between two instants, collapsing what both ends share (`"Jul 29 – 31, 2026"`), through `Intl.DateTimeFormat#formatRange`. The time half appears when `timeStyle` is given.
 
 #### `formatRelative(date: Date, options: FormatRelativeOptions): string`
 
-Words the distance from now to an instant, picking the largest unit that still rounds to a whole number. `now` defaults to the current time, `numeric` to `"auto"` so the locale may say "yesterday", and `style` to `"long"`.
-
-```typescript
-formatRelative(yesterday, { locale: "en-US", now }); // "yesterday"
-formatRelative(yesterday, { locale: "en-US", now, numeric: "always" }); // "1 day ago"
-```
-
-`Intl` words a value and a unit you have already chosen; picking that pair from two instants is what this adds. Once it has them, the wording is `Intl`'s:
-
-```typescript
-formatRelative(threeDaysAgo, { locale, now });
-// measures the distance, picks the unit, then words it as
-new Intl.RelativeTimeFormat(locale, { numeric: "auto", style: "long" }).format(-3, "day");
-```
+Words the distance from `now` (default: the current time) to `date`, picking the largest unit that rounds to a whole number, then wording it with `Intl.RelativeTimeFormat`. `numeric` defaults to `"auto"` (so "yesterday"; `"always"` gives "1 day ago") and `style` to `"long"`.
 
 #### `formatDuration(input: DurationInput, options: FormatDurationOptions): string`
 
-Words a length of time, skipping zero-valued components. `style` defaults to `"long"`, and `maxUnits` keeps only that many components, largest first.
+Words a duration string or millisecond count, skipping zero components. `style` is `"long"` (default), `"short"` or `"narrow"`; `maxUnits` keeps that many components, largest first.
 
 ```typescript
 formatDuration("90 minutes", { locale: "en-US" }); // "1 hour, 30 minutes"
-formatDuration("90 minutes", { locale: "en-US", style: "short" }); // "1 hr, 30 min"
-formatDuration(5_400_000, { locale: "en-US", maxUnits: 1 }); // "1 hour"
+formatDuration(5_400_000, { locale: "en-US", style: "short", maxUnits: 1 }); // "1 hr"
 ```
 
 #### `formatParts(date: Date, options: FormatPartsOptions): Intl.DateTimeFormatPart[]`
 
-Breaks an instant into its localized pieces, each tagged with what it is, for a layout composed by the caller. Beyond the required `locale` and `timeZone`, it accepts any `Intl.DateTimeFormatOptions` field, and the parts come back in the locale's own order.
-
-```typescript
-formatParts(date, { locale: "en-US", timeZone: "UTC", month: "long", day: "numeric" });
-// [{ type: "month", value: "July" }, { type: "literal", value: " " }, { type: "day", value: "29" }]
-```
-
-```typescript
-formatParts(date, { locale, timeZone, month: "long", day: "numeric" });
-// same as
-new Intl.DateTimeFormat(locale, { timeZone, month: "long", day: "numeric" }).formatToParts(date);
-```
+The localized pieces of an instant, tagged and in the locale's order, for a layout the caller composes. Takes `locale`, `timeZone` and any other `Intl.DateTimeFormatOptions` field.
 
 #### `formatWeekday(weekday: Weekday, options: FormatWeekdayOptions): string`
 
-The localized name of a weekday on its own, for a grid header. `style` defaults to `"short"`.
+A weekday's localized name, for a grid header; `style` defaults to `"short"` (`formatWeekday(1, { locale: "en-US" })` is `"Mon"`).
 
-```typescript
-formatWeekday(1, { locale: "en-US" }); // "Mon"
-formatWeekday(0, { locale: "es-AR", style: "long" }); // "domingo"
-```
+### Calendar operations
 
-### Zoned Operations
+All take the zone whose calendar the answer is about. A day, month or quarter ends one millisecond before the next one starts, so a closed range stays exact on 23- and 25-hour days, and a start falls on the first instant that exists when DST skips midnight.
 
-#### `startOfDay(date: Date, timeZone: TimeZone): Date`
+#### `startOfDay(date, timeZone)`, `endOfDay(date, timeZone)`
 
-The first instant of the calendar day an instant falls on, in a zone. On a day whose DST transition skips midnight it is the first instant that exists that day.
-
-```typescript
-startOfDay(new Date("2026-07-29T02:00:00Z"), "America/New_York"); // 2026-07-28T04:00:00Z
-```
-
-#### `endOfDay(date: Date, timeZone: TimeZone): Date`
-
-The last instant of that calendar day, one millisecond before the next day starts, so it stays correct on days that are 23 or 25 hours long.
+The first and last instant of the calendar day `date` falls on.
 
 #### `startOfWeek(date: Date, timeZone: TimeZone, options: StartOfWeekOptions): Date`
 
-The first instant of the week an instant falls in. `weekStartsOn` is required, `0` Sunday through `6` Saturday.
+The first instant of the week `date` falls in; `options.weekStartsOn` is required.
 
-```typescript
-startOfWeek(date, "UTC", { weekStartsOn: 1 }); // Monday-based week
-```
+#### `startOfMonth(date, timeZone)`, `endOfMonth(date, timeZone)`
 
-#### `startOfMonth(date: Date, timeZone: TimeZone): Date`
+The first and last instant of the calendar month `date` falls in.
 
-The first instant of the calendar month an instant falls in, in a zone. When DST skips midnight on the 1st it is the first instant that exists that day.
+#### `startOfQuarter(date, timeZone)`, `endOfQuarter(date, timeZone)`
 
-```typescript
-startOfMonth(new Date("2026-07-01T02:00:00Z"), "UTC"); // 2026-07-01T00:00:00Z
-startOfMonth(new Date("2026-07-01T02:00:00Z"), "America/New_York"); // 2026-06-01T04:00:00Z
-```
-
-#### `endOfMonth(date: Date, timeZone: TimeZone): Date`
-
-The last instant of that calendar month, one millisecond before the next month starts, the same closed-range convention as `endOfDay`.
-
-```typescript
-endOfMonth(new Date("2026-02-10T12:00:00Z"), "America/New_York"); // 2026-03-01T04:59:59.999Z
-```
-
-#### `startOfQuarter(date: Date, timeZone: TimeZone): Date`
-
-The first instant of the calendar quarter an instant falls in: the start of January, April, July or October in that zone.
-
-```typescript
-startOfQuarter(new Date("2026-08-15T12:00:00Z"), "UTC"); // 2026-07-01T00:00:00Z
-```
-
-#### `endOfQuarter(date: Date, timeZone: TimeZone): Date`
-
-The last instant of that calendar quarter, one millisecond before the next quarter starts.
-
-```typescript
-endOfQuarter(new Date("2026-08-15T12:00:00Z"), "America/New_York"); // 2026-10-01T03:59:59.999Z
-```
+The first and last instant of the calendar quarter, which opens in January, April, July or October.
 
 #### `addMonths(date: Date, count: number, timeZone: TimeZone): Date`
 
-Moves an instant by calendar months in a zone, keeping its wall-clock time of day. The day clamps to the target month's last day, so January 31st plus one month is February 28th or 29th, and negative counts move back. A time DST skips or repeats on the target day resolves as `instantFromParts` does.
-
-```typescript
-addMonths(new Date("2026-01-31T15:00:00Z"), 1, "America/New_York"); // 2026-02-28T15:00:00Z
-addMonths(new Date("2026-03-01T15:00:00Z"), 1, "America/New_York"); // 2026-04-01T14:00:00Z, still 10:00 local
-```
-
-#### `daysInMonth(year: number, month: number): number`
-
-How many days a month has, `month` counted `1` through `12`. It takes no zone, reads years 0 to 99 literally, and returns `NaN` for a month outside the calendar.
-
-```typescript
-daysInMonth(2024, 2); // 29
-daysInMonth(2026, 2); // 28
-```
-
-```typescript
-daysInMonth(year, month);
-// same as, for years from 100 on
-new Date(Date.UTC(year, month, 0)).getUTCDate();
-```
-
-#### `isValidTimeZone(timeZone: string): boolean`
-
-Whether the runtime's `Intl` accepts a zone name. Every function here that takes a zone lets `Intl` throw a `RangeError` for one it rejects, so check a zone from a cookie, header or form once at the boundary. Answers are cached per name.
-
-```typescript
-isValidTimeZone("America/New_York"); // true
-isValidTimeZone("Mars/Olympus_Mons"); // false
-```
+Moves by calendar months keeping the wall-clock time, clamping the day to the target month (January 31st plus one is February 28th or 29th). Negative counts move back.
 
 #### `diffInDays(a: Date, b: Date, timeZone: TimeZone): number`
 
-Calendar days from `b` to `a`: the count of day boundaries crossed, positive when `a` is on a later day.
-
-```typescript
-diffInDays(new Date("2026-07-30T01:00:00Z"), new Date("2026-07-29T23:00:00Z"), "UTC"); // 1
-```
+Calendar day boundaries crossed from `b` to `a`, positive when `a` is on a later day.
 
 #### `isSameDay(a: Date, b: Date, timeZone: TimeZone): boolean`
 
-Whether two instants fall on the same year, month and day in a zone. The same pair can be one day in one zone and two in another.
+Whether both instants fall on the same calendar day in the zone.
 
 #### `eachDayOfInterval(interval: Interval, timeZone: TimeZone): Date[]`
 
-Every calendar day touched by an inclusive interval, as the instant each day starts at. Returns an empty array when `end` falls on a day before `start`.
+The start of every day an inclusive interval touches, or `[]` when `end` is on an earlier day than `start`.
 
-### Instant Arithmetic
+#### `daysInMonth(year: number, month: number): number`
 
-#### `addDays(date: Date, count: number): Date`
+Days in a month counted `1` through `12`, with no zone involved.
 
-Moves an instant forward by whole 24-hour days, returning a new `Date`. Negative counts move back.
+### Instant arithmetic
 
-```typescript
-addDays(date, 3);
-// same as
-new Date(date.getTime() + 3 * 86_400_000);
-```
+#### `add(date: Date, duration: DurationInput): Date`, `subtract(date, duration)`
 
-#### `subDays(date: Date, count: number): Date`
+Moves an instant by a duration string (`"90 minutes"`) or a millisecond count.
 
-Moves an instant back by whole 24-hour days, with the same instant semantics as `addDays`.
+#### `addDays(date: Date, count: number): Date`, `subDays(date, count)`
 
-```typescript
-subDays(date, 3);
-// same as
-new Date(date.getTime() - 3 * 86_400_000);
-```
-
-#### `add(date: Date, duration: DurationInput): Date`
-
-Moves an instant forward by a duration string or a number of milliseconds.
-
-```typescript
-add(new Date("2026-07-29T10:00:00Z"), "90 minutes"); // 2026-07-29T11:30:00Z
-```
-
-```typescript
-add(date, "90 minutes");
-// same as
-new Date(date.getTime() + 90 * 60 * 1000);
-```
-
-#### `subtract(date: Date, duration: DurationInput): Date`
-
-Moves an instant back by a duration string or a number of milliseconds.
-
-```typescript
-subtract(date, "30 minutes");
-// same as
-new Date(date.getTime() - 30 * 60 * 1000);
-```
+Moves an instant by whole 24-hour days: `new Date(date.getTime() + count * 86_400_000)`.
 
 #### `elapsed(since: Date | number, now?: Date | number): number`
 
-Milliseconds between an instant and now, positive once the instant is in the past. `now` defaults to the current time, and a test supplies both ends.
+Milliseconds from `since` to `now` (default: the current time), positive once `since` is past.
 
-```typescript
-elapsed(new Date("2026-07-29T10:00:00Z"), new Date("2026-07-29T10:00:05Z")); // 5000
-```
+#### `toUnixSeconds(date: Date | number): number`, `fromUnixSeconds(seconds: number): Date`
 
-```typescript
-let startedAt = Date.now();
-elapsed(startedAt);
-// same as
-Date.now() - startedAt;
-```
+Whole seconds since the epoch, floored, as JWT `iat` and `exp` claims carry them, and back.
 
-#### `toUnixSeconds(date: Date | number): number`
+### Day grids
 
-Whole seconds since the epoch, floored toward the past: the NumericDate a JWT's `iat` and `exp` claims carry.
-
-```typescript
-toUnixSeconds(new Date("2026-07-29T10:00:00.999Z")); // 1785319200
-```
-
-```typescript
-toUnixSeconds(date);
-// same as
-Math.floor(date.getTime() / 1000);
-```
-
-#### `fromUnixSeconds(seconds: number): Date`
-
-The instant a count of seconds since the epoch names, the inverse of `toUnixSeconds`.
-
-```typescript
-fromUnixSeconds(seconds);
-// same as
-new Date(seconds * 1000);
-```
-
-### Day Grids
+A `Day` carries its key, weekday, first instant and zone, resolved once for a renderer.
 
 #### `daysOfYear(year: number, timeZone: TimeZone): Day[]`
 
-Every day of a calendar year in a zone, in chronological order.
-
-```typescript
-daysOfYear(2024, "UTC").length; // 366
-```
+Every day of a calendar year, in order.
 
 #### `lastNDays(count: number, options: LastNDaysOptions): Day[]`
 
-A rolling window of the last `count` calendar days, ending on the day `from` falls on and including it. `from` defaults to the current instant, and the window stays exactly `count` entries long across a DST transition.
+The last `count` days ending on, and including, the day `options.from` (default: now) falls on.
 
 #### `groupByWeek(days: Day[], options: GroupByWeekOptions): Day[][]`
 
-Buckets a chronological day list into weeks, one array per week. The first and last buckets stay short when the range starts or ends mid-week.
-
-```typescript
-groupByWeek(daysOfYear(2026, "UTC"), { weekStartsOn: 0, timeZone: "UTC" }).length; // 53
-```
+Buckets a chronological day list into weeks starting on `options.weekStartsOn`; the first and last weeks stay short when the list starts or ends mid-week.
 
 #### `monthGrid(date: Date, options: GroupByWeekOptions): MonthGridDay[][]`
 
-The six weeks a calendar lays the month of `date` out as, starting on the `weekStartsOn` day on or before the 1st. Days borrowed from the neighbouring months pad both ends and carry `inMonth: false`, so every month is the same 6 × 7 grid and a calendar keeps its height as it pages.
+The month of `date` as six full weeks, padded with neighbouring days marked `inMonth: false`, so every month renders at the same height.
 
-```typescript
-let weeks = monthGrid(new Date("2026-06-15T12:00:00Z"), { weekStartsOn: 0, timeZone: "UTC" });
-weeks[0]?.[0]; // { key: "2026-05-31", inMonth: false, ... }
-```
-
-### Day Ranges
-
-A `DayRange` is two day keys, both ends included, so it travels through a URL or form as written.
-
-#### `monthRange(date: Date, timeZone: TimeZone): DayRange`
-
-The whole calendar month `date` falls in. Combine it with `addMonths()` for the previous month.
-
-```typescript
-monthRange(addMonths(new Date(), -1, "UTC"), "UTC"); // last month, first day through last
-```
-
-#### `quarterRange(date: Date, timeZone: TimeZone): DayRange`
-
-The whole calendar quarter `date` falls in; quarters open in January, April, July and October.
-
-#### `yearToDateRange(date: Date, timeZone: TimeZone): DayRange`
-
-January 1st through the day `date` falls on. Given yesterday on January 1st, it is the whole previous year.
-
-#### `lastNDaysRange(count: number, options: LastNDaysOptions): DayRange`
-
-The last `count` calendar days, ending on the day `options.from` falls on and including it, as a range instead of a day list.
-
-```typescript
-lastNDaysRange(30, { from: new Date("2026-09-28T12:00:00Z"), timeZone: "UTC" }); // { from: "2026-08-30", to: "2026-09-28" }
-```
-
-#### `dayRangeLength(range: DayRange): number`
-
-The days a range covers, both ends counted, or `NaN` when either end names no calendar day.
-
-```typescript
-dayRangeLength({ from: "2026-02-01", to: "2026-02-28" }); // 28
-```
-
-#### `isWholeMonth(range: DayRange): boolean`
-
-Whether a range is exactly one month, first day through last: the case where a label or filename can name the month alone.
-
-#### `validateDayRange(range: DayRange, options?: ValidateDayRangeOptions): Result<DayRange, InvalidDayRangeError>`
-
-Checks a submitted range and reports the first rule it breaks, as `error.problem`:
-
-- `"invalid"`: an end is not an exact `"YYYY-MM-DD"` key naming a real day
-- `"reversed"`: `from` comes after `to`
-- `"tooLate"`: `to` comes after `options.latest`, a day key
-- `"tooLong"`: the range covers more than `options.maxDays` days
-
-```typescript
-validateDayRange({ from: "2026-09-01", to: "2026-09-29" }, { latest: "2026-09-28" }); // failure, "tooLate"
-```
-
-#### `InvalidDayRangeError`
-
-The error `validateDayRange()` reports, with the broken rule on `error.problem` and the submitted ends on `error.range`.
-
-### Time Zones
-
-#### `supportedTimeZones(): readonly TimeZone[]`
-
-Every zone the runtime's IANA database lists through `Intl.supportedValuesOf("timeZone")`, `"UTC"` first and each zone once. `"UTC"` is added by name because some runtimes, Cloudflare Workers among them, omit it. The list is computed on first call and cached, and it follows the runtime's ICU build.
-
-#### `isSupportedTimeZone(value: string): boolean`
-
-Whether a value is in `supportedTimeZones()`. Aliases `Intl` also accepts, such as `"Etc/UTC"`, fail it, so a stored zone keeps one spelling; `isValidTimeZone()` accepts every name `Intl` takes.
-
-```typescript
-isSupportedTimeZone("Europe/Madrid"); // true
-isSupportedTimeZone("Etc/UTC"); // false
-```
-
-#### `timeZonesByRegion(): readonly TimeZoneGroup[]`
-
-The supported zones grouped by IANA area (`"America"`, `"Europe"`, ...), in the order the areas first appear. `"UTC"` has no area and sits in no group.
-
-#### `systemTimeZone(): TimeZone`
-
-The zone the runtime's clock runs in: the browser's setting on a page, usually `"UTC"` on a server.
-
-```typescript
-systemTimeZone();
-// same as
-Intl.DateTimeFormat().resolvedOptions().timeZone;
-```
-
-### Day Keys
+### Day keys and parsing
 
 #### `toDayKey(date: Date, timeZone: TimeZone): string`
 
-The `"YYYY-MM-DD"` key for the calendar day an instant falls on in a zone, zero padded. Group and join aggregations on it.
-
-```typescript
-toDayKey(new Date("2026-07-29T02:00:00Z"), "UTC"); // "2026-07-29"
-toDayKey(new Date("2026-07-29T02:00:00Z"), "America/New_York"); // "2026-07-28"
-```
+The `"YYYY-MM-DD"` key of the day an instant falls on: the value to group, join and put in URLs.
 
 #### `parseDayKey(key: string): Result<CalendarDay, InvalidDayKeyError>`
 
-Reads a day key into its calendar fields, with no zone involved. A day that does not exist on its month is rejected.
-
-```typescript
-parseDayKey("2026-07-29"); // { status: "success", data: { year: 2026, month: 7, day: 29 } }
-parseDayKey("2026-02-30"); // { status: "failure", error: InvalidDayKeyError }
-```
+A day key read into its calendar fields; a day the month lacks fails.
 
 #### `fromDayKey(key: string, timeZone: TimeZone): Result<Date, InvalidDayKeyError>`
 
-The instant a day key's day starts at in a zone, the inverse of `toDayKey`.
-
-```typescript
-fromDayKey("2026-07-29", "America/New_York"); // { status: "success", data: 2026-07-29T04:00:00Z }
-```
+The first instant of a day key's day in the zone, the inverse of `toDayKey`.
 
 #### `parseDate(input: string | number): Result<Date, InvalidDateError>`
 
-Reads text or a millisecond timestamp into a `Date`, failing rather than producing an `Invalid Date`. A date-only string is read as UTC midnight; use `fromDayKey()` when the input names a calendar day.
-
-```typescript
-parseDate("2026-07-29T10:00:00Z"); // { status: "success", data: Date }
-parseDate("not a date"); // { status: "failure", error: InvalidDateError }
-```
-
-#### `InvalidDayKeyError`
-
-The error `parseDayKey()` and `fromDayKey()` report, with the rejected text on `error.text`.
-
-#### `InvalidDateError`
-
-The error `parseDate()` reports, with the rejected value on `error.input`.
-
-### Form Values
+Text or a millisecond timestamp read into a `Date`. A date-only string reads as UTC midnight, so use `fromDayKey()` for a calendar day.
 
 #### `toDateTimeLocal(date: Date, timeZone: TimeZone): string`
 
-The value an `<input type="datetime-local">` takes, `"YYYY-MM-DDTHH:mm"`, as a clock in the zone reads the instant. Seconds are dropped to match the input's default one-minute step.
-
-```typescript
-toDateTimeLocal(new Date("2026-07-29T14:30:00Z"), "America/New_York"); // "2026-07-29T10:30"
-```
+The `"YYYY-MM-DDTHH:mm"` value an `<input type="datetime-local">` takes, as a clock in the zone reads the instant.
 
 #### `parseDateTimeLocal(value: string, timeZone: TimeZone): Result<Date, InvalidDateTimeLocalError>`
 
-Reads a submitted `datetime-local` value as the instant it names in a zone. Optional seconds and a one-to-three-digit fraction are accepted, since browsers submit them when `step` is below a minute. A day the month lacks or a time past `23:59:59` is rejected, and a time DST skips or repeats resolves as `instantFromParts` does.
+A submitted `datetime-local` value read as the instant it names in the zone. Seconds and fractions are accepted; impossible days and times fail.
 
-```typescript
-parseDateTimeLocal("2026-07-29T10:30", "America/New_York"); // { status: "success", data: 2026-07-29T14:30:00Z }
-parseDateTimeLocal("2026-02-30T10:00", "UTC"); // { status: "failure", error: InvalidDateTimeLocalError }
-```
+### Day ranges
 
-#### `InvalidDateTimeLocalError`
+A `DayRange` is two inclusive day keys, so it travels through a URL or form as written.
 
-The error `parseDateTimeLocal()` reports, with the rejected text on `error.text`.
+#### `monthRange(date, timeZone)`, `quarterRange(date, timeZone)`, `yearToDateRange(date, timeZone)`
 
-### Zone Math
+The calendar month or quarter `date` falls in, or January 1st through the day `date` falls on.
 
-The conversions every operation above is built on, on their own subpath for code that works with wall clocks directly, such as a calendar format reader.
+#### `lastNDaysRange(count: number, options: LastNDaysOptions): DayRange`
 
-```typescript
-import { instantFromParts, zonedParts } from "@sdxc/dates/zone";
+The same window as `lastNDays()`, as a range.
 
-zonedParts(Date.UTC(2026, 6, 29, 2), "America/New_York"); // { year: 2026, month: 7, day: 28, hour: 22, ... }
-instantFromParts(
-	{ year: 2026, month: 3, day: 8, hour: 2, minute: 30, second: 0, millisecond: 0 },
-	"America/New_York",
-); // 2026-03-08T07:30:00Z, the skipped 02:30 read with the offset before the gap
-```
+#### `dayRangeLength(range: DayRange): number`
 
-#### `zonedParts(instant: number, timeZone: TimeZone): ZonedParts`
+Days covered, both ends counted, or `NaN` when an end names no real day.
 
-The wall clock a zone shows at an instant: calendar day, hour, minute, second and millisecond.
+#### `isWholeMonth(range: DayRange): boolean`
 
-#### `instantFromParts(parts: ZonedParts, timeZone: TimeZone): number`
+Whether the range is exactly one month, first day through last.
 
-The instant a wall clock names in a zone. A repeated hour resolves to its earlier instant, and a skipped one is read with the offset before the gap, which moves it forward by the gap's length: the rule RFC 5545 gives for local times.
+#### `validateDayRange(range: DayRange, options?: ValidateDayRangeOptions): Result<DayRange, InvalidDayRangeError>`
 
-#### `offsetMsAt(instant: number, timeZone: TimeZone): number`
+Fails with the first rule the range breaks on `error.problem`: `"invalid"` (an end is not an exact day key), `"reversed"`, `"tooLate"` (`to` after `options.latest`, a day key) or `"tooLong"` (more than `options.maxDays` days).
 
-The zone's offset from UTC at an instant, in milliseconds to add to UTC; negative west of Greenwich.
+### Time zones
 
-#### `utcFromParts(parts: ZonedParts): number`
+#### `isValidTimeZone(timeZone: string): boolean`
 
-Wall-clock fields read as if they were UTC, with years 0 to 99 kept literal.
+Whether `Intl` accepts the zone name. Every function taking a zone throws a `RangeError` on one it rejects, so check zones from cookies, headers or forms once.
 
-#### `calendarDayAt(instant: number, timeZone: TimeZone): CalendarDay`
+#### `supportedTimeZones(): readonly TimeZone[]`
 
-The calendar day an instant falls on in a zone.
+The runtime's IANA zones from `Intl.supportedValuesOf("timeZone")`, `"UTC"` first and always present.
 
-#### `startOfDayInstant(day: CalendarDay, timeZone: TimeZone): number`
+#### `isSupportedTimeZone(value: string): boolean`
 
-The first instant of a calendar day in a zone: midnight, or the first instant that exists when DST skips midnight.
+Whether a value is in `supportedTimeZones()`. Aliases such as `"Etc/UTC"` fail, so a stored zone keeps one spelling.
 
-#### `epochDayOf(day: CalendarDay): number`, `calendarDayFromEpochDay(epochDay: number): CalendarDay`
+#### `timeZonesByRegion(): readonly TimeZoneGroup[]`
 
-A calendar day as whole days since 1970-01-01 and back, for DST-proof day differences and iteration.
+The supported zones grouped by IANA area (`"America"`, `"Europe"`, ...); `"UTC"` sits in no group.
 
-#### `shiftCalendarDay(day: CalendarDay, count: number): CalendarDay`
+#### `systemTimeZone(): TimeZone`
 
-A calendar day moved by whole days, rolling over months and years.
+The runtime clock's zone: the browser's setting on a page, usually `"UTC"` on a server.
 
-#### `shiftCalendarMonth(day: CalendarDay, count: number): CalendarDay`
+### Errors
 
-A calendar day moved by whole months, rolling over years and clamping the day to the target month's last day.
+`InvalidDateError` (rejected value on `error.input`), `InvalidDayKeyError` and `InvalidDateTimeLocalError` (on `error.text`), and `InvalidDayRangeError` (`error.problem` and `error.range`) are the classes the parsers return inside a failure.
 
-```typescript
-shiftCalendarMonth({ year: 2024, month: 1, day: 31 }, 1); // { year: 2024, month: 2, day: 29 }
-```
+### `@sdxc/dates/zone`
 
-#### `weekdayOf(day: CalendarDay): Weekday`
+The wall-clock math the operations above are built on, for code that reads or writes wall clocks directly. It also exports `daysInMonth`, `isValidTimeZone`, and the `CalendarDay`, `TimeZone` and `Weekday` types.
 
-The weekday a calendar day falls on, `0` Sunday through `6` Saturday.
-
-#### `DAY_MS`
-
-`86_400_000`, one exact 24-hour day in milliseconds.
-
-#### `ZonedParts`
-
-```typescript
-interface ZonedParts extends CalendarDay {
-	hour: number; // 0-23
-	minute: number;
-	second: number;
-	millisecond: number;
-}
-```
-
-The subpath also exports `daysInMonth` and `isValidTimeZone`, and re-exports `CalendarDay`, `TimeZone` and `Weekday`.
+- `zonedParts(instant: number, timeZone): ZonedParts`: the wall clock a zone shows at an instant.
+- `instantFromParts(parts: ZonedParts, timeZone): number`: the instant a wall clock names. A repeated hour resolves to its earlier instant; a skipped one reads with the offset before the gap (RFC 5545). `addMonths()` and `parseDateTimeLocal()` resolve the same way.
+- `offsetMsAt(instant: number, timeZone): number`: the offset to add to UTC, negative west of Greenwich.
+- `utcFromParts(parts: ZonedParts): number`: wall-clock fields read as UTC.
+- `calendarDayAt(instant: number, timeZone): CalendarDay` and `startOfDayInstant(day: CalendarDay, timeZone): number`.
+- `epochDayOf(day: CalendarDay): number` and `calendarDayFromEpochDay(epochDay: number): CalendarDay`: days since 1970-01-01, for DST-proof differences.
+- `shiftCalendarDay(day, count)` and `shiftCalendarMonth(day, count)`: move a `CalendarDay`, the month shift clamping the day.
+- `weekdayOf(day: CalendarDay): Weekday`.
+- `DAY_MS`: `86_400_000`.
 
 ### Types
 
-#### `TimeZone`
+- `TimeZone`: an IANA zone name, `string`.
+- `Locale`: `string | readonly string[]`, passed straight to `Intl`.
+- `Weekday`: `0 | 1 | 2 | 3 | 4 | 5 | 6`, Sunday first, matching `Date#getDay`.
+- `CalendarDay`: `{ year, month, day }`, `month` counted `1` through `12`.
+- `Day`: a `CalendarDay` plus `date` (its first instant), `key`, `weekday` and `timeZone`.
+- `MonthGridDay`: a `Day` plus `inMonth`.
+- `ZonedParts` (from `./zone`): a `CalendarDay` plus `hour`, `minute`, `second` and `millisecond`.
+- `Interval`: `{ start: Date; end: Date }`, both inclusive.
+- `DayRange`: `{ from: string; to: string }`, inclusive day keys.
+- `DayRangeProblem`: `"invalid" | "reversed" | "tooLate" | "tooLong"`.
+- `TimeZoneGroup`: `{ region: string; zones: readonly TimeZone[] }`.
+- `DateStyle`, `TimeStyle`: `"full" | "long" | "medium" | "short"`.
+- Every options interface named in a signature above is exported.
+
+## Pattern: Activity Per Day Over A Week Grid
+
+Bucket rows on the reader's day key, then lay the window out as weeks with localized headers.
 
 ```typescript
-type TimeZone = string;
-```
+import { formatWeekday, groupByWeek, lastNDays, toDayKey } from "@sdxc/dates";
+import type { Weekday } from "@sdxc/dates";
 
-An IANA time zone name, e.g. `"America/New_York"` or `"UTC"`.
+function activityGrid(events: { at: Date }[], locale: string, timeZone: string) {
+	let counts = new Map<string, number>();
+	for (let event of events) {
+		let key = toDayKey(event.at, timeZone);
+		counts.set(key, (counts.get(key) ?? 0) + 1);
+	}
 
-#### `Locale`
-
-```typescript
-type Locale = string | readonly string[];
-```
-
-A BCP 47 locale, or a preference list the platform resolves in order. Passed straight to `Intl`.
-
-#### `Weekday`
-
-```typescript
-type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-```
-
-A weekday index, `0` Sunday through `6` Saturday, matching `Date#getDay`. Used both for `weekStartsOn` and for the weekday a day falls on.
-
-#### `CalendarDay`
-
-```typescript
-interface CalendarDay {
-	year: number;
-	month: number; // 1-12, not zero-based
-	day: number;
-}
-```
-
-A calendar day with no zone and no time attached: what a human reads off a wall calendar.
-
-#### `Day`
-
-```typescript
-interface Day extends CalendarDay {
-	date: Date; // the day's first instant in timeZone
-	key: string; // "YYYY-MM-DD"
-	weekday: Weekday;
-	timeZone: TimeZone;
-}
-```
-
-One cell of a day grid, with everything zone-dependent resolved once so a renderer never recomputes it.
-
-#### `Interval`
-
-```typescript
-interface Interval {
-	start: Date;
-	end: Date;
-}
-```
-
-A closed range of instants. Both ends are inclusive for day enumeration.
-
-#### `DayRange`
-
-```typescript
-interface DayRange {
-	from: string; // "YYYY-MM-DD", included
-	to: string; // "YYYY-MM-DD", included
-}
-```
-
-An inclusive run of calendar days as day keys.
-
-#### `MonthGridDay`
-
-```typescript
-interface MonthGridDay extends Day {
-	inMonth: boolean;
-}
-```
-
-One cell of `monthGrid()`, with `inMonth: false` on the padding days from the neighbouring months.
-
-#### `TimeZoneGroup`
-
-```typescript
-interface TimeZoneGroup {
-	region: string; // the IANA area, e.g. "Europe"
-	zones: readonly TimeZone[];
-}
-```
-
-One area's zones, as a picker renders them in an `<optgroup>`.
-
-#### `DayRangeProblem`
-
-```typescript
-type DayRangeProblem = "invalid" | "reversed" | "tooLate" | "tooLong";
-```
-
-The rule `validateDayRange()` reports a range breaking.
-
-#### `DateStyle`, `TimeStyle`
-
-The `dateStyle` and `timeStyle` lengths from `Intl.DateTimeFormat`: `"full" | "long" | "medium" | "short"`.
-
-#### Options
-
-`FormatDateOptions`, `FormatTimeOptions`, `FormatDateTimeOptions`, `FormatRangeOptions`, `FormatRelativeOptions`, `FormatDurationOptions`, `FormatPartsOptions`, `FormatWeekdayOptions`, `StartOfWeekOptions`, `LastNDaysOptions`, `GroupByWeekOptions` and `ValidateDayRangeOptions` are exported for callers that pass options through their own signatures.
-
-#### Errors
-
-`InvalidDateError`, `InvalidDayKeyError`, `InvalidDateTimeLocalError` and `InvalidDayRangeError` are the classes the parsers and validators return inside a `Failure`, each carrying the rejected input.
-
-## Pattern: One Zone Per Request
-
-Resolve the reader's zone once, at the edge, and pass it down. Every call site below then reads as a statement about that reader's calendar instead of the server's.
-
-```typescript
-import { formatDate, lastNDays, toDayKey } from "@sdxc/dates";
-
-function buildView(preferences: { locale: string; timeZone: string }) {
-	let { locale, timeZone } = preferences;
+	let order: Weekday[] = [1, 2, 3, 4, 5, 6, 0];
+	let days = lastNDays(90, { timeZone });
 
 	return {
-		today: toDayKey(new Date(), timeZone),
-		heading: formatDate(new Date(), { locale, timeZone, dateStyle: "full" }),
-		window: lastNDays(30, { timeZone }),
+		headers: order.map((weekday) => formatWeekday(weekday, { locale })),
+		weeks: groupByWeek(days, { weekStartsOn: 1, timeZone }).map((week) =>
+			week.map((day) => ({ key: day.key, count: counts.get(day.key) ?? 0 })),
+		),
 	};
 }
 ```
 
-## Pattern: Aggregating By Day
+## Pattern: A Month Calendar
 
-Group rows on the day key rather than on a truncated timestamp, so the buckets land on the reader's calendar and the grid looks each day up in constant time.
+Page through months with `addMonths()` and render each as the same six-week grid.
 
 ```typescript
-import { lastNDays, toDayKey } from "@sdxc/dates";
+import { addMonths, formatDate, monthGrid, toDayKey } from "@sdxc/dates";
 
-function ordersPerDay(orders: { placedAt: Date }[], timeZone: string) {
-	let counts = new Map<string, number>();
+function calendar(month: Date, offset: number, locale: string, timeZone: string) {
+	let shown = addMonths(month, offset, timeZone);
+	let today = toDayKey(new Date(), timeZone);
 
-	for (let order of orders) {
-		let key = toDayKey(order.placedAt, timeZone);
-		counts.set(key, (counts.get(key) ?? 0) + 1);
-	}
-
-	return lastNDays(90, { timeZone }).map((day) => ({
-		key: day.key,
-		weekday: day.weekday,
-		orders: counts.get(day.key) ?? 0,
-	}));
+	return {
+		title: formatDate(shown, { locale, timeZone, dateStyle: "long" }),
+		weeks: monthGrid(shown, { weekStartsOn: 0, timeZone }).map((week) =>
+			week.map((day) => ({
+				key: day.key,
+				label: day.day,
+				muted: !day.inMonth,
+				today: day.key === today,
+			})),
+		),
+	};
 }
 ```
 
 ## Pattern: Querying One Day's Rows
 
-Turn a day into the pair of instants a query filters on. The range is closed: `endOfDay()` is the day's last millisecond in that zone, so a row at 23:59 local is included and one at the next midnight is not. `fromDayKey()` returns a `Result` because a key usually arrives from a URL.
+Turn a day key from a URL into the closed pair of instants a query filters on: a row at 23:59 local is in, one at the next midnight is out.
 
 ```typescript
-import { endOfDay, fromDayKey, startOfDay } from "@sdxc/dates";
-import { isFailure } from "@sdxc/result";
+import { endOfDay, fromDayKey } from "@sdxc/dates";
+import { isFailure, success } from "@sdxc/result";
 
-function boundsForDate(date: Date, timeZone: string) {
-	return { from: startOfDay(date, timeZone), to: endOfDay(date, timeZone) };
-}
-
-function boundsForKey(key: string, timeZone: string) {
+function dayBounds(key: string, timeZone: string) {
 	let start = fromDayKey(key, timeZone);
 	if (isFailure(start)) return start;
-	return { from: start.data, to: endOfDay(start.data, timeZone) };
+	return success({ from: start.data, to: endOfDay(start.data, timeZone) });
 }
 ```
 
 ## Pattern: A datetime-local Field In The Reader's Zone
 
-The input shows and submits a wall clock with no zone, so pre-fill it and read it back in the same zone the reader sees. The zone usually comes from a cookie, so it is checked before use, and `parseDateTimeLocal()` returns a `Result` because the value arrives from a form.
+The input holds a wall clock with no zone, so fill it and read it back in the zone the reader sees.
 
 ```typescript
-import { isValidTimeZone, parseDateTimeLocal, toDateTimeLocal } from "@sdxc/dates";
+import { formatDateTime, isValidTimeZone, parseDateTimeLocal, toDateTimeLocal } from "@sdxc/dates";
+import { isFailure } from "@sdxc/result";
 
-function eventFormValues(event: { startsAt: Date }, timeZone: string) {
-	return { startsAt: toDateTimeLocal(event.startsAt, timeZone) }; // the input's value attribute
+function startsAtValue(startsAt: Date, timeZone: string) {
+	return toDateTimeLocal(startsAt, timeZone); // the input's value attribute
 }
 
-function readEventForm(form: FormData, timeZone: string) {
-	let zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
-	return parseDateTimeLocal(String(form.get("startsAt") ?? ""), zone);
-}
-```
+function readStartsAt(form: FormData, cookieZone: string, locale: string) {
+	let timeZone = isValidTimeZone(cookieZone) ? cookieZone : "UTC";
+	let startsAt = parseDateTimeLocal(String(form.get("startsAt") ?? ""), timeZone);
+	if (isFailure(startsAt)) return { error: "Pick a valid date and time" };
 
-## Pattern: A Layout Intl Will Not Produce
-
-When a design needs the pieces of a date in their own elements, compose `formatParts()` output instead of reaching for a pattern string. Each part is tagged with what it is, and they arrive in the locale's own order, so rendering them in order stays correct where the day precedes the month.
-
-```typescript
-import { formatParts } from "@sdxc/dates";
-
-function stackedDate(date: Date, locale: string, timeZone: string) {
-	let parts = formatParts(date, { locale, timeZone, month: "short", day: "numeric" });
-	let read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
-
-	return { month: read("month"), day: read("day") };
+	return {
+		startsAt: startsAt.data,
+		confirmation: formatDateTime(startsAt.data, { locale, timeZone }),
+	};
 }
 ```
 
 ## Pattern: A Report Range From The Query String
 
-Offer presets over completed days and check a hand-picked range against the same rules. Data that rolls up nightly is complete through yesterday, so yesterday is the latest day a range may name, and the month and quarter presets step back from today.
+Offer presets over completed days and hold a hand-picked range to the same limits. Data that rolls up nightly is complete through yesterday.
 
 ```typescript
 import {
 	addMonths,
+	formatDate,
+	formatRange,
+	fromDayKey,
+	isWholeMonth,
 	lastNDaysRange,
 	monthRange,
 	quarterRange,
@@ -891,42 +426,47 @@ import {
 	validateDayRange,
 	yearToDateRange,
 } from "@sdxc/dates";
-import { success } from "@sdxc/result";
+import type { DayRange } from "@sdxc/dates";
+import { isSuccess, success } from "@sdxc/result";
 
-type Preset = "lastMonth" | "last30Days" | "lastQuarter" | "yearToDate";
+let timeZone = "UTC";
 
-function presetRange(preset: Preset, now = new Date()) {
+function presetRange(preset: string, now: Date): DayRange {
 	let yesterday = subDays(now, 1);
-	switch (preset) {
-		case "lastMonth":
-			return monthRange(addMonths(now, -1, "UTC"), "UTC");
-		case "last30Days":
-			return lastNDaysRange(30, { from: yesterday, timeZone: "UTC" });
-		case "lastQuarter":
-			return quarterRange(addMonths(now, -3, "UTC"), "UTC");
-		case "yearToDate":
-			return yearToDateRange(yesterday, "UTC");
-	}
+	if (preset === "lastMonth") return monthRange(addMonths(now, -1, timeZone), timeZone);
+	if (preset === "lastQuarter") return quarterRange(addMonths(now, -3, timeZone), timeZone);
+	if (preset === "yearToDate") return yearToDateRange(yesterday, timeZone);
+	return lastNDaysRange(30, { from: yesterday, timeZone });
 }
 
 function readRange(url: URL, now = new Date()) {
 	let from = url.searchParams.get("from");
 	let to = url.searchParams.get("to");
-	if (from === null || to === null) return success(presetRange("lastMonth", now));
+	if (from === null || to === null) {
+		return success(presetRange(url.searchParams.get("preset") ?? "", now));
+	}
 
-	let latest = toDayKey(subDays(now, 1), "UTC");
-	return validateDayRange({ from, to }, { latest, maxDays: 366 });
+	let latest = toDayKey(subDays(now, 1), timeZone);
+	return validateDayRange({ from, to }, { latest, maxDays: 366 }); // failure.error.problem says why
+}
+
+function rangeLabel(range: DayRange, locale: string) {
+	let from = fromDayKey(range.from, timeZone);
+	let to = fromDayKey(range.to, timeZone);
+	if (!isSuccess(from) || !isSuccess(to)) return "";
+	if (isWholeMonth(range)) return formatDate(from.data, { locale, timeZone, dateStyle: "long" });
+	return formatRange(from.data, to.data, { locale, timeZone });
 }
 ```
 
 ## Pattern: A Time-Zone Picker
 
-List UTC first, the areas as option groups, and validate the submitted value against the same list, so the form and the validator never disagree.
+List UTC first and the areas as option groups, then validate the submission against the same list.
 
 ```typescript
-import { isSupportedTimeZone, timeZonesByRegion } from "@sdxc/dates";
+import { isSupportedTimeZone, systemTimeZone, timeZonesByRegion } from "@sdxc/dates";
 
-function timeZoneOptions(selected: string) {
+function timeZoneOptions(selected = systemTimeZone()) {
 	return [
 		{ label: "UTC", options: [{ value: "UTC", selected: selected === "UTC" }] },
 		...timeZonesByRegion().map((group) => ({
@@ -939,6 +479,38 @@ function timeZoneOptions(selected: string) {
 function readTimeZone(form: FormData) {
 	let value = String(form.get("timeZone") ?? "UTC");
 	return isSupportedTimeZone(value) ? value : null;
+}
+```
+
+## Pattern: A Stacked Date Badge
+
+When a design puts the month and day in their own elements, read them from `formatParts()` so each locale supplies its own names.
+
+```typescript
+import { formatParts } from "@sdxc/dates";
+
+function badge(date: Date, locale: string, timeZone: string) {
+	let parts = formatParts(date, { locale, timeZone, month: "short", day: "numeric" });
+	let read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+	return { month: read("month"), day: read("day") };
+}
+```
+
+## Pattern: Wall Clocks In A Calendar Feed
+
+A recurring event stored as a local time keeps that local time across DST; the `./zone` subpath turns each occurrence's wall clock into an instant.
+
+```typescript
+import { instantFromParts, shiftCalendarDay, zonedParts } from "@sdxc/dates/zone";
+
+function weeklyOccurrences(first: Date, count: number, timeZone: string) {
+	let clock = zonedParts(first.getTime(), timeZone);
+	let occurrences: Date[] = [];
+	for (let week = 0; week < count; week++) {
+		let day = shiftCalendarDay(clock, week * 7);
+		occurrences.push(new Date(instantFromParts({ ...clock, ...day }, timeZone)));
+	}
+	return occurrences;
 }
 ```
 
