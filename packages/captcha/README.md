@@ -1,26 +1,42 @@
 # @sdxc/captcha
 
-Provider-neutral CAPTCHA verification: one `Captcha` contract with Turnstile, hCaptcha and
-reCAPTCHA implementations, router middleware, widgets and an in-memory provider for tests.
-Every failure carries a neutral `code` that separates what the visitor fixes (`rejected`,
-`expired`, `low-score`) from what the provider broke (`unavailable`).
+Turnstile, hCaptcha and reCAPTCHA verification, with middleware and widgets.
+
+Every provider implements one `Captcha` contract, so the middleware, the widgets and an
+in-memory provider for tests work the same over any of them. A failure carries a neutral
+`code` that separates what the visitor fixes (`rejected`, `expired`, `low-score`) from what the
+provider broke (`unavailable`).
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/captcha
 ```
 
 The middleware runs on the [`remix`](https://www.npmjs.com/package/remix) router and the widgets
-render with `remix/component`; every verification returns an
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) value. Both install alongside this
-package.
+render with `remix/component`; every verification answers a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 
 ## Usage
 
+### Verify a token
+
+```ts
+import { Turnstile } from "@sdxc/captcha/turnstile";
+import { isFailure } from "@sdxc/result";
+
+let turnstile = new Turnstile({ secretKey: TURNSTILE_SECRET_KEY });
+
+let result = await turnstile.verify(token, { remoteIp: "203.0.113.7" });
+if (isFailure(result)) return result.error.code; // "rejected", "expired", "unavailable", …
+result.data.hostname; // "example.com"
+```
+
+Tokens are single-use, so verify each submission once.
+
 ### Guard a form route
 
-```tsx
+```ts
 import { captcha } from "@sdxc/captcha/middleware";
 import { Turnstile } from "@sdxc/captcha/turnstile";
 import { createRouter } from "remix/router";
@@ -30,12 +46,12 @@ let router = createRouter();
 
 router.post("/sign-up", {
 	middleware: [captcha(turnstile, { action: "sign-up" })],
-	handler() {
-		// Reached only once the token verified; a failure was answered with a 403.
-		return new Response("Welcome");
-	},
+	handler: () => new Response("Welcome"),
 });
 ```
+
+The middleware reads `turnstile.field` from the submitted form, verifies it with the visitor's
+`CF-Connecting-IP`, and answers a failure with a 403. The handler still reads the body.
 
 ### Render the widget
 
@@ -55,18 +71,6 @@ function SignUpForm(handle: Handle<{ siteKey: string }>) {
 }
 ```
 
-### Verify without the middleware
-
-```ts
-import { Turnstile } from "@sdxc/captcha/turnstile";
-import { isFailure } from "@sdxc/result";
-
-let turnstile = new Turnstile({ secretKey: TURNSTILE_SECRET_KEY });
-let result = await turnstile.verify(token, { remoteIp: "203.0.113.7" });
-if (isFailure(result)) return result.error.code; // "rejected", "expired", "unavailable", …
-result.data.hostname; // "example.com"
-```
-
 ### Switch providers
 
 ```ts
@@ -78,98 +82,98 @@ captcha(new HCaptcha({ secretKey: HCAPTCHA_SECRET, siteKey: HCAPTCHA_SITE_KEY })
 captcha(new ReCaptcha({ secretKey: RECAPTCHA_SECRET, minScore: 0.7 }), { action: "sign_up" });
 ```
 
+Pair each with its widget from `@sdxc/captcha/hcaptcha/ui` or `@sdxc/captcha/recaptcha/ui`.
+
 ## API
 
-### `@sdxc/captcha`
+### `Captcha`
 
-- `Captcha` — the interface a provider implements: `field`, the form field its widget writes,
-  and `verify(token, { remoteIp? })`, which resolves to
-  `Result<Captcha.Verification, CaptchaError>`. Single-use providers consume the token, so call
-  it once per submission.
-- `Captcha.Verification` — what the provider confirmed: `hostname?`, `action?`, `score?` (`0`
-  bot to `1` human) and `challengedAt?`. A field the provider does not report stays unset.
-- `Captcha.ErrorCode` — one of `missing-token`, `rejected`, `expired`, `low-score`,
-  `unavailable`, `action-mismatch` or `hostname-mismatch`.
-- `CaptchaError` — the failure every provider returns: `code` to branch on, and `providerCodes`
-  with the provider's own codes verbatim for logs.
+The interface a provider implements: `field`, the form field its widget writes, and
+`verify(token, { remoteIp? })`, which answers `Result<Captcha.Verification, CaptchaError>`.
+A field of the verification the provider does not report stays unset.
 
-### `@sdxc/captcha/middleware`
+### `new CaptchaError(code, providerCodes?)`
 
-`captcha(provider, options?)` verifies `provider.field` on every request of the route it is
-installed on, so install it on the action that accepts the submission. It reads the form parsed
-by `remix`'s `formData()` middleware when present, and otherwise a clone of the request, leaving
-the body readable for the handler. A missing field or a non-form body is `missing-token`.
+The failure every provider answers: `code` to branch on, and `providerCodes` with the
+provider's own codes verbatim, for logs.
 
-- `action` / `hostname` — expected values; a verification reporting another one, or none, fails
+### `captcha(provider, options?)` from `./middleware`
+
+Verifies `provider.field` on every request of the route it is installed on, and publishes the
+outcome as `ctx.captcha`. It reuses the form parsed by `remix`'s `formData()` middleware when
+present; a missing field or a non-form body is `missing-token`.
+
+- `action` / `hostname`: expected values; a verification reporting another one, or none, fails
   with `action-mismatch` / `hostname-mismatch`.
-- `remoteIp(request)` — resolves the visitor's address; defaults to the `CF-Connecting-IP`
-  header in canonical text, passing none on when the header is not an address.
-- `onFailure(error, ctx)` — return a `Response` to refuse, or `null` to continue with the failure
-  published. Defaults to a plain-text 403.
+- `remoteIp(request)`: the visitor's address. Defaults to the `CF-Connecting-IP` header when it
+  holds a valid address.
+- `onFailure(error, ctx)`: answer a `Response` to refuse, or `null` to reach the handler with
+  the failure on `ctx.captcha`. Defaults to a plain-text 403.
 
-The outcome is published as `ctx.captcha` (`CaptchaOutcome`, a
-`Result<Captcha.Verification, CaptchaError>`) and under the `CaptchaKey` context key.
+### `CaptchaKey` from `./middleware`
 
-### `@sdxc/captcha/turnstile`
+The context key holding the same outcome as `ctx.captcha`, for code that reads it with
+`ctx.get(CaptchaKey)`.
 
-`new Turnstile({ secretKey, field?, timeout? })` verifies against Cloudflare's
-[`siteverify`](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/).
-`field` defaults to `cf-turnstile-response`; `timeout` to 10 seconds. It reports hostname,
-action and solve time.
+### `new Turnstile({ secretKey, field?, timeout? })` from `./turnstile`
 
-### `@sdxc/captcha/turnstile/ui`
+Verifies with Cloudflare's
+[`siteverify`](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)
+and reports hostname, action and solve time. `field` defaults to `cf-turnstile-response`,
+`timeout` to 10 seconds.
 
-`<TurnstileWidget siteKey />` renders the `.cf-turnstile` container and Cloudflare's loader.
-Optional props: `action`, `cData`, `theme` (`auto` | `light` | `dark`), `size` (`normal` |
-`flexible` | `compact`), `appearance` (`always` | `execute` | `interaction-only`), `language`,
-`field` (match `Turnstile`'s) and `nonce` for the loader script.
+### `new HCaptcha({ secretKey, siteKey?, maxRiskScore?, field?, timeout? })` from `./hcaptcha`
 
-### `@sdxc/captcha/hcaptcha`
+Verifies with [hCaptcha's `siteverify`](https://docs.hcaptcha.com/). `siteKey` refuses a token
+solved for another site. On Enterprise plans the verification's `score` is `1 - risk`, and a
+risk above `maxRiskScore` (hCaptcha's own scale, `1` is a threat) fails with `low-score`.
+`field` defaults to `h-captcha-response`.
 
-`new HCaptcha({ secretKey, siteKey?, maxRiskScore?, field?, timeout? })` verifies against
-[hCaptcha's `siteverify`](https://docs.hcaptcha.com/).
-`siteKey` makes hCaptcha refuse a token solved for another site. hCaptcha Enterprise scores
-risk (`1` is a threat), so the verification reports `1 - risk` as `score`, and `maxRiskScore`,
-in hCaptcha's own terms, fails a riskier token with `low-score`. `field` defaults to
-`h-captcha-response`.
+### `new ReCaptcha({ secretKey, minScore?, field?, timeout? })` from `./recaptcha`
 
-### `@sdxc/captcha/hcaptcha/ui`
+Verifies v2 and v3 tokens with
+[Google's `siteverify`](https://developers.google.com/recaptcha/docs/verify). A v3 score under
+`minScore` (default `0.5`) fails with `low-score`; a v2 answer has no score and passes on
+success alone. `field` defaults to `g-recaptcha-response`.
 
-`<HCaptchaWidget siteKey />` renders the `.h-captcha` container and hCaptcha's loader. Optional
-props: `theme` (`light` | `dark`), `size` (`normal` | `compact`), `tabIndex`, `language` and
-`nonce`.
+### `new MemoryCaptcha({ field?, verification?, unknownTokens? })` from `./memory`
 
-### `@sdxc/captcha/recaptcha`
+A scriptable provider for tests. A call takes the next queued outcome, then the token's own
+rule, then the default: pass with `verification`, or `rejected` under
+`unknownTokens: "reject"`. An empty token is `missing-token` and leaves the queue alone.
+`field` defaults to `captcha-response`.
 
-`new ReCaptcha({ secretKey, minScore?, field?, timeout? })` verifies v2 and v3 tokens against
-[Google's `siteverify`](https://developers.google.com/recaptcha/docs/verify). A v3 answer
-reports its `score` and `action`; a score under `minScore` (default `0.5`) fails with
-`low-score`. A v2 answer carries no score and passes on `success` alone. Hold a v3 token to
-the form's action with the middleware's `action` option. `field` defaults to
-`g-recaptcha-response`.
-
-### `@sdxc/captcha/recaptcha/ui`
-
-`<ReCaptchaWidget siteKey />` renders the v2 checkbox: the `.g-recaptcha` container and Google's
-loader. Optional props: `theme` (`light` | `dark`), `size` (`normal` | `compact`), `tabIndex`,
-`language` and `nonce`. A v3 key has no widget; the page calls `grecaptcha.execute()` and writes
-the token into a `g-recaptcha-response` field itself.
-
-### `@sdxc/captcha/memory`
-
-`new MemoryCaptcha({ field?, verification?, unknownTokens? })` is a scriptable provider for
-tests. A call is answered by the next queued outcome, then by the token's own rule, then by the
-default: every non-empty token passes with `verification`, or is `rejected` under
-`unknownTokens: "reject"`.
-
-- `passNext(verification?)` / `failNext(code, providerCodes?)` — queue the next answer.
-- `accept(token, verification?)` / `reject(token, code, providerCodes?)` — answer one token the
+- `passNext(verification?)` / `failNext(code, providerCodes?)`: queue the next answer.
+- `accept(token, verification?)` / `reject(token, code, providerCodes?)`: answer one token the
   same way every time.
-- `calls` / `last` — every recorded `{ token, remoteIp? }`.
-- `reset()` — forget calls, queued answers and rules.
+- `calls` / `last`: every recorded `{ token, remoteIp? }`.
+- `reset()`: forget calls, queued answers and rules.
 
-An empty token is `missing-token` and never consumes a queued answer. `field` defaults to
-`captcha-response`.
+### Widgets
+
+Each renders the provider's container followed by its loader script; `nonce` sets the script's
+CSP nonce.
+
+- `<TurnstileWidget siteKey />` from `./turnstile/ui`: `action`, `cData`, `theme` (`auto` |
+  `light` | `dark`), `size` (`normal` | `flexible` | `compact`), `appearance` (`always` |
+  `execute` | `interaction-only`), `language`, `field` (match the server's) and `nonce`.
+- `<HCaptchaWidget siteKey />` from `./hcaptcha/ui`: `theme` (`light` | `dark`), `size`
+  (`normal` | `compact`), `tabIndex`, `language` and `nonce`.
+- `<ReCaptchaWidget siteKey />` from `./recaptcha/ui`: the v2 checkbox, with the same props as
+  `HCaptchaWidget`. A v3 page calls `grecaptcha.execute()` and writes the token into a
+  `g-recaptcha-response` field itself.
+
+### Types
+
+- `Captcha.Verification`: `hostname?`, `action?`, `score?` (`0` bot to `1` human) and
+  `challengedAt?`.
+- `Captcha.VerifyOptions`: `{ remoteIp? }`.
+- `Captcha.ErrorCode`: `missing-token`, `rejected`, `expired`, `low-score`, `unavailable`,
+  `action-mismatch` or `hostname-mismatch`.
+- `CaptchaOutcome`: `Result<Captcha.Verification, CaptchaError>`, the type of `ctx.captcha`.
+- `CaptchaMiddlewareOptions`, `Turnstile.Options`, `HCaptcha.Options`, `ReCaptcha.Options`,
+  `MemoryCaptcha.Options` and `MemoryCaptcha.Call`: the option and record shapes above.
+- `TurnstileWidget.Props`, `HCaptchaWidget.Props`, `ReCaptchaWidget.Props`: the widget props.
 
 ## Pattern: Fail open when the provider is down
 
@@ -178,6 +182,7 @@ A sign-in keeps working through a provider outage while still refusing a bad tok
 ```ts
 import { captcha } from "@sdxc/captcha/middleware";
 import { Turnstile } from "@sdxc/captcha/turnstile";
+import { isFailure } from "@sdxc/result";
 import { createRouter } from "remix/router";
 
 let turnstile = new Turnstile({ secretKey: TURNSTILE_SECRET_KEY });
@@ -193,36 +198,87 @@ router.post("/sign-in", {
 		}),
 	],
 	handler(ctx) {
-		// ctx.captcha is a failure with code "unavailable" when the provider was down.
-		return signIn(ctx);
+		let unverified = isFailure(ctx.captcha); // true only when the provider was unavailable
+		return signIn(ctx, { unverified });
 	},
 });
 ```
 
 ## Pattern: Escalate a low reCAPTCHA v3 score
 
-v3 runs invisibly; a `low-score` answer is the moment to show a v2 checkbox instead of
+v3 runs invisibly; a `low-score` answer is the moment to show the v2 checkbox instead of
 refusing outright.
 
-```ts
+```tsx
+import type { Handle } from "remix/component";
+
 import { captcha } from "@sdxc/captcha/middleware";
 import { ReCaptcha } from "@sdxc/captcha/recaptcha";
+import { ReCaptchaWidget } from "@sdxc/captcha/recaptcha/ui";
+import { isFailure } from "@sdxc/result";
 import { createRouter } from "remix/router";
 
-let recaptcha = new ReCaptcha({ secretKey: RECAPTCHA_V3_SECRET, minScore: 0.5 });
+let invisible = new ReCaptcha({ secretKey: RECAPTCHA_V3_SECRET, minScore: 0.5 });
+let checkbox = new ReCaptcha({ secretKey: RECAPTCHA_V2_SECRET });
 let router = createRouter();
 
 router.post("/comment", {
 	middleware: [
-		captcha(recaptcha, {
+		captcha(invisible, {
 			action: "comment",
 			onFailure: (error) =>
 				error.code === "low-score" ? null : new Response(null, { status: 403 }),
 		}),
 	],
 	handler(ctx) {
-		if (ctx.captcha.status === "failure") return renderWithCheckbox(ctx);
+		if (isFailure(ctx.captcha)) return renderPage(<CheckboxForm siteKey={RECAPTCHA_V2_SITE_KEY} />);
 		return saveComment(ctx);
+	},
+});
+
+router.post("/comment/checked", {
+	middleware: [captcha(checkbox)],
+	handler: (ctx) => saveComment(ctx),
+});
+
+function CheckboxForm(handle: Handle<{ siteKey: string }>) {
+	return () => (
+		<form method="post" action="/comment/checked">
+			<textarea name="body" />
+			<ReCaptchaWidget siteKey={handle.props.siteKey} />
+			<button type="submit">Post</button>
+		</form>
+	);
+}
+```
+
+v2 and v3 keys are separate, so the checkbox posts to a route verified with the v2 secret; a v2
+answer has no score and passes on success alone.
+
+## Pattern: Hold a token to its form and site
+
+A token solved on one form or domain fails on another, and the visitor's address comes from
+the header your proxy sets.
+
+```ts
+import { captcha } from "@sdxc/captcha/middleware";
+import { Turnstile } from "@sdxc/captcha/turnstile";
+import { formData } from "remix/middleware/form-data";
+import { createRouter } from "remix/router";
+
+let turnstile = new Turnstile({ secretKey: TURNSTILE_SECRET_KEY, timeout: 5_000 });
+let router = createRouter({ middleware: [formData()] });
+
+router.post("/contact", {
+	middleware: [
+		captcha(turnstile, {
+			action: "contact",
+			hostname: "www.example.com",
+			remoteIp: (request) => request.headers.get("X-Real-IP"),
+		}),
+	],
+	handler(ctx) {
+		return sendMessage(ctx.get(FormData));
 	},
 });
 ```
@@ -255,15 +311,22 @@ test("refuses a sign-up the provider rejected", async () => {
 	expect(response.status).toBe(403);
 	expect(provider.last).toEqual({ token: "token", remoteIp: "203.0.113.7" });
 });
+
+test("accepts only the known token", async () => {
+	let provider = new MemoryCaptcha({ unknownTokens: "reject" }).accept("good", { action: "x" });
+
+	expect(await provider.verify("good")).toEqual({ status: "success", data: { action: "x" } });
+	expect((await provider.verify("bad")).status).toBe("failure");
+	provider.reset();
+});
 ```
 
 ## Pattern: Implementing `Captcha` for another provider
 
-An implementation owns three things: the widget's field name, the call (or local check) that
-verifies a token, and the mapping of the provider's answer onto `Captcha.Verification` and
-`Captcha.ErrorCode`. Report only what the provider confirms, map token problems to `rejected`
-or `expired`, and map everything the visitor cannot fix — a bad key, a provider error, a
-network failure — to `unavailable`.
+An implementation names its widget's field, verifies a token, and maps the answer onto
+`Captcha.Verification` and `Captcha.ErrorCode`: token problems are `rejected` or `expired`, and
+anything the visitor cannot fix (a bad key, a provider error, a network failure) is
+`unavailable`.
 
 ```ts
 import type { Captcha } from "@sdxc/captcha";
@@ -272,7 +335,6 @@ import type { Result } from "@sdxc/result";
 import { CaptchaError } from "@sdxc/captcha";
 import { failure, success } from "@sdxc/result";
 
-/** Friendly Captcha v2, verified with an API key header. */
 class FriendlyCaptcha implements Captcha {
 	readonly field = "frc-captcha-response";
 
@@ -291,7 +353,7 @@ class FriendlyCaptcha implements Captcha {
 			return failure(new CaptchaError("unavailable"));
 		}
 		if (!response.ok) return failure(new CaptchaError("unavailable", [`http-${response.status}`]));
-		let answer = await response.json(); // validate the shape before trusting it
+		let answer = await response.json();
 		if (answer.success) return success({ challengedAt: new Date(answer.data.challenge.timestamp) });
 		let code = answer.error.error_code;
 		if (code === "response_timeout" || code === "response_duplicate") {
@@ -302,10 +364,8 @@ class FriendlyCaptcha implements Captcha {
 }
 ```
 
-A provider verified locally fits the same contract: an [ALTCHA](https://altcha.org) proof of
-work is checked with an HMAC key and no network call, so its implementation reads the `altcha`
-field, ignores `remoteIp`, and reports no hostname, action or score — which is why the
-middleware treats an expected `action` it cannot confirm as `action-mismatch`.
+A provider that reports no action fails the middleware's `action` option with
+`action-mismatch`, so leave `action` unset for it.
 
 ## Versioning
 
