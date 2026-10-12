@@ -2,10 +2,9 @@
 
 TeX math to MathML Core, with a markdown walk visitor and a component.
 
-Browsers render [MathML Core](https://developer.mozilla.org/en-US/docs/Web/MathML) natively,
-so a formula needs no stylesheet, no web font and no client JavaScript. This package reads a
-practical subset of TeX into a JSON tree of MathML elements and writes it as markup or as
-component elements.
+Browsers render [MathML Core](https://developer.mozilla.org/en-US/docs/Web/MathML) natively, so a
+formula needs no stylesheet, web font or client JavaScript. This package reads a practical subset
+of TeX into a JSON tree of MathML elements and writes it as markup or as component elements.
 
 ## Installation
 
@@ -13,10 +12,10 @@ component elements.
 npm add @sdxc/math
 ```
 
-The root entry depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+Conversions answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 `@sdxc/math/markdown` walks documents from
-[`@sdxc/markdown`](https://www.npmjs.com/package/@sdxc/markdown), and `@sdxc/math/ui` renders
-with `remix/component`; both install alongside this package.
+[`@sdxc/markdown`](https://www.npmjs.com/package/@sdxc/markdown), and `@sdxc/math/ui` renders with
+`remix/component` from [`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
@@ -30,99 +29,96 @@ let result = toMathML("\\frac{a}{b}", { display: true });
 if (isFailure(result)) throw result.error;
 
 result.data;
-// '<math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics>
+// <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><semantics>
 //   <mfrac><mi>a</mi><mi>b</mi></mfrac>
 //   <annotation encoding="application/x-tex">\frac{a}{b}</annotation>
-// </semantics></math>'
+// </semantics></math>
 ```
 
-The formula travels with its TeX as an annotation, which screen readers and copy-paste can
-read back.
+Leave `display` off for a formula inside a sentence. The TeX travels with the formula as an
+annotation, which screen readers and copy-paste read back.
 
-### Render Math In Markdown
+### Read the tree
 
-````typescript
+```typescript
+import { parseMath } from "@sdxc/math";
+
+let tree = parseMath("x^2");
+// success: { type: "element", name: "math", attributes: { xmlns: "…", display: "inline" }, children: [ … ] }
+```
+
+The tree is plain JSON, so it caches and travels in a payload.
+
+### Render math in markdown
+
+```typescript
 import { Markdown } from "@sdxc/markdown";
 import { toHTML } from "@sdxc/markdown/html";
 import { math, renderMath } from "@sdxc/math/markdown";
 import { isFailure } from "@sdxc/result";
 
-let parsed = Markdown.parse("Euler: $`e^{i\\pi} + 1 = 0`$\n\n```math\n\\sum_{i=1}^n i\n```\n");
+let fence = "`".repeat(3);
+let source = `Euler: $\`e^{i\\pi} + 1 = 0\`$\n\n${fence}math\n\\sum_{i=1}^n i\n${fence}\n`;
+
+let parsed = Markdown.parse(source);
 if (isFailure(parsed)) throw parsed.error;
 
 let walked = Markdown.walk(parsed.data.document, math);
 if (isFailure(walked)) throw walked.error;
 
 let html = toHTML(walked.data, { tags: { math: renderMath } });
-````
+```
 
-The visitor reads the two forms GitHub renders: a fenced block whose language is `math`, and
-inline code wrapped in dollar signs, ``$`x^2`$``. Each becomes a `math` tag node carrying
-`{ tex, display }`.
+The visitor reads the two forms GitHub renders: a fenced block whose language is `math` (display),
+and inline code wrapped in dollar signs, ``$`x^2`$`` (inline). Each becomes a `math` tag node with
+`{ tex, display }` attributes.
 
-### Render With Remix
+### Render with Remix
 
 ```tsx
-import { toRemix } from "@sdxc/markdown/remix";
-import { MathFormula, MathTag } from "@sdxc/math/ui";
+import { MathFormula } from "@sdxc/math/ui";
 
 <p>
 	The area is <MathFormula tex="\pi r^2" />.
 </p>;
 
-<article>{toRemix(walked.data, { components: { math: MathTag } })}</article>;
+<MathFormula tex="\int_0^1 x^2 \, dx = \frac{1}{3}" display />;
 ```
+
+Render it on the server: the browser's HTML parser places the elements in the MathML namespace.
 
 ## API
 
 ### `toMathML(tex: string, options?: MathOptions): Result<string, MathError>`
 
-Converts TeX to a MathML string, every value escaped, ready for HTML or XHTML. Every element
-has an explicit closing tag, so HTML and XML parsers read it the same way.
+Converts TeX to a MathML string with every value escaped and every element explicitly closed,
+ready for HTML or XHTML.
 
 ### `parseMath(tex: string, options?: MathOptions): Result<MathElement, MathError>`
 
-Reads TeX into the tree `toMathML` serializes, rooted at the `math` element. The tree is plain
-JSON, so it caches and travels in a payload.
-
-```typescript
-let tree = parseMath("x^2");
-// { type: "element", name: "math", attributes: { xmlns: "…", display: "inline" }, children: [ … ] }
-```
-
-### `MathOptions`
-
-- `display`: a block formula. Sets `display="block"` and moves the limits of `\sum`, `\prod`,
-  `\lim` and similar operators under and over them. Defaults to `false`.
+Reads TeX into the tree `toMathML` serializes: a `math` element holding a `semantics` element with
+the formula and its TeX annotation.
 
 ### `MathError`
 
-The first construct the parser refused. `reason` says what went wrong; `index` (0-based),
-`line` and `column` (1-based) locate it in the TeX, and the message ends with `line:column`.
+The first construct the parser refused. `reason` says what went wrong; `index` (0-based), `line`
+and `column` (1-based) locate it in the TeX, and `message` ends with `line:column`.
 
 ```typescript
 parseMath("a + \\foo"); // failure: "Unknown command \foo at 1:5"
 ```
 
-### Types
-
-#### `MathNode`, `MathElement`, `MathText`
-
-A node is an element, `{ type: "element", name, attributes, children }` with string
-attribute values, or text, `{ type: "text", value }` holding the unescaped characters.
-
 ### `@sdxc/math/markdown`
 
 #### `math`
 
-The `Markdown.walk` visitor. A formula that does not convert fails the walk, and the failure's
-`cause` is the `MathError`, so a broken formula stops a build. Every handler is synchronous,
-so the walk returns a `Result`, never a promise.
+The `Markdown.walk` visitor with default options. A formula that does not convert fails the walk,
+with the `MathError` as the failure's `cause`. The walk stays synchronous and returns a `Result`.
 
 #### `createMathVisitor(options?: MathVisitorOptions)`
 
-Builds the visitor with options. `invalid: "keep"` leaves a formula that does not convert as
-the code block or inline code it was written as; `invalid: "fail"` is the default.
+Builds the visitor. `invalid: "fail"` (the default) fails the walk on a formula that does not
+convert; `invalid: "keep"` leaves it as the code block or inline code the author wrote.
 
 #### `renderMath`
 
@@ -133,14 +129,33 @@ escaped TeX inside `<code>`.
 
 #### `MathFormula`
 
-A `remix/component` component taking `tex` and `display`. It builds the MathML as elements and
-renders the TeX in a `<code>` when it does not convert. Render it on the server: the browser's
-HTML parser places the elements in the MathML namespace, which a client-side render does not.
+A `remix/component` component taking `tex` and `display`. It builds the MathML as elements, and
+renders the TeX in a `<code>` when it does not convert.
 
 #### `MathTag`
 
-`MathFormula` shaped for `toRemix`'s `components` option, which hands every component its
-children alongside the tag's attributes.
+`MathFormula` shaped for `toRemix`'s `components` option, which passes a walked `math` tag's
+attributes plus `children`.
+
+### Types
+
+#### `MathOptions`
+
+- `display`: a block formula. Sets `display="block"` and places the limits of `\sum`, `\prod`,
+  `\lim` and similar operators under and over them. Defaults to `false`.
+
+#### `MathVisitorOptions`
+
+- `invalid`: `"fail"` or `"keep"`, as described under `createMathVisitor`.
+
+#### `MathNode`, `MathElement`, `MathText`
+
+A node is an element, `{ type: "element", name, attributes, children }` with string attribute
+values, or text, `{ type: "text", value }` holding the unescaped characters.
+
+#### `MathFormula.Props`
+
+`{ tex: string; display?: boolean }`, the props `MathFormula` accepts.
 
 ## Supported TeX
 
@@ -150,19 +165,70 @@ children alongside the tag's attributes.
 - Greek letters `\alpha` … `\omega`, the `\var` forms, and uppercase `\Gamma` … `\Omega`
 - Operators, relations and arrows such as `\cdot \times \pm \leq \neq \approx \in`,
   `\subseteq \cup \to \Rightarrow \iff \forall \exists \ldots \cdots`, and `\infty \partial \nabla`
-- Big operators `\sum \prod \coprod \bigcup \bigcap` with limits in display mode, integrals
-  `\int \iint \iiint \oint` with limits beside them, and `\limits` / `\nolimits`
-- Functions `\sin \cos \tan \log \ln \exp \det \max \min \sup \inf \lim` and more, plus
+- Big operators `\sum \prod \coprod \bigcup \bigcap \bigoplus \bigotimes \bigvee \bigwedge` with
+  limits in display mode, integrals `\int \iint \iiint \oint` with limits beside them, and
+  `\limits` / `\nolimits`
+- Functions `\sin \cos \tan \log \ln \exp \det \gcd \max \min \sup \inf \lim` and more, plus
   `\operatorname{…}`
 - `\left … \right` with `( ) [ ] | / .` and
   `\{ \} \langle \rangle \lvert \rvert \| \lfloor \rfloor \lceil \rceil`
-- `\text{…}`, `\mathrm`, `\mathbf`, `\mathit`, `\mathbb`
+- `\text{…}`, `\textrm{…}`, `\mbox{…}`, `\mathrm`, `\mathbf`, `\mathit`, `\mathbb`
 - Accents `\hat \bar \vec \tilde \dot \ddot`
-- Spacing `\, \: \; \! \quad \qquad \enspace`, `~` and `\ `
-- Environments `matrix`, `pmatrix`, `bmatrix`, `Bmatrix`, `vmatrix`, `Vmatrix` and `cases`,
-  with `&` between cells and `\\` between rows; both are errors outside an environment
+- Spacing `\, \: \> \; \! \quad \qquad \enspace`, `~` and `\ `
+- Environments `matrix`, `pmatrix`, `bmatrix`, `Bmatrix`, `vmatrix`, `Vmatrix` and `cases`, with
+  `&` between cells and `\\` between rows
 
 Any other command is a `MathError` naming it.
+
+## Pattern: Validate TeX From A Form
+
+Check a formula before saving it, and point the author at the character that broke it.
+
+```typescript
+import { toMathML } from "@sdxc/math";
+import { isFailure } from "@sdxc/result";
+
+function validateFormula(tex: string) {
+	let result = toMathML(tex, { display: true });
+	if (isFailure(result)) {
+		let { reason, line, column } = result.error;
+		return { ok: false as const, message: `${reason} (line ${line}, column ${column})` };
+	}
+	return { ok: true as const, tex, preview: result.data };
+}
+
+validateFormula("\\frac{1}{\\foo}");
+// { ok: false, message: "Unknown command \foo (line 1, column 10)" }
+```
+
+## Pattern: Fail A Build On A Broken Formula
+
+Walk with `math` so a formula that does not convert stops the build, and report both where it sits
+in the document and where the TeX broke.
+
+```typescript
+import { Markdown } from "@sdxc/markdown";
+import { toHTML } from "@sdxc/markdown/html";
+import { MathError } from "@sdxc/math";
+import { math, renderMath } from "@sdxc/math/markdown";
+import { isFailure } from "@sdxc/result";
+
+function build(file: string, source: string): string {
+	let parsed = Markdown.parse(source);
+	if (isFailure(parsed)) throw parsed.error;
+
+	let walked = Markdown.walk(parsed.data.document, math);
+	if (isFailure(walked)) {
+		let { cause, position } = walked.error;
+		if (cause instanceof MathError) {
+			throw new Error(`${file}:${position?.start.line}: ${cause.message}`, { cause });
+		}
+		throw walked.error;
+	}
+
+	return toHTML(walked.data, { tags: { math: renderMath } });
+}
+```
 
 ## Pattern: Keep Building When A Formula Breaks
 
@@ -183,6 +249,30 @@ function render(source: string): string {
 	let walked = Markdown.walk(parsed.data.document, preview);
 	if (isFailure(walked)) return "";
 	return toHTML(walked.data, { tags: { math: renderMath } });
+}
+```
+
+## Pattern: Render A Markdown Article With Remix
+
+Draw walked `math` tags with `MathTag` when the page renders markdown through `toRemix`.
+
+```tsx
+import type { Handle } from "remix/component";
+
+import { Markdown } from "@sdxc/markdown";
+import { toRemix } from "@sdxc/markdown/remix";
+import { math } from "@sdxc/math/markdown";
+import { MathTag } from "@sdxc/math/ui";
+import { isFailure } from "@sdxc/result";
+
+function Article(handle: Handle<{ source: string }>) {
+	return () => {
+		let parsed = Markdown.parse(handle.props.source);
+		if (isFailure(parsed)) return <p>Could not read this article.</p>;
+		let walked = Markdown.walk(parsed.data.document, math);
+		if (isFailure(walked)) return <p>{walked.error.message}</p>;
+		return <article>{toRemix(walked.data, { components: { math: MathTag } })}</article>;
+	};
 }
 ```
 
