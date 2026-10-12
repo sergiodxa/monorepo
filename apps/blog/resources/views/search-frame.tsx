@@ -49,9 +49,8 @@ function statusOf(model: SearchViewModel.Suggestions): string {
 
 /**
  * Creates the dialog body renderer. The form is a plain `GET` to `/search`, so Enter reaches
- * the full results with or without script; the rows are the listbox the box points into, the
- * tabs and "See all" outside it; the status line, present in every state, is the one live
- * region, and the card appears around it only once there is something to show.
+ * the full results with or without script; "See all" shows only while more match than are
+ * listed; the status line, present in every state, is the one live region.
  *
  * @returns A view function that renders from a dialog model.
  */
@@ -121,11 +120,11 @@ export function SearchFrameView() {
 									/>
 								))}
 							</ol>
-							<p mix={[m(0), pi(3), pb(2), text("sm")]}>
-								<Link href={model.seeAll}>
-									See all {model.total === 1 ? "1 result" : `${model.total} results`} →
-								</Link>
-							</p>
+							{model.total > model.items.length ? (
+								<p mix={[m(0), pi(3), pb(2), text("sm")]}>
+									<Link href={model.seeAll}>See all {model.total} results →</Link>
+								</p>
+							) : null}
 						</>
 					) : null}
 				</div>

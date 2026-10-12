@@ -744,18 +744,34 @@ describe("the search dialog's kind tabs", () => {
 		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
 
 		expect(pressInBox("ArrowRight")).toEqual([true]);
-		await vi.waitFor(() => expect(currentTab()).toBe("Articles"));
+		expect(currentTab()).toBe("Articles");
+		await vi.waitFor(() => expect(rows()).toEqual(["/articles/mix-1", "/articles/mix-2"]));
 		expect(requests.at(-1)?.src).toBe("/frames/search?q=mix&kind=article");
-		expect(rows()).toEqual(["/articles/mix-1", "/articles/mix-2"]);
 		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
 
 		pressInBox("ArrowRight");
-		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
 		await vi.waitFor(() => expect(chosen()).toBe("/tutorials/mix-1"));
+		expect(currentTab()).toBe("Tutorials");
 
 		pressInBox("ArrowRight");
-		await vi.waitFor(() => expect(currentTab()).toBe("All"));
-		expect(requests.at(-1)?.src).toBe("/frames/search?q=mix");
+		expect(currentTab()).toBe("All");
+		await vi.waitFor(() => expect(requests.at(-1)?.src).toBe("/frames/search?q=mix"));
+	});
+
+	test("follows every quick press with the tab mark, loading only the tab the reader stops on", async () => {
+		await searchFor("mix");
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
+		let sent = requests.length;
+
+		pressInBox("ArrowRight", 2);
+		expect(currentTab()).toBe("Tutorials");
+
+		await vi.waitFor(() => expect(rows()).toEqual(["/tutorials/mix-1"]));
+		expect(requests.slice(sent).map((request) => request.src)).toEqual([
+			"/frames/search?q=mix&kind=tutorial",
+		]);
+		await vi.waitFor(() => expect(chosen()).toBe("/tutorials/mix-1"));
 	});
 
 	test("ArrowLeft on a chosen row in All opens the last tab", async () => {
@@ -764,16 +780,16 @@ describe("the search dialog's kind tabs", () => {
 		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
 
 		expect(pressInBox("ArrowLeft")).toEqual([true]);
-		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
-		expect(rows()).toEqual(["/tutorials/mix-1"]);
+		expect(currentTab()).toBe("Tutorials");
+		await vi.waitFor(() => expect(rows()).toEqual(["/tutorials/mix-1"]));
 	});
 
 	test("a click on a tab narrows the results in place, keeping focus in the box", async () => {
 		await searchFor("mix");
 
 		expect(clickWith(tab("tutorial"))).toBe(true);
-		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
-		expect(rows()).toEqual(["/tutorials/mix-1"]);
+		expect(currentTab()).toBe("Tutorials");
+		await vi.waitFor(() => expect(rows()).toEqual(["/tutorials/mix-1"]));
 		expect(followed).toEqual([]);
 		expect(document.activeElement).toBe(input());
 	});
@@ -789,7 +805,7 @@ describe("the search dialog's kind tabs", () => {
 	test("typing keeps the open tab", async () => {
 		await searchFor("mix");
 		clickWith(tab("tutorial"));
-		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
+		await vi.waitFor(() => expect(rows()).toEqual(["/tutorials/mix-1"]));
 
 		type("mixed");
 		await settle();

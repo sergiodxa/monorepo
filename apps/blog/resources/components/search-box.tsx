@@ -26,6 +26,12 @@ export const SEARCH_DEBOUNCE_MS = 200;
  */
 export const SPINNER_DELAY_MS = 350;
 
+/**
+ * How long arrows must pause on a tab before its results load, so pressing through several
+ * tabs loads only the one the reader stops on.
+ */
+export const TAB_DEBOUNCE_MS = 150;
+
 /** How long the panel takes to grow or shrink to the new results. */
 const RESIZE_MS = 160;
 
@@ -126,6 +132,8 @@ export const SearchBox = clientEntry(
 		let selected = -1;
 		/** Counts keystrokes, so a reload only settles the state when no newer one is pending. */
 		let latest = 0;
+		/** The tab marked ahead of its results, or `null` once the frame shows the tab it marks. */
+		let markedKind: string | null = null;
 		/** What the page rendered the box with, which closing the dialog returns it to. */
 		let initialQuery = handle.props.query;
 		let initialSrc = searchFrameSrc(handle.props.frameSrc, initialQuery);
@@ -156,6 +164,7 @@ export const SearchBox = clientEntry(
 		/** Clears the pending marks once the newest results are showing. */
 		function settle(): void {
 			pending = false;
+			markedKind = null;
 			markBusy(false);
 			clearTimeout(spinnerDelay);
 			if (!spinning) return;
@@ -195,19 +204,37 @@ export const SearchBox = clientEntry(
 			resize(dialog, from);
 		}
 
-		/** Reloads the results for the box's text narrowed to `kind`, at once. */
-		function switchTab(kind: string, chooseFirst: boolean): void {
+		/** The tab the reader is on: the one marked ahead of its results, else the frame's. */
+		function currentKind(): string {
+			return markedKind ?? handle.props.kind;
+		}
+
+		/**
+		 * Marks `kind`'s tab current at once and loads its results after `delay`, so the tab
+		 * follows every press while the results load only for the tab the reader stops on.
+		 */
+		function switchTab(kind: string, chooseFirst: boolean, delay: number): void {
 			let box = document.getElementById(handle.props.id);
 			if (!(box instanceof HTMLInputElement)) return;
+			markedKind = kind;
+			for (let tab of document.querySelectorAll(`[${SEARCH_KIND_ATTRIBUTE}]`)) {
+				if (tab.getAttribute(SEARCH_KIND_ATTRIBUTE) === kind) {
+					tab.setAttribute("aria-current", "true");
+					tab.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+				} else tab.removeAttribute("aria-current");
+			}
 			clearTimeout(debounce);
 			let keystroke = ++latest;
 			begin();
-			void load(
-				searchFrameSrc(handle.props.frameSrc, box.value, kind),
-				box.closest("dialog"),
-				keystroke,
-				chooseFirst,
-			);
+			let text = box.value;
+			debounce = setTimeout(() => {
+				void load(
+					searchFrameSrc(handle.props.frameSrc, text, kind),
+					box.closest("dialog"),
+					keystroke,
+					chooseFirst,
+				);
+			}, delay);
 		}
 
 		/**
@@ -222,7 +249,7 @@ export const SearchBox = clientEntry(
 				return;
 			}
 			event.preventDefault();
-			switchTab(kind, false);
+			switchTab(kind, false, 0);
 			document.getElementById(handle.props.id)?.focus();
 		}
 
@@ -248,7 +275,7 @@ export const SearchBox = clientEntry(
 		 */
 		function navigate(event: KeyboardEvent): void {
 			let rows = options();
-			let { kind, kinds } = handle.props;
+			let { kinds } = handle.props;
 
 			if (
 				(event.key === "ArrowRight" || event.key === "ArrowLeft") &&
@@ -257,8 +284,8 @@ export const SearchBox = clientEntry(
 			) {
 				event.preventDefault();
 				let step = event.key === "ArrowRight" ? 1 : -1;
-				let at = Math.max(0, kinds.indexOf(kind));
-				switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true);
+				let at = Math.max(0, kinds.indexOf(currentKind()));
+				switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true, TAB_DEBOUNCE_MS);
 			} else if (event.key === "ArrowDown" && rows.length > 0) {
 				event.preventDefault();
 				choose(selected + 1 >= rows.length ? 0 : selected + 1);
@@ -311,7 +338,7 @@ export const SearchBox = clientEntry(
 							begin();
 							debounce = setTimeout(() => {
 								void load(
-									searchFrameSrc(handle.props.frameSrc, text, handle.props.kind),
+									searchFrameSrc(handle.props.frameSrc, text, currentKind()),
 									box.closest("dialog"),
 									keystroke,
 								);

@@ -8,8 +8,8 @@
  */
 
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
-import { backdropBlur, shadow } from "@sdxc/u/effects";
-import { media } from "@sdxc/u/responsive";
+import { backdropBlur, backdropSaturate, shadow } from "@sdxc/u/effects";
+import { dark, light, media } from "@sdxc/u/responsive";
 
 /**
  * The panel's own text color at low strength: a hairline that stays equally faint against
@@ -22,8 +22,8 @@ export const SEARCH_HAIRLINE = colorMix(
 );
 
 /**
- * A frosted panel. A reader who asks for reduced transparency gets the solid panel color,
- * so text over a busy page stays legible.
+ * A frosted panel, lighter in the light theme where the page behind is pale enough to show
+ * through. A reader who asks for reduced transparency gets the solid panel color instead.
  */
 export function searchSurface() {
 	return [
@@ -32,8 +32,14 @@ export function searchSurface() {
 		border({ color: SEARCH_HAIRLINE, width: 1 }),
 		shadow("xl"),
 		media("(prefers-reduced-transparency: no-preference)", [
-			bg(colorMix("oklab", { color: "var(--ui-neutral-bg-tint)", weight: 88 }, "transparent")),
+			light(
+				bg(colorMix("oklab", { color: "var(--ui-neutral-bg-tint)", weight: 62 }, "transparent")),
+			),
+			dark(
+				bg(colorMix("oklab", { color: "var(--ui-neutral-bg-tint)", weight: 88 }, "transparent")),
+			),
 			backdropBlur("xl"),
+			backdropSaturate(1.8),
 		]),
 	];
 }

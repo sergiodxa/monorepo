@@ -227,8 +227,7 @@ describe("GET /frames/search kind tabs", () => {
 		expect(count(html, `href="/tutorials/${KIND_WORD}-tutorial-`)).toBe(2);
 		expect(html).not.toContain(`href="/articles/${KIND_WORD}-article"`);
 		expect(html).toMatch(/aria-current="true"[^>]*>Tutorials/);
-		expect(html).toContain("See all 2 results →");
-		expect(html).toContain(`href="/search?q=${KIND_WORD}+kind%3Atutorial"`);
+		expect(html).toContain("Top matches");
 	});
 
 	test("falls back to All for a kind with no matches or one it does not know", async () => {
@@ -236,8 +235,15 @@ describe("GET /frames/search kind tabs", () => {
 			let html = await (await get(`/frames/search?q=${KIND_WORD}&kind=${kind}`)).text();
 
 			expect(html).toMatch(/aria-current="true"[^>]*>All/);
-			expect(html).toContain("See all 3 results →");
+			expect(count(html, `href="/tutorials/${KIND_WORD}-tutorial-`)).toBe(2);
+			expect(html).toContain(`href="/articles/${KIND_WORD}-article"`);
 		}
+	});
+
+	test("leaves See all out while every match is listed", async () => {
+		let html = await (await get(`/frames/search?q=${KIND_WORD}`)).text();
+
+		expect(html).not.toContain("See all");
 	});
 
 	test("shows no tabs while one kind holds every match", async () => {

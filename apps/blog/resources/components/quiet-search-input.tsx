@@ -33,7 +33,7 @@ export namespace QuietSearchInput {
 	export interface RowProps {
 		/** What leads the row; the magnifier when left out. */
 		lead?: RemixNode;
-		/** The input, then anything that trails it, such as a Cancel button. */
+		/** The input, whose own clear button ends the row. */
 		children: RemixNode;
 		mix?: TagProps<"div">["mix"];
 	}
@@ -71,15 +71,16 @@ export function QuietSearchInput(handle: Handle<QuietSearchInput.Props>) {
 }
 
 /**
- * The row the input sits in: the lead (a magnifier by default) in a fixed slot, the input
- * taking the rest, and any trailing control after it.
+ * The row the input sits in: the lead (a magnifier by default) in a fixed slot and the input
+ * taking the rest, so the input's clear button sits as far from the row's end as the lead
+ * sits from its start.
  */
 export function QuietSearchRow(handle: Handle<QuietSearchInput.RowProps>) {
 	return () => (
 		<div
 			mix={[
 				grid(),
-				gridTemplate({ columns: "auto minmax(0, 1fr) auto" }),
+				gridTemplate({ columns: "auto minmax(0, 1fr)" }),
 				items("center"),
 				gap(3),
 				fg("neutral.muted"),
