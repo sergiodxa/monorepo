@@ -10,13 +10,13 @@
 import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ManagementTestCore } from "~/app/test/harness/management";
 
 import { createAgentClientsRegisterAction } from "~/app/http/controllers/management/agent-clients/register";
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import {
 	buildManagementTestCore,
@@ -34,7 +34,7 @@ async function buildHarness(dashboardSubjectId: string | null = null) {
 	let core = await buildManagementTestCore({ defaultScope: "clients:write" });
 
 	let router = createRouter({
-		middleware: [conformance, database(() => core.db), modelsMiddleware()],
+		middleware: [conformance, database(core.db), modelsMiddleware()],
 	});
 	router.map(
 		routes.agentClientsRegister,

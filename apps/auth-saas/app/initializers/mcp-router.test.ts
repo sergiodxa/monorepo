@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
+import { database } from "@sdxc/database-middleware";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
@@ -22,7 +23,6 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { Models } from "~/app/models";
 
 import { createSubjectsListAction } from "~/app/http/controllers/management/subjects/list";
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { mcpRouter } from "~/app/initializers/mcp-router";
 import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
@@ -181,7 +181,7 @@ beforeEach(async () => {
 	subjectId = created.subjectId;
 
 	let managementActionRouter = createRouter({
-		middleware: [database(() => db), modelsMiddleware()],
+		middleware: [database(db), modelsMiddleware()],
 	});
 	managementActionRouter.map(
 		routes.subjectsList,

@@ -9,6 +9,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -25,7 +26,6 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 
 import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/middleware/api-version";
-import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import { models } from "~/app/http/middleware/models";
@@ -73,7 +73,7 @@ export const managementRouter = createRouter({
 		asyncContext(),
 		securityHeaders(MANAGEMENT_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry }),
-		database(createDatabase),
+		database(createDatabase()),
 		models(),
 		managementWellKnown(issuer),
 		formData(),

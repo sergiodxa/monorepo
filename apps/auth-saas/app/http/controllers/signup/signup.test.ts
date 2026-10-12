@@ -99,7 +99,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	};
 });
 
-let { database } = await import("~/app/http/middleware/database");
+let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { Mail } = await import("~/app/http/middleware/mail");
 let { htmlRenderer } = await import("~/app/http/render");
@@ -174,7 +174,7 @@ function buildRouter() {
 	});
 
 	let middleware: Middleware[] = [
-		database(() => db) as Middleware,
+		database(db) as Middleware,
 		modelsMiddleware() as Middleware,
 		(ctx, next) => {
 			ctx.set(Mail, mailer, { property: "mail" });

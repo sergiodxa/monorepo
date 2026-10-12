@@ -18,6 +18,7 @@ import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { createRouter } from "remix/router";
@@ -43,7 +44,6 @@ import { createTenantMfaPolicySetAction } from "~/app/http/controllers/managemen
 import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
 import { createTenantSessionPolicyDescribeAction } from "~/app/http/controllers/management/tenants/session-policy";
 import { createTenantSessionPolicySetAction } from "~/app/http/controllers/management/tenants/set-session-policy";
-import { database } from "~/app/http/middleware/database";
 import { Mail } from "~/app/http/middleware/mail";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import {
@@ -96,7 +96,7 @@ export function buildTenantsRouter(
 	let router = createRouter({
 		middleware: [
 			conformance,
-			database(() => db),
+			database(db),
 			modelsMiddleware(),
 			(ctx, next) => {
 				ctx.set(Mail, mailer, { property: "mail" });

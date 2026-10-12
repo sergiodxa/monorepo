@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -38,7 +39,6 @@ import { createSubjectsListAction } from "~/app/http/controllers/management/subj
 import { createSubjectsReadAction } from "~/app/http/controllers/management/subjects/read";
 import { createSubjectsUnblockAction } from "~/app/http/controllers/management/subjects/unblock";
 import { createSubjectsUpdateAction } from "~/app/http/controllers/management/subjects/update";
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import {
 	buildManagementTestCore,
@@ -71,7 +71,7 @@ export function buildSubjectsRouter(
 		r2: options.r2 ?? createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
+	let router = createRouter({ middleware: [conformance, database(db), modelsMiddleware()] });
 
 	router.map(routes.subjectsCreate, createSubjectsCreateAction(controllerOptions));
 	router.map(routes.subjectsList, createSubjectsListAction(controllerOptions));

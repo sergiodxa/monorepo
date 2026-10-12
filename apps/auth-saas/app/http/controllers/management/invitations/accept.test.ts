@@ -75,7 +75,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 });
 
 let { conformance } = await import("~/app/test/harness/management");
-let { database } = await import("~/app/http/middleware/database");
+let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { sessionCookie } = await import("~/app/initializers/session-cookie");
 let invitationsAccept = (await import("~/app/http/controllers/management/invitations/accept"))
@@ -102,7 +102,7 @@ beforeEach(async () => {
 
 /** Builds a router mapping only `invitationsAccept`, with no auth middleware, matching how it is mounted for real. */
 function buildRouter() {
-	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
+	let router = createRouter({ middleware: [conformance, database(db), modelsMiddleware()] });
 	router.map(routes.invitationsAccept, invitationsAccept);
 	return router;
 }

@@ -12,13 +12,13 @@ import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Models } from "~/app/models";
 
-import { database } from "~/app/http/middleware/database";
 import { ManagementCallerContext } from "~/app/http/middleware/management-auth";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -65,7 +65,7 @@ function stubManagementCaller(callerTenantId: string): Middleware {
 function buildRouter(limiter: RateLimiterBinding, callerTenantId: string) {
 	let router = createRouter({
 		middleware: [
-			database(() => db),
+			database(db),
 			modelsMiddleware(),
 			stubManagementCaller(callerTenantId),
 			managementRateLimit(limiter),

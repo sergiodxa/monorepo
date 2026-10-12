@@ -16,6 +16,7 @@ import type { RequestContext } from "remix/router";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { database } from "@sdxc/database-middleware";
 import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Database as DataTableDatabase } from "remix/data-table";
@@ -24,7 +25,6 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Models } from "~/app/models";
 
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
 import { authorizationCodes } from "~/app/models/tenant/authorization";
@@ -208,7 +208,7 @@ async function signHumanToken(input: {
 }
 
 function buildRouter(resolveDashboardSubjectId: (ctx: RequestContext) => Promise<string | null>) {
-	let router = createRouter({ middleware: [database(() => db), modelsMiddleware()] });
+	let router = createRouter({ middleware: [database(db), modelsMiddleware()] });
 	router.get("/tenants/:tenantId/probe", {
 		middleware: [managementAuth({ issuer: ISSUER, resolveDashboardSubjectId })],
 		handler: (ctx) => Response.json(ctx.managementCaller),

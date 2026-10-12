@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -27,7 +28,6 @@ import { createClientsRegisterAction } from "~/app/http/controllers/management/c
 import { createClientsRevokeSecretAction } from "~/app/http/controllers/management/clients/revoke-secret";
 import { createClientsRotateSecretAction } from "~/app/http/controllers/management/clients/rotate-secret";
 import { createClientsUpdateAction } from "~/app/http/controllers/management/clients/update";
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import {
 	buildManagementTestCore,
@@ -59,7 +59,7 @@ export function buildClientsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
+	let router = createRouter({ middleware: [conformance, database(db), modelsMiddleware()] });
 
 	router.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));
 	router.map(routes.clientsList, createClientsListAction(controllerOptions));

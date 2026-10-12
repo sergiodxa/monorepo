@@ -91,7 +91,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	};
 });
 
-let { database } = await import("~/app/http/middleware/database");
+let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { htmlRenderer } = await import("~/app/http/render");
 let { dashboardShow, dashboardCreateTenant } =
@@ -121,7 +121,7 @@ buildTenant = (state) =>
 /** Builds the platform web router mapping every `/dashboard` route, matching how `app/initializers/router.ts` mounts them. */
 function buildDashboardRouter() {
 	let middleware: Middleware[] = [
-		database(() => db) as Middleware,
+		database(db) as Middleware,
 		modelsMiddleware() as Middleware,
 		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
@@ -140,7 +140,7 @@ function buildDashboardRouter() {
 /** Builds the management router mapping only `agentClientsRegister`, matching how `app/initializers/management-router.ts` mounts it. */
 function buildManagementRouter() {
 	let router = createRouter({
-		middleware: [database(() => db) as Middleware, modelsMiddleware() as Middleware],
+		middleware: [database(db) as Middleware, modelsMiddleware() as Middleware],
 	});
 
 	router.map(

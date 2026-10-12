@@ -111,7 +111,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	};
 });
 
-let { database } = await import("~/app/http/middleware/database");
+let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { htmlRenderer } = await import("~/app/http/render");
 let { platformTenantForward } = await import("~/app/http/controllers/platform-tenant-forward");
@@ -124,7 +124,7 @@ let db: Awaited<ReturnType<typeof createTestDatabase>>;
 function buildRouter() {
 	/** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`, matching `platformTenantForward`'s own type. */
 	let middleware: Middleware[] = [
-		database(() => db),
+		database(db) as Middleware,
 		modelsMiddleware() as Middleware,
 		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,

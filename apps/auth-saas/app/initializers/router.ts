@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
@@ -21,7 +22,6 @@ import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
 
 import { platformTenantForward } from "~/app/http/controllers/platform-tenant-forward";
-import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/mail";
 import { models } from "~/app/http/middleware/models";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
@@ -51,7 +51,7 @@ export const webRouter = createRouter({
 		asyncContext(),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry }),
-		database(createDatabase),
+		database(createDatabase()),
 		models(),
 		mail(),
 		...htmlRenderer(),

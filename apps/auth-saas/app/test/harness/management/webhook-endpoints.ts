@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -30,7 +31,6 @@ import { createWebhookEndpointsReadAction } from "~/app/http/controllers/managem
 import { createWebhookEndpointsRegisterAction } from "~/app/http/controllers/management/webhook-endpoints/register";
 import { createWebhookEndpointsRotateSecretAction } from "~/app/http/controllers/management/webhook-endpoints/rotate-secret";
 import { createWebhookEndpointsUpdateAction } from "~/app/http/controllers/management/webhook-endpoints/update";
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import {
 	buildManagementTestCore,
@@ -63,7 +63,7 @@ export function buildWebhookEndpointsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
+	let router = createRouter({ middleware: [conformance, database(db), modelsMiddleware()] });
 
 	router.map(
 		routes.webhookEndpointsRegister,

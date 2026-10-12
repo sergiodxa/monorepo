@@ -14,11 +14,11 @@ import type { Middleware } from "remix/router";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64, randomToken } from "@sdxc/crypto";
+import { database } from "@sdxc/database-middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
 import TenantObject from "~/app/models/tenant/object";
@@ -61,7 +61,7 @@ beforeEach(async () => {
  * request body directly. */
 function buildRouter() {
 	let router = createRouter({
-		middleware: [conformance, formData() as Middleware, database(() => db), modelsMiddleware()],
+		middleware: [conformance, formData() as Middleware, database(db), modelsMiddleware()],
 	});
 	router.map(routes.token, token);
 	return router;

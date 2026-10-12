@@ -53,7 +53,7 @@ let billing = new MemoryBilling({
 
 vi.doMock("~/app/initializers/billing", () => ({ polar: billing }));
 
-let { database } = await import("~/app/http/middleware/database");
+let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let billingCheckout = (await import("~/app/http/controllers/billing/checkout")).default;
 let billingPortal = (await import("~/app/http/controllers/billing/portal")).default;
@@ -72,7 +72,7 @@ let models: Models;
 function buildBillingRouter() {
 	let router = createRouter({
 		middleware: [
-			database(() => db) as Middleware,
+			database(db) as Middleware,
 			modelsMiddleware() as Middleware,
 			formData() as Middleware,
 		],

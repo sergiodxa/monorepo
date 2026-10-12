@@ -24,6 +24,7 @@
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
+		"@sdxc/database-middleware": "workspace:*",
 		"@sdxc/doh": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/email-address": "workspace:*",

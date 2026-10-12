@@ -12,6 +12,7 @@ import type { Database } from "remix/data-table";
 import { parse as parseChallenges } from "@sdxc/auth/bearer-challenge";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
+import { database } from "@sdxc/database-middleware";
 import { JWK } from "@sdxc/jwt";
 import { unwrap } from "@sdxc/result";
 import { parse as parseJwks } from "@sdxc/well-known/jwks";
@@ -21,7 +22,6 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Models } from "~/app/models";
 
-import { database } from "~/app/http/middleware/database";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
@@ -66,7 +66,7 @@ beforeEach(async () => {
 /** A management router carrying the discovery documents and one scope-guarded route. */
 function buildRouter() {
 	let router = createRouter({
-		middleware: [database(() => db), modelsMiddleware(), managementWellKnown(ISSUER)],
+		middleware: [database(db), modelsMiddleware(), managementWellKnown(ISSUER)],
 	});
 	router.get("/tenants/:tenantId/probe", {
 		middleware: [managementAuth({ issuer: ISSUER, resolveDashboardSubjectId: async () => null })],
