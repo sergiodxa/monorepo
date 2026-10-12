@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 /**
  * In-memory `R2Bucket` binding: objects with HTTP and custom metadata, real MD5 etags,
  * conditional reads and writes, range reads, delimiter-grouped listing, and multipart
@@ -6,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createHash } from "node:crypto";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 /** Objects returned by `list` when no `limit` is given, and the ceiling R2 enforces. */
 const DEFAULT_LIST_LIMIT = 1000;
@@ -244,7 +246,7 @@ export function createR2Bucket(): R2BucketMock {
 		key: string,
 		options?: R2MultipartOptions,
 	): Promise<R2MultipartUpload> {
-		let uploadId = crypto.randomUUID();
+		let uploadId = generateUUID();
 		uploads.set(uploadId, { key, parts: new Map(), options });
 
 		return Promise.resolve(createUploadHandle(key, uploadId));

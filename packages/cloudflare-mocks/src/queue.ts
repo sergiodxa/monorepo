@@ -6,6 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { generateUUID } from "@sdxc/uuid/v4";
+
 /** Largest batch the platform accepts from `sendBatch`. */
 const MAXIMUM_BATCH_SIZE = 100;
 
@@ -332,7 +335,7 @@ function createMessage<Body>(
 
 /** Generates an opaque message id shaped like the platform's. */
 function createMessageId(): string {
-	return crypto.randomUUID().replaceAll("-", "");
+	return generateUUID().replaceAll("-", "");
 }
 
 /** Approximates a body's serialized size, the number the platform's limit applies to. */

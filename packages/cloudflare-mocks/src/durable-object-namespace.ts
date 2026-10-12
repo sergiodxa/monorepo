@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { generateUUID } from "@sdxc/uuid/v4";
+
 import type { FetcherHandler } from "./fetcher.js";
 
 import { createFetcher } from "./fetcher.js";
@@ -179,7 +181,7 @@ export function createDurableObjectNamespace<
 			 * @returns An id for a fresh, anonymous object.
 			 */
 			newUniqueId(): DurableObjectId {
-				return createId(crypto.randomUUID(), jurisdiction);
+				return createId(generateUUID(), jurisdiction);
 			},
 
 			/**

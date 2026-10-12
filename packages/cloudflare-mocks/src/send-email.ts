@@ -6,6 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { generateUUID } from "@sdxc/uuid/v4";
+
 /** One captured outbound email, with recipients flattened to plain addresses. */
 export interface SentEmailRecord {
 	/** Message id returned to the caller. */
@@ -180,5 +183,5 @@ function toAddress(value: string | EmailAddress): string {
 
 /** Generates an opaque message id shaped like the platform's. */
 function createMessageId(): string {
-	return `${crypto.randomUUID()}@mock.cloudflare-mocks`;
+	return `${generateUUID()}@mock.cloudflare-mocks`;
 }
