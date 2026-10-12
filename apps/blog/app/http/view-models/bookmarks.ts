@@ -78,31 +78,39 @@ export class BookmarksViewModel {
 	static index(bookmarks: Array<Like>): BookmarksViewModel.Page {
 		let items = [...bookmarks]
 			.sort((a, b) => this.activityTimestamp(b) - this.activityTimestamp(a))
-			.map((bookmark) => {
-				let href = bookmark.meta.url;
-				let label = bookmarkLabel(bookmark.meta);
-				let normalizedHref = normalizeUrl(href);
-				let publishedAt = this.publishedAt(bookmark);
-				let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
-				let createdAt = this.createdAt(bookmark);
-				let suffixHref = normalizedHref.startsWith("http")
-					? waybackSnapshotUrl(normalizedHref, bookmark.meta.archived_at || createdAt)
-					: null;
-
-				return {
-					href,
-					label,
-					description: bookmark.meta.description.trim(),
-					date: publishedAt ?? createdAt,
-					preview: !isPublished,
-					suffixHref: suffixHref ?? undefined,
-					suffixLabel: suffixHref ? "🏛️" : undefined,
-					suffixAriaLabel: suffixHref ? "View on Wayback Machine" : undefined,
-					suffixTitle: suffixHref ? "Wayback Machine" : undefined,
-				};
-			});
+			.map((bookmark) => this.item(bookmark));
 
 		return { items };
+	}
+
+	/**
+	 * One bookmark's row, with Wayback metadata for an absolute HTTP(S) URL: the recorded
+	 * capture when there is one, else the capture closest to the bookmark's date.
+	 *
+	 * @param bookmark A liked-post record.
+	 */
+	static item(bookmark: Like): BookmarksViewModel.Item {
+		let href = bookmark.meta.url;
+		let label = bookmarkLabel(bookmark.meta);
+		let normalizedHref = normalizeUrl(href);
+		let publishedAt = this.publishedAt(bookmark);
+		let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
+		let createdAt = this.createdAt(bookmark);
+		let suffixHref = normalizedHref.startsWith("http")
+			? waybackSnapshotUrl(normalizedHref, bookmark.meta.archived_at || createdAt)
+			: null;
+
+		return {
+			href,
+			label,
+			description: bookmark.meta.description.trim(),
+			date: publishedAt ?? createdAt,
+			preview: !isPublished,
+			suffixHref: suffixHref ?? undefined,
+			suffixLabel: suffixHref ? "🏛️" : undefined,
+			suffixAriaLabel: suffixHref ? "View on Wayback Machine" : undefined,
+			suffixTitle: suffixHref ? "Wayback Machine" : undefined,
+		};
 	}
 
 	/**

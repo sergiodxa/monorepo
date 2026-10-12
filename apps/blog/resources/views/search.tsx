@@ -16,7 +16,6 @@ import { rounded, shadow, transition } from "@sdxc/u/effects";
 import { cursor, listStyle, raw } from "@sdxc/u/general";
 import {
 	contents,
-	flexWrap,
 	gap,
 	grid,
 	gridTemplate,
@@ -30,11 +29,12 @@ import { m, mbs, p, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
 import { font, nowrap, tabularNums, text } from "@sdxc/u/typography";
-import { FieldError, Heading, Pagination } from "@sdxc/ui";
+import { FieldError, Heading } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
 import { QuietSearchInput, QuietSearchRow } from "~/resources/components/quiet-search-input";
+import { ResultsPager } from "~/resources/components/results-pager";
 import { SearchResult } from "~/resources/components/search-result";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -182,51 +182,6 @@ function SyntaxHelp() {
 	);
 }
 
-/** The numbered pager under a results page, with the current page marked for assistive tech. */
-function ResultsPager(handle: Handle<{ pager: SearchViewModel.Pager }>) {
-	return () => {
-		let { pager } = handle.props;
-
-		return (
-			<Pagination aria-label="Search result pages" mix={[mbs(4)]}>
-				<Pagination.List mix={[flexWrap("wrap")]}>
-					{pager.prev ? (
-						<Pagination.Item>
-							<Pagination.Link href={pager.prev} rel="prev">
-								Previous
-							</Pagination.Link>
-						</Pagination.Item>
-					) : null}
-					{pager.items.map((item, index) =>
-						item.type === "gap" ? (
-							<Pagination.Item key={`gap-${index}`}>
-								<Pagination.Link aria-disabled="true">…</Pagination.Link>
-							</Pagination.Item>
-						) : (
-							<Pagination.Item key={`page-${item.page}`}>
-								<Pagination.Link
-									href={item.href}
-									aria-current={item.current ? "page" : undefined}
-									aria-label={`Page ${item.page}`}
-								>
-									{item.page}
-								</Pagination.Link>
-							</Pagination.Item>
-						),
-					)}
-					{pager.next ? (
-						<Pagination.Item>
-							<Pagination.Link href={pager.next} rel="next">
-								Next
-							</Pagination.Link>
-						</Pagination.Item>
-					) : null}
-				</Pagination.List>
-			</Pagination>
-		);
-	};
-}
-
 /**
  * Creates the search page renderer. A query page carries `noindex`: result pages are a view
  * of the posts the sitemap already lists, one per query anybody types.
@@ -269,7 +224,7 @@ export function SearchView() {
 								<SearchResult key={item.href} item={item} />
 							))}
 						</ol>
-						{model.pager ? <ResultsPager pager={model.pager} /> : null}
+						{model.pager ? <ResultsPager label="Search result pages" pager={model.pager} /> : null}
 					</section>
 				) : null}
 			</main>

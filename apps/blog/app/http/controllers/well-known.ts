@@ -21,8 +21,24 @@ import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
-/** Every feed stream, each advertised in all three formats it is served in. */
-const FEED_STREAMS = ["feed", "articles", "tutorials", "bookmarks"] as const;
+/** The kinds' topics whose feeds WebFinger advertises beside the site's own, in all three formats. */
+const FEED_TOPICS = ["articles", "tutorials", "bookmarks"] as const;
+
+/** The site's feed and each advertised topic's, as RSS, Atom and JSON Feed paths. */
+function feedPaths(): Array<{ rss: string; atom: string; json: string }> {
+	return [
+		{
+			rss: routes.rss.feed.href(),
+			atom: routes.atom.feed.href(),
+			json: routes.jsonFeed.feed.href(),
+		},
+		...FEED_TOPICS.map((topic) => ({
+			rss: routes.rss.topic.href({ topic }),
+			atom: routes.atom.topic.href({ topic }),
+			json: routes.jsonFeed.topic.href({ topic }),
+		})),
+	];
+}
 
 /**
  * RFC 7033 §5 asks every WebFinger answer, errors included, to allow any origin, so a
@@ -86,10 +102,10 @@ function createWebFingerDocument(subject: string): Jrd {
 			actorLink(ACTOR_ID),
 			link("http://webfinger.net/rel/profile-page", home, "text/html"),
 			link("http://webfinger.net/rel/avatar", avatar, "image/png"),
-			...FEED_STREAMS.flatMap((stream) => [
-				link("alternate", feed(routes.rss[stream].href()), "application/rss+xml"),
-				link("alternate", feed(routes.atom[stream].href()), "application/atom+xml"),
-				link("alternate", feed(routes.jsonFeed[stream].href()), "application/feed+json"),
+			...feedPaths().flatMap((paths) => [
+				link("alternate", feed(paths.rss), "application/rss+xml"),
+				link("alternate", feed(paths.atom), "application/atom+xml"),
+				link("alternate", feed(paths.json), "application/feed+json"),
 			]),
 			link("me", PROFILE.x.profile),
 			link("me", PROFILE.github.profile),

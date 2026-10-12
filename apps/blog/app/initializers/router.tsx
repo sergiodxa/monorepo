@@ -41,8 +41,6 @@ import { methodOverride } from "remix/middleware/method-override";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import type { Syndication } from "~/app/http/view-models/syndication";
-
 import activityPub from "~/app/http/middleware/activitypub";
 import activityPubRateLimit from "~/app/http/middleware/activitypub-rate-limit";
 import auth from "~/app/http/middleware/auth";
@@ -138,11 +136,25 @@ const CMS_GUARDS: Middleware[] = [requireCMSAuth, requireAdmin];
 const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
 
 /**
- * A feed stream's routes in every format it is served in, which the WebSub hub is pinged
- * with together because one stored write changes all of them.
+ * A feed's routes in every format it is served in, which the WebSub hub is pinged with
+ * together because one stored write changes all of them: `"feed"` for the whole site, or a
+ * kind's topic slug for that topic's feeds.
  */
-function feedsOf(stream: Syndication.Stream) {
-	return [routes.rss[stream], routes.atom[stream], routes.jsonFeed[stream]];
+function feedsOf(stream: "feed" | (string & {})): Array<{ href(): string }> {
+	if (stream === "feed") return [routes.rss.feed, routes.atom.feed, routes.jsonFeed.feed];
+	return [routes.rss.topic, routes.atom.topic, routes.jsonFeed.topic].map((feed) => ({
+		href: () => feed.href({ topic: stream }),
+	}));
+}
+
+/**
+ * Maps a kind's topic page onto the shared topic controller, which renders the topic the
+ * registry names by `slug`; the controller loads on the page's first request.
+ *
+ * @param slug The kind's `topic` in the registry, which is also the page's path.
+ */
+function kindTopic(slug: string) {
+	return lazy(() => import("~/app/http/controllers/topic").then((it) => it.kindTopic(slug)));
 }
 
 /**
@@ -338,21 +350,17 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		routes.encorePrivacyMarkdown,
 		lazy(() => import("~/app/http/controllers/encore-privacy").then((it) => it.markdownPage)),
 	);
+	router.map(routes.articles, kindTopic("articles"));
+	router.map(routes.tutorials, kindTopic("tutorials"));
+	router.map(routes.bookmarks, kindTopic("bookmarks"));
+	router.map(routes.glossary, kindTopic("glossary"));
 	router.map(
-		routes.articles,
-		lazy(() => import("~/app/http/controllers/articles")),
+		routes.topics,
+		lazy(() => import("~/app/http/controllers/topics")),
 	);
 	router.map(
-		routes.tutorials,
-		lazy(() => import("~/app/http/controllers/tutorials")),
-	);
-	router.map(
-		routes.bookmarks,
-		lazy(() => import("~/app/http/controllers/bookmarks")),
-	);
-	router.map(
-		routes.glossary,
-		lazy(() => import("~/app/http/controllers/glossary")),
+		routes.topic,
+		lazy(() => import("~/app/http/controllers/topic")),
 	);
 	router.map(
 		routes.search,
@@ -458,7 +466,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		routes.cms.glossary,
 		lazy(
 			() => import("~/app/http/controllers/cms/glossary"),
-			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"))],
+			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"), ...feedsOf("glossary"))],
 		),
 	);
 	router.map(

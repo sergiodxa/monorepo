@@ -10,30 +10,32 @@
 import { Atom } from "@sdxc/atom";
 import { createController } from "remix/router";
 
-import type { AppContext } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";
 
+import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { syndicationChannel, syndicationEntries } from "~/app/http/view-models/syndication";
+import { TOPIC_NOT_FOUND, TopicViewModel } from "~/app/http/view-models/topic";
+import { findKindTopic, topicFeedPosts } from "~/app/services/topics";
 import { advertiseHub } from "~/app/services/websub";
 import { PROFILE } from "~/config/profile";
+import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * Serializes one stream as Atom. Entry ids are `urn:uuid:` IRIs over the post id, as
- * RFC 4287 requires an IRI, and the feed's `updated` is its newest edit, or now when empty.
+ * Serializes a feed as Atom. Entry ids are `urn:uuid:` IRIs over the post id, as RFC 4287
+ * requires an IRI, and the feed's `updated` is its newest edit, or now when empty.
  *
- * @param ctx Request context carrying the database and the request URL.
- * @param feed The route being served, whose URL is the feed's id and WebSub topic.
- * @param stream The content the feed carries.
+ * @param self The feed's absolute URL, which is its id and WebSub topic.
+ * @param channel The feed's own metadata.
+ * @param entries The entries, in the order they are listed.
+ * @param origin The site's origin, which names the feed's author.
  */
-async function atomFeed(
-	ctx: AppContext,
-	feed: { href(): string },
-	stream: Syndication.Stream,
-): Promise<Response> {
-	let channel = syndicationChannel(stream, ctx.url);
-	let entries = await syndicationEntries(ctx.models, ctx.url, stream);
-	let self = new URL(feed.href(), ctx.url).toString();
+export function atomResponse(
+	self: string,
+	channel: Syndication.Channel,
+	entries: ReadonlyArray<Syndication.Entry>,
+	origin: string,
+): Response {
 	let hub = advertiseHub(self, "application/atom+xml");
 
 	let updated = entries.reduce(
@@ -46,7 +48,7 @@ async function atomFeed(
 		title: channel.title,
 		subtitle: channel.description,
 		updated,
-		author: { name: PROFILE.name, uri: ctx.url.origin },
+		author: { name: PROFILE.name, uri: origin },
 		link: [{ rel: "alternate", href: channel.home, type: "text/html" }, ...hub.atomLink],
 		lang: "en",
 	});
@@ -72,12 +74,24 @@ export default createController(routes.atom, {
 	middleware: [],
 	actions: {
 		/** The whole site's activity, glossary terms included, in one timeline. */
-		feed: (ctx) => atomFeed(ctx, routes.atom.feed, "feed"),
-		/** Published articles only. */
-		articles: (ctx) => atomFeed(ctx, routes.atom.articles, "articles"),
-		/** Published tutorials only. */
-		tutorials: (ctx) => atomFeed(ctx, routes.atom.tutorials, "tutorials"),
-		/** Saved links, each entry pointing at the bookmarked page. */
-		bookmarks: (ctx) => atomFeed(ctx, routes.atom.bookmarks, "bookmarks"),
+		async feed(ctx) {
+			let self = new URL(routes.atom.feed.href(), ctx.url).toString();
+			let entries = await syndicationEntries(ctx.models, ctx.url, "feed");
+			return atomResponse(self, syndicationChannel("feed", ctx.url), entries, ctx.url.origin);
+		},
+
+		/**
+		 * A kind's topic, newest first: `/articles.atom` carries what `/articles` lists. A name
+		 * no kind's topic has answers 404.
+		 */
+		async topic(ctx) {
+			let topic = await findKindTopic(ctx.models, ctx.params.topic);
+			if (topic === null) {
+				return ctx.render(NotFoundView, NotFoundViewModel.page(TOPIC_NOT_FOUND), { status: 404 });
+			}
+			let self = new URL(routes.atom.topic.href({ topic: topic.slug }), ctx.url).toString();
+			let feed = TopicViewModel.feed(topic, await topicFeedPosts(ctx, topic), ctx.url);
+			return atomResponse(self, feed.channel, feed.entries, ctx.url.origin);
+		},
 	},
 });

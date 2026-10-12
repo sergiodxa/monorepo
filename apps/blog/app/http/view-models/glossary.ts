@@ -63,19 +63,25 @@ export class GlossaryViewModel {
 	static index(entries: Array<GlossaryEntry>): GlossaryViewModel.Page {
 		let list = [...entries]
 			.sort((a, b) => a.meta.term.localeCompare(b.meta.term))
-			.map((entry) => {
-				let record = entry as { id?: string };
-				let id = record.id ?? entry.meta.slug;
-
-				return {
-					id,
-					slug: entry.meta.slug,
-					term: entry.meta.term,
-					title: entry.meta.title,
-					definition: entry.meta.definition,
-				};
-			});
+			.map((entry) => this.entry(entry));
 
 		return { entries: list };
+	}
+
+	/**
+	 * One entry as the page renders it; a missing `id` degrades to `meta.slug`.
+	 *
+	 * @param entry A glossary entry.
+	 */
+	static entry(entry: GlossaryEntry): GlossaryViewModel.Entry {
+		let record = entry as { id?: string };
+
+		return {
+			id: record.id ?? entry.meta.slug,
+			slug: entry.meta.slug,
+			term: entry.meta.term,
+			title: entry.meta.title,
+			definition: entry.meta.definition,
+		};
 	}
 }

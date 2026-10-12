@@ -10,30 +10,32 @@
 import { JSONFeed } from "@sdxc/json-feed";
 import { createController } from "remix/router";
 
-import type { AppContext } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";
 
+import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { syndicationChannel, syndicationEntries } from "~/app/http/view-models/syndication";
+import { TOPIC_NOT_FOUND, TopicViewModel } from "~/app/http/view-models/topic";
+import { findKindTopic, topicFeedPosts } from "~/app/services/topics";
 import { advertiseHub } from "~/app/services/websub";
 import { PROFILE } from "~/config/profile";
+import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * Serializes one stream as JSON Feed. Each item carries its summary as `content_text`,
- * since JSON Feed expects every item to hold a body.
+ * Serializes a feed as JSON Feed. Each item carries its summary as `content_text`, since
+ * JSON Feed expects every item to hold a body.
  *
- * @param ctx Request context carrying the database and the request URL.
- * @param feed The route being served, whose URL is the feed's `feed_url` and WebSub topic.
- * @param stream The content the feed carries.
+ * @param self The feed's absolute URL, which is its `feed_url` and WebSub topic.
+ * @param channel The feed's own metadata.
+ * @param entries The items, in the order they are listed.
+ * @param origin The site's origin, which names the feed's author.
  */
-async function jsonFeed(
-	ctx: AppContext,
-	feed: { href(): string },
-	stream: Syndication.Stream,
-): Promise<Response> {
-	let channel = syndicationChannel(stream, ctx.url);
-	let entries = await syndicationEntries(ctx.models, ctx.url, stream);
-	let self = new URL(feed.href(), ctx.url).toString();
+export function jsonFeedResponse(
+	self: string,
+	channel: Syndication.Channel,
+	entries: ReadonlyArray<Syndication.Entry>,
+	origin: string,
+): Response {
 	let hub = advertiseHub(self, JSONFeed.mediaType);
 
 	let document = new JSONFeed({
@@ -41,7 +43,7 @@ async function jsonFeed(
 		homePageUrl: channel.home,
 		feedUrl: self,
 		description: channel.description,
-		authors: [{ name: PROFILE.name, url: ctx.url.origin }],
+		authors: [{ name: PROFILE.name, url: origin }],
 		language: "en",
 		hubs: [{ type: "WebSub", url: hub.hubUrl }],
 	});
@@ -67,12 +69,24 @@ export default createController(routes.jsonFeed, {
 	middleware: [],
 	actions: {
 		/** The whole site's activity, glossary terms included, in one timeline. */
-		feed: (ctx) => jsonFeed(ctx, routes.jsonFeed.feed, "feed"),
-		/** Published articles only. */
-		articles: (ctx) => jsonFeed(ctx, routes.jsonFeed.articles, "articles"),
-		/** Published tutorials only. */
-		tutorials: (ctx) => jsonFeed(ctx, routes.jsonFeed.tutorials, "tutorials"),
-		/** Saved links, each item pointing at the bookmarked page. */
-		bookmarks: (ctx) => jsonFeed(ctx, routes.jsonFeed.bookmarks, "bookmarks"),
+		async feed(ctx) {
+			let self = new URL(routes.jsonFeed.feed.href(), ctx.url).toString();
+			let entries = await syndicationEntries(ctx.models, ctx.url, "feed");
+			return jsonFeedResponse(self, syndicationChannel("feed", ctx.url), entries, ctx.url.origin);
+		},
+
+		/**
+		 * A kind's topic, newest first: `/articles.json` carries what `/articles` lists. A name
+		 * no kind's topic has answers 404.
+		 */
+		async topic(ctx) {
+			let topic = await findKindTopic(ctx.models, ctx.params.topic);
+			if (topic === null) {
+				return ctx.render(NotFoundView, NotFoundViewModel.page(TOPIC_NOT_FOUND), { status: 404 });
+			}
+			let self = new URL(routes.jsonFeed.topic.href({ topic: topic.slug }), ctx.url).toString();
+			let feed = TopicViewModel.feed(topic, await topicFeedPosts(ctx, topic), ctx.url);
+			return jsonFeedResponse(self, feed.channel, feed.entries, ctx.url.origin);
+		},
 	},
 });

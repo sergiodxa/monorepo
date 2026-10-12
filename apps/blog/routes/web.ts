@@ -89,10 +89,20 @@ export default route({
 	encorePrivacy: get("/apps/encore/privacy"),
 	encorePrivacyMarkdown: get("/apps/encore/privacy.md"),
 
+	/**
+	 * Each kind's topic, at the root under the slug the kind registry names, served by the
+	 * shared topic controller; its feeds are `rss.topic`, `atom.topic` and `jsonFeed.topic`.
+	 * A new kind adds its page here and maps it with `kindTopic()` in the router.
+	 */
 	articles: get("/articles"),
 	tutorials: get("/tutorials"),
 	bookmarks: get("/bookmarks"),
 	glossary: get("/glossary"),
+
+	/** Every topic, kinds' and author's, by title. */
+	topics: get("/topics"),
+	/** An author's topic: its page, or its feed with `.rss`, `.atom` or `.json`. */
+	topic: get("/topics/:slug(.:ext)"),
 
 	/**
 	 * Full-text search over published articles, tutorials and glossary entries. A plain

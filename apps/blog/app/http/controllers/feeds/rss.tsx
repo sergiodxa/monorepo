@@ -1,7 +1,7 @@
 /**
- * HTTP controller for the RSS 2.0 feeds: the combined site feed and the per-type article,
- * tutorial, and bookmark feeds. Each advertises the WebSub hub so subscribers receive new
- * items as they are published.
+ * HTTP controller for the RSS 2.0 feeds: the combined site feed, and the feed of each kind's
+ * topic at `/<topic>.rss`. Each advertises the WebSub hub so subscribers receive new items
+ * as they are published.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,28 +11,29 @@ import { xml } from "@sdxc/http/response";
 import { RSS } from "@sdxc/rss";
 import { createController } from "remix/router";
 
-import type { AppContext } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";
 
+import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { syndicationChannel, syndicationEntries } from "~/app/http/view-models/syndication";
+import { TOPIC_NOT_FOUND, TopicViewModel } from "~/app/http/view-models/topic";
+import { findKindTopic, topicFeedPosts } from "~/app/services/topics";
 import { advertiseHub } from "~/app/services/websub";
+import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * Serializes one stream as RSS, dating each item by its publish time.
+ * Serializes a feed as RSS, dating each item by its publish time.
  *
- * @param ctx Request context carrying the database and the request URL.
- * @param feed The route being served, whose URL is the feed's WebSub topic.
- * @param stream The content the feed carries.
+ * @param self The feed's absolute URL, which is its WebSub topic.
+ * @param channel The feed's own metadata.
+ * @param entries The items, in the order they are listed.
  */
-async function rssFeed(
-	ctx: AppContext,
-	feed: { href(): string },
-	stream: Syndication.Stream,
-): Promise<Response> {
-	let channel = syndicationChannel(stream, ctx.url);
-	let entries = await syndicationEntries(ctx.models, ctx.url, stream);
-	let hub = advertiseHub(new URL(feed.href(), ctx.url).toString());
+export function rssResponse(
+	self: string,
+	channel: Syndication.Channel,
+	entries: ReadonlyArray<Syndication.Entry>,
+): Response {
+	let hub = advertiseHub(self);
 
 	let rss = new RSS({
 		title: channel.title,
@@ -59,12 +60,24 @@ export default createController(routes.rss, {
 	middleware: [],
 	actions: {
 		/** The whole site's activity, glossary terms included, in one timeline. */
-		feed: (ctx) => rssFeed(ctx, routes.rss.feed, "feed"),
-		/** Published articles only. */
-		articles: (ctx) => rssFeed(ctx, routes.rss.articles, "articles"),
-		/** Published tutorials only. */
-		tutorials: (ctx) => rssFeed(ctx, routes.rss.tutorials, "tutorials"),
-		/** Saved links, each item pointing at the bookmarked page. */
-		bookmarks: (ctx) => rssFeed(ctx, routes.rss.bookmarks, "bookmarks"),
+		async feed(ctx) {
+			let self = new URL(routes.rss.feed.href(), ctx.url).toString();
+			let entries = await syndicationEntries(ctx.models, ctx.url, "feed");
+			return rssResponse(self, syndicationChannel("feed", ctx.url), entries);
+		},
+
+		/**
+		 * A kind's topic, newest first: `/articles.rss` carries what `/articles` lists. A name
+		 * no kind's topic has answers 404.
+		 */
+		async topic(ctx) {
+			let topic = await findKindTopic(ctx.models, ctx.params.topic);
+			if (topic === null) {
+				return ctx.render(NotFoundView, NotFoundViewModel.page(TOPIC_NOT_FOUND), { status: 404 });
+			}
+			let self = new URL(routes.rss.topic.href({ topic: topic.slug }), ctx.url).toString();
+			let feed = TopicViewModel.feed(topic, await topicFeedPosts(ctx, topic), ctx.url);
+			return rssResponse(self, feed.channel, feed.entries);
+		},
 	},
 });

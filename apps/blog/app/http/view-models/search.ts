@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Page } from "@sdxc/pagination";
+import type { Page, Pagination } from "@sdxc/pagination";
 import type { Excerpt, HighlightSegment, ParsedQuery } from "@sdxc/search/query";
 import type { ValidationError } from "@sdxc/validate";
 
@@ -154,7 +154,7 @@ export class SearchViewModel {
 			from: pagination.from,
 			to: pagination.to,
 			items: input.page.items.map((result) => this.item(result, input.parsed)),
-			pager: pagination.pages > 1 ? this.pager(input.page, input.url) : null,
+			pager: pagination.pages > 1 ? this.pager(pagination, input.url) : null,
 		};
 	}
 
@@ -224,9 +224,14 @@ export class SearchViewModel {
 		return fromSummary ?? fromBody;
 	}
 
-	/** The numbered pager, every link the current URL with only its `page` replaced. */
-	private static pager(page: Page<PostSearch.Hit>, url: URL): SearchViewModel.Pager {
-		let { pagination } = page;
+	/**
+	 * The numbered pager, every link the current URL with only its `page` replaced, so any
+	 * listing paged by `?page=` keeps the rest of its query string.
+	 *
+	 * @param pagination The page's arithmetic.
+	 * @param url The request URL the links are built from.
+	 */
+	static pager(pagination: Pagination, url: URL): SearchViewModel.Pager {
 		let href = (number: number) => {
 			let target = new URL(url);
 			target.searchParams.set("page", String(number));

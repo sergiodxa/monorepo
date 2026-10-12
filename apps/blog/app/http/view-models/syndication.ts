@@ -8,7 +8,10 @@
  */
 
 import type { BlogModels } from "~/app/models";
+import type { Article } from "~/app/models/articles";
+import type { GlossaryEntry } from "~/app/models/glossary";
 import type { Like } from "~/app/models/likes";
+import type { Tutorial } from "~/app/models/tutorials";
 
 import { bookmarkLabel } from "~/app/models/post-values";
 import routes from "~/routes/web";
@@ -112,42 +115,68 @@ export async function syndicationEntries(
 		["articles", articles],
 		["tutorials", tutorials],
 	] as const) {
-		for (let post of posts) {
-			let url = new URL(routes.post.href({ postType, postSlug: post.meta.slug }), base).toString();
-			entries.push({
-				id: post.id,
-				title: post.meta.title,
-				summary: post.meta.excerpt ?? url,
-				url,
-				published: iso(post.published_at ?? post.created_at),
-				updated: iso(post.updated_at),
-			});
-		}
+		for (let post of posts) entries.push(pageEntry(post, postType, base));
 	}
 
-	for (let like of likes) {
-		entries.push({
-			id: like.id,
-			title: bookmarkLabel(like.meta),
-			summary: bookmarkSummary(like.meta),
-			url: like.meta.url,
-			published: iso(like.created_at),
-			updated: iso(like.updated_at),
-		});
-	}
+	for (let like of likes) entries.push(bookmarkEntry(like));
 
-	for (let term of glossary) {
-		entries.push({
-			id: term.id,
-			title: term.meta.title ? `${term.meta.term} (aka ${term.meta.title})` : term.meta.term,
-			summary: term.meta.definition,
-			url: new URL(`${routes.glossary.href()}#${term.meta.slug}`, base).toString(),
-			published: iso(term.created_at),
-			updated: iso(term.updated_at),
-		});
-	}
+	for (let term of glossary) entries.push(glossaryEntry(term, base));
 
 	return entries.sort((a, b) => Date.parse(b.published) - Date.parse(a.published));
+}
+
+/**
+ * An article's or tutorial's item, linking to its page and summarized by its excerpt, or by
+ * that link while it has none.
+ *
+ * @param post The article or tutorial.
+ * @param postType The topic its page lives under.
+ * @param base The request URL, which the link resolves against.
+ */
+export function pageEntry(
+	post: Article | Tutorial,
+	postType: "articles" | "tutorials",
+	base: URL,
+): Syndication.Entry {
+	let url = new URL(routes.post.href({ postType, postSlug: post.meta.slug }), base).toString();
+	return {
+		id: post.id,
+		title: post.meta.title,
+		summary: post.meta.excerpt ?? url,
+		url,
+		published: iso(post.published_at ?? post.created_at),
+		updated: iso(post.updated_at),
+	};
+}
+
+/** A bookmark's item, pointing at the page it saved and dated by when it was saved. */
+export function bookmarkEntry(like: Like): Syndication.Entry {
+	return {
+		id: like.id,
+		title: bookmarkLabel(like.meta),
+		summary: bookmarkSummary(like.meta),
+		url: like.meta.url,
+		published: iso(like.created_at),
+		updated: iso(like.updated_at),
+	};
+}
+
+/**
+ * A glossary entry's item, linking to its anchor on the glossary page and titled by its term
+ * with its alias.
+ *
+ * @param term The glossary entry.
+ * @param base The request URL, which the link resolves against.
+ */
+export function glossaryEntry(term: GlossaryEntry, base: URL): Syndication.Entry {
+	return {
+		id: term.id,
+		title: term.meta.title ? `${term.meta.term} (aka ${term.meta.title})` : term.meta.term,
+		summary: term.meta.definition,
+		url: new URL(`${routes.glossary.href()}#${term.meta.slug}`, base).toString(),
+		published: iso(term.created_at),
+		updated: iso(term.updated_at),
+	};
 }
 
 /**
@@ -161,6 +190,6 @@ function bookmarkSummary(meta: Like["meta"]): string {
 }
 
 /** Normalizes a stored timestamp to the RFC 3339 form Atom and JSON Feed both require. */
-function iso(value: string): string {
+export function iso(value: string): string {
 	return new Date(value).toISOString();
 }
