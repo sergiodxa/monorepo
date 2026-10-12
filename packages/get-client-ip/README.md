@@ -2,37 +2,46 @@
 
 Read the client IP from a Cloudflare Workers request, parsed into an address.
 
-A request that reaches a Worker has already crossed Cloudflare's network, and every proxy
-along the way is another hop that could have rewritten the source address. Cloudflare
-settles it by attaching
-[`CF-Connecting-IP`](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip),
-a header carrying the address the connection actually came from. This package reads that
-header and parses it into an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip),
-so a junk header can never become a rate limit key or a stored address.
+Cloudflare attaches
+[`CF-Connecting-IP`](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip)
+to every request it routes, carrying the address the connection came from. This package reads
+that header and parses it into an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip),
+so only a valid address ever becomes a rate limit key or a stored value.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/get-client-ip
 ```
 
-`@sdxc/ip` and [`remix`](https://www.npmjs.com/package/remix), for the middleware, are
-installed with it.
+`@sdxc/ip` and [`remix`](https://www.npmjs.com/package/remix), for the middleware, are installed
+with it.
 
 ## Usage
 
-### Read The Caller's Address
+### Read the caller's address
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
 
 export function GET(request: Request) {
 	let ip = getClientIP(request); // IP | null
-	return Response.json({ ip }); // {"ip":"203.0.113.42"}, through IP#toJSON
+	return Response.json({ ip }); // {"ip":"203.0.113.42"}
 }
 ```
 
-### Publish It On Every Request
+An `IP` serializes as its canonical text, so it goes straight into JSON.
+
+### Fall back when there is no address
+
+A request Cloudflare did not route (a local dev server, a test) has no header, and a header that
+is not one address parses to nothing; both answer `null`, so one fallback covers them:
+
+```typescript
+let ip = getClientIP(request)?.toString() ?? "unknown";
+```
+
+### Publish it on every request
 
 The middleware parses the header once per request and publishes it as `ctx.ip`:
 
@@ -47,70 +56,36 @@ router.get("/", (ctx) => {
 });
 ```
 
-### Handle A Request Without The Header
-
-The header arrives on every request Cloudflare routes, so it is absent exactly when
-something else served the request — a local dev server, a test, another host. A header
-that is not an address answers `null` too, so one fallback covers both:
-
-```typescript
-let ip = getClientIP(request)?.toString() ?? "unknown";
-```
-
-### Pair It With Cloudflare's Geolocation
-
-A Worker request also carries a `cf` object with the location Cloudflare resolved for that
-same connection, so the address and where it came from read together:
-
-```typescript
-import { getClientIP } from "@sdxc/get-client-ip";
-
-export function GET(request: Request) {
-	return Response.json({
-		ip: getClientIP(request),
-		country: request.cf?.country,
-		city: request.cf?.city,
-		region: request.cf?.region,
-	});
-}
-```
-
-`request.cf` is typed by
-[`@cloudflare/workers-types`](https://www.npmjs.com/package/@cloudflare/workers-types),
-listed in the `types` of a Workers `tsconfig.json`.
-
 ## API
 
 ### `getClientIP(request: Request): IP | null`
 
-Parses the request's `CF-Connecting-IP` header into an `IP`, or answers `null` when the
-header is absent or is not one address — a header repeated across several lines reads as a
-comma-joined string, which is not.
-
-```typescript
-getClientIP(request)?.toString(); // "203.0.113.42" or "2001:db8::1"
-```
+Parses the request's `CF-Connecting-IP` header into an `IP`, or answers `null` when the header
+is absent or is not a single address.
 
 ### `@sdxc/get-client-ip/middleware`
 
-- Default export `getClientIP()` — a router middleware that sets `ctx.ip` to
-  `getClientIP(ctx.request)`. Importing the module types `ctx.ip` as `IP | null`.
-- `ClientIP` — the context key, for code that reads the value with `ctx.get(ClientIP)`. A
-  context the middleware never ran on reads `null`.
+#### `getClientIP(): Middleware` (default export)
+
+A router middleware that sets `ctx.ip` to the parsed address. Importing the module types
+`ctx.ip` as `IP | null`.
+
+#### `ClientIP`
+
+The context key the middleware writes, for code that reads the value with `ctx.get(ClientIP)`.
+A context the middleware never ran on reads `null`.
 
 ## Pattern: Rate Limiting Per Client Network
 
-An IPv6 client is normally assigned a whole `/64` and can send each request from a
-different address in it. Keying IPv6 on its `/64` and IPv4 on the full address gives one
-budget per client:
+An IPv6 client is usually assigned a whole `/64` and can send each request from a different
+address in it. Keying IPv6 on its `/64` and IPv4 on the full address gives one budget per client:
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
 import { ok, tooManyRequests } from "@sdxc/response";
 
-/** How many requests one client may spend inside the window. */
-const LIMIT = 100;
-const WINDOW_SECONDS = 60;
+let LIMIT = 100;
+let WINDOW_SECONDS = 60;
 
 export default {
 	async fetch(request: Request, env: { KV: KVNamespace }) {
@@ -127,13 +102,39 @@ export default {
 };
 ```
 
-Every request that arrives without a usable header shares the `unknown` bucket, which keeps
-the budget finite for traffic that reached the Worker some other way. The status helpers
-come from [`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response).
+Requests without a usable address share the `unknown` bucket, which keeps their budget finite.
+The status helpers come from [`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response).
+
+## Pattern: Restricting Routes To A Network
+
+A guard middleware reads the address through the `ClientIP` key and answers before the handler
+when it falls outside an allowed range:
+
+```typescript
+import getClientIP, { ClientIP } from "@sdxc/get-client-ip/middleware";
+import { IP } from "@sdxc/ip";
+import { isSuccess } from "@sdxc/result";
+import type { Middleware } from "remix/router";
+import { createRouter } from "remix/router";
+
+let OFFICE = IP.Range.parse("203.0.113.0/24");
+
+function officeOnly(): Middleware {
+	return (ctx, next) => {
+		let ip = ctx.get(ClientIP);
+		if (ip === null || !isSuccess(OFFICE) || !OFFICE.data.contains(ip)) {
+			return new Response("Forbidden", { status: 403 });
+		}
+		return next();
+	};
+}
+
+let router = createRouter({ middleware: [getClientIP(), officeOnly()] });
+```
 
 ## Pattern: Attaching The Address To A Log Line
 
-An `IP` serializes as its canonical text, so it goes onto the request's wide event from
+The address goes onto the request's wide event from
 [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) as one field:
 
 ```typescript
@@ -147,11 +148,29 @@ export function logClient(): Middleware {
 }
 ```
 
-Mount it after `log(logger)` and this package's middleware, so both `ctx.log` and `ctx.ip`
-are published when it runs.
+Mount it after `log(logger)` and `getClientIP()`, so both `ctx.log` and `ctx.ip` are set when it
+runs. An IP address is personal data in many jurisdictions, so decide its retention before the
+log line outlives the request.
 
-An IP address is personal data in many jurisdictions. Decide what retention applies before
-a log line like this outlives the request that produced it.
+## Pattern: Pairing It With Cloudflare's Geolocation
+
+A Worker request also carries a `cf` object with the location Cloudflare resolved for the same
+connection:
+
+```typescript
+import { getClientIP } from "@sdxc/get-client-ip";
+
+export function GET(request: Request) {
+	return Response.json({
+		ip: getClientIP(request),
+		country: request.cf?.country,
+		city: request.cf?.city,
+	});
+}
+```
+
+`request.cf` is typed by
+[`@cloudflare/workers-types`](https://www.npmjs.com/package/@cloudflare/workers-types).
 
 ## Versioning
 
