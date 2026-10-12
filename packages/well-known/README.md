@@ -2,84 +2,39 @@
 
 Typed documents for well-known URIs: security.txt, WebFinger, NodeInfo, OAuth and OIDC metadata, JWKS and more.
 
+[RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) reserves `/.well-known/` for documents a client
+finds on any origin without being told where to look. Each registered name is one subpath of this
+package that reads, writes and describes its document, with camelCase fields and `URL` values; the
+specification's member names appear only in the serialized text.
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/well-known
 ```
 
-Readers return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values, which
-install alongside this package. `./response` and `./middleware` also need
+Readers return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values, installed
+alongside. Serving through `./response` and `./middleware` also needs
 [`@sdxc/http`](https://www.npmjs.com/package/@sdxc/http) and
-[`remix`](https://www.npmjs.com/package/remix), optional peer dependencies you add when you
-serve documents; the document subpaths work without them.
-
-[RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) reserves `/.well-known/` for documents a
-client finds on any origin without being told where to look. Each registered name is one
-subpath, with camelCase fields and `URL` values; the specification's member names appear only
-in the serialized text. Every reader returns a `Result` whose failure, `WellKnownParseError`,
-lists every issue with a JSON Pointer (or a line number for security.txt).
+[`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Serve security.txt And WebFinger From A Router
+### Find a document's URL
 
 ```typescript
-import { isFailure } from "@sdxc/result";
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { securityTxt } from "@sdxc/well-known/security-txt";
-import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
-import type { SecurityTxt } from "@sdxc/well-known/security-txt";
-import { createRouter } from "remix/router";
+import { wellKnownUrl } from "@sdxc/well-known";
 
-const SECURITY_TXT: SecurityTxt = {
-	contact: [new URL("mailto:security@example.com")],
-	expires: new Date("2027-06-30T00:00:00Z"),
-	encryption: [],
-	acknowledgments: [],
-	preferredLanguages: ["en"],
-	canonical: [new URL("https://example.com/.well-known/security.txt")],
-	policy: [],
-	hiring: [],
-	extensions: {},
-};
-
-let router = createRouter({
-	middleware: [
-		wellKnown({
-			"security.txt": serve(securityTxt, () => SECURITY_TXT),
-			webfinger: serve(webFinger, (ctx) => {
-				let query = readQuery(ctx.url);
-				if (isFailure(query)) return null;
-				return select(profileFor(query.data.resource), query.data.rels);
-			}),
-		}),
-	],
-});
+wellKnownUrl("https://auth.example.com/tenant", "oauth-authorization-server");
+// https://auth.example.com/.well-known/oauth-authorization-server/tenant
+wellKnownUrl("https://auth.example.com/tenant", "openid-configuration", "append");
+// https://auth.example.com/tenant/.well-known/openid-configuration
 ```
 
-### Publish OpenID Connect Discovery From An Action
+OAuth metadata inserts the suffix between the host and the path; OpenID Connect Discovery appends
+it to the issuer.
 
-```typescript
-import { define, openIdConfiguration } from "@sdxc/well-known/openid-configuration";
-import { respond } from "@sdxc/well-known/response";
-import { createAction } from "remix/router";
-
-const DISCOVERY = define({
-	issuer: "https://auth.example.com",
-	authorizationEndpoint: new URL("https://auth.example.com/authorize"),
-	jwksUri: new URL("https://auth.example.com/.well-known/jwks.json"),
-	responseTypesSupported: ["code"],
-	subjectTypesSupported: ["public"],
-	idTokenSigningAlgValuesSupported: ["ES256"],
-});
-
-export default createAction(routes.discovery, (ctx) =>
-	respond(openIdConfiguration, DISCOVERY, { request: ctx.request }),
-);
-```
-
-### Read A Provider's Metadata
+### Read a fetched document
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -87,117 +42,152 @@ import { wellKnownUrl } from "@sdxc/well-known";
 import { parse } from "@sdxc/well-known/oauth-authorization-server";
 
 let issuer = "https://auth.example.com";
-let url = wellKnownUrl(issuer, "oauth-authorization-server");
-let metadata = parse(await (await fetch(url)).text(), { issuer });
-if (isFailure(metadata)) return metadata;
-metadata.data.tokenEndpoint; // URL | null
+let response = await fetch(wellKnownUrl(issuer, "oauth-authorization-server"));
+let metadata = parse(await response.text(), { issuer });
+
+if (isFailure(metadata)) {
+	metadata.error.issues; // [{ at: "/token_endpoint", message: "..." }, ...]
+} else {
+	metadata.data.tokenEndpoint; // URL | null
+}
 ```
+
+Every reader returns a `Result`. Its failure, `WellKnownParseError`, lists every issue at once,
+each located by a JSON Pointer (or a line number for security.txt).
+
+### Write a document
+
+```typescript
+import { define, stringify } from "@sdxc/well-known/oauth-protected-resource";
+
+let metadata = define({
+	resource: new URL("https://api.example.com/v1"),
+	authorizationServers: [new URL("https://auth.example.com")],
+	scopesSupported: ["read", "write"],
+});
+
+stringify(metadata);
+// {"resource":"https://api.example.com/v1","authorization_servers":[...],...}
+```
+
+`define` fills every member you leave out with its default, and `stringify` writes only what
+differs from it.
+
+### Serve it
+
+```typescript
+import { securityTxt } from "@sdxc/well-known/security-txt";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({
+	middleware: [
+		wellKnown({
+			"security.txt": serve(securityTxt, () => ({
+				contact: [new URL("mailto:security@example.com")],
+				expires: new Date("2027-06-30T00:00:00Z"),
+				encryption: [],
+				acknowledgments: [],
+				preferredLanguages: ["en"],
+				canonical: [new URL("https://example.com/.well-known/security.txt")],
+				policy: [],
+				hiring: [],
+				extensions: {},
+			})),
+		}),
+	],
+});
+```
+
+`wellKnown` answers the names it lists with the media type, a cache policy, an `ETag`, CORS where
+the specification requires it and a 304 for a current copy; every other path reaches your routes.
 
 ## API
 
 ### `@sdxc/well-known`
 
-#### `wellKnownUrl(identifier, name, placement = "insert")`
+#### `wellKnownUrl(identifier: URL | string, name: string, placement?: WellKnownPlacement): URL`
 
-The URL a document is served at for an identifier. `"insert"` (RFC 8414, RFC 9728) puts the
-suffix between the host and the path, keeping the query; `"append"` (OIDC Discovery) adds it
-after the path.
-
-```typescript
-wellKnownUrl("https://as.example/tenant", "oauth-authorization-server");
-// https://as.example/.well-known/oauth-authorization-server/tenant
-wellKnownUrl("https://op.example/tenant", "openid-configuration", "append");
-// https://op.example/tenant/.well-known/openid-configuration
-```
+The URL a document is served at for an identifier. `"insert"`, the default, puts the suffix
+between the host and the path and keeps the query; `"append"` adds it after the path.
 
 #### `WellKnownParseError`
 
-The failure every reader returns: `format` (the registered name) and `issues`, each with `at`
-(a JSON Pointer, `""` for the whole document; or a 1-based line number, `0` for the whole
-file) and `message`.
+The failure every reader returns, with `format` (the registered name) and `issues`, each an `at`
+(a JSON Pointer, `""` for the whole document; or a 1-based line, `0` for the whole file) and a
+`message`.
 
-#### `WellKnownFormat<Document>` and `WellKnownPlacement`
+#### `WellKnownFormat<Document>`
 
 The descriptor each document subpath exports: `name`, `mediaType`, `placement`, `cors`,
-`stringify` and `parse`. `respond` and `serve` take one.
+`stringify` and `parse`. `respond` and `serve` take one; its `parse` reads structure only, so a
+client checking a fetched document's issuer or resource calls the subpath's own `parse`.
 
-### Every Document Subpath
+### Every document subpath
 
-Each exports `NAME`, `MEDIA_TYPE`, `parse(text)` returning a `Result`, `stringify(document)`
-and a descriptor. The descriptor's `parse` reads structure only; a client reading a fetched
-discovery document calls the subpath's `parse` with the identifier it expected.
+Each exports `NAME`, `MEDIA_TYPE`, `parse(text)`, `stringify(document)` and a descriptor.
 
 ### `@sdxc/well-known/security-txt` (RFC 9116)
 
-- `SecurityTxt` has `contact` (at least one), `expires`, `encryption`, `acknowledgments`,
-  `preferredLanguages`, `canonical`, `policy`, `hiring`, and `extensions` for other fields,
-  keyed by lowercased name.
-- `parse(text)` returns a `ParsedSecurityTxt`, with `signed` set when the text arrived inside
-  an OpenPGP cleartext signature (read from its signed body; the signature is left
-  unverified). It fails on a missing `Contact`, a missing or repeated `Expires`, a repeated
-  `Preferred-Languages`, an `http` URI, and a line that is neither a field, a comment nor
-  blank. An expired file parses.
-- `stringify(document, options?)` writes unsigned text with LF endings; `StringifyOptions`
-  takes `comments` to write at the top.
-- `isExpired(document, now?)` answers staleness (§2.5.5).
+- `parse(text): Result<ParsedSecurityTxt, WellKnownParseError>` reads signed or unsigned text,
+  setting `signed` for an OpenPGP cleartext signature, which it leaves unverified. It fails on a
+  missing `Contact`, a missing or repeated `Expires`, a repeated `Preferred-Languages`, an `http`
+  URI and a malformed line; an expired file parses.
+- `stringify(document, options?: StringifyOptions): string` writes unsigned text with LF endings,
+  with `options.comments` at the top.
+- `isExpired(document, now?: Date): boolean` answers whether `expires` has passed.
 - `securityTxt` is the descriptor.
 
 ### `@sdxc/well-known/webfinger` (RFC 7033)
 
-- `Jrd` and `JrdLink` are the descriptor and its links; absent members read as `null`, `[]`
-  or `{}`.
-- `readQuery(url)` returns a `WebFingerQuery` (`{ resource, rels }`), or a
-  `MissingResourceError` to answer with a 400.
-- `select(document, rels)` keeps only the links whose `rel` was asked for; an empty list keeps
-  them all.
-- `webFinger` is the descriptor, with `cors: true` as §5 requires.
+- `readQuery(url: URL): Result<WebFingerQuery, MissingResourceError>` reads `resource` and every
+  `rel`; the failure is the request to answer with a 400.
+- `select(document: Jrd, rels: string[]): Jrd` keeps only the links whose `rel` was asked for; an
+  empty list keeps them all.
+- `parse` and `stringify` read and write a `Jrd`; `webFinger` is the descriptor, served with CORS.
 
 ### `@sdxc/well-known/oauth-authorization-server` (RFC 8414)
 
-- `AuthorizationServerMetadata<Extensions>` has every §2 member plus RFC 8628, RFC 9126,
-  RFC 9207 and RFC 9728 §4 members. `issuer` is a string, compared as published.
-- `parse(text, options?)` takes `ParseOptions` (`issuer`, `extensions`) and fails on a missing
-  `issuer` or `response_types_supported`, a malformed member, or a different issuer (§3.3).
-  Unknown members land in `extensions`, validated by a synchronous
-  [Standard Schema](https://standardschema.dev/) when one is given.
-- `define(document)` defaults lists to `[]`, URLs to `null` and flags to `false`.
-- `stringify(document)` leaves out `null` members, empty lists and flags at their default; the
-  standard member wins over an extension of the same name.
+- `parse(text, options?: ParseOptions)` fails on a missing `issuer` or `response_types_supported`,
+  a malformed member, or an `issuer` other than `options.issuer`. Members outside the
+  specification land in `extensions` under their serialized names, validated by
+  `options.extensions`, any synchronous [Standard Schema](https://standardschema.dev/).
+- `define(document)` takes `issuer` and `responseTypesSupported` and defaults lists to `[]`, URLs
+  to `null` and flags to `false`.
+- `stringify(document): string` writes extensions beside the standard members, which win a name
+  clash.
 - `authorizationServerMetadata` is the descriptor.
 
 ### `@sdxc/well-known/openid-configuration` (OpenID Connect Discovery 1.0)
 
-`OpenIdProviderMetadata` extends the RFC 8414 document with the §3 members, and makes
-`authorizationEndpoint` and `jwksUri` required. `parse`, `define`, `stringify` and
-`ParseOptions` work as above; `requestUriParameterSupported` defaults to `true`, as §3 states.
-`openIdConfiguration` is the descriptor, with `placement: "append"`.
+`OpenIdProviderMetadata` adds the Discovery members to the RFC 8414 document. `define` also
+requires `authorizationEndpoint`, `jwksUri`, `subjectTypesSupported` and
+`idTokenSigningAlgValuesSupported`, and defaults `requestUriParameterSupported` to `true`. `parse`,
+`stringify` and `ParseOptions` work as above; `openIdConfiguration` is the descriptor, with
+`placement: "append"`.
 
 ### `@sdxc/well-known/oauth-protected-resource` (RFC 9728)
 
-- `ProtectedResourceMetadata<Extensions>` has every §2 member; `resourceName` is a
-  `LocalizedString` (`value` plus `#`-tagged `translations`), and `BearerMethod` is
-  `"header" | "body" | "query"`.
-- `parse(text, options)` requires `ParseOptions.resource`: the document's `resource` must
-  equal it, or with `match: "prefix"` be a same-origin, segment-aligned prefix of it (§3.3).
-- `define(document)` defaults `bearerMethodsSupported` to `["header"]`.
-- `metadataUrl(resource)` inserts the suffix before the resource's path.
-- `protectedResourceMetadata` is the descriptor.
+- `parse(text, options: ParseOptions)` requires the expected `options.resource`: the document's
+  `resource` must equal it, or with `match: "prefix"` be a same-origin, segment-aligned prefix of
+  it. `extensions` works as for RFC 8414.
+- `define(document)` takes `resource` and defaults `bearerMethodsSupported` to `["header"]`.
+- `metadataUrl(resource: URL | string): URL` is where a resource's metadata is served.
+- `stringify` writes the document; `protectedResourceMetadata` is the descriptor.
 
-### `@sdxc/well-known/jwks` (RFC 7517 §5)
+### `@sdxc/well-known/jwks` (RFC 7517)
 
-- `Jwk` keeps the registered member names Web Crypto imports; `JwkSet` is `{ keys }`.
-- `parse(text)` returns a `ParsedJwkSet`, dropping entries that are not objects, lack `kty`,
-  or lack a member their `EC`, `RSA`, `OKP` or `oct` key type requires, and counting them in
-  `skipped`.
-- `stringify(document)` returns a `Result` and fails on any private member (`d`, `p`, `q`,
-  `dp`, `dq`, `qi`, `oth`, `k`).
-- `jwks` is the descriptor; serving through it publishes each key's public half and leaves
-  symmetric keys out.
+- `parse(text): Result<ParsedJwkSet, WellKnownParseError>` drops entries without a `kty` or the
+  members their `EC`, `RSA`, `OKP` or `oct` key type requires, counting them in `skipped`.
+- `stringify(document: JwkSet): Result<string, WellKnownParseError>` fails on any private member
+  (`d`, `p`, `q`, `dp`, `dq`, `qi`, `oth`, `k`).
+- `jwks` is the descriptor. Serving through it publishes each key's public half and leaves
+  symmetric keys out, so private keys can go in directly.
 
 ### `@sdxc/well-known/change-password` (W3C)
 
-`redirect(target)` is a 302 to the page where a signed-in person changes their password.
-`NAME` is `"change-password"`.
+`redirect(target: URL | string): Response` is a 302 to the page where a signed-in person changes
+their password. The name has no document, so it exports `NAME` and no descriptor.
 
 ### `@sdxc/well-known/passkey-endpoints` (W3C)
 
@@ -206,47 +196,146 @@ object is a valid document. `passkeyEndpoints` is the descriptor.
 
 ### `@sdxc/well-known/nodeinfo` (NodeInfo 2.0 and 2.1)
 
-- `NodeInfoLinks` is the `/.well-known/nodeinfo` document, `{ links }`, each `NodeInfoLink`
-  a `rel` (the schema URI, `NODEINFO_2_0` or `NODEINFO_2_1`) and an absolute `href`.
-  `parseLinks(text)` and `stringifyLinks(document)` read and write it; `nodeInfoLinks` is its
-  descriptor, served as `application/json` with `cors: true`.
-- `NodeInfo` has `version`, `software` (`name`, `version`, and 2.1's `repository` and
-  `homepage`, `null` when absent), `protocols`, `services` (`inbound`, `outbound`),
-  `openRegistrations`, `usage` (`users` with `total`, `activeMonth`, `activeHalfyear`, plus
-  `localPosts` and `localComments`, each `number | null`) and `metadata`.
-- `parse(text)` reads 2.0 and 2.1 and checks the schema: `software.name` uses lowercase
-  letters, digits and hyphens, at least one protocol, every protocol and service a non-empty
-  string, and non-negative integer counts. Names outside the schema's registry, such as
-  `atproto`, are kept; the types autocomplete the registered ones. A 2.0 document reads with `repository` and `homepage`
-  `null`.
-- `stringify(document)` writes 2.1 whatever `version` says, leaving out `null` members.
-- `nodeInfo` is the descriptor for the document itself, served at the path the links
-  document names with `DOCUMENT_MEDIA_TYPE`, the 2.1 profile.
+- `parseLinks(text)` and `stringifyLinks(document)` read and write the `/.well-known/nodeinfo`
+  discovery document, `{ links }`, each link a schema `rel` (`NODEINFO_2_0` or `NODEINFO_2_1`) and
+  an absolute `href`. `nodeInfoLinks` is its descriptor, served with CORS.
+- `parse(text): Result<NodeInfo, WellKnownParseError>` reads 2.0 and 2.1 against the schema, a 2.0
+  document with `software.repository` and `software.homepage` as `null`. Protocol and service
+  names outside the schema's registry are kept.
+- `stringify(document: NodeInfo): string` always writes 2.1, leaving out `null` members.
+- `nodeInfo` is the descriptor for the document itself, served at the `href` the links name with
+  `DOCUMENT_MEDIA_TYPE`, the 2.1 profile.
 
 ### `@sdxc/well-known/response`
 
-#### `respond(format, document, options?)`
+#### `respond(format, document, options?: RespondOptions): Promise<Response>`
 
-A `Promise<Response>` with the document's media type, a `Cache-Control` (default
-`public, max-age=3600`), an `ETag` over the body, CORS for a CORS format, a 304 when
-`options.request`'s `If-None-Match` still matches, and an empty body for `HEAD`.
-`RespondOptions` takes `request`, `cache` and `headers`, which apply last.
+The document with its media type, a `Cache-Control` (`options.cache`, default public for one hour),
+an `ETag` over the body and CORS for a CORS format. With `options.request` it answers 304 when
+`If-None-Match` still matches and an empty body for `HEAD`. `options.headers` apply last.
 
 ### `@sdxc/well-known/middleware`
 
-#### `serve(format, produce, options?)`
+#### `serve(format, produce: (ctx) => Document | null, options?): WellKnownEntry`
 
-A `WellKnownEntry` answering with `produce(ctx)`'s document through `respond`; a `null`
-document falls through to the next middleware.
+Answers with `produce(ctx)`'s document through `respond`, built per request; `null` falls through
+to the next middleware. `produce` may be async, and `options` takes `cache` and `headers`.
 
-#### `wellKnown(entries)`
+#### `wellKnown(entries: Record<string, WellKnownEntry>): Middleware`
 
-Answers `GET` and `HEAD` on `/.well-known/<name>` for the names given (and on
-`/.well-known/<name>/<path>` for a `serve`d format that inserts its suffix), `OPTIONS` for a
-CORS format, and 405 with `Allow` for other methods. Every other path goes to `next()`, so a
-name of your own stays an ordinary route. An entry is any `(ctx) => Response | null`.
+Answers `GET` and `HEAD` on `/.well-known/<name>` for each name given, and on
+`/.well-known/<name>/<path>` for a `serve`d format that inserts its suffix. A CORS format also
+answers `OPTIONS`; any other method gets a 405 with `Allow`. Every other path goes to `next()`.
 
-## Pattern: Metadata For An API Accepting Bearer Tokens
+### Types
+
+`WellKnownPlacement` is `"insert" | "append"`. `WellKnownEntry` is any
+`(ctx) => Response | null`, sync or async. Each document subpath exports its document type
+(`SecurityTxt`, `Jrd`, `AuthorizationServerMetadata<Extensions>`, `OpenIdProviderMetadata<Extensions>`,
+`ProtectedResourceMetadata<Extensions>`, `JwkSet`, `PasskeyEndpoints`, `NodeInfo`,
+`NodeInfoLinks`) and the types of its members (`ParsedSecurityTxt`, `JrdLink`, `WebFingerQuery`,
+`LocalizedString`, `BearerMethod`, `Jwk`, `ParsedJwkSet`, `NodeInfoSoftware`, `NodeInfoUsage` and
+the rest).
+
+## Pattern: security.txt, WebFinger And Change-Password On One Router
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { redirect } from "@sdxc/well-known/change-password";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { isExpired, securityTxt } from "@sdxc/well-known/security-txt";
+import type { SecurityTxt } from "@sdxc/well-known/security-txt";
+import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
+import type { Jrd } from "@sdxc/well-known/webfinger";
+import { createRouter } from "remix/router";
+
+export const SECURITY_TXT: SecurityTxt = {
+	contact: [new URL("mailto:security@example.com")],
+	expires: new Date("2027-06-30T00:00:00Z"),
+	encryption: [],
+	acknowledgments: [],
+	preferredLanguages: ["en"],
+	canonical: [new URL("https://example.com/.well-known/security.txt")],
+	policy: [new URL("https://example.com/security-policy")],
+	hiring: [],
+	extensions: {},
+};
+
+declare function findProfile(resource: string): Promise<Jrd | null>;
+
+let router = createRouter({
+	middleware: [
+		wellKnown({
+			"security.txt": serve(securityTxt, () => SECURITY_TXT),
+			webfinger: async (ctx) => {
+				let query = readQuery(ctx.url);
+				if (isFailure(query)) return new Response(query.error.message, { status: 400 });
+				return serve(webFinger, async () => {
+					let profile = await findProfile(query.data.resource);
+					return profile === null ? null : select(profile, query.data.rels);
+				})(ctx);
+			},
+			"change-password": () => redirect("/account/password"),
+		}),
+	],
+});
+
+let inThirtyDays = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+isExpired(SECURITY_TXT, inThirtyDays); // assert false in a test
+```
+
+Keep `expires` a literal date and assert in a test that it is more than 30 days away: a date
+computed from the clock keeps the file fresh while its contact goes stale. A `null` profile falls
+through to your 404.
+
+## Pattern: OpenID Connect Discovery With Its Key Set
+
+```typescript
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { jwks } from "@sdxc/well-known/jwks";
+import type { Jwk } from "@sdxc/well-known/jwks";
+import { define, openIdConfiguration } from "@sdxc/well-known/openid-configuration";
+import { respond } from "@sdxc/well-known/response";
+import { createRouter } from "remix/router";
+
+let issuer = "https://auth.example.com";
+
+let discovery = define({
+	issuer,
+	authorizationEndpoint: new URL("/authorize", issuer),
+	tokenEndpoint: new URL("/token", issuer),
+	jwksUri: new URL("/.well-known/jwks.json", issuer),
+	responseTypesSupported: ["code"],
+	subjectTypesSupported: ["public"],
+	idTokenSigningAlgValuesSupported: ["ES256"],
+	codeChallengeMethodsSupported: ["S256"],
+});
+
+declare function signingKeys(): Promise<Jwk[]>;
+
+let router = createRouter({
+	middleware: [
+		wellKnown({
+			"openid-configuration": serve(openIdConfiguration, () => discovery),
+			"jwks.json": serve(jwks, async () => ({ keys: await signingKeys() })),
+		}),
+	],
+});
+
+// an issuer with a path serves discovery after it, from its own route
+router.get("/tenant/.well-known/openid-configuration", (ctx) =>
+	respond(openIdConfiguration, define({ ...discovery, issuer: `${issuer}/tenant` }), {
+		request: ctx.request,
+		cache: { visibility: "public", maxAge: "5 minutes" },
+	}),
+);
+```
+
+`signingKeys()` may answer private JWKs: the `jwks` descriptor serves each key's public half and
+leaves symmetric keys out. Call `stringify` from `./jwks` instead when a private member should be
+reported as an error.
+
+## Pattern: Protected Resource Metadata For A Bearer-Token API
 
 ```typescript
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
@@ -256,69 +345,61 @@ import {
 	protectedResourceMetadata,
 } from "@sdxc/well-known/oauth-protected-resource";
 
-const API_METADATA = define({
+let api = define({
 	resource: new URL("https://api.example.com/v1"),
 	authorizationServers: [new URL("https://auth.example.com")],
 	scopesSupported: ["read", "write"],
+	resourceName: { value: "Example API", translations: { es: "API de ejemplo" } },
 });
 
 let middleware = wellKnown({
-	"oauth-protected-resource": serve(protectedResourceMetadata, () => API_METADATA),
+	"oauth-protected-resource": serve(protectedResourceMetadata, () => api),
 });
 
-let challenge = `Bearer resource_metadata="${metadataUrl(API_METADATA.resource)}"`;
-```
-
-## Pattern: Advertising A Server Through NodeInfo
-
-```typescript
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { NODEINFO_2_1, nodeInfo, nodeInfoLinks } from "@sdxc/well-known/nodeinfo";
-import { respond } from "@sdxc/well-known/response";
-import { createAction } from "remix/router";
-
-let middleware = wellKnown({
-	nodeinfo: serve(nodeInfoLinks, () => ({
-		links: [{ rel: NODEINFO_2_1, href: "https://example.com/nodeinfo/2.1" }],
-	})),
-});
-
-export default createAction(routes.nodeInfo, (ctx) =>
-	respond(
-		nodeInfo,
-		{
-			version: "2.1",
-			software: { name: "example", version: "1.0.0", repository: null, homepage: null },
-			protocols: ["activitypub"],
-			services: { inbound: [], outbound: ["rss2.0"] },
-			openRegistrations: false,
-			usage: {
-				users: { total: 1, activeMonth: 1, activeHalfyear: 1 },
-				localPosts: 42,
-				localComments: null,
-			},
-			metadata: {},
+function unauthorized() {
+	return new Response(null, {
+		status: 401,
+		headers: {
+			"WWW-Authenticate": `Bearer resource_metadata="${metadataUrl(api.resource)}"`,
 		},
-		{ request: ctx.request },
-	),
-);
+	});
+}
 ```
 
-## Pattern: A Change-Password Redirect Beside Documents
+The document is served at `/.well-known/oauth-protected-resource/v1`, which `wellKnown` matches
+because the format inserts its suffix before the resource's path.
+
+## Pattern: Discovering An Authorization Server From A Resource
+
+A client handed only an API URL follows the resource's metadata to its authorization server,
+checking each document names the identifier it was fetched for.
 
 ```typescript
-import { redirect } from "@sdxc/well-known/change-password";
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { securityTxt } from "@sdxc/well-known/security-txt";
+import { isFailure } from "@sdxc/result";
+import { wellKnownUrl } from "@sdxc/well-known";
+import * as authorizationServer from "@sdxc/well-known/oauth-authorization-server";
+import * as protectedResource from "@sdxc/well-known/oauth-protected-resource";
+import * as s from "remix/data-schema";
 
-let middleware = wellKnown({
-	"security.txt": serve(securityTxt, () => SECURITY_TXT),
-	"change-password": () => redirect("/account/password"),
+let resource = "https://api.example.com/v1/items";
+
+let resourceResponse = await fetch(protectedResource.metadataUrl("https://api.example.com/v1"));
+let api = protectedResource.parse(await resourceResponse.text(), { resource, match: "prefix" });
+if (isFailure(api)) throw api.error;
+
+let issuer = api.data.authorizationServers[0];
+if (issuer === undefined) throw new Error("The API names no authorization server");
+
+let serverResponse = await fetch(wellKnownUrl(issuer, "oauth-authorization-server"));
+let server = authorizationServer.parse(await serverResponse.text(), {
+	issuer,
+	extensions: s.object({ userinfo_endpoint: s.optional(s.string()) }),
 });
-```
+if (isFailure(server)) throw server.error;
 
-Give security.txt a literal `expires` date and a test that fails when it is under 30 days
-away; a date computed from the clock keeps the file fresh while its contact goes stale.
+server.data.tokenEndpoint; // URL | null
+server.data.extensions.userinfo_endpoint; // string | undefined
+```
 
 ## Pattern: Importing A Fetched Key Set
 
@@ -328,12 +409,76 @@ import { parse } from "@sdxc/well-known/jwks";
 
 let response = await fetch("https://auth.example.com/.well-known/jwks.json");
 let set = parse(await response.text());
-if (isFailure(set)) return set;
+if (isFailure(set)) throw set.error;
 
-let algorithm = { name: "ECDSA", namedCurve: "P-256" };
+let keys = new Map<string, CryptoKey>();
 for (let key of set.data.keys) {
-	await crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]);
+	if (key.kty !== "EC" || key.kid === undefined) continue;
+	let algorithm = { name: "ECDSA", namedCurve: key.crv ?? "P-256" };
+	keys.set(key.kid, await crypto.subtle.importKey("jwk", key, algorithm, false, ["verify"]));
 }
+```
+
+A malformed entry is dropped and counted in `set.data.skipped`, so one bad key leaves the others
+usable.
+
+## Pattern: Advertising A Server Through NodeInfo
+
+```typescript
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { NODEINFO_2_1, nodeInfo, nodeInfoLinks } from "@sdxc/well-known/nodeinfo";
+import { respond } from "@sdxc/well-known/response";
+import { createRouter } from "remix/router";
+
+declare function countUsers(): Promise<number>;
+
+let router = createRouter({
+	middleware: [
+		wellKnown({
+			nodeinfo: serve(nodeInfoLinks, () => ({
+				links: [{ rel: NODEINFO_2_1, href: "https://example.com/nodeinfo/2.1" }],
+			})),
+		}),
+	],
+});
+
+router.get("/nodeinfo/2.1", async (ctx) =>
+	respond(
+		nodeInfo,
+		{
+			version: "2.1",
+			software: { name: "example", version: "1.0.0", repository: null, homepage: null },
+			protocols: ["activitypub"],
+			services: { inbound: [], outbound: ["rss2.0"] },
+			openRegistrations: false,
+			usage: {
+				users: { total: await countUsers(), activeMonth: null, activeHalfyear: null },
+				localPosts: null,
+				localComments: null,
+			},
+			metadata: {},
+		},
+		{ request: ctx.request },
+	),
+);
+```
+
+The links document lives under `/.well-known/`; the document it points to is an ordinary route,
+answered through `respond`.
+
+## Pattern: Passkey Endpoints For Password Managers
+
+```typescript
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { passkeyEndpoints } from "@sdxc/well-known/passkey-endpoints";
+
+let middleware = wellKnown({
+	"passkey-endpoints": serve(passkeyEndpoints, () => ({
+		enroll: new URL("https://example.com/account/passkeys/new"),
+		manage: new URL("https://example.com/account/passkeys"),
+		prfUsageDetails: null,
+	})),
+});
 ```
 
 ## Versioning
