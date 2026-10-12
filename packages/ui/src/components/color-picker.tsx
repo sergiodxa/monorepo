@@ -255,7 +255,7 @@ ColorPicker.Group = function ColorPickerGroup(handle: Handle<ColorPicker.GroupPr
 				{...rest}
 				data-slot="group"
 				mix={[
-					/*
+					/**
 					 * Focus is shown by the control that holds it, the way `Group` shows it: a ring
 					 * around the row says the group is focused without saying whether the field or
 					 * the preview has it, and it stacks with the ring that control draws for itself.
@@ -316,18 +316,15 @@ ColorPicker.Trigger = function ColorPickerTrigger(handle: Handle<ColorPicker.Tri
 					p(0),
 					shrink(),
 					when('&[data-shape="square"]', rounded("none")),
-					/*
-					 * The preview is the button, so the swatch is grown through the measure the
-					 * swatch itself reads rather than by overriding the size it sets: a size passed
-					 * down as `mix` compiles into its own cascade layer and can land before the
-					 * swatch's own, which leaves the preview at its default size in a corner of the
-					 * button.
+					/**
+					 * The swatch grows through the size variable it reads itself: a size passed down as
+					 * `mix` compiles into its own cascade layer, which can land before the swatch's own
+					 * and leave the preview at its default size in a corner of the button.
 					 */
 					raw({ "--ui-color-swatch-size-md": "100%" }),
-					/*
-					 * Hover steps the preview's edge one shade darker rather than laying a second
-					 * ring outside it, since the swatch already draws an edge of its own and the
-					 * two together read as a border drawn twice.
+					/**
+					 * Hover steps the preview's edge one shade darker, so the edge the swatch already
+					 * draws stays the only one and the border reads once.
 					 */
 					when("&:hover", raw({ boxShadow: "0 0 0 1px var(--ui-neutral-border-hover)" })),
 					media("(prefers-reduced-motion: reduce)", raw({ transitionDuration: "0s" })),

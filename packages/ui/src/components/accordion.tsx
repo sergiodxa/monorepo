@@ -18,7 +18,7 @@ import { media } from "@sdxc/u/responsive";
 import { bs, is, pb, pbe, pi } from "@sdxc/u/size";
 import { hover, open, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
-import { text, textDecoration } from "@sdxc/u/typography";
+import { pretty, text, textDecoration } from "@sdxc/u/typography";
 
 import { Disclosure } from "./disclosure.js";
 
@@ -209,9 +209,9 @@ Accordion.Trigger = function AccordionTrigger(handle: Handle<Accordion.TriggerPr
 };
 
 /**
- * Renders {@link Accordion.ContentProps.children} as the section's revealed
- * body: {@link Disclosure.Panel} restyled with block-end padding and small,
- * muted text sized for supporting copy.
+ * Renders {@link Accordion.ContentProps.children} as the section's revealed body:
+ * {@link Disclosure.Panel} running edge to edge like its trigger, with block-end
+ * padding and small, muted text sized for supporting copy.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the body's markup.
@@ -224,10 +224,8 @@ Accordion.Content = function AccordionContent(handle: Handle<Accordion.ContentPr
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		/*
-		 * A row in an accordion runs edge to edge, the way its trigger does, so the panel's
-		 * own inline inset is released here rather than carried through.
-		 */
-		return <Disclosure.Panel {...rest} mix={[pi(0), pbe(4), fg("neutral"), text("sm"), mix]} />;
+		return (
+			<Disclosure.Panel {...rest} mix={[pi(0), pbe(4), fg("neutral"), text("sm"), pretty(), mix]} />
+		);
 	};
 };

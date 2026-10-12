@@ -18,7 +18,6 @@ describe("Tree.ExpandButton", () => {
 	test("renders as decoration, so the summary it sits in keeps the activation", async () => {
 		let html = await renderToString(<Tree.ExpandButton />);
 
-		/* A button here would take the click for itself and leave the branch closed. */
 		expect(html).not.toContain("<button");
 		expect(html).toContain("<span");
 	});

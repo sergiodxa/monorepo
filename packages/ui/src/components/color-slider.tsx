@@ -13,7 +13,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { bg, border, outlineStyle } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor, pseudoContent } from "@sdxc/u/general";
-import { absolute, appearance, inset, relative, vstack } from "@sdxc/u/layout";
+import { absolute, appearance, insBe, insBs, inset, relative, vstack } from "@sdxc/u/layout";
 import { bs, is, m, minIs } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
@@ -59,6 +59,14 @@ const DEFAULT_STEP_BY_CHANNEL: Record<ColorSlider.Channel, number> = {
 	lightness: 1,
 	alpha: 0.01,
 };
+
+/**
+ * Negative inset growing {@link ColorSlider.Thumb}'s native input across the track's
+ * block axis to the larger of the thumb and `--ui-target-size`, clamped at zero so a
+ * track already that thick keeps its own box.
+ */
+const THUMB_HIT_INSET =
+	"min(0px, calc((100% - max(var(--ui-color-slider-thumb-size, 1.25rem), var(--ui-target-size, 1.5rem))) / 2))";
 
 /**
  * Builds one {@link ColorSlider.Track} gradient string from its color stops,
@@ -192,10 +200,9 @@ export function ColorSlider(handle: Handle<ColorSlider.Props, ColorSlider.Contex
 				mix={[
 					vstack({ gap: 2 }),
 					is("full"),
-					/*
-					 * The slider takes the width it is given rather than insisting on a floor: a
-					 * minimum wider than the panel holding it does not make the track usable, it
-					 * makes the panel overflow, and the track is what runs off the edge.
+					/**
+					 * The slider takes the width it is given, so a narrow panel keeps the track inside it
+					 * instead of overflowing with the track running off the edge.
 					 */
 					minIs(0),
 					mix,
@@ -300,6 +307,12 @@ ColorSlider.Thumb = function ColorSliderThumb(handle: Handle<ColorSlider.ThumbPr
 					cursor("pointer"),
 					when("&:disabled", cursor("not-allowed")),
 					inset("0"),
+					/**
+					 * The native input reaches past the track's block axis to a full pointer target,
+					 * centred so the thumb stays on the visible gradient.
+					 */
+					insBs(THUMB_HIT_INSET),
+					insBe(THUMB_HIT_INSET),
 					m("0"),
 					bg("transparent"),
 					outlineStyle("none"),

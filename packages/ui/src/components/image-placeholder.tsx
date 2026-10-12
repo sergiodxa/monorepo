@@ -30,7 +30,7 @@ import {
 import { overflow } from "@sdxc/u/overflow";
 import { bs, fit, is, mis } from "@sdxc/u/size";
 import { data, precededBy, when } from "@sdxc/u/state";
-import { text, textTransform, weight } from "@sdxc/u/typography";
+import { tabularNums, text, textTransform, weight } from "@sdxc/u/typography";
 
 /** Size variant {@link ImagePlaceholder} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: ImagePlaceholder.Size = "md";
@@ -40,6 +40,12 @@ const DEFAULT_SIZE: ImagePlaceholder.Size = "md";
  * fall back to when `shape` is omitted.
  */
 const DEFAULT_SHAPE: ImagePlaceholder.Shape = "circle";
+
+/**
+ * The inset hairline {@link ImagePlaceholder.Image} draws over a picture's
+ * edge, read from the theme's `--ui-image-outline`, which flips for dark mode.
+ */
+const IMAGE_OUTLINE = "var(--ui-image-outline, rgb(0 0 0 / 0.1))";
 
 /**
  * Prop types for {@link ImagePlaceholder} and its compound parts.
@@ -192,9 +198,9 @@ export function ImagePlaceholder(handle: Handle<ImagePlaceholder.Props>) {
 }
 
 /**
- * Renders the placeholder's image layer: an `<img>` cropped with
- * `object-fit: cover`, clipped to {@link ImagePlaceholder}'s `data-shape`.
- * Stacking above or below {@link ImagePlaceholder.Fallback} decides what shows.
+ * Renders the placeholder's image layer: an `<img>` cropped to cover, clipped to
+ * {@link ImagePlaceholder}'s `data-shape`, its inset hairline holding the edge on
+ * a same-tone background. Its order against {@link ImagePlaceholder.Fallback} decides what shows.
  *
  * @param handle Runtime handle carrying the host `<img>`'s props.
  * @returns The render function producing the image layer's markup.
@@ -218,6 +224,7 @@ ImagePlaceholder.Image = function ImagePlaceholderImage(
 					fit("cover"),
 					inset(0, 0, 0, 0),
 					overflow("hidden"),
+					outline({ color: IMAGE_OUTLINE, width: 1, offset: -1 }),
 					mix,
 				]}
 			/>
@@ -246,12 +253,10 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 				{...rest}
 				data-slot="fallback"
 				mix={[
-					/*
-					 * Both layers fill the host, and this one is written after the image, so it
-					 * would cover a picture that loaded. It stands down while an image is present
-					 * and unbroken, and takes over once the image reports that it failed. It
-					 * stands down through `visibility`, which no other rule here sets, so the
-					 * order the page declared these rules in cannot bring it back.
+					/**
+					 * Both layers fill the host and this one follows the image, so it hides while an unbroken
+					 * image is present and takes over once the image fails. It hides through `visibility`,
+					 * which no other rule here sets, so declaration order keeps it hidden.
 					 */
 					precededBy('img[data-slot="image"]:not([data-image-error])', visibility("hidden")),
 					absolute(),
@@ -346,8 +351,8 @@ ImagePlaceholder.Group = function ImagePlaceholderGroup(
 
 /**
  * Renders the "+N" overflow indicator trailing {@link ImagePlaceholder.Group}:
- * a fixed medium-size box matching {@link ImagePlaceholder}'s dimensions and
- * ring treatment, taking its own `shape` prop to match the sibling placeholders.
+ * a medium box matching {@link ImagePlaceholder}'s size, ring and `shape`, its
+ * tabular digits keeping a changing count the same width.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the overflow indicator's markup.
@@ -382,6 +387,7 @@ ImagePlaceholder.GroupCount = function ImagePlaceholderGroupCount(
 					is("var(--ui-image-placeholder-size-md, 2.5rem)"),
 					bs("var(--ui-image-placeholder-size-md, 2.5rem)"),
 					text("sm"),
+					tabularNums(),
 					ringShadow("neutral.tint"),
 					mix,
 				]}

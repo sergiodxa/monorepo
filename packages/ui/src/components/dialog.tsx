@@ -12,16 +12,17 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { XIcon } from "@sdxc/icons";
-import { bg, fg, outline } from "@sdxc/u/color";
+import { bg, border, fg, outline } from "@sdxc/u/color";
 import {
 	backdropBlur,
 	backdropSaturate,
 	opacity,
 	rounded,
+	shadow,
 	transition,
 	transitionBehavior,
 } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
+import { raw, vars } from "@sdxc/u/general";
 import {
 	absolute,
 	container,
@@ -39,9 +40,18 @@ import { overflow } from "@sdxc/u/overflow";
 import { at, media, startingStyle, supports } from "@sdxc/u/responsive";
 import { is, maxBs, maxIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
+import {
+	balance,
+	fontSize,
+	leading,
+	pretty,
+	textAlign,
+	tracking,
+	weight,
+} from "@sdxc/u/typography";
 
 import { durations, easings } from "../animations/tokens.js";
+import { SHADOW_RING } from "../styles/floating-surface.js";
 
 import { Button } from "./button.js";
 import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
@@ -180,11 +190,9 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 					fg("neutral.emphasis"),
 					rounded("lg"),
 					is("full"),
-					/*
-					 * Wide enough for the form a dialog usually carries: a field, its help text and
-					 * a row of actions read as one column at this measure, where a narrower panel
-					 * stacks them into a ribbon. A consumer with less to say narrows it through
-					 * `mix`.
+					/**
+					 * Wide enough for the form a dialog usually carries, so a field, its help text and a row
+					 * of actions read as one column. A consumer with less to say narrows it through `mix`.
 					 */
 					maxIs("32rem"),
 					maxBs("90vh"),
@@ -214,11 +222,15 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 					),
 					startingStyle(when("&[open]::backdrop", opacity(0))),
 					outline("none"),
-					/** `overscrollBehavior` has no matching utility; this shadow value doesn't match the `shadow()` scale (`sm`/`base`/`md`/`lg`). */
-					raw({
-						overscrollBehavior: "contain",
-						boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-					}),
+					/**
+					 * The panel's edge is a ring shadow that takes on the tone behind it, over a
+					 * transparent border that forced-colors mode still paints as a line.
+					 */
+					border({ color: "transparent", width: 1 }),
+					shadow("xl"),
+					vars({ "ui-box-shadow-ring": SHADOW_RING }),
+					/** `overscrollBehavior` has no matching utility. */
+					raw({ overscrollBehavior: "contain" }),
 					mix,
 				]}
 			>
@@ -288,6 +300,7 @@ Dialog.Title = function DialogTitle(handle: Handle<Dialog.TitleProps>) {
 					tracking("tight"),
 					fontSize("lg"),
 					leading(1),
+					balance(),
 					mix,
 				]}
 			>
@@ -312,7 +325,11 @@ Dialog.Description = function DialogDescription(handle: Handle<Dialog.Descriptio
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p {...rest} data-slot="description" mix={[fg("neutral.muted"), fontSize("sm"), mix]}>
+			<p
+				{...rest}
+				data-slot="description"
+				mix={[fg("neutral.muted"), fontSize("sm"), pretty(), mix]}
+			>
 				{rest.children}
 			</p>
 		);

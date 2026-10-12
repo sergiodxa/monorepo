@@ -26,6 +26,7 @@ import {
 	grid,
 	gridTemplate,
 	items,
+	relative,
 	shrink,
 	virtualize,
 } from "@sdxc/u/layout";
@@ -35,6 +36,7 @@ import { active, data, not, when } from "@sdxc/u/state";
 import { text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { panelChrome } from "../styles/panel-chrome.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
@@ -250,24 +252,20 @@ GridList.Item = function GridListItem(handle: Handle<GridList.ItemProps>) {
 					flex(),
 					items("center"),
 					gap(2),
-					/*
-					 * A glyph a row leads with is measured against the row's text rather than
-					 * against whatever an icon set draws at, and holds that measure when the row
-					 * runs out of space: the default `flex-shrink: 1` otherwise squeezes it by
-					 * however much that row's own text overruns, so every row lands on a
-					 * different width and the column of glyphs reads as a rendering fault.
+					/**
+					 * A leading glyph is sized against the row's text and holds that size when the row runs
+					 * short; the default `flex-shrink: 1` would squeeze each glyph by its own row's overrun
+					 * and leave the column of glyphs ragged.
 					 */
 					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					pb(2),
 					pi(2),
 					fg("neutral.emphasis"),
-					/*
-					 * A selected row answers "which ones", so it is tinted far enough off the
-					 * surface to be read at a glance: the plain tint is the same lightness as the
-					 * list's own background and leaves a selection invisible. Pointer states and
-					 * selection are written as selectors that exclude each other, so a hovered
-					 * row keeps saying it is selected whichever order the layers land in.
+					/**
+					 * A selected row is tinted far enough off the surface to read at a glance; the plain tint
+					 * matches the list's background. Pointer and selection states use mutually exclusive
+					 * selectors, so a hovered row stays visibly selected whichever order the layers land in.
 					 */
 					when('&:hover:not([aria-selected="true"])', bg("neutral.bg-tint-hover")),
 					when('&:active:not([aria-selected="true"])', bg("neutral.bg-tint-pressed")),
@@ -366,9 +364,9 @@ GridList.Header = function GridListHeader(handle: Handle<GridList.HeaderProps>) 
 GridList.LoadMoreItem = SentinelRow;
 
 /**
- * Renders the drag-grab element of a row: a native `<button type="button">`
- * written before the consumer's own attributes, so a `command`/`commandfor`
- * pair still runs inside a `<form>` — a `type` seen only after them is ignored.
+ * Renders a row's drag grip as a native `<button type="button">` written before the
+ * consumer's attributes, so a `command`/`commandfor` pair still runs inside a `<form>`;
+ * its pointer target grows to `--ui-target-size` around the 16px glyph.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the handle's markup.
@@ -388,6 +386,8 @@ GridList.DragHandle = function GridListDragHandle(handle: Handle<GridList.DragHa
 				{...rest}
 				mix={[
 					attrs({ role: DEFAULT_DRAG_HANDLE_ROLE, "data-drag-handle": DEFAULT_DRAG_HANDLE_MARKER }),
+					relative(),
+					hitArea(),
 					fg("neutral.muted"),
 					cursor("grab"),
 					active(cursor("grabbing")),

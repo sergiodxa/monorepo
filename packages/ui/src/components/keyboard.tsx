@@ -14,7 +14,7 @@ import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { inlineFlex, items, justify } from "@sdxc/u/layout";
 import { bs, minIs, mis, pi } from "@sdxc/u/size";
-import { leading, text } from "@sdxc/u/typography";
+import { leading, tabularNums, text } from "@sdxc/u/typography";
 
 /**
  * Prop types for {@link Keyboard}.
@@ -47,18 +47,17 @@ export function Keyboard(handle: Handle<Keyboard.Props>) {
 				{...rest}
 				mix={[
 					mis("auto"),
-					/*
-					 * A cap keeps its height and a minimum width whatever it holds, so a single
-					 * letter and a two-glyph chord sit on the same line as each other.
-					 */
-					/*
-					 * The cap centers its glyph without `center()`, because that pattern composes
-					 * `flex()` and would turn the cap into a block of its own — a key standing on
-					 * its own line in the middle of the sentence naming it.
+					/**
+					 * The cap centers its glyph as an inline box, so a key sits inside the sentence
+					 * naming it; `center()` composes `flex()` and would put the key on a line of its own.
 					 */
 					inlineFlex(),
 					items("center"),
 					justify("center"),
+					/**
+					 * A cap keeps its height and a minimum width whatever it holds, so a single
+					 * letter and a two-glyph chord sit on the same line as each other.
+					 */
 					bs("1.25rem"),
 					minIs("1.25rem"),
 					pi(1.5),
@@ -68,6 +67,7 @@ export function Keyboard(handle: Handle<Keyboard.Props>) {
 					fg("neutral"),
 					text("xs"),
 					leading("none"),
+					tabularNums(),
 					mix,
 				]}
 			/>

@@ -89,19 +89,16 @@ export function Input(handle: Handle<Input.Props>) {
 					pb(2),
 					when("&::placeholder", fg("neutral.muted")),
 					hover(border("neutral.border-hover")),
-					/*
-					 * Focus is drawn as a ring standing off the field, the same way every button
-					 * in this library draws it, rather than by darkening the border: a border
-					 * promoted to its strong weight and a ring sat flush against it read as one
-					 * thick slab, which says the field changed shape rather than that it took
-					 * focus. The border only steps to its hover weight, so nothing jumps.
+					/**
+					 * Focus draws a ring standing off the field, as every button here does, and the border
+					 * steps only to its hover weight: a strong border flush with the ring reads as the field
+					 * changing shape.
 					 */
 					when("&:focus", border("neutral.border-hover")),
-					/*
-					 * Pointer focus drops the platform outline; keyboard focus keeps the ring
-					 * drawn below. The two selectors exclude each other because `outline: none`
-					 * is a shorthand, and a shorthand reaching this element from a later cascade
-					 * layer resets the ring's color, width and style all at once.
+					/**
+					 * Pointer focus drops the platform outline and keyboard focus keeps the ring below. The
+					 * selectors exclude each other because `outline: none` is a shorthand, and from a later
+					 * cascade layer it resets the ring's color, width and style at once.
 					 */
 					when("&:focus:not(:focus-visible)", outline("none")),
 					focusVisible([

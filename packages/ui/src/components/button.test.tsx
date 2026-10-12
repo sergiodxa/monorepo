@@ -1,13 +1,7 @@
 /**
- * Tests for the `type` {@link Button} resolves: a button carrying an Invoker
- * Command renders `type="button"` on its own, because inside a `<form>` an
- * untyped button is a submit button and the platform then refuses to run its
- * command at all — while a button carrying no command is left untyped, so a
- * plain submit button inside a form still submits.
- *
- * The attribute's position is part of the contract, not only its presence: the
- * platform decides whether the pairing is ambiguous while it parses `command`
- * and `commandfor`, so a `type` written after them is refused all the same.
+ * Tests for {@link Button}: the `type` an Invoker Command needs (and where it is written),
+ * the per-size icon-only measure, the glyph-edge markers that trim padding beside a
+ * leading or trailing glyph, and the pointer target box drawn however it is positioned.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,5 +71,67 @@ describe(Button.name, () => {
 
 		expect(html).toContain('type="reset"');
 		expect(html).not.toContain('type="button"');
+	});
+
+	test("sizes an icon-only button from a per-size custom property", async () => {
+		let html = await renderToString(
+			<Button size="sm" aria-label="Close">
+				<svg />
+			</Button>,
+		);
+
+		expect(html).toContain("data-icon-only");
+		expect(html).toContain("inline-size: var(--ui-button-icon-size-sm, 2rem);");
+		expect(html).toContain("inline-size: var(--ui-button-icon-size-md, 2.5rem);");
+		expect(html).toContain("inline-size: var(--ui-button-icon-size-lg, 3rem);");
+	});
+
+	test("marks a leading glyph beside a label so its side's padding drops a step", async () => {
+		let html = await renderToString(
+			<Button>
+				<svg />
+				Save
+			</Button>,
+		);
+
+		expect(html).toMatch(/<button[^>]*data-glyph-start/);
+		expect(html).not.toMatch(/<button[^>]*data-glyph-end/);
+	});
+
+	test("marks a trailing glyph after a label, even though :first-child would also match it", async () => {
+		let html = await renderToString(
+			<Button>
+				Next
+				<svg />
+			</Button>,
+		);
+
+		expect(html).toMatch(/<button[^>]*data-glyph-end/);
+		expect(html).not.toMatch(/<button[^>]*data-glyph-start/);
+	});
+
+	test("marks neither edge on an icon-only or text-only button", async () => {
+		let iconOnly = await renderToString(
+			<Button aria-label="Close">
+				<svg />
+			</Button>,
+		);
+		let textOnly = await renderToString(<Button>Save</Button>);
+
+		expect(iconOnly).not.toMatch(/<button[^>]*data-glyph-/);
+		expect(textOnly).not.toMatch(/<button[^>]*data-glyph-/);
+	});
+
+	test("draws an unanchored target box, so it reaches --ui-target-size however it is positioned", async () => {
+		let html = await renderToString(
+			<Button size="sm" aria-label="Close">
+				<svg />
+			</Button>,
+		);
+
+		expect(html).toMatch(
+			/&::after \{[^}]*position: absolute;[^}]*inline-size: var\(--ui-target-size, 1\.5rem\);[^}]*block-size: var\(--ui-target-size, 1\.5rem\);/,
+		);
+		expect(html).not.toMatch(/&::after \{[^}]*inset/);
 	});
 });

@@ -215,10 +215,14 @@ export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((h
 
 					setRovingTabindex(rows, stopAt(rows, position));
 				}),
+				/** A shift-click spans rows, so the grid keeps that gesture for selection. */
 				on<HTMLElement, "pointerdown">("pointerdown", (event) => {
-					/* A shift-click spans rows, so the grid keeps that gesture for selection. */
 					if (event.shiftKey) event.preventDefault();
 				}),
+				/**
+				 * Selection belongs to the row: a click inside an action cell moves focus there and
+				 * leaves the rest to that cell's own action.
+				 */
 				on<HTMLElement, "click">("click", (event) => {
 					if (hostNode === undefined) return;
 
@@ -228,7 +232,6 @@ export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((h
 
 					focusElement(rows, stopAt(rows, position));
 
-					/* Selection belongs to the row, leaving an action cell's click to its own action. */
 					if (position.cellIndex !== null) return;
 
 					let key = resolveKey(model, rowKeyOf(rows[position.rowIndex]!));

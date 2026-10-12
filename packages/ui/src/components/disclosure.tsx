@@ -21,7 +21,7 @@ import { media } from "@sdxc/u/responsive";
 import { bs, is, m, pb, pbe, pi } from "@sdxc/u/size";
 import { detailsContent, hover, open, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
-import { textAlign, weight } from "@sdxc/u/typography";
+import { balance, textAlign, weight } from "@sdxc/u/typography";
 
 import { panelChrome } from "../styles/panel-chrome.js";
 
@@ -121,7 +121,7 @@ export function Disclosure(handle: Handle<Disclosure.Props>) {
 						transitionDuration("200ms"),
 					]),
 					when("&[open]::details-content", bs("auto")),
-					/*
+					/**
 					 * The glyph a trigger carries as `data-slot="icon"` turns over while the section
 					 * is open, the same rule `Accordion` states: the section owns the turn because
 					 * only it knows it is open, and the trigger owns which glyph turns.
@@ -160,7 +160,7 @@ Disclosure.Header = function DisclosureHeader(handle: Handle<Disclosure.HeaderPr
 		let Tag = TAG_BY_LEVEL[resolved];
 
 		return (
-			<Tag {...rest} data-heading-level={resolved} mix={[m(0), mix]}>
+			<Tag {...rest} data-heading-level={resolved} mix={[m(0), balance(), mix]}>
 				{children}
 			</Tag>
 		);
@@ -185,11 +185,10 @@ Disclosure.Header = function DisclosureHeader(handle: Handle<Disclosure.HeaderPr
 Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.TriggerProps>) {
 	return () => {
 		let { children, mix, ...rest } = handle.props;
-		/*
-		 * A `<summary>` has no `disabled`, so a row marked disabled is taken out of the tab
-		 * order to stop Enter and Space reaching it. Paired with the pointer-events rule
-		 * below, that is the whole of what `disabled` would do, and it holds before any
-		 * script runs rather than waiting for a handler to cancel the toggle.
+		/**
+		 * A `<summary>` has no `disabled`, so a disabled row leaves the tab order to keep Enter
+		 * and Space off it. With the pointer-events rule below, that covers all `disabled` does,
+		 * and it holds before any script runs.
 		 */
 		let disabled = rest["aria-disabled"] === "true";
 
@@ -207,6 +206,7 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 					pb(3),
 					pi(3),
 					textAlign("start"),
+					balance(),
 					weight("medium"),
 					fg("neutral.emphasis"),
 					hover(bg("neutral.tint")),
@@ -215,10 +215,9 @@ Disclosure.Trigger = function DisclosureTrigger(handle: Handle<Disclosure.Trigge
 					listStyle(),
 					when("&::-webkit-details-marker", hidden()),
 					when("&::marker", raw({ content: '""' })),
-					/*
-					 * The indicator is measured against the label it sits beside rather than against
-					 * whatever an icon set draws at, and holds that measure when a long label
-					 * squeezes the row.
+					/**
+					 * The indicator is sized against the label beside it, whatever an icon set draws at,
+					 * and holds that size when a long label squeezes the row.
 					 */
 					when('& [data-slot="icon"]', [is(4), bs(4), shrink()]),
 					transition(
@@ -255,11 +254,10 @@ Disclosure.Panel = function DisclosurePanel(handle: Handle<Disclosure.PanelProps
 				{...rest}
 				mix={[
 					overflow(),
-					/*
-					 * The panel is inset to the same line the trigger's label sits on, so the
-					 * section reads as one block rather than as a label indented above content
-					 * running to the border. The block-start stays open because the trigger's own
-					 * padding already separates the two.
+					/**
+					 * The panel is inset to the line the trigger's label sits on, so the section reads as
+					 * one block; the block-start stays open because the trigger's own padding already
+					 * separates the two.
 					 */
 					pi(3),
 					pbe(3),

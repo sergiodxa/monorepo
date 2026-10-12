@@ -13,18 +13,20 @@
 import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { bg, border, outline } from "@sdxc/u/color";
-import { rounded, transition } from "@sdxc/u/effects";
-import { combine, raw } from "@sdxc/u/general";
+import { rounded, shadow, transition, transitionDuration } from "@sdxc/u/effects";
+import { combine, cursor, raw } from "@sdxc/u/general";
+import { appearance } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
+import { scaleProperty } from "@sdxc/u/transform";
 
 import type { CSSStyles } from "../utils/css-styles.js";
 
 /**
  * The declarations shared by both engines' thumb pseudo-elements; the
- * webkit-only appearance reset is composed separately by the caller. Its
- * box-shadow stays raw; no shared shadow-scale entry matches this value.
+ * webkit-only appearance reset is composed separately by the caller. The
+ * lift reads the theme's `--ui-shadow-base`, so it follows the app's shadow scale.
  */
 function thumbBase<Node extends Element = Element>(size: string, borderWidth: string) {
 	return combine<Node>([
@@ -33,10 +35,8 @@ function thumbBase<Node extends Element = Element>(size: string, borderWidth: st
 		rounded<Node>("full"),
 		border<Node>({ color: "brand.solid", width: borderWidth }),
 		bg<Node>("neutral.tint"),
-		raw<Node>({
-			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-			cursor: "pointer",
-		}),
+		shadow<Node>("base"),
+		cursor<Node>("pointer"),
 		transition<Node>("box-shadow, scale", {
 			duration: 150,
 			easing: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -75,14 +75,11 @@ export function rangeThumbAppearance<Node extends Element = Element>(
 	return combine<Node>([
 		when<Node>(
 			"&::-webkit-slider-thumb",
-			combine<Node>([
-				raw<Node>({ WebkitAppearance: "none", appearance: "none" }),
-				thumbBase<Node>(size, borderWidth),
-			]),
+			combine<Node>([appearance<Node>("none", { moz: false }), thumbBase<Node>(size, borderWidth)]),
 		),
 		when<Node>("&::-moz-range-thumb", thumbBase<Node>(size, borderWidth)),
-		when<Node>("&:active::-webkit-slider-thumb", raw<Node>({ scale: "1.1" })),
-		when<Node>("&:active::-moz-range-thumb", raw<Node>({ scale: "1.1" })),
+		when<Node>("&:active::-webkit-slider-thumb", scaleProperty<Node>(1.1)),
+		when<Node>("&:active::-moz-range-thumb", scaleProperty<Node>(1.1)),
 		when<Node>(
 			"&:focus-visible::-webkit-slider-thumb",
 			outline<Node>({ color: "brand.ring", offset: 2 }),
@@ -92,16 +89,18 @@ export function rangeThumbAppearance<Node extends Element = Element>(
 			outline<Node>({ color: "brand.ring", offset: 2 }),
 		),
 		when<Node>("&:disabled::-webkit-slider-thumb", [
-			raw<Node>({ cursor: "not-allowed", boxShadow: "none" }),
+			cursor<Node>("not-allowed"),
+			raw<Node>({ boxShadow: "none" }),
 			border<Node>("neutral"),
 		]),
 		when<Node>("&:disabled::-moz-range-thumb", [
-			raw<Node>({ cursor: "not-allowed", boxShadow: "none" }),
+			cursor<Node>("not-allowed"),
+			raw<Node>({ boxShadow: "none" }),
 			border<Node>("neutral"),
 		]),
 		media<Node>("(prefers-reduced-motion: reduce)", [
-			when<Node>("&::-webkit-slider-thumb", raw<Node>({ transitionDuration: "0s" })),
-			when<Node>("&::-moz-range-thumb", raw<Node>({ transitionDuration: "0s" })),
+			when<Node>("&::-webkit-slider-thumb", transitionDuration<Node>("0s")),
+			when<Node>("&::-moz-range-thumb", transitionDuration<Node>("0s")),
 		]),
 	]);
 }

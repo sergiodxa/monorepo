@@ -21,6 +21,13 @@
  *   as a nudge rather than as a change of state.
  * - A `--ui-chart-{1..8}` categorical color sequence for multi-series
  *   charts — a component-library concern, not a theme-contract concept.
+ * - `--ui-target-size`, the smallest pointer target `hitArea()` grows a small
+ *   control to: 24px (WCAG 2.5.8) by default, 44px under `pointer: coarse`.
+ * - `--ui-shadow-ring` / `--ui-shadow-ring-hover`, the hairline ring plus soft
+ *   lift an elevated surface draws its edge with, so the edge takes on the
+ *   tone of whatever sits behind it; high contrast turns it into a solid line.
+ * - `--ui-image-outline`, the inset hairline that keeps an image's edge
+ *   visible against a background of the same tone.
  *
  * Dark Mode:
  * - Add .dark class to <html> for forced dark mode
@@ -74,6 +81,25 @@
 	--ui-chart-6: var(--ui-color-brand-400);
 	--ui-chart-7: var(--ui-color-success-400);
 	--ui-chart-8: var(--ui-color-warning-400);
+
+	/* Pointer targets: WCAG 2.5.8 minimum, the floor hitArea() grows small controls to */
+	--ui-target-size: 1.5rem;
+
+	/* Elevated surfaces: a translucent hairline ring plus a soft lift */
+	--ui-shadow-ring:
+		0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06), 0 2px 4px 0 rgb(0 0 0 / 0.04);
+	--ui-shadow-ring-hover:
+		0 0 0 1px rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08), 0 2px 4px 0 rgb(0 0 0 / 0.06);
+
+	/* Images: an inset hairline that holds the edge against a same-tone background */
+	--ui-image-outline: rgb(0 0 0 / 0.1);
+}
+
+/* Touch input: grow every hitArea() target to the 44px a fingertip needs */
+@media (pointer: coarse) {
+	:root {
+		--ui-target-size: 2.75rem;
+	}
 }
 
 /* Forced dark mode */
@@ -117,6 +143,12 @@
 	--ui-chart-6: var(--ui-color-brand-300);
 	--ui-chart-7: var(--ui-color-success-300);
 	--ui-chart-8: var(--ui-color-warning-300);
+
+	/* Elevated surfaces: a light hairline reads as the edge where a shadow cannot */
+	--ui-shadow-ring: 0 0 0 1px rgb(255 255 255 / 0.08);
+	--ui-shadow-ring-hover: 0 0 0 1px rgb(255 255 255 / 0.12);
+
+	--ui-image-outline: rgb(255 255 255 / 0.1);
 }
 
 /* System-preference dark mode */
@@ -161,16 +193,31 @@
 		--ui-chart-6: var(--ui-color-brand-300);
 		--ui-chart-7: var(--ui-color-success-300);
 		--ui-chart-8: var(--ui-color-warning-300);
+
+		/* Elevated surfaces: a light hairline reads as the edge where a shadow cannot */
+		--ui-shadow-ring: 0 0 0 1px rgb(255 255 255 / 0.08);
+		--ui-shadow-ring-hover: 0 0 0 1px rgb(255 255 255 / 0.12);
+
+		--ui-image-outline: rgb(255 255 255 / 0.1);
 	}
 }
 
-/* High contrast: the resting border is already promoted, so its hover step follows it */
+/*
+ * High contrast: the resting border is already promoted, so its hover step follows it,
+ * and an elevated surface's ring becomes a solid line in that promoted border color.
+ * Listed after both dark blocks and matching the same elements, so it wins in every scheme.
+ */
 @media (prefers-contrast: more) {
-	:root {
+	:root,
+	:is(.dark, .dark *),
+	:is(.system, .system *) {
 		--ui-brand-border-hover: var(--ui-brand-border-strong);
 		--ui-neutral-border-hover: var(--ui-neutral-border-strong);
 		--ui-success-border-hover: var(--ui-success-border-strong);
 		--ui-warning-border-hover: var(--ui-warning-border-strong);
 		--ui-danger-border-hover: var(--ui-danger-border-strong);
+
+		--ui-shadow-ring: 0 0 0 1px var(--ui-neutral-border-strong);
+		--ui-shadow-ring-hover: 0 0 0 1px var(--ui-neutral-border-strong);
 	}
 }

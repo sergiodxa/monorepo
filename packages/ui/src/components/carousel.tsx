@@ -253,12 +253,10 @@ Carousel.Slide = function CarouselSlide(handle: Handle<Carousel.SlideProps>) {
 					attrs({ role: DEFAULT_SLIDE_ROLE }),
 					grow(0),
 					shrink(0),
-					/*
-					 * The slide snaps to the viewport's start edge, but does not force the scroll to
-					 * stop at it. `scroll-snap-stop: always` clamps every scroll to a single snap
-					 * point, programmatic ones included, which leaves a jump to any slide but the
-					 * next one moving one slide instead — so a row of dots all scroll the same
-					 * distance and none of them reach the slide they name.
+					/**
+					 * The slide snaps to the viewport's start edge and leaves the scroll free to pass it:
+					 * `scroll-snap-stop: always` clamps programmatic scrolls too, so every dot would move
+					 * one slide and none would reach the slide it names.
 					 */
 					raw({
 						flexBasis: "var(--ui-carousel-slide-size, 18rem)",

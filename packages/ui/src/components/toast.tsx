@@ -36,10 +36,11 @@ import { media, supports } from "@sdxc/u/responsive";
 import { is, bs, maxIs, minIs, pb, pi, pie } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { translateX } from "@sdxc/u/transform";
-import { fontSize, leading, weight } from "@sdxc/u/typography";
+import { balance, fontSize, leading, pretty, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import { graphicHostStyle } from "../styles/graphic-host.js";
+import { hitArea } from "../styles/hit-area.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 /**
@@ -426,7 +427,11 @@ Toast.Title = function ToastTitle(handle: Handle<Toast.TitleProps>) {
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<h3 {...rest} data-slot="title" mix={[weight(500), leading(1), fontSize("sm"), mix]}>
+			<h3
+				{...rest}
+				data-slot="title"
+				mix={[weight(500), leading(1), fontSize("sm"), balance(), mix]}
+			>
 				{children}
 			</h3>
 		);
@@ -451,6 +456,7 @@ Toast.Description = function ToastDescription(handle: Handle<Toast.DescriptionPr
 				data-slot="description"
 				mix={[
 					fontSize("sm"),
+					pretty(),
 					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,
 				]}
@@ -588,6 +594,7 @@ Toast.Close = function ToastClose(handle: Handle<Toast.CloseProps>) {
 					),
 					insBs("0.5rem"),
 					insIe("0.5rem"),
+					hitArea(),
 					mix,
 				]}
 			>

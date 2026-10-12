@@ -1,8 +1,8 @@
 /**
  * Covers the enter/exit animation factories as pure `css()` output: the
- * `enterExit()` composer's selector defaults, `@starting-style`/reduced-motion
- * emission, and numeric-value stringification, plus the `fade()`/`zoom()`/
- * `slide()` presets delegating the right defaults through it.
+ * `enterExit()` composer's selector defaults, separate entry and exit values
+ * and timing, blur, `@starting-style`/reduced-motion emission, plus the
+ * `fade()`/`zoom()`/`slide()` presets delegating the right defaults through it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,10 +41,12 @@ describe("enterExit", () => {
 		let style = styles(enterExit({ opacity: 0 }));
 
 		expect(style.opacity).toBe(0);
-		expect(style.transitionDuration).toBe(`${durations.normal}ms`);
-		expect(style.transitionTimingFunction).toBe(easings.standard);
 		expect(style.transitionBehavior).toBe("allow-discrete");
-		expect(style[DEFAULT_SELECTOR]).toEqual({ opacity: 1 });
+		expect(style[DEFAULT_SELECTOR]).toEqual({
+			opacity: 1,
+			transitionDuration: `${durations.normal}ms`,
+			transitionTimingFunction: easings.standard,
+		});
 	});
 
 	test("only lists the axes actually configured, plus display/overlay, in transitionProperty", () => {
@@ -65,7 +67,7 @@ describe("enterExit", () => {
 	test("resets scale/translate to none and opacity to 1 in the entered state", () => {
 		let style = styles(enterExit({ opacity: 0, scale: 0.9, translate: "0 0.5rem" }));
 
-		expect(style[DEFAULT_SELECTOR]).toEqual({ opacity: 1, scale: "none", translate: "none" });
+		expect(style[DEFAULT_SELECTOR]).toMatchObject({ opacity: 1, scale: "none", translate: "none" });
 	});
 
 	test("mirrors the exit state inside @starting-style under the same selector", () => {
@@ -95,15 +97,71 @@ describe("enterExit", () => {
 	test("a custom when selector replaces the platform-state default", () => {
 		let style = styles(enterExit({ opacity: 0, when: "[data-visible]" }));
 
-		expect(style["&[data-visible]"]).toEqual({ opacity: 1 });
+		expect(style["&[data-visible]"]).toMatchObject({ opacity: 1 });
 		expect(style[DEFAULT_SELECTOR]).toBeUndefined();
 	});
 
 	test("a caller-provided duration and easing override the defaults", () => {
 		let style = styles(enterExit({ opacity: 0, duration: 500, easing: easings.linear }));
 
-		expect(style.transitionDuration).toBe("500ms");
-		expect(style.transitionTimingFunction).toBe("linear");
+		expect(style[DEFAULT_SELECTOR]).toMatchObject({
+			transitionDuration: "500ms",
+			transitionTimingFunction: "linear",
+		});
+	});
+
+	test("exits on a shorter clock than it enters, reusing the entry easing", () => {
+		let style = styles(enterExit({ opacity: 0, duration: 200, easing: easings.decelerate }));
+
+		expect(style.transitionDuration).toBe("150ms");
+		expect(style.transitionTimingFunction).toBe(easings.decelerate);
+	});
+
+	test("takes its own exit duration and easing", () => {
+		let style = styles(enterExit({ opacity: 0, exitDuration: 90, exitEasing: easings.accelerate }));
+
+		expect(style.transitionDuration).toBe("90ms");
+		expect(style.transitionTimingFunction).toBe(easings.accelerate);
+	});
+
+	test("leaves to the exit values while @starting-style keeps the entry values", () => {
+		let style = styles(
+			enterExit({ opacity: 0, translate: "100% 0", exit: { translate: "1rem 0" } }),
+		);
+		let startingStyle = style["@starting-style"] as Record<string, unknown>;
+
+		expect(style.translate).toBe("1rem 0");
+		expect(style.opacity).toBe(0);
+		expect(startingStyle[DEFAULT_SELECTOR]).toEqual({ opacity: 0, translate: "100% 0" });
+	});
+
+	test("a value only the exit names enters from its reset", () => {
+		let style = styles(enterExit({ translate: "100% 0", exit: { opacity: 0, blur: 4 } }));
+		let startingStyle = style["@starting-style"] as Record<string, unknown>;
+
+		expect(style.opacity).toBe(0);
+		expect(style.filter).toBe("blur(4px)");
+		expect(startingStyle[DEFAULT_SELECTOR]).toEqual({
+			opacity: 1,
+			translate: "100% 0",
+			filter: "none",
+		});
+	});
+
+	test("transitions filter for a blur and clears it in the entered state", () => {
+		let style = styles(enterExit({ opacity: 0, blur: 4 }));
+
+		expect(style.filter).toBe("blur(4px)");
+		expect(style.transitionProperty).toBe("opacity, filter, display, overlay");
+		expect(style[DEFAULT_SELECTOR]).toMatchObject({ filter: "none" });
+	});
+
+	test("drops the blur along with movement under prefers-reduced-motion", () => {
+		let style = styles(enterExit({ opacity: 0, scale: 0.9, blur: 4 }));
+		let reduced = style["@media (prefers-reduced-motion: reduce)"] as Record<string, unknown>;
+
+		expect(reduced.filter).toBe("none");
+		expect(reduced.transitionProperty).toBe("opacity, display, overlay");
 	});
 });
 
@@ -122,9 +180,11 @@ describe("fade", () => {
 			fade({ duration: durations.fast, easing: easings.linear, when: "[data-open]" }),
 		);
 
-		expect(style.transitionDuration).toBe(`${durations.fast}ms`);
-		expect(style.transitionTimingFunction).toBe("linear");
-		expect(style["&[data-open]"]).toEqual({ opacity: 1 });
+		expect(style["&[data-open]"]).toEqual({
+			opacity: 1,
+			transitionDuration: `${durations.fast}ms`,
+			transitionTimingFunction: "linear",
+		});
 	});
 });
 
@@ -133,27 +193,47 @@ describe("zoom", () => {
 		let style = styles(zoom());
 
 		expect(style.opacity).toBe(0);
-		expect(style.scale).toBe("0.95");
+		expect(style.scale).toBe("0.975");
 		expect(style.transitionProperty).toBe("opacity, scale, display, overlay");
 	});
 
-	test("accepts a custom scale factor", () => {
+	test("enters from the full scale and exits only halfway back to it", () => {
 		let style = styles(zoom({ scale: 0.8 }));
+		let startingStyle = style["@starting-style"] as Record<string, unknown>;
 
-		expect(style.scale).toBe("0.8");
+		expect(startingStyle[DEFAULT_SELECTOR]).toMatchObject({ scale: "0.8" });
+		expect(style.scale).toBe("0.9");
+	});
+
+	test("forwards a blur", () => {
+		expect(styles(zoom({ blur: 2 })).filter).toBe("blur(2px)");
 	});
 });
 
 describe("slide", () => {
-	test("offsets the exit state away from the resting position for each edge", () => {
-		expect(styles(slide({ from: "top" })).translate).toBe("0 -0.5rem");
-		expect(styles(slide({ from: "bottom" })).translate).toBe("0 0.5rem");
-		expect(styles(slide({ from: "left" })).translate).toBe("-0.5rem 0");
-		expect(styles(slide({ from: "right" })).translate).toBe("0.5rem 0");
+	/** The `translate` a slide enters from, read out of its `@starting-style` block. */
+	function entryTranslate(mixin: CSSMixinDescriptor): unknown {
+		let startingStyle = styles(mixin)["@starting-style"] as Record<string, Record<string, unknown>>;
+		return startingStyle[DEFAULT_SELECTOR]?.translate;
+	}
+
+	test("enters from just off the resting position for each edge", () => {
+		expect(entryTranslate(slide({ from: "top" }))).toBe("0 -0.5rem");
+		expect(entryTranslate(slide({ from: "bottom" }))).toBe("0 0.5rem");
+		expect(entryTranslate(slide({ from: "left" }))).toBe("-0.5rem 0");
+		expect(entryTranslate(slide({ from: "right" }))).toBe("0.5rem 0");
 	});
 
-	test("accepts a custom distance", () => {
-		expect(styles(slide({ from: "top", distance: "1rem" })).translate).toBe("0 -1rem");
+	test("exits half the entry distance toward the same edge", () => {
+		expect(styles(slide({ from: "top" })).translate).toBe("0 -0.25rem");
+		expect(styles(slide({ from: "right" })).translate).toBe("0.25rem 0");
+	});
+
+	test("accepts a custom distance, wrapping one it cannot halve directly in calc()", () => {
+		expect(entryTranslate(slide({ from: "top", distance: "1rem" }))).toBe("0 -1rem");
+		expect(styles(slide({ from: "left", distance: "var(--gap)" })).translate).toBe(
+			"calc(-1 * calc(var(--gap) / 2)) 0",
+		);
 	});
 
 	test("defaults to a transparent exit state alongside the offset", () => {

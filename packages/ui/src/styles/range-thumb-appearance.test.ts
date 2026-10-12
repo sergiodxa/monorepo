@@ -77,7 +77,9 @@ describe(rangeThumbAppearance.name, () => {
 			borderStyle: "solid",
 			borderColor: "var(--ui-brand-bg-solid)",
 			backgroundColor: "var(--ui-neutral-bg-tint)",
-			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+			"--ui-box-shadow-elevation":
+				"var(--ui-shadow-base, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1))",
+			boxShadow: "var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000)",
 			cursor: "pointer",
 			transitionProperty: "box-shadow, scale",
 			transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",
@@ -91,7 +93,9 @@ describe(rangeThumbAppearance.name, () => {
 			borderStyle: "solid",
 			borderColor: "var(--ui-brand-bg-solid)",
 			backgroundColor: "var(--ui-neutral-bg-tint)",
-			boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
+			"--ui-box-shadow-elevation":
+				"var(--ui-shadow-base, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1))",
+			boxShadow: "var(--ui-box-shadow-ring, 0 0 #0000), var(--ui-box-shadow-elevation, 0 0 #0000)",
 			cursor: "pointer",
 			transitionProperty: "box-shadow, scale",
 			transitionTimingFunction: "cubic-bezier(0.4, 0, 0.2, 1)",

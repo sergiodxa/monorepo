@@ -27,7 +27,7 @@ import {
 	opacity,
 	outline,
 	pseudoContent,
-	raw,
+	verticalAlign,
 	relative,
 	rounded,
 	scaleProperty,
@@ -123,7 +123,7 @@ export function Switch(handle: Handle<Switch.Props>) {
 					shrink(0),
 					transition("background-color", { duration: durations.fast, easing: easings.standard }),
 					when("&:disabled", cursor("not-allowed")),
-					raw({ verticalAlign: "middle" }),
+					verticalAlign("middle"),
 					before([
 						pseudoContent('""'),
 						insBs("var(--ui-switch-thumb-inset, 0.125rem)"),

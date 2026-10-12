@@ -147,11 +147,6 @@ function precedes(node: Node, reference: Node): boolean {
  * @param model Model whose pinned state gates the jump.
  */
 function stickToEndIfPinned(host: HTMLElement, model: ScrollFollowModel): void {
-	/*
-	 * Following lands at once, so a viewport that scrolls smoothly still keeps up with a
-	 * reply arriving a word at a time: an eased scroll would restart on every word and
-	 * spend the whole answer travelling.
-	 */
 	if (model.pinned) host.scrollTo({ top: host.scrollHeight, behavior: "instant" });
 }
 
@@ -373,10 +368,9 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
 
-		/*
-		 * The press is answered from the frame around the scroller rather than the scroller
-		 * itself, so a control floating over the log reaches the behavior the same way one
-		 * rendered inside it does.
+		/**
+		 * The frame around the scroller answers the press, so a control floating over the
+		 * log reaches the behavior the same way one rendered inside it does.
 		 */
 		let pressScope = event.node.parentElement ?? event.node;
 		pressScope.addEventListener(
@@ -397,13 +391,13 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 			resync(hostNode, boundModel, false);
 		}
 
+		/**
+		 * Watches text as well as nodes: a reply arriving a word at a time grows by rewriting
+		 * the row it is already in, and following keeps up with that.
+		 */
 		let mutationObserver = new MutationObserver((records) => {
 			if (hostNode && boundModel) handleMutations(hostNode, boundModel, records);
 		});
-		/*
-		 * Text counts as growth, not just nodes: a reply that arrives a word at a time grows
-		 * by rewriting the row it is already in, and following has to keep up with that.
-		 */
 		mutationObserver.observe(event.node, {
 			childList: true,
 			subtree: true,

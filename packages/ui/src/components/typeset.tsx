@@ -20,7 +20,16 @@ import { overflow } from "@sdxc/u/overflow";
 import { at } from "@sdxc/u/responsive";
 import { is, maxIs, pb, pi, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { leading, textAlign, textDecoration, tracking, weight } from "@sdxc/u/typography";
+import {
+	balance,
+	leading,
+	pretty,
+	tabularNums,
+	textAlign,
+	textDecoration,
+	tracking,
+	weight,
+} from "@sdxc/u/typography";
 import { css } from "remix/component";
 
 import { easings } from "../animations/tokens.js";
@@ -293,8 +302,11 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						leading(1.25),
 						tracking("tight"),
 						fg("neutral.emphasis"),
+						balance(),
 					]),
 					when("& :where(h6)", fg("neutral")),
+
+					when("& :where(p, li, blockquote, dd)", pretty()),
 
 					when("& :where(ul, ol)", pis("1.5em")),
 					when("& :where(li)::marker", fg("neutral.muted")),
@@ -331,7 +343,7 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						pb("0.875em"),
 						overflow("auto"),
 					]),
-					/*
+					/**
 					 * A fenced block's `code` is an inline box, so the chip padding above would
 					 * apply at the start of the box alone and indent the block's first line
 					 * past every line under it. The block's own padding is the `pre`'s.
@@ -353,6 +365,7 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 					when("& :where(th, td):not([align])", textAlign("start")),
 					when("& :where(th)", [weight("semibold"), fg("neutral.emphasis")]),
 					when("& :where(th, td)", [
+						tabularNums(),
 						pi("0.75em"),
 						pb("0.5em"),
 						borderEdge("block-end", { color: "neutral", width: "1px" }),

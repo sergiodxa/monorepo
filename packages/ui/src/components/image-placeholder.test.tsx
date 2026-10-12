@@ -1,7 +1,7 @@
 /**
- * Guards the rule that lets a loaded picture show through its fallback. Every utility a
- * page uses lands in a cascade layer of its own, declared in the order the page first
- * uses it, so a rule that shares a property with another one on the fallback can lose.
+ * Guards the rule that lets a loaded picture show through its fallback, and the inset
+ * hairline that edges the picture. Every utility lands in a cascade layer of its own,
+ * in first-use order, so a rule sharing a property on the fallback can lose.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,5 +29,18 @@ describe("an image placeholder's fallback", () => {
 
 		expect(rule.slice(0, rule.indexOf("}"))).toContain("visibility: hidden");
 		expect(rule.slice(0, rule.indexOf("}"))).not.toContain("display: none");
+	});
+});
+
+describe("an image placeholder's image", () => {
+	test("draws an inset hairline from the theme's image outline token", async () => {
+		let html = await renderToString(
+			<Avatar>
+				<Avatar.Image src="https://example.test/ada.png" alt="" />
+			</Avatar>,
+		);
+
+		expect(html).toContain("outline-color: var(--ui-image-outline, rgb(0 0 0 / 0.1))");
+		expect(html).toContain("outline-offset: -1px");
 	});
 });

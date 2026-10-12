@@ -1,8 +1,8 @@
 /**
- * Tests for the panel's positioning scheme: a modal dialog is measured against
- * the viewport, while the page's flow keeps the containing block its dismiss
- * control pins itself to. Both come from the panel's own emitted stylesheet,
- * so these assertions read the CSS the component renders.
+ * Tests for the panel's positioning scheme, ring-shadow edge and text wrapping:
+ * a modal dialog is measured against the viewport, while the page's flow keeps
+ * the containing block its dismiss control pins itself to. These assertions
+ * read the CSS the component renders.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,5 +59,24 @@ describe("Dialog", () => {
 
 		expect(css).toContain("max-block-size: 90vh");
 		expect(css).toContain("overflow: auto");
+	});
+
+	test("draws its edge as the theme's ring shadow over a transparent border", async () => {
+		let css = await panelStyles();
+
+		expect(css).toContain("--ui-box-shadow-ring: var(--ui-shadow-ring,");
+		expect(css).toContain("border-color: transparent");
+	});
+
+	test("balances the title and wraps the description prettily", async () => {
+		let html = await renderToString(
+			<Dialog id="d">
+				<Dialog.Title>Delete project?</Dialog.Title>
+				<Dialog.Description>This removes every file.</Dialog.Description>
+			</Dialog>,
+		);
+
+		expect(html).toContain("text-wrap: balance");
+		expect(html).toContain("text-wrap: pretty");
 	});
 });

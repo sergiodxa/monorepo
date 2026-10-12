@@ -16,7 +16,7 @@ import { userSelect } from "@sdxc/u/general";
 import { gap, inlineFlex, items, shrink } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
-import { fontSize, leading, nowrap, weight } from "@sdxc/u/typography";
+import { fontSize, leading, nowrap, tabularNums, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
@@ -103,6 +103,7 @@ export function Badge(handle: Handle<Badge.Props>) {
 					pb(0.5),
 					leading(1),
 					weight("semibold"),
+					tabularNums(),
 					nowrap(),
 					transition(
 						"color, background-color, border-color, outline-color, text-decoration-color, fill, stroke",

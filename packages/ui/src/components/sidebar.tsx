@@ -86,6 +86,7 @@ import {
 import { attrs } from "remix/component";
 
 import { durations, easings } from "../animations/tokens.js";
+import { hitArea } from "../styles/hit-area.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 import { Dialog } from "./dialog.js";
@@ -596,11 +597,10 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 				data-slot="mobile-nav"
 				data-side={resolvedSide}
 				mix={[
-					/*
-					 * A press outside the drawer closes it, which is how a drawer is dismissed on a
-					 * phone: a modal dialog closes on Escape and nothing else, and a touch device has
-					 * no Escape to press — so the only way out would be a control the drawer does not
-					 * render. A consumer wanting the drawer held open passes its own `closedby`.
+					/**
+					 * A press outside closes the drawer, the way a drawer is dismissed on a phone: a modal
+					 * dialog otherwise closes only on Escape, which a touch device lacks. A consumer
+					 * holding the drawer open passes its own `closedby`.
 					 */
 					attrs({ closedby: "any" }),
 					fixed(),
@@ -662,11 +662,10 @@ Sidebar.Header = function SidebarHeader(handle: Handle<Sidebar.HeaderProps>) {
 				{...rest}
 				data-slot="header"
 				mix={[
-					/*
-					 * The slot paints the rail's own background rather than letting it show
-					 * through, so a consumer that holds this row against the viewport keeps the
-					 * scrolling content behind it out of sight. Inheriting it means the row still
-					 * matches whichever surface hosts it — the docked rail or the drawer.
+					/**
+					 * The slot paints the rail's background, so content scrolling behind a row held
+					 * against the viewport stays hidden; inheriting it matches whichever surface hosts
+					 * the row, the docked rail or the drawer.
 					 */
 					bg("inherit"),
 					flex(),
@@ -990,9 +989,9 @@ Sidebar.GroupLabel = function SidebarGroupLabel(handle: Handle<Sidebar.GroupLabe
 };
 
 /**
- * Renders a small icon-only action button anchored to
- * {@link Sidebar.GroupLabel}'s trailing edge. In dev mode, an action with no
- * plain text and no `aria-label`/`aria-labelledby` logs a `console.warn`.
+ * Renders a small icon-only action button anchored to {@link Sidebar.GroupLabel}'s
+ * trailing edge, its pointer target grown to `--ui-target-size`. In dev mode, an
+ * action with no plain text and no `aria-label`/`aria-labelledby` logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the action's markup.
@@ -1021,9 +1020,11 @@ Sidebar.GroupAction = function SidebarGroupAction(handle: Handle<Sidebar.GroupAc
 				data-slot="group-action"
 				mix={[
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+					relative(),
 					inlineFlex(),
 					is("1.25rem"),
 					bs("1.25rem"),
+					hitArea(),
 					items("center"),
 					justify("center"),
 					when("&:disabled", [cursor("not-allowed"), opacity(50)]),
@@ -1114,11 +1115,10 @@ Sidebar.MenuItem = function SidebarMenuItem(handle: Handle<Sidebar.MenuItemProps
 				mix={[
 					relative(),
 					flex(),
-					/*
-					 * A row on its own centres what it holds; a row that carries a sub-menu
-					 * stacks, so the nested list sits under it at full width. The two are
-					 * written under selectors that never match at once, so the layout holds
-					 * whichever order the cascade puts the pair in.
+					/**
+					 * A plain row centres what it holds and a row carrying a sub-menu stacks, putting the
+					 * nested list under it at full width. The selectors never match at once, so the layout
+					 * holds whichever order the cascade puts the pair in.
 					 */
 					when('&:not(:has([data-slot="menu-sub"]))', items("center")),
 					when('&:has([data-slot="menu-sub"])', [flexCol(), items("stretch")]),
@@ -1269,8 +1269,8 @@ function menuRowMixins() {
 }
 
 /**
- * Renders a small icon-only action anchored to {@link Sidebar.MenuItem}'s
- * trailing edge, revealed by `showOnHover` on hover or focus within the row.
+ * Renders a small icon-only action anchored to {@link Sidebar.MenuItem}'s trailing
+ * edge, revealed by `showOnHover`, with its pointer target grown to `--ui-target-size`.
  * In dev mode, an action with no accessible name logs a `console.warn`.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
@@ -1310,6 +1310,7 @@ Sidebar.MenuAction = function SidebarMenuAction(handle: Handle<Sidebar.MenuActio
 					inlineFlex(),
 					is("1.5rem"),
 					bs("1.5rem"),
+					hitArea(),
 					items("center"),
 					justify("center"),
 					opacity(0),
@@ -1624,8 +1625,8 @@ Sidebar.Rail = function SidebarRail(handle: Handle<Sidebar.RailProps>) {
 };
 
 /**
- * Renders the collapse toggle: a native, keyboard-reachable
- * `<input type="checkbox">` wrapped in a button-styled `<label>`; its
+ * Renders the collapse toggle: a native, keyboard-reachable `<input type="checkbox">`
+ * in a button-styled `<label>` whose pointer target grows to `--ui-target-size`; its
  * `:checked` state drives every collapse rule in {@link Sidebar.Provider}.
  *
  * @param handle Runtime handle carrying the host checkbox's props.
@@ -1648,6 +1649,7 @@ Sidebar.Trigger = function SidebarTrigger(handle: Handle<Sidebar.TriggerProps>) 
 					inlineFlex(),
 					is("2rem"),
 					bs("2rem"),
+					hitArea(),
 					items("center"),
 					justify("center"),
 					cursor("pointer"),

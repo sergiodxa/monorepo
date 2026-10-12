@@ -17,7 +17,7 @@ import { raw, vars } from "@sdxc/u/general";
 import { block, flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { maxIs, mie, mis, pb, pbe, pi, width } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
-import { wordBreak } from "@sdxc/u/typography";
+import { pretty, wordBreak } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 /** Selector matching every framed variant, the ones that hug their own text. */
@@ -222,6 +222,7 @@ Bubble.Content = function BubbleContent(handle: Handle<Bubble.ContentProps>) {
 						overflowWrap: "break-word",
 					}),
 					wordBreak("break-word"),
+					pretty(),
 					mix,
 				]}
 			>
@@ -274,10 +275,10 @@ Bubble.Reactions = function BubbleReactions(handle: Handle<Bubble.ReactionsProps
 					flexWrap("wrap"),
 					items("center"),
 					gap(1),
-					/*
-					 * The row sits on the line the turn's own text sits on, and clears the frame's
-					 * lower edge: inset to match the content beside it, a negative pull would lift
-					 * the reactions into the last line of the message they belong to.
+					/**
+					 * The row sits on the line the turn's own text sits on and clears the frame's lower
+					 * edge, inset to match the content beside it, so the reactions stay clear of the
+					 * message's last line.
 					 */
 					pi(3.5),
 					pbe(2.5),

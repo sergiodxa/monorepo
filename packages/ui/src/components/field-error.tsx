@@ -15,7 +15,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { text, weight } from "@sdxc/u/typography";
+import { pretty, text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 /**
@@ -64,6 +64,7 @@ export function FieldError(handle: Handle<FieldError.Props>) {
 					fg("danger"),
 					weight("medium"),
 					text("sm"),
+					pretty(),
 					mix,
 				]}
 			/>

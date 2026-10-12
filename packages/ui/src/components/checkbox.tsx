@@ -97,8 +97,8 @@ export function Checkbox(handle: Handle<Checkbox.Props>) {
 					data-color={resolvedColor}
 					mix={[
 						center(),
-						is("1.25rem"),
-						bs("1.25rem"),
+						is("var(--ui-checkbox-size, 1.25rem)"),
+						bs("var(--ui-checkbox-size, 1.25rem)"),
 						shrink(0),
 						rounded("sm"),
 						border({ width: 2, color: "neutral.strong" }),

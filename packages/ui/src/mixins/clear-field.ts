@@ -93,13 +93,12 @@ export const clearField: MixinFactory<HTMLButtonElement> = createMixin<HTMLButto
 	(handle) => {
 		handle.addEventListener("insert", (event) => {
 			let button = event.node;
+			/**
+			 * Unresolved while the input renders after the button or a rewritten `commandfor`
+			 * settles; the button then shows from the moment script runs, so its press stays reachable.
+			 */
 			let input = resolveClearTarget(button);
 
-			/*
-			 * A button whose target resolves later — markup that renders the input after it,
-			 * or a `commandfor` the consumer rewrites — shows from the moment script runs, so
-			 * its press stays reachable while the pairing settles.
-			 */
 			if (!input) {
 				button.hidden = false;
 				return;

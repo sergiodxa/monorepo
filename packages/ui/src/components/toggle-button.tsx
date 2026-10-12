@@ -17,14 +17,16 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
 import { cursor, userSelect } from "@sdxc/u/general";
 import { flex, flexCol, inlineFlex, items, justify, gap, shrink } from "@sdxc/u/layout";
-import { bs, is, minBs, pi, pb } from "@sdxc/u/size";
+import { bs, is, minBs, pi, pb, pie, pis } from "@sdxc/u/size";
 import { when, hover, active, data } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
+import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { glyphEdges } from "../utils/glyph-edges.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 /** Semantic color role {@link ToggleButton} falls back to when `color` is omitted. */
@@ -123,6 +125,7 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let resolvedSize = size ?? DEFAULT_SIZE;
 		let resolvedPressed = resolveAriaPressed(pressed);
+		let edges = glyphEdges(children);
 
 		warnIfNoAccessibleName(
 			handle.props,
@@ -137,6 +140,8 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
+				data-glyph-start={edges.start || undefined}
+				data-glyph-end={edges.end || undefined}
 				mix={[
 					when("&:focus-visible", [
 						outline({ color: "brand.ring", offset: 2 }),
@@ -150,24 +155,23 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 					items("center"),
 					justify("center"),
 					gap("0.5rem"),
-					/*
-					 * A glyph is measured against the label it sits beside rather than against
-					 * whatever an icon set draws at, so the row keeps the height its text and
-					 * padding ask for, and it never shrinks: squeeze the row and the default
-					 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
-					 * icon reads as a rendering fault.
+					/**
+					 * A glyph is sized against the label beside it and holds that size, so the row keeps the
+					 * height its text and padding ask for; the default `flex-shrink: 1` would squash the glyph
+					 * ahead of the words.
 					 */
 					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					weight(500),
 					cursor("default"),
+					/** A small control reaches `--ui-target-size` however a consumer positions it. */
+					hitArea({ anchor: "flex-center" }),
 					userSelect(),
 					pi("1rem"),
 					pb("0.5rem"),
-					/*
-					 * The row measure is stated rather than left to fall out of the padding and
-					 * the border, so the control lines up with a field of the same size when a
-					 * Group fuses the two, and still grows when a long label wraps.
+					/**
+					 * The row measure is stated, so the control lines up with a field of the same size when
+					 * a Group fuses the two, and still grows when a long label wraps.
 					 */
 					minBs("2.5rem"),
 
@@ -182,6 +186,20 @@ export function ToggleButton(handle: Handle<ToggleButton.Props>) {
 						pb("0.625rem"),
 						minBs("3rem"),
 						when("& > svg", [is(5), bs(5)]),
+					]),
+					/**
+					 * A glyph beside a label carries its own side bearing, so the padding on that
+					 * side drops one step and the glyph and the words read as evenly inset.
+					 */
+					when("&[data-glyph-start]:has(> svg:first-child)", [
+						pis("0.75rem"),
+						when('&[data-size="sm"]', pis("0.5rem")),
+						when('&[data-size="lg"]', pis("1rem")),
+					]),
+					when("&[data-glyph-end]:has(> svg:last-child)", [
+						pie("0.75rem"),
+						when('&[data-size="sm"]', pie("0.5rem")),
+						when('&[data-size="lg"]', pie("1rem")),
 					]),
 					text("sm"),
 					data("size", "sm", text("xs")),

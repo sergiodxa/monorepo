@@ -19,7 +19,7 @@ import { cursor, listStyle, pointerEvents } from "@sdxc/u/general";
 import { flex, gap, inlineFlex, items, justify } from "@sdxc/u/layout";
 import { bs, m, minIs, p, pi } from "@sdxc/u/size";
 import { active, hover, when } from "@sdxc/u/state";
-import { text, textDecoration, weight } from "@sdxc/u/typography";
+import { tabularNums, text, textDecoration, weight } from "@sdxc/u/typography";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import {
@@ -186,6 +186,7 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					when('&[aria-disabled="true"]', opacity(50)),
 					text("sm"),
+					tabularNums(),
 					textDecoration("none"),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
 					mix,
@@ -244,6 +245,7 @@ Pagination.Button = function PaginationButton(handle: Handle<Pagination.ButtonPr
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					when("&:disabled", opacity(50)),
 					text("sm"),
+					tabularNums(),
 					when("&:disabled", cursor("not-allowed")),
 					mix,
 				]}

@@ -1,6 +1,6 @@
 /**
  * A bounded container grouping a header, body content, and footer actions
- * into one bordered, softly shadowed panel tinted by a semantic color role.
+ * into one ring-edged, softly lifted panel tinted by a semantic color role.
  * The role colors border, background, and text together, so {@link Card.Title}
  * and {@link Card.Description} inherit their text color from the root through
  * ordinary CSS inheritance.
@@ -13,13 +13,15 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { border } from "@sdxc/u/color";
 import { opacity, rounded, shadow } from "@sdxc/u/effects";
+import { vars } from "@sdxc/u/general";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
 import { p, pbe, pbs, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
+import { balance, fontSize, leading, pretty, tracking, weight } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
+import { SHADOW_RING } from "../styles/floating-surface.js";
 import { semanticColorPanel } from "../styles/semantic-color-panel.js";
 
 import { resolveHeadingLevel, TAG_BY_LEVEL } from "./heading-scope.js";
@@ -67,8 +69,10 @@ export namespace Card {
 }
 
 /**
- * The card panel: a rounded, bordered, softly shadowed `<section>` tinted
- * through the `data-color` attribute contract. Compose {@link Card.Header},
+ * The card panel: a rounded, softly lifted `<section>` tinted through the
+ * `data-color` attribute contract. A neutral card draws its edge as a ring
+ * shadow that takes on the tone behind it; a colored one keeps its tinted
+ * border inside that ring. Compose {@link Card.Header},
  * {@link Card.Content}, and {@link Card.Footer} inside it.
  *
  * @param handle Runtime handle carrying the host `<section>`'s props.
@@ -100,7 +104,15 @@ export function Card(handle: Handle<Card.Props>) {
 			<section
 				data-color={resolvedColor}
 				{...rest}
-				mix={[semanticColorPanel(), rounded("lg"), border({ width: 1 }), shadow("base"), mix]}
+				mix={[
+					semanticColorPanel(),
+					rounded("lg"),
+					border({ width: 1 }),
+					when('&[data-color="neutral"]', border("transparent")),
+					shadow("sm"),
+					vars({ "ui-box-shadow-ring": SHADOW_RING }),
+					mix,
+				]}
 			/>
 		);
 	};
@@ -146,7 +158,7 @@ Card.Title = function CardTitle(handle: Handle<Card.TitleProps>) {
 			<Tag
 				{...rest}
 				data-heading-level={resolved}
-				mix={[fontSize("2xl"), leading(1), weight("semibold"), tracking("tight"), mix]}
+				mix={[fontSize("2xl"), leading(1), weight("semibold"), tracking("tight"), balance(), mix]}
 			>
 				{rest.children}
 			</Tag>
@@ -167,13 +179,14 @@ Card.Description = function CardDescription(handle: Handle<Card.DescriptionProps
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <p {...rest} mix={[fontSize("sm"), opacity(70), mix]} />;
+		return <p {...rest} mix={[fontSize("sm"), opacity(70), pretty(), mix]} />;
 	};
 };
 
 /**
  * The card's main body slot: a `<div>` padded on its inline and block-end
- * edges, leaving its block-start edge flush against {@link Card.Header}.
+ * edges, leaving its block-start edge flush against {@link Card.Header}. Its
+ * prose wraps with `text-wrap: pretty`, which every paragraph inside inherits.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the body slot's markup.
@@ -187,12 +200,18 @@ Card.Content = function CardContent(handle: Handle<Card.ContentProps>) {
 		return (
 			<div
 				{...rest}
-				/*
-				 * The body meets whatever sits above it with no gap of its own, because a header
-				 * already carries that space. Opening the card takes it back: a card written as
-				 * content alone would otherwise start hard against its own top edge.
-				 */
-				mix={[pbs(0), when("&:first-child", pbs(6)), pbe(6), pi(6), mix]}
+				mix={[
+					/**
+					 * The body leaves the gap above it to a header, and takes it back when it opens the card,
+					 * so a card of content alone still clears its own top edge.
+					 */
+					pbs(0),
+					when("&:first-child", pbs(6)),
+					pbe(6),
+					pi(6),
+					pretty(),
+					mix,
+				]}
 			/>
 		);
 	};

@@ -1,10 +1,10 @@
 /**
  * A preset of {@link Dialog} docked flush against one physical edge of the
- * viewport, sized to fill that edge and sliding into place from it on open,
- * back out on close. Every other detail — the dimming, blurrable
- * `::backdrop`, the `ui-dialog` named container its compound parts query,
- * and the missing-`id` dev-mode contract check — carries over from
- * {@link Dialog}, since this component composes it directly.
+ * viewport, sized to fill that edge, sliding into place from it on open and
+ * fading out with a short drift toward it on close. Every other detail — the
+ * dimming, blurrable `::backdrop`, the `ui-dialog` named container its
+ * compound parts query, and the missing-`id` dev-mode contract check — carries
+ * over from {@link Dialog}, since this component composes it directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,15 +12,14 @@
 
 import type { Handle } from "remix/component";
 
-import { rounded, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
-import { willChange } from "@sdxc/u/general";
+import { rounded } from "@sdxc/u/effects";
+import { vars, willChange } from "@sdxc/u/general";
 import { fixed, insBe, insBs, insIe, insIs, insLeft, insRight } from "@sdxc/u/layout";
-import { media, startingStyle } from "@sdxc/u/responsive";
 import { bs, is, m, maxBs, maxIs } from "@sdxc/u/size";
-import { data, when } from "@sdxc/u/state";
-import { translateX, translateY } from "@sdxc/u/transform";
+import { data } from "@sdxc/u/state";
 
 import { durations, easings } from "../animations/tokens.js";
+import { enterExit } from "../animations/transitions.js";
 
 import { Dialog } from "./dialog.js";
 
@@ -29,6 +28,15 @@ import { Dialog } from "./dialog.js";
  * `placement` is left unset.
  */
 const DEFAULT_PLACEMENT: Drawer.Placement = "bottom";
+
+/**
+ * How far toward its edge the panel drifts while it fades out on close: a
+ * hint of the direction it came from, short of the full slide it entered with.
+ */
+const EXIT_DISTANCE = "1rem";
+
+/** Blur radius in pixels the panel softens to as it fades out. */
+const EXIT_BLUR_PX = 4;
 
 /**
  * Prop types for {@link Drawer} and its compound parts. Each compound part
@@ -106,22 +114,20 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 					fixed(),
 					m(0),
 					rounded("none"),
-					transition("transform, display, overlay", {
-						duration: `${durations.slow}ms`,
+					enterExit({
+						translate: "var(--ui-drawer-enter-offset)",
+						duration: durations.slow,
 						easing: easings.decelerate,
+						exit: { translate: "var(--ui-drawer-exit-offset)", opacity: 0, blur: EXIT_BLUR_PX },
+						exitDuration: durations.fast,
+						exitEasing: easings.accelerate,
 					}),
-					willChange("transform"),
-					transitionBehavior("allow-discrete"),
+					willChange("translate"),
 
-					/*
-					 * Each placement releases the edge it does not dock to. The dialog underneath
-					 * constrains all four and centres itself between them, so naming only the near
-					 * edge leaves that centring in force and the drawer away from the edge asked for.
-					 *
-					 * Both measures are stated for the same reason: a `<dialog>` sizes to its
-					 * content on both axes, so pinning the two opposite insets does not stretch it.
-					 * Each placement therefore gives the edge it docks to a depth and tells the
-					 * other axis to fill.
+					/**
+					 * Each placement frees the far edge so the dialog's centring lets go, gives its docked
+					 * edge a depth, and fills the other axis, since a `<dialog>` sizes to its content on both
+					 * axes even with opposite insets pinned.
 					 */
 					data("placement", "top", [
 						insBs("0"),
@@ -132,8 +138,10 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						maxBs("90vh"),
 						is("full"),
 						maxIs("none"),
-						translateY("-100%"),
-						when("&[open]", translateY(0)),
+						vars({
+							"ui-drawer-enter-offset": "0 -100%",
+							"ui-drawer-exit-offset": `0 -${EXIT_DISTANCE}`,
+						}),
 					]),
 
 					data("placement", "bottom", [
@@ -145,8 +153,10 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						maxBs("90vh"),
 						is("full"),
 						maxIs("none"),
-						translateY("100%"),
-						when("&[open]", translateY(0)),
+						vars({
+							"ui-drawer-enter-offset": "0 100%",
+							"ui-drawer-exit-offset": `0 ${EXIT_DISTANCE}`,
+						}),
 					]),
 
 					data("placement", "left", [
@@ -158,8 +168,10 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						maxIs("90vw"),
 						bs("full"),
 						maxBs("none"),
-						translateX("-100%"),
-						when("&[open]", translateX(0)),
+						vars({
+							"ui-drawer-enter-offset": "-100% 0",
+							"ui-drawer-exit-offset": `-${EXIT_DISTANCE} 0`,
+						}),
 					]),
 
 					data("placement", "right", [
@@ -171,18 +183,11 @@ export function Drawer(handle: Handle<Drawer.Props>) {
 						maxIs("90vw"),
 						bs("full"),
 						maxBs("none"),
-						translateX("100%"),
-						when("&[open]", translateX(0)),
+						vars({
+							"ui-drawer-enter-offset": "100% 0",
+							"ui-drawer-exit-offset": `${EXIT_DISTANCE} 0`,
+						}),
 					]),
-
-					startingStyle([
-						when('&[data-placement="top"][open]', translateY("-100%")),
-						when('&[data-placement="bottom"][open]', translateY("100%")),
-						when('&[data-placement="left"][open]', translateX("-100%")),
-						when('&[data-placement="right"][open]', translateX("100%")),
-					]),
-
-					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
 
 					mix,
 				]}

@@ -11,13 +11,15 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, userSelect } from "@sdxc/u/general";
+import { cursor, raw, userSelect } from "@sdxc/u/general";
 import { flex, gap, inlineFlex, items } from "@sdxc/u/layout";
-import { pb, pi } from "@sdxc/u/size";
+import { p, pb, pi } from "@sdxc/u/size";
 import { active, disabled, hover, when } from "@sdxc/u/state";
+import { radius } from "@sdxc/u/tokens";
 import { text, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import { concentricRadius, surfacePadding } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import {
 	warnIfNoAccessibleLabel,
@@ -111,11 +113,10 @@ export function Menubar(handle: Handle<Menubar.Props>) {
 					flex(),
 					items("center"),
 					gap("0.125rem"),
-					rounded("md"),
+					raw({ borderRadius: concentricRadius(surfacePadding(1), radius("sm")) }),
 					border({ color: "neutral", width: 1 }),
 					bg("neutral.tint"),
-					pb(1),
-					pi(1),
+					p(surfacePadding(1)),
 					mix,
 				]}
 			/>

@@ -15,7 +15,7 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
+import { balance, fontSize, leading, tracking, weight } from "@sdxc/u/typography";
 
 import type { HeadingLevel } from "./heading-scope.js";
 
@@ -73,6 +73,7 @@ export function Heading(handle: Handle<Heading.Props>) {
 					fg("neutral.emphasis"),
 					fontSize("lg"),
 					leading("none"),
+					balance(),
 					mix,
 				]}
 			/>

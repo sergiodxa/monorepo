@@ -119,10 +119,9 @@ export function HoverCard(handle: Handle<HoverCard.Props>) {
 						when('&:hover [data-slot="hover-card-content"]', [
 							opacity(100),
 							visibility(),
-							/*
-							 * An open card is something the reader reaches into, so it takes the
-							 * pointer. Importance is what settles it: every mix entry compiles into
-							 * its own cascade sublayer ordered by first appearance, and the resting
+							/**
+							 * An open card is something the reader reaches into, so it takes the pointer.
+							 * `!important` settles it: each mix entry gets its own cascade sublayer, and the resting
 							 * state's own rule may land in a later one.
 							 */
 							raw({
@@ -233,7 +232,7 @@ HoverCard.Content = function HoverCardContent(handle: Handle<HoverCard.ContentPr
 						raw({ left: "100%" }),
 					]),
 
-					/*
+					/**
 					 * The card rests off its trigger's edge, and a pointer travelling between the
 					 * two crosses that space, so the card's own hit area reaches back across it
 					 * and the pair reads as one surface for as long as the pointer is on either.

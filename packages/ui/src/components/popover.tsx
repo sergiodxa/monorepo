@@ -112,11 +112,9 @@ export function Popover(handle: Handle<Popover.Props>) {
 					when('&[data-placement^="left"]', marginRight("var(--ui-popover-offset, 0.5rem)")),
 					when('&[data-placement^="right"]', marginLeft("var(--ui-popover-offset, 0.5rem)")),
 					positionTryFallbacks("flip-block", "flip-inline", "flip-block flip-inline"),
-					/*
-					 * A corner placement aligns one pair of edges and grows away from it, so the
-					 * surface occupies the anchor's own track and spans the one beyond it. Naming
-					 * the neighbouring cell instead — `bottom left` for `bottom-start` — would sit
-					 * the surface past the anchor's edge rather than flush with it.
+					/**
+					 * A corner placement aligns one pair of edges and grows away from it, so the surface
+					 * occupies the anchor's own track and spans the one beyond it, flush with the anchor's edge.
 					 */
 					data("placement", "top", positionArea("top")),
 					data("placement", "top-start", positionArea("top span-right")),
@@ -130,20 +128,10 @@ export function Popover(handle: Handle<Popover.Props>) {
 					data("placement", "right", positionArea("right")),
 					data("placement", "right-start", positionArea("right span-bottom")),
 					data("placement", "right-end", positionArea("right span-top")),
-					/*
-					 * A part built on this surface that lays its contents out — a stack, a grid —
-					 * sets `display` in the author origin and beats the user agent's
-					 * `[popover]:not(:popover-open) { display: none }`, leaving the surface on
-					 * screen with nothing having opened it. The closed state is marked important
-					 * because every `mix` entry compiles into its own cascade sublayer ordered by
-					 * first appearance, and a consumer's entry is appended after these: later layer
-					 * wins whatever the selectors say, so importance is what settles it.
-					 *
-					 * A `"hint"` surface is left out: that mode is the one a hint reveals itself
-					 * in, from CSS state on its trigger rather than from an invoker, so it stays
-					 * closed the whole time it is on screen and owns its own hidden state. An
-					 * important rule here would be the one thing its reveal could not answer,
-					 * since importance reverses layer order and this entry comes first.
+					/**
+					 * Layout parts on this surface set `display` and beat the UA's closed `display: none`, so
+					 * the closed state is important to outrank a consumer's later sublayer. A `"hint"` surface
+					 * reveals itself from CSS state on its trigger, so it keeps its own hidden state.
 					 */
 					when('&:not(:popover-open):not([popover="hint"])', raw({ display: "none !important" })),
 					mix,

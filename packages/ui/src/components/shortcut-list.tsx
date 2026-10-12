@@ -12,7 +12,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { contents, flex, gap, grid, gridTemplate, items, justify } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { pretty, text, weight } from "@sdxc/u/typography";
 
 import { Keyboard } from "./keyboard.js";
 
@@ -85,7 +85,7 @@ ShortcutList.Item = function ShortcutListItem(handle: Handle<ShortcutList.ItemPr
 
 		return (
 			<div {...rest} data-slot="shortcut" mix={[contents(), mix]}>
-				<dt mix={[text("sm"), fg("neutral")]}>{children}</dt>
+				<dt mix={[text("sm"), fg("neutral"), pretty()]}>{children}</dt>
 				<dd mix={[m(0), flex(), gap(1), items("center"), justify("end")]}>
 					{keys.map((key, index) => (
 						<Keyboard key={`${index}-${key}`} mix={[m(0), weight("medium")]}>

@@ -25,13 +25,15 @@ import {
 	relative,
 	shrink,
 } from "@sdxc/u/layout";
-import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
+import { bs, is, minBs, p, pb, pi, pie, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
+import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { glyphEdges } from "../utils/glyph-edges.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 const DEFAULT_COLOR: Button.Color = "neutral";
@@ -39,6 +41,15 @@ const DEFAULT_COLOR: Button.Color = "neutral";
 const DEFAULT_VARIANT: Button.Variant = "solid";
 
 const DEFAULT_SIZE: Button.Size = "md";
+
+/** Edge of a small icon-only button, matching the `sm` row height. */
+const ICON_ONLY_SIZE_SM = "var(--ui-button-icon-size-sm, 2rem)";
+
+/** Edge of a medium icon-only button, matching the `md` row height. */
+const ICON_ONLY_SIZE_MD = "var(--ui-button-icon-size-md, 2.5rem)";
+
+/** Edge of a large icon-only button, matching the `lg` row height. */
+const ICON_ONLY_SIZE_LG = "var(--ui-button-icon-size-lg, 3rem)";
 
 /**
  * Native `type` given to a button carrying `command`/`commandfor` and no
@@ -105,6 +116,18 @@ export namespace Button {
 }
 
 /**
+ * Reports whether `children` is a lone glyph, which is what makes a button a target for
+ * that glyph rather than for a label. A selector cannot answer this: `:only-child`
+ * counts elements, so a button holding text beside one icon still matches it.
+ *
+ * @param children The button's own children.
+ * @returns Whether the button renders a single element and no text of its own.
+ */
+function holdsOnlyAGlyph(children: RemixNode): boolean {
+	return typeof children === "object" && children !== null && !Array.isArray(children);
+}
+
+/**
  * Visual state lives in `data-color`/`data-variant`/`data-size` on the host, so
  * hover, pressed, and focus-visible stay on native pseudo-classes. `type` precedes
  * the spread so the platform sees it while parsing `command`/`commandfor`.
@@ -118,18 +141,6 @@ export namespace Button {
  * @example
  * <Button type="submit" isPending={isSubmitting}>{t("actions.save")}</Button>
  */
-/**
- * Reports whether `children` is a lone glyph, which is what makes a button a target for
- * that glyph rather than for a label. A selector cannot answer this: `:only-child`
- * counts elements, so a button holding text beside one icon still matches it.
- *
- * @param children The button's own children.
- * @returns Whether the button renders a single element and no text of its own.
- */
-function holdsOnlyAGlyph(children: RemixNode): boolean {
-	return typeof children === "object" && children !== null && !Array.isArray(children);
-}
-
 export function Button(handle: Handle<Button.Props>) {
 	return () => {
 		let { color, variant, size, isPending, disabled, type, parts, children, mix, ...rest } =
@@ -141,6 +152,7 @@ export function Button(handle: Handle<Button.Props>) {
 		let resolvedSize = size ?? DEFAULT_SIZE;
 		let resolvedDisabled = disabled || isPending;
 		let iconOnly = holdsOnlyAGlyph(children);
+		let edges = glyphEdges(children);
 
 		warnIfNoAccessibleName(
 			handle.props,
@@ -157,6 +169,8 @@ export function Button(handle: Handle<Button.Props>) {
 				data-size={resolvedSize}
 				data-pending={isPending || undefined}
 				data-icon-only={iconOnly || undefined}
+				data-glyph-start={edges.start || undefined}
+				data-glyph-end={edges.end || undefined}
 				disabled={resolvedDisabled}
 				mix={[
 					when("&:focus-visible", [
@@ -182,6 +196,8 @@ export function Button(handle: Handle<Button.Props>) {
 					rounded("md"),
 					weight("medium"),
 					cursor("default"),
+					/** A small control reaches `--ui-target-size` however a consumer positions it. */
+					hitArea({ anchor: "flex-center" }),
 					userSelect(),
 
 					pi(4),
@@ -194,7 +210,7 @@ export function Button(handle: Handle<Button.Props>) {
 					 */
 					border({ width: 1, noStyleDefault: true }),
 
-					/*
+					/**
 					 * The row measure is stated rather than left to fall out of the padding and
 					 * the border, so the control lines up with a field of the same size when a
 					 * Group fuses the two, and still grows when a long label wraps.
@@ -216,15 +232,46 @@ export function Button(handle: Handle<Button.Props>) {
 						when("& > svg", [is(5), bs(5)]),
 					]),
 
-					/*
+					/**
+					 * A glyph beside a label carries its own side bearing, so the padding on that
+					 * side drops one step and the glyph and the words read as evenly inset.
+					 */
+					when("&[data-glyph-start]:has(> svg:first-child)", [
+						pis(3),
+						when('&[data-size="sm"]', pis(2)),
+						when('&[data-size="lg"]', pis(4)),
+					]),
+					when("&[data-glyph-end]:has(> svg:last-child)", [
+						pie(3),
+						when('&[data-size="sm"]', pie(2)),
+						when('&[data-size="lg"]', pie(4)),
+					]),
+
+					/**
 					 * A button holding a glyph and nothing else is a target for that glyph alone, so
 					 * it takes a round footprint as tall as the row it would otherwise fill. The
-					 * measure is written out per size, since a box sized by its own content on both
-					 * axes has no ratio to resolve against.
+					 * measure is a custom property per size, since a box sized by its own content on
+					 * both axes has no ratio to resolve against, and an app or a composing part can
+					 * resize it without touching the rule.
 					 */
-					when("&[data-icon-only]", [pi(0), is("2.5rem"), bs("2.5rem"), shrink(), rounded("full")]),
-					when('&[data-size="sm"][data-icon-only]', [is("2rem"), bs("2rem")]),
-					when('&[data-size="lg"][data-icon-only]', [is("3rem"), bs("3rem")]),
+					when("&[data-icon-only]", [
+						p(0),
+						is(ICON_ONLY_SIZE_MD),
+						bs(ICON_ONLY_SIZE_MD),
+						minBs(ICON_ONLY_SIZE_MD),
+						shrink(),
+						rounded("full"),
+					]),
+					when('&[data-size="sm"][data-icon-only]', [
+						is(ICON_ONLY_SIZE_SM),
+						bs(ICON_ONLY_SIZE_SM),
+						minBs(ICON_ONLY_SIZE_SM),
+					]),
+					when('&[data-size="lg"][data-icon-only]', [
+						is(ICON_ONLY_SIZE_LG),
+						bs(ICON_ONLY_SIZE_LG),
+						minBs(ICON_ONLY_SIZE_LG),
+					]),
 
 					when('&[data-variant="solid"]', [
 						when('&[data-color="brand"]', [

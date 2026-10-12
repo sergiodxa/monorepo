@@ -78,16 +78,10 @@ export function DropIndicator(handle: Handle<DropIndicator.Props>) {
 					bs("0.125rem"),
 					rounded("full"),
 					transition("background-color", { duration: 150 }),
-					/*
-					 * A bar that marks every gap at rest marks nothing: the list reads as though
-					 * it were ruled, and the gap being pointed at looks like all the others. The
-					 * resting bar therefore paints nothing while keeping its place in the layout,
-					 * so the list neither reflows nor jumps when one of them lights up.
-					 *
-					 * The two states are written as selectors that exclude each other rather than
-					 * as a resting value a state rule overrides, because each entry compiles into
-					 * its own cascade layer and a plain utility's layer can land after the state
-					 * rule meant to beat it — which leaves the active bar painted like the rest.
+					/**
+					 * The resting bar paints nothing while keeping its place, so only the targeted gap reads
+					 * as marked and the list never reflows when one lights up. The states use exclusive
+					 * selectors because each entry compiles into its own cascade layer, landing in any order.
 					 */
 					when("&:not([data-drop-target])", bg("transparent")),
 					when("&[data-drop-target]", bg("brand.solid")),

@@ -14,7 +14,15 @@ import { bg, border, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexCol, flexWrap, gap, items, justify } from "@sdxc/u/layout";
 import { bs, is, mbs, p } from "@sdxc/u/size";
-import { fontSize, leading, textAlign, tracking, weight } from "@sdxc/u/typography";
+import {
+	balance,
+	fontSize,
+	leading,
+	pretty,
+	textAlign,
+	tracking,
+	weight,
+} from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
@@ -191,7 +199,14 @@ Empty.Title = function EmptyTitle(handle: Handle<Empty.TitleProps>) {
 			<Tag
 				{...rest}
 				data-slot="title"
-				mix={[weight("semibold"), tracking("tight"), fontSize("base"), leading("snug"), mix]}
+				mix={[
+					weight("semibold"),
+					tracking("tight"),
+					fontSize("base"),
+					leading("snug"),
+					balance(),
+					mix,
+				]}
 			>
 				{children}
 			</Tag>
@@ -218,6 +233,7 @@ Empty.Description = function EmptyDescription(handle: Handle<Empty.DescriptionPr
 				mix={[
 					fontSize("sm"),
 					leading("relaxed"),
+					pretty(),
 					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,
 				]}
@@ -246,10 +262,9 @@ Empty.Action = function EmptyAction(handle: Handle<Empty.ActionProps>) {
 				{...rest}
 				data-slot="action"
 				mix={[
-					/*
-					 * The slot holds however many actions the state offers, so it lays them out
-					 * rather than leaving them to sit flush against each other: a centered row
-					 * that wraps, since two buttons side by side outgrow a narrow panel.
+					/**
+					 * The slot lays out however many actions the state offers as a centered row that
+					 * wraps, since two buttons side by side outgrow a narrow panel.
 					 */
 					flex(),
 					flexWrap(),

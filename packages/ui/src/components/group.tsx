@@ -70,7 +70,7 @@ export function Group(handle: Handle<Group.Props>) {
 					attrs({ role: DEFAULT_ROLE }),
 					flex(),
 					items("center"),
-					/*
+					/**
 					 * The controls compose into one shape, so the cluster keeps the rounding on
 					 * its own outer corners and the seam where two of them meet is drawn once.
 					 */
@@ -83,11 +83,10 @@ export function Group(handle: Handle<Group.Props>) {
 						roundedCorner("start-end", "none"),
 						roundedCorner("end-end", "none"),
 					]),
-					/*
-					 * Focus is shown by the control that holds it, since a ring around the whole
-					 * cluster says a group is focused without saying which of its controls is.
-					 * The focused one is raised so its ring crosses the seam it shares with a
-					 * neighbour rather than being painted over by it.
+					/**
+					 * Focus shows on the control holding it, naming which control has it where a ring
+					 * around the cluster names only the group. That control is raised so its ring
+					 * crosses the seam it shares with a neighbour.
 					 */
 					when("& > *:focus-visible", z(1)),
 					when('&[aria-invalid="true"] > *:focus-visible', outlineColor("danger")),

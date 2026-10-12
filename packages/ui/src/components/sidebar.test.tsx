@@ -50,3 +50,16 @@ describe("Sidebar.MobileNav", () => {
 		expect(gated.length).toBe(displays.length);
 	});
 });
+
+describe("small sidebar controls", () => {
+	test.each([
+		["Sidebar.GroupAction", <Sidebar.GroupAction aria-label="Add">+</Sidebar.GroupAction>],
+		["Sidebar.MenuAction", <Sidebar.MenuAction aria-label="Settings">…</Sidebar.MenuAction>],
+		["Sidebar.Trigger", <Sidebar.Trigger id="toggle" aria-label="Toggle sidebar" />],
+	])("%s grows its pointer target to the minimum target size", async (_, node) => {
+		let html = String(await renderToString(node));
+
+		expect(html).toContain("--ui-target-size");
+		expect(html).toMatch(/position:\s*relative|position:\s*absolute/);
+	});
+});

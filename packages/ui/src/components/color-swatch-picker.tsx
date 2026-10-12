@@ -14,9 +14,11 @@ import { visuallyHidden } from "@sdxc/u/a11y";
 import { border, outline } from "@sdxc/u/color";
 import { opacity, ringShadow, transition } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
-import { flexWrap, hstack, inlineFlex } from "@sdxc/u/layout";
+import { flexWrap, hstack, inlineFlex, relative } from "@sdxc/u/layout";
 import { precededBy, when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
+
+import { hitArea } from "../styles/hit-area.js";
 
 import { ColorSwatch } from "./color-swatch.js";
 
@@ -137,9 +139,9 @@ export function ColorSwatchPicker(
 }
 
 /**
- * Renders a single option: a hidden `<input type="radio">` paired with a
- * {@link ColorSwatch} indicator, styled through `precededBy()` since a bare
- * element-first selector here would serialize as a declaration, not a match.
+ * Renders a single option: a hidden `<input type="radio">` paired with a {@link ColorSwatch}
+ * styled through `precededBy()` (a bare element-first selector serializes as a declaration),
+ * with the option's pointer target grown to `--ui-target-size` around smaller swatches.
  *
  * @param handle Runtime handle carrying the host `<label>`'s props.
  * @returns The render function producing the option's markup.
@@ -175,7 +177,9 @@ ColorSwatchPicker.Swatch = function ColorSwatchPickerSwatch(
 			<label
 				{...rest}
 				mix={[
+					relative(),
 					inlineFlex(),
+					hitArea(),
 					cursor("default"),
 					when("&:has(input:disabled)", [cursor("not-allowed"), opacity(50)]),
 					mix,

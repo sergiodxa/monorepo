@@ -30,3 +30,12 @@ describe("GridList.DragHandle", () => {
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
 	});
 });
+
+describe("GridList.DragHandle target", () => {
+	test("grows its pointer target around the grip to the minimum target size", async () => {
+		let html = String(await renderToString(<GridList.DragHandle aria-label="Reorder" />));
+
+		expect(html).toContain("--ui-target-size");
+		expect(html).toMatch(/position:\s*relative/);
+	});
+});

@@ -2,8 +2,8 @@
  * A pre-animated preset of {@link Dialog}: the same native `<dialog>` panel,
  * its `::backdrop` treatment, and every compound part, with the panel's own
  * pop-in and pop-out motion — a fade paired with a scale, entering from
- * slightly smaller and less opaque than rest and exiting back down to it —
- * already wired onto the host.
+ * slightly smaller than rest and leaving faster, shrinking only halfway back
+ * and blurring softly as it fades — already wired onto the host.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,26 +11,19 @@
 
 import type { Handle } from "remix/component";
 
-import { opacity, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
-import { media, startingStyle } from "@sdxc/u/responsive";
-import { when } from "@sdxc/u/state";
-import { scaleProperty } from "@sdxc/u/transform";
-
 import { durations, easings } from "../animations/tokens.js";
+import { enterExit } from "../animations/transitions.js";
 
 import { Dialog } from "./dialog.js";
 
-/**
- * Exit-state `scale` factor {@link Modal}'s panel animates from on entry and
- * back down to on exit.
- */
-const PANEL_EXIT_SCALE = "0.95";
+/** `scale` factor {@link Modal}'s panel grows from on entry. */
+const PANEL_ENTRY_SCALE = 0.95;
 
-/**
- * Entered-state `scale` factor — the platform's own reset value, undoing
- * {@link PANEL_EXIT_SCALE} once the panel is open.
- */
-const PANEL_ENTERED_SCALE = "none";
+/** `scale` factor the panel shrinks to on exit, halfway back toward its entry scale. */
+const PANEL_EXIT_SCALE = 0.975;
+
+/** Blur radius in pixels the panel softens to as it fades out. */
+const PANEL_EXIT_BLUR_PX = 2;
 
 /**
  * Prop types for {@link Modal} and its compound parts. Every part aliases
@@ -91,19 +84,14 @@ export function Modal(handle: Handle<Modal.Props>) {
 			<Dialog
 				{...rest}
 				mix={[
-					scaleProperty(PANEL_EXIT_SCALE),
-					transitionBehavior("allow-discrete"),
-					opacity(0),
-					transition("opacity, scale, display, overlay", {
+					enterExit({
+						opacity: 0,
+						scale: PANEL_ENTRY_SCALE,
 						duration: durations.normal,
 						easing: easings.standard,
+						exit: { scale: PANEL_EXIT_SCALE, blur: PANEL_EXIT_BLUR_PX },
+						exitDuration: durations.fast,
 					}),
-					when("&[open]", [scaleProperty(PANEL_ENTERED_SCALE), opacity(100)]),
-					startingStyle(when("&[open]", [scaleProperty(PANEL_EXIT_SCALE), opacity(0)])),
-					media("(prefers-reduced-motion: reduce)", [
-						scaleProperty(PANEL_ENTERED_SCALE),
-						transitionProperty("opacity, display, overlay"),
-					]),
 					mix,
 				]}
 			/>

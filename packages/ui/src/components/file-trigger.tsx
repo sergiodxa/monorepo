@@ -140,12 +140,10 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					items("center"),
 					justify("center"),
 					gap(2),
-					/*
-					 * A glyph is measured against the label it sits beside rather than against
-					 * whatever an icon set draws at, so the row keeps the height its text and
-					 * padding ask for, and it never shrinks: squeeze the row and the default
-					 * `flex-shrink: 1` compresses the glyph rather than the words, and a squashed
-					 * icon reads as a rendering fault.
+					/**
+					 * A glyph is sized against the label beside it and holds that size, so the row keeps the
+					 * height its text and padding ask for; the default `flex-shrink: 1` would squash the glyph
+					 * ahead of the words.
 					 */
 					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
@@ -164,10 +162,9 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 					pb("0.5rem"),
 					text("sm"),
 
-					/*
-					 * The row measure is stated rather than left to fall out of the padding and
-					 * the border, so the control lines up with a field of the same size when a
-					 * Group fuses the two, and still grows when a long label wraps.
+					/**
+					 * The row measure is stated, so the control lines up with a field of the same size when
+					 * a Group fuses the two, and still grows when a long label wraps.
 					 */
 					minBs("2.5rem"),
 

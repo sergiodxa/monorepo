@@ -18,7 +18,7 @@ import { cursor, raw } from "@sdxc/u/general";
 import { basis, flex, grow, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
 import { bs, is } from "@sdxc/u/size";
 import { active, focusVisible, hover, invalid, when } from "@sdxc/u/state";
-import { textAlign } from "@sdxc/u/typography";
+import { tabularNums, textAlign } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import { fieldStackLayout } from "../styles/field-stack-layout.js";
@@ -165,11 +165,10 @@ NumberField.Group = function NumberFieldGroup(handle: Handle<NumberField.GroupPr
 					bg("neutral.tint"),
 					fg("neutral.emphasis"),
 					hover(border("neutral.border-hover")),
-					/*
-					 * The wrapper wears the focus of whichever part holds it, drawn as a ring
-					 * standing off the field the way every button in this library draws one; the
-					 * border only steps to its hover weight, since a ring sat flush against a
-					 * darkened border reads as one thick slab rather than as focus.
+					/**
+					 * The wrapper wears the focus of whichever part holds it as a ring standing off the
+					 * field, as every button here does; the border steps only to its hover weight, since a
+					 * darkened border flush with the ring reads as one thick slab.
 					 */
 					when("&:focus-within", [
 						outline({ color: "brand.ring", offset: 2 }),
@@ -204,6 +203,7 @@ NumberField.Input = function NumberFieldInput(handle: Handle<NumberField.InputPr
 				{...rest}
 				mix={[
 					textAlign("center"),
+					tabularNums(),
 					rounded("none"),
 					grow(),
 					shrink(1),

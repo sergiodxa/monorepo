@@ -15,13 +15,15 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor, pointerEvents, userSelect } from "@sdxc/u/general";
 import { gap, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
-import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
+import { bs, is, minBs, pb, pi, pie, pis } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 
+import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { glyphEdges } from "../utils/glyph-edges.js";
 
 /** Semantic color role {@link LinkButton} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: LinkButton.Color = "neutral";
@@ -84,10 +86,11 @@ export namespace LinkButton {
  */
 export function LinkButton(handle: Handle<LinkButton.Props>) {
 	return () => {
-		let { color, variant, size, mix, ...rest } = handle.props;
+		let { color, variant, size, children, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let resolvedSize = size ?? DEFAULT_SIZE;
+		let edges = glyphEdges(children);
 
 		return (
 			<a
@@ -95,6 +98,8 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
+				data-glyph-start={edges.start || undefined}
+				data-glyph-end={edges.end || undefined}
 				mix={[
 					when("&:focus-visible", [
 						outline({ color: "brand.ring", offset: 2 }),
@@ -118,6 +123,8 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					when("& > svg", [shrink(), is(4), bs(4)]),
 					rounded("md"),
 					weight("medium"),
+					/** A small control reaches `--ui-target-size` however a consumer positions it. */
+					hitArea({ anchor: "flex-center" }),
 					pi(4),
 					pb(2),
 					/**
@@ -126,10 +133,9 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					 * render at the same footprint.
 					 */
 					border({ width: 1 }),
-					/*
-					 * The row measure is stated rather than left to fall out of the padding and
-					 * the border, so the control lines up with a field of the same size when a
-					 * Group fuses the two, and still grows when a long label wraps.
+					/**
+					 * The row measure is stated, so the control lines up with a field of the same size when
+					 * a Group fuses the two, and still grows when a long label wraps.
 					 */
 					minBs("2.5rem"),
 
@@ -140,6 +146,20 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 						text("base"),
 						minBs("3rem"),
 						when("& > svg", [is(5), bs(5)]),
+					]),
+					/**
+					 * A glyph beside a label carries its own side bearing, so the padding on that
+					 * side drops one step and the glyph and the words read as evenly inset.
+					 */
+					when("&[data-glyph-start]:has(> svg:first-child)", [
+						pis(3),
+						data("size", "sm", pis(2)),
+						data("size", "lg", pis(4)),
+					]),
+					when("&[data-glyph-end]:has(> svg:last-child)", [
+						pie(3),
+						data("size", "sm", pie(2)),
+						data("size", "lg", pie(4)),
 					]),
 
 					data("variant", "solid", [
@@ -254,7 +274,9 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 					data("size", "sm", text("xs")),
 					mix,
 				]}
-			/>
+			>
+				{children}
+			</a>
 		);
 	};
 }

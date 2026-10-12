@@ -16,7 +16,7 @@ import { rounded } from "@sdxc/u/effects";
 import { absolute, basis, gap, grow, inset, relative, self, shrink, vstack } from "@sdxc/u/layout";
 import { bs, is, mbe, minIs, p, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
+import { balance, fontSize, leading, pretty, tracking, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
@@ -259,7 +259,15 @@ Alert.Title = function AlertTitle(handle: Handle<Alert.TitleProps>) {
 				{...rest}
 				data-heading-level={resolved}
 				data-slot="title"
-				mix={[mbe(1), weight("medium"), leading(1), tracking("tight"), fontSize("sm"), mix]}
+				mix={[
+					mbe(1),
+					weight("medium"),
+					leading(1),
+					tracking("tight"),
+					fontSize("sm"),
+					balance(),
+					mix,
+				]}
 			>
 				{children}
 			</Tag>
@@ -286,6 +294,7 @@ Alert.Description = function AlertDescription(handle: Handle<Alert.DescriptionPr
 				mix={[
 					leading("relaxed"),
 					when("& p", leading("relaxed")),
+					pretty(),
 					fontSize("sm"),
 					fg(colorMix("oklab", { color: "currentcolor", weight: 70 }, "transparent")),
 					mix,

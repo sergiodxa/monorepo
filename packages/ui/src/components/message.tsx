@@ -31,7 +31,7 @@ import {
 import { at } from "@sdxc/u/responsive";
 import { maxIs, minIs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { fontSize, weight } from "@sdxc/u/typography";
+import { fontSize, tabularNums, weight } from "@sdxc/u/typography";
 
 /**
  * Named container {@link Message} declares on its own host, so
@@ -214,7 +214,7 @@ Message.Header = function MessageHeader(handle: Handle<Message.HeaderProps>) {
 					items("baseline"),
 					gap("0.125rem", "0.5rem"),
 					when("& > :first-child", [fontSize("sm"), weight("semibold"), fg("neutral.emphasis")]),
-					when("& > :not(:first-child)", [fontSize("xs"), fg("neutral.muted")]),
+					when("& > :not(:first-child)", [fontSize("xs"), fg("neutral.muted"), tabularNums()]),
 					at("26rem", CONTAINER_NAME, [flexWrap("nowrap"), justify("between")]),
 					mix,
 				]}

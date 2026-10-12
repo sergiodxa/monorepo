@@ -242,9 +242,11 @@ function TreeItem(handle: Handle<Tree.ItemProps, Tree.ItemContext>) {
 						}),
 						transitionDuration("200ms"),
 					]),
-					// Collapsed and expanded sizes are written under selectors that never
-					// match at once, so the reveal holds whichever order the cascade puts
-					// the pair in.
+					/**
+					 * Collapsed and expanded sizes are written under selectors that never
+					 * match at once, so the reveal holds whichever order the cascade puts
+					 * the pair in.
+					 */
 					when("&:not([open])::details-content", bs(0)),
 					when("&[open]::details-content", bs("auto")),
 					when(`&[open] > summary [data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"]`, rotate(90)),
@@ -295,8 +297,10 @@ Tree.ItemContent = function TreeItemContent(handle: Handle<Tree.ItemContentProps
 					fg("neutral.emphasis"),
 					cursor("default"),
 					listStyle(),
-					// The two indents are written under selectors that never match at once, so
-					// a row keeps its own whichever order the cascade puts the pair in.
+					/**
+					 * The two indents are written under selectors that never match at once, so
+					 * a row keeps its own whichever order the cascade puts the pair in.
+					 */
 					when(
 						`&:has([data-slot="${DEFAULT_EXPAND_BUTTON_SLOT}"])`,
 						raw({

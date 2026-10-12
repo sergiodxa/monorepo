@@ -23,14 +23,23 @@ import {
 	inlineBlock,
 	items,
 	justify,
+	relative,
 	shrink,
 } from "@sdxc/u/layout";
 import { bs, is, mbe, p, pbe } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { scaleX } from "@sdxc/u/transform";
-import { text, textAlign, textDecoration, verticalAlign, weight } from "@sdxc/u/typography";
+import {
+	tabularNums,
+	text,
+	textAlign,
+	textDecoration,
+	verticalAlign,
+	weight,
+} from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import {
 	warnIfNoAccessibleLabel,
@@ -311,8 +320,10 @@ Calendar.PreviousButton = function CalendarPreviousButton(
 					flex(),
 					items("center"),
 					justify("center"),
+					relative(),
 					is(8),
 					bs(8),
+					hitArea(),
 					rounded("full"),
 					fg("neutral"),
 					hover(bg("neutral.bg-tint-hover")),
@@ -359,8 +370,10 @@ Calendar.NextButton = function CalendarNextButton(handle: Handle<Calendar.NextBu
 					flex(),
 					items("center"),
 					justify("center"),
+					relative(),
 					is(8),
 					bs(8),
+					hitArea(),
 					rounded("full"),
 					fg("neutral"),
 					hover(bg("neutral.bg-tint-hover")),
@@ -558,12 +571,10 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 				mix={[
 					interactiveTransition(),
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					/*
-					 * The day sits centred inside the cell through table alignment, which is what
-					 * keeps the cell a cell: a flex box here would take every day out of the row it
-					 * belongs to and stack the month into a single column. A row laid out as a flex
-					 * box turns its cells into blocks, where a block's own content alignment is what
-					 * centres the day, so the two are written together and each answers one case.
+					/**
+					 * Table alignment centres the day while the cell stays a table cell in its row; a row
+					 * laid out as a flex box turns its cells into blocks, where `align-content` centres the
+					 * day. Each declaration answers one of the two cases.
 					 */
 					textAlign("center"),
 					verticalAlign("middle"),
@@ -574,6 +585,7 @@ Calendar.Cell = function CalendarCell(handle: Handle<Calendar.CellProps>) {
 					rounded("full"),
 					fg("neutral.emphasis"),
 					text("sm"),
+					tabularNums(),
 					hover(bg("neutral.bg-tint-hover")),
 					when('&[aria-selected="true"]', [bg("brand.solid"), fg("brand.onSolid")]),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(30)]),

@@ -102,27 +102,24 @@ function scrollToSlide(node: HTMLElement, index: number): void {
 	let slide = slides[index];
 	if (slide === undefined) return;
 
-	/*
-	 * Measured against the viewport's own box rather than through `offsetLeft`, which
-	 * reports a distance from whichever ancestor happens to be positioned — usually the
-	 * page — and so scrolls the carousel by however far it sits from that ancestor.
+	/**
+	 * Read from the viewport's own box, so the target holds wherever the carousel sits;
+	 * `offsetLeft` counts from the nearest positioned ancestor, usually the page.
 	 */
 	let viewportEdges = node.getBoundingClientRect();
 	let slideEdges = slide.getBoundingClientRect();
 
-	/*
-	 * Given as a position rather than a distance. A distance is measured against wherever
-	 * the viewport happens to be at that instant, so a second command arriving while the
-	 * first is still animating moves by an amount that is already stale; a position is the
-	 * same answer however many times it is asked, and the scroller simply retargets.
+	/**
+	 * A position, so a command arriving mid-animation asks for the same answer and the
+	 * scroller retargets; a distance would be measured from wherever the viewport stood then.
 	 */
-	node.scrollTo({
-		left:
-			node.scrollLeft +
-			(isRightToLeft(node)
-				? slideEdges.right - viewportEdges.right
-				: slideEdges.left - viewportEdges.left),
-	});
+	let left =
+		node.scrollLeft +
+		(isRightToLeft(node)
+			? slideEdges.right - viewportEdges.right
+			: slideEdges.left - viewportEdges.left);
+
+	node.scrollTo({ left });
 }
 
 /**

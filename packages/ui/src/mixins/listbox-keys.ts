@@ -76,7 +76,7 @@ export const listboxKeys: MixinFactory<HTMLElement> = createMixin<HTMLElement>((
 		}
 
 		return [
-			/*
+			/**
 			 * Moving past the first option carries on to the last, matching the wrap the
 			 * forward direction already makes. The primitive's own handler runs on this same
 			 * host, so the press is settled here before it reaches that one.

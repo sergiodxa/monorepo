@@ -16,7 +16,7 @@ import type { Handle, Props as ElementProps } from "remix/component";
 import { XIcon } from "@sdxc/icons";
 import { bg, fg, outline, outlineColor } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, listStyle } from "@sdxc/u/general";
+import { cursor, listStyle, vars } from "@sdxc/u/general";
 import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { bs, is, m, mie, p, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
@@ -38,6 +38,9 @@ const DEFAULT_COLOR: TagGroup.Color = "neutral";
 
 /** Size variant {@link TagGroup.Tag} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: TagGroup.Size = "md";
+
+/** Visible edge of {@link TagGroup.Remove}'s round glyph, small enough to sit inside a pill's line. */
+const REMOVE_SIZE = "var(--ui-tag-remove-size, 1rem)";
 
 /**
  * Prop types for {@link TagGroup} and its compound parts.
@@ -243,11 +246,14 @@ TagGroup.Remove = function TagGroupRemove(handle: Handle<TagGroup.RemoveProps>) 
 				variant="ghost"
 				data-slot="remove"
 				mix={[
+					/**
+					 * The control shrinks through Button's own icon-only measure, so it sits inside
+					 * the pill's line instead of stretching the tag to a full button row, while
+					 * Button's own hit area keeps its pointer target at `--ui-target-size`.
+					 */
+					vars({ "ui-button-icon-size-md": REMOVE_SIZE }),
 					mie(-1),
-					pb(0.5),
-					pi(0.5),
-					rounded("full"),
-					when("& svg", [is(3), bs(3)]),
+					when('&[data-slot="remove"] > svg', [is(3), bs(3)]),
 					fg("currentColor"),
 					hover(bg("brand.bg-tint-hover")),
 					when('[data-color="neutral"] &:hover', bg("neutral.bg-tint-hover")),

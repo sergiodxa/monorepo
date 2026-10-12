@@ -333,12 +333,10 @@ MessageScroller.Button = function MessageScrollerButton(
 					z(1),
 					absolute(),
 					inset("auto", "auto", "1rem", "50%"),
-					/*
-					 * The control floats over a log it must stay legible against, so it carries an
-					 * opaque surface of its own rather than the transparent fill an outline button
-					 * sits on. Importance is what settles it: every mix entry compiles into its own
-					 * cascade sublayer ordered by first appearance, and the variant's own fill may
-					 * land in a later one.
+					/**
+					 * The control floats over the log, so it carries an opaque surface of its own to stay
+					 * legible. `!important` settles it: each mix entry gets its own cascade sublayer, and
+					 * the variant's own fill may land in a later one.
 					 */
 					raw({ backgroundColor: "var(--ui-bg, Canvas) !important" }),
 					shadow("md"),

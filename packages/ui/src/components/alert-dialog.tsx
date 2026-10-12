@@ -14,7 +14,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { fg } from "@sdxc/u/color";
 import { flex, gap, justify, vstack } from "@sdxc/u/layout";
 import { mbs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { balance, pretty, text, weight } from "@sdxc/u/typography";
 
 import { Button } from "./button.js";
 import { Dialog } from "./dialog.js";
@@ -186,7 +186,7 @@ AlertDialog.Title = function AlertDialogTitle(handle: Handle<AlertDialog.TitlePr
 			<Tag
 				{...rest}
 				data-slot="title"
-				mix={[fg("neutral.emphasis"), weight("semibold"), text("lg"), mix]}
+				mix={[fg("neutral.emphasis"), weight("semibold"), text("lg"), balance(), mix]}
 			>
 				{rest.children}
 			</Tag>
@@ -211,7 +211,7 @@ AlertDialog.Description = function AlertDialogDescription(
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p {...rest} data-slot="description" mix={[fg("neutral.muted"), text("sm"), mix]}>
+			<p {...rest} data-slot="description" mix={[fg("neutral.muted"), text("sm"), pretty(), mix]}>
 				{rest.children}
 			</p>
 		);

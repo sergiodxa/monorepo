@@ -15,7 +15,13 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { bg, border, borderEdge, fg, outline, outlineStyle, outlineWidth } from "@sdxc/u/color";
-import { opacity, rounded, transition, transitionDuration } from "@sdxc/u/effects";
+import {
+	opacity,
+	rounded,
+	transition,
+	transitionBehavior,
+	transitionDuration,
+} from "@sdxc/u/effects";
 import { cursor, raw } from "@sdxc/u/general";
 import {
 	appearance,
@@ -24,17 +30,21 @@ import {
 	gap,
 	grow,
 	inlineFlex,
+	inset,
 	items,
 	justify,
 	shrink,
 } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { bs, is, m, p, pb, pi } from "@sdxc/u/size";
+import { overflow } from "@sdxc/u/overflow";
+import { media, startingStyle } from "@sdxc/u/responsive";
+import { bs, is, m, maxBs, p, pb, pi } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
 import { text, textAlign, truncate } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import { durations } from "../animations/tokens.js";
 import { mirrorSelectedOption } from "../mixins/mirror-selected-option.js";
+import { floatingSurface, surfaceInset } from "../styles/floating-surface.js";
 
 /**
  * The `<selectedcontent>` element mirrors the currently selected
@@ -155,17 +165,10 @@ export function Select(handle: Handle<Select.Props>) {
 			justify("between"),
 			cursor("default"),
 			text("sm"),
-			/*
-			 * Focus is drawn as a ring standing off the field, the same way every button in
-			 * this library draws it, rather than by darkening the border: a border promoted
-			 * to its strong weight and a ring sat flush against it read as one thick slab,
-			 * which says the field changed shape rather than that it took focus. The border
-			 * only steps to its hover weight, so nothing jumps.
-			 *
-			 * Pointer focus drops the platform outline and keyboard focus keeps the ring. The
-			 * two selectors exclude each other because `outline: none` is a shorthand, and a
-			 * shorthand reaching this element from a later cascade layer resets the ring's
-			 * color, width and style all at once.
+			/**
+			 * Focus draws a ring standing off the field and the border steps only to its hover weight,
+			 * so the field keeps its shape. The pointer and keyboard selectors exclude each other because
+			 * `outline: none` is a shorthand that, from a later layer, resets the whole ring.
 			 */
 			when("&:focus:not(:focus-visible)", outline("none")),
 			when("&:focus-visible", [
@@ -182,27 +185,26 @@ export function Select(handle: Handle<Select.Props>) {
 			]),
 			when("&:disabled", [cursor("not-allowed"), opacity(50)]),
 
+			when("&::picker(select)", [
+				floatingSurface(),
+				surfaceInset(),
+				m(0),
+				inset("auto"),
+				maxBs("15rem"),
+				overflow("auto"),
+				outline("none"),
+				opacity(0),
+				transition("opacity, display, overlay", { duration: durations.fast }),
+				transitionBehavior("allow-discrete"),
+			]),
+			when("&:open::picker(select)", opacity(100)),
+			startingStyle(when("&:open::picker(select)", opacity(0))),
+			media(
+				"(prefers-reduced-motion: reduce)",
+				when("&::picker(select)", transitionDuration("0s")),
+			),
 			raw({
-				"&::picker(select)": {
-					margin: "0",
-					inset: "auto",
-					boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-					maxBlockSize: "15rem",
-					overflow: "auto",
-					padding: "0.25rem",
-					outline: "none",
-					opacity: "0",
-					transitionProperty: "opacity, display, overlay",
-					transitionDuration: "150ms",
-					transitionBehavior: "allow-discrete",
-					"@starting-style": {
-						opacity: "0",
-					},
-				},
 				"&:open": {
-					"&::picker(select)": {
-						opacity: "1",
-					},
 					'& [data-slot="icon"]': {
 						transform: "rotate(180deg)",
 					},
@@ -210,12 +212,6 @@ export function Select(handle: Handle<Select.Props>) {
 				"&:has(option:checked:disabled)": {
 					"& selectedcontent": {
 						color: "var(--ui-neutral-fg-muted)",
-					},
-				},
-
-				"@media (prefers-reduced-motion: reduce)": {
-					"&::picker(select)": {
-						transitionDuration: "0s",
 					},
 				},
 			}),

@@ -14,6 +14,8 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { tabularNums } from "@sdxc/u/typography";
+
 import type { FieldPartsProps } from "../utils/field-parts.js";
 
 import { fieldStackLayout } from "../styles/field-stack-layout.js";
@@ -178,7 +180,7 @@ export function TimeField(handle: Handle<TimeField.Props>) {
 					aria-invalid={resolvedInvalid}
 					aria-describedby={describedBy}
 					color={resolvedColor}
-					mix={parts?.input}
+					mix={[tabularNums(), parts?.input]}
 				/>
 				{description ? (
 					<Description id={descriptionId} mix={parts?.description}>

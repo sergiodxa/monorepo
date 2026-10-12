@@ -12,6 +12,7 @@ export * from "./chart-palette.js";
 export * from "./field-stack-layout.js";
 export * from "./floating-surface.js";
 export * from "./graphic-host.js";
+export * from "./hit-area.js";
 export * from "./interactive-transition.js";
 export * from "./legend-toggle.js";
 export * from "./output-caption-text.js";

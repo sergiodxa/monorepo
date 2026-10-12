@@ -360,7 +360,7 @@ Attachment.Title = function AttachmentTitle(handle: Handle<Attachment.TitleProps
 					weight("semibold"),
 					truncate(),
 					text("sm"),
-					/*
+					/**
 					 * The loop settles visible, because this host carries the file's name: a gated
 					 * loop rests hidden outside its gate, which suits an element that exists only
 					 * as a loading cue and would leave every finished upload unnamed.

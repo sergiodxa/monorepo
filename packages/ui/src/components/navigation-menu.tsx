@@ -20,7 +20,7 @@ import {
 	transitionBehavior,
 	transitionProperty,
 } from "@sdxc/u/effects";
-import { cursor, userSelect } from "@sdxc/u/general";
+import { cursor, raw, userSelect } from "@sdxc/u/general";
 import {
 	container,
 	flex,
@@ -35,7 +35,7 @@ import {
 } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { at, media, startingStyle } from "@sdxc/u/responsive";
-import { bs, is, maxIs, mbs, minIs, p, pb, pi } from "@sdxc/u/size";
+import { bs, is, maxIs, mbs, minIs, pb, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { data, disabled, hover, when } from "@sdxc/u/state";
 import { scaleProperty } from "@sdxc/u/transform";
@@ -43,7 +43,12 @@ import { fontSize, leading, text, textDecoration, weight } from "@sdxc/u/typogra
 import { attrs } from "remix/component";
 
 import { durations, easings } from "../animations/tokens.js";
-import { floatingSurface } from "../styles/floating-surface.js";
+import {
+	concentricRadius,
+	floatingSurface,
+	surfaceInset,
+	surfacePadding,
+} from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 
 import { Popover } from "./popover.js";
@@ -408,7 +413,7 @@ NavigationMenu.Content = function NavigationMenuContent(
 					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
 					is("max-content"),
 					minIs("11rem"),
-					p(2),
+					surfaceInset({ scale: 2 }),
 					z(50),
 					opacity(0),
 					when('& [data-slot="link"]', [is("full"), justify("start")]),
@@ -505,6 +510,7 @@ NavigationMenu.Viewport = function NavigationMenuViewport(
 				{...rest}
 				mix={[
 					floatingSurface(),
+					raw({ borderRadius: concentricRadius(surfacePadding(2)) }),
 					relative(),
 					mbs(2),
 					overflow(),

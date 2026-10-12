@@ -14,9 +14,9 @@
 import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
-import { listStyle, raw } from "@sdxc/u/general";
-import { flex, gap, items } from "@sdxc/u/layout";
-import { m, mi, p } from "@sdxc/u/size";
+import { listStyle, pseudoContent } from "@sdxc/u/general";
+import { flex, items } from "@sdxc/u/layout";
+import { m, mb, mis, p, pb, pi } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
 import { fontSize, textDecoration, weight } from "@sdxc/u/typography";
 
@@ -90,8 +90,8 @@ export function Breadcrumbs(handle: Handle<Breadcrumbs.Props>) {
 
 /**
  * Renders the trail's `<ol>` list, resetting native list markers and spacing
- * and laying {@link Breadcrumbs.Item} children out as a wrapped row with a
- * small gap between them.
+ * and laying {@link Breadcrumbs.Item} children out in a row whose spacing
+ * comes from each {@link Breadcrumbs.Link}'s padding, so the gaps stay clickable.
  *
  * @param handle Runtime handle carrying the host `<ol>`'s props.
  * @returns The render function producing the list's markup.
@@ -110,7 +110,7 @@ Breadcrumbs.List = function BreadcrumbsList(handle: Handle<Breadcrumbs.ListProps
 			<ol
 				{...rest}
 				data-slot="list"
-				mix={[flex(), items("center"), gap(1), m(0), p(0), listStyle(), mix]}
+				mix={[flex(), items("center"), m(0), p(0), listStyle(), mix]}
 			/>
 		);
 	};
@@ -139,12 +139,10 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
 				mix={[
 					flex(),
 					items("center"),
-					gap(1),
 					when("&:not(:last-child)::after", [
-						mi(1),
 						fg("neutral.muted"),
 						fontSize("sm"),
-						raw({ content: '"›"' }),
+						pseudoContent('"›"'),
 					]),
 					mix,
 				]}
@@ -181,6 +179,16 @@ Breadcrumbs.Link = function BreadcrumbsLink(handle: Handle<Breadcrumbs.LinkProps
 				data-slot="link"
 				mix={[
 					fontSize("sm"),
+					/**
+					 * The space around each separator lives in the link's own padding, so the
+					 * whole gap is clickable; the block padding reaches a 24px target and its
+					 * negative margin keeps the row at the text's height. The trail's first link
+					 * pulls back by its padding so the trail stays flush with its container.
+					 */
+					pi(2),
+					pb(0.5),
+					mb(-0.5),
+					when('[data-slot="item"]:first-child > &', mis(-2)),
 					textDecoration("none"),
 					hover(textDecoration("none")),
 					data("color", "neutral", [fg("neutral.muted"), hover(fg("neutral"))]),

@@ -19,7 +19,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, m, p } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
-import { text } from "@sdxc/u/typography";
+import { tabularNums, text } from "@sdxc/u/typography";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
@@ -203,6 +203,6 @@ Meter.ValueLabel = function MeterValueLabel(handle: Handle<Meter.ValueLabelProps
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} mix={[text("sm"), fg("neutral"), mix]} />;
+		return <span {...rest} mix={[text("sm"), tabularNums(), fg("neutral"), mix]} />;
 	};
 };

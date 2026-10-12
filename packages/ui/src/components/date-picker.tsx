@@ -195,7 +195,7 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 				mix={[
 					flex(),
 					items("center"),
-					/*
+					/**
 					 * The fields compose into one control, so the pair keeps the rounding on its own
 					 * outer corners and the seam the two share is drawn once.
 					 */
@@ -208,18 +208,15 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 						roundedCorner("start-end", "none"),
 						roundedCorner("end-end", "none"),
 					]),
-					/*
-					 * Focus is shown by the field that holds it, the way `Group` shows it: a ring
-					 * around the pair says the group is focused without saying which of its two
-					 * dates is. The focused one is raised so its own ring crosses the seam rather
-					 * than being painted over by its neighbour.
+					/**
+					 * Focus shows on the field holding it, naming which date has it where a ring around
+					 * the pair names only the group. That field is raised so its ring crosses the seam.
 					 */
 					when("& > *:focus-visible", z(1)),
-					/*
-					 * Validity is the pair's, not either field's: a range is one value, and half of
-					 * one is what makes it invalid. So the ring is drawn once around the group, and
-					 * the ring each field would draw for itself is released — two of them meeting at
-					 * the seam read as damage rather than as one field needing attention.
+					/**
+					 * Validity belongs to the pair, since a range is one value and half of one makes it
+					 * invalid: one ring is drawn around the group and each field's own ring is released,
+					 * so the seam shows one field needing attention.
 					 */
 					when(
 						'&:has(> :user-invalid), &:has(> [aria-invalid="true"])',
@@ -227,11 +224,10 @@ DatePicker.Group = function DatePickerGroup(handle: Handle<DatePicker.GroupProps
 					),
 					when(
 						'& > :user-invalid:not(:focus-visible), & > [aria-invalid="true"]:not(:focus-visible)',
-						/*
-						 * Marked important because the field's own invalid ring is stated by `Input`,
-						 * in a cascade layer this one cannot be ordered against — importance is what
-						 * reaches across the layers to release it. The selector stops short of
-						 * `:focus-visible` so a field being filled in still shows its own focus ring.
+						/**
+						 * Important so it reaches across to the cascade layer where `Input` states the field's
+						 * invalid ring. The selector excludes `:focus-visible`, so a field being filled in still
+						 * shows its own focus ring.
 						 */
 						raw({ outline: "none !important" }),
 					),

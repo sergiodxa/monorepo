@@ -43,7 +43,7 @@ import { bs, is, pb, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { scaleProperty, translateProperty } from "@sdxc/u/transform";
-import { fontSize, leading, nowrap, textDecoration, weight } from "@sdxc/u/typography";
+import { fontSize, leading, nowrap, tabularNums, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
 import type { Point } from "../utils/chart-path.js";
@@ -816,6 +816,7 @@ function ChartTooltip(handle: Handle<Chart.Tooltip.Props>) {
 					gap(1.5),
 					pb(1.5),
 					nowrap(),
+					tabularNums(),
 					opacity(0),
 					transition("opacity, scale", { duration: durations.fast, easing: easings.standard }),
 					when("&[data-open]", [opacity(100), scaleProperty(1)]),
@@ -893,8 +894,8 @@ ChartTooltip.Label = function ChartTooltipLabel(handle: Handle<Chart.Tooltip.Lab
 
 /**
  * Renders the tooltip's value slot: a native `<span>` showing the hovered
- * point or wedge's own value, weighted to read as the surface's most
- * prominent figure against {@link Chart.Tooltip.Label}.
+ * point or wedge's own value, weighted as the surface's most prominent figure
+ * and set in tabular digits, so the surface holds its width as the value changes.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the value's markup.
@@ -905,7 +906,7 @@ ChartTooltip.Value = function ChartTooltipValue(handle: Handle<Chart.Tooltip.Val
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		return <span {...rest} data-slot="value" mix={[weight("semibold"), mix]} />;
+		return <span {...rest} data-slot="value" mix={[weight("semibold"), tabularNums(), mix]} />;
 	};
 };
 

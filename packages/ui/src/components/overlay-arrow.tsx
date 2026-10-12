@@ -109,7 +109,7 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 				mix={[
 					attrs({ "aria-hidden": DEFAULT_ARIA_HIDDEN }),
 					absolute(),
-					/*
+					/**
 					 * The host spans the whole edge it attaches to, so centring the glyph inside it
 					 * is what puts the point under the trigger the surface is anchored to.
 					 */
@@ -131,7 +131,7 @@ export function OverlayArrow(handle: Handle<OverlayArrow.Props>) {
 						insIs("0"),
 						insIe("0"),
 					]),
-					/*
+					/**
 					 * A side placement sits past the surface's own inline edge, where the space
 					 * left to grow into is none, so the glyph is sized from its own content the
 					 * way the block placements are sized from theirs.

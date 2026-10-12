@@ -13,8 +13,8 @@
 import type { Handle } from "remix/component";
 
 import { borderEdge, fg } from "@sdxc/u/color";
-import { rounded, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
-import { willChange } from "@sdxc/u/general";
+import { rounded } from "@sdxc/u/effects";
+import { vars, willChange } from "@sdxc/u/general";
 import {
 	fixed,
 	flex,
@@ -27,13 +27,12 @@ import {
 	justify,
 	vstack,
 } from "@sdxc/u/layout";
-import { media, startingStyle } from "@sdxc/u/responsive";
 import { is, m, maxBs, maxIs, mbs, paddingLeft, paddingRight, pbe, pbs } from "@sdxc/u/size";
-import { data, when } from "@sdxc/u/state";
-import { translateX } from "@sdxc/u/transform";
-import { fontSize } from "@sdxc/u/typography";
+import { data } from "@sdxc/u/state";
+import { fontSize, pretty } from "@sdxc/u/typography";
 
 import { durations, easings } from "../animations/tokens.js";
+import { enterExit } from "../animations/transitions.js";
 
 import { Dialog } from "./dialog.js";
 
@@ -42,6 +41,15 @@ import { Dialog } from "./dialog.js";
  * unset.
  */
 const DEFAULT_SIDE: Sheet.Side = "right";
+
+/**
+ * How far toward its side the panel drifts while it fades out on close: a
+ * hint of the direction it came from, short of the full slide it entered with.
+ */
+const EXIT_DISTANCE = "1rem";
+
+/** Blur radius in pixels the panel softens to as it fades out. */
+const EXIT_BLUR_PX = 4;
 
 /**
  * Prop types for {@link Sheet} and its compound parts.
@@ -120,41 +128,41 @@ export function Sheet(handle: Handle<Sheet.Props>) {
 					is("min(90vw, var(--ui-sheet-size, 24rem))"),
 					insBs("0"),
 					insBe("0"),
-					transitionBehavior("allow-discrete"),
-					willChange("transform"),
+					enterExit({
+						translate: "var(--ui-sheet-enter-offset)",
+						duration: durations.slow,
+						easing: easings.decelerate,
+						exit: { translate: "var(--ui-sheet-exit-offset)", opacity: 0, blur: EXIT_BLUR_PX },
+						exitDuration: durations.fast,
+						exitEasing: easings.accelerate,
+					}),
+					willChange("translate"),
 					data("side", "right", [
 						borderEdge("left", { width: 1, color: "neutral" }),
-						translateX("100%"),
+						vars({
+							"ui-sheet-enter-offset": "100% 0",
+							"ui-sheet-exit-offset": `${EXIT_DISTANCE} 0`,
+						}),
 						insRight("0"),
 						insLeft("auto"),
 						paddingLeft("1.5rem"),
 						paddingRight("calc(1.5rem + env(safe-area-inset-right, 0px))"),
 					]),
-					data("side", "right", when("&[open]", translateX("0"))),
 
 					data("side", "left", [
 						borderEdge("right", { width: 1, color: "neutral" }),
-						translateX("-100%"),
+						vars({
+							"ui-sheet-enter-offset": "-100% 0",
+							"ui-sheet-exit-offset": `-${EXIT_DISTANCE} 0`,
+						}),
 						insLeft("0"),
 						insRight("auto"),
 						paddingRight("1.5rem"),
 						paddingLeft("calc(1.5rem + env(safe-area-inset-left, 0px))"),
 					]),
-					data("side", "left", when("&[open]", translateX("0"))),
-
-					startingStyle([
-						when('&[data-side="right"][open]', translateX("100%")),
-						when('&[data-side="left"][open]', translateX("-100%")),
-					]),
-
-					media("(prefers-reduced-motion: reduce)", transitionProperty("none")),
 					gap("1rem"),
 					pbs(`calc(1.5rem + env(safe-area-inset-top, 0px))`),
 					pbe(`calc(1.5rem + env(safe-area-inset-bottom, 0px))`),
-					transition("transform, display, overlay", {
-						duration: durations.slow,
-						easing: easings.decelerate,
-					}),
 					mix,
 				]}
 			/>
@@ -210,7 +218,7 @@ Sheet.Description = function SheetDescription(handle: Handle<Sheet.DescriptionPr
 		let { mix, ...rest } = handle.props;
 
 		return (
-			<p {...rest} data-slot="description" mix={[fontSize("sm"), fg("neutral"), mix]}>
+			<p {...rest} data-slot="description" mix={[fontSize("sm"), fg("neutral"), pretty(), mix]}>
 				{rest.children}
 			</p>
 		);

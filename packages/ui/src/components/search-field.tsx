@@ -144,11 +144,9 @@ SearchField.Input = function SearchFieldInput(handle: Handle<SearchField.InputPr
 					{...rest}
 					mix={[
 						pis("2.25rem"),
-						/*
-						 * The field owns its own chrome, and {@link SearchField.Clear} draws the
-						 * clear affordance. The user agent draws one of its own inside a search
-						 * input that holds a value, unstyled and in the same corner, so the two
-						 * would sit on top of each other.
+						/**
+						 * {@link SearchField.Clear} draws the clear affordance, so the one the user agent draws
+						 * inside a search input holding a value is hidden to keep the two from stacking.
 						 */
 						when("&::-webkit-search-cancel-button", [appearance("none"), hidden()]),
 						when("&::-webkit-search-decoration", [appearance("none"), hidden()]),
@@ -185,7 +183,9 @@ SearchField.Control = function SearchFieldControl(handle: Handle<SearchField.Con
 					relative(),
 					flex(),
 					items("center"),
-					/* The input spans the row, so the field keeps the width its container offers. */
+					/**
+					 * The input spans the row, so the field keeps the width its container offers.
+					 */
 					when('& > [data-slot="input-wrapper"]', grow()),
 					mix,
 				]}
@@ -221,7 +221,7 @@ SearchField.Clear = function SearchFieldClear(handle: Handle<SearchField.ClearPr
 				data-slot="clear"
 				mix={[
 					clearField(),
-					/*
+					/**
 					 * A round, icon-sized target centred on the field, so its hover tint reads as a
 					 * disc beside the text, and its glyph sits as far from the trailing edge as the
 					 * search glyph sits from the leading one.

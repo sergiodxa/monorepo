@@ -275,6 +275,10 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 						);
 					}
 				}),
+				/**
+				 * Listens in the capture phase: a `toggle` event stays on the `<details>` it fires at,
+				 * so the host hears it on the way down.
+				 */
 				on<HTMLElement, "toggle">(
 					"toggle",
 					(event) => {
@@ -291,7 +295,6 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 						row.setAttribute("aria-expanded", disclosure.open ? "true" : "false");
 						refreshKeys(hostNode, model);
 					},
-					/* A `toggle` event stays on the `<details>` it fires at, so the host hears it on the way down. */
 					true,
 				),
 				on<HTMLElement, "keydown">("keydown", (event) => {

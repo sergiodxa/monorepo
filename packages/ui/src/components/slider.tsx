@@ -40,6 +40,7 @@ import {
 	relative,
 	rounded,
 	shrink,
+	tabularNums,
 	translateX,
 	translateY,
 	vstack,
@@ -63,6 +64,14 @@ const DEFAULT_MAX = 100;
 
 /** Default {@link Slider.ThumbProps} step, applied when `step` is omitted. */
 const DEFAULT_STEP = 1;
+
+/**
+ * Negative inset growing {@link Slider.Thumb}'s native input across the track's thin
+ * axis to the larger of the thumb and `--ui-target-size`, clamped at zero so a track
+ * already that thick keeps its own box.
+ */
+const THUMB_HIT_INSET =
+	"min(0px, calc((100% - max(var(--ui-slider-thumb-size, 1.25rem), var(--ui-target-size, 1.5rem))) / 2))";
 
 /**
  * Prop types for {@link Slider} and its compound parts.
@@ -131,9 +140,9 @@ export namespace Slider {
 }
 
 /**
- * Renders the root host: a `<div>` stacking its children, growing to fill
- * the inline axis by default or a fixed block axis when vertical. Resolves
- * the range, value, orientation, and thumb id into context for nested parts.
+ * Renders the root `<div>`, stacking its children and resolving range, value, orientation
+ * and thumb id into context. Nested parts scope orientation rules to its `data-slot`, so an
+ * ancestor carrying `data-orientation` (a toolbar, a scroll viewport) leaves its layout alone.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link Slider.Context}.
  * @returns The render function producing the root's markup.
@@ -168,11 +177,6 @@ export function Slider(handle: Handle<Slider.Props, Slider.Context>) {
 		});
 
 		return (
-			/*
-			 * The slot is what the parts below scope their orientation rules to. Matching on
-			 * the attribute alone would answer to any ancestor that happens to carry it — a
-			 * scroll viewport, a toolbar — and lay a horizontal slider out as a vertical one.
-			 */
 			<div
 				data-slot="slider"
 				data-orientation={resolvedOrientation}
@@ -297,6 +301,14 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 					rangeThumbAppearance("--ui-slider-thumb-size", "--ui-slider-thumb-border-width"),
 					absolute(),
 					inset("0"),
+					/**
+					 * The native input reaches past the track across its thin axis to a full
+					 * pointer target, centred so the thumb stays on the visible rail.
+					 */
+					when('[data-orientation="horizontal"] &', [
+						insBs(THUMB_HIT_INSET),
+						insBe(THUMB_HIT_INSET),
+					]),
 					z(10),
 					m("0"),
 					appearance(),
@@ -338,7 +350,11 @@ Slider.Output = function SliderOutput(handle: Handle<Slider.OutputProps>) {
 		let context = handle.context.get(Slider);
 
 		return (
-			<output {...rest} htmlFor={htmlFor ?? context.thumbId} mix={[outputCaptionText(), mix]} />
+			<output
+				{...rest}
+				htmlFor={htmlFor ?? context.thumbId}
+				mix={[outputCaptionText(), tabularNums(), mix]}
+			/>
 		);
 	};
 };

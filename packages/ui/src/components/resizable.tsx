@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { cursor, raw, touchAction, userSelect } from "@sdxc/u/general";
+import { cursor, pseudoContent, touchAction, userSelect } from "@sdxc/u/general";
 import {
 	basis,
 	flex,
@@ -33,6 +33,7 @@ import { bs, is, maxBs, maxIs, minBs, minIs } from "@sdxc/u/size";
 import { before, data, focusVisible, hover, when } from "@sdxc/u/state";
 import { attrs } from "remix/component";
 
+import { hitArea } from "../styles/hit-area.js";
 import { mergeStyle } from "../utils/merge-style.js";
 
 /** Default {@link Resizable.Props} orientation, applied when `orientation` is omitted. */
@@ -255,8 +256,7 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 					outlineStyle("none"),
 					when('&[data-orientation="horizontal"]', cursor("col-resize")),
 					when('&[data-orientation="vertical"]', cursor("row-resize")),
-					/** `raw()` sets the bare CSS `content` property directly, its only utility path. */
-					before(raw({ content: '""' })),
+					before(pseudoContent('""')),
 					data("orientation", "horizontal", before([bs("2.5rem"), is("0.125rem")])),
 					data("orientation", "vertical", before([bs("0.125rem"), is("2.5rem")])),
 					when('&[aria-disabled="true"]', [cursor("not-allowed"), opacity(50)]),
@@ -265,6 +265,11 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 					hover(when("&::before", bg("neutral.strong"))),
 					when("&[data-resizing]::before", bg("brand.solid")),
 					focusVisible(outline({ color: "brand.ring" })),
+					/**
+					 * The handle's thin axis grows to `--ui-target-size` through an invisible box
+					 * over the panels' edges, leaving the layout and the drawn line unchanged.
+					 */
+					hitArea(),
 					mix,
 				]}
 			/>

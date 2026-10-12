@@ -22,11 +22,12 @@ import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
 import { flex, gap, items, shrink } from "@sdxc/u/layout";
-import { bs, is, minIs, mb, pb, pi, p } from "@sdxc/u/size";
+import { bs, is, minIs, mb, pb, pi } from "@sdxc/u/size";
 import { active, disabled, focusVisible, hover, when } from "@sdxc/u/state";
 import { text, textAlign, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import { surfaceInset } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
@@ -141,7 +142,7 @@ export function Menu(handle: Handle<Menu.Props>) {
 			<Popover
 				{...rest}
 				placement={resolvedPlacement}
-				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), p(1), outline("none"), mix]}
+				mix={[attrs({ role: DEFAULT_ROLE }), minIs("10rem"), surfaceInset(), outline("none"), mix]}
 			>
 				{children}
 			</Popover>
@@ -180,10 +181,9 @@ Menu.Item = function MenuItem(handle: Handle<Menu.ItemProps>) {
 			is("full"),
 			items("center"),
 			gap(2),
-			/*
-			 * A glyph in a row reads beside the row's own text, so it is measured against that
-			 * text rather than at whatever size it was drawn at, and it holds that measure
-			 * while a long label wraps.
+			/**
+			 * A glyph in a row reads beside the row's own text, so it is sized against that text
+			 * and holds that size while a long label wraps.
 			 */
 			when("& > svg, & > [data-slot='icon']", [is("1rem"), bs("1rem"), shrink()]),
 			rounded("md"),

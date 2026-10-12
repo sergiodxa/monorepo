@@ -162,11 +162,10 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 				style={resolvedStyle}
 				mix={[
 					relative(),
-					/*
-					 * The two shapes size themselves through selectors that exclude each other: a
-					 * circular wheel states one measure for both axes, and a bare `is("full")`
-					 * beside it compiles into its own cascade layer that can land after the
-					 * circular rule and stretch the wheel into an ellipse.
+					/**
+					 * Each shape sizes itself under a selector excluding the other: a bare `is("full")`
+					 * compiles into its own cascade layer, which can land after the circular rule and
+					 * stretch the wheel into an ellipse.
 					 */
 					when('&:not([data-shape="circular"])', [block(), is("full"), minIs("10rem")]),
 					when(
@@ -178,10 +177,9 @@ export function ColorWheel(handle: Handle<ColorWheel.Props>) {
 						is("var(--ui-color-wheel-size, 12rem)"),
 						bs("var(--ui-color-wheel-size, 12rem)"),
 						minIs("0"),
-						/*
-						 * A wheel is round, so it holds the one measure it states on both axes. As a
-						 * flex item it would otherwise shrink on the inline axis alone when the row
-						 * runs short, and a circle squeezed on one axis is an ellipse.
+						/**
+						 * A wheel holds its one measure on both axes; as a flex item it would shrink on the
+						 * inline axis alone when the row runs short, and a circle squeezed on one axis is an ellipse.
 						 */
 						shrink(),
 						rounded("full"),

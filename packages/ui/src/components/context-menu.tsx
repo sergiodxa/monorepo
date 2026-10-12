@@ -16,7 +16,7 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 import { borderEdge, fg, outline } from "@sdxc/u/color";
 import { mis, pb, pi, pie } from "@sdxc/u/size";
 import { not } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
+import { tabularNums, text, weight } from "@sdxc/u/typography";
 
 import { Menu } from "./menu.js";
 import { Section } from "./section.js";
@@ -297,8 +297,8 @@ ContextMenu.RadioGroup = ContextMenu.Group;
 
 /**
  * Renders {@link ContextMenu.ShortcutProps.children} as a row's trailing
- * keyboard-shortcut hint: pushed to the row's inline end and muted, reading
- * as supplementary detail alongside the row's primary label.
+ * keyboard-shortcut hint: pushed to the row's inline end, muted, and set in
+ * tabular digits so the hints of a column of rows line up.
  *
  * @param handle Runtime handle carrying the host `<span>`'s props.
  * @returns The render function producing the shortcut hint's markup.
@@ -313,7 +313,7 @@ ContextMenu.Shortcut = function ContextMenuShortcut(handle: Handle<ContextMenu.S
 		let { children, mix, ...rest } = handle.props;
 
 		return (
-			<span {...rest} mix={[mis("auto"), fg("neutral.muted"), text("xs"), mix]}>
+			<span {...rest} mix={[mis("auto"), fg("neutral.muted"), text("xs"), tabularNums(), mix]}>
 				{children}
 			</span>
 		);

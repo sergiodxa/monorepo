@@ -72,18 +72,15 @@ export const contextMenu = createMixin<HTMLElement, [id: string, options?: Ancho
 			return createElement(handle.element, {
 				mix: [
 					attrs({ "aria-controls": id, "aria-haspopup": "menu" }),
+					/**
+					 * A pointer request opens once its button is released: a `popover="auto"` surface reads
+					 * the summoning press's pointerdown and pointerup as a click away. A keyboard request
+					 * reports no button and has no release to wait for, so it opens where it stands.
+					 */
 					on<HTMLElement, "contextmenu">("contextmenu", (event) => {
 						event.preventDefault();
 						let point = { x: event.clientX, y: event.clientY };
 
-						/*
-						 * A `popover="auto"` surface is dismissed by a press that begins outside it, and
-						 * the press asking for the menu began before the menu existed: the browser pairs
-						 * that pointerdown with the pointerup still to come and reads the pair as a click
-						 * away. Opening once the button is released leaves the surface to the next press
-						 * instead of the one that summoned it. A menu asked for from the keyboard reports
-						 * no button and has no release to wait for, so it opens where it stands.
-						 */
 						if (event.button !== SECONDARY_BUTTON) {
 							openSurfaceAt(id, point, options);
 							return;

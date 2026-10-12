@@ -394,7 +394,7 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 			<Calendar.Cell
 				{...rest}
 				mix={[
-					/*
+					/**
 					 * A day is the range's opening, its closing, both at once, or one of the days
 					 * between. The four are written under selectors that match one apiece, so each
 					 * day keeps its own shape however the cascade orders the set.
@@ -411,13 +411,15 @@ RangeCalendar.Cell = function RangeCalendarCell(handle: Handle<RangeCalendar.Cel
 						roundedCorner("start-start", "none"),
 						roundedCorner("end-start", "none"),
 					]),
-					// A range of one day opens and closes on itself, so it reads as a single day.
+					/**
+					 * A range of one day opens and closes on itself, so it reads as a single day.
+					 */
 					when("&[data-selection-start][data-selection-end]", [
 						bg("brand.solid"),
 						fg("brand.onSolid"),
 					]),
 					when('&[aria-selected="true"]:not([data-selection-start]):not([data-selection-end])', [
-						/*
+						/**
 						 * The days between carry the range across the row, so the band reads as one
 						 * run at a glance while the two ends stay the strongest thing in the month.
 						 */

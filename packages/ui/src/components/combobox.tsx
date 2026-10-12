@@ -17,10 +17,11 @@ import type { Handle, Props as TagProps } from "remix/component";
 import { ChevronDownIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { center, hstack, spacer, vstack } from "@sdxc/u/layout";
+import { center, hstack, relative, spacer, vstack } from "@sdxc/u/layout";
 import { bs, is, mis, pie } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 
+import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
@@ -139,6 +140,7 @@ ComboBox.Input = function ComboBoxInput(handle: Handle<ComboBox.InputProps>) {
  * Renders {@link ComboBox}'s trailing disclosure glyph: a native `<button>`
  * pulled back over {@link ComboBox.Input}'s padding so it reads as part of
  * the same field, its chevron marked `aria-hidden` since it carries no text.
+ * Its pointer target grows to `--ui-target-size` past its drawn 28px box.
  *
  * @param handle Runtime handle carrying the host `<button>`'s props.
  * @returns The render function producing the button's markup.
@@ -161,6 +163,8 @@ ComboBox.Button = function ComboBoxButton(handle: Handle<ComboBox.ButtonProps>) 
 				mix={[
 					interactiveTransition(),
 					center(),
+					relative(),
+					hitArea(),
 					is("1.75rem"),
 					bs("1.75rem"),
 					rounded("sm"),

@@ -19,12 +19,13 @@ import {
 	container,
 	cursor,
 	fg,
+	flex,
 	fontSize,
 	gap,
 	hover,
-	inlineFlex,
 	is,
 	items,
+	justify,
 	opacity,
 	outline,
 	overflow,
@@ -34,6 +35,7 @@ import {
 	raw,
 	relative,
 	shrink,
+	tabularNums,
 	textAlign,
 	textDecoration,
 	userSelect,
@@ -55,6 +57,18 @@ const CONTAINER_NAME = "ui-table";
 
 /** Text alignment {@link Table.Column} falls back to when `align` is omitted. */
 const DEFAULT_ALIGN: Table.Align = "start";
+
+/**
+ * Text alignment a `numeric` {@link Table.Column} falls back to when `align` is
+ * omitted, lining its header up with the end-aligned figures beneath it.
+ */
+const DEFAULT_NUMERIC_ALIGN: Table.Align = "end";
+
+/**
+ * Flex alignment a sortable header's link takes for each column alignment, so the
+ * link fills the whole cell and still places its label where `align` puts it.
+ */
+const JUSTIFY_BY_ALIGN = { start: "start", center: "center", end: "end" } as const;
 
 /**
  * Prop types for {@link Table} and its compound parts.
@@ -109,8 +123,16 @@ export namespace Table {
 	 * shadows the deprecated native `align` with the logical values above.
 	 */
 	export interface ColumnProps extends Omit<TagProps<"th">, "align"> {
-		/** Text alignment for the header and its indicator. Defaults to {@link DEFAULT_ALIGN}. */
+		/**
+		 * Text alignment for the header and its indicator. Defaults to {@link DEFAULT_ALIGN},
+		 * or {@link DEFAULT_NUMERIC_ALIGN} for a `numeric` column.
+		 */
 		align?: Align;
+		/**
+		 * Marks the column as holding numbers, exposed as `data-numeric`: the header aligns
+		 * to the end unless `align` says otherwise, matching `numeric` cells beneath it.
+		 */
+		numeric?: boolean;
 		/** Target URL that re-requests the table sorted by this column. Omit for an unsortable column. */
 		href?: string;
 		/** This column's current sort direction, when it's the active sort key. */
@@ -127,9 +149,15 @@ export namespace Table {
 	export interface RowProps extends TagProps<"tr"> {}
 
 	/**
-	 * Every native `<td>` attribute, unchanged, plus the `mix` passthrough.
+	 * Every native `<td>` attribute plus the `mix` passthrough and `numeric`.
 	 */
-	export interface CellProps extends TagProps<"td"> {}
+	export interface CellProps extends TagProps<"td"> {
+		/**
+		 * Marks the cell as a number, exposed as `data-numeric`: its figures render at
+		 * tabular widths and align to the end, so digits line up down the column.
+		 */
+		numeric?: boolean;
+	}
 
 	/**
 	 * Per-part styling for the elements {@link Table.LoadMore} renders besides
@@ -290,14 +318,16 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
 };
 
 /**
- * Renders a column header inside a native `<th scope="col">`, aligned by
- * the `data-align` attribute. Setting `href` turns the label into a sort
- * link exposing `aria-sort` and a direction indicator for the active key.
+ * Renders a column header inside a native `<th scope="col">`, aligned by `data-align`.
+ * Setting `href` makes the header a cell-filling sort link with `aria-sort` and a direction
+ * indicator held square, so a header narrow enough to squeeze the link keeps both arrows legible.
  *
  * @param handle Runtime handle carrying the host `<th>`'s props.
  * @returns The render function producing the column header's markup.
  * @example
  * <Table.Column>{t("subjects.email")}</Table.Column>
+ * @example
+ * <Table.Column numeric>{t("invoices.amount")}</Table.Column>
  * @example
  * <Table.Column href={sortUrl("name", nextDirection)} sortDirection={activeSort === "name" ? currentDirection : undefined}>
  * 	{t("subjects.name")}
@@ -305,19 +335,19 @@ Table.Body = function TableBody(handle: Handle<Table.BodyProps>) {
  */
 Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 	return () => {
-		let { align, href, sortDirection, parts, children, mix, ...rest } = handle.props;
-		let resolvedAlign = align ?? DEFAULT_ALIGN;
+		let { align, numeric, href, sortDirection, parts, children, mix, ...rest } = handle.props;
+		let resolvedAlign = align ?? (numeric ? DEFAULT_NUMERIC_ALIGN : DEFAULT_ALIGN);
 
 		return (
 			<th
 				{...rest}
 				data-align={resolvedAlign}
+				data-numeric={numeric ? "" : undefined}
 				aria-sort={href ? (sortDirection ?? "none") : undefined}
 				data-slot="column"
 				mix={[
 					attrs({ scope: "col" }),
-					pi("1rem"),
-					pb("0.75rem"),
+					href ? undefined : [pi("1rem"), pb("0.75rem")],
 					textAlign("start"),
 					weight(500),
 					fg("neutral"),
@@ -332,8 +362,11 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 					<a
 						href={href}
 						mix={[
-							when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-							inlineFlex(),
+							when("&:focus-visible", outline({ color: "brand.ring", offset: -2 })),
+							flex(),
+							justify(JUSTIFY_BY_ALIGN[resolvedAlign]),
+							pi("1rem"),
+							pb("0.75rem"),
 							items("center"),
 							gap("0.25rem"),
 							fg("inherit"),
@@ -343,11 +376,6 @@ Table.Column = function TableColumn(handle: Handle<Table.ColumnProps>) {
 						]}
 					>
 						{children}
-						{/*
-						 * The indicator holds its square: a header narrow enough to squeeze the
-						 * link squeezes the glyph with it, and an arrow pair pressed together
-						 * along its own axis stops reading as two arrows.
-						 */}
 						{sortDirection === "ascending" && <ArrowUpIcon size={14} mix={[shrink()]} />}
 						{sortDirection === "descending" && <ArrowDownIcon size={14} mix={[shrink()]} />}
 						{!sortDirection && <ArrowUpDownIcon size={14} mix={[shrink(), opacity(40)]} />}
@@ -397,22 +425,31 @@ Table.Row = function TableRow(handle: Handle<Table.RowProps>) {
 
 /**
  * Renders a native `<td>` host, padded on every side and colored as the
- * table's emphasized foreground text.
+ * table's emphasized foreground text; a `numeric` cell end-aligns tabular figures.
  *
  * @param handle Runtime handle carrying the host `<td>`'s props.
  * @returns The render function producing the cell's markup.
  * @example
  * <Table.Cell>{subject.name}</Table.Cell>
+ * @example
+ * <Table.Cell numeric>{formatCurrency(invoice.amount)}</Table.Cell>
  */
 Table.Cell = function TableCell(handle: Handle<Table.CellProps>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { numeric, mix, ...rest } = handle.props;
 
 		return (
 			<td
 				{...rest}
+				data-numeric={numeric ? "" : undefined}
 				data-slot="cell"
-				mix={[pi("1rem"), pb("0.75rem"), fg("neutral.emphasis"), mix]}
+				mix={[
+					pi("1rem"),
+					pb("0.75rem"),
+					fg("neutral.emphasis"),
+					when("&[data-numeric]", [tabularNums(), textAlign("end")]),
+					mix,
+				]}
 			/>
 		);
 	};

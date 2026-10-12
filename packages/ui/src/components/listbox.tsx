@@ -19,11 +19,12 @@ import { opacity, rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
 import { flex, gap, items } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
-import { maxBs, p, pb, pi } from "@sdxc/u/size";
+import { maxBs, pb, pi } from "@sdxc/u/size";
 import { active, hover, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import { surfaceInset } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
@@ -119,8 +120,9 @@ export namespace ListBox {
 
 /**
  * Renders the group host: a `<div>` laying its {@link ListBox.Item} options
- * out as a scrollable column capped at a fixed block size, with `role`
- * defaulting to `"radiogroup"` for single selection or `"group"` for `multiple`.
+ * out as a scrollable column capped at a fixed block size and rounded
+ * concentric with its rows, with `role` defaulting to `"radiogroup"` for
+ * single selection or `"group"` for `multiple`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props and providing {@link ListBox.Context}.
  * @returns The render function producing the group's markup.
@@ -154,7 +156,7 @@ export function ListBox(handle: Handle<ListBox.Props, ListBox.Context>) {
 					attrs({ role: resolvedMultiple ? "group" : "radiogroup" }),
 					maxBs(60),
 					overflow("auto"),
-					p(1),
+					surfaceInset(),
 					outline("none"),
 					mix,
 				]}
@@ -216,10 +218,9 @@ ListBox.Item = function ListBoxItem(handle: Handle<ListBox.ItemProps>) {
 					hover(bg("neutral.bg-tint-hover")),
 					active(bg("neutral.bg-tint-pressed")),
 					when("&:has(input:focus)", bg("brand.bg-tint-pressed")),
-					/*
-					 * The row the keyboard is on is where the next Enter lands, so it is shown
-					 * before it is chosen. The tint stops at the selected row, which already
-					 * carries the stronger fill and would otherwise lose it while being walked past.
+					/**
+					 * The row the keyboard is on is where the next Enter lands, so it is shown before it is
+					 * chosen. The tint stops at the selected row, which keeps its stronger fill while walked past.
 					 */
 					when('&[data-highlighted="true"]:not(:has(input:checked)):not([aria-selected="true"])', [
 						bg("brand.bg-tint-pressed"),
