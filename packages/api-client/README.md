@@ -1,152 +1,125 @@
 # @sdxc/api-client
 
-Base class for clients of a remote HTTP API: one origin, path-relative verb methods, and
-one place to attach what every call needs.
+Base class for HTTP API clients: one origin, verb methods, shared hooks.
 
-Talking to the same HTTP service from several places repeats the same three lines: join a
-path onto an origin, attach the credential, check the status. `APIClient` gives them one
-home. A subclass names the origin once, calls `get`/`post`/`put`/`patch`/`delete` with
-paths, and overrides `before` and `after` to shape every request and response it makes.
+A client of a remote service is a subclass of `APIClient`: it names the origin once, calls
+`get`/`post`/`put`/`patch`/`delete` with paths, and overrides `before` and `after` to shape every
+request and response in one place.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/api-client
 ```
 
+Requests carry the running trace through
+[`@sdxc/trace-context`](https://www.npmjs.com/package/@sdxc/trace-context), installed with it.
+
 ## Usage
 
-### A Client For One Service
+### Define a client for one service
 
 ```typescript
 import { APIClient } from "@sdxc/api-client";
 
-class GitHub extends APIClient {
-	constructor(private token: string) {
-		super(new URL("https://api.github.com"));
+class Catalog extends APIClient {
+	constructor() {
+		super(new URL("https://api.example.com/v1/"));
 	}
 
-	async repository(owner: string, name: string): Promise<Response> {
-		return await this.get(`/repos/${owner}/${name}`);
+	async product(id: string): Promise<Response> {
+		return await this.get(`products/${id}`);
 	}
 }
 
-let github = new GitHub("ghp_example");
-let response = await github.repository("example-org", "example-repo");
+let catalog = new Catalog();
+let response = await catalog.product("42");
 ```
 
-### Attach What Every Request Needs
+### Attach what every request needs
 
-`before` runs on each request, whichever verb produced it, so a credential is set once
-rather than at every call site.
+`before` runs on every request, whichever verb sent it, so a credential is set once.
 
 ```typescript
-class GitHub extends APIClient {
+import { APIClient } from "@sdxc/api-client";
+
+class Catalog extends APIClient {
+	constructor(private token: string) {
+		super(new URL("https://api.example.com/v1/"));
+	}
+
 	protected override async before(request: Request): Promise<Request> {
 		request.headers.set("Authorization", `Bearer ${this.token}`);
-		request.headers.set("Accept", "application/vnd.github+json");
 		return request;
 	}
 }
 ```
 
-### Inspect Or Replace A Response
+### Paths resolve against the base URL
 
-`after` receives the request alongside the response, since what a status means usually
-depends on what was asked for.
-
-```typescript
-class Search extends APIClient {
-	protected override async after(request: Request, response: Response): Promise<Response> {
-		if (response.status === 404) return Response.json({ items: [] });
-		return response;
-	}
-}
-```
-
-### Paths Resolve Against The Base URL
-
-Paths are resolved with
-[`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL/URL), so a leading slash is
-anchored at the origin and a relative path continues the base URL's own path.
+Paths are resolved with [`new URL(path, base)`](https://developer.mozilla.org/en-US/docs/Web/API/URL/URL):
+a leading slash anchors at the origin, and a relative path continues the base URL's own path.
 
 ```typescript
+import { APIClient } from "@sdxc/api-client";
+
 let client = new APIClient(new URL("https://api.example.com/v1/"));
 
-await client.get("/subjects"); // https://api.example.com/subjects
-await client.get("subjects"); // https://api.example.com/v1/subjects
+await client.get("products"); // https://api.example.com/v1/products
+await client.get("/products"); // https://api.example.com/products
 ```
 
 ## API
 
 ### `new APIClient(baseURL: URL)`
 
-A client bound to one origin. `baseURL` is a `URL` because every path is resolved against
-it. Subclass it to give a service its own methods.
+A client bound to one origin. Subclass it to give a service its own methods.
 
 ### `client.fetch(path: string, init?: RequestInit): Promise<Response>`
 
-Sends one request to `path`, resolved against the base URL, and returns the response after
-`after` has seen it. Takes a full `RequestInit`, including `method`, and is what every verb
-method calls.
+Resolves `path` against the base URL, writes the current trace headers, runs `before`, sends the
+request with the global `fetch`, and returns what `after` hands back. Every verb method calls it.
 
-### `client.get(path, init?)`, `client.post(path, init?)`, `client.put(path, init?)`, `client.patch(path, init?)`, `client.delete(path, init?)`
+### `client.get`, `client.post`, `client.put`, `client.patch`, `client.delete`
 
-Send a request with that method. Each takes an `APIClientInit` and sets `method` itself:
-`client.post("/subjects", { body })` is `client.fetch("/subjects", { body, method: "POST" })`.
+`(path: string, init?: APIClientInit) => Promise<Response>`. Each sets its own `method`, so
+`client.post("products", { body })` is `client.fetch("products", { body, method: "POST" })`.
 
 ### `protected before(request: Request): Promise<Request>`
 
-Adjusts a request before it is sent, and returns the one to send. The single place a
-subclass sets what every call carries — credentials, a rewritten body — and it already sees
-the trace headers `fetch` wrote. The base implementation returns the request as it arrived.
+Returns the request to send. It sees the trace headers already written, so it can read, replace
+or delete them. The default returns the request as it arrived.
 
 ### `protected after(request: Request, response: Response): Promise<Response>`
 
-Sees the response before it reaches the caller, and returns the one to hand back. It
-receives the request too, since reading a status usually needs to know what was asked. The
-base implementation returns the response as it arrived.
+Returns the response to hand to the caller, with the request that produced it. The default
+returns the response as it arrived.
 
 ### `protected propagateTrace: "all" | "traceparent" | "none"`
 
-Which [W3C Trace Context](https://www.w3.org/TR/trace-context/) headers every request
-carries. When the running invocation has a trace bound, `fetch` writes `traceparent`
-(naming that invocation's span as the parent) and `tracestate` into the request before
-`before` runs, so a subclass can still read, replace or delete them, and a `traceparent`
-passed in `init` is kept. Outside a traced invocation nothing is added. Defaults to
-`"all"`; a subclass talking to a service that should not receive upstream vendor state
-narrows it to `"traceparent"`, and one that should see no trace to `"none"`:
-
-```typescript
-class Payments extends APIClient {
-	protected override readonly propagateTrace = "traceparent";
-}
-```
+Which [W3C Trace Context](https://www.w3.org/TR/trace-context/) headers a request carries when
+the running invocation has a trace: `traceparent` and `tracestate` (`"all"`, the default),
+`traceparent` alone, or neither. A `traceparent` passed in `init` is kept.
 
 ### `protected baseURL: URL`
 
-The origin this instance resolves paths against, readable from a subclass.
+The origin paths resolve against, readable from a subclass.
 
 ### Types
 
 #### `APIClientInit`
 
-The options a verb method accepts: a `RequestInit` minus `method`, which the verb sets.
-
-```typescript
-type APIClientInit = Omit<RequestInit, "method">;
-```
+`Omit<RequestInit, "method">`: the options a verb method accepts.
 
 ## Pattern: Methods That Return Data
 
-A client is most useful when its methods return the shape a caller wants rather than a
-`Response`. Parsing lives in the method, so the origin, the path and the type stay in one
-place:
+Parsing lives in the method, so the path, the payload and the type a caller receives stay
+together.
 
 ```typescript
 import { APIClient } from "@sdxc/api-client";
 
-interface Subject {
+interface Product {
 	id: string;
 	name: string;
 }
@@ -156,56 +129,104 @@ class Catalog extends APIClient {
 		super(new URL("https://api.example.com/v1/"));
 	}
 
-	async list(): Promise<Subject[]> {
-		let response = await this.get("subjects");
-		return (await response.json()) as Subject[];
+	async list(): Promise<Product[]> {
+		let response = await this.get("products");
+		return (await response.json()) as Product[];
 	}
 
-	async create(name: string): Promise<Subject> {
-		let response = await this.post("subjects", {
+	async create(name: string): Promise<Product> {
+		let response = await this.post("products", {
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({ name }),
 		});
+		return (await response.json()) as Product;
+	}
 
-		return (await response.json()) as Subject;
+	async remove(id: string): Promise<boolean> {
+		let response = await this.delete(`products/${id}`);
+		return response.ok;
 	}
 }
+
+let catalog = new Catalog();
+let product = await catalog.create("Lamp");
+await catalog.remove(product.id);
 ```
 
 ## Pattern: One Error Policy For Every Call
 
-An error status reaches the caller as an ordinary `Response`, so a client that prefers
-exceptions states that once in `after` and every method inherits it:
+An error status reaches the caller as an ordinary `Response`. `after` states the policy once,
+with the request at hand: here a missing search answers an empty list, and any other failure
+becomes a value the caller checks.
 
 ```typescript
 import { APIClient } from "@sdxc/api-client";
 
-class CatalogError extends Error {
-	constructor(
-		readonly status: number,
-		readonly url: string,
-	) {
-		super(`${status} from ${url}`);
-		this.name = "CatalogError";
+class Search extends APIClient {
+	constructor() {
+		super(new URL("https://search.example.com"));
 	}
-}
 
-class Catalog extends APIClient {
 	protected override async after(request: Request, response: Response): Promise<Response> {
-		if (response.ok) return response;
-		throw new CatalogError(response.status, request.url);
+		if (response.status === 404 && new URL(request.url).pathname === "/search") {
+			return Response.json({ items: [] });
+		}
+		return response;
+	}
+
+	async search(query: string): Promise<{ items: string[] } | { error: number }> {
+		let response = await this.get(`/search?q=${encodeURIComponent(query)}`);
+		if (!response.ok) return { error: response.status };
+		return (await response.json()) as { items: string[] };
 	}
 }
 ```
 
-Reading the body inside `after` calls for a `response.clone()` first, so the caller still
-receives an unread stream.
+Read the body inside `after` from `response.clone()`, so the caller still receives an unread
+stream.
+
+## Pattern: Carry The Trace Across Services
+
+Inside a traced invocation every request names that invocation's span as its parent, so the
+callee's logs join the caller's trace. `propagateTrace` narrows what a third party receives.
+
+```typescript
+import { APIClient } from "@sdxc/api-client";
+import { trace } from "@sdxc/trace-context/middleware";
+import { createRouter } from "remix/router";
+
+class Inventory extends APIClient {
+	constructor() {
+		super(new URL("https://inventory.internal.example.com"));
+	}
+}
+
+class Payments extends APIClient {
+	protected override readonly propagateTrace = "traceparent";
+
+	constructor() {
+		super(new URL("https://payments.example.com"));
+	}
+}
+
+let inventory = new Inventory();
+let payments = new Payments();
+
+let router = createRouter({ middleware: [trace()] });
+
+router.post("/checkout", async () => {
+	await inventory.post("/reservations"); // traceparent and tracestate
+	await payments.post("/charges"); // traceparent only
+	return new Response(null, { status: 204 });
+});
+```
+
+Outside a traced invocation the requests carry no trace headers.
 
 ## Pattern: Stubbing The Origin In Tests
 
-Requests go to the global `fetch`, so a test intercepts them the way it intercepts any
-other outbound call — with [MSW](https://mswjs.io), for example — and the client under test
-is the real one:
+Requests go through the global `fetch`, so a test intercepts them with
+[MSW](https://mswjs.io) and exercises the real client.
 
 ```typescript
 import { APIClient } from "@sdxc/api-client";
@@ -214,8 +235,8 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
 
 let server = setupServer(
-	http.get("https://api.example.com/subjects", () => {
-		return HttpResponse.json([{ id: "1", name: "Tempo" }]);
+	http.get("https://api.example.com/products", () => {
+		return HttpResponse.json([{ id: "1", name: "Lamp" }]);
 	}),
 );
 
@@ -223,11 +244,11 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-test("lists subjects", async () => {
+test("lists products", async () => {
 	let client = new APIClient(new URL("https://api.example.com"));
-	let response = await client.get("/subjects");
+	let response = await client.get("/products");
 
-	expect(await response.json()).toEqual([{ id: "1", name: "Tempo" }]);
+	expect(await response.json()).toEqual([{ id: "1", name: "Lamp" }]);
 });
 ```
 
