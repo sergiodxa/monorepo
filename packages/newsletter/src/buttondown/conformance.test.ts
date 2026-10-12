@@ -9,6 +9,7 @@
 
 import { Hex, hmac } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
@@ -51,7 +52,7 @@ const RECORDS: StoredRecord[] = [];
 
 /** Issues a TypeID-shaped subscriber id. */
 function nextId(): string {
-	return `sub_${crypto.randomUUID().replaceAll("-", "").slice(0, 26)}`;
+	return `sub_${generateUUID().replaceAll("-", "").slice(0, 26)}`;
 }
 
 /** Finds a record the way Buttondown resolves `{id_or_email}`: by id, or by address ignoring case. */
@@ -194,7 +195,7 @@ afterAll(() => server.close());
 /** Signs a delivery about `subscriber` exactly as Buttondown would. */
 async function deliver(_provider: Newsletter, subscriber: Subscriber) {
 	let body = JSON.stringify({
-		id: `ext_evt_${crypto.randomUUID().replaceAll("-", "")}`,
+		id: `ext_evt_${generateUUID().replaceAll("-", "")}`,
 		event_type: "subscriber.confirmed",
 		data: { subscriber: subscriber.id },
 	});

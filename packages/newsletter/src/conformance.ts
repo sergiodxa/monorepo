@@ -11,6 +11,7 @@ import type { EmailAddress } from "@sdxc/email-address";
 
 import { parseEmailAddress } from "@sdxc/email-address";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { Newsletter } from "./contract.js";
@@ -73,7 +74,7 @@ export interface ConformanceOptions {
 
 /** Unique enough that two runs against one list stay distinct. */
 function uniqueSuffix(): string {
-	return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
+	return generateUUID().replaceAll("-", "").slice(0, 12);
 }
 
 /** Parses the next unused address, which the suite's own factory guarantees is valid. */

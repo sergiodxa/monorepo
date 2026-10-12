@@ -23,7 +23,7 @@
 		"@sdxc/ip": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/validate": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"@sdxc/webhooks": "workspace:*",
 		"remix": "3.0.0"
 	}

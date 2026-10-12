@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { setupServer } from "msw/node";
 import { afterAll, beforeAll, beforeEach } from "vitest";
 
@@ -56,7 +57,7 @@ async function deliver(_provider: Newsletter, subscriber: Subscriber) {
 		delivery_id: 1,
 		events: [
 			{
-				id: crypto.randomUUID(),
+				id: generateUUID(),
 				type: "subscriber.activated",
 				created: new Date().toISOString(),
 				data: {

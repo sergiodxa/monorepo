@@ -13,6 +13,7 @@ import type { Result } from "@sdxc/result";
 import { parseEmailAddress } from "@sdxc/email-address";
 import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { sign, verify } from "@sdxc/webhooks";
 import * as s from "remix/data-schema";
 
@@ -496,7 +497,7 @@ export class MemoryNewsletter implements Newsletter {
 	}
 
 	async #emit(payload: MemoryEmitEvent): Promise<Result<MemoryDelivery, NewsletterError>> {
-		let id = payload.id ?? `evt_${crypto.randomUUID()}`;
+		let id = payload.id ?? `evt_${generateUUID()}`;
 		let record = [...this.#records.values()].find(
 			(candidate) => candidate.id === payload.subscriberId,
 		);
