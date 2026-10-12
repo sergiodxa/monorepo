@@ -1,132 +1,320 @@
 # @sdxc/saml
 
-SAML 2.0 Web Browser SSO, from the service provider's side.
+SAML 2.0 service provider: verify signed assertions, build requests and metadata.
 
-An enterprise buyer federates over SAML: their directory posts a signed XML document to a URL
-this service publishes, and everything decided about the person comes out of reading it. This
-package verifies that document, builds the request that asked for it, and reads and writes the
-metadata the two sides exchange. It runs on Web Crypto alone, with no DOM and no Node crypto,
-so one implementation serves every runtime — workerd included.
+An identity provider posts a signed XML document to your assertion consumer service; this package
+verifies it, builds the request that asked for it, and reads and writes the metadata the two sides
+exchange. It runs on Web Crypto alone, so the same code works in workerd, Node, Bun and Deno.
 
-Identity-provider support is out of scope: issuing and signing assertions for other people's
-service providers is a different job with a different key-handling story.
+Verification hands back an `Assertion` read from the exact element the signature covered, and that
+is the only way to read claims: the document tree is never exposed, so a signature-wrapping attack
+(a signed assertion hidden next to a forged one) has nothing to slip through.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/saml
 ```
 
-Every call reports failures as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this
-package and supplies `isFailure`, `isSuccess` and `unwrap`. A clock skew and a replay TTL are
-written as the duration strings
-[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) reads.
-
-## The shape of the API is the security property
-
-An XML signature covers whatever its reference resolves to, and a reader then goes looking for
-an assertion by name. Signature wrapping is the family of documents where those are not the
-same element — a legitimately signed assertion parked inside an `Extensions` element or a
-signature object, with a forged one where the reader looks first; two elements carrying one
-`ID`. Every one of them verifies, and an attacker needs no key, only one signed assertion,
-which any employee of the target obtains by signing in once.
-
-So there is no `parseResponse`, the document tree is never returned, and the `Assertion`
-constructor is not exported. A verification answers with an assertion built from the element
-the signature covered, and that is the only place claims are readable from.
+Every call answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+Clock skew and replay TTLs are duration strings from
+[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration).
 
 ## Usage
 
-### Verify A Response
+### Verify a response
 
 ```typescript
 import * as SAML from "@sdxc/saml";
 import { isFailure } from "@sdxc/result";
 
-let result = await SAML.verifyResponse(samlResponse, {
-	certificates, // the connection's active signing certificates
+let result = await SAML.verifyResponse(samlResponseXml, {
+	certificates, // the provider's signing certificates
 	audience: "https://sp.example.com/metadata",
 	destination: "https://sp.example.com/acs",
 	recipient: "https://sp.example.com/acs",
-	inResponseTo: requestId, // or null, for a sign-in the provider started
-	decryptionKey, // a CryptoKey, several, or null for cleartext assertions
-	replay, // { seen, remember }
+	inResponseTo: requestId, // or null for a sign-in the provider started
+	decryptionKey: null, // or the private key(s) for encrypted assertions
+	replay, // a ReplayStore
 	clock: { now: new Date(), skew: "60 seconds" },
 });
 
-if (isFailure(result)) return reject(result.error);
+if (isFailure(result)) return new Response(null, { status: 403 });
 
 let assertion = result.data;
 assertion.nameId?.value;
 assertion.attribute("email");
 ```
 
-Every option is required and none carries a default, so a call that forgets the audience does
-not typecheck, `inResponseTo: null` is a sentence somebody wrote, and the replay check that
-makes the others worth running is always present.
+Every option is required, so a call that forgets the audience or the replay store does not
+typecheck. One call checks the signature, the wrapping, `Destination`, `Audience`, `Recipient`,
+`NotBefore`, `NotOnOrAfter`, `InResponseTo` and the replay store before it answers.
 
-One call does all of it: the source is refused if it carries a document type declaration, the
-document must hold exactly one signature, the reference must name an id exactly one element
-carries, the signature must be enveloped by the element it references, and `Destination`,
-`Audience`, `Recipient`, `NotBefore`, `NotOnOrAfter`, `InResponseTo` and the assertion id
-against the replay store are all checked before an assertion comes back.
-
-### Start A Sign-In
+### Start a sign-in
 
 ```typescript
+import * as SAML from "@sdxc/saml";
+import { isSuccess } from "@sdxc/result";
+
 let request = await SAML.createAuthnRequest({
 	binding: "redirect",
-	destination: idp.singleSignOn[0].location,
+	destination: "https://idp.example.com/sso",
 	issuer: "https://sp.example.com/metadata",
 	assertionConsumerService: "https://sp.example.com/acs",
 	nameIdFormat: null,
 	forceAuthn: false,
-	relayState: null,
-	signingKey: privateKey,
+	relayState: "/dashboard",
+	signingKey: null,
 	now: new Date(),
 });
 
 if (isSuccess(request)) {
-	rememberRequestId(request.data.id);
-	redirect(request.data.url);
+	await saveRequestId(request.data.id);
+	return Response.redirect(request.data.url!, 302);
 }
 ```
 
-Hold on to `id`: it is what the response has to answer with, and passing it back as
-`inResponseTo` is what binds the assertion to the browser that asked for it.
+Keep `id`: passing it back as `inResponseTo` binds the response to the browser that asked for it.
 
-### Read And Write Metadata
+### Read and write metadata
 
 ```typescript
-let idp = await SAML.parseIdPMetadata(metadataXml);
-// entityId, singleSignOn, signing, encryption, wantAuthnRequestsSigned
+import * as SAML from "@sdxc/saml";
+import { isSuccess } from "@sdxc/result";
 
-let document = SAML.buildServiceProviderMetadata({
+let idp = await SAML.parseIdPMetadata(idpMetadataXml);
+if (isSuccess(idp)) {
+	idp.data.entityId;
+	idp.data.singleSignOn; // [{ binding, location }]
+	idp.data.signing; // Certificate[]
+}
+
+let metadata = SAML.buildServiceProviderMetadata({
 	entityId: "https://sp.example.com/metadata",
 	assertionConsumerService: "https://sp.example.com/acs",
-	certificate, // published for both signing and encryption use
+	certificate: null,
 	nameIdFormat: null,
 	wantAssertionsSigned: true,
-	authnRequestsSigned: true,
+	authnRequestsSigned: false,
 	validUntil: null,
 });
-```
 
-### Track Certificates
-
-```typescript
-let result = await SAML.Certificate.parse(pem);
-if (isSuccess(result)) {
-	result.data.fingerprint; // lowercase hex SHA-256, what a rotation is tracked by
-	result.data.notAfter; // a readable date, so an expiry is announced before it happens
-	result.data.validAt(new Date());
+if (isSuccess(metadata)) {
+	return new Response(metadata.data, {
+		headers: { "Content-Type": "application/samlmetadata+xml" },
+	});
 }
 ```
 
-A service provider generates its own certificate from the key pair it keeps:
+## API
+
+### `verifyResponse(source: string, options: VerifyResponseOptions): Promise<Result<Assertion, SAMLError>>`
+
+Verifies a response and answers with its assertion. `source` is the base64-decoded `SAMLResponse`
+XML. A signature verifying under any one of `certificates` is accepted. An accepted assertion id is
+remembered in `replay` for the rest of the assertion's own validity window.
+
+- `certificates`: the provider's signing certificates
+- `audience`: your entity id
+- `destination` / `recipient`: your assertion consumer service URL
+- `inResponseTo`: the id of the request this answers, or `null` for a provider-initiated sign-in
+- `decryptionKey`: an RSA-OAEP private key, several, or `null` to accept cleartext assertions only
+- `replay`: a `ReplayStore`
+- `clock`: `{ now, skew }`, the moment every window is judged against and the drift allowed
+
+### `createAuthnRequest(options: CreateAuthnRequestOptions): Promise<Result<AuthnRequestResult, SAMLError>>`
+
+Builds an authentication request for the `"redirect"` or `"post"` binding. The result carries the
+request `id`, plus a `url` to redirect to (redirect binding) or a `form` of `{ action, samlRequest,
+relayState }` to post (POST binding); the other is `null`. `signingKey` is an RSASSA-PKCS1-v1_5 or
+ECDSA private key, or `null` to send the request unsigned.
+
+### `parseIdPMetadata(source: string): Promise<Result<IdPMetadata, SAMLError>>`
+
+Reads an identity provider's metadata into its entity id, sign-on endpoints, parsed signing and
+encryption certificates, and `wantAuthnRequestsSigned`.
+
+### `buildServiceProviderMetadata(options: ServiceProviderMetadataOptions): Result<string, SAMLError>`
+
+Writes the metadata XML you hand an identity provider. A `certificate` is published for both
+signing and encryption; `nameIdFormat` and `validUntil` are written when not `null`.
+
+### `Certificate`
+
+One X.509 certificate. Instances carry `fingerprint`, `subject`, `issuer`, `serial`, `notBefore`,
+`notAfter`, `algorithm`, `spki` and `der`, with `validAt(date)`, `toPem()` and `toBase64()`.
+
+#### `Certificate.parse(source: string): Promise<Result<Certificate, CertificateError>>`
+
+Reads PEM, or the bare base64 a metadata document carries.
+
+#### `Certificate.selfSigned(options: Certificate.SelfSignedOptions): Promise<Result<Certificate, CertificateError>>`
+
+Generates a self-signed certificate from an RSASSA-PKCS1-v1_5 key pair, with `commonName`,
+`notBefore` and `notAfter`.
+
+### `Assertion`
+
+A verified assertion; instances come only from `verifyResponse`. Carries `id`, `issuer`, `nameId`
+(`{ value, format }` or `null`), `sessionIndex`, `authnInstant` and `notOnOrAfter`.
+`attribute(name)` returns the first value or `null`, `values(name)` every value, `names()` every
+attribute name, and `claims()` one record where a repeated attribute is an array. Attributes resolve
+by both `Name` and `FriendlyName`.
+
+### Errors
+
+Every failure extends `SAMLError`; read `name` for the kind. Messages never carry key material or
+document-supplied text, so they are safe to log.
+
+| Error                      | Meaning                                                               |
+| -------------------------- | --------------------------------------------------------------------- |
+| `UnsupportedFeatureError`  | The document uses a refused feature, named in `feature`               |
+| `MalformedDocumentError`   | Not readable XML, or a required element is absent                     |
+| `UnsignedDocumentError`    | Not exactly one signature (`count`)                                   |
+| `UnresolvedReferenceError` | The reference names no element or several (`count`)                   |
+| `SignatureMismatchError`   | The signature did not verify under any certificate                    |
+| `WrappedAssertionError`    | The signed element and the assertion element differ                   |
+| `DecryptionFailedError`    | An encrypted assertion could not be opened, for any reason            |
+| `ResponseStatusError`      | The provider reported a non-success `status` and `substatus`          |
+| `AssertionConditionError`  | Authentic but not for here; `condition` names which check failed      |
+| `ReplayedAssertionError`   | The assertion id was already accepted                                 |
+| `ReplayStoreError`         | The replay store threw; no verdict was reached, so the user may retry |
+| `CertificateError`         | A certificate could not be read or generated                          |
+
+### Supported algorithms
+
+Signatures use RSA or ECDSA with SHA-256 or stronger and exclusive canonicalization, over one
+same-document reference. Encrypted assertions use RSA-OAEP key transport (MGF1 with SHA-1 or
+SHA-256) and AES-128 or AES-256 in GCM or CBC. Everything else answers `UnsupportedFeatureError`,
+including SHA-1, DSA, RSA-PSS, inclusive canonicalization, `#WithComments`, XPath and XSLT
+transforms, `URI=""` references, document type declarations, and the identity-provider role,
+Single Logout, HTTP-Artifact, SOAP, ECP and SAML 1.1.
+
+Canonicalization costs CPU over the whole document, so cap the posted body size before verifying.
+
+### Types
+
+#### `VerifyResponseOptions`, `CreateAuthnRequestOptions`, `ServiceProviderMetadataOptions`
+
+The options objects above. Every field is required.
+
+#### `AuthnRequestResult` and `AuthnRequest.Binding`
+
+The built request (`id`, `url`, `form`) and `"redirect" | "post"`.
+
+#### `IdPMetadata` and `IdPMetadata.Endpoint`
+
+Parsed provider metadata; an endpoint is `{ binding, location }`.
+
+#### `ReplayStore`
+
+`seen(id): Promise<boolean>` and `remember(id, ttl): Promise<void>`, where `ttl` is a duration.
+
+#### `Assertion.NameId` and `Certificate.SelfSignedOptions`
+
+`{ value, format }`, and `{ keys, commonName, notBefore, notAfter }`.
+
+## Pattern: An Assertion Consumer Service
+
+Decode the posted form, verify against the request you started, and tell a configuration problem
+from an infrastructure one.
 
 ```typescript
+import * as SAML from "@sdxc/saml";
+import { isFailure } from "@sdxc/result";
+
+async function handleAcs(request: Request) {
+	let form = await request.formData();
+	let encoded = String(form.get("SAMLResponse") ?? "");
+	let xml = new TextDecoder().decode(Uint8Array.from(atob(encoded), (c) => c.charCodeAt(0)));
+	let relayState = form.get("RelayState");
+
+	let result = await SAML.verifyResponse(xml, {
+		certificates: await loadCertificates(),
+		audience: "https://sp.example.com/metadata",
+		destination: "https://sp.example.com/acs",
+		recipient: "https://sp.example.com/acs",
+		inResponseTo: await takeRequestId(request),
+		decryptionKey: null,
+		replay,
+		clock: { now: new Date(), skew: "60 seconds" },
+	});
+
+	if (isFailure(result)) {
+		let error = result.error;
+		if (error instanceof SAML.ReplayStoreError) return new Response("Try again", { status: 503 });
+		if (error instanceof SAML.AssertionConditionError) {
+			logger.warn("assertion not for us", { condition: error.condition });
+		} else {
+			logger.warn("assertion rejected", { kind: error.name });
+		}
+		return new Response("Sign-in failed", { status: 403 });
+	}
+
+	await signIn(result.data.nameId?.value, result.data.sessionIndex);
+	return Response.redirect(typeof relayState === "string" ? relayState : "/", 303);
+}
+```
+
+## Pattern: A Replay Store On A Table
+
+```typescript
+import type { ReplayStore } from "@sdxc/saml";
+import { toMs } from "@sdxc/duration";
+
+let replay: ReplayStore = {
+	async seen(id) {
+		return (await db.findOne(assertionIds, { where: { id } })) !== null;
+	},
+	async remember(id, ttl) {
+		await db.create(assertionIds, { id, expires_at: Date.now() + toMs(ttl) });
+	},
+};
+```
+
+An id is remembered only after every other check passed, and only for as long as the assertion
+stays valid, so a periodic delete of expired rows keeps the table small.
+
+## Pattern: Certificates That Rotate
+
+Trust every certificate the provider's metadata lists, and refresh them on a schedule. A signature
+verifying under any one of them is accepted, so a rotation needs no coordination, and `notAfter`
+tells you when to warn an administrator.
+
+```typescript
+import * as SAML from "@sdxc/saml";
+import { isFailure } from "@sdxc/result";
+
+let response = await fetch("https://idp.example.com/metadata");
+let idp = await SAML.parseIdPMetadata(await response.text());
+if (isFailure(idp)) throw idp.error;
+
+for (let certificate of idp.data.signing) {
+	await saveCertificate({
+		fingerprint: certificate.fingerprint,
+		notAfter: certificate.notAfter,
+		pem: certificate.toPem(),
+	});
+}
+
+let certificates: SAML.Certificate[] = [];
+for (let pem of await loadCertificatePems()) {
+	let parsed = await SAML.Certificate.parse(pem);
+	if (!isFailure(parsed) && parsed.data.validAt(new Date())) certificates.push(parsed.data);
+}
+// pass `certificates` to verifyResponse
+```
+
+## Pattern: Signed Requests And Encrypted Assertions
+
+Generate one key pair, publish a self-signed certificate for it, sign requests with it, and open
+encrypted assertions with the same private key imported for RSA-OAEP. Providers use either OAEP
+digest, so pass the key imported under both.
+
+```typescript
+import * as SAML from "@sdxc/saml";
+import { isFailure } from "@sdxc/result";
+
 let keys = await crypto.subtle.generateKey(
 	{
 		name: "RSASSA-PKCS1-v1_5",
@@ -144,140 +332,66 @@ let certificate = await SAML.Certificate.selfSigned({
 	notBefore: new Date(),
 	notAfter: new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000),
 });
+if (isFailure(certificate)) throw certificate.error;
+
+let metadata = SAML.buildServiceProviderMetadata({
+	entityId: "https://sp.example.com/metadata",
+	assertionConsumerService: "https://sp.example.com/acs",
+	certificate: certificate.data,
+	nameIdFormat: "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+	wantAssertionsSigned: true,
+	authnRequestsSigned: true,
+	validUntil: null,
+});
+
+let pkcs8 = await crypto.subtle.exportKey("pkcs8", keys.privateKey);
+let decryptionKey = await Promise.all(
+	["SHA-1", "SHA-256"].map((hash) =>
+		crypto.subtle.importKey("pkcs8", pkcs8, { name: "RSA-OAEP", hash }, false, ["decrypt"]),
+	),
+);
+
+let request = await SAML.createAuthnRequest({
+	binding: "post",
+	destination: "https://idp.example.com/sso",
+	issuer: "https://sp.example.com/metadata",
+	assertionConsumerService: "https://sp.example.com/acs",
+	nameIdFormat: null,
+	forceAuthn: true,
+	relayState: null,
+	signingKey: keys.privateKey,
+	now: new Date(),
+});
+// request.data.form → { action, samlRequest, relayState } to render as an auto-submitting form
+// later: SAML.verifyResponse(xml, { ...options, decryptionKey })
 ```
 
-## API
+## Pattern: Mapping Attributes To An Account
 
-### `verifyResponse(source, options): Promise<Result<Assertion, SAMLError>>`
-
-Verifies a response and answers with the assertion inside it. `source` is the decoded
-`SAMLResponse` XML as the browser posted it.
-
-### `createAuthnRequest(options): Promise<Result<AuthnRequestResult, SAMLError>>`
-
-Builds an authentication request over the redirect or POST binding. The result carries the
-request `id`, and either a `url` to redirect to or a `form` to post.
-
-### `parseIdPMetadata(source): Promise<Result<IdPMetadata, SAMLError>>`
-
-Reads an identity provider's metadata: entity id, sign-on endpoints, and the signing and
-encryption certificates, each already parsed.
-
-### `buildServiceProviderMetadata(options): Result<string, SAMLError>`
-
-Writes the metadata document an identity provider is handed.
-
-### `Certificate`
-
-`Certificate.parse(source)` reads PEM or the bare base64 an XML document carries.
-`Certificate.selfSigned(options)` generates one from a key pair. An instance carries
-`fingerprint`, `subject`, `issuer`, `serial`, `notBefore`, `notAfter`, `algorithm`, `spki` and
-`der`, with `validAt(date)`, `toPem()` and `toBase64()`.
-
-### `Assertion`
-
-What a verification answers with, and a type only — instances arrive from `verifyResponse`.
-Carries `id`, `issuer`, `nameId`, `sessionIndex`, `authnInstant` and `notOnOrAfter`, with
-`attribute(name)`, `values(name)`, `names()` and `claims()`. Attributes resolve by `Name` and
-by `FriendlyName`.
-
-### `ReplayStore`
-
-The two-method contract a verification consults: `seen(id)` and `remember(id, ttl)`. Storage
-stays out of this package so an application can keep accepted ids in a table it can inspect.
-
-### Failures
-
-Every failure extends `SAMLError`, so one `instanceof` covers the package while the subclasses
-let a caller tell them apart:
-
-| Failure                    | What it means                                                        |
-| -------------------------- | -------------------------------------------------------------------- |
-| `UnsupportedFeatureError`  | A feature this refuses, named in `feature` so a tenant can act on it |
-| `MalformedDocumentError`   | Not readable XML, or a required element is absent                    |
-| `UnsignedDocumentError`    | The document does not hold exactly one signature                     |
-| `UnresolvedReferenceError` | The reference names no element, or more than one                     |
-| `SignatureMismatchError`   | The digest or the signature did not check under any certificate      |
-| `WrappedAssertionError`    | The signed element and the read element are two elements             |
-| `DecryptionFailedError`    | One value for every outcome of opening an encrypted assertion        |
-| `ResponseStatusError`      | The provider reported something other than success                   |
-| `AssertionConditionError`  | Authentic, and addressed elsewhere or out of its window              |
-| `ReplayedAssertionError`   | The assertion id was already accepted                                |
-| `ReplayStoreError`         | The store could not be consulted, so no verdict was reached          |
-| `CertificateError`         | A certificate could not be read                                      |
-
-No message carries key material, a decrypted fragment, or anything an unauthenticated document
-supplied beyond a fixed-vocabulary identifier, because these values are what gets logged.
-
-## What this refuses, and why
-
-Named in the error, so a tenant reads which part of a provider's configuration to change:
-
-- **SHA-1**, in both signatures and digests, and **DSA** and **RSA-PSS**.
-- **Inclusive canonicalization** 1.0 and 1.1, and every `#WithComments` variant.
-- **XPath and XSLT transforms**, which put an evaluator inside the security boundary to serve
-  a feature whose main use is wrapping.
-- **A reference naming the whole document** (`URI=""`), and any reference that is not a
-  same-document id.
-- **More than one signature**, and more than one reference in one signature, because the
-  reader would then choose which one decides.
-- **A document type declaration**, refused on the source before parsing, and any processing
-  instruction past a leading XML declaration.
-- **The identity-provider role**, Single Logout, HTTP-Artifact, SOAP, ECP, attribute queries
-  and SAML 1.1.
-
-Key transport is RSA-OAEP under MGF1-SHA-1 or MGF1-SHA-256, since providers emit both; content
-encryption is AES-128 or AES-256 in GCM or CBC. Every outcome of opening an encrypted assertion
-is one `DecryptionFailedError`, which keeps CBC from answering questions one attempt at a time.
-
-Canonicalization is CPU over a whole subtree, so bound the posted body and cap document size and
-depth before handing anything here: a large assertion occupies whatever is running it for as
-long as it takes.
-
-## Pattern: A Connection That Rotates Its Certificates
-
-A provider's signing certificate expires on a date and rotates on a schedule nobody here
-controls, so trust a set and let both events pass unnoticed:
+Providers name the same attribute differently; `Assertion` answers to both `Name` and
+`FriendlyName`, and `claims()` gives the whole set for a configurable mapping.
 
 ```typescript
-let idp = await SAML.parseIdPMetadata(await fetchMetadata(connection.metadataUrl));
-if (isFailure(idp)) return;
+import type { Assertion } from "@sdxc/saml";
 
-for (let certificate of idp.data.signing) {
-	await upsertCertificate(connection.id, {
-		fingerprint: certificate.fingerprint,
-		notAfter: certificate.notAfter,
-		pem: certificate.toPem(),
-	});
+let TRANSIENT = "urn:oasis:names:tc:SAML:2.0:nameid-format:transient";
+
+function toAccount(assertion: Assertion) {
+	let email =
+		assertion.attribute("email") ??
+		assertion.attribute("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress");
+
+	return {
+		externalId: assertion.nameId?.format === TRANSIENT ? null : (assertion.nameId?.value ?? null),
+		email,
+		groups: assertion.values("groups"),
+		raw: assertion.claims(),
+	};
 }
 ```
 
-Pass every unretired certificate to `verifyResponse`; a signature verifying under any one of
-them is accepted, so a rotation needs no coordination. `notAfter` is what a job reads to warn
-an administrator before an expiry stops sign-ins.
-
-## Pattern: A Replay Store On A Table
-
-```typescript
-import { toMs } from "@sdxc/duration";
-
-let replay: SAML.ReplayStore = {
-	async seen(id) {
-		return (await db.findOne(assertionIds, { where: { id } })) !== null;
-	},
-	async remember(id, ttl) {
-		await db.create(assertionIds, { id, expires_at: Date.now() + toMs(ttl) });
-	},
-};
-```
-
-A verification remembers an id only once every other check has passed, so a document that
-failed verification cannot fill the store. The TTL it asks for is the rest of the assertion's
-own window, which is exactly how long a captured document stays replayable.
-
-A store that throws surfaces as `ReplayStoreError`, which is an infrastructure failure rather
-than a verdict about the assertion: answer it as a failure to reach a decision, and let the
-person retry.
+A transient `NameID` names one session, not a person, so link accounts by a persistent identifier
+or an attribute instead.
 
 ## Versioning
 
