@@ -12,6 +12,7 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import type {
 	Address,
@@ -93,7 +94,7 @@ function derivePlainText(message: Message, overrides?: SendOptions): string | un
  */
 function generateMessageId(from: Address): string {
 	let domain = from.email.split("@").at(1) ?? "localhost";
-	return `<${crypto.randomUUID()}@${domain}>`;
+	return `<${generateUUID()}@${domain}>`;
 }
 
 /**

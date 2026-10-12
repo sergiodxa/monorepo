@@ -21,6 +21,7 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"remix": "3.0.0"
 	}
 }

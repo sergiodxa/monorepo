@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
+
 import type { Address, NormalizedMessage } from "./types.js";
 
 import { formatAddress } from "./lib/address.js";
@@ -351,9 +353,9 @@ function encodePart(contentType: string, content: string): EncodedPart {
  * quoted-printable escapes a leading one), checked directly against the bodies too.
  */
 function selectBoundary(parts: Entity[]): string {
-	let boundary = `${BOUNDARY_PREFIX}${crypto.randomUUID()}`;
+	let boundary = `${BOUNDARY_PREFIX}${generateUUID()}`;
 	while (parts.some((part) => part.body.includes(boundary))) {
-		boundary = `${BOUNDARY_PREFIX}${crypto.randomUUID()}`;
+		boundary = `${BOUNDARY_PREFIX}${generateUUID()}`;
 	}
 	return boundary;
 }
