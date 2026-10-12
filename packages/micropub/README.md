@@ -2,44 +2,54 @@
 
 Read Micropub requests into typed operations and build the spec's responses.
 
+[Micropub](https://www.w3.org/TR/micropub/) is the W3C Recommendation for publishing to a site
+from any client. This package decodes a POST (form-encoded, multipart or JSON) into one of four
+typed operations and a GET into a typed query, finds the access token wherever it was sent,
+names the scopes each operation needs, and builds every response the specification defines.
+Both encodings of the same post yield the same operation. Verifying the token, storing posts and
+storing files stay with you.
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/micropub
 ```
 
-Parsers return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values; it installs
-alongside this package, as does [`@sdxc/microformats`](https://www.npmjs.com/package/@sdxc/microformats),
-whose `MF2` item shape every create and `q=source` answer takes.
-
-[Micropub](https://www.w3.org/TR/micropub/) is the W3C Recommendation for publishing to a site
-from a client the site's owner did not write. Clients POST creates, updates, deletes and
-undeletes, form-encoded, multipart (with files) or as JSON in the microformats2 shape, and GET
-queries (`q=config`, `q=source`, `q=syndicate-to`) to learn what the server supports and to read
-a post back for editing.
-
-- **`@sdxc/micropub`** decodes a POST into one of four typed operations and a GET into a typed
-  query, returns the access token from whichever place it was sent, names the scopes each
-  operation needs, and builds every response the specification defines. Form bodies are
-  reshaped into the JSON shape first (`h` into `type`, `name[]` into arrays, `mp-*` into
-  commands), and property values are validated as microformats2, so both encodings yield the
-  same operation for the same post.
-- **`@sdxc/micropub/media`** reads the single `file` part a media endpoint upload carries,
-  checked for size and media type, and answers it.
-
-Verifying the token, mapping operations onto posts and storing files stay with you. Every
-example of the Recommendation and every server test of [micropub.rocks](https://micropub.rocks/)
-is replayed in the test suite.
+Parsers answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and
+post properties take the `MF2` shape of
+[`@sdxc/microformats`](https://www.npmjs.com/package/@sdxc/microformats).
 
 ## Usage
 
-### Handle A Write
+### Parse a write
 
-Check the token before looking at the operation's contents, and answer `unauthorized` when
-`accessToken` is `null`; the parser leaves the decision of who may write to you.
+`parseOperation` reads a POST into a `create`, `update`, `delete` or `undelete`. Every parse
+failure is an `invalid_request` whose message fits `error_description`.
 
 ```typescript
-import { created, deleted, error, parseOperation, requiredScopes, updated } from "@sdxc/micropub";
+import { created, error, parseOperation } from "@sdxc/micropub";
+import { isFailure } from "@sdxc/result";
+
+export async function handlePost(request: Request) {
+	let parsed = await parseOperation(request);
+	if (isFailure(parsed)) return error("invalid_request", parsed.error.message);
+
+	let operation = parsed.data.body;
+	if (operation.action !== "create") return error("invalid_request", "Only creates for now");
+
+	let url = await savePost(operation.type, operation.properties);
+	return created(url); // 201, Location: <url>
+}
+```
+
+### Check the token and its scopes
+
+`accessToken` comes from `Authorization: Bearer` or the form's `access_token`, and is `null`
+when the client sent none. `requiredScopes` lists the scopes any one of which authorizes the
+operation.
+
+```typescript
+import { error, parseOperation, requiredScopes } from "@sdxc/micropub";
 import { isFailure } from "@sdxc/result";
 
 let parsed = await parseOperation(request);
@@ -47,203 +57,304 @@ if (isFailure(parsed)) return error("invalid_request", parsed.error.message);
 
 let { body: operation, accessToken } = parsed.data;
 if (accessToken === null) return error("unauthorized");
-let token = await verify(accessToken);
-if (!requiredScopes(operation).some((scope) => token.has(scope))) {
-	return error("insufficient_scope", undefined, { scope: requiredScopes(operation) });
-}
 
-switch (operation.action) {
-	case "create":
-		return created(await posts.create(operation)); // 201, Location: <url>
-	case "update":
-		await posts.update(operation);
-		return updated(); // 204
-	case "delete":
-	case "undelete":
-		await posts[operation.action](operation.url);
-		return deleted(); // 204
+let granted = await verifyToken(accessToken); // your token endpoint or store
+if (granted === null) return error("forbidden", "Unknown token");
+
+let scopes = requiredScopes(operation);
+if (!scopes.some((scope) => granted.includes(scope))) {
+	return error("insufficient_scope", "The token cannot do this", { scope: scopes });
 }
 ```
 
-### Answer A Query
+### Answer a query
+
+`parseQuery` reads a GET into a query discriminated on `q`; each answer has its own builder.
 
 ```typescript
 import { config, error, parseQuery, source, syndicateTo } from "@sdxc/micropub";
 import { isFailure } from "@sdxc/result";
 
-let parsed = parseQuery(request);
-if (isFailure(parsed)) return error("invalid_request", parsed.error.message);
+export async function handleGet(request: Request) {
+	let parsed = parseQuery(request);
+	if (isFailure(parsed)) return error("invalid_request", parsed.error.message);
 
-let query = parsed.data.body;
-switch (query.q) {
-	case "config":
-		return config({ mediaEndpoint: "https://example.com/micropub/media", q: ["source"] });
-	case "syndicate-to":
-		return syndicateTo([]); // {"syndicate-to":[]}
-	case "source": {
-		let item = await posts.toItem(query.url);
-		return item ? source(item, query.properties) : error("invalid_request", "No such post");
+	let query = parsed.data.body;
+	switch (query.q) {
+		case "config":
+			return config({ mediaEndpoint: "https://example.com/micropub/media", q: ["source"] });
+		case "syndicate-to":
+			return syndicateTo([]);
+		case "source": {
+			let item = await loadPost(query.url);
+			return item ? source(item, query.properties) : error("invalid_request", "No such post");
+		}
+		default:
+			return error("invalid_request", "Unsupported query");
 	}
-	default:
-		return error("invalid_request", "Unsupported query");
 }
 ```
 
-### Accept An Upload
+### Accept an upload
+
+The `./media` entry point reads the one `file` part a media endpoint upload carries.
 
 ```typescript
 import { error } from "@sdxc/micropub";
 import { parseUpload, uploaded } from "@sdxc/micropub/media";
 import { isFailure } from "@sdxc/result";
 
-let upload = parseUpload(request, { formData: await request.formData(), accept: ["image/*"] });
-if (isFailure(upload)) return error("invalid_request", upload.error.message);
+export async function handleUpload(request: Request) {
+	let upload = parseUpload(request, { formData: await request.formData(), accept: ["image/*"] });
+	if (isFailure(upload)) return error("invalid_request", upload.error.message);
 
-let url = await storage.put(upload.data.body);
-return uploaded(url); // 201, Location: <url>
+	let url = await storeFile(upload.data.body);
+	return uploaded(url); // 201, Location: <url>
+}
 ```
 
 ## API
 
-### `@sdxc/micropub`
-
-#### `parseOperation(request: Request, options?: Micropub.ParseOptions): Promise<Result<Micropub.Parsed<Micropub.Operation>, MicropubRequestError>>`
+### `parseOperation(request: Request, options?: Micropub.ParseOptions): Promise<Result<Micropub.Parsed<Micropub.Operation>, MicropubRequestError>>`
 
 Decodes a POST by its `Content-Type`: `application/json` (or any `+json` type),
-`application/x-www-form-urlencoded` or `multipart/form-data`.
+`application/x-www-form-urlencoded` or `multipart/form-data`. Forms are reshaped into the JSON
+shape first: `h=entry` becomes `type: ["h-entry"]` (the default when `h` is missing), `name[]`
+and `name` collect into one array, and file parts go to `files`. Values are validated as
+microformats2, so `{ html }` content gains its text as `value` and JSON numbers are read as
+text. `mp-slug`, `mp-syndicate-to` and `post-status` become `commands`; other `mp-*` names land
+in `commands.other`.
 
-- A form with `action=delete` or `action=undelete` and a `url` is a `Delete` or `Undelete`;
-  any other form is a `Create`. `h=entry` becomes `type: ["h-entry"]`, and a missing `h`
-  defaults to `h-entry`. `category[]` and `category` collect into one array. File parts go
-  to `files` by property name, `photo[]` included; an empty file input is dropped.
-- A JSON body with `action: "update"` is an `Update`, `delete`/`undelete` a `Delete` or
-  `Undelete`, and a body without `action` a `Create` validated with `ITEM_SCHEMA`: `{ html }`
-  content gains its text as `value`, and a nested item without `value` takes its first
-  `name` or `url`. Numbers and booleans inside property arrays are read as their text,
-  since clients send coordinates as JSON numbers.
-- `mp-slug`, `mp-syndicate-to` and `post-status` become `commands.slug`,
-  `commands.syndicateTo` and `commands.status`; every other `mp-*` name lands in
-  `commands.other` with its values as sent. None of them stays in `properties`.
-- An update's `delete` as a list fills `deleteProperties`; as a map it fills `deleteValues`.
-- The token comes from `Authorization: Bearer` (scheme matched case-insensitively) or a
-  form's `access_token`, which is never kept as a property. JSON bodies carry no token.
+Updates are JSON only. An update's `delete` as a list fills `deleteProperties`, as a map
+`deleteValues`. A token sent both in the header and the form is `invalid_request`.
 
-These are `invalid_request` failures, each with a message fit for `error_description` and
-the data-schema `issues` behind it: an unsupported media type, text that is not JSON, a
-JSON body that is not an object or is over `maxJsonBytes`, an update over a form body, an
-update naming no change, an unknown `action`, a `url` that is not an absolute URL, a
-`post-status` other than `published` or `draft`, and a token sent both in the header and in
-the body (RFC 6750 forbids it).
+- `options.formData`: the form body, when middleware already read the request stream
+- `options.maxJsonBytes`: the JSON body cap, enforced while streaming (default `1_048_576`)
 
-**Options:**
+### `parseQuery(request: Request): Result<Micropub.Parsed<Micropub.Query>, MicropubRequestError>`
 
-- `formData`: the form body when your framework already read it (the request stream is
-  consumed by then); without it the parser reads form bodies itself
-- `maxJsonBytes`: the JSON body cap, enforced while streaming (default `1_048_576`)
+Decodes a GET into `config`, `syndicate-to`, `source` (an absolute `url` plus the requested
+`properties[]`, empty for the whole post), `category` (with an optional `filter`) or
+`extension` (any other `q`, with its `name` and every `params`). The token comes from the header.
 
-#### `parseQuery(request: Request): Result<Micropub.Parsed<Micropub.Query>, MicropubRequestError>`
+### `requiredScopes(operation: Micropub.Operation): Micropub.Scope[]`
 
-Decodes a GET into a query discriminated on `q`: `{ q: "config" }`, `{ q: "syndicate-to" }`,
-`{ q: "source", url, properties }` (from `properties[]` or `properties`; empty asks for the
-whole post), `{ q: "category", filter }` (the widely implemented extension), and
-`{ q: "extension", name, params }` for any other `q`. A missing `q`, and a `source` query
-without an absolute `url`, are `invalid_request`. The token comes from the header.
+The scopes any one of which authorizes the operation: `create` (or `draft` for a create with
+`post-status: draft`), `update`, `delete`, and `undelete` or `delete`.
 
-#### `requiredScopes(operation: Micropub.Operation): Micropub.Scope[]`
+### Responses
 
-The scopes any one of which authorizes the operation: `create`, or `draft`/`create` for a
-create with `post-status: draft`; `update`; `delete`; `undelete`/`delete`.
+| Builder                               | Response                                                        |
+| ------------------------------------- | --------------------------------------------------------------- |
+| `created(location)`                   | `201` with `Location`                                           |
+| `accepted(location)`                  | `202` with `Location`, for a create processed asynchronously    |
+| `updated(location?)`                  | `204`, or `201` with `Location` when the update moved the post  |
+| `deleted(location?)`                  | `204`, or `201` with `Location` when an undelete moved the post |
+| `error(code, description?, details?)` | JSON `{ error, error_description?, scope? }`                    |
+| `config(config)`                      | The `q=config` answer with wire names (`media-endpoint`, …)     |
+| `syndicateTo(targets)`                | `{ "syndicate-to": [...] }`                                     |
+| `source(item, properties?)`           | The item, or `{ properties }` with only the requested names     |
+| `categories(names)`                   | `{ categories: [...] }`, the `q=category` answer                |
 
-```typescript
-requiredScopes(operation).some((scope) => token.has(scope));
-```
+`error` answers `invalid_request` 400, `unauthorized` 401, `forbidden` 403 and
+`insufficient_scope` 401. `unauthorized` and `insufficient_scope` carry a
+`WWW-Authenticate: Bearer` challenge, the latter with its description and `details.scope`.
 
-#### Responses
+### `MicropubRequestError`
 
-| Builder                               | Response                                                          |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| `created(location)`                   | `201 Created` with `Location`                                     |
-| `accepted(location)`                  | `202 Accepted` with `Location`, for asynchronous creates          |
-| `updated(location?)`                  | `204`, or `201` with `Location` when the update moved the post    |
-| `deleted(location?)`                  | `204`, or `201` with `Location` when an undelete moved the post   |
-| `error(code, description?, details?)` | JSON `{ error, error_description?, scope? }` with the code status |
-| `config(config)`                      | `q=config` with wire names; `{}` when nothing is set              |
-| `syndicateTo(targets)`                | `{ "syndicate-to": [...] }`                                       |
-| `source(item, properties?)`           | the item, or `{ properties }` with only the requested names       |
-| `categories(names)`                   | `{ categories: [...] }`, the `q=category` extension answer        |
+The failure every parser answers. `message` suits `error_description`; `issues` holds the
+data-schema issues behind it, empty when the request failed outside the body's shape.
 
-Error statuses follow the Micropub specification: `invalid_request` 400, `unauthorized`
-401, `forbidden` 403, `insufficient_scope` 401. `unauthorized` carries
-`WWW-Authenticate: Bearer`; `insufficient_scope` carries
-`WWW-Authenticate: Bearer error="insufficient_scope", …` with its description and
-`details.scope`.
+### `parseUpload(request: Request, options: Media.Options): Result<Micropub.Parsed<File>, MicropubRequestError>` from `./media`
 
-```typescript
-error("insufficient_scope", "Token lacks create", { scope: ["create"] });
-// 401, WWW-Authenticate: Bearer error="insufficient_scope", error_description="Token lacks create", scope="create"
-// {"error":"insufficient_scope","error_description":"Token lacks create","scope":"create"}
-```
+The single part named `file`, with the token from the header or the form. A missing, textual or
+repeated `file`, a file over `maxBytes` and a type outside `accept` are `invalid_request`.
 
-#### `MicropubRequestError`
+- `options.formData`: the multipart body, already read
+- `options.accept`: media types matched on the essence, with `image/*` and `*/*` wildcards; an
+  untyped file matches only `*/*`
+- `options.maxBytes`: the size cap (default `26_214_400`)
 
-The failure of every parser. `message` suits `error_description`; `issues` holds the
-data-schema issues, empty for failures outside the body's shape.
+### `uploaded(location: string | URL): Response` from `./media`
 
-#### `Micropub` namespace
+`201` with the file's URL in `Location`.
 
-`Operation` (`Create | Update | Delete | Undelete`), `Commands`, `Properties`, `Query` and
-its members, `Parsed<Body>`, `Scope`, `Config`, `SyndicationTarget`, `SyndicationDetail`,
-`PostType`, `ErrorCode`, `ErrorDetails` and `ParseOptions`. Every type is exported from the
-namespace, including each query member (`ConfigQuery`, `SyndicateToQuery`, `SourceQuery`,
-`CategoryQuery`, `ExtensionQuery`) and each operation (`Create`, `Update`, `Delete`,
-`Undelete`).
+### Types
 
-### `@sdxc/micropub/media`
+The `Micropub` namespace holds every type. `Operation` is `Create | Update | Delete | Undelete`,
+discriminated on `action`; `Create` carries `type`, `properties`, `commands` (`Commands`) and
+`files`, and `Update` carries `url`, `replace`, `add`, `deleteProperties` and `deleteValues`.
+`Query` is `ConfigQuery | SyndicateToQuery | SourceQuery | CategoryQuery | ExtensionQuery`,
+discriminated on `q`. `Parsed<Body>` pairs a body with its `accessToken`. `Properties`, `Scope`,
+`Config`, `SyndicationTarget`, `SyndicationDetail`, `PostType`, `ErrorCode`, `ErrorDetails` and
+`ParseOptions` complete it. `Media.Options` from `./media` types `parseUpload`'s options.
 
-#### `parseUpload(request: Request, options: Media.Options): Result<Micropub.Parsed<File>, MicropubRequestError>`
+## Pattern: One Endpoint For Every Write
 
-Returns the one part named `file`, and the token from the header or the form's
-`access_token`. A missing, textual or repeated `file` part, a file over `maxBytes`
-(default `26_214_400`) and a media type outside `accept` are `invalid_request`. `accept`
-matches on the essence, case-insensitively, with `image/*` and `*/*` wildcards; an untyped
-file matches only `*/*`.
-
-#### `uploaded(location: string | URL): Response`
-
-`201 Created` with the file's URL in `Location`.
-
-#### `Media`
-
-Types only: `Options` (`formData`, `maxBytes`, `accept`).
-
-## Pattern: Keep Files And URLs Together
-
-A multipart create puts uploaded files in `files` and URLs in `properties`, so a photo sent
-either way reaches the post. Ignore properties your content model does not know: the
-specification has servers create the post from the properties they recognize.
+Each operation maps onto its own response; `accepted` answers a create stored after responding.
 
 ```typescript
 import type { Micropub } from "@sdxc/micropub";
 
-async function photosOf(operation: Micropub.Create) {
-	let uploaded = await Promise.all((operation.files.photo ?? []).map((file) => storage.put(file)));
-	return [...(operation.properties.photo ?? []), ...uploaded];
+import { accepted, created, deleted, updated } from "@sdxc/micropub";
+
+export async function applyOperation(operation: Micropub.Operation, queue: boolean) {
+	switch (operation.action) {
+		case "create": {
+			let url = urlFor(operation.commands.slug ?? Date.now().toString(36));
+			if (queue) {
+				await enqueueCreate(url, operation);
+				return accepted(url); // 202
+			}
+			await savePost(url, operation);
+			return created(url); // 201
+		}
+		case "update": {
+			let movedTo = await updatePost(operation);
+			return updated(movedTo ?? undefined); // 204, or 201 when the URL changed
+		}
+		case "delete":
+		case "undelete":
+			await setDeleted(operation.url, operation.action === "delete");
+			return deleted(); // 204
+	}
 }
 ```
 
-## Pattern: Read A Post Back In The Shape A Create Sends
+## Pattern: Apply An Update To A Stored Item
 
-`source` writes an `MF2.Item`, the same shape `parseOperation` produces for a JSON create, so a
-round trip through a client's editor keeps HTML content as `{ html }` and alt text as
-`{ value, alt }`. Advertise only the queries you answer in `config({ q })`; clients treat a
-missing query as unsupported.
+An `Update` names four change sets; applied in order to an `MF2.Item`, they give the post's new
+properties. A property left with no values is removed.
 
 ```typescript
 import type { MF2 } from "@sdxc/microformats";
-import { source } from "@sdxc/micropub";
+import type { Micropub } from "@sdxc/micropub";
 
-let item: MF2.Item = { type: ["h-entry"], properties: { content: [{ html, value: text }] } };
-return source(item, query.properties);
+export function applyUpdate(item: MF2.Item, update: Micropub.Update): MF2.Item {
+	let properties = { ...item.properties, ...update.replace };
+	for (let [name, values] of Object.entries(update.add)) {
+		properties[name] = [...(properties[name] ?? []), ...values];
+	}
+	for (let name of update.deleteProperties) delete properties[name];
+	for (let [name, values] of Object.entries(update.deleteValues)) {
+		let removed = new Set(values.map((value) => JSON.stringify(value)));
+		let kept = (properties[name] ?? []).filter((value) => !removed.has(JSON.stringify(value)));
+		if (kept.length > 0) properties[name] = kept;
+		else delete properties[name];
+	}
+	return { ...item, properties };
+}
+```
+
+## Pattern: Files, URLs And Commands On A Create
+
+A multipart create puts uploaded files in `files` and URLs in `properties`, so a photo sent
+either way reaches the post. `commands` holds the slug, the syndication targets and the draft
+status, none of which stays in `properties`.
+
+```typescript
+import type { Micropub } from "@sdxc/micropub";
+
+export async function prepareCreate(operation: Micropub.Create) {
+	let uploaded = await Promise.all((operation.files.photo ?? []).map((file) => storeFile(file)));
+	let photos = [...(operation.properties.photo ?? []), ...uploaded];
+
+	return {
+		properties: { ...operation.properties, photo: photos },
+		slug: operation.commands.slug,
+		draft: operation.commands.status === "draft",
+		syndicateTo: operation.commands.syndicateTo, // uids from q=syndicate-to
+	};
+}
+```
+
+## Pattern: Forms Already Read By Middleware
+
+When a framework has consumed the request stream, pass the `FormData` it read. A JSON body is
+read from the request either way, capped at `maxJsonBytes`.
+
+```typescript
+import { error, parseOperation } from "@sdxc/micropub";
+import { isFailure } from "@sdxc/result";
+
+export async function handle(request: Request, formData: FormData | undefined) {
+	let parsed = await parseOperation(request, { formData, maxJsonBytes: 256 * 1024 });
+	if (isFailure(parsed)) return error("invalid_request", parsed.error.message);
+	return applyOperation(parsed.data.body, false);
+}
+```
+
+## Pattern: Advertise What The Server Supports
+
+`config` lists the media endpoint, the syndication targets, the post types and the queries the
+server answers; clients treat a query missing from `q` as unsupported. `categories` answers the
+`q=category` extension, and any other `q` arrives as an `extension` query.
+
+```typescript
+import type { Micropub } from "@sdxc/micropub";
+
+import { categories, config, error, syndicateTo } from "@sdxc/micropub";
+
+let TARGETS: Micropub.SyndicationTarget[] = [
+	{
+		uid: "mastodon",
+		name: "Mastodon",
+		service: { name: "Mastodon", url: "https://joinmastodon.org" },
+	},
+];
+
+export async function answerQuery(query: Micropub.Query) {
+	switch (query.q) {
+		case "config":
+			return config({
+				mediaEndpoint: "https://example.com/micropub/media",
+				syndicateTo: TARGETS,
+				q: ["source", "syndicate-to", "category"],
+				postTypes: [
+					{ type: "note", name: "Note" },
+					{ type: "photo", name: "Photo" },
+				],
+			});
+		case "syndicate-to":
+			return syndicateTo(TARGETS);
+		case "category": {
+			let prefix = query.filter ?? "";
+			let tags = await listTags();
+			return categories(tags.filter((tag) => tag.startsWith(prefix)));
+		}
+		case "extension":
+			return error("invalid_request", `Unsupported query ${query.name}`);
+		default:
+			return error("invalid_request", "Unsupported query");
+	}
+}
+```
+
+## Pattern: Read A Post Back For Editing
+
+`source` answers with an `MF2.Item`, the same shape a JSON create sends, so an editor's round
+trip keeps HTML content as `{ html, value }` and alt text as `{ value, alt }`. Requested
+`properties` narrow the answer to those names.
+
+```typescript
+import type { MF2 } from "@sdxc/microformats";
+import type { Micropub } from "@sdxc/micropub";
+
+import { error, source } from "@sdxc/micropub";
+
+export async function answerSource(query: Micropub.SourceQuery) {
+	let post = await loadStoredPost(query.url);
+	if (post === null) return error("invalid_request", "No such post");
+
+	let item: MF2.Item = {
+		type: ["h-entry"],
+		properties: {
+			content: [{ html: post.html, value: post.text }],
+			photo: post.photos.map((photo) => ({ value: photo.url, alt: photo.alt })),
+		},
+	};
+	return source(item, query.properties); // whole item, or { properties } with the requested names
+}
 ```
 
 ## Versioning
