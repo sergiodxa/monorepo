@@ -34,7 +34,6 @@ import {
 	minBs,
 	minIs,
 	outlineStyle,
-	overflow,
 	pseudoContent,
 	raw,
 	relative,
@@ -224,7 +223,6 @@ Slider.Track = function SliderTrack(handle: Handle<Slider.TrackProps>) {
 					when('[data-slot="slider"][data-orientation="vertical"] &', [
 						is("var(--ui-slider-thumb-size, 1.25rem)"),
 						minBs("0"),
-						overflow("hidden"),
 					]),
 					before([absolute(), rounded("full"), bg("neutral.border"), pseudoContent('""')]),
 					after([absolute(), rounded("full"), bg("brand.solid"), pseudoContent('""')]),
@@ -302,13 +300,12 @@ Slider.Thumb = function SliderThumb(handle: Handle<Slider.ThumbProps>) {
 					absolute(),
 					inset("0"),
 					/**
-					 * The native input reaches past the track across its thin axis to a full
-					 * pointer target, centred so the thumb stays on the visible rail.
+					 * The native input reaches past the track across its thin axis to a full pointer
+					 * target, centred so the thumb stays on the visible rail. Its block axis is that
+					 * thin axis in both orientations, since a vertical input runs `vertical-lr`.
 					 */
-					when('[data-orientation="horizontal"] &', [
-						insBs(THUMB_HIT_INSET),
-						insBe(THUMB_HIT_INSET),
-					]),
+					insBs(THUMB_HIT_INSET),
+					insBe(THUMB_HIT_INSET),
 					z(10),
 					m("0"),
 					appearance(),
