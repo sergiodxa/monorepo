@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { mf } from "@sdxc/microformats/ui";
 import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
@@ -50,8 +52,9 @@ export namespace FeedView {
  * subscription links, and the activity timeline as an `h-feed` of `h-entry` rows.
  */
 export function FeedView() {
-	return ({ model }: { model: FeedView.Model }) => (
+	return ({ model, assets }: { model: FeedView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Sergio Xalambrí"
 			description="Sergio Xalambrí"
 			activePath="/"

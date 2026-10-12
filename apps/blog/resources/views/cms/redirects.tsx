@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
@@ -58,11 +60,11 @@ export namespace CMSRedirectsNewView {
  * Builds the redirects listing page with delete actions.
  */
 export function CMSRedirectsIndexView() {
-	return ({ model }: { model: CMSRedirectsIndexView.Props }) => {
+	return ({ model, assets }: { model: CMSRedirectsIndexView.Props; assets: DocumentAssets }) => {
 		let { items } = model;
 
 		return (
-			<CMSLayout title="Redirects" activePath={routes.cms.redirects.index.href()}>
+			<CMSLayout assets={assets} title="Redirects" activePath={routes.cms.redirects.index.href()}>
 				<main mix={[grid(), gap(4)]}>
 					<section
 						mix={[p(4), rounded("lg"), border({ width: 1, color: "neutral" }), bg("neutral.tint")]}
@@ -154,11 +156,11 @@ export function CMSRedirectsIndexView() {
  * Builds the form page for creating a redirect.
  */
 export function CMSRedirectsNewView() {
-	return ({ model }: { model: CMSRedirectsNewView.Props }) => {
+	return ({ model, assets }: { model: CMSRedirectsNewView.Props; assets: DocumentAssets }) => {
 		let { title, description, action } = model;
 
 		return (
-			<CMSLayout title={title} activePath={routes.cms.redirects.index.href()}>
+			<CMSLayout assets={assets} title={title} activePath={routes.cms.redirects.index.href()}>
 				<main>
 					<section
 						mix={[

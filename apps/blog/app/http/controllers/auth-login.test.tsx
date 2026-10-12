@@ -29,10 +29,10 @@ import type { AppContext } from "~/app/http/context";
 import auth from "~/app/http/middleware/auth";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import models from "~/app/http/middleware/models";
-import { htmlRenderer } from "~/app/http/render";
 import { testDatabase } from "~/app/test/database";
 import { blankSearchFrame } from "~/app/test/frames";
 import { bindModels } from "~/app/test/models";
+import { pageRenderer } from "~/app/test/renderer";
 import routes from "~/routes/web";
 
 import { callbackAction, loginController } from "./auth";
@@ -161,7 +161,7 @@ function openBrowser(db: Database): Browser {
 			database(db),
 			models(),
 			auth,
-			...htmlRenderer(),
+			...pageRenderer(),
 		],
 	});
 

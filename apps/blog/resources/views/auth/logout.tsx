@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { fg } from "@sdxc/u/color";
 import { contents, gap, grid, place } from "@sdxc/u/layout";
 import { m, maxIs } from "@sdxc/u/size";
@@ -32,8 +34,9 @@ export namespace LogoutView {
  * centered grid, in the danger tone that marks sign-out as destructive.
  */
 export function LogoutView() {
-	return ({ model: _model }: { model: LogoutView.Model }) => (
+	return ({ assets }: { model: LogoutView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Logout"
 			description="Sign out from CMS"
 			activePath={routes.auth.logout.index.href()}

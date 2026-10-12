@@ -15,6 +15,7 @@
 	"dependencies": {
 		"@pitlane/assets": "0.1.0",
 		"@sdxc/activitypub": "workspace:*",
+		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/atom": "workspace:*",
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/backoff": "workspace:*",

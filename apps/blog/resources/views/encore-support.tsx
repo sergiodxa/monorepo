@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Honeypot } from "@sdxc/honeypot";
 import type { Handle } from "remix/component";
 
@@ -178,12 +179,13 @@ function MessageField(handle: Handle<EncoreSupportView.MessageProps>) {
  * @returns View function rendering the support page for the controller's state.
  */
 export function EncoreSupportView() {
-	return ({ model }: { model: EncoreSupportView.Model }) => {
+	return ({ model, assets }: { model: EncoreSupportView.Model; assets: DocumentAssets }) => {
 		let { state, values, issues, honeypot } = model;
 		let action = routes.encoreSupport.action.href();
 
 		return (
 			<BlogLayout
+				assets={assets}
 				title="Encore Support"
 				description="Get help with Encore: Music Party Game for iPhone, iPad, Apple Watch, and Mac. Report a problem, ask a question, or suggest a feature."
 			>

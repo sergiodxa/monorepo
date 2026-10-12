@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
@@ -78,8 +80,8 @@ const DECISIONS: Record<
 
 /** Builds the moderation page for one queue. */
 export function CMSWebmentionsView() {
-	return ({ model }: { model: CMSWebmentionsView.Model }) => (
-		<CMSLayout title="Webmentions" activePath={routes.cms.webmentions.index.href()}>
+	return ({ model, assets }: { model: CMSWebmentionsView.Model; assets: DocumentAssets }) => (
+		<CMSLayout assets={assets} title="Webmentions" activePath={routes.cms.webmentions.index.href()}>
 			<main mix={[grid(), gap(4)]}>
 				<section
 					mix={[

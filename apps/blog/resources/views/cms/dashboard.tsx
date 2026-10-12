@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -94,12 +95,12 @@ function StatCard(handle: Handle<StatCard.Props>) {
  * reads.
  */
 export function CMSDashboardView() {
-	return ({ model }: { model: CMSDashboardView.Props }) => {
+	return ({ model, assets }: { model: CMSDashboardView.Props; assets: DocumentAssets }) => {
 		let { stats, purgeResult } = model;
 		let purgeDialogId = "purge-cache-dialog";
 
 		return (
-			<CMSLayout title="Dashboard" activePath={routes.cms.dashboard.href()}>
+			<CMSLayout assets={assets} title="Dashboard" activePath={routes.cms.dashboard.href()}>
 				<main mix={[grid(), gap(4)]}>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>Bookmark a page</Heading>

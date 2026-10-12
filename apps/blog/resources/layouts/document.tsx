@@ -8,14 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { colorScheme } from "@sdxc/u/color";
 import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
 import { ImportMap } from "remix/component/server";
-
-import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
@@ -32,15 +31,6 @@ import "~/resources/css/highlight.css";
  */
 const REL_ME = [PROFILE.github.profile, PROFILE.x.profile, PROFILE.youtube.profile];
 
-/**
- * Hands the document the assets the renderer looked up, which it reads where a component
- * cannot await them itself.
- */
-export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
-	handle.context.set(handle.props.value);
-	return () => handle.props.children;
-}
-
 namespace DocumentLayout {
 	/**
 	 * A tag rendered in `<head>` beyond the document's own fixed set. Either
@@ -55,6 +45,8 @@ namespace DocumentLayout {
 
 	export interface Props {
 		children: RemixNode;
+		/** The request's `ctx.assets`: the stylesheets, import map and client entry it links. */
+		assets: DocumentAssets;
 		title: string;
 		/** The document's language, set as `<html lang>`. Defaults to `"en"`. */
 		locale?: string;
@@ -91,6 +83,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let {
 			activity,
+			assets,
 			bodyMix,
 			canonical,
 			children,
@@ -99,7 +92,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			meta = [],
 			title,
 		} = handle.props;
-		let { script, stylesheets } = handle.context.get(DocumentAssets);
+		let { script, stylesheets } = assets;
 
 		return (
 			<html

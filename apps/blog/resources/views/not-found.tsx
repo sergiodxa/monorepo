@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { maxIs, pbs } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Empty } from "@sdxc/ui";
@@ -35,8 +37,8 @@ export namespace NotFoundView {
  * @returns A view function that renders the page from a `model` payload.
  */
 export function NotFoundView() {
-	return ({ model }: { model: NotFoundView.Model }) => (
-		<BlogLayout title={model.title} description={model.description}>
+	return ({ model, assets }: { model: NotFoundView.Model; assets: DocumentAssets }) => (
+		<BlogLayout assets={assets} title={model.title} description={model.description}>
 			<main mix={[pbs(12)]}>
 				<Empty color="brand">
 					<Empty.Icon mix={[text("4xl")]}>{model.emoji}</Empty.Icon>

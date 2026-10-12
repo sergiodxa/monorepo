@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { border, fg, surface } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { contents, gap, grid, place } from "@sdxc/u/layout";
@@ -39,8 +41,9 @@ export namespace LoginView {
  * @returns A view function that renders the login screen from the route model.
  */
 export function LoginView() {
-	return ({ model }: { model: LoginView.Model }) => (
+	return ({ model, assets }: { model: LoginView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Login"
 			description="Authenticate to access CMS tools"
 			activePath={routes.auth.login.index.href()}

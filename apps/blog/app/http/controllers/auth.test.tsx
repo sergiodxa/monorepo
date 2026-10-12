@@ -20,8 +20,8 @@ import type { AppContext } from "~/app/http/context";
 import type * as schema from "~/database/schema";
 
 import createEnvMiddleware from "~/app/http/middleware/env";
-import { htmlRenderer } from "~/app/http/render";
 import { blankSearchFrame } from "~/app/test/frames";
+import { pageRenderer } from "~/app/test/renderer";
 import routes from "~/routes/web";
 
 import { logoutController } from "./auth";
@@ -117,7 +117,7 @@ function createTestRouter(session: Session, viewer: schema.SelectUser | null) {
 				);
 				return next();
 			},
-			...htmlRenderer(),
+			...pageRenderer(),
 		],
 	});
 

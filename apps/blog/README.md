@@ -177,7 +177,10 @@ with it empty, is answered with a 500.
 
 ## Client Islands
 
-Pages are server-rendered documents. The document shell loads `bootstrap/browser.ts`, which
+Pages are server-rendered documents. The router's `assets()` middleware resolves the document's
+stylesheets and client entry from the build's asset manifest once per request, and
+`ctx.render(View, model)` hands them to the view, which passes them to its layout's document
+shell. The document shell loads `bootstrap/browser.ts`, which
 hydrates only the components marked with `clientEntry()` and keeps every link and form a full
 document navigation. An island lives in `resources/components/`, one per file, declaring its
 own module path (`/resources/components/<file>.tsx#<Export>`):

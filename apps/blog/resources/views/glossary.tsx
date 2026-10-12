@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { bg, border, fg } from "@sdxc/u/color";
 import { ringShadow, rounded, transition } from "@sdxc/u/effects";
 import { gap, grid } from "@sdxc/u/layout";
@@ -60,8 +62,9 @@ export function glossaryPathFromSlug(slug: string): string {
  * @returns View function that renders glossary entries from the model.
  */
 export function GlossaryView() {
-	return ({ model }: { model: GlossaryView.Model }) => (
+	return ({ model, assets }: { model: GlossaryView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Glossary"
 			description="My definition of some terms."
 			activePath={routes.glossary.href()}

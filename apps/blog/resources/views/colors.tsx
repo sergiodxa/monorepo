@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
@@ -179,7 +180,7 @@ function TonePreview(handle: Handle<TonePreview.Props>) {
  * Builds the colors page renderer with token previews and swatches.
  */
 export function ColorsView() {
-	return ({ model: _model }: { model: ColorsView.Model }) => {
+	return ({ assets }: { model: ColorsView.Model; assets: DocumentAssets }) => {
 		let groups: Array<ColorsView.Group> = [
 			...TONES.map((tone) => ({
 				title: `Palette: ${tone}`,
@@ -193,6 +194,7 @@ export function ColorsView() {
 
 		return (
 			<BlogLayout
+				assets={assets}
 				title="Color Palette"
 				description="R3 Blog color tokens"
 				activePath={routes.colors.href()}

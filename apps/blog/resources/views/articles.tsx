@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { formatParts, parseDate } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -77,8 +79,9 @@ function formatDate(value: string) {
  * @returns A view function that renders from an articles model.
  */
 export function ArticlesView() {
-	return ({ model }: { model: ArticlesView.Model }) => (
+	return ({ model, assets }: { model: ArticlesView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Articles"
 			description="These are my articles."
 			activePath={routes.articles.href()}

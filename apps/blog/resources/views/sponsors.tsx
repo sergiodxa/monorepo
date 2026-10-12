@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
@@ -43,8 +44,9 @@ const TIP_AMOUNTS = [5, 10, 20];
  * @returns View function that renders the pitch and the stored roster.
  */
 export function SponsorsView() {
-	return ({ model }: { model: SponsorRoster }) => (
+	return ({ model, assets }: { model: SponsorRoster; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Sponsors"
 			description="Sponsor my articles, tutorials and open-source work, and meet the people who already do."
 			activePath={routes.sponsors.href()}

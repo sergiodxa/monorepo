@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { m, p } from "@sdxc/u/size";
@@ -82,11 +84,11 @@ export namespace CMSGlossaryActionView {
  * Renders the CMS glossary index with table actions.
  */
 export function CMSGlossaryIndexView() {
-	return ({ model }: { model: CMSGlossaryIndexView.Props }) => {
+	return ({ model, assets }: { model: CMSGlossaryIndexView.Props; assets: DocumentAssets }) => {
 		let { items } = model;
 
 		return (
-			<CMSLayout title="Glossary" activePath={routes.cms.glossary.index.href()}>
+			<CMSLayout assets={assets} title="Glossary" activePath={routes.cms.glossary.index.href()}>
 				<main mix={[grid(), gap(4)]}>
 					<Card mix={[p(4)]}>
 						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
@@ -182,11 +184,11 @@ export function CMSGlossaryIndexView() {
  * Renders the CMS glossary form for creating or editing a term.
  */
 export function CMSGlossaryActionView() {
-	return ({ model }: { model: CMSGlossaryActionView.Props }) => {
+	return ({ model, assets }: { model: CMSGlossaryActionView.Props; assets: DocumentAssets }) => {
 		let { action, description, mode, submitLabel, title, values } = model;
 
 		return (
-			<CMSLayout title={title} activePath={routes.cms.glossary.index.href()}>
+			<CMSLayout assets={assets} title={title} activePath={routes.cms.glossary.index.href()}>
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>

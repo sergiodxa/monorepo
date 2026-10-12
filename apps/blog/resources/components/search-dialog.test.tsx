@@ -15,7 +15,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
-import { htmlRenderer } from "~/app/http/render";
+import { pageRenderer } from "~/app/test/renderer";
 import { WIDE_SCREEN } from "~/resources/components/nav-pill";
 import {
 	SEARCH_DEBOUNCE_MS,
@@ -78,30 +78,33 @@ function suggestionsFor(query: string): SearchViewModel.Suggestions {
 
 /** A page wearing the blog layout, with the dialog's frame served by the same router. */
 function application() {
-	let router = createRouter({ middleware: htmlRenderer() });
+	let router = createRouter({ middleware: pageRenderer() });
 
 	router.get("/", (ctx) =>
 		ctx.render(
-			() => () => (
-				<BlogLayout title="Home" description="Home">
-					<main id="page">Page</main>
-				</BlogLayout>
-			),
+			() =>
+				({ assets }) => (
+					<BlogLayout assets={assets} title="Home" description="Home">
+						<main id="page">Page</main>
+					</BlogLayout>
+				),
 			null,
 		),
 	);
 
 	router.get(routes.search.href(), (ctx) =>
 		ctx.render(
-			() => () => (
-				<BlogLayout
-					title="Search"
-					description="Search"
-					searchQuery={ctx.url.searchParams.get("q") ?? ""}
-				>
-					<main id="page">Results</main>
-				</BlogLayout>
-			),
+			() =>
+				({ assets }) => (
+					<BlogLayout
+						assets={assets}
+						title="Search"
+						description="Search"
+						searchQuery={ctx.url.searchParams.get("q") ?? ""}
+					>
+						<main id="page">Results</main>
+					</BlogLayout>
+				),
 			null,
 		),
 	);

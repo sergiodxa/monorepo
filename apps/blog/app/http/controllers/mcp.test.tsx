@@ -17,17 +17,17 @@ import { describe, expect, test } from "vitest";
 import type { AppContext } from "~/app/http/context";
 
 import { MCP_RATE_LIMIT } from "~/app/http/middleware/mcp-rate-limit";
-import { htmlRenderer } from "~/app/http/render";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
 import { blankSearchFrame } from "~/app/test/frames";
+import { pageRenderer } from "~/app/test/renderer";
 import routes from "~/routes/web";
 
 import mcpPage, { mcpMarkdownPage } from "./mcp";
 
 /** Fetches a page through a router carrying only what the controllers need. */
 async function fetchPage(url: string, headers: Record<string, string> = {}): Promise<Response> {
-	let router = createRouter<AppContext>({ middleware: htmlRenderer() });
+	let router = createRouter<AppContext>({ middleware: pageRenderer() });
 	router.map(routes.searchFrame, blankSearchFrame);
 	router.map(routes.mcp.index, mcpPage);
 	router.map(routes.mcpMarkdown, mcpMarkdownPage);

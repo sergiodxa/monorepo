@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { formatParts, parseDate } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -76,8 +78,9 @@ function formatDate(value: string) {
  * @returns A view function that renders the tutorials model.
  */
 export function TutorialsView() {
-	return ({ model }: { model: TutorialsView.Model }) => (
+	return ({ model, assets }: { model: TutorialsView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Tutorials"
 			description="Learn about Remix, React, and more."
 			activePath={routes.tutorials.href()}

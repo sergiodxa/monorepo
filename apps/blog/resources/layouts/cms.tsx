@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
@@ -31,6 +32,8 @@ export namespace CMSLayout {
 		title: string;
 		activePath?: string;
 		children: RemixNode;
+		/** The request's document assets, which the renderer hands every view. */
+		assets: DocumentAssets;
 	};
 
 	/**
@@ -62,10 +65,11 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
  */
 export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 	return () => {
-		let { activePath, children, title } = handle.props;
+		let { activePath, assets, children, title } = handle.props;
 
 		return (
 			<DocumentLayout
+				assets={assets}
 				title={title}
 				bodyMix={[m(0), font("sans"), bg("neutral.tint"), fg("neutral.emphasis")]}
 			>

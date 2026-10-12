@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { ChevronRightIcon } from "@sdxc/icons";
@@ -232,8 +233,9 @@ function ResultsPager(handle: Handle<{ pager: SearchViewModel.Pager }>) {
  * @returns A view function that renders from a search model.
  */
 export function SearchView() {
-	return ({ model }: { model: SearchViewModel.Model }) => (
+	return ({ model, assets }: { model: SearchViewModel.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title={model.state === "blank" ? "Search" : `Search: ${model.query}`}
 			description="Search the articles, tutorials and glossary entries I have published."
 			activePath={routes.search.href()}

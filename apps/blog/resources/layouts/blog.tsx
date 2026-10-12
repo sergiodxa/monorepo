@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { mf } from "@sdxc/microformats/ui";
@@ -61,6 +62,8 @@ export namespace BlogLayout {
 		 */
 		searchQuery?: string;
 		children: RemixNode;
+		/** The request's document assets, which the renderer hands every view. */
+		assets: DocumentAssets;
 	}
 
 	/**
@@ -93,6 +96,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 		let {
 			activePath,
 			activity,
+			assets,
 			canonical,
 			children,
 			description,
@@ -104,6 +108,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 
 		return (
 			<DocumentLayout
+				assets={assets}
 				locale={locale}
 				title={title}
 				description={description}

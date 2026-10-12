@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { minBs, p } from "@sdxc/u/size";
@@ -89,11 +91,11 @@ export namespace CMSTutorialsActionView {
  * Builds the CMS tutorials list page with edit and delete actions.
  */
 export function CMSTutorialsIndexView() {
-	return ({ model }: { model: CMSTutorialsIndexView.Props }) => {
+	return ({ model, assets }: { model: CMSTutorialsIndexView.Props; assets: DocumentAssets }) => {
 		let { items } = model;
 
 		return (
-			<CMSLayout title="Tutorials" activePath={routes.cms.tutorials.index.href()}>
+			<CMSLayout assets={assets} title="Tutorials" activePath={routes.cms.tutorials.index.href()}>
 				<main mix={[grid(), gap(4)]}>
 					<Card mix={[p(4)]}>
 						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
@@ -210,11 +212,11 @@ export function CMSTutorialsIndexView() {
  * lines.
  */
 export function CMSTutorialsActionView() {
-	return ({ model }: { model: CMSTutorialsActionView.Props }) => {
+	return ({ model, assets }: { model: CMSTutorialsActionView.Props; assets: DocumentAssets }) => {
 		let { action, description, mode, submitLabel, title, values } = model;
 
 		return (
-			<CMSLayout title={title} activePath={routes.cms.tutorials.index.href()}>
+			<CMSLayout assets={assets} title={title} activePath={routes.cms.tutorials.index.href()}>
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>

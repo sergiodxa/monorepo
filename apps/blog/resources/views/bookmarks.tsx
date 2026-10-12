@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { formatParts, parseDate } from "@sdxc/dates";
 import { mf } from "@sdxc/microformats/ui";
 import { isFailure } from "@sdxc/result";
@@ -108,8 +110,9 @@ function isoDate(value: string) {
  * applies.
  */
 export function BookmarksView() {
-	return ({ model }: { model: BookmarksView.Model }) => (
+	return ({ model, assets }: { model: BookmarksView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			title="Bookmarks"
 			description="Links that I read and liked."
 			activePath={routes.bookmarks.href()}

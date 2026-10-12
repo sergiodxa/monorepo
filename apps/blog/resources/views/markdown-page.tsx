@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Markdown } from "@sdxc/markdown";
 
 import { DiagramTag } from "@sdxc/diagram/ui";
@@ -46,8 +47,9 @@ export namespace MarkdownPageView {
  * @returns View function that renders the page from its parsed Markdown.
  */
 export function MarkdownPageView() {
-	return ({ model }: { model: MarkdownPageView.Model }) => (
+	return ({ model, assets }: { model: MarkdownPageView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
+			assets={assets}
 			locale={model.locale}
 			title={model.title}
 			description={model.description}

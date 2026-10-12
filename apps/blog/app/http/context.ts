@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { RemixNode } from "remix/component";
 import type { RouterContext } from "remix/router";
 
@@ -18,10 +19,13 @@ export interface RenderOptions {
 	headers?: HeadersInit;
 }
 
-/** Renders an app view component with its view model into an HTML response. */
+/**
+ * Renders an app view component with its view model into an HTML response. The view also
+ * receives the request's document assets, which it hands to the layout wrapping its page.
+ */
 export interface BlogRenderer {
 	<ViewModel>(
-		ViewComponent: () => (props: { model: ViewModel }) => RemixNode,
+		ViewComponent: () => (props: { model: ViewModel; assets: DocumentAssets }) => RemixNode,
 		viewModel: ViewModel,
 		options?: RenderOptions,
 	): Promise<Response>;

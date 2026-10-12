@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { minBs, p } from "@sdxc/u/size";
@@ -89,11 +91,11 @@ export namespace CMSArticlesActionView {
  * Renders the CMS page that lists articles and provides row actions.
  */
 export function CMSArticlesIndexView() {
-	return ({ model }: { model: CMSArticlesIndexView.Props }) => {
+	return ({ model, assets }: { model: CMSArticlesIndexView.Props; assets: DocumentAssets }) => {
 		let { items } = model;
 
 		return (
-			<CMSLayout title="Articles" activePath={routes.cms.articles.index.href()}>
+			<CMSLayout assets={assets} title="Articles" activePath={routes.cms.articles.index.href()}>
 				<main mix={[grid(), gap(4)]}>
 					<Card mix={[p(4)]}>
 						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
@@ -197,11 +199,11 @@ export function CMSArticlesIndexView() {
  * carries Markdown source, so it renders monospaced with room for many lines.
  */
 export function CMSArticlesActionView() {
-	return ({ model }: { model: CMSArticlesActionView.Props }) => {
+	return ({ model, assets }: { model: CMSArticlesActionView.Props; assets: DocumentAssets }) => {
 		let { action, description, mode, submitLabel, title, values } = model;
 
 		return (
-			<CMSLayout title={title} activePath={routes.cms.articles.index.href()}>
+			<CMSLayout assets={assets} title={title} activePath={routes.cms.articles.index.href()}>
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>

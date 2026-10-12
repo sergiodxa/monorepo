@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
@@ -162,11 +163,11 @@ export function QuickBookmarkForm() {
  * `table-layout` sits outside the `u` utilities.
  */
 export function CMSBookmarksIndexView() {
-	return ({ model }: { model: CMSBookmarksIndexView.Props }) => {
+	return ({ model, assets }: { model: CMSBookmarksIndexView.Props; assets: DocumentAssets }) => {
 		let { items } = model;
 
 		return (
-			<CMSLayout title="Bookmarks" activePath={routes.cms.bookmarks.index.href()}>
+			<CMSLayout assets={assets} title="Bookmarks" activePath={routes.cms.bookmarks.index.href()}>
 				<main mix={[grid(), gap(4)]}>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
@@ -327,11 +328,11 @@ function CheckReport(handle: Handle<{ check: CMSBookmarksActionView.Check }>) {
  * Builds the CMS page used to create or edit a bookmark.
  */
 export function CMSBookmarksActionView() {
-	return ({ model }: { model: CMSBookmarksActionView.Props }) => {
+	return ({ model, assets }: { model: CMSBookmarksActionView.Props; assets: DocumentAssets }) => {
 		let { action, check, conflict, description, mode, notice, submitLabel, title, values } = model;
 
 		return (
-			<CMSLayout title={title} activePath={routes.cms.bookmarks.index.href()}>
+			<CMSLayout assets={assets} title={title} activePath={routes.cms.bookmarks.index.href()}>
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>

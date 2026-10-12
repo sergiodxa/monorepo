@@ -15,6 +15,7 @@ import type { Transport } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { assets } from "@sdxc/assets-middleware";
 import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
@@ -37,6 +38,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import type { Syndication } from "~/app/http/view-models/syndication";
@@ -55,9 +57,10 @@ import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
 import supportDesk from "~/app/http/middleware/support-desk";
+import { viewRenderer } from "~/app/http/middleware/view-renderer";
 import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
-import { htmlRenderer } from "~/app/http/render";
 import { loginFor } from "~/app/http/return-path";
+import { assetResolver } from "~/app/initializers/assets";
 import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
@@ -184,7 +187,8 @@ export interface ApplicationOptions {
  * `wellKnown()` answers the registered documents it lists before any session or cache
  * work, since they are static and the same for every visitor.
  * `securityHeaders` sits just before the renderer, so it decorates the rendered response
- * that `workersCache` then stores and replays.
+ * that `workersCache` then stores and replays; `assets()` publishes the document's assets
+ * that `viewRenderer()` hands every view, after `render()` installs the stream it writes to.
  * `workersCache` sits outside session and auth so its refusal check reads the finished
  * response, downgrading a public declaration once the visitor turns out to be identified.
  * `database(createDatabase())` is global, so `ctx.db` is there for a route the app maps and
@@ -225,7 +229,12 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			htmlOnly(redirects),
 			htmlOnly(auth),
 			securityHeaders(SECURITY_POLICY),
-			...htmlRenderer(),
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
+			viewRenderer(),
 		],
 
 		async defaultHandler(ctx) {

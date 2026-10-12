@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { DiagramTag } from "@sdxc/diagram/ui";
@@ -140,9 +141,10 @@ function PostMentions(handle: Handle<{ mentions: PostViewModel.Page["mentions"] 
  * sponsor copy uses the darker tone weights to clear AA on the tint.
  */
 export function PostView() {
-	return ({ model }: { model: PostView.Model }) => {
+	return ({ model, assets }: { model: PostView.Model; assets: DocumentAssets }) => {
 		return (
 			<BlogLayout
+				assets={assets}
 				title={model.title}
 				description={model.description}
 				activePath={model.activePath}
