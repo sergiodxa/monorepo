@@ -10,6 +10,7 @@
 export type {
 	Excerpt,
 	ExcerptOptions,
+	FormatQueryOptions,
 	HighlightOptions,
 	HighlightSegment,
 	ParsedQuery,
@@ -38,6 +39,7 @@ export {
 	DEFAULT_MAX_QUERY_LENGTH,
 	DEFAULT_MAX_QUERY_TERMS,
 	excerpt,
+	formatQuery,
 	highlight,
 	parseQuery,
 } from "./query.js";

@@ -1,5 +1,5 @@
 /**
- * Tests for `parseQuery`, `highlight` and `excerpt`: the Lucene-style syntax and its lenient
+ * Tests for `parseQuery`, `formatQuery`, `highlight` and `excerpt`: the Lucene-style syntax and its lenient
  * fallbacks, the inputs FTS5 rejects as syntax parsed as plain terms, prefix rules and
  * limits, and highlighting mapped back onto the text exactly as written.
  *
@@ -13,7 +13,7 @@ import { describe, expect, test } from "vitest";
 
 import type { ParsedQuery, SearchClause, SearchTerm } from "./query.js";
 
-import { excerpt, highlight, parseQuery } from "./query.js";
+import { excerpt, formatQuery, highlight, parseQuery } from "./query.js";
 
 /** Parses a query the test knows is valid and non-blank. */
 function parsed(input: string, options?: Parameters<typeof parseQuery>[1]): ParsedQuery {
@@ -437,5 +437,56 @@ describe("excerpt", () => {
 		expect(cut.truncatedStart).toBe(false);
 		expect(cut.truncatedEnd).toBe(false);
 		expect(cut.segments.map((segment) => segment.text).join("")).toBe("short remix text");
+	});
+});
+
+describe("formatQuery", () => {
+	/** Options every round trip below parses with, declaring a field and two filters. */
+	let declared = { fields: ["title"], filters: ["tag", "kind"] };
+
+	/** The parts of a query its text does not decide, which a round trip must keep. */
+	function structure(query: ParsedQuery) {
+		return { clauses: query.clauses, filters: query.filters, order: query.order };
+	}
+
+	test.each([
+		"remix",
+		`remix OR react "route pattern" -legacy`,
+		`title:forms title:"form data" -title:old`,
+		`tag:"react router" OR tag:remix -kind:bookmark`,
+		"order:asc remix",
+		"+OR +AND +NOT",
+		"+-dash --double",
+		"+order:desc -order:asc",
+		"+foo:bar tag:",
+		"remix* react",
+	])("writes %s back as text that parses to the same query", (input) => {
+		for (let prefix of ["all", "last", "none"] as const) {
+			let query = parsed(input, { ...declared, prefix });
+			let written = formatQuery(query, { prefix });
+			expect(structure(parsed(written, { ...declared, prefix }))).toEqual(structure(query));
+		}
+	});
+
+	test("writes equal queries typed differently as the same text", () => {
+		let a = parsed("  remix   AND  react tag:Remix ORDER:DESC", declared);
+		let b = parsed("+remix react order:desc tag:Remix", declared);
+		expect(formatQuery(a)).toBe("remix react tag:Remix order:desc");
+		expect(formatQuery(b)).toBe(formatQuery(a));
+	});
+
+	test("stars a prefix word only where the prefix rule leaves it exact", () => {
+		expect(formatQuery(parsed("remix react"))).toBe("remix react");
+		expect(formatQuery(parsed("remix* react", { prefix: "none" }), { prefix: "none" })).toBe(
+			"remix* react",
+		);
+		expect(formatQuery(parsed("remix* react", { prefix: "last" }), { prefix: "last" })).toBe(
+			"remix* react",
+		);
+	});
+
+	test("quotes phrases and filter values holding whitespace, and nothing else", () => {
+		let query = parsed(`"route  pattern" tag:"react router" tag:"remix"`, declared);
+		expect(formatQuery(query)).toBe(`"route pattern" tag:"react router" tag:remix`);
 	});
 });

@@ -117,8 +117,8 @@ excerpt(article.body, query, { words: 24 });
 // { segments, truncatedStart: true, truncatedEnd: false }
 ```
 
-`@sdxc/search/query` holds `parseQuery`, `highlight` and `excerpt` with no database code, so a
-browser bundle parses and highlights with the code the server searched with.
+`@sdxc/search/query` holds `parseQuery`, `formatQuery`, `highlight` and `excerpt` with no
+database code, so a browser bundle parses and highlights with the code the server searched with.
 
 ## API
 
@@ -140,6 +140,20 @@ Phrases always match exactly, and a trailing `*` makes its word a prefix whateve
 `order:` reads `relevance`, `asc` or `desc` in any case, and the last one typed wins; any other
 value, a signed `order:`, or a declared field or filter named `order` reads as the syntax above.
 It counts toward neither `maxTerms` nor the positive clause a query needs.
+
+### `formatQuery(query, options?): string`
+
+Writes a parsed query back as text in one canonical form: clauses in the order typed, then
+filters, then `order:` when it is not `relevance`, single-spaced, with `OR` between alternatives
+and quotes only around phrases and filter values holding whitespace. Parsing the text with the
+options the query came from yields the same clauses, filters and order, so two spellings of one
+query write the same text, ready to store under a unique index. Pass the `prefix` rule the text
+will be parsed with, and a `*` is written only where that rule leaves a word exact.
+
+```typescript
+let query = unwrap(parseQuery("  remix AND react  tag:Remix", { filters: ["tag"] }));
+formatQuery(query!); // "remix react tag:Remix"
+```
 
 ### `highlight(text, query, options?): HighlightSegment[]`
 
@@ -213,11 +227,11 @@ A `SearchError` raised before a statement runs when it would bind more than
 `ParsedQuery` holds `text`, `clauses`, `filters` and `order`, a `SearchOrder` of
 `"relevance"` (the default), `"asc"` or `"desc"`. A `SearchClause` is `{ terms, exclude }`,
 matching when any of its `SearchTerm`s `{ text, phrase, prefix, field }` does; a `SearchFilter` is
-`{ name, values, exclude }`. `ParseQueryOptions`, `HighlightOptions`, `HighlightSegment`,
-`ExcerptOptions` and `Excerpt` type the query entry point. `Search<Table>`, `SearchQuery<Table>`,
-`SearchRow<Table>` (a row plus `rank`), `SearchColumnName<Table>`, `SearchWhere<Table>`,
-`DefineSearchOptions`, `SearchColumn`, `SearchFts`, `SearchPredicateOptions`, `ReindexOptions`
-and `ReindexProgress` type a definition and its queries.
+`{ name, values, exclude }`. `ParseQueryOptions`, `FormatQueryOptions`, `HighlightOptions`,
+`HighlightSegment`, `ExcerptOptions` and `Excerpt` type the query entry point. `Search<Table>`,
+`SearchQuery<Table>`, `SearchRow<Table>` (a row plus `rank`), `SearchColumnName<Table>`,
+`SearchWhere<Table>`, `DefineSearchOptions`, `SearchColumn`, `SearchFts`, `SearchPredicateOptions`,
+`ReindexOptions` and `ReindexProgress` type a definition and its queries.
 
 ## Pattern: Storing an FTS5 index
 

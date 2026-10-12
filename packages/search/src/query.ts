@@ -261,6 +261,77 @@ export function parseQuery(
 	return success({ text, clauses, filters, order });
 }
 
+/** How {@link formatQuery} writes a query, matching the options it will be parsed with. */
+export interface FormatQueryOptions {
+	/**
+	 * The prefix rule the text will be parsed with, so a `*` is written only where that rule
+	 * would not already make the word a prefix.
+	 *
+	 * @default "all"
+	 */
+	prefix?: "all" | "last" | "none";
+}
+
+/** Words that read as operators unless signed or quoted. */
+const OPERATORS = new Set(["OR", "AND", "NOT"]);
+
+/**
+ * Writes a parsed query back as text in one canonical form: clauses in the order typed, then
+ * filters, then `order:` when it is not `relevance`, single-spaced, with `OR` between
+ * alternatives and quotes only where a value needs them. Parsing the text with the options the
+ * query came from yields the same clauses, filters and order, so equal queries write equally.
+ *
+ * @param query A query from {@link parseQuery}.
+ * @param options The prefix rule the text will be parsed with.
+ * @returns The query's text, whose length can exceed the input's by the quotes it adds.
+ * @example
+ * formatQuery(query); // `tag:Remix  remix AND react` writes "remix react tag:Remix"
+ */
+export function formatQuery(query: ParsedQuery, options: FormatQueryOptions = {}): string {
+	let rule = options.prefix ?? "all";
+	let terms = query.clauses.flatMap((clause) => clause.terms);
+	let last = terms[terms.length - 1];
+	let parts: string[] = [];
+
+	for (let clause of query.clauses) {
+		let written = clause.terms.map((term) => {
+			let star = term.prefix && rule !== "all" && !(rule === "last" && term === last);
+			return formatTerm(term, clause.exclude, star);
+		});
+		parts.push(written.join(" OR "));
+	}
+
+	for (let filter of query.filters) {
+		let sign = filter.exclude ? "-" : "";
+		let written = filter.values.map((value) => `${sign}${filter.name}:${quoteValue(value)}`);
+		parts.push(written.join(" OR "));
+	}
+
+	if (query.order !== "relevance") parts.push(`order:${query.order}`);
+	return parts.join(" ");
+}
+
+/**
+ * One term as typed: `-` for an exclusion, and `+` before a positive unscoped word that would
+ * otherwise read as an operator, a sign, or a `name:` qualifier.
+ */
+function formatTerm(term: SearchTerm, exclude: boolean, star: boolean): string {
+	let value = term.phrase ? `"${term.text}"` : `${term.text}${star ? "*" : ""}`;
+	let scoped = term.field === null ? value : `${term.field}:${value}`;
+	if (exclude) return `-${scoped}`;
+
+	let ambiguous =
+		term.field === null &&
+		!term.phrase &&
+		(OPERATORS.has(term.text) || /^[-+]/u.test(term.text) || QUALIFIER.test(term.text));
+	return ambiguous ? `+${scoped}` : scoped;
+}
+
+/** A filter value, quoted when it holds whitespace, which would otherwise end it. */
+function quoteValue(value: string): string {
+	return SPACE.test(value) ? `"${value}"` : value;
+}
+
 /**
  * Whether an `OR` joins two tokens into one group: positive terms join terms, and positive
  * filters join filters of the same name. Any other pairing reads the `OR` as nothing, so
