@@ -1,36 +1,31 @@
 # @sdxc/spec
 
-An executable specification runner. You describe behavior in `.spec` files —
-setup, action, expectation — and `spec` runs each one against your real app, in
-an isolated workspace, under permissions you grant explicitly.
+Executable specification runner for `.spec` files: describe behavior as setup, action and
+expectation, and `spec` runs each test against your real app in an isolated workspace, under
+permissions you grant explicitly.
 
-A suite is a directory of `.spec` files (conventionally `spec/`), each written
-in a deliberately tiny language — no `if`, no loops, no operators. Every test
-runs in its own fresh temporary directory, and every privileged act needs an
-explicit `--allow-*` grant.
+A suite is a directory of `.spec` files (conventionally `spec/`) written in a deliberately tiny
+language with no `if`, no loops and no operators. Every test runs in its own fresh temporary
+directory, and every privileged act needs an explicit `--allow-*` grant.
 
 ## Installation
 
-```bash
+```sh
 npm add -D @sdxc/spec
 ```
 
-The `spec` command runs on [Bun](https://bun.sh), so keep `bun` on your `PATH`.
-Then invoke the CLI through your package runner:
-
-```bash
-npx spec run spec
-```
-
-`bunx @sdxc/spec run spec` runs it without installing first. The `browser`
-capability additionally needs the `agent-browser` CLI installed globally; every
-other capability is self-contained.
+The `spec` command runs on [Bun](https://bun.sh), so keep `bun` on your `PATH`. The `browser`
+capability also needs the [`agent-browser`](https://www.npmjs.com/package/agent-browser) CLI
+installed globally; every other capability is self-contained. Programmatic results are
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values.
 
 ## Usage
 
-### Write a suite
+### Write a spec
 
-Create `spec/greeting.spec`:
+Create `spec/greeting.spec`. A `test` has up to three phases, always in this order: `given`
+(arrange), `when` (act) and `then` (assert). `use` lets a file call a namespace's tools by their
+bare names.
 
 ```
 use fs
@@ -59,12 +54,12 @@ test "the generated config is on disk" {
 }
 ```
 
-### Run it
+### Run it and grant what it needs
 
-`write` creates files in the test's workspace and `run` starts processes there.
-Spawning `node` is a privileged act, so grant exactly that one executable:
+`write` stays inside the test's workspace and needs no grant; spawning `node` is privileged, so
+grant exactly that executable:
 
-```bash
+```sh
 npx spec run spec --allow-run=node
 ```
 
@@ -78,18 +73,8 @@ run mtw62dtrkgga (replay with --run-id=mtw62dtrkgga)
 2 passed, 0 failed (21ms)
 ```
 
-The header comes before the first result, so a failure is already anchored to
-the inputs that produced it: both flags re-run this exact run, and a suite with
-configured bases prints each resolved address underneath them.
-
-`spec run` takes a directory (default `./spec`) and scans it recursively for
-`.spec` files.
-
-### Read a denial
-
-Drop the grant and the process-spawning test fails before `node` is ever
-launched. Tests denied for the same missing grant collapse into one block naming
-the flag that would unblock them:
+The header names the two flags that replay this exact run. Drop the grant and the test fails
+before `node` launches; tests denied for the same grant collapse into one block naming the flag:
 
 ```
 ✗ Permission denied: run (1 test)
@@ -104,160 +89,13 @@ the flag that would unblock them:
   - the script prints its greeting (spec/greeting.spec:9)
 ```
 
-Start with no flags and let the denials tell you the suite's true footprint.
+Start with no flags and let the denials tell you the suite's real footprint.
 
-## The language
+### Share steps with commands
 
-### Tests and phases
-
-A `test` has up to three phase blocks, always in this order: `given` (arrange),
-`when` (act), `then` (assert). Each is optional. Lines end statements, and `#`
-starts a comment to end of line (a `#` inside a string is just text).
-
-```
-test "a write is read back verbatim" {
-	given {
-		write "notes.txt" "remember the milk"   # arrange
-	}
-	when {
-		let content = read "notes.txt"           # act, capture a value
-	}
-	then {
-		expect content "remember the milk"       # assert
-	}
-}
-```
-
-`skip` prefixes `test` and takes an optional reason, which the summary prints.
-The body never executes, and the test is counted apart from the passes and the
-failures:
-
-```
-skip "the staging database is down" test "the nightly report reconciles" {
-	then {
-		expect report.balance 0
-	}
-}
-```
-
-### `expect`
-
-`expect` has three forms:
-
-```
-expect content "remember the milk"   # two values: deep structural equality
-expect true                          # one value: it must be true
-expect file "notes.txt" exists       # observable: assert straight from a capability
-```
-
-The observable form reads the world through a capability (`file … exists`,
-`file … contains`, `directory … exists`, `browser.heading …`) and passes when
-that observation holds.
-
-`contains` and `not` join either form. `contains` is a substring over a string
-and membership over an array, comparing members with the same structural
-equality the two-value form uses. `not` is valid as `expect`'s first argument
-and inverts whichever form follows it.
-
-```
-then {
-	expect page contains "og:title"
-	expect rows contains { id: 2, title: "Emma" }
-	expect not page contains "twitter:card"
-	expect not browser.cookie "session" exists
-}
-```
-
-A negative assertion holds when the thing is absent and equally when the page
-never rendered, so anchor it with a positive expectation in the same block. An
-observable denied a permission still fails the statement under `not`, so a
-missing grant is never read as the thing being absent.
-
-### `let` and references
-
-`let` binds the result of a step, and a dotted reference reaches into a returned
-object:
-
-```
-when {
-	let result = run "node" "build.js"
-}
-then {
-	expect result.exit_code 0
-	expect result.stdout "built\n"
-}
-```
-
-A bare word in tool-argument position resolves against the tool's own
-declaration. It is a symbol when the tool declares a word of that spelling, or
-when the required parameter at that position is a word — which is what makes
-`expect file "notes.txt" exists` read `exists` as `fs.file`'s assertion word.
-Otherwise it reads the binding of that name, so `browser.open profile` hands the
-tool the URL `profile` holds. A spelling that is both a declared word and a live
-binding is an `ambiguous-name` error: rename the binding, or pass it as a dotted
-reference.
-
-A dotted path whose head names a binding is a reference. When the head names
-something callable instead — a tool that takes no arguments, or a command that
-takes no parameters — the path is that call, so `let current = browser.url`
-binds the tool's observed value and `let user = create_testing_account` binds
-what the command produced. Both are permission-gated exactly like a written
-call.
-
-A bound head is always a reference and an unbound one is always a call, so the
-two readings never overlap and the rule holds in every expression position — a
-right-hand side, an object entry, an array item, an argument. A tool's value
-therefore reaches the place it belongs with no binding in between:
-
-```
-when {
-	let slug = format "${name}-${nonce}" { name: who.username, nonce: spec.nonce }
-}
-```
-
-Arrays are values like any other, writable as a literal, and a path segment
-spelled as digits indexes one **0-based**:
-
-```
-given {
-	let titles = [ "Dune", "Emma" ]
-}
-then {
-	expect titles.0 "Dune"
-	expect titles contains "Emma"
-}
-```
-
-The addressing vocabulary's ordinals count from 1 instead (`nth 2`,
-`row 1 column 2`), and the two sit side by side in a real spec.
-
-### `eventually`
-
-Wrap an observable assertion in `eventually` to retry it until it holds or the
-window ends — for anything that becomes true a moment later, such as a server
-coming up or an async write landing. A plain assertion checks exactly once.
-
-```
-then {
-	eventually within 2s {
-		expect file "ready.txt" exists
-	}
-}
-```
-
-Only assertions may be retried; an action inside `eventually` is an error.
-`eventually` stands in a `then` block, in a command body, and in a `setup` or
-`teardown` hook — everywhere a body may wait for an effect to land. A command
-that waits for the effect it just caused is what lets a sequence of calls stand
-in for the loop the language does not have.
-
-### `command`
-
-A command is a reusable step: it takes parameters, performs effects, and
-produces whatever it `return`s. Define one beside the test that uses it, or
-share it suite-wide by putting it under `spec/commands/`. Either way it resolves
-by name from anywhere — no import, no path — because every definition is
-registered before any test runs.
+A `command` is a reusable step: it takes parameters, performs effects and produces what it
+`return`s. Every command resolves by name from any file, so shared ones usually live under
+`spec/commands/`.
 
 ```
 # spec/commands/catalog.spec
@@ -270,14 +108,16 @@ command book {
 command seed_file(path) {
 	write path "seeded"
 }
+```
 
-# spec/tour.spec
+```
+# spec/catalog.spec
 test "commands compose by name" {
 	given {
-		seed_file "out.txt"     # run a command for its effect
+		seed_file "out.txt"
 	}
 	when {
-		let record = book       # one with no parameters is called by its bare name
+		let record = book
 	}
 	then {
 		expect record.title "Dune"
@@ -286,702 +126,235 @@ test "commands compose by name" {
 }
 ```
 
-A command runs on every call — no memoization, no lifecycle — so a value wanted
-once is bound once. Reusable data is a command that only returns, which is the
-whole of it: one definition form covers arrangement, effects, and data alike.
+A command with no parameters is called by its bare name, and runs again on every call.
 
-### `setup` and `teardown`
+### Point the suite at your app
 
-A suite may declare one `setup` and one `teardown`, in whichever file suits
-them; a second of either kind is a load error naming both files. `setup` runs
-once before any test whatever the concurrency, in its own workspace and under
-the same grants, and its failure is fatal — the run reports a load error, exits
-`2`, and no test executes. `teardown` runs once after every test, failures
-included, which is where a suite removes the rows it left behind.
+`spec/config.jsonc` names the addresses a suite reaches, each read from an environment variable
+with an optional fallback, so one suite runs against a laptop, staging and CI unchanged:
 
-```
-use db
-use spec
-
-setup {
-	db.run_file "db/schema.sql" on "web"
-}
-
-teardown {
-	db.query "delete from accounts where run_id = $1" params spec.run_id on "web"
+```jsonc
+{
+	"bases": {
+		"web": { "env": "WEB_BASE_URL", "default": "http://localhost:3000" },
+	},
 }
 ```
-
-A hook body is an ordinary block with a fresh, empty scope; `return` inside one
-is a usage error.
-
-### `use` and namespaces
-
-Capabilities live in twelve namespaces: `fs`, `cli`, `http`, `browser`, `html`,
-`db`, `url`, `jwt`, `env`, `sample`, `str`, and `spec`. Use a fully qualified
-name anywhere (`fs.write`, `cli.run`), or `use` a namespace at the top of a file
-to call its tools by their bare names (`write`, `run`). `use` applies per file,
-and a command or hook body resolves bare names against the imports of the file
-that declared it rather than the caller's. An ambiguous bare name is an error
-naming both candidates.
-
-## Capabilities
-
-`fs`, `html`, `url`, `sample`, `str`, and `spec` need no grant; the rest are
-privileged and denied until you grant them.
-
-### `fs` — the workspace filesystem
-
-Every path resolves inside the test's workspace. Tools: `write`, `read`,
-`mkdir`, `copy`, `remove`, and the observables `exists`, `file`, `directory`.
-Strings are written verbatim; objects and arrays are written as JSON.
-
-```
-use fs
-
-test "mkdir, copy, and remove move files around the workspace" {
-	given {
-		mkdir "src"
-		write "src/index.ts" "export const answer = 42"
-	}
-	when {
-		copy "src/index.ts" "dist/index.ts"
-		remove "src/index.ts"
-	}
-	then {
-		expect directory "src" exists
-		expect file "dist/index.ts" contains "answer = 42"
-	}
-}
-```
-
-### `cli` — run processes · `--allow-run`
-
-`run` spawns a program in the workspace, waits for it to exit, and returns
-`{ stdout, stderr, exit_code }`. The grant is scoped by executable basename. The
-child gets a minimal environment (`PATH`, `HOME`, `TMPDIR`, plus only the
-variables granted with `--allow-env`), so your host environment stays out of it.
-
-```
-use cli
-
-test "run captures stdout and the exit code" {
-	when {
-		let result = run "echo" "hello"
-	}
-	then {
-		expect result.exit_code 0
-		expect result.stdout "hello\n"
-	}
-}
-```
-
-```bash
-npx spec run spec --allow-run=echo
-```
-
-`in <directory>` runs the program somewhere other than the workspace, resolved
-against the directory `spec run` was invoked from. Reaching it needs the host
-filesystem on top of the program:
-
-```
-let result = run "bun" "run" "build" in "apps/web"
-```
-
-#### Long-lived programs
-
-`start` takes the same arguments and returns as soon as the program is running,
-handing back a process to pass to `output` and `stop`. `output` is an
-observable — everything the program printed so far, stdout and stderr
-interleaved — so `eventually` waits on it, and `contains` asserts on part of it:
-
-```
-use cli
-
-setup {
-	let server = start "bun" "run" "dev" in "."
-	eventually within 30s {
-		expect output server contains "localhost:3000"
-	}
-}
-```
-
-A started program belongs to the run rather than to the hook or test that
-started it, so a server started in `setup` serves every test, and the run stops
-whatever is still running when it ends. `stop` ends one sooner and returns
-`{ exit_code, output }`. Both signal the program's whole process group, so a
-script that spawns the real server takes that server down with it. An
-`output … contains` that fails on a program that already exited says so, which
-is the diagnosis when a server crashed on boot.
-
-```bash
-npx spec run spec --allow-run=bun --allow-host-fs=.
-```
-
-### `http` — call an HTTP API · `--allow-net`
-
-`get`, `post`, `put`, `patch`, and `delete`, each needing `--allow-net` for the
-URL's host (and port, if you scope one). A target is an absolute URL, or a
-`/path` resolved against a configured base. An optional bare body travels as
-`text/plain` when it is a string and as JSON otherwise. Each returns
-`{ status, ok, headers, text, json }`; an HTTP error status is a normal value,
-and only a network-level failure is an error.
 
 ```
 use http
 
-test "creating a post returns 201" {
+test "the health check answers" {
 	when {
-		let response = http.post "http://localhost:3000/api/posts" { title: "Hello" }
+		let response = get "/health"
 	}
 	then {
-		expect response.status 201
+		expect response.status 200
 	}
 }
 ```
 
-```bash
+```sh
 npx spec run spec --allow-net=localhost:3000
 ```
 
-After the URL, a request takes word-tagged options in any order:
+A `/path` target resolves against the base, and `--allow-net` keys on the resolved host.
 
-- `headers { Name: "value", … }` — request headers. Numbers and booleans
-  stringify, header names are case-insensitive, and an explicit `content-type`
-  here overrides the body's.
-- `form { field: "value", … }` — a body sent as
-  `application/x-www-form-urlencoded`.
-- `json <value>` — a body sent as `application/json`.
-- `text "<string>"` — a body sent as `text/plain`.
-- `bearer <token>` — sets `Authorization: Bearer <token>`.
-- `basic <user> <pass>` — sets `Authorization: Basic base64(user:pass)`. It is
-  the one option that takes two values.
+### Run a suite from code
 
-The options combine, so an authenticated form post is one call:
+`runSuite` is the CLI without the process: it loads a directory, registers the built-in
+capabilities and returns every outcome as data.
 
-```
-when {
-	let response = http.post "http://localhost:3000/oauth/token" form {
-		grant_type: "authorization_code"
-		code: "bogus"
-	} basic "the-client-id" "the-secret"
-}
-```
+```typescript
+import { isFailure } from "@sdxc/result";
+import { createRunId, parseGrants, reportRunHeader, reportSuite, runSuite } from "@sdxc/spec";
 
-A request carries at most one body (the bare body, or one of `json`, `form`,
-`text`), at most one `headers` block, and at most one auth option. A second
-body, a body on a `GET`, both `bearer` and `basic`, or an unknown tag is an
-error, and an explicit `headers.authorization` wins over `bearer` and `basic`.
+let parsed = parseGrants(["--allow-net=localhost:3000"]);
+if (isFailure(parsed)) throw parsed.error;
 
-A response body is read whole, which is what the CLI wants. An embedder running
-untrusted specs in a bounded runtime caps it instead — see
-[`createHttpPlugin`](#createhttpplugin-options).
+let runId = createRunId();
+let sink = { write: (text: string) => process.stdout.write(text) };
+reportRunHeader({ seed: "spec", runId, bases: [] }, sink);
 
-### Named bases — where a relative target points
+let run = await runSuite({ root: "spec", grants: parsed.data.grants, runId, concurrency: 4 });
+if (isFailure(run)) throw run.error;
 
-`http`, `browser`, and `browser.fetch` address a running app by path, and
-`spec/config.jsonc` decides what those paths hang off. Each base reads an
-environment variable, falling back to a default, so one suite runs against a
-laptop, staging, and CI unchanged:
-
-```jsonc
-// spec/config.jsonc
-{
-	"bases": {
-		"web": { "env": "FRONTEND_BASE_URL", "default": "http://localhost:4000" },
-		"work": { "env": "WORK_FRONTEND_BASE_URL", "default": "http://localhost:4020" },
-	},
-}
+reportSuite(run.data, new Map(), sink);
+process.exitCode = run.data.failed > 0 ? 1 : 0;
 ```
 
-```
-browser.open "/charities"
-browser.open "/dashboard" on "work"
-http.get "/portfolios"
-```
+## API
 
-Naming no base works when exactly one is configured; `on "name"` chooses
-otherwise, and naming none among several is an error listing what the config
-declares. A relative target starts with `/` — anything else is an error
-suggesting the slash, which keeps a statement from depending on the statement
-before it — and a target carrying a scheme, or `//host/path`, is absolute and
-ignores the base entirely.
+### The `.spec` language
 
-Substituting the environment into the config needs no grant: it is the runner's
-own settings, written by whoever runs the CLI, and could have held the literal
-URL. `env.get` inside a spec is a different act and keeps its grant. A base that
-resolves to nothing stops the run before any test, naming the variable to set.
+#### Tests, phases and `skip`
 
-`--allow-net` keys on the **resolved** host, so a denial is copy-pasteable
-whatever the spec wrote:
+`test "title" { given { … } when { … } then { … } }` — each phase is optional and they share one
+scope. Statements end at the newline, and `#` comments to the end of the line (inside a string it
+is text). `skip "reason" test "title" { … }` never runs the body and counts the test apart,
+printing the reason.
+
+#### `expect`
 
 ```
-✗ Permission denied: net (1 test)
-
-  The spec attempted to reach:
-  > localhost:4020
-
-  Re-run with an appropriate permission, for example:
-  > spec run --allow-net=localhost:4020
+expect content "remember the milk"   # two values: deep structural equality
+expect ready                         # one value: it must be true
+expect file "notes.txt" exists       # an observable tool asserts directly
+expect rows contains { id: 2 }       # substring of a string, member of an array
+expect not page contains "beta"      # not inverts any form
 ```
 
-The run header prints each resolved base, so a run says out loud which app it
-actually reached.
-
-### `html` — read a served page's markup · no grant
-
-`html` addresses a string of HTML — typically the `text` of an `http` response —
-so a page's content, structure, and metadata are assertable with no browser, no
-sockets, and no grant. Every tool takes the source as its first argument.
-`title`, `meta`, and `rel` read what the document says about itself; `text`,
-`element`, `cell`, and `definition` read what a person would see.
-
-```
-use http
-use html
-
-test "the portfolios page describes itself" {
-	when {
-		let page = http.get "/portfolios"
-	}
-	then {
-		expect page.status 200
-		expect html.title page.text "Invest your money for more charitable impact"
-		expect html.meta page.text "description" "Give more, and give it sooner"
-		expect html.rel page.text "canonical" "https://example.com/portfolios"
-		expect html.meta page.text "og:image" containing "/build/_assets/og-image-"
-	}
-}
-```
-
-`meta` matches a tag's `name` or its `property` and `rel` matches one token of a
-`<link>`'s `rel`, which is why the tag is an argument rather than a field of a
-parsed object: `og:image` could never be a segment of a dotted path. A requested
-tag the document does not carry is an error naming the ones it does — `Present:
-description` — and `exists` is how a spec says the absence is the point.
-
-`html` and `browser` address elements under identical rules, so a document is
-addressed one way and the namespace choice is only about whether a live browser
-is needed. Both reach every role through `element`, and both carry `heading`,
-`link`, `button`, and `checkbox` as shorthands for the roles a suite reaches for
-most, so an assertion moved from one namespace to the other keeps its meaning —
-which is why a `<link rel>` is read by `html.rel`, leaving the name `link` to the
-role it means on either side. `html` answers nothing that depends on layout: no
-viewport, no scrolling, no `in_viewport`.
-
-#### The addressing vocabulary
-
-Elements are addressed the way a person perceives them: by ARIA role (a bare
-word) and accessible name (a string). A control's label is its accessible name,
-so addressing by label needs no feature of its own.
-
-```
-then {
-	expect html.element page.text heading "Portfolios"
-	expect html.element page.text textbox "Tip" value "20"
-	expect html.element page.text button "Save" enabled
-	expect html.element page.text button "Save" attribute "type" "submit"
-}
-```
-
-- **Names match exactly**, on the normalized accessible name; `containing` opts
-  into a substring. `text` is the mirror image — a substring assertion over the
-  visible text, with `exactly` opting into equality. "Is there an element named
-  X" and "does this string appear" are different questions, so they carry
-  opposite defaults.
-- **Ambiguity is an error** listing every match with its position, because a nav
-  link repeated in the footer would otherwise assert on whichever came first
-  with no signal that a choice was made. `first`, `nth <n>`, and `last` opt into
-  one, counting from 1 — deliberately distinct from a 0-based array index.
-- **`field "name"`** resolves anything carrying a `name` attribute — input,
-  textarea, select, button — and sits where a role word sits. `value "annual"`
-  narrows a group sharing one name, which is how a radio group and a
-  submit-intent button are addressed — in an action as much as in an assertion,
-  so `browser.fill field "cadence" value "annual" with "12"` writes into the one
-  member it names.
-- **Predicates** are `count <n>`, `value <v>`, `attribute <name> <v>`,
-  `enabled` / `disabled`, and `in_viewport` (a browser only). `count` is the one
-  set predicate and accepts any number of matches; the rest require exactly one.
-  `attribute` reads the raw markup rather than the resolved property, and `value`
-  compares as a string.
-- **`cell row 1 column 2`** is 1-based over body rows, with `including header` to
-  count them, and **`definition "Total"`** reads the `definition` paired with a
-  `term`.
-- **Roles are roles, not tags.** A `<textarea>` is a `textbox`, and writing
-  `textarea` is an error naming the role that tag exposes; `menuitem`, `switch`,
-  and `image` sit alongside the familiar ones.
-- **A `browser` lookup takes visibility from the rendered page**, the one place
-  the two namespaces answer differently and only because `browser` has a layout
-  to consult: an element the page does not render does not match, so a closed
-  `<dialog>` reads as absent. A dropdown's `<option>` elements are the
-  exception, since Chrome reports them as not visible until the popup opens
-  while a person reading the list sees them all.
-
-```
-then {
-	expect html.cell page.text row 2 column 2 "40%"
-	expect html.definition page.text "Total" "$12,400"
-	expect html.element page.text link "Profile" count 2
-	expect html.element page.text link "Profile" first
-	expect html.element page.text field "cadence" value "annual"
-}
-```
-
-An expected value closes an element lookup the way it closes `html.title` and
-`html.meta`, comparing the element's text whole — `containing` opts into a part
-of it and `exactly` spells the default out. With neither an expected value nor a
-predicate the lookup asserts the element is there and hands its text to whatever
-binds it, so `let share = html.cell page.text row 2 column 2` is one call, which
-is worth binding where the same value is asserted more than once. A lookup that
-matched nothing reports the near misses — the same role under another name, the
-same name under another role — which is usually the whole diagnosis:
-
-```
-✗ the sign-in form offers a way in (spec/auth.spec:8)
-  expectation-failed: html.element found a button named "Save" nowhere in the
-  document. Present under the same lookup: "Save draft". That name is carried
-  by: link
-```
-
-A control can carry a label and still expose no role at all: a password input
-is the common one, so `textbox "Password"` never reaches it. The miss then names
-the lookup that does, by the control's `name` attribute — `That name labels a
-control with no role, reached as field "password"`.
-
-Under `--artifacts=<dir>` the failure also writes out the document it read and
-prints the path.
-
-### `browser` — drive a real browser · `--allow-net`
-
-The same vocabulary, against a live page. Actions are `open`, `navigate`,
-`reload`, `set_cookie`, `ua`, `viewport`, `scroll`, `click`, `fill … with …`,
-`type … with …`, `check`, `uncheck`, `select … with …`, `press`,
-`click_selector`, and the
-`fetch.<verb>` request family; observables are `element`, `heading`, `link`,
-`button`, `text`, `checkbox`, `cell`, `definition`, `cookie`, `response_header`,
-`response_status`, `url`, `path`, `query`, `fragment`, and `title`. Each needs
-`--allow-net` for the resolved host. The capability is backed by the globally
-installed `agent-browser` CLI, loaded lazily, so the grant and the binary matter
-only to a suite that reaches for `browser.*`.
-
-```
-use browser
-
-test "the sign-in form authenticates" {
-	when {
-		browser.open "/login"
-		browser.fill textbox "Email" with "user@example.com"
-		# A password input exposes no role, so it is reached by its `name`.
-		browser.fill field "password" with "correct horse"
-		browser.click button "Sign in"
-	}
-	then {
-		expect browser.heading "Welcome back"
-		expect browser.title "My App"
-		expect browser.path "/home"
-	}
-}
-```
-
-A session is keyed to the test's workspace, so cookies, viewport, and history
-are per-test by construction, and a retry's fresh workspace gets a fresh
-session.
-
-`fill` replaces a control's value and `type` appends keystrokes; both dispatch
-the `input` and `change` events the platform would, so a controlled component
-never reads a stale value. `check` and `uncheck` are the two halves of a box or a
-switch. `click` lands where a person's would, on the element's centre, and a
-control straddling the viewport's edge is scrolled to the middle of it first.
-
-`browser.select combobox "Plan" with "Annual"` chooses in a dropdown, taking the
-same `with` every write takes and naming the option the way the list shows it; an
-option the list does not hold fails naming the ones it does. Every write
-addresses its control with the vocabulary an assertion uses, narrowing included,
-so `browser.fill field "cadence" value "annual" with "12"` reaches one member of
-a group sharing a name. A clause that questions the element rather than narrowing
-it — `enabled`, `count` — is refused in a write, which asserts nothing.
-
-`browser.heading` also takes a level, for when the rung of the document outline
-is part of the behavior: `expect browser.heading "Billing" level 2` matches an
-`<h2>` and equally a `role="heading"` with `aria-level="2"`. A heading of that
-name at another level fails with the levels it did find.
-
-#### Where the session is
-
-`browser.url`, `browser.path`, `browser.query <name>`, `browser.fragment <name>`,
-and `browser.title` each assert when handed an expected value and read as a
-value when called bare, so `eventually` can wait on a navigation without binding
-anything first. An absent query or fragment parameter is an error, with `exists`
-for deliberate absence.
-
-```
-then {
-	eventually within 5s {
-		expect browser.path "/donate/share"
-	}
-	expect browser.query "step" "share"
-}
-```
-
-Reading a part rather than the whole is what keeps the assertion tight:
-`browser.query "step" "share"` is exact, where a substring over the URL would
-also pass on `?next=/donate/share`. Bound as a value, the current URL is what a
-spec pulls an authorization code out of:
-
-```
-when {
-	browser.click button "Authorize"
-	let code = browser.query "code"
-}
-```
-
-`browser.reload` returns once the document has finished loading again.
-
-#### Cookies, headers, and requests inside the session
-
-**`browser.cookie` reads a cookie and `browser.set_cookie` writes one.** A
-descriptor is an action or an observable and never both, so the reading name is
-the short one and the writing name says what it does. Seeding the jar is how a
-test about what comes after sign-in arrives already signed in:
-
-```
-given {
-	let token = env.get "SESSION_COOKIE"
-	browser.set_cookie "session" token for "http://localhost:3000/app"
-}
-then {
-	expect browser.cookie "session" token
-	expect not browser.cookie "remember_me" exists
-}
-```
-
-The `for` clause names the URL the cookie belongs to, which is what lets it be
-written before the first navigation; drop the clause to set it on the page
-already open. Reads include `HttpOnly` cookies, so a sign-out assertion needs no
-other shape.
-
-`browser.response_status` and `browser.response_header` read the session's own
-responses. A framework navigation issues both a document and a data response and
-the assertions are about each separately, so `of document` and `of data` select
-the last response of that kind; naming neither reads the document.
-
-```
-then {
-	expect browser.response_status 200
-	expect browser.response_status of data 201
-	expect browser.response_header "x-page" containing "dashboard"
-}
-```
-
-A header resolves to an **array** of every value it carried, and an assertion
-holds when one of them answers it. Two limits are worth knowing before writing
-one: `Set-Cookie` is readable through neither kind, because Chrome withholds it
-from the network log — read it with `browser.cookie` instead — and repeated
-headers stay separate only on a document response, since a data response arrives
-through the fetch layer already comma-folded.
-
-`browser.fetch.<verb>` mirrors `http`'s five verbs and its option grammar
-verbatim, issuing the request inside the session so its cookies apply. After
-`use browser` the bare form is `fetch.post`. A `fetch` never becomes the most
-recent response the header observables read, so seeding data cannot clobber an
-assertion:
-
-```
-when {
-	fetch.post "/api/portfolios" json { name: "Balanced" }
-}
-```
-
-#### Viewport and scrolling
-
-`browser.viewport` takes two numbers or a name, applying immediately to an open
-page. A name sets size alone — no user agent, no scale factor, no touch
-emulation — taking Tailwind's widths with the height of the device that lives
-there:
-
-| Name  | Size       | Device                   |
-| ----- | ---------- | ------------------------ |
-| `xs`  | 390 × 844  | iPhone 14                |
-| `sm`  | 640 × 1138 | phone aspect ratio       |
-| `md`  | 768 × 1024 | iPad, portrait           |
-| `lg`  | 1024 × 768 | iPad, landscape          |
-| `xl`  | 1280 × 800 | MacBook Air 13″          |
-| `2xl` | 1536 × 998 | MacBook Pro aspect ratio |
-
-```
-when {
-	browser.viewport "md"
-	browser.viewport 1280 800
-	browser.scroll to 900
-	browser.scroll to button "Menu"
-}
-then {
-	expect browser.element button "Menu" in_viewport
-}
-```
-
-`browser.scroll to <n>` is an absolute Y offset in CSS pixels, and
-`browser.scroll to <element>` brings one into view.
-
-`browser.ua "spec-runner/1.0"` sets the `User-Agent` the session sends, so the
-app can recognize its own spec run. Set it before `open`; it applies to requests
-made after it, and changes the request header only, so `navigator.userAgent`
-inside the page still reports the real browser.
-
-A failed lookup reports the session's current URL and the same near-match list
-`html` gives, and under `--artifacts=<dir>` it also writes a screenshot and an
-accessibility-tree dump, printing both paths.
-
-### `db` — query a database · `--allow-db`
-
-`db.query` runs raw SQL on Bun's SQL client and returns
-`{ rows, affected_rows, count }`. Connections are named in `spec/config.jsonc`
-the way bases are, so a spec never mentions a host, a port, or a password:
-
-```jsonc
-// spec/config.jsonc
-{
-	"databases": {
-		"web": { "env": "WEB_DATABASE_URL" },
-		"backend": { "env": "BACKEND_DATABASE_URL" },
-	},
-}
-```
-
-`on "name"` selects one, keeping the SQL in first position; naming none works
-when exactly one is configured. `params` binds a value to `$1`, or an array to
-`$1`, `$2`, … in order, so a title carrying a quote stays a title and never
-becomes syntax. `one` returns the single row and refuses any other count, which
-turns the assumption behind a lookup by unique key into a checked one.
-
-```
-use db
-
-command give_fund_balance(email, amount) {
-	let fund = db.query "select id from funds where owner_email = $1" params email on "web" one
-	db.query "delete from balances where fund_id = $1" params fund.id on "backend"
-	db.query "insert into balances (fund_id, amount) values ($1, $2)" params [ fund.id, amount ] on "backend"
-}
-
-test "an INSERT reports exactly one affected row" {
-	when {
-		let result = db.query "insert into ledger (entry) values ('opening balance')" on "web"
-	}
-	then {
-		expect result.affected_rows 1
-		expect result.count 0
-	}
-}
-```
-
-A statement ends at its newline, so a long call stays on one line however wide
-it grows.
-
-`db.run_file "db/seed.sql" on "web"` sends a file's bytes unparsed over the
-simple query protocol, which accepts multiple statements natively. Nothing
-splits on `;` — dollar-quoted bodies, semicolons inside strings, and comments all
-defeat a splitter, whose failure mode is a half-applied seed — so `run_file`
-binds no parameters. Its path resolves against the directory `spec run` was
-invoked from, and reaching it needs the host filesystem on top of the database:
-
-```bash
-npx spec run spec --allow-db --allow-host-fs=./db
-```
-
-The grant is scoped by connection name, and a query denied under a grant scoped
-elsewhere names the exact flag it wanted (`--allow-db=backend`). A call missing
-both of `run_file`'s grants reports one denial naming both flags. The connection
-opens lazily on the first query and closes at the end of the run.
-
-### `env` — read a granted variable · `--allow-env`
-
-`env.get NAME` reads one environment variable, and only one the caller granted
-by name — so a spec names a secret without containing one, and the same spec
-runs against local, staging, and CI. An unset variable is an error unless you
-give `env.get` a fallback as its optional second argument.
-
-```
-use env
-use browser
-
-test "the dashboard renders for a signed-in session" {
-	given {
-		let token = env.get "SESSION_COOKIE"
-		browser.set_cookie "session" token for "http://localhost:3000/app"
-	}
-	when {
-		browser.open "http://localhost:3000/app"
-	}
-	then {
-		expect browser.heading "Dashboard"
-	}
-}
-```
-
-```bash
-SESSION_COOKIE=… npx spec run spec --allow-env=SESSION_COOKIE --allow-net=localhost:3000
-```
-
-### `url` — parse a URL · no grant
-
-Pure URL parsing, so a spec reads a value straight out of a URL it already
-holds.
-
-- `url.query <url> <name>` — the value of a query-string parameter.
-- `url.fragment <url> <name>` — the value of a parameter after the `#`.
-- `url.path <url>` — the URL's pathname.
-- `url.host <url>` — its host and port.
-
-A missing parameter, a non-string argument, or an unparseable URL is an error.
-
-```
-when {
-	let code = url.query "http://localhost:3000/callback?code=abc123&state=s" "code"
-}
-then {
-	expect code "abc123"
-}
-```
-
-### `sample` — generate a suite's input · no grant
-
-Names, addresses, identifiers, and numbers drawn per test, instead of literals
-typed into the suite. Every value reproduces: the same test draws the same data
-on every run, so a failure on generated input is replayable. Each module is one
-tool returning a record of everything it generates, so bind it and read fields
-by path:
-
-```
-use sample
-use http
-
-test "a visitor signs up from somewhere" {
-	given {
-		let who = sample.person
-		let where = sample.location
-	}
-	when {
-		let created = http.post "http://localhost:3000/signup" json {
-			email: who.email
-			name: who.full_name
-			city: where.city
-			country: where.country
-		}
-	}
-	then {
-		expect created.status 201
-	}
-}
-```
-
-| Tool              | The record holds                                                                                                                                                        |
+A negative assertion also holds when the page never rendered, so pair it with a positive one. A
+denied observable fails under `not` too, so a missing grant never reads as absence.
+
+#### `let`, references and calls
+
+`let name = <step>` binds a value; `name.field` reads into it and `name.0` indexes an array from 0.
+A dotted path whose head is a binding is a reference; one whose head is a tool or command taking no
+arguments is a call, so `let current = browser.url` and `let record = book` both run something.
+A bare word in argument position is a symbol when the tool declares that word and the binding of
+that name otherwise; a spelling that is both is an `ambiguous-name` error. Values are strings,
+numbers, booleans, `null`, arrays (`[ "a", "b" ]`) and objects (`{ key: value }`).
+
+#### `eventually within <duration>`
+
+Retries the assertions in its block until they hold or the window (`2s`, `30s`) ends. It accepts
+only assertions, and stands in `then`, a command body, `setup` or `teardown`.
+
+#### `command name(params) { … }`
+
+A suite-global, reusable step: parameters bind as values, `return` produces its result, and every
+definition is registered before any test runs. A duplicate name across files is a load error.
+
+#### `setup { … }` and `teardown { … }`
+
+At most one of each per suite, in any file. `setup` runs once before every test, under the same
+grants, and its failure stops the run with exit code `2`. `teardown` runs once after every test,
+failures included. Both start from an empty scope, and `return` in either is an error.
+
+#### `use <namespace>`
+
+Imports a namespace's tool names into one file; a fully qualified name (`fs.write`) works
+anywhere. A command body resolves bare names against its own file's `use` lines, and a bare name
+two namespaces share is an error naming both.
+
+### Capabilities
+
+| Namespace | Tools                                                                                                    | Grant                      |
+| --------- | -------------------------------------------------------------------------------------------------------- | -------------------------- |
+| `fs`      | `write`, `read`, `mkdir`, `copy`, `remove`, `exists`, `file`, `directory`                                | none                       |
+| `cli`     | `run`, `start`, `output`, `stop`                                                                         | `--allow-run`              |
+| `http`    | `get`, `post`, `put`, `patch`, `delete`                                                                  | `--allow-net`              |
+| `html`    | `title`, `meta`, `rel`, `text`, `element`, `heading`, `link`, `button`, `checkbox`, `cell`, `definition` | none                       |
+| `browser` | actions, observables and `fetch.<verb>` (below)                                                          | `--allow-net`              |
+| `db`      | `query`, `run_file`                                                                                      | `--allow-db`               |
+| `env`     | `get`                                                                                                    | `--allow-env`              |
+| `url`     | `query`, `fragment`, `path`, `host`                                                                      | none                       |
+| `jwt`     | `decode`, `verify`                                                                                       | `--allow-net` for `verify` |
+| `sample`  | one record per module, plus `int`, `float`, `words`, `pick`, `email`, `uuid`                             | none                       |
+| `str`     | `format`                                                                                                 | none                       |
+| `spec`    | `run_id`, `attempt`, `nonce`                                                                             | none                       |
+
+#### `fs`
+
+Paths resolve inside the test's workspace; leaving it needs `--allow-host-fs`. `write` stores a
+string verbatim and any other value as JSON. `file <path> exists|contains <text>` and
+`directory <path> exists` are the observables.
+
+#### `cli`
+
+`run <program> <args…> [in <dir>]` waits and returns `{ stdout, stderr, exit_code }`. `start`
+takes the same arguments and returns a process handle at once; `output <process>` observes
+everything it printed so far (so `eventually` waits on it) and `stop <process>` returns
+`{ exit_code, output }`. Started programs belong to the run and stop when it ends, process group
+included. The child sees only `PATH`, `HOME`, `TMPDIR` and the variables granted with
+`--allow-env`; `in <dir>` resolves against where `spec run` was invoked and needs
+`--allow-host-fs`.
+
+#### `http`
+
+`<verb> <target> [body] [options…]` returns `{ status, ok, headers, text, json }`; an error status
+is a normal value. A bare body travels as `text/plain` for a string and JSON otherwise. Options
+come in any order: `headers { … }`, `json <value>`, `form { … }`, `text "<string>"`,
+`bearer <token>`, `basic <user> <pass>`. A request takes one body, one `headers` block and one
+auth option, and an explicit `authorization` header wins over `bearer`/`basic`.
+
+#### Bases
+
+`http`, `browser` and `browser.fetch` resolve a `/path` target against a base from
+`spec/config.jsonc`; `on "name"` picks one when several exist. A target with a scheme ignores the
+bases. A base whose variable is unset and has no `default` stops the run naming the variable.
+
+#### Addressing elements (`html` and `browser`)
+
+`html` tools take an HTML string first (usually `response.text`); `browser` tools read the live
+page. Both address elements by ARIA role and accessible name, under the same rules:
+
+- `element <role> "<name>"`, with `heading`, `link`, `button` and `checkbox` as shorthands.
+  `heading "Billing" level 2` pins the outline level.
+- Names match exactly; `containing` opts into a substring. `text "<string>"` is the reverse: a
+  substring over the visible text, with `exactly` for equality.
+- Several matches is an error listing them; `first`, `nth <n>` and `last` (from 1) choose.
+- `field "<name>"` addresses by `name` attribute (a password input has no role), and
+  `value "<v>"` narrows a group sharing a name.
+- Predicates: `count <n>`, `value <v>`, `attribute <name> <v>`, `enabled`, `disabled`,
+  `in_viewport` (browser only), and `exists` for deliberate absence.
+- `cell row <r> column <c>` (1-based, `including header` to count it) and
+  `definition "<term>"` read tables and description lists.
+- A trailing string compares the element's text; with no expected value or predicate the lookup
+  asserts presence and returns the text, so it can be bound.
+
+`html.title`, `html.meta <name|property>` and `html.rel <rel>` read the document's own metadata.
+A miss lists the near matches, and `browser` matches only rendered elements.
+
+#### `browser`
+
+Actions: `open`, `navigate`, `reload`, `click`, `fill … with`, `type … with`, `select … with`,
+`check`, `uncheck`, `press`, `click_selector`, `scroll to <y|element>`, `viewport`, `ua`,
+`set_cookie <name> <value> [for <url>]` and `fetch.<verb>` (the `http` grammar, inside the
+session's cookies). Observables: the addressing tools, `cookie`, `response_status [of document|data]`,
+`response_header <name> [of …]`, `url`, `path`, `query <name>`, `fragment <name>` and `title`;
+called bare, they return a value. Each test gets its own session. `viewport` takes a width and
+height or a name:
+
+| Name  | Size       |
+| ----- | ---------- |
+| `xs`  | 390 × 844  |
+| `sm`  | 640 × 1138 |
+| `md`  | 768 × 1024 |
+| `lg`  | 1024 × 768 |
+| `xl`  | 1280 × 800 |
+| `2xl` | 1536 × 998 |
+
+A header reads as an array of every value it carried; `Set-Cookie` is read with `cookie`.
+
+#### `db`
+
+`query "<sql>" [params <value|array>] [on "<name>"] [one]` runs on Bun's SQL client and returns
+`{ rows, affected_rows, count }`; `params` binds `$1`, `$2`, … and `one` returns the single row,
+failing on any other count. `run_file "<path>" [on "<name>"]` sends a SQL file unparsed, multiple
+statements included, and also needs `--allow-host-fs`. Connections come from the `databases` key.
+
+#### `env`, `url`, `jwt`
+
+`env.get "NAME" [fallback]` reads one granted variable, failing when unset without a fallback.
+`url.query|fragment <url> <name>`, `url.path <url>` and `url.host <url>` parse a URL.
+`jwt.decode <token>` returns `{ header, payload }` unverified; `jwt.verify <token> <jwks_url>`
+checks an ES256 signature against the issuer's JWKS plus expiry, and returns the payload.
+
+#### `sample`
+
+Each module returns a record whose fields agree with each other, drawn from the run's seed and the
+test's file and title, so data reproduces whatever the concurrency:
+
+| Tool              | Fields                                                                                                                                                                  |
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sample.person`   | `first_name`, `last_name`, `full_name`, `prefix`, `suffix`, `sex`, `gender`, `zodiac_sign`, `job_title`, `bio`, `email`, `username`, `phone`                            |
 | `sample.internet` | `email`, `username`, `url`, `domain_name`, `password`, `ip`, `ipv4`, `ipv6`, `mac`, `port`, `protocol`, `http_method`, `http_status_code`, `jwt`, `user_agent`, `emoji` |
 | `sample.location` | `country`, `city`, `country_code`, `state`, `county`, `street`, `street_address`, `zip_code`, `postal_address`, `latitude`, `longitude`, `time_zone`                    |
-| `sample.company`  | `name`, `catch_phrase`, `buzz_phrase`, and their parts                                                                                                                  |
+| `sample.company`  | `name`, `catch_phrase`, `buzz_phrase` and their parts                                                                                                                   |
 | `sample.lorem`    | `word`, `words`, `sentence`, `paragraph`, `lines`, `slug`, `text`                                                                                                       |
-| `sample.date`     | `past`, `future`, `recent`, `soon`, `anytime`, `birthdate`, `month`, `weekday`, `time_zone` — dates as ISO timestamps                                                   |
+| `sample.date`     | `past`, `future`, `recent`, `soon`, `anytime`, `birthdate`, `month`, `weekday`, `time_zone` (ISO timestamps)                                                            |
 | `sample.string`   | `uuid`, `ulid`, `nanoid`, `alpha`, `alphanumeric`, `numeric`, `hexadecimal`, `binary`, `octal`, `symbol`                                                                |
 | `sample.number`   | `int`, `float`, `hex`, `binary`, `octal`, `roman_numeral`, `big_int`                                                                                                    |
 | `sample.color`    | `human`, `hex`, `rgb`, `hsl`, `space`, `css_function`                                                                                                                   |
@@ -991,238 +364,458 @@ test "a visitor signs up from somewhere" {
 | `sample.phone`    | `number`, `national`, `international`, `imei`                                                                                                                           |
 | `sample.system`   | `file_name`, `file_ext`, `file_type`, `mime_type`, `directory_path`, `file_path`, `network_interface`, `semver`, `cron`                                                 |
 
-A record's fields agree with each other: a location's postal address names its
-own city and country. The generators that take an argument keep a tool of their
-own, alongside two shortcuts:
+`sample.int <min> <max>`, `sample.float <min> <max>`, `sample.words <count>`, `sample.pick <list>`,
+`sample.email` and `sample.uuid` return single values. Every draw advances the stream, so `sample`
+stays out of `eventually`.
 
-- `sample.int <min> <max>` — an integer, both bounds included.
-- `sample.float <min> <max>` — a number between the bounds, two decimals.
-- `sample.words <count>` — that many words of placeholder prose.
-- `sample.pick <list>` — one element of a list another tool returned.
-- `sample.email`, `sample.uuid` — the two single values worth their own name.
+#### `str`
 
-Every tool is an action rather than an observation: a draw advances the stream,
-so `sample` may not head an `eventually`.
+`format "<template>" <values…>` fills `${0}` holes by position or `${name}` holes from one object.
+Values stringify as JSON without quotes, a bare `$` is literal and `{{` writes a literal `${`. A
+hole without a value, an unused value, mixed hole styles, or a `null`/object/array value is an
+error.
 
-A test's data follows its identity — the run's seed, the test's file inside the
-suite, and its title — and nothing else, so two runs generate the same data
-whatever the concurrency and wherever the suite is checked out. Adding or
-removing a neighboring test leaves it in place. The run header prints the seed
-whatever it is (`seed 1007223771 (replay with --seed=1007223771)`), so a suite
-can be shaken with `--seed=random` for hidden dependence on particular values
-and any failure stays reproducible.
+#### `spec`
 
-Data that must be unique across runs rather than merely varied is composed from
-`spec.nonce`, which leaves every draw here untouched.
+`spec.run_id` names the run, `spec.attempt` counts the test's attempts from 1, and `spec.nonce`
+is `<run_id>-<attempt>`: compose it into any value that must be unique across runs and retries.
 
-```bash
-npx spec run spec --seed=checkout      # a different suite-wide seed
-npx spec run spec --seed=random        # draw one, printed so it can be replayed
-```
-
-### `str` — compose a string · no grant
-
-The language has no `+` and no interpolation inside a literal, so a generated
-value reaches a URL, a heading, or a SQL parameter through `str.format`.
-Holes are `${…}`, positional by index or named by key, and one argument fills
-every hole naming its index:
+### CLI
 
 ```
-when {
-	let profile = format "/${0}" who.username
-	let invite = format "/${slug}/invite" { slug: user.slug }
-	let query = format "?page=${0}&all=${1}" 12 true
+spec run [directory] [flags]     Run every .spec file under directory (default ./spec)
+
+  --allow-run[=name,…]           Spawn processes, by executable basename
+  --allow-net[=host[:port],…]    Reach the network, by host and optional port
+  --allow-env[=VAR,…]            Read environment variables, by name
+  --allow-host-fs[=dir,…]        Touch files outside the workspace, by path prefix
+  --allow-db[=name,…]            Query databases, by connection name
+  --allow-plugins[=ns,…]         Launch plugins spec/config.jsonc declares
+  --allow-config                 Apply the permissions spec/config.jsonc declares
+  --concurrency=N (--jobs=N)     Run up to N tests at once (default 1)
+  --retries=N                    Retry a failing test N more times (default 0)
+  --seed=VALUE | --seed=random   Seed generated data (default: fixed)
+  --run-id=VALUE                 Replay the run id a header printed
+  --artifacts=DIR                Write failure screenshots and documents under DIR
+```
+
+A bare `--allow-*` grants the whole family, a scoped one only what it lists, and repeated flags
+union. Exit codes: `0` everything passed, `1` a test failed, `2` a usage or load error. Results
+print in source order at any concurrency; a test that passes only on a retry is counted `flaky`
+with the failed attempt's diagnostics.
+
+### `spec/config.jsonc`
+
+JSONC with four optional keys:
+
+- `bases`: `{ "<name>": { "env": "VAR", "default": "<url>" } }`, applied on every run.
+- `databases`: `{ "<name>": { "env": "VAR" } }`, applied on every run.
+- `plugins`: `{ "<ns>": { "command": ["bun", "./plugin.ts"] } }`; an argument starting with `.`
+  resolves against the config's directory. Launching one needs `--allow-plugins`.
+- `permissions.allow`: family names (`"run"`, `"net"`, `"env"`, `"host-fs"`, `"db"`,
+  `"plugins"`) or `[family, ...scopes]` tuples, inert until `--allow-config`, then unioned with
+  the flags.
+
+### Running suites
+
+#### `runSuite(options: RunOptions): Promise<Result<SuiteResult, SpecError>>`
+
+Loads every `.spec` file under `options.root` and runs it with the built-in plugins. Options:
+`grants` (required), `plugins` (added to the built-ins), `builtins` (the namespaces to register;
+one left out does not exist), `concurrency`, `seed`, `runId`, `retries`, `bases`, `connections`
+and `artifacts`. Test failures are outcomes in the result; only a load, `setup` or workspace
+failure is a `Failure`.
+
+#### `runTests(options: RunTestsOptions): Promise<Result<SuiteResult, SpecError>>`
+
+The runtime under `runSuite`, with everything injected: `suite`, the complete `plugins` list,
+`grants` and `createWorkspace`, plus the same optional fields and `root` (the directory a test's
+seed measures its file against).
+
+#### `loadSuite(root: string): Promise<Result<LoadedSuite, SpecError>>`
+
+Reads and parses every `.spec` file under `root`, sorted by path, and registers its commands and
+hooks.
+
+#### `loadSources(sources: readonly SpecSource[]): Result<LoadedSuite, SpecError>`
+
+Parses `{ path, text }` pairs from anywhere; `path` only labels diagnostics.
+
+#### `parseGrants(args: string[]): Result<{ grants: Grants; remaining: string[] }, SpecError>`
+
+Reads the `--allow-run|net|env|host-fs|db` flags from an argument list and passes the rest
+through in `remaining`.
+
+#### `createPermissionSet(grants: Grants): PermissionSet`
+
+The checks every tool asks (`checkRun`, `checkNet`, `checkEnv`, `checkHostFs`, `checkDb`), each
+failing with a `PermissionDeniedError` that names the flag to add.
+
+#### `createBaseSet(bases: readonly Base[]): BaseSet` / `createConnectionSet(connections: readonly Connection[]): ConnectionSet`
+
+The named bases and database connections a run resolves `on "name"` against.
+
+#### `createArtifactStore(directory: string): ArtifactStore`
+
+Where failing tools write screenshots, accessibility trees and documents.
+
+#### `createRunId(): string`
+
+A fresh, URL-safe run id for `runId` and the run header.
+
+#### `createWorkspace(permissions: PermissionSet)` / `createNoFilesystemWorkspace()`
+
+Workspace factories for `runTests`: a fresh temporary directory per test, or a workspace that
+refuses every path.
+
+#### `reportRunHeader(header: RunHeader, sink: Sink): void`
+
+Writes the seed, the run id and each base, as the CLI prints them.
+
+#### `reportSuite(suite: SuiteResult, sources: Map<string, SourceFile>, sink: Sink): void`
+
+Writes a line per test, grouped denials and the summary; `sources` turns spans into line numbers.
+
+#### `reportFatal(error: SpecError, sink: Sink): void`
+
+Writes a load-time failure with its location and remedy.
+
+### Plugins
+
+#### `createBuiltinPlugins(only?: readonly BuiltinNamespace[]): Plugin[]` and `BUILTIN_NAMESPACES`
+
+Every built-in plugin, or the named subset.
+
+#### Plugin factories
+
+`createFsPlugin`, `createCliPlugin`, `createHttpPlugin`, `createBrowserPlugin`, `createHtmlPlugin`,
+`createDbPlugin`, `createEnvPlugin`, `createUrlPlugin`, `createJwtPlugin`, `createSamplePlugin`,
+`createStrPlugin` and `createSpecPlugin` each build one namespace and take no arguments, except:
+
+#### `createHttpPlugin(options?: HttpPluginOptions): Plugin`
+
+`maxResponseBytes` caps each response body, refusing it with a `ResponseTooLargeError` as soon as
+the declared length or the streamed bytes pass the cap. Omitted, bodies are read whole.
+
+#### `connectStdioPlugin(command: string[], namespace: string): Promise<Result<Plugin, SpecError>>`
+
+Spawns an external plugin and talks NDJSON over its stdio; `dispose()` kills it.
+
+#### `servePlugin(plugin: Plugin): Promise<undefined>`
+
+The plugin side of that protocol: serves `plugin` on stdin/stdout until stdin closes.
+
+#### `createToolContext(overrides?: Partial<ToolContext>): ToolContext`
+
+A complete tool context with nothing granted, for calling a plugin directly in its tests.
+
+#### Addressing helpers
+
+`parseQuery`, `parseFill`, `parseAssertion`, `describeQuery`, `formatCandidates`,
+`ambiguousMatch`, `noMatch`, and the parameter lists `QUERY_PARAMS`, `ASSERTION_PARAMS` and
+`FILL_PARAMS` give a plugin the same element-addressing grammar and diagnostics `html` and
+`browser` use.
+
+### Language internals
+
+`lex(source)`, `parse(source)` (a `SourceFile` into a `SpecFileNode`), `positionAt(source,
+offset)`, `KEYWORDS`, `createRegistry(plugins, suite)`, `executeTest(test, context)`,
+`executeHook(hook, context)`, `valueEquals(left, right)` (the equality `expect` uses) and
+`formatValue(value)` expose each stage for tools built on the language.
+
+### Errors
+
+Every failure is a `SpecError` with a stable `code` (`DiagnosticCode`), optional `file`, `span`,
+`remedy`, `hint` and `artifacts`. Subclasses: `ParseError`, `LoadError`, `ResolutionError`
+(`candidates`), `ExpectationError` (`expected`, `observed`), `PermissionDeniedError`
+(`permission`, `resource`), `ToolError`, `ResponseTooLargeError` (`limit`, `declared`) and
+`WorkspaceEscapeError` (`attemptedPath`).
+
+### `@sdxc/spec/workers`
+
+The language core for a runtime with no process or filesystem: `loadSources`, `runTests`,
+`createNoFilesystemWorkspace`, `parseGrants`, the base and connection sets, the errors, and the
+`http`, `html`, `url`, `jwt`, `sample`, `str` and `spec` plugin factories.
+
+### Types
+
+- `Plugin`: `namespace`, `describe(): ToolDescriptor[]`, `call(tool, args, context)` and an
+  optional `dispose()`.
+- `ToolDescriptor`, `ToolParam`: a tool's name, summary, `kind` (`"action"` or `"observable"`;
+  only observables run in `eventually` or head an `expect`), `requires` and parameters.
+- `ToolContext`: `workspace`, `permissions`, `random` (a seeded stream from
+  [`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random)), `now`, `run`, `bases`,
+  `connections` and `artifacts`.
+- `ToolArg`, `Value`, `ValueObject`: a call's arguments (`{ kind: "value" }` or
+  `{ kind: "word" }`) and the values a spec handles.
+- `SuiteResult`, `TestResult`, `TestStatus`: per-test outcomes and the `passed`, `failed`,
+  `skipped` and `flaky` counts, with `runId` and `wallMs`.
+- `Grants`, `Grant`, `PermissionKind`, `PermissionSet`; `Base`, `BaseSet`, `Connection`,
+  `ConnectionSet`; `ArtifactStore`; `Workspace`, `WorkspaceFactory`; `RunOptions`,
+  `RunTestsOptions`, `RunIdentity`, `RunHeader`, `Sink`; `LoadedSuite`, `SpecSource`,
+  `SourceFile`, `Position`, `Span`, `Token`, `TokenKind`, `Registry`, `ResolvedCallable`,
+  `ExecutionContext`, the AST node types, and the addressing types (`ElementQuery`,
+  `ParsedQuery`, `Assertion`, `Candidate`, …).
+
+## Pattern: Test an HTTP API and its pages without a browser
+
+`http` reaches the app, `html` asserts on the markup it served, and `env` supplies a token
+without the spec containing it.
+
+```jsonc
+// spec/config.jsonc
+{
+	"bases": {
+		"web": { "env": "WEB_BASE_URL", "default": "http://localhost:3000" },
+	},
 }
-then {
-	expect query "?page=12&all=true"
-}
 ```
 
-Values stringify the way JSON would, without the quotes. A bare `$` is literal,
-so prices and shell-looking text need no escape; where the output itself wants
-the two characters a hole opens with, write `{{`:
-
 ```
-when {
-	let price = format "costs $5"
-	let literal = format "write {{name} for a hole"
-}
-then {
-	expect price "costs $5"
-	expect literal "write ${name} for a hole"
-}
-```
+use http
+use html
+use env
 
-Most of `format`'s design is what it refuses. A template and its arguments are
-written in two places and drift apart as a suite is edited, so every mismatch is
-an error naming both the template and the offender: a hole with no value, an
-argument or key no hole uses, and mixing positional holes with named ones.
-`null`, objects, and arrays are refused the same way, naming the hole — which is
-the case the strictness exists for, since a nullable column stringified to
-`"null"` composes a URL that looks real and is not.
-
-`format` is an action rather than an observation, so it may not head an `expect`
-nor run inside an `eventually`. Bind its result and assert on the binding.
-
-### `spec` — what this run is called · no grant
-
-Generated data is deterministic on purpose, which collides with a persistent
-database the moment a suite inserts under a unique constraint. `spec` is the
-seam: it reports the run's identity, and a suite composes that into the one
-value that must not reproduce, leaving every `sample` draw untouched.
-
-| Tool           | Reads                                                      |
-| -------------- | ---------------------------------------------------------- |
-| `spec.run_id`  | This run's identifier, shared by every test in it          |
-| `spec.attempt` | Which attempt of this test is running, counting from 1     |
-| `spec.nonce`   | `<run_id>-<attempt>`, the value composed into new identity |
-
-```
-use spec
-use str
-use sample
-
-test "a visitor signs up under an identifier no other run holds" {
-	given {
-		let who = sample.person
-	}
+test "creating a post returns it" {
 	when {
-		let slug = format "${name}-${nonce}" { name: who.username, nonce: spec.nonce }
-		let created = http.post "/signup" json { email: who.email, slug: slug }
+		let token = env.get "API_TOKEN"
+		let response = post "/api/posts" json { title: "Hello" } bearer token
 	}
 	then {
-		expect created.status 201
+		expect response.status 201
+		expect response.json.title "Hello"
+	}
+}
+
+test "the posts page describes itself" {
+	when {
+		let page = get "/posts"
+	}
+	then {
+		expect page.status 200
+		expect title page.text "All posts"
+		expect meta page.text "og:image" containing "/og/posts.png"
+		expect rel page.text "canonical" "https://example.com/posts"
+		expect heading page.text "Posts" level 1
+		expect cell page.text row 1 column 2 "Hello"
+		expect link page.text "Profile" count 2
+	}
+}
+
+test "the token endpoint rejects a bad code" {
+	when {
+		let response = post "/oauth/token" form { grant_type: "authorization_code", code: "bogus" } basic "client" "secret"
+	}
+	then {
+		expect response.status 400
 	}
 }
 ```
 
-Read bare, each tool observes its value; handed one, it asserts equality
-(`expect spec.attempt 1`) like every other reading observable. Reading advances
-nothing, so a spec composes the nonce into as many identifiers as it needs and
-they all share the suffix.
+```sh
+API_TOKEN=… npx spec run spec --allow-net=localhost:3000 --allow-env=API_TOKEN
+```
 
-The nonce varies with the **attempt**, not just the run, which is what makes
-`--retries` sound: a retry that reused the run's identifier would re-insert the
-same email and fail on a duplicate key for a reason unrelated to the original
-failure. Two tests on the same attempt share a nonce, which is safe because
-their `sample` streams are keyed on test identity — and it is what makes the
-rows a run left behind greppable, and deletable from a `teardown`, by a single
-identifier.
+## Pattern: Drive a sign-in flow in a browser
 
-### `jwt` — read and verify tokens · `--allow-net` (verify only)
-
-- `jwt.decode <token>` — split a token into `{ header, payload }` with no
-  signature check; permissionless, for asserting on claims
-  (`decoded.payload.sub`, `decoded.header.alg`, …).
-- `jwt.verify <token> <jwks_url>` — fetch the issuer's JWKS, select the key the
-  token names by `kid`, verify its ES256 signature and expiry, and return the
-  verified payload, so a spec proves a token is genuinely issuer-signed. It
-  reads the JWKS over the network, so it needs `--allow-net` for that host; a
-  bad signature, an unknown key, an expired token, or a non-ES256 algorithm is
-  an error.
+A `browser` session per test, addressed the way a person reads the page, waiting on navigation
+with `eventually`.
 
 ```
-when {
-	let claims = jwt.verify tokens.id_token "http://localhost:3000/.well-known/jwks.json"
+use browser
+use env
+
+test "signing in lands on the dashboard" {
+	when {
+		open "/login"
+		fill textbox "Email" with "user@example.com"
+		fill field "password" with "correct horse"
+		click button "Sign in"
+	}
+	then {
+		eventually within 5s {
+			expect path "/dashboard"
+		}
+		expect heading "Dashboard"
+		expect cookie "session" exists
+		expect response_status 200
+	}
 }
-then {
-	expect claims.iss "https://id.example.com"
-	expect claims.aud "the-client-id"
+
+test "a signed-in session skips the form" {
+	given {
+		let session = env.get "SESSION_COOKIE"
+		set_cookie "session" session for "http://localhost:3000/"
+		viewport "xs"
+	}
+	when {
+		open "/dashboard"
+		select combobox "Plan" with "Annual"
+		let step = query "step"
+	}
+	then {
+		expect step "billing"
+		expect element button "Upgrade" enabled
+	}
 }
 ```
 
-## Permissions
-
-| Flag                          | Grants                                                 |
-| ----------------------------- | ------------------------------------------------------ |
-| `--allow-run[=name,…]`        | Spawn processes (scoped by executable basename)        |
-| `--allow-net[=host[:port],…]` | Reach the network (scoped by host, optionally port)    |
-| `--allow-env[=VAR,…]`         | Read environment variables (scoped by name)            |
-| `--allow-host-fs[=dir,…]`     | Touch files outside the workspace (path-prefix scoped) |
-| `--allow-db[=name,…]`         | Query databases (scoped by connection name)            |
-| `--allow-plugins[=ns,…]`      | Launch project-declared plugins                        |
-| `--allow-config`              | Apply the permissions the suite's config declares      |
-
-A bare flag grants the whole family (`--allow-net`); a scoped flag grants only
-what it lists (`--allow-run=node,git`); repeated scoped flags union.
-
-```bash
-# Pure filesystem suite — the workspace is always writable, so no flags at all:
-npx spec run spec
-
-# One known tool, one local server, and two named env vars:
-npx spec run spec --allow-run=node --allow-net=localhost:3000 --allow-env=CI,NODE_ENV
-
-# Read shared seed data from outside the workspace (path prefix):
-npx spec run spec --allow-host-fs=/opt/seeds
-
-# One of two configured databases:
-npx spec run spec --allow-db=web
+```sh
+npx spec run spec --allow-net=localhost:3000 --allow-env=SESSION_COOKIE --artifacts=./artifacts
 ```
 
-## `spec/config.jsonc`
+A failed lookup lists the near matches and, under `--artifacts`, writes a screenshot and an
+accessibility-tree dump.
 
-Rather than reciting the same `--allow-*` line every run, a suite can carry its
-own configuration in `spec/config.jsonc` (JSONC: comments and trailing commas
-allowed). It has four optional keys: `permissions`, `plugins`, `bases`, and
-`databases`.
+## Pattern: Seed a database with unique, reproducible data
+
+`setup` loads the schema once, `sample` draws reproducible input, `spec.nonce` makes the one
+unique value, and `teardown` removes what the run wrote.
+
+```jsonc
+// spec/config.jsonc
+{
+	"bases": { "web": { "env": "WEB_BASE_URL", "default": "http://localhost:3000" } },
+	"databases": { "web": { "env": "DATABASE_URL" } },
+}
+```
+
+```
+use db
+use http
+use sample
+use str
+
+setup {
+	run_file "db/schema.sql"
+}
+
+teardown {
+	let pattern = format "%-${0}-%" spec.run_id
+	query "delete from accounts where slug like $1" params pattern
+}
+
+command signed_up_account {
+	let who = sample.person
+	let slug = format "${name}-${nonce}" { name: who.username, nonce: spec.nonce }
+	let created = post "/signup" json { email: who.email, name: who.full_name, slug: slug }
+	expect created.status 201
+	return query "select * from accounts where slug = $1" params slug one
+}
+
+test "a new account starts on the free plan" {
+	when {
+		let account = signed_up_account
+	}
+	then {
+		expect account.plan "free"
+	}
+}
+```
+
+```sh
+npx spec run spec --allow-net=localhost:3000 --allow-db=web --allow-host-fs=./db
+```
+
+Data stays the same on every run; `--seed=random` shakes the suite for hidden dependence on
+particular values and prints the seed to replay. The nonce moves with each attempt, so
+`--retries` never collides with the rows a failed attempt wrote.
+
+## Pattern: Boot the app under test
+
+`cli.start` in `setup` launches a server once for the whole run, and `eventually` waits for it to
+come up. The run stops it at the end.
+
+```
+use cli
+use http
+
+setup {
+	let server = start "bun" "run" "dev" in "."
+	eventually within 30s {
+		expect output server contains "localhost:3000"
+	}
+}
+
+test "the home page answers" {
+	when {
+		let response = get "http://localhost:3000/"
+	}
+	then {
+		expect response.status 200
+	}
+}
+```
+
+```sh
+npx spec run spec --allow-run=bun --allow-host-fs=. --allow-net=localhost:3000
+```
+
+A failing `output … contains` on a program that already exited says so, which diagnoses a crash
+on boot.
+
+## Pattern: Declare permissions with the suite
+
+The suite carries its grants in `spec/config.jsonc`; they stay inert until an operator who read
+the file passes `--allow-config`, so a cloned project fails closed with the normal denials.
 
 ```jsonc
 // spec/config.jsonc
 {
 	"permissions": {
-		// A bare string is a whole-family grant (like a bare --allow-<family>);
-		// a [family, ...scopes] tuple is a scoped grant (like --allow-<family>=…).
-		"allow": ["run", "plugins", ["db", "web"]],
-	},
-	// Where a relative target points, and which database a query runs against.
-	// Each reads an environment variable, with an optional literal fallback.
-	"bases": {
-		"web": { "env": "FRONTEND_BASE_URL", "default": "http://localhost:4000" },
-	},
-	"databases": {
-		"web": { "env": "WEB_DATABASE_URL" },
+		"allow": ["run", ["net", "localhost:3000"], ["db", "web"]],
 	},
 }
 ```
 
-The families match the flags: `"run"`, `"net"`, `"env"`, `"host-fs"`, `"db"`,
-and `"plugins"`. A malformed or unknown entry is a load error naming it.
-
-`bases` and `databases` are addresses rather than grants, so they apply on every
-run without `--allow-config` — the file is the runner's own settings, written by
-whoever runs the CLI, and could have held the literal URL. Reaching what they
-name is still gated: `--allow-net` for a base's resolved host, `--allow-db` for a
-connection's name. A base or connection whose variable is unset and which
-declares no fallback stops the run before any test, naming the variable.
-
-### Pattern: declare, then opt in
-
-The declaration stays inert until an operator opts in, so until then the suite
-fails closed with the normal denials. One flag opts in:
-
-```bash
+```sh
 npx spec run spec --allow-config
+npx spec run spec --allow-config --allow-env=CI --concurrency=4 --retries=1
 ```
 
-The effective grants are then the config's declared set unioned with any
-explicit `--allow-*` flags you also pass — flags only ever add. Because the file
-takes effect only once someone who read it adds `--allow-config`, a cloned or
-untrusted project stays inert until an operator says otherwise. When a denial
-would be covered by the config, the denial adds one line pointing at
+Flags only add to the declared set, and a denial the config would cover points at
 `--allow-config`.
 
-### Loading project plugins
+## Pattern: Write a plugin
 
-The `plugins` key maps a namespace to the command that launches its plugin, so
-specs name `greet.hello` and never a path:
+A plugin is one namespace of typed tools. Serve it over stdio from any script, declare it in the
+config, and grant its launch.
+
+```typescript
+// spec/greeter.ts
+import type { Plugin } from "@sdxc/spec";
+
+import { failure, success } from "@sdxc/result";
+import { servePlugin, ToolError } from "@sdxc/spec";
+
+let greeter: Plugin = {
+	namespace: "greet",
+	describe() {
+		return [
+			{
+				name: "hello",
+				summary: "Greet the given name.",
+				kind: "observable",
+				params: [{ name: "name", kind: "value", required: true, summary: "Who to greet." }],
+			},
+		];
+	},
+	async call(tool, args) {
+		let first = args[0];
+		if (tool !== "hello" || first?.kind !== "value" || typeof first.value !== "string") {
+			return failure(new ToolError('greet.hello expects one string, e.g. hello "world"'));
+		}
+		return success(`Hello, ${first.value}!`);
+	},
+};
+
+await servePlugin(greeter);
+```
 
 ```jsonc
 // spec/config.jsonc
 {
 	"plugins": {
-		// A command argument starting with "." resolves against this file's
-		// directory, so the suite runs the same from any working directory.
 		"greet": { "command": ["bun", "./greeter.ts"] },
 	},
 }
@@ -1233,7 +826,7 @@ use greet
 
 test "the greet plugin greets by name" {
 	when {
-		let message = greet.hello "world"
+		let message = hello "world"
 	}
 	then {
 		expect message "Hello, world!"
@@ -1241,197 +834,68 @@ test "the greet plugin greets by name" {
 }
 ```
 
-Declaring a plugin is a separate act from running it: launching one executes
-code the project ships, so `spec run` starts a declared plugin only with
-`--allow-plugins` (all) or `--allow-plugins=greet` (named), and a suite that
-imports an unauthorized namespace is refused before any test runs. The built-in
-namespaces stay available throughout.
-
-```bash
+```sh
 npx spec run spec --allow-plugins=greet
 ```
 
-## Custom and third-party plugins
+A served plugin receives the whole `ToolContext` on every call, so it resolves bases, checks
+permissions and reads `context.run.nonce` like a built-in; a `PermissionDeniedError` it returns
+keeps its remedy. Pass the same object to `runSuite({ plugins: [greeter] })` to run it in-process,
+and test it directly with `greeter.call("hello", args, createToolContext())`.
 
-Every capability is itself a plugin — one namespace exposing typed tools behind
-a single interface — so your own is a first-class citizen. Write one in-process
-for an embedder, as an external executable speaking a small NDJSON-over-stdio
-protocol in any language, or install someone else's and declare it.
+## Pattern: Run specs inside a Worker
 
-A tool generating values draws them from `context.random`, a `SeededRandom` from
-[`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random) opened on the run's
-seed and the test's identity, so its output replays under `--seed` however the
-tests interleave. A served plugin's stream opens on a fixed seed, so its values
-repeat from run to run.
+`@sdxc/spec/workers` runs specs held as strings, with only the capabilities that need no process
+or filesystem, and caps response bodies for an untrusted suite.
 
-An external one is no lesser for being a process: every call carries the whole
-context over the wire — `workspaceRoot`, `now`, `run`, `bases`, `connections`,
-`grants`, and `artifactsDirectory` — so a served plugin resolves a base, selects
-a connection, and stamps the run's nonce exactly as a built-in does. A
-`permission-denied` it raises keeps its `permission`, `resource`, and `remedy`
-across the wire, so its denial prints the flag that would grant it.
-
-The full authoring guide — the `Plugin` interface, all three shapes, the wire
-protocol in detail, project loading, and the trust model — ships with the
-package as `docs/writing-plugins.md`, next to a runnable showcase under
-`examples/plugin-loading/`.
-
-## CLI
-
-```
-spec run [directory] [--allow-*]     Run the suite (directory defaults to ./spec)
-
-  --concurrency=N (alias --jobs=N)   Run up to N tests at once (default 1, sequential)
-  --retries=N                        Retry a failing test N more times (default 0)
-  --seed=VALUE                       Seed the data sample generates (default: fixed)
-  --seed=random                      Draw a seed and print it, to replay with --seed=<it>
-  --run-id=VALUE                     Name this run, replaying the one printed in the header
-  --artifacts=DIR                    Write failure screenshots and dumps under DIR
-```
-
-Exit codes are the contract to script against: `0` everything passed, `1` a test
-failed, `2` a usage or load error (a bad flag, an unreadable suite, a parse
-error).
-
-Every run opens with a header naming the two things a replay needs, plus each
-base it resolved. A database connection is left out of it, because a DSN carries
-credentials:
-
-```
-seed spec (replay with --seed=spec)
-run mtw62dtrkgga (replay with --run-id=mtw62dtrkgga)
-base "web" → http://localhost:4000
-```
-
-At `--concurrency=N` the runner executes up to `N` tests at once and still
-reports them in source order, so output, counts, and exit code stay identical
-and only wall-time changes. It isolates each test's workspace rather than the
-app under test, so a suite whose tests write the same rows belongs at
-`--concurrency=1` — while a suite that keys its writes to `spec.nonce` has
-already isolated them.
-
-`--retries=N` gives a failing test that many further attempts. A retry redraws
-no data — same seed, same `sample` draws — while `spec.nonce` moves, so inserts
-stay clean; `setup` does not re-run, and the attempt gets a fresh workspace. A
-test that passed only on a retry lands in its own **flaky** count with the failed
-attempt's diagnostics kept, so retries absorb infrastructure noise without hiding
-a test decaying toward permanent failure. The summary carries the extra counts
-only when they are non-zero:
-
-```
-○ the nightly report reconciles (skipped: the staging database is down)
-✓ settles on the second attempt (flaky: passed on attempt 2)
-  attempt 1: expectation-failed: spec.attempt is not 2
-✓ a plain one
-
-1 passed, 0 failed, 1 skipped, 1 flaky (1ms)
-```
-
-`--artifacts=DIR` turns a failure's evidence into files: a browser failure leaves
-a screenshot and an accessibility-tree dump, an `html` failure leaves the
-document it read, and the reporter prints each path under a `Wrote:` heading.
-
-```
-✗ a lookup that matched nothing (spec/portfolios.spec:8)
-  expectation-failed: html.element found a button named "Save" nowhere …
-
-  Wrote:
-  > /work/artifacts/html-element-mtw62io8y5ij-1.html
-```
-
-## Programmatic API
-
-Every fallible export returns a
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) `Result`, so parse
-errors, permission denials, and tool failures are values you branch on.
-
-### `runSuite(options)`
-
-Loads a suite from disk and runs it, registering all twelve built-in namespaces.
-Options: `root` (the directory to scan), `grants` (from `parseGrants`), and the
-optional `plugins`, `builtins`, `concurrency`, `seed`, `runId`, `retries`,
-`bases`, `connections`, and `artifacts` — the last three built with
-`createBaseSet`, `createConnectionSet`, and `createArtifactStore`.
-
-```ts
+```typescript
 import { isFailure } from "@sdxc/result";
-import { parseGrants, runSuite } from "@sdxc/spec";
+import {
+	createBaseSet,
+	createHtmlPlugin,
+	createHttpPlugin,
+	createNoFilesystemWorkspace,
+	createSpecPlugin,
+	loadSources,
+	parseGrants,
+	runTests,
+} from "@sdxc/spec/workers";
 
-let grants = parseGrants(["--allow-net=localhost:3000"]);
-if (isFailure(grants)) throw grants.error;
+export default {
+	async fetch(request: Request) {
+		let source = await request.text();
+		let suite = loadSources([{ path: "submitted.spec", text: source }]);
+		if (isFailure(suite)) return Response.json({ error: suite.error.message }, { status: 400 });
 
-let run = await runSuite({ root: "spec", grants: grants.data, concurrency: 4 });
+		let parsed = parseGrants(["--allow-net=example.com"]);
+		if (isFailure(parsed)) return Response.json({ error: parsed.error.message }, { status: 500 });
+
+		let run = await runTests({
+			suite: suite.data,
+			plugins: [
+				createHttpPlugin({ maxResponseBytes: 1_048_576 }),
+				createHtmlPlugin(),
+				createSpecPlugin(),
+			],
+			grants: parsed.data.grants,
+			createWorkspace: createNoFilesystemWorkspace,
+			bases: createBaseSet([{ name: "site", url: "https://example.com" }]),
+		});
+		if (isFailure(run)) return Response.json({ error: run.error.message }, { status: 422 });
+
+		return Response.json({
+			passed: run.data.passed,
+			failed: run.data.failed,
+			failures: run.data.results
+				.filter((result) => result.status === "failed")
+				.map((result) => ({ title: result.title, code: result.error?.code })),
+		});
+	},
+};
 ```
 
-Passing `builtins` registers only the namespaces you name — `builtins: ["http",
-"url", "jwt"]`. That is not a permission decision: a denied capability still
-exists and its denial names the flag that would allow it, while a namespace left
-out does not exist at all, so a spec calling `fs.write` fails with an unknown
-name.
-
-### `runTests(options)`
-
-The runtime underneath `runSuite`, which assumes no filesystem and no process:
-the `suite`, the `plugins`, the `grants`, and the `createWorkspace` factory all
-arrive as arguments. Pair it with `loadSources`, which parses `{ path, text }`
-pairs from wherever the specs live, and `createNoFilesystemWorkspace`.
-
-```ts
-import { isFailure } from "@sdxc/result";
-import { createHttpPlugin, createNoFilesystemWorkspace, loadSources, runTests } from "@sdxc/spec";
-
-let loaded = loadSources([{ path: "flow.spec", text: source }]);
-if (isFailure(loaded)) return loaded;
-
-let outcome = await runTests({
-	suite: loaded.data,
-	plugins: [createHttpPlugin()],
-	grants: grants.data,
-	createWorkspace: createNoFilesystemWorkspace,
-});
-```
-
-### `createHttpPlugin(options?)`
-
-`maxResponseBytes` caps how much of any one response body the `http` tools will
-read. Omitted — which is what `runSuite` and the CLI use — reads whatever
-arrives; set it when a run is untrusted and the runtime's memory is bounded,
-since a parsed document costs many times its source.
-
-```ts
-import { createHttpPlugin } from "@sdxc/spec";
-
-let http = createHttpPlugin({ maxResponseBytes: 1_048_576 });
-```
-
-The cap is enforced as the body arrives, not after it is buffered: a
-`content-length` past the cap refuses before a byte is read, and because that
-header is a hint a server may omit, the bytes are counted as they stream and the
-stream is cancelled the moment the count passes the cap. The refusal is an
-ordinary tool error naming the cap and what arrived, so the statement that asked
-fails and the spec reports it like any other tool failure. It bounds one
-response at a time and says nothing about a run's total.
-
-### Entry points
-
-`@sdxc/spec` also exports `lex`, `parse`, `loadSuite`, `loadSources`,
-`createRegistry`, `executeTest`, `executeHook`, `createToolContext`,
-`createRunId`, `reportSuite`, `reportRunHeader`, `reportFatal`,
-`createBuiltinPlugins`, every plugin factory (`createFsPlugin`,
-`createCliPlugin`, `createHttpPlugin`, `createBrowserPlugin`,
-`createHtmlPlugin`, `createDbPlugin`, `createEnvPlugin`, `createUrlPlugin`,
-`createJwtPlugin`, `createSamplePlugin`, `createStrPlugin`, `createSpecPlugin`),
-the `SpecError` family, and `connectStdioPlugin` / `servePlugin` for plugins
-that speak the NDJSON-over-stdio protocol. A plugin's own test builds its
-`ToolContext` with `createToolContext`, which fills every field with an inert
-default.
-
-`@sdxc/spec/workers` carries the same language core for a V8-isolate runtime,
-with the seven capabilities that reach for neither a process nor a filesystem:
-`http`, `url`, `jwt`, `sample`, `html`, `str`, and `spec`. Each computes from
-its arguments or from the run's own identity; `db`, `cli`, `browser` and the
-stdio transport reach for Bun's SQL client or the `Bun` global, so they stay
-behind the root entry.
+A namespace left out of `plugins` does not exist to the spec, so `fs.write` here fails as an
+unknown name.
 
 ## Versioning
 
