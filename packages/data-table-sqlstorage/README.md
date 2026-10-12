@@ -2,29 +2,29 @@
 
 A `remix/data-table` database driver backed by a Cloudflare Durable Object's SQL storage.
 
-`remix/data-table` models reach a database through a driver. This one runs their queries
-against the `SqlStorage` handle a Durable Object owns, so a model's rows live inside the
-object that serves them, with JSON and boolean columns round-tripped on the way through.
+The driver runs `remix/data-table` queries against the `SqlStorage` handle a Durable Object
+owns, so a model's rows live inside the object that serves them, with JSON and boolean columns
+round-tripped on the way through.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/data-table-sqlstorage
 ```
 
-The driver plugs into the `data-table` models of
-[`remix`](https://www.npmjs.com/package/remix), which installs alongside this package. The
-`SqlStorage` handle it executes against comes from the Durable Objects runtime, so a
-TypeScript project also wants `@cloudflare/workers-types` for that type.
+The driver plugs into `remix/data-table` from [`remix`](https://www.npmjs.com/package/remix).
+TypeScript projects also install `@cloudflare/workers-types` for the `SqlStorage` type.
 
 ## Usage
 
-### Build A Driver From A Durable Object's SQL Handle
+### Build a database inside a Durable Object
 
 ```typescript
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
+
+import { users } from "./schema.js";
 
 export class Tenant extends DurableObject {
 	#db = new Database(createSQLStorageDatabaseAdapter(this.ctx.storage.sql));
@@ -35,17 +35,13 @@ export class Tenant extends DurableObject {
 }
 ```
 
-The handle belongs to the object and outlives every request, so the driver is built once
-per instance rather than per call.
+The handle belongs to the object and outlives every request, so build the database once per
+instance.
 
-### Read And Write Through Models
-
-Models are declared the way every `remix/data-table` model is, and the driver compiles them
-to SQLite text:
+### Read and write JSON and boolean columns
 
 ```typescript
-import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { column as c, Database, table } from "remix/data-table";
+import { column as c, table } from "remix/data-table";
 
 let users = table({
 	name: "users",
@@ -57,177 +53,166 @@ let users = table({
 	},
 });
 
-let db = new Database(createSQLStorageDatabaseAdapter(sql));
-
-let created = await db.create(users, {
+await db.create(users, {
 	id: 1,
 	email: "user@example.com",
 	settings: { theme: "dark" },
 	active: true,
 });
+
+let user = await db.find(users, 1);
+user?.settings; // { theme: "dark" }
+user?.active; // true
 ```
 
-SQLite stores neither JSON nor booleans natively, so the driver bridges both: a `c.json()`
-value is serialized on the way in and parsed back into an object on the way out, and a
-`c.boolean()` column reads back as `true` or `false` instead of the integers SQLite holds.
-A nullable column keeps `null` as its own third state.
+A `c.json()` value is stored as JSON text and parsed back into an object; a `c.boolean()` column
+reads back as `true` or `false` instead of SQLite's `1` and `0`. `null` stays `null` in both.
 
-### Atomicity Without A Transaction Scope
-
-A Durable Object's SQL storage rejects `BEGIN`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`, `RELEASE`
-and `ROLLBACK TO`, so the driver issues none of them and `db.transaction()` rejects:
+### Run raw SQL
 
 ```typescript
-await db.transaction(async (tx) => {
-	await tx.create(users, { id: 1, email: "first@example.com" });
-}); // rejects: Durable Object SQL storage has no transaction statements
+import { sql } from "remix/data-table";
+
+let result = await db.exec(sql`SELECT email FROM users WHERE id = ${1}`);
+result.rows; // [{ email: "user@example.com" }]
+
+let deleted = await db.exec(sql`DELETE FROM users WHERE id = ${1}`);
+deleted.affectedRows; // 1
 ```
 
-Atomicity comes from the object itself instead. Every write an object makes within one turn
-of its event loop is coalesced into a single atomic commit, so a sequence of writes that
-stays inside a turn either lands whole or not at all:
+A statement starting with `SELECT`, `WITH` or `PRAGMA` answers rows; any other statement
+answers the number of rows it wrote.
+
+### Write atomically within one turn
+
+Durable Object SQL storage has no transaction statements, so `db.transaction()` rejects.
+Instead, every write an object makes within one turn of its event loop commits as one unit:
 
 ```typescript
 async register(email: string) {
 	await this.#db.create(users, { id: 1, email });
-	await this.#db.create(profiles, { userId: 1, email });
+	await this.#db.create(profiles, { user_id: 1, email });
 }
 ```
 
-The limit is the turn. Awaiting network I/O — a `fetch`, an RPC call to another object,
-anything that yields to the runtime — ends the turn, and the writes made before the await
-commit separately from the ones made after. A scope that spans an await is therefore no
-longer atomic, so gather what a write needs before the first write rather than between two
-of them.
-
-Where a scope must also cover key-value storage, the runtime's own
-[`ctx.storage.transactionSync(callback)`](https://developers.cloudflare.com/durable-objects/api/state/#transactionsync)
-runs synchronous work atomically across both. It is synchronous by design, so the callback
-cannot await; work that must await belongs outside it.
-
-`capabilities.savepoints` and `capabilities.transactionalDdl` both report `false`, which is
-what `remix/data-table` reads to decide what it attempts: a nested `transaction()` is refused
-by name, and the migration runner applies each migration without opening a scope.
-
-### Run Raw SQL
-
-```typescript
-let result = await db.exec("SELECT email FROM users WHERE id = ?", [2]);
-result.rows; // [{ email: "second@example.com" }]
-
-let deleted = await db.exec("DELETE FROM users WHERE id = ?", [1]);
-deleted.affectedRows; // 1
-```
-
-A raw statement carries no read/write signal of its own, so the leading keyword decides:
-`SELECT`, `WITH` and `PRAGMA` come back with rows, and anything else reports how many rows
-it wrote.
+Awaiting network I/O (a `fetch`, an RPC call to another object) ends the turn, so the writes
+before it and after it commit separately.
 
 ## API
 
 ### `createSQLStorageDatabaseAdapter(db: SqlStorage, options?): DatabaseDriver`
 
-Builds the `DatabaseDriver` that `new Database(...)` takes. `db` is the
-[`SqlStorage`](https://developers.cloudflare.com/durable-objects/api/sql-storage/) handle to
-execute against, which a Durable Object exposes as `ctx.storage.sql` once its class is
-SQLite-backed. The driver reports a dialect of `"sqlite"`.
+Builds the driver `new Database(...)` takes, executing against a Durable Object's
+[`SqlStorage`](https://developers.cloudflare.com/durable-objects/api/sql-storage/) handle
+(`ctx.storage.sql`). The driver reports the `"sqlite"` dialect.
 
-`options.capabilities` overrides the feature flags the driver advertises. `returning` and
-`upsert` are on by default and `migrationLock` is off; those three are what it accepts.
-`savepoints` and `transactionalDdl` are fixed at `false` and are not overridable, because the
-platform rejects the statements either one would need.
+- `options.capabilities.returning`: compile `RETURNING` clauses. Default `true`.
+- `options.capabilities.upsert`: compile `INSERT … ON CONFLICT`. Default `true`.
+- `options.capabilities.migrationLock`: let the migration runner take its lock. Default `false`.
 
-The returned driver carries the full `DatabaseDriver` surface. Three members behave in a way
-worth knowing:
+`savepoints` and `transactionalDdl` are always `false`. On the returned driver:
 
-- `beginTransaction()`, and every commit, rollback and savepoint method, always rejects. The
-  error names `ctx.storage.transactionSync()` as the API the platform offers instead.
-- `executeScript(sql)` runs a multi-statement script one statement at a time, which is what
-  SQL storage's one-statement-per-call `exec` needs. It cuts the script on the semicolons
-  that terminate a statement; see below for what that covers.
-- `wipe()` always rejects. The Durable Object owns its database's lifecycle, so a clean
-  slate comes from migrating down or deleting the object's storage.
+- `executeScript(sql)` splits a multi-statement script and runs it one statement at a time. A
+  semicolon inside a string literal, a quoted identifier, a comment or a `CREATE TRIGGER` body
+  stays in its statement, and a script with an unclosed one throws, naming it and its line,
+  before any statement runs.
+- `beginTransaction()` and every commit, rollback and savepoint method reject, pointing to
+  `ctx.storage.transactionSync()`.
+- `wipe()` rejects; reset an object's data by migrating down or deleting its storage.
+- `insertId` is reported for tables with a single-column primary key, from the `RETURNING` row
+  or else from `last_insert_rowid()`.
 
-Reads after a write are best served by a `RETURNING` clause, which `returning` enables:
-`insertId` falls back to `last_insert_rowid()`, and it is reported only for a table with a
-single-column primary key.
+## Pattern: Apply A Schema When The Object Boots
 
-## Pattern: Running Migrations When A Durable Object Boots
-
-An object's database is created the first time the object runs, so the schema is applied
-from the constructor or from the first call that needs it. `executeScript` takes the whole
-script:
+An object's database starts empty, so the object applies its schema before the first query.
+`executeScript` takes the whole script, comments and triggers included.
 
 ```typescript
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
+import { Database } from "remix/data-table";
+
+let SCHEMA = `
+	-- Keyset pages read (created_at, id); keep both in the index.
+	CREATE TABLE IF NOT EXISTS events (id TEXT PRIMARY KEY, label TEXT, created_at TEXT);
+	CREATE INDEX IF NOT EXISTS events_created ON events (created_at, id);
+	CREATE TABLE IF NOT EXISTS totals (id INTEGER PRIMARY KEY, n INTEGER NOT NULL DEFAULT 0);
+	CREATE TRIGGER IF NOT EXISTS count_events AFTER INSERT ON events BEGIN
+		UPDATE totals SET n = CASE WHEN n < 1000 THEN n + 1 ELSE n END WHERE id = 1;
+	END;
+	INSERT OR IGNORE INTO totals (id, n) VALUES (1, 0)
+`;
 
 export class Tenant extends DurableObject {
 	#adapter = createSQLStorageDatabaseAdapter(this.ctx.storage.sql);
+	#db = new Database(this.#adapter);
 
-	async migrate() {
-		await this.#adapter.executeScript(`
-			CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY, email TEXT NOT NULL);
-			CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users (email);
-		`);
+	constructor(ctx: DurableObjectState, env: Env) {
+		super(ctx, env);
+		ctx.blockConcurrencyWhile(() => this.#adapter.executeScript(SCHEMA));
 	}
 }
 ```
 
-`transactionalDdl` is off, so the migration runner applies each script as it stands rather
-than wrapping it. A migration declared as requiring transactional DDL is refused by name
-before anything runs, which is what keeps a half-applied schema from being mistaken for a
-rolled-back one.
+With `transactionalDdl` off, the `remix/data-table` migration runner applies each migration
+without a transaction and refuses one that declares it needs transactional DDL.
 
-### Where A Script Is Cut
+## Pattern: Keep A Multi-Step Write Atomic
 
-A semicolon ends a statement everywhere except inside a string literal, a quoted identifier
-— double-quoted, backtick-quoted or `[bracketed]`, each with its doubled-delimiter escape —
-a `--` line comment, a `/* */` block comment, and a `CREATE TRIGGER` body. So all of this
-runs as its author wrote it, and a comment explaining a migration is free to use prose
-punctuation:
-
-```sql
--- Pages by keyset on (created_at, id); the seek is a seek only while an index carries both.
-CREATE INDEX feeds_subscription_idx ON feeds (created_at, id);
-INSERT INTO settings (label) VALUES ('first; second');
-CREATE TRIGGER counted AFTER INSERT ON events BEGIN
-	UPDATE totals SET n = CASE WHEN n < 10 THEN n + 1 ELSE n END;
-END;
-```
-
-A trigger arrives at `exec` whole, so its body semicolons stay inside it and the `BEGIN`
-that opens it reads as the trigger's own rather than as the transaction statement the
-platform refuses. `CASE … END` inside a body nests, so the trigger ends at the `END` that
-matches its `BEGIN`.
-
-Fragments holding only whitespace or comments yield no statement, so a doubled `;;` and a
-closing `-- done` are both fine, and a final statement needs no trailing semicolon.
-
-A script whose string literal, quoted identifier, block comment or trigger body never closes
-is refused before any statement runs, with an error naming what is open and the line it
-opened on — a truncated script fails whole rather than applying the part that parsed.
-
-## Pattern: Hosting A Storage-Agnostic Library Inside A Durable Object
-
-A library that takes a `DatabaseDriver` rather than opening its own connection runs wherever
-a driver can be built. Constructing one here is what lets such a library live inside a
-Durable Object, keeping each object's data in the object itself:
+Gather everything a write needs before the first write, so no await on network I/O falls
+between two of them. Use `transactionSync` when the same unit must also cover key-value storage.
 
 ```typescript
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
+import { Database } from "remix/data-table";
+
+import { orders, stock } from "./schema.js";
+
+export class Shop extends DurableObject {
+	#db = new Database(createSQLStorageDatabaseAdapter(this.ctx.storage.sql));
+
+	async order(sku: string, quantity: number) {
+		let price = await fetch(`https://prices.example.com/${sku}`).then((r) => r.json());
+
+		await this.#db.create(orders, { sku, quantity, total: price.amount * quantity });
+		await this.#db.update(stock, sku, { reserved: quantity });
+	}
+
+	markShipped(orderId: string) {
+		this.ctx.storage.transactionSync(() => {
+			this.ctx.storage.sql.exec("UPDATE orders SET shipped = 1 WHERE id = ?", orderId);
+			this.ctx.storage.kv.put(`shipped:${orderId}`, Date.now());
+		});
+	}
+}
+```
+
+[`transactionSync`](https://developers.cloudflare.com/durable-objects/api/state/#transactionsync)
+takes a synchronous callback, so async work runs before or after it.
+
+## Pattern: Host A Storage-Agnostic Library In A Durable Object
+
+A library that takes a `DatabaseDriver` runs wherever a driver can be built, so each object keeps
+its own data.
+
+```typescript
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { DurableObject } from "cloudflare:workers";
+import { Database } from "remix/data-table";
+
+import { createEngine } from "./engine.js";
 
 export class Tenant extends DurableObject {
 	#engine = createEngine({
-		database: createSQLStorageDatabaseAdapter(this.ctx.storage.sql),
+		database: new Database(createSQLStorageDatabaseAdapter(this.ctx.storage.sql)),
 	});
 }
 ```
 
-The same library moves to Cloudflare D1 by swapping in the driver from
-[`@sdxc/data-table-d1`](https://www.npmjs.com/package/@sdxc/data-table-d1); the models,
-queries and migrations above it are unchanged.
+The same library runs on Cloudflare D1 with the driver from
+[`@sdxc/data-table-d1`](https://www.npmjs.com/package/@sdxc/data-table-d1); its models, queries
+and migrations stay the same.
 
 ## Versioning
 
