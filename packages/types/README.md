@@ -1,47 +1,33 @@
 # @sdxc/types
 
-TypeScript utility types for async return values, JSON boundaries, and type-level checks.
+Shared TypeScript types for async return values, JSON boundaries and type-level checks.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/types
 ```
 
-Types only: the package ships no runtime code, so import everything with `import type`.
+The package ships types only, so import everything with `import type`.
 
 ## Usage
 
-### Extract the resolved type of an async function
+### Name what an async function resolves to
 
 ```typescript
 import type { ResolvedType } from "@sdxc/types";
 
 async function fetchUser(id: string): Promise<{ name: string; email: string }> {
-	// ...
+	return { name: id, email: `${id}@example.com` };
 }
 
 type User = ResolvedType<typeof fetchUser>; // { name: string; email: string }
 ```
 
-### Type component props from a data function
+### Accept only values that survive JSON
 
-```typescript
-import type { ResolvedType } from "@sdxc/types";
-
-import type { listPosts } from "./posts";
-
-// Props stay in sync with whatever listPosts returns
-interface Props {
-	posts: ResolvedType<typeof listPosts>;
-}
-```
-
-Combine it with indexed access to reach nested types, such as `ResolvedType<typeof listPosts>["posts"][number]` for a single item.
-
-### Constrain an argument to valid JSON
-
-Take `JSONValue` as a bound rather than as the parameter type. The caller still gets their own shape back, and anything JSON cannot carry is rejected where it is passed.
+Use `JSONValue` as a generic bound: the caller keeps their own shape, and anything JSON cannot
+carry is rejected at the call site.
 
 ```typescript
 import type { JSONValue } from "@sdxc/types";
@@ -51,17 +37,15 @@ function enqueue<T extends JSONValue>(payload: T): T {
 }
 
 let job = enqueue({ id: 1, tags: ["news"], draft: false });
-job.tags; // string[] — the literal shape survives
+job.tags; // string[]
 
-enqueue({ when: new Date() }); // Error: Date is not a JSONValue
-enqueue({ run: () => 1 }); // Error: functions are not a JSONValue
-enqueue({ missing: undefined }); // Error: undefined is not a JSONValue
+enqueue({ when: new Date() }); // Error: a Date comes back as a string
+enqueue({ run: () => 1 }); // Error: functions are not JSON
 ```
 
-### Constrain an argument to what JSON can write
+### Accept anything `JSON.stringify` can write
 
-`JSONSerializable` is the same union plus objects carrying a `toJSON`, so a value that
-substitutes itself on the way out is accepted where `JSONValue` rejects it.
+`JSONSerializable` adds objects with a `toJSON`, such as `Date` and `URL`.
 
 ```typescript
 import type { JSONSerializable } from "@sdxc/types";
@@ -70,225 +54,173 @@ function write<T extends JSONSerializable>(payload: T): string {
 	return JSON.stringify(payload);
 }
 
-write({ publishedAt: new Date() }); // "{"publishedAt":"2026-09-04T00:00:00.000Z"}"
-write({ href: new URL("https://example.com") });
-write({ run: () => 1 }); // Error: functions are not a JSONSerializable
+write({ publishedAt: new Date(), href: new URL("https://example.com") });
+```
+
+### Type what comes back
+
+`JSONSerialized<T>` is the shape a written value has after `JSON.parse`.
+
+```typescript
+import type { JSONSerialized } from "@sdxc/types";
+
+type Stored = JSONSerialized<{ id: number; publishedAt: Date; edit: () => void }>;
+// { id: number; publishedAt: string }
 ```
 
 ## API
 
-### `ResolvedType<T>`
+### `ResolvedType<T extends (...args: any) => Promise<any>>`
 
-Unwraps the value an async function resolves to, where `T` is a function type `(...args: any) => Promise<any>`.
-
-```typescript
-type User = ResolvedType<typeof fetchUser>;
-// same as
-type User = Awaited<ReturnType<typeof fetchUser>>;
-```
+The value an async function resolves to; shorthand for `Awaited<ReturnType<T>>`.
 
 ### `JSONPrimitive`
 
-A JSON value that holds no other value — the four scalars, without the arrays and objects that nest them:
-
-```typescript
-type JSONPrimitive = string | number | boolean | null;
-```
-
-Take it where a value is compared, indexed or used as a key, so the signature says a structure has no meaning there:
-
-```typescript
-function eq(field: string, value: JSONPrimitive): Condition;
-
-eq("plan", "pro"); // fine
-eq("plan", { tier: "pro" }); // Error: an object is not a JSONPrimitive
-```
+`string | number | boolean | null`. Take it where a value is compared, indexed or used as a key,
+so the signature says a structure has no meaning there.
 
 ### `JSONValue`
 
-Any JSON-serializable value: a `JSONPrimitive` at the leaves, and the arrays and objects that nest them to any depth.
-
-```typescript
-type JSONValue = JSONPrimitive | JSONValue[] | { [key: string]: JSONValue };
-```
-
-Reach for it as a generic bound. As a parameter type it widens the argument to the whole union and the caller loses their shape; as a constraint it only rules values out:
-
-```typescript
-function enqueue<T extends JSONValue>(payload: T): T;
-// payload stays { id: number; tags: string[] }
-
-function enqueue(payload: JSONValue): JSONValue;
-// payload is now the union, and `payload.id` no longer exists
-```
+`JSONPrimitive | JSONValue[] | { [key: string]: JSONValue }`: a value that comes back from
+`JSON.parse` identical to what was written. Use it as a generic bound (`T extends JSONValue`); as
+a plain parameter type it widens the argument and the caller loses their shape.
 
 ### `JSONSerializable`
 
-Any value `JSON.stringify` accepts. Adds one branch to `JSONValue` — an object that
-returns its own replacement from `toJSON` — so it covers `Date`, `URL` and every class
-that serializes itself:
-
-```typescript
-type JSONSerializable =
-	| string
-	| number
-	| boolean
-	| null
-	| JSONSerializable[]
-	| { [key: string]: JSONSerializable }
-	| { toJSON(): JSONSerializable };
-```
-
-The two types name the two directions of one boundary, and the direction decides which
-one applies. Take `JSONSerializable` where a value is written, and `JSONValue` where one
-is read back, because the replacement is what a reader receives:
-
-```typescript
-JSON.parse(JSON.stringify({ at: new Date() })).at; // a string, not a Date
-```
+`JSONValue` plus `{ toJSON(): JSONSerializable }` at any depth: every value `JSON.stringify`
+accepts. Take it where a value is written and `JSONValue` (or `JSONSerialized<T>`) where it is
+read back, since the reader receives the `toJSON` replacement.
 
 ### `JSONSerialized<T>`
 
-What a `JSONSerializable` type becomes after the round trip. Use it to type the read side
-of a boundary in terms of what was written, instead of widening to `JSONValue` and casting
-back:
-
-```typescript
-type Stored = JSONSerialized<{ id: number; publishedAt: Date }>;
-//   { id: number; publishedAt: string }
-```
-
-It applies `toJSON`, drops a property JSON cannot write, and writes an unwritable array
-element as `null`, since dropping a slot would change the length that is read back:
+What `T` becomes after a JSON round trip: `toJSON` is applied, unwritable properties are dropped,
+and unwritable array elements become `null`. A `JSONValue` comes back unchanged.
 
 ```typescript
 JSONSerialized<Date>; // string
-JSONSerialized<{ id: number; edit: () => void }>; // { id: number }
 JSONSerialized<undefined[]>; // null[]
 JSONSerialized<[string, Date]>; // [string, string]
 ```
 
-A type that already survives the round trip is returned unchanged, so `JSONSerialized<T>`
-is `T` for every `JSONValue`.
-
-It describes the shape rather than the value. A cycle throws, `NaN` and `Infinity` read
-back as `null`, and a property that is inherited rather than owned is kept by the type and
-left out by `JSON.stringify`:
-
-```typescript
-class Money {
-	constructor(private cents: number) {}
-	get dollars() {
-		return this.cents / 100;
-	}
-}
-
-JSONSerialized<Money>; // { readonly dollars: number }
-JSON.stringify(new Money(500)); // {"cents":500}
-```
-
-It tracks nine levels of nesting and widens to `JSONValue` below that, which is what lets
-a generic constrained to `JSONSerializable` be passed through it — both types are
-recursive, and unbounded the pair exhausts the compiler rather than any real value.
+It describes the shape, so it tracks nine levels of nesting and widens to `JSONValue` below
+that, and it keeps getters and inherited properties that `JSON.stringify` leaves out.
 
 ### `IsAny<T>`
 
-Resolves to `true` when `T` is `any`, and `false` for every other type. Use it to branch on values that type as `any`, such as the result of `JSON.parse`.
+`true` when `T` is `any`, `false` for every other type, `unknown` included. Equivalent to
+`0 extends 1 & T ? true : false`.
 
-```typescript
-type Parsed<T> = IsAny<T> extends true ? unknown : T;
-// same as
-type Parsed<T> = (0 extends 1 & T ? true : false) extends true ? unknown : T;
-```
+## Pattern: Typing a consumer from its data function
 
-`0 extends 1 & T` holds only for `any`, because intersecting with `any` collapses `1 & T` back to `any`, which `0` does extend. Every other type leaves `1 & T` incompatible with `0`.
-
-```typescript
-type A = IsAny<any>; // true
-type B = IsAny<unknown>; // false
-type C = IsAny<string>; // false
-```
-
-## Pattern: Typing deferred data
-
-A data function can hand back a promise instead of awaiting it, so the caller decides when to resolve. `ResolvedType` names the value on the far side of that promise, letting the consumer type itself without restating the shape.
+Name the data once, at its source, and derive props and item types from it with indexed access.
 
 ```typescript
 import type { ResolvedType } from "@sdxc/types";
 
-import { listPosts } from "./posts";
-
-function load() {
-	return { posts: listPosts() }; // a promise, not awaited
+async function listPosts() {
+	return { posts: [{ id: "1", title: "Hello" }], total: 1 };
 }
 
-interface PostListProps {
-	posts: ResolvedType<typeof listPosts>["posts"];
-}
-
-function PostList(props: PostListProps) {
-	// props.posts is fully typed
-}
-
-let { posts } = load();
-posts.then((data) => PostList({ posts: data.posts }));
-```
-
-## Pattern: A JSON-safe boundary
-
-Anything crossing a serialization boundary — a queue message, a cache entry, a stored column — has to survive `JSON.stringify` and come back intact. Constraining the write side to `JSONValue` moves that from a runtime surprise to a compile error, while the read side still knows the shape it wrote.
-
-```typescript
-import type { JSONValue } from "@sdxc/types";
-
-class Queue {
-	async push<T extends JSONValue>(topic: string, message: T): Promise<void> {
-		await this.transport.send(topic, JSON.stringify(message));
-	}
-}
-
-let queue = new Queue();
-
-await queue.push("posts", { id: 1, publishedAt: "2026-09-04" });
-await queue.push("posts", { id: 1, publishedAt: new Date() }); // Error, caught here
-```
-
-The second call fails at the call site rather than surviving as `"2026-09-04T00:00:00.000Z"` and coming back a string the consumer expected to be a `Date`.
-
-A queue that formats its own dates wants the other type on the way in, and still hands `JSONValue` to whoever reads the message:
-
-```typescript
-import type { JSONSerializable, JSONValue } from "@sdxc/types";
-
-class Queue {
-	async push<T extends JSONSerializable>(topic: string, message: T): Promise<void> {
-		await this.transport.send(topic, JSON.stringify(message));
-	}
-
-	async pull(topic: string): Promise<JSONValue> {
-		return JSON.parse(await this.transport.receive(topic));
-	}
-}
-
-await queue.push("posts", { id: 1, publishedAt: new Date() }); // accepted
-```
-
-`push` takes the `Date`; `pull` types the message as what JSON actually carries, so the reader has to narrow the field rather than assume a `Date` came back.
-
-## Pattern: Typing array items from query results
-
-Indexed access reaches into the resolved value, so a single item of a returned array gets a name of its own.
-
-```typescript
-import type { ResolvedType } from "@sdxc/types";
-
-import type { listPosts } from "./posts";
-
-type Post = ResolvedType<typeof listPosts>["posts"][number];
+type PostList = ResolvedType<typeof listPosts>;
+type Post = PostList["posts"][number]; // { id: string; title: string }
 
 interface PostRowProps {
 	post: Post;
 }
+
+let pending = listPosts(); // hand the promise on unawaited
+pending.then((list: PostList) => list.posts.map((post): PostRowProps => ({ post })));
+```
+
+## Pattern: A typed queue across a JSON boundary
+
+The producer may send a `Date`; the consumer is typed with the string it will actually receive.
+
+```typescript
+import type { JSONSerializable, JSONSerialized } from "@sdxc/types";
+
+class Topic<T extends JSONSerializable> {
+	#messages: string[] = [];
+
+	push(message: T): void {
+		this.#messages.push(JSON.stringify(message));
+	}
+
+	pull(): JSONSerialized<T> | undefined {
+		let raw = this.#messages.shift();
+		return raw === undefined ? undefined : JSON.parse(raw);
+	}
+}
+
+let posts = new Topic<{ id: number; publishedAt: Date }>();
+posts.push({ id: 1, publishedAt: new Date() });
+
+let message = posts.pull();
+message?.publishedAt; // string
+```
+
+## Pattern: A cache that only stores round-trippable values
+
+When the value read back must be the value written, constrain the write to `JSONValue`.
+
+```typescript
+import type { JSONValue } from "@sdxc/types";
+
+class Cache {
+	#entries = new Map<string, string>();
+
+	set<T extends JSONValue>(key: string, value: T): void {
+		this.#entries.set(key, JSON.stringify(value));
+	}
+
+	get<T extends JSONValue>(key: string): T | undefined {
+		let raw = this.#entries.get(key);
+		return raw === undefined ? undefined : JSON.parse(raw);
+	}
+}
+
+let cache = new Cache();
+cache.set("plans", ["free", "pro"]);
+cache.set("now", new Date()); // Error: read back, it would be a string
+```
+
+## Pattern: Filters over scalar fields
+
+`JSONPrimitive` keeps comparisons to values that compare meaningfully.
+
+```typescript
+import type { JSONPrimitive } from "@sdxc/types";
+
+interface Condition {
+	field: string;
+	value: JSONPrimitive;
+}
+
+function eq(field: string, value: JSONPrimitive): Condition {
+	return { field, value };
+}
+
+eq("plan", "pro");
+eq("seats", null);
+eq("plan", { tier: "pro" }); // Error: an object is not a JSONPrimitive
+```
+
+## Pattern: Turning `any` into `unknown`
+
+`IsAny` lets a helper refuse to pass `any` through, so a caller narrows the result of
+`JSON.parse` before using it.
+
+```typescript
+import type { IsAny } from "@sdxc/types";
+
+type Known<T> = IsAny<T> extends true ? unknown : T;
+
+function read<T>(load: () => T): Known<T> {
+	return load() as Known<T>;
+}
+
+let parsed = read(() => JSON.parse('{"id":1}')); // unknown
+let count = read(() => 42); // number
 ```
 
 ## Versioning
