@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/database-middleware",
+	"version": "0.0.1",
+	"description": "Router middleware that publishes a remix/data-table database on the request context as ctx.db",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"remix": "3.0.0"
+	}
+}

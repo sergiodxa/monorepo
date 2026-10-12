@@ -35,6 +35,7 @@
         "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/database-middleware": "workspace:*",
         "@sdxc/doh": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/email-address": "workspace:*",
@@ -102,6 +103,7 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/database-middleware": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/diagram": "workspace:*",
         "@sdxc/distill": "workspace:*",
@@ -202,6 +204,7 @@
         "@sdxc/captcha": "workspace:*",
         "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/database-middleware": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
@@ -253,6 +256,7 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/database-middleware": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/email-address": "workspace:*",
@@ -402,6 +406,7 @@
         "@sdxc/csv": "workspace:*",
         "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/database-middleware": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/doh": "workspace:*",
         "@sdxc/email-address": "workspace:*",
@@ -727,6 +732,13 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
+      },
+    },
+    "packages/database-middleware": {
+      "name": "@sdxc/database-middleware",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/dates": {
@@ -2310,6 +2322,8 @@
     "@sdxc/data-table-d1": ["@sdxc/data-table-d1@workspace:packages/data-table-d1"],
 
     "@sdxc/data-table-sqlstorage": ["@sdxc/data-table-sqlstorage@workspace:packages/data-table-sqlstorage"],
+
+    "@sdxc/database-middleware": ["@sdxc/database-middleware@workspace:packages/database-middleware"],
 
     "@sdxc/dates": ["@sdxc/dates@workspace:packages/dates"],
 
