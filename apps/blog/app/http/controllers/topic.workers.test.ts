@@ -26,6 +26,9 @@ const ORIGIN = "https://blog.test";
 const RUN = generateUUID().slice(0, 8);
 const TAG = `topictag${RUN}`;
 const TOPIC_SLUG = `tagged-${RUN}`;
+const MANY_TAG = `manytag${RUN}`;
+const MANY_SLUG = `many-${RUN}`;
+const MANY = 25;
 
 /** A full `App.Env` over the real bindings, with the secrets a local run cannot read. */
 function environment(): App.Env {
@@ -80,6 +83,22 @@ beforeAll(async () => {
 			"tutorial",
 		);
 	}
+	for (let index = 0; index < MANY; index++) {
+		created(
+			await models.tutorials.create({
+				author_id: author,
+				published_at: `2025-01-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`,
+				meta: {
+					slug: `${MANY_SLUG}-${index}`,
+					title: `Many ${index} ${RUN}`,
+					excerpt: "One of many tutorials.",
+					content: "Body.",
+					tags: JSON.stringify([MANY_TAG]),
+				},
+			}),
+			"many tutorials",
+		);
+	}
 	for (let term of ["Zebra", "Aardvark"]) {
 		created(
 			await models.glossary.create({
@@ -102,6 +121,41 @@ beforeAll(async () => {
 		}),
 		"topic",
 	);
+	created(
+		await models.topics.create({
+			slug: MANY_SLUG,
+			title: `Many ${RUN}`,
+			description: "More posts than one page held.",
+			query: `tag:${MANY_TAG}`,
+		}),
+		"many topic",
+	);
+});
+
+/** Whether a page lists every one of the many tutorials, newest first, with no pager. */
+function expectEveryMany(page: string) {
+	let positions = Array.from({ length: MANY }, (_, index) =>
+		page.indexOf(`Many ${MANY - 1 - index} ${RUN}<`),
+	);
+	expect(positions.every((position) => position >= 0)).toBe(true);
+	expect(positions).toEqual([...positions].sort((a, b) => a - b));
+	expect(page).not.toContain('rel="next"');
+	expect(page).not.toContain("Topic pages");
+}
+
+describe("a topic with more matches than one page once held", () => {
+	test("its kind's page lists every one of them, newest first", async () => {
+		expectEveryMany(await html("/tutorials"));
+	});
+
+	test("an author's topic page lists every one of them, newest first", async () => {
+		expectEveryMany(await html(`/topics/${MANY_SLUG}`));
+	});
+
+	test("an old paged address renders the whole list", async () => {
+		expectEveryMany(await html(`/topics/${MANY_SLUG}?page=2`));
+		expectEveryMany(await html("/tutorials?page=2&perPage=5"));
+	});
 });
 
 describe("a kind's topic", () => {

@@ -8,8 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { createPaging } from "@sdxc/pagination";
-import { isFailure, succeeded } from "@sdxc/result";
+import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
@@ -37,62 +36,25 @@ import { NotFoundView } from "~/resources/views/not-found";
 import { TopicView } from "~/resources/views/topic";
 import routes from "~/routes/web";
 
-/** Twenty posts a page, up to fifty for a reader who asks with `?perPage=`. */
-const PAGING = createPaging({ perPage: 20, maxPerPage: 50 });
-
 /** The 404 page a topic URL naming no topic answers with. */
 function topicNotFound(ctx: AppContext): Promise<Response> {
 	return ctx.render(NotFoundView, NotFoundViewModel.page(TOPIC_NOT_FOUND), { status: 404 });
 }
 
 /**
- * Renders a topic's page: its query's matches newest first unless it asks for an `order:`,
- * paged like `/search`, with malformed paging redirected to the first page. A kind's topic
- * whose posts are entries of its page, such as the glossary, lists every entry by term on
- * one page, so each entry's anchor resolves. The page is cached under the post-list tag,
- * which every CMS write purges, previews never appearing in it.
+ * Renders a topic's page: every match of its query on one page, newest first unless it asks
+ * for an `order:`, so an old `?page=` address shows the whole list. A kind's topic whose posts
+ * are entries of its page, such as the glossary, lists them by term, so each entry's anchor
+ * reads as a reference. The page is cached under the post-list tag, which every CMS write
+ * purges, previews never appearing in it.
  */
 async function renderTopic(ctx: AppContext, topic: SelectTopic): Promise<Response> {
-	let path = topicPath(topic);
 	let query = topicQuery(topic);
-
-	if (listsEveryEntry(topic)) {
-		let hits = query === null ? [] : await PostSearch.all(ctx.db, query);
-		let posts = alphabetical(await topicPosts(ctx.models, hits));
-		ctx.cache(PUBLIC_PAGE, TAGS.postList());
-		return ctx.render(
-			TopicView,
-			TopicViewModel.page({ topic, posts, pagination: null, url: ctx.url }),
-		);
-	}
-
-	let params = PAGING.parse(ctx.url.searchParams);
-	if (isFailure(params)) return redirect(path);
-
-	if (query === null) {
-		ctx.cache(PUBLIC_PAGE, TAGS.postList());
-		return ctx.render(
-			TopicView,
-			TopicViewModel.page({ topic, posts: [], pagination: null, url: ctx.url }),
-		);
-	}
-
-	let page = await PostSearch.page(ctx.db, {
-		query,
-		page: params.data.page,
-		perPage: params.data.perPage,
-	});
-	succeeded(page, "Listing a topic failed");
-
-	let posts = await topicPosts(ctx.models, page.data.items);
-	let headers = PAGING.paginate(new Headers(), page.data, { url: ctx.url });
+	let posts =
+		query === null ? [] : await topicPosts(ctx.models, await PostSearch.all(ctx.db, query));
+	if (listsEveryEntry(topic)) posts = alphabetical(posts);
 	ctx.cache(PUBLIC_PAGE, TAGS.postList());
-
-	return ctx.render(
-		TopicView,
-		TopicViewModel.page({ topic, posts, pagination: page.data.pagination, url: ctx.url }),
-		{ headers },
-	);
+	return ctx.render(TopicView, TopicViewModel.page({ topic, posts }));
 }
 
 /**

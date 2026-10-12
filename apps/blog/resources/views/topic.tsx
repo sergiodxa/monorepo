@@ -37,7 +37,6 @@ import type { TopicViewModel } from "~/app/http/view-models/topic";
 
 import { ActivityRow } from "~/resources/components/activity-row";
 import { InlinePost } from "~/resources/components/inline-post";
-import { ResultsPager } from "~/resources/components/results-pager";
 import { BlogLayout } from "~/resources/layouts/blog";
 
 /**
@@ -299,7 +298,6 @@ export function TopicView() {
 						))}
 					</ol>
 				)}
-				{model.pager ? <ResultsPager label="Topic pages" pager={model.pager} /> : null}
 			</main>
 		</BlogLayout>
 	);

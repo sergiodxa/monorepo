@@ -1,13 +1,11 @@
 /**
  * View model for topic pages, the topic index and topic feeds. Turns a topic and the posts
  * its query found into rows drawn the way each kind's own listing draws them, with the
- * topic's addresses and pager, and into the format-neutral entries every feed format writes.
+ * topic's addresses, and into the format-neutral entries every feed format writes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import type { Pagination } from "@sdxc/pagination";
 
 import { Markdown } from "@sdxc/markdown";
 import { toPlainText } from "@sdxc/markdown/plain";
@@ -23,7 +21,6 @@ import type { SelectTopic } from "~/database/schema";
 import { BookmarksViewModel } from "~/app/http/view-models/bookmarks";
 import { FeedViewModel } from "~/app/http/view-models/feed";
 import { GlossaryViewModel } from "~/app/http/view-models/glossary";
-import { SearchViewModel } from "~/app/http/view-models/search";
 import {
 	bookmarkEntry,
 	glossaryEntry,
@@ -87,8 +84,6 @@ export namespace TopicViewModel {
 		items: Array<Item>;
 		/** Whether every row is a glossary entry, which the page lists as a definition list. */
 		entries: boolean;
-		/** `null` when every match fits on one page. */
-		pager: SearchViewModel.Pager | null;
 	}
 
 	/** One topic on the topic index. */
@@ -112,16 +107,10 @@ export class TopicViewModel {
 	 * A topic page. A kind's topic speaks as the kind's own page did ("my articles", "No
 	 * articles yet."); any other names itself by its title.
 	 *
-	 * @param input The topic, the posts on this page, the paging (`null` when every post is
-	 * listed at once) and the request URL the pager's links keep.
+	 * @param input The topic and every post it lists, in the order the page shows them.
 	 */
-	static page(input: {
-		topic: SelectTopic;
-		posts: ReadonlyArray<TopicPost>;
-		pagination: Pagination | null;
-		url: URL;
-	}): TopicViewModel.Page {
-		let { topic, pagination } = input;
+	static page(input: { topic: SelectTopic; posts: ReadonlyArray<TopicPost> }): TopicViewModel.Page {
+		let { topic } = input;
 		let builtIn = isBuiltInTopic(topic.slug);
 		let items = input.posts.map((post) => this.item(post));
 		let description = parse(topic.description);
@@ -136,10 +125,6 @@ export class TopicViewModel {
 			empty: builtIn ? `No ${inSentence(topic.title)} yet.` : "No posts yet.",
 			items,
 			entries: items.length > 0 && items.every((item) => item.type === "entry"),
-			pager:
-				pagination !== null && pagination.pages > 1
-					? SearchViewModel.pager(pagination, input.url)
-					: null,
 		};
 	}
 
