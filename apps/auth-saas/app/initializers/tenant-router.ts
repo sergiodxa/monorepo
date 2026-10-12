@@ -7,9 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware } from "remix/router";
-
-import { Turnstile } from "@sdxc/captcha/turnstile";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -40,9 +37,10 @@ import {
 	tokenRateLimit,
 } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
-import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
+import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { htmlRenderer } from "~/app/http/render";
 import { logger } from "~/app/initializers/logger";
+import { turnstile } from "~/app/initializers/turnstile";
 import { userinfoMetadataEntry } from "~/app/initializers/userinfo-resource";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
@@ -81,6 +79,7 @@ export const tenantRouter = createRouter({
 		i18n,
 		platformSender(platformFrom),
 		mail({ transport: new CloudflareTransport(env.SEND_EMAIL), from: platformFrom }),
+		turnstileProvider(turnstile),
 	],
 	defaultHandler: notFound,
 });
@@ -106,15 +105,6 @@ let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER, env);
  * screens it is on.
  */
 let credentialTurnstileChallenge = turnstileChallenge(env.TURNSTILE_CHALLENGE_KV);
-
-/**
- * Verifies the token every hosted form that can challenge submits, after its rate limits.
- * It publishes `ctx.captcha`, which the submit handlers read through its global
- * `RequestContext` augmentation, so it runs as a plain guard ahead of the loaded handler.
- */
-let submittedTurnstile: Middleware = turnstileVerification(
-	new Turnstile({ secretKey: env.TURNSTILE_SECRET_KEY }),
-);
 
 tenantRouter.map(
 	routes.openidConfiguration,
@@ -185,7 +175,7 @@ tenantRouter.map(
 	routes.hostedSignInSubmit,
 	lazy(
 		() => import("~/app/http/controllers/hosted/sign-in").then((it) => it.signInSubmit),
-		[credentialTurnstileChallenge, credentialRateLimit, submittedTurnstile],
+		[credentialTurnstileChallenge, credentialRateLimit],
 	),
 );
 tenantRouter.map(
@@ -279,7 +269,7 @@ tenantRouter.map(
 	routes.hostedSignUpSubmit,
 	lazy(
 		() => import("~/app/http/controllers/hosted/sign-up").then((it) => it.signUpSubmit),
-		[credentialRateLimit, mailRateLimit, submittedTurnstile],
+		[credentialRateLimit, mailRateLimit],
 	),
 );
 tenantRouter.map(
@@ -304,7 +294,7 @@ tenantRouter.map(
 	routes.hostedResetSubmit,
 	lazy(
 		() => import("~/app/http/controllers/hosted/reset").then((it) => it.resetSubmit),
-		[credentialTurnstileChallenge, credentialRateLimit, resetMailRateLimit, submittedTurnstile],
+		[credentialTurnstileChallenge, credentialRateLimit, resetMailRateLimit],
 	),
 );
 tenantRouter.map(
@@ -322,7 +312,6 @@ tenantRouter.map(
 			credentialTurnstileChallenge,
 			credentialRateLimit,
 			magicLinkRateLimit(env.MAGIC_LINK_RATE_LIMIT_KV, env),
-			submittedTurnstile,
 		],
 	),
 );

@@ -46,6 +46,7 @@ import {
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { requestOrigin } from "~/app/http/request-origin";
 import { emailAddress } from "~/app/http/validators/email-address";
 import {
@@ -184,68 +185,71 @@ export const magicLinkShow = createAction(routes.hostedMagicLinkShow, async (ctx
  * @example
  * router.map(routes.hostedMagicLinkSubmit, magicLinkSubmit);
  */
-export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async (ctx) => {
-	let t = ctx.intl.t;
-	let interactionId = ctx.url.searchParams.get("interaction");
-	let returnTo = safeReturnTo(ctx);
-	let challenge = ctx.turnstileChallenge === true;
+export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, {
+	middleware: [turnstileVerification()],
+	handler: async (ctx) => {
+		let t = ctx.intl.t;
+		let interactionId = ctx.url.searchParams.get("interaction");
+		let returnTo = safeReturnTo(ctx);
+		let challenge = ctx.turnstileChallenge === true;
 
-	if (!interactionId && !returnTo) {
-		return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
-	}
-
-	let origin = requestOrigin(ctx.request);
-
-	if (challenge) {
-		let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
-			env,
-			tenantId: ctx.tenant.id,
-			country: origin.country ?? undefined,
-		});
-
-		if (!turnstilePassed) {
-			let turnstileIssue = [{ message: t("hostedMagicLink.errors.turnstileFailed") }];
-			return renderRequestForm(ctx, challenge, turnstileIssue);
+		if (!interactionId && !returnTo) {
+			return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
 		}
-	}
 
-	let parsed = s.parseSafe(requestSchema(t), ctx.formData);
-	if (!parsed.success) return renderRequestForm(ctx, challenge, parsed.issues);
-	let email = parsed.value.email.address;
+		let origin = requestOrigin(ctx.request);
 
-	let nonce = mintMagicLinkNonce();
-	let nonceHash = await hashMagicLinkNonce(nonce);
+		if (challenge) {
+			let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
+				env,
+				tenantId: ctx.tenant.id,
+				country: origin.country ?? undefined,
+			});
 
-	let begun = await ctx.tenantStub.beginMagicLinkSignIn({
-		address: email,
-		locale: ctx.locale,
-		browserNonceHash: nonceHash,
-		interactionId,
-		returnTo,
-	});
+			if (!turnstilePassed) {
+				let turnstileIssue = [{ message: t("hostedMagicLink.errors.turnstileFailed") }];
+				return renderRequestForm(ctx, challenge, turnstileIssue);
+			}
+		}
 
-	let tenantName = senderNameFromIssuer(ctx.tenant.issuer);
+		let parsed = s.parseSafe(requestSchema(t), ctx.formData);
+		if (!parsed.success) return renderRequestForm(ctx, challenge, parsed.issues);
+		let email = parsed.value.email.address;
 
-	if (begun.message === "sign_in") {
-		await ctx.email.send(
-			new MagicLinkSignInEmail({
-				email,
-				url: magicLinkSignInLink(ctx, begun.token),
-				code: begun.code,
-				tenantName,
-				t,
-			}),
-			{ from: senderAddressFor(ctx) },
-		);
-	} else if (begun.message === "no_account") {
-		await ctx.email.send(new MagicLinkNoAccountEmail({ email, tenantName, t }), {
-			from: senderAddressFor(ctx),
+		let nonce = mintMagicLinkNonce();
+		let nonceHash = await hashMagicLinkNonce(nonce);
+
+		let begun = await ctx.tenantStub.beginMagicLinkSignIn({
+			address: email,
+			locale: ctx.locale,
+			browserNonceHash: nonceHash,
+			interactionId,
+			returnTo,
 		});
-	}
 
-	let response = await renderConfirmation(ctx);
-	response.headers.append("Set-Cookie", await serializeMagicLinkNonceCookie(nonce));
-	return response;
+		let tenantName = senderNameFromIssuer(ctx.tenant.issuer);
+
+		if (begun.message === "sign_in") {
+			await ctx.email.send(
+				new MagicLinkSignInEmail({
+					email,
+					url: magicLinkSignInLink(ctx, begun.token),
+					code: begun.code,
+					tenantName,
+					t,
+				}),
+				{ from: senderAddressFor(ctx) },
+			);
+		} else if (begun.message === "no_account") {
+			await ctx.email.send(new MagicLinkNoAccountEmail({ email, tenantName, t }), {
+				from: senderAddressFor(ctx),
+			});
+		}
+
+		let response = await renderConfirmation(ctx);
+		response.headers.append("Set-Cookie", await serializeMagicLinkNonceCookie(nonce));
+		return response;
+	},
 });
 
 /**

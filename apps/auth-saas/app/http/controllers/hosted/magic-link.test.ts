@@ -12,9 +12,10 @@
 import type { NormalizedMessage } from "@sdxc/mail";
 import type { MemoryTransport } from "@sdxc/mail/memory";
 import type { RateLimitKVNamespace } from "@sdxc/rate-limit";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware } from "remix/router";
 
 import { totp } from "@sdxc/crypto";
+import { lazy } from "@sdxc/lazy-route";
 import { MemoryTransport as MemoryMailTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { isFailure } from "@sdxc/result";
@@ -31,6 +32,7 @@ import i18n from "~/app/http/middleware/i18n";
 import { platformSender } from "~/app/http/middleware/mail-sender";
 import { tenant } from "~/app/http/middleware/tenant";
 import { magicLinkRateLimit } from "~/app/http/middleware/tenant-rate-limit";
+import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { htmlRenderer } from "~/app/http/render";
 import {
 	buildHarness,
@@ -400,12 +402,13 @@ describe("magicLinkSubmit under magicLinkRateLimit", () => {
 			i18n as Middleware,
 			platformSender(testSender),
 			mail({ transport: new MemoryMailTransport(), from: testSender }) as Middleware,
+			turnstileProvider(harness.turnstile),
 		];
 		let router = createRouter({ middleware });
-		router.map(routes.hostedMagicLinkSubmit, {
-			middleware: [magicLinkRateLimit(memoryKv())],
-			handler: magicLinkSubmit as RequestHandler,
-		});
+		router.map(
+			routes.hostedMagicLinkSubmit,
+			lazy(async () => magicLinkSubmit, [magicLinkRateLimit(memoryKv())]),
+		);
 
 		function attempt(email: string) {
 			let body = new URLSearchParams({ email });

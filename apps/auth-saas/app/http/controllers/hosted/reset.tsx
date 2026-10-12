@@ -32,6 +32,7 @@ import {
 	passesConditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { requestOrigin } from "~/app/http/request-origin";
 import { HostedDocument } from "~/resources/views/hosted/document";
 import { ResetPage } from "~/resources/views/hosted/reset";
@@ -152,79 +153,82 @@ export const resetShow = createAction(routes.hostedResetShow, async (ctx) => {
  * @example
  * router.map(routes.hostedResetSubmit, resetSubmit);
  */
-export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) => {
-	let t = ctx.intl.t;
-	let ticket = ctx.url.searchParams.get("ticket");
-	let challenge = ctx.turnstileChallenge === true;
+export const resetSubmit = createAction(routes.hostedResetSubmit, {
+	middleware: [turnstileVerification()],
+	handler: async (ctx) => {
+		let t = ctx.intl.t;
+		let ticket = ctx.url.searchParams.get("ticket");
+		let challenge = ctx.turnstileChallenge === true;
 
-	if (challenge) {
-		let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
-			env,
-			tenantId: ctx.tenant.id,
-			country: requestOrigin(ctx.request).country ?? undefined,
+		if (challenge) {
+			let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
+				env,
+				tenantId: ctx.tenant.id,
+				country: requestOrigin(ctx.request).country ?? undefined,
+			});
+
+			if (!turnstilePassed) {
+				let turnstileIssue = [{ message: t("hostedReset.errors.turnstileFailed") }];
+				if (!ticket) return renderRequestForm(ctx, challenge, turnstileIssue);
+
+				let policy = await ctx.tenantStub.describePasswordPolicy();
+				return renderCompleteForm(ctx, policy, challenge, turnstileIssue);
+			}
+		}
+
+		if (!ticket) {
+			let parsed = s.parseSafe(RequestSchema, ctx.formData);
+			if (!parsed.success) return renderRequestForm(ctx, challenge, parsed.issues);
+
+			let begun = await ctx.tenantStub.beginPasswordReset({ identifier: parsed.value.identifier });
+
+			if (begun.address !== null) {
+				await ctx.email.send(
+					new ResetPasswordEmail({
+						email: begun.address,
+						url: resetPasswordLink(ctx, begun.ticket),
+						tenantName: senderNameFromIssuer(ctx.tenant.issuer),
+						t,
+					}),
+					{ from: senderAddressFor(ctx) },
+				);
+			}
+
+			return ctx.render(
+				<HostedDocument title={t("hostedReset.requestTitle")} locale={ctx.locale}>
+					<ResetPage t={t} state="requested" />
+				</HostedDocument>,
+			);
+		}
+
+		let policy = await ctx.tenantStub.describePasswordPolicy();
+		let parsed = s.parseSafe(completeSchema(policy), ctx.formData);
+		if (!parsed.success) return renderCompleteForm(ctx, policy, challenge, parsed.issues);
+
+		let completed = await ctx.tenantStub.completePasswordReset({
+			ticket,
+			newPassword: parsed.value.newPassword,
 		});
 
-		if (!turnstilePassed) {
-			let turnstileIssue = [{ message: t("hostedReset.errors.turnstileFailed") }];
-			if (!ticket) return renderRequestForm(ctx, challenge, turnstileIssue);
+		if (!completed.ok) {
+			if (completed.reason === "invalid-ticket") {
+				return ctx.render(
+					<HostedDocument title={t("hostedReset.invalidTicket.heading")} locale={ctx.locale}>
+						<ResetPage t={t} state="invalidTicket" requestHref={freshRequestHref(ctx)} />
+					</HostedDocument>,
+					{ status: 400 },
+				);
+			}
 
-			let policy = await ctx.tenantStub.describePasswordPolicy();
-			return renderCompleteForm(ctx, policy, challenge, turnstileIssue);
-		}
-	}
-
-	if (!ticket) {
-		let parsed = s.parseSafe(RequestSchema, ctx.formData);
-		if (!parsed.success) return renderRequestForm(ctx, challenge, parsed.issues);
-
-		let begun = await ctx.tenantStub.beginPasswordReset({ identifier: parsed.value.identifier });
-
-		if (begun.address !== null) {
-			await ctx.email.send(
-				new ResetPasswordEmail({
-					email: begun.address,
-					url: resetPasswordLink(ctx, begun.ticket),
-					tenantName: senderNameFromIssuer(ctx.tenant.issuer),
-					t,
-				}),
-				{ from: senderAddressFor(ctx) },
-			);
+			return renderCompleteForm(ctx, policy, challenge, [
+				passwordPolicyIssue(t, completed, "newPassword"),
+			]);
 		}
 
 		return ctx.render(
-			<HostedDocument title={t("hostedReset.requestTitle")} locale={ctx.locale}>
-				<ResetPage t={t} state="requested" />
+			<HostedDocument title={t("hostedReset.completeSuccess.heading")} locale={ctx.locale}>
+				<ResetPage t={t} state="completed" signInHref={signInHref(ctx)} />
 			</HostedDocument>,
 		);
-	}
-
-	let policy = await ctx.tenantStub.describePasswordPolicy();
-	let parsed = s.parseSafe(completeSchema(policy), ctx.formData);
-	if (!parsed.success) return renderCompleteForm(ctx, policy, challenge, parsed.issues);
-
-	let completed = await ctx.tenantStub.completePasswordReset({
-		ticket,
-		newPassword: parsed.value.newPassword,
-	});
-
-	if (!completed.ok) {
-		if (completed.reason === "invalid-ticket") {
-			return ctx.render(
-				<HostedDocument title={t("hostedReset.invalidTicket.heading")} locale={ctx.locale}>
-					<ResetPage t={t} state="invalidTicket" requestHref={freshRequestHref(ctx)} />
-				</HostedDocument>,
-				{ status: 400 },
-			);
-		}
-
-		return renderCompleteForm(ctx, policy, challenge, [
-			passwordPolicyIssue(t, completed, "newPassword"),
-		]);
-	}
-
-	return ctx.render(
-		<HostedDocument title={t("hostedReset.completeSuccess.heading")} locale={ctx.locale}>
-			<ResetPage t={t} state="completed" signInHref={signInHref(ctx)} />
-		</HostedDocument>,
-	);
+	},
 });

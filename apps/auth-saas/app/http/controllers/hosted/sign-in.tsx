@@ -31,6 +31,7 @@ import {
 } from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { CREDENTIAL_FAILURE_SPEND } from "~/app/http/middleware/tenant-rate-limit";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { requestOrigin } from "~/app/http/request-origin";
 import { readTrustedDeviceToken } from "~/app/initializers/trusted-device-cookie";
 import { recordAttackSignal } from "~/app/services/attack-signals";
@@ -112,121 +113,129 @@ export const signInShow = createAction(routes.hostedSignInShow, async (ctx) => {
  * @example
  * router.map(routes.hostedSignInSubmit, signInSubmit);
  */
-export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) => {
-	let interactionId = ctx.url.searchParams.get("interaction");
-	let returnTo = safeReturnTo(ctx);
-	let loginHint = ctx.url.searchParams.get("login_hint");
-	let forced = ctx.url.searchParams.get("forced") === "1";
-	let challenge = ctx.turnstileChallenge === true;
+export const signInSubmit = createAction(routes.hostedSignInSubmit, {
+	middleware: [turnstileVerification()],
+	handler: async (ctx) => {
+		let interactionId = ctx.url.searchParams.get("interaction");
+		let returnTo = safeReturnTo(ctx);
+		let loginHint = ctx.url.searchParams.get("login_hint");
+		let forced = ctx.url.searchParams.get("forced") === "1";
+		let challenge = ctx.turnstileChallenge === true;
 
-	if (!interactionId && !returnTo) {
-		return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
-	}
+		if (!interactionId && !returnTo) {
+			return redirectToErrorPage(ctx, ctx.intl.t("hostedError.invalidInteraction"));
+		}
 
-	let origin = requestOrigin(ctx.request);
+		let origin = requestOrigin(ctx.request);
 
-	if (challenge) {
-		let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
-			env,
-			tenantId: ctx.tenant.id,
-			country: origin.country ?? undefined,
-		});
-		if (!turnstilePassed) {
+		if (challenge) {
+			let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
+				env,
+				tenantId: ctx.tenant.id,
+				country: origin.country ?? undefined,
+			});
+			if (!turnstilePassed) {
+				return renderSignInPage(ctx, {
+					loginHint,
+					forced,
+					challenge,
+					error: ctx.intl.t("hostedSignIn.errors.turnstileFailed"),
+				});
+			}
+		}
+
+		let identifier = ctx.formData.get("identifier");
+		let password = ctx.formData.get("password");
+		let remembered = ctx.formData.get("remember") === "true";
+
+		if (
+			typeof identifier !== "string" ||
+			!identifier ||
+			typeof password !== "string" ||
+			!password
+		) {
 			return renderSignInPage(ctx, {
 				loginHint,
 				forced,
 				challenge,
-				error: ctx.intl.t("hostedSignIn.errors.turnstileFailed"),
+				error: ctx.intl.t("hostedSignIn.errors.invalidCredentials"),
 			});
 		}
-	}
 
-	let identifier = ctx.formData.get("identifier");
-	let password = ctx.formData.get("password");
-	let remembered = ctx.formData.get("remember") === "true";
+		let trustedDeviceToken = await readTrustedDeviceToken(ctx.request);
 
-	if (typeof identifier !== "string" || !identifier || typeof password !== "string" || !password) {
-		return renderSignInPage(ctx, {
-			loginHint,
-			forced,
-			challenge,
-			error: ctx.intl.t("hostedSignIn.errors.invalidCredentials"),
+		let signedIn = await ctx.tenantStub.signInWithPassword({
+			identifier,
+			password,
+			remembered,
+			trustedDeviceToken,
+			...origin,
 		});
-	}
 
-	let trustedDeviceToken = await readTrustedDeviceToken(ctx.request);
+		if (!signedIn.ok) {
+			if (signedIn.reason === "invalid-credentials") {
+				let spend = ctx.credentialRateLimit;
+				if (spend) await spend.adapter.consume(spend.key, CREDENTIAL_FAILURE_SPEND);
 
-	let signedIn = await ctx.tenantStub.signInWithPassword({
-		identifier,
-		password,
-		remembered,
-		trustedDeviceToken,
-		...origin,
-	});
+				recordAttackSignal(env, {
+					tenantId: ctx.tenant.id,
+					surface: "credential",
+					outcome: signedIn.retryAfter !== undefined ? "refused-backoff" : "refused-credential",
+					reason: "invalid-credentials",
+					country: origin.country ?? undefined,
+				});
+			}
 
-	if (!signedIn.ok) {
-		if (signedIn.reason === "invalid-credentials") {
-			let spend = ctx.credentialRateLimit;
-			if (spend) await spend.adapter.consume(spend.key, CREDENTIAL_FAILURE_SPEND);
-
-			recordAttackSignal(env, {
-				tenantId: ctx.tenant.id,
-				surface: "credential",
-				outcome: signedIn.retryAfter !== undefined ? "refused-backoff" : "refused-credential",
-				reason: "invalid-credentials",
-				country: origin.country ?? undefined,
-			});
+			let error =
+				signedIn.reason === "password_expired"
+					? ctx.intl.t("hostedSignIn.errors.passwordExpired")
+					: signedIn.reason === "dau_cap_reached"
+						? ctx.intl.t("hostedSignIn.errors.dauCapReached")
+						: ctx.intl.t("hostedSignIn.errors.invalidCredentials");
+			return renderSignInPage(ctx, { loginHint, forced, challenge, error });
 		}
 
-		let error =
-			signedIn.reason === "password_expired"
-				? ctx.intl.t("hostedSignIn.errors.passwordExpired")
-				: signedIn.reason === "dau_cap_reached"
-					? ctx.intl.t("hostedSignIn.errors.dauCapReached")
-					: ctx.intl.t("hostedSignIn.errors.invalidCredentials");
-		return renderSignInPage(ctx, { loginHint, forced, challenge, error });
-	}
+		recordAttackSignal(env, {
+			tenantId: ctx.tenant.id,
+			surface: "credential",
+			outcome: "succeeded",
+			country: origin.country ?? undefined,
+		});
 
-	recordAttackSignal(env, {
-		tenantId: ctx.tenant.id,
-		surface: "credential",
-		outcome: "succeeded",
-		country: origin.country ?? undefined,
-	});
+		let sessionCookieHeader = await serializeSessionCookie(signedIn, remembered);
 
-	let sessionCookieHeader = await serializeSessionCookie(signedIn, remembered);
+		if (signedIn.secondFactorRequired) {
+			let url = new URL(routes.hostedSecondFactorShow.href(), ctx.request.url);
+			if (interactionId) url.searchParams.set("interaction", interactionId);
+			if (returnTo) url.searchParams.set("return_to", returnTo);
+			url.searchParams.set("mode", signedIn.mustEnrolFactor ? "enrol" : "prove");
+			let uiLocales = ctx.url.searchParams.get("ui_locales");
+			if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
 
-	if (signedIn.secondFactorRequired) {
-		let url = new URL(routes.hostedSecondFactorShow.href(), ctx.request.url);
-		if (interactionId) url.searchParams.set("interaction", interactionId);
-		if (returnTo) url.searchParams.set("return_to", returnTo);
-		url.searchParams.set("mode", signedIn.mustEnrolFactor ? "enrol" : "prove");
-		let uiLocales = ctx.url.searchParams.get("ui_locales");
-		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
+			let response = new Response(null, { status: 302, headers: { Location: url.toString() } });
+			response.headers.append("Set-Cookie", sessionCookieHeader);
+			return response;
+		}
 
-		let response = new Response(null, { status: 302, headers: { Location: url.toString() } });
+		let response: Response;
+
+		if (interactionId) {
+			let outcome = await ctx.tenantStub.resumeAuthorization({
+				interactionId,
+				sessionId: signedIn.sessionId,
+				now: Date.now(),
+			});
+
+			response = await respondToAuthorizationOutcome(ctx, outcome, {
+				uiLocales: ctx.url.searchParams.get("ui_locales"),
+			});
+		} else {
+			// `returnTo` is the only other way this action was reached — the top
+			// guard already refused any request carrying neither.
+			response = redirectToReturnTo(ctx, returnTo as string);
+		}
+
 		response.headers.append("Set-Cookie", sessionCookieHeader);
 		return response;
-	}
-
-	let response: Response;
-
-	if (interactionId) {
-		let outcome = await ctx.tenantStub.resumeAuthorization({
-			interactionId,
-			sessionId: signedIn.sessionId,
-			now: Date.now(),
-		});
-
-		response = await respondToAuthorizationOutcome(ctx, outcome, {
-			uiLocales: ctx.url.searchParams.get("ui_locales"),
-		});
-	} else {
-		// `returnTo` is the only other way this action was reached — the top
-		// guard already refused any request carrying neither.
-		response = redirectToReturnTo(ctx, returnTo as string);
-	}
-
-	response.headers.append("Set-Cookie", sessionCookieHeader);
-	return response;
+	},
 });

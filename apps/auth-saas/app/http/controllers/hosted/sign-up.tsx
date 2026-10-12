@@ -37,6 +37,7 @@ import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { requestOrigin } from "~/app/http/request-origin";
 import { emailAddress } from "~/app/http/validators/email-address";
 import { HostedDocument } from "~/resources/views/hosted/document";
@@ -113,91 +114,60 @@ export const signUpShow = createAction(routes.hostedSignUpShow, async (ctx) => {
  * @example
  * router.map(routes.hostedSignUpSubmit, signUpSubmit);
  */
-export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) => {
-	let t = ctx.intl.t;
-	let policy = await ctx.tenantStub.describePasswordPolicy();
-	let turnstileSiteKey = env.TURNSTILE_SITE_KEY;
+export const signUpSubmit = createAction(routes.hostedSignUpSubmit, {
+	middleware: [turnstileVerification()],
+	handler: async (ctx) => {
+		let t = ctx.intl.t;
+		let policy = await ctx.tenantStub.describePasswordPolicy();
+		let turnstileSiteKey = env.TURNSTILE_SITE_KEY;
 
-	let turnstilePassed = passesUnconditionalTurnstileChallenge(ctx.captcha, {
-		env,
-		tenantId: ctx.tenant.id,
-		country: requestOrigin(ctx.request).country ?? undefined,
-	});
-	if (!turnstilePassed) {
-		return renderSignUpPage(ctx, {
-			policy,
-			turnstileSiteKey,
-			issues: [{ message: t("hostedSignUp.errors.turnstileFailed") }],
+		let turnstilePassed = passesUnconditionalTurnstileChallenge(ctx.captcha, {
+			env,
+			tenantId: ctx.tenant.id,
+			country: requestOrigin(ctx.request).country ?? undefined,
 		});
-	}
+		if (!turnstilePassed) {
+			return renderSignUpPage(ctx, {
+				policy,
+				turnstileSiteKey,
+				issues: [{ message: t("hostedSignUp.errors.turnstileFailed") }],
+			});
+		}
 
-	let parsed = s.parseSafe(signUpSchema(policy, t), ctx.formData);
-	if (!parsed.success) {
-		return renderSignUpPage(ctx, { policy, turnstileSiteKey, issues: parsed.issues });
-	}
+		let parsed = s.parseSafe(signUpSchema(policy, t), ctx.formData);
+		if (!parsed.success) {
+			return renderSignUpPage(ctx, { policy, turnstileSiteKey, issues: parsed.issues });
+		}
 
-	let { password, name } = parsed.value;
-	let email = parsed.value.email.address;
-	let displayName = name.trim().length > 0 ? name.trim() : undefined;
+		let { password, name } = parsed.value;
+		let email = parsed.value.email.address;
+		let displayName = name.trim().length > 0 ? name.trim() : undefined;
 
-	let created = await ctx.tenantStub.createSubject({
-		identifiers: [{ kind: "email", value: email }],
-		profile: { name: displayName },
-	});
-
-	if (!created.ok) {
-		let message =
-			created.reason === "identifier-taken"
-				? t("hostedSignUp.errors.identifierTaken")
-				: t("hostedSignUp.errors.identifierInvalid");
-		return renderSignUpPage(ctx, {
-			policy,
-			turnstileSiteKey,
-			issues: [{ message, path: ["email"] }],
+		let created = await ctx.tenantStub.createSubject({
+			identifiers: [{ kind: "email", value: email }],
+			profile: { name: displayName },
 		});
-	}
 
-	let added = await ctx.tenantStub.addIdentifier({
-		subjectId: created.subjectId,
-		kind: "email",
-		value: email,
-		actor: { kind: "subject" },
-	});
+		if (!created.ok) {
+			let message =
+				created.reason === "identifier-taken"
+					? t("hostedSignUp.errors.identifierTaken")
+					: t("hostedSignUp.errors.identifierInvalid");
+			return renderSignUpPage(ctx, {
+				policy,
+				turnstileSiteKey,
+				issues: [{ message, path: ["email"] }],
+			});
+		}
 
-	if (!added.ok) {
-		return renderSignUpPage(ctx, {
-			policy,
-			turnstileSiteKey,
-			issues: [{ message: t("hostedSignUp.errors.generic") }],
+		let added = await ctx.tenantStub.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: email,
+			actor: { kind: "subject" },
 		});
-	}
 
-	let sendFailed = false;
-
-	if (added.kind === "email") {
-		let tenantName = senderNameFromIssuer(ctx.tenant.issuer);
-
-		let sent = await ctx.email.send(
-			new VerifyAddressEmail({
-				email: added.value,
-				url: verifyAddressLink(ctx, added.ticket),
-				tenantName,
-				t,
-			}),
-			{ from: senderAddressFor(ctx) },
-		);
-
-		sendFailed = isFailure(sent);
-	}
-
-	let written = await ctx.tenantStub.setPassword({
-		subjectId: created.subjectId,
-		password,
-		actor: { kind: "subject" },
-	});
-
-	if (!written.ok) {
-		if (written.reason === "not-found") {
+		if (!added.ok) {
 			return renderSignUpPage(ctx, {
 				policy,
 				turnstileSiteKey,
@@ -205,18 +175,52 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 			});
 		}
 
-		return renderSignUpPage(ctx, {
-			policy,
-			turnstileSiteKey,
-			issues: [passwordPolicyIssue(t, written, "password")],
+		let sendFailed = false;
+
+		if (added.kind === "email") {
+			let tenantName = senderNameFromIssuer(ctx.tenant.issuer);
+
+			let sent = await ctx.email.send(
+				new VerifyAddressEmail({
+					email: added.value,
+					url: verifyAddressLink(ctx, added.ticket),
+					tenantName,
+					t,
+				}),
+				{ from: senderAddressFor(ctx) },
+			);
+
+			sendFailed = isFailure(sent);
+		}
+
+		let written = await ctx.tenantStub.setPassword({
+			subjectId: created.subjectId,
+			password,
+			actor: { kind: "subject" },
 		});
-	}
 
-	let url = new URL(routes.hostedVerifyShow.href(), ctx.request.url);
-	url.searchParams.set("subject", created.subjectId);
-	if (sendFailed) url.searchParams.set("sendFailed", "1");
-	let uiLocales = ctx.url.searchParams.get("ui_locales");
-	if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
+		if (!written.ok) {
+			if (written.reason === "not-found") {
+				return renderSignUpPage(ctx, {
+					policy,
+					turnstileSiteKey,
+					issues: [{ message: t("hostedSignUp.errors.generic") }],
+				});
+			}
 
-	return new Response(null, { status: 302, headers: { Location: url.toString() } });
+			return renderSignUpPage(ctx, {
+				policy,
+				turnstileSiteKey,
+				issues: [passwordPolicyIssue(t, written, "password")],
+			});
+		}
+
+		let url = new URL(routes.hostedVerifyShow.href(), ctx.request.url);
+		url.searchParams.set("subject", created.subjectId);
+		if (sendFailed) url.searchParams.set("sendFailed", "1");
+		let uiLocales = ctx.url.searchParams.get("ui_locales");
+		if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
+
+		return new Response(null, { status: 302, headers: { Location: url.toString() } });
+	},
 });

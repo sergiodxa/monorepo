@@ -36,6 +36,8 @@ import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
+import i18n from "~/app/http/middleware/i18n";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { requestOrigin } from "~/app/http/request-origin";
 import { emailAddress } from "~/app/http/validators/email-address";
 import { PublicDocument } from "~/resources/views/landing";
@@ -156,112 +158,115 @@ export const signupShow = createAction(routes.signup.show, async (ctx) => {
  * @example
  * router.map(routes.signup.submit, signupSubmit);
  */
-export const signupSubmit = createAction(routes.signup.submit, async (ctx) => {
-	let platform = env.TENANT.getByName(env.PLATFORM_DOMAIN);
-	let policy = await platform.describePasswordPolicy();
+export const signupSubmit = createAction(routes.signup.submit, {
+	middleware: [i18n, turnstileVerification()],
+	handler: async (ctx) => {
+		let platform = env.TENANT.getByName(env.PLATFORM_DOMAIN);
+		let policy = await platform.describePasswordPolicy();
 
-	let turnstilePassed = passesUnconditionalTurnstileChallenge(ctx.captcha, {
-		env,
-		tenantId: env.PLATFORM_DOMAIN,
-		country: requestOrigin(ctx.request).country ?? undefined,
-	});
-	if (!turnstilePassed) {
-		return renderSignUpPage(ctx, {
-			policy,
-			issues: [{ message: "We couldn't verify you're not a robot. Try again." }],
+		let turnstilePassed = passesUnconditionalTurnstileChallenge(ctx.captcha, {
+			env,
+			tenantId: env.PLATFORM_DOMAIN,
+			country: requestOrigin(ctx.request).country ?? undefined,
 		});
-	}
+		if (!turnstilePassed) {
+			return renderSignUpPage(ctx, {
+				policy,
+				issues: [{ message: "We couldn't verify you're not a robot. Try again." }],
+			});
+		}
 
-	let parsed = s.parseSafe(signUpSchema(policy, ctx.intl.t), ctx.formData);
-	if (!parsed.success) return renderSignUpPage(ctx, { policy, issues: parsed.issues });
+		let parsed = s.parseSafe(signUpSchema(policy, ctx.intl.t), ctx.formData);
+		if (!parsed.success) return renderSignUpPage(ctx, { policy, issues: parsed.issues });
 
-	let { organizationName, password } = parsed.value;
-	let email = parsed.value.email.address;
+		let { organizationName, password } = parsed.value;
+		let email = parsed.value.email.address;
 
-	let refusal = await screenOwnerAddress(
-		ctx.intl.t,
-		parsed.value.email,
-		ctx.formData.get("confirmedEmail"),
-	);
-	if (refusal) {
-		return renderSignUpPage(ctx, {
-			policy,
-			issues: [{ message: refusal.message, path: ["email"] }],
-			organizationName,
-			email: refusal.suggestion ?? email,
-			confirmedEmail: refusal.suggestion ? email : undefined,
-		});
-	}
-
-	let created = await platform.createSubject({ identifiers: [{ kind: "email", value: email }] });
-
-	if (!created.ok) {
-		let message =
-			created.reason === "identifier-taken"
-				? "An account with this email already exists."
-				: "Enter a valid email address.";
-		return renderSignUpPage(ctx, { policy, issues: [{ message, path: ["email"] }] });
-	}
-
-	let added = await platform.addIdentifier({
-		subjectId: created.subjectId,
-		kind: "email",
-		value: email,
-		actor: { kind: "subject" },
-	});
-
-	if (!added.ok) {
-		return renderSignUpPage(ctx, {
-			policy,
-			issues: [{ message: "Something went wrong. Try again." }],
-		});
-	}
-
-	unwrap(
-		await ctx.models.pendingSignups.create({
-			subject_id: created.subjectId,
-			organization_name: organizationName,
-		}),
-	);
-
-	let sendFailed = false;
-
-	if (added.kind === "email") {
-		let { t } = mailTranslator();
-		let url = new URL(routes.signup.verify.href(), ctx.request.url);
-		url.searchParams.set("ticket", added.ticket);
-
-		let sent = await ctx.mail.send(
-			new PlatformSignupVerifyEmail({ email: added.value, url: url.toString(), t }),
-			{ from: parseSenderAddress(env.EMAIL_FROM) },
+		let refusal = await screenOwnerAddress(
+			ctx.intl.t,
+			parsed.value.email,
+			ctx.formData.get("confirmedEmail"),
 		);
+		if (refusal) {
+			return renderSignUpPage(ctx, {
+				policy,
+				issues: [{ message: refusal.message, path: ["email"] }],
+				organizationName,
+				email: refusal.suggestion ?? email,
+				confirmedEmail: refusal.suggestion ? email : undefined,
+			});
+		}
 
-		sendFailed = isFailure(sent);
-	}
+		let created = await platform.createSubject({ identifiers: [{ kind: "email", value: email }] });
 
-	let written = await platform.setPassword({
-		subjectId: created.subjectId,
-		password,
-		actor: { kind: "subject" },
-	});
+		if (!created.ok) {
+			let message =
+				created.reason === "identifier-taken"
+					? "An account with this email already exists."
+					: "Enter a valid email address.";
+			return renderSignUpPage(ctx, { policy, issues: [{ message, path: ["email"] }] });
+		}
 
-	if (!written.ok) {
-		if (written.reason === "not-found") {
+		let added = await platform.addIdentifier({
+			subjectId: created.subjectId,
+			kind: "email",
+			value: email,
+			actor: { kind: "subject" },
+		});
+
+		if (!added.ok) {
 			return renderSignUpPage(ctx, {
 				policy,
 				issues: [{ message: "Something went wrong. Try again." }],
 			});
 		}
 
-		return renderSignUpPage(ctx, {
-			policy,
-			issues: [passwordPolicyIssue(ctx.intl.t, written, "password")],
+		unwrap(
+			await ctx.models.pendingSignups.create({
+				subject_id: created.subjectId,
+				organization_name: organizationName,
+			}),
+		);
+
+		let sendFailed = false;
+
+		if (added.kind === "email") {
+			let { t } = mailTranslator();
+			let url = new URL(routes.signup.verify.href(), ctx.request.url);
+			url.searchParams.set("ticket", added.ticket);
+
+			let sent = await ctx.mail.send(
+				new PlatformSignupVerifyEmail({ email: added.value, url: url.toString(), t }),
+				{ from: parseSenderAddress(env.EMAIL_FROM) },
+			);
+
+			sendFailed = isFailure(sent);
+		}
+
+		let written = await platform.setPassword({
+			subjectId: created.subjectId,
+			password,
+			actor: { kind: "subject" },
 		});
-	}
 
-	let redirectUrl = new URL(routes.signup.pending.href(), ctx.request.url);
-	redirectUrl.searchParams.set("subject", created.subjectId);
-	if (sendFailed) redirectUrl.searchParams.set("sendFailed", "1");
+		if (!written.ok) {
+			if (written.reason === "not-found") {
+				return renderSignUpPage(ctx, {
+					policy,
+					issues: [{ message: "Something went wrong. Try again." }],
+				});
+			}
 
-	return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
+			return renderSignUpPage(ctx, {
+				policy,
+				issues: [passwordPolicyIssue(ctx.intl.t, written, "password")],
+			});
+		}
+
+		let redirectUrl = new URL(routes.signup.pending.href(), ctx.request.url);
+		redirectUrl.searchParams.set("subject", created.subjectId);
+		if (sendFailed) redirectUrl.searchParams.set("sendFailed", "1");
+
+		return new Response(null, { status: 302, headers: { Location: redirectUrl.toString() } });
+	},
 });

@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware } from "remix/router";
 
 import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -22,7 +22,7 @@ import type Tenant from "~/app/models/tenant/object";
 import i18n from "~/app/http/middleware/i18n";
 import { tenant } from "~/app/http/middleware/tenant";
 import { TurnstileChallengeContext } from "~/app/http/middleware/turnstile-challenge";
-import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
+import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { htmlRenderer } from "~/app/http/render";
 import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
@@ -48,11 +48,10 @@ function fixedChallenge(challenged: boolean): Middleware {
 	};
 }
 
-/** Builds a router mounting the challenge decision on sign-in and reset, the way `tenant-app.ts` shares one across both. */
+/** Builds a router fixing one challenge decision for every sign-in and reset request, the way the shared counter decides one per address. */
 async function buildChallengeRouter(challenged: boolean) {
 	let harness = await buildHarness();
 	let challenge = fixedChallenge(challenged);
-	let verification = turnstileVerification(turnstile);
 
 	let middleware: Middleware[] = [
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
@@ -60,25 +59,15 @@ async function buildChallengeRouter(challenged: boolean) {
 		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
 		i18n as Middleware,
+		turnstileProvider(turnstile),
+		challenge,
 	];
 	let router = createRouter({ middleware });
 
-	router.map(routes.hostedSignInShow, {
-		middleware: [challenge],
-		handler: signInShow as RequestHandler,
-	});
-	router.map(routes.hostedSignInSubmit, {
-		middleware: [challenge, verification],
-		handler: signInSubmit as RequestHandler,
-	});
-	router.map(routes.hostedResetShow, {
-		middleware: [challenge],
-		handler: resetShow as RequestHandler,
-	});
-	router.map(routes.hostedResetSubmit, {
-		middleware: [challenge, verification],
-		handler: resetSubmit as RequestHandler,
-	});
+	router.map(routes.hostedSignInShow, signInShow);
+	router.map(routes.hostedSignInSubmit, signInSubmit);
+	router.map(routes.hostedResetShow, resetShow);
+	router.map(routes.hostedResetSubmit, resetSubmit);
 
 	return { harness, router };
 }

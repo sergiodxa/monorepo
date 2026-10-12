@@ -18,7 +18,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware } from "remix/router";
 
 import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import {
@@ -104,8 +104,7 @@ let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { Mail } = await import("~/app/http/middleware/mail");
 let { htmlRenderer } = await import("~/app/http/render");
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
-let { turnstileVerification } = await import("~/app/http/middleware/turnstile-verification");
-let i18n = (await import("~/app/http/middleware/i18n")).default;
+let { turnstileProvider } = await import("~/app/http/middleware/turnstile-verification");
 let signupPending = (await import("~/app/http/controllers/signup/pending")).default;
 let signupVerify = (await import("~/app/http/controllers/signup/verify")).default;
 let signupResend = (await import("~/app/http/controllers/signup/resend")).default;
@@ -183,14 +182,12 @@ function buildRouter() {
 		},
 		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
+		turnstileProvider(turnstile),
 	];
 	let router = createRouter({ middleware });
 
 	router.map(routes.signup.show, signupShow);
-	router.map(routes.signup.submit, {
-		middleware: [i18n as Middleware, turnstileVerification(turnstile)],
-		handler: signupSubmit as RequestHandler,
-	});
+	router.map(routes.signup.submit, signupSubmit);
 	router.map(routes.signup.pending, signupPending);
 	router.map(routes.signup.verify, signupVerify);
 	router.map(routes.signup.resend, signupResend);

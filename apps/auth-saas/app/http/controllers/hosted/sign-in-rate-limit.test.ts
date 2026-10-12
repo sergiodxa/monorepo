@@ -10,8 +10,9 @@
  */
 
 import type { RateLimiterBinding } from "@sdxc/rate-limit";
-import type { Middleware, RequestHandler } from "remix/router";
+import type { Middleware } from "remix/router";
 
+import { lazy } from "@sdxc/lazy-route";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -21,6 +22,7 @@ import type Tenant from "~/app/models/tenant/object";
 import i18n from "~/app/http/middleware/i18n";
 import { tenant } from "~/app/http/middleware/tenant";
 import { interactiveCredentialRateLimit } from "~/app/http/middleware/tenant-rate-limit";
+import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { htmlRenderer } from "~/app/http/render";
 import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import routes from "~/routes/tenant";
@@ -53,12 +55,13 @@ describe("signInSubmit under interactiveCredentialRateLimit", () => {
 			...(htmlRenderer() as readonly Middleware[]),
 			formData() as Middleware,
 			i18n as Middleware,
+			turnstileProvider(harness.turnstile),
 		];
 		let router = createRouter({ middleware });
-		router.map(routes.hostedSignInSubmit, {
-			middleware: [interactiveCredentialRateLimit(limiter)],
-			handler: signInSubmit as RequestHandler,
-		});
+		router.map(
+			routes.hostedSignInSubmit,
+			lazy(async () => signInSubmit, [interactiveCredentialRateLimit(limiter)]),
+		);
 
 		function attempt(password: string) {
 			let body = new URLSearchParams({ identifier: "jane@example.com", password });
@@ -95,12 +98,13 @@ describe("signInSubmit under interactiveCredentialRateLimit", () => {
 			...(htmlRenderer() as readonly Middleware[]),
 			formData() as Middleware,
 			i18n as Middleware,
+			turnstileProvider(harness.turnstile),
 		];
 		let router = createRouter({ middleware });
-		router.map(routes.hostedSignInSubmit, {
-			middleware: [interactiveCredentialRateLimit(limiter)],
-			handler: signInSubmit as RequestHandler,
-		});
+		router.map(
+			routes.hostedSignInSubmit,
+			lazy(async () => signInSubmit, [interactiveCredentialRateLimit(limiter)]),
+		);
 
 		function attempt() {
 			let body = new URLSearchParams({

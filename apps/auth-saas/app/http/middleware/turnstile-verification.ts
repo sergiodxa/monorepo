@@ -11,23 +11,44 @@ import type { Captcha } from "@sdxc/captcha";
 import type { Middleware } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
+import { createContextKey } from "remix/router";
+
+/** Where a router's Turnstile verifier lives on the context, installed as `ctx.turnstile`. */
+export const TurnstileProvider = createContextKey<Captcha>();
+
+declare module "remix/router" {
+	interface RequestContext {
+		/** The verifier every submitted Turnstile token is checked against. */
+		turnstile: Captcha;
+	}
+}
+
+/**
+ * Publishes the verifier `turnstileVerification()` checks tokens against, so production
+ * installs the platform's Turnstile and a test installs a `MemoryCaptcha`.
+ *
+ * @param provider - The platform's `Turnstile`, or a `MemoryCaptcha` in tests.
+ * @returns The middleware installing it as `ctx.turnstile`, for a router's global chain.
+ * @example
+ * createRouter({ middleware: [formData(), turnstileProvider(turnstile)] });
+ */
+export function turnstileProvider(provider: Captcha): Middleware {
+	return (ctx, next) => {
+		ctx.set(TurnstileProvider, provider, { property: "turnstile" });
+		return next();
+	};
+}
 
 /**
  * Every failure, `unavailable` included, continues to the handler, which re-renders its form
- * with a localized message rather than a bare 403 and lets an unchallenged sign-in through
- * without a token. Install it after the rate limits, so a refused request never spends a
- * verification.
+ * with a localized message and lets an unchallenged sign-in through without a token. Declared
+ * by the submitting action itself, it runs after the route's rate-limit guards, so a refused
+ * request never spends a verification.
  *
- * @param provider - The platform's `Turnstile`, or a `MemoryCaptcha` in tests.
- * @returns The middleware, for a submitting route's own `middleware` array.
+ * @returns The middleware publishing `ctx.captcha`, for a submitting action's own `middleware`.
  * @example
- * router.map(routes.hostedSignUpSubmit, {
- * 	middleware: [credentialRateLimit, turnstileVerification(turnstile)],
- * 	handler: signUpSubmit,
- * });
+ * createAction(routes.hostedSignUpSubmit, { middleware: [turnstileVerification()], handler });
  */
-export function turnstileVerification(provider: Captcha): Middleware {
-	return captcha(provider, {
-		onFailure: () => null,
-	}) as Middleware;
+export function turnstileVerification(): Middleware {
+	return (ctx, next) => captcha(ctx.turnstile, { onFailure: () => null })(ctx, next);
 }
