@@ -1,29 +1,25 @@
 # @sdxc/seo
 
-Canonical URLs, typed [schema.org](https://schema.org/) structured data and head metadata,
-all resolved through one configured instance.
+Canonical URLs, typed [schema.org](https://schema.org/) structured data and head metadata.
 
-A page's head has rules that are easy to get subtly wrong: the canonical URL must name one
-origin regardless of which host served the request, structured data must spell `@context`
-and `@type` exactly, and JSON-LD must not let page content close its own `<script>`.
-`createSeo()` takes the site's identity and returns everything else, so one install serves
-any site and the copy stays in the application.
+Configure a site's origin and identity once with `createSeo()`, and every canonical URL,
+structured-data node and head tag the instance produces names that one origin, whichever host
+served the request. Node types spell `@context` and `@type` as literals, and the JSON-LD
+serializer escapes content so it stays inside its `<script>`.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/seo
 ```
 
-The head elements are [`remix`](https://www.npmjs.com/package/remix) components, rendered
-by `remix/component`, which installs alongside this package, as does
-[`@sdxc/robots`](https://www.npmjs.com/package/@sdxc/robots), which writes the `robots`
-directives. The URL helpers, schema builders and
-`jsonLdString` are plain functions and run anywhere.
+The head elements are `remix/component` components from
+[`remix`](https://www.npmjs.com/package/remix); the URL helpers, schema builders and
+`jsonLdString` are plain functions that run anywhere.
 
 ## Usage
 
-### Configure Once
+### Configure the site once
 
 ```typescript
 import { createSeo } from "@sdxc/seo";
@@ -32,23 +28,23 @@ let seo = createSeo({
 	baseUrl: "https://example.com",
 	siteName: "Example",
 	defaultDescription: "A searchable catalog of public datasets, with an API.",
-	twitter: { site: "@example" },
+	twitter: { site: "@example", creator: "@author" },
 });
 ```
 
-### Canonical And Absolute URLs
+### Resolve canonical and absolute URLs
 
 ```typescript
 seo.canonical("/features/search/"); // "https://example.com/features/search"
 seo.canonical("https://preview.workers.dev/pricing"); // "https://example.com/pricing"
 seo.canonical("/docs?section=api&utm_source=newsletter"); // "https://example.com/docs?section=api"
+
 seo.absolute("/og/cover.png"); // "https://example.com/og/cover.png"
+seo.absolute("https://cdn.example.net/cover.png"); // unchanged
+seo.baseUrl; // "https://example.com"
 ```
 
-Whatever host served the request, one canonical URL comes out, so `seo.canonical(request.url)`
-is the whole of what a page does about canonicalization.
-
-### Structured Data
+### Build structured data
 
 ```typescript
 let organization = seo.schema.organization({
@@ -59,366 +55,185 @@ let organization = seo.schema.organization({
 
 let breadcrumbs = seo.schema.breadcrumbs([
 	{ name: "Docs", url: "/docs" },
-	{ name: "API", url: "/docs/api" },
+	{ name: "API", url: "/docs/api/" },
 ]);
-
-seo.jsonLdString([organization, breadcrumbs]);
-// '[{"@context":"https://schema.org","@type":"Organization",…}]'
+// item URLs go through the canonical rules: "https://example.com/docs/api"
 ```
 
-### Head Elements
+### Render the head
 
 ```tsx
 import { Seo } from "@sdxc/seo";
 
 <head>
-	<Seo.Meta
+	<Seo
 		title="API reference"
 		description="Every endpoint, with request and response examples."
 		canonical={seo.canonical(request.url)}
 		site={seo.site}
 		og={{ type: "article", image: seo.absolute("/og/api.png") }}
+		schema={[organization, breadcrumbs]}
 	/>
-	<Seo.JsonLd schema={[organization, breadcrumbs]} />
 </head>;
 ```
+
+`Seo` emits the title, description, canonical link, Open Graph and Twitter tags, and one
+`application/ld+json` script holding every node. A tag whose input is missing is skipped.
 
 ## API
 
 ### `createSeo(config: SeoConfig): SeoService`
 
-Creates the instance a site resolves all of its head metadata through. The configured base
-URL is reduced to its origin once, and every URL the instance returns is built from that
-origin rather than from the host that served the request.
-
-- `config.baseUrl`: The site's canonical base URL, as a string or `URL`
-- `config.siteName`: Site name for `og:site_name` and for nodes describing the site
-- `config.defaultDescription`: Description used when a page or node passes none
-- `config.twitter`: Optional `site`/`creator` handles and `card` layout
+Creates the instance a site resolves its head metadata through. `baseUrl` (a string or `URL`)
+is reduced to its origin; `siteName` feeds `og:site_name` and the nodes describing the site;
+`defaultDescription` is used wherever a page or node passes none; `twitter` holds the optional
+`site` and `creator` handles and the `card` layout (default `"summary_large_image"`).
 
 ### `seo.canonical(url: string | URL): string`
 
-Resolves a request URL or a root-relative path to the page's one canonical URL.
-
-The configured origin replaces whatever host served the request, the trailing slash is
-dropped everywhere but the root, and the hash is dropped. Tracking parameters (`utm_*` and
-click identifiers such as `gclid` and `fbclid`, the list
-[@sdxc/attribution](https://www.npmjs.com/package/@sdxc/attribution) keeps) are removed, so a
-page reached from any campaign link names its clean URL; every other parameter is preserved
-verbatim. A trailing slash sitting before a remaining `?` stays — the slash is only dropped
-when it is the resolved URL's last character.
+Resolves a request URL or root-relative path to the page's canonical URL: the configured origin,
+no trailing slash outside the root, no hash, and no tracking parameters (`utm_*` and click
+identifiers such as `gclid`, the list
+[`@sdxc/attribution`](https://www.npmjs.com/package/@sdxc/attribution) keeps). Every other query
+parameter is kept verbatim.
 
 ### `seo.absolute(path: string | URL): string`
 
-Resolves an asset path against the configured origin, leaving an already-absolute URL alone
-so a CDN host passes through. It performs no trailing-slash normalization, since an asset
-URL is not a page URL.
-
-```typescript
-seo.absolute("/og/cover.png"); // "https://example.com/og/cover.png"
-seo.absolute("https://cdn.example.net/cover.png"); // unchanged
-```
+Resolves an asset path against the configured origin, passing an absolute URL such as a CDN
+host through and keeping the path exactly as given.
 
 ### `seo.robotsTag(options?: RobotsOptions): string`
 
-Builds the `robots` meta content for one page from `index` and `follow` booleans, both
-defaulting to `true`. Both directives are always spelled out, so the emitted value states
-the page's full policy.
-
-```typescript
-seo.robotsTag({ index: false, follow: true }); // "noindex, follow"
-seo.robotsTag(); // "index, follow"
-```
+Builds `robots` meta content from `index` and `follow`, both defaulting to `true`. Both
+directives are always spelled out: `{ index: false }` gives `"noindex, follow"`.
 
 ### `seo.jsonLdString(schema: SchemaOrg.Node | SchemaOrg.Node[]): string`
 
-Serializes one node or several for a `<script type="application/ld+json">` body. Every `<`
-becomes its unicode escape, so no string value can emit a `</script` or `<!--` sequence and
-break out of the script element; the JSON still parses back to the original text. Use it
-wherever the JSX is not `remix/component`, and `Seo.JsonLd` where it is.
+Serializes one node or several for an `application/ld+json` script body, escaping every `<` as
+`<` so no value can close the script; the JSON parses back to the original text.
 
 ### `seo.baseUrl: string`
 
-The configured origin, with no trailing slash — useful for building URLs the package has no
-builder for, such as a feed entry or a
-[`@sdxc/sitemap`](https://www.npmjs.com/package/@sdxc/sitemap) document.
+The configured origin with no trailing slash, for URLs the package has no builder for, such as
+feed entries or a [`@sdxc/sitemap`](https://www.npmjs.com/package/@sdxc/sitemap) document.
 
 ### `seo.site: SeoSite`
 
-The site identity `Seo.Meta` needs (`name`, `description`, and `twitter`), so a layout
-passes configuration through instead of restating it.
+The site's `name`, `description` and `twitter` settings, ready to pass as `Seo`'s `site` prop.
 
 ### `seo.schema: SeoSchema`
 
-Typed builders bound to this configuration. Page URLs go through the canonical rules, so a
-node's `url` agrees with the canonical link; image and logo paths are made absolute; dates
-accept a `Date` or an already-formatted string; and optional properties are omitted rather
-than emitted empty.
+Builders bound to the configuration, each returning one typed node. Page URLs go through the
+canonical rules, image and logo paths are made absolute, dates accept a `Date` or an
+already-formatted string, and optional properties left out are omitted from the node.
 
 #### `seo.schema.organization(input): SchemaOrg.Organization`
 
-The publisher behind the site. `url` defaults to the configured base URL, and `sameAs`
-carries profile URLs proving the same entity elsewhere.
-
-```typescript
-seo.schema.organization({ name: "Example Inc", logo: "/icon-512.png" });
-```
+The publisher behind the site: `name`, plus optional `url` (defaults to the base URL), `logo`,
+`description` and `sameAs` profile URLs.
 
 #### `seo.schema.website(input?): SchemaOrg.WebSite`
 
-The site as a whole, for the one page whose subject is the site itself. Name, URL, and
-description all fall back to the configuration. A `searchAction` template is prefixed
-without percent-encoding, so the braces around the query placeholder survive.
-
-```typescript
-seo.schema.website({ searchAction: { urlTemplate: "/search?q={search_term_string}" } });
-```
+The site as a whole; `name`, `url` and `description` fall back to the configuration.
+`searchAction: { urlTemplate, queryName? }` adds a site search box; a root-relative template is
+prefixed with the origin and keeps its `{search_term_string}` braces.
 
 #### `seo.schema.webPage(input): SchemaOrg.WebPage`
 
-A page with no more specific type. A single `image` becomes the page's
-`primaryImageOfPage`.
-
-```typescript
-seo.schema.webPage({
-	name: "Pricing",
-	description: "Every plan, and what each one includes.",
-	url: "/pricing",
-	image: "/og/pricing.png",
-});
-```
+A page with no more specific type: `name`, `description`, `url`, and optional `inLanguage`,
+`datePublished`, `dateModified` and `image` (emitted as `primaryImageOfPage`).
 
 #### `seo.schema.article(input): SchemaOrg.Article`
 
-A dated, authored page. The byline defaults to a `Person`; pass
-`author: { name, kind: "Organization" }` for an organizational one. A single image is
-normalized into a list.
-
-```typescript
-seo.schema.article({
-	headline: post.title,
-	datePublished: post.publishedAt,
-	dateModified: post.updatedAt,
-	author: { name: "Sergio", url: "/about" },
-	image: post.cover,
-	url: `/blog/${post.slug}`,
-});
-```
+A dated, authored page: `headline`, `datePublished` and `author`, plus optional
+`dateModified`, `description`, `url`, `image` (one or several), `publisher: { name, logo? }`,
+`section`, `keywords` and `inLanguage`. The author is a `Person` unless it passes
+`kind: "Organization"`.
 
 #### `seo.schema.breadcrumbs(crumbs): SchemaOrg.BreadcrumbList`
 
-The trail leading to the current page. Positions are numbered from the given order.
-
-```typescript
-seo.schema.breadcrumbs([
-	{ name: "Home", url: "/" },
-	{ name: "Docs", url: "/docs" },
-]);
-```
+The trail to the current page from `{ name, url }` pairs, numbered from 1 in the given order.
 
 #### `seo.schema.faq(questions): SchemaOrg.FAQPage`
 
-A page's question-and-answer section. Pass the same pairs the page renders:
+A question-and-answer section from `{ question, answer }` pairs.
 [Google's structured data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies)
-require the marked-up answers to be visible to the visitor.
-
-```typescript
-seo.schema.faq([{ question: "Is there a free plan?", answer: "Yes, up to 10 projects." }]);
-```
+require the marked-up answers to be visible on the page.
 
 #### `seo.schema.softwareApplication(input): SchemaOrg.SoftwareApplication`
 
-A product or capability page whose subject is the software itself. It takes one `offers`
-object, since an application page quotes one price.
-
-```typescript
-seo.schema.softwareApplication({
-	name: "Example",
-	applicationCategory: "WebApplication",
-	operatingSystem: "Any",
-	offers: { price: "0", priceCurrency: "USD", description: "Usage-based pricing" },
-	featureList: ["Full-text search", "Bulk export"],
-});
-```
+A page whose subject is the software: `name` and `applicationCategory`, plus optional
+`description`, `operatingSystem`, `url`, one `offers` object and `featureList`.
 
 #### `seo.schema.book(input): SchemaOrg.Book`
 
-A page selling one book. Only the title and its author are required; every other property
-is one a sales page either knows or leaves out. The byline behaves as `article`'s, a single
-cover image is normalized into a list, and `bookFormat` takes a
-[schema.org `BookFormatType`](https://schema.org/BookFormatType) URL so a typo cannot
-compile. Pass an array to `offers` when the book is sold as more than one package: each
-price is its own `Offer`, and a single offer is normalized into the same list.
-
-```typescript
-seo.schema.book({
-	name: "Álem",
-	author: { name: "Sergio", url: "/about" },
-	description: "A novel about the places a language remembers.",
-	url: "/",
-	image: "/og.jpg",
-	bookFormat: "https://schema.org/EBook",
-	inLanguage: "es",
-	numberOfPages: 180,
-	offers: [
-		{ price: "29", priceCurrency: "USD", description: "Book", url: "/checkout" },
-		{ price: "49", priceCurrency: "USD", description: "Book and workshop", url: "/checkout/pro" },
-	],
-});
-```
+A page selling one book: `name` and `author`, plus optional `description`, `url`, `image`,
+`bookFormat` (a [`BookFormatType`](https://schema.org/BookFormatType) URL), `inLanguage`,
+`numberOfPages`, `isbn`, `datePublished`, `publisher`, and `offers` as one offer or a list,
+always emitted as a list.
 
 ### `Seo`
 
-`remix/component` component emitting a page's whole head contribution: the `Seo.Meta` tag set, plus
-a `Seo.JsonLd` script when `schema` is given.
-
-**Props:**
-
-- Everything `Seo.Meta` accepts
-- `schema?`: `SchemaOrg.Node | SchemaOrg.Node[]` - Structured data for the page
-
-```tsx
-<Seo title={title} canonical={seo.canonical(request.url)} site={seo.site} schema={article} />
-```
+`remix/component` component emitting `Seo.Meta` and, when `schema` is given, `Seo.JsonLd`. It
+takes every `Seo.Meta` prop plus `schema?: SchemaOrg.Node | SchemaOrg.Node[]`.
 
 ### `Seo.Meta`
 
-`remix/component` component emitting the title, description, canonical link, robots directives, and
-the Open Graph and Twitter tag sets. Both social namespaces restate the title and
-description, because every consumer of these cards reads its own namespace and ignores the
-other's. A tag whose input is missing is skipped, so a page states only what it has.
+Emits `<title>`, the description, the canonical link, `robots`, and the Open Graph and Twitter
+tag sets, each namespace restating the title and description. Props:
 
-**Props:**
-
-- `title?`: `string` - The page title, already localized
-- `description?`: `string` - Meta description. Falls back to `site.description`
-- `canonical`: `string` - The page's canonical absolute URL, from `seo.canonical()`
-- `site?`: `SeoSite` - Site identity, from `seo.site`
-- `og?`: `Seo.OpenGraph` - `type`, `image`, `imageAlt`, and `locale`
-- `robots?`: `string` - Content from `seo.robotsTag()`
-
-```tsx
-<Seo.Meta
-	title={title}
-	description={description}
-	canonical={seo.canonical(request.url)}
-	site={seo.site}
-	og={{ type: "article", image: seo.absolute("/og/cover.png") }}
-/>
-```
+- `canonical`: The page's absolute canonical URL, from `seo.canonical()`
+- `title?`: The page title
+- `description?`: Falls back to `site.description`
+- `site?`: From `seo.site`; adds `og:site_name` and the Twitter handles and card
+- `og?`: `type` (`"website"` by default, or `"article"`), `image`, `imageAlt` and `locale`
+- `robots?`: From `seo.robotsTag()`
 
 ### `Seo.JsonLd`
 
-`remix/component` component emitting structured data as one `application/ld+json` script. Several
-nodes go into a single script as an array, which is valid and far easier to audit than
-several scripts. The JSON is set through `innerHTML`, since JSX escapes text nodes and would
-leave the data unparseable.
-
-**Props:**
-
-- `schema`: `SchemaOrg.Node | SchemaOrg.Node[]` - The nodes to serialize
-
-```tsx
-<Seo.JsonLd schema={[organization, article, breadcrumbs]} />
-```
+Emits one `application/ld+json` script for `schema`, a node or an array of nodes, serialized as
+`jsonLdString` does.
 
 ### Types
 
-#### `SeoConfig`
+- `SeoConfig`: the `createSeo` input.
+- `SeoService`: the instance `createSeo` returns.
+- `SeoSite`: `{ name, description, twitter? }`.
+- `SeoTwitter`: `{ site?, creator?, card?: "summary" | "summary_large_image" }`.
+- `RobotsOptions`: `{ index?, follow? }`.
+- `SeoSchema`: the builder set on `seo.schema`.
+- `Seo.Props`, `Seo.MetaProps`, `Seo.JsonLdProps`, `Seo.OpenGraph`: the component props.
+- `SchemaOrg`: namespace of the nodes the builders return (`SchemaOrg.Article`,
+  `SchemaOrg.Book`, …), their parts (`SchemaOrg.Offer`, `SchemaOrg.ListItem`, …) and the builder
+  inputs (`SchemaOrg.ArticleInput`, …). `SchemaOrg.Node` is the union of every top-level node.
 
-```typescript
-interface SeoConfig {
-	baseUrl: string | URL;
-	siteName: string;
-	defaultDescription: string;
-	twitter?: SeoTwitter;
-}
-```
+## Pattern: A Shared Instance And A Layout That Takes Metadata
 
-#### `SeoSite`
+Build the instance once at module scope, and let the document layout accept `Seo.Props` so each
+page supplies its own copy and structured data while the tag set stays identical everywhere.
 
-```typescript
-interface SeoSite {
-	name: string;
-	description: string;
-	twitter?: SeoTwitter;
-}
-```
+```tsx
+import { createSeo, Seo } from "@sdxc/seo";
+import type { Handle, RemixNode } from "remix/component";
 
-#### `SeoTwitter`
-
-```typescript
-interface SeoTwitter {
-	site?: string;
-	creator?: string;
-	card?: "summary" | "summary_large_image";
-}
-```
-
-#### `RobotsOptions`
-
-```typescript
-interface RobotsOptions {
-	index?: boolean;
-	follow?: boolean;
-}
-```
-
-#### `SeoService`
-
-The interface `createSeo` returns: `baseUrl`, `site`, `schema`, and the `canonical`,
-`absolute`, `robotsTag` and `jsonLdString` methods.
-
-#### `SeoSchema`
-
-The builder set exposed as `seo.schema`, with one method per node type.
-
-#### `SchemaOrg`
-
-Namespace of the node shapes the builders return (`SchemaOrg.Organization`,
-`SchemaOrg.Article`, `SchemaOrg.BreadcrumbList`, …), their nested types
-(`SchemaOrg.ListItem`, `SchemaOrg.Offer`, …), and the inputs the builders accept
-(`SchemaOrg.ArticleInput`, …). `SchemaOrg.Node` is the union of every top-level node, and is
-what serialization accepts.
-
-## Pattern: One Instance Per Site
-
-The configuration is read once at boot, so build the instance once and share it rather than
-calling the factory per request.
-
-```typescript
-import { createSeo } from "@sdxc/seo";
-
-/** The site's one SEO instance, shared by every page and layout. */
 export const SEO = createSeo({
 	baseUrl: "https://example.com",
 	siteName: "Example",
 	defaultDescription: "A searchable catalog of public datasets, with an API.",
 	twitter: { site: "@example" },
 });
-```
 
-## Pattern: A Document Layout That Takes Metadata As Input
-
-Let the layout accept the metadata input and pass it straight through, so each page decides
-its own copy and structured data while the tag set stays identical everywhere.
-
-```tsx
-import { Seo } from "@sdxc/seo";
-import type { Handle, RemixNode } from "remix/component";
-
-interface Props {
+interface DocumentProps {
 	children: RemixNode;
-	locale?: string;
-	seo?: Seo.Props;
+	seo: Seo.Props;
 }
 
-function DocumentLayout(handle: Handle<Props>) {
+export function Document(handle: Handle<DocumentProps>) {
 	return () => (
-		<html lang={handle.props.locale}>
+		<html lang="en">
 			<head>
 				<meta charSet="utf-8" />
-				{handle.props.seo && <Seo {...handle.props.seo} />}
+				<Seo site={SEO.site} {...handle.props.seo} />
 			</head>
 			<body>{handle.props.children}</body>
 		</html>
@@ -426,26 +241,209 @@ function DocumentLayout(handle: Handle<Props>) {
 }
 ```
 
-## Pattern: Serializing Outside `remix/component`
+## Pattern: The Home Page Describes The Site
 
-Where the JSX is not `remix/component`, build the same nodes and serialize them by hand.
+The home page carries the organization and the site itself; a search action lets a search
+engine offer a search box that lands on the site's results page.
 
 ```tsx
-let body = seo.jsonLdString([organization, article]);
+import { createSeo, Seo } from "@sdxc/seo";
 
-<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: body }} />;
+let seo = createSeo({
+	baseUrl: "https://example.com",
+	siteName: "Example",
+	defaultDescription: "A searchable catalog of public datasets, with an API.",
+});
+
+let organization = seo.schema.organization({
+	name: "Example Inc",
+	logo: "/icon-512.png",
+	sameAs: ["https://github.com/example", "https://x.com/example"],
+});
+
+let website = seo.schema.website({
+	searchAction: { urlTemplate: "/search?q={search_term_string}" },
+});
+
+<Seo
+	title="Example"
+	canonical={seo.canonical(request.url)}
+	site={seo.site}
+	og={{ image: seo.absolute("/og/home.png"), imageAlt: "The Example dashboard" }}
+	schema={[organization, website]}
+/>;
+```
+
+## Pattern: An Article Page
+
+An article states its dates, byline and publisher, and sits under a breadcrumb trail; the Open
+Graph type switches to `article`.
+
+```tsx
+import { createSeo, Seo } from "@sdxc/seo";
+
+let seo = createSeo({
+	baseUrl: "https://example.com",
+	siteName: "Example",
+	defaultDescription: "Notes on building for the web.",
+});
+
+let url = `/articles/${post.slug}`;
+
+let article = seo.schema.article({
+	headline: post.title,
+	description: post.summary,
+	datePublished: post.publishedAt,
+	dateModified: post.updatedAt,
+	author: { name: post.authorName, url: "/about" },
+	publisher: { name: "Example", logo: "/icon-512.png" },
+	image: [post.cover, post.coverSquare],
+	section: "Guides",
+	keywords: post.tags,
+	inLanguage: "en",
+	url,
+});
+
+let breadcrumbs = seo.schema.breadcrumbs([
+	{ name: "Articles", url: "/articles" },
+	{ name: post.title, url },
+]);
+
+<Seo
+	title={post.title}
+	description={post.summary}
+	canonical={seo.canonical(url)}
+	site={seo.site}
+	og={{ type: "article", image: seo.absolute(post.cover), locale: "en_US" }}
+	schema={[article, breadcrumbs]}
+/>;
+```
+
+## Pattern: A Product Page With Pricing And FAQ
+
+Describe the software with its offer and features, and mark up the same questions the page
+renders, from one list so the two stay identical.
+
+```tsx
+import { createSeo, Seo } from "@sdxc/seo";
+
+let seo = createSeo({
+	baseUrl: "https://example.com",
+	siteName: "Example",
+	defaultDescription: "A searchable catalog of public datasets, with an API.",
+});
+
+let questions = [
+	{ question: "Is there a free plan?", answer: "Yes, up to 10 projects." },
+	{ question: "Can I export my data?", answer: "Yes, as CSV or JSON at any time." },
+];
+
+let schema = [
+	seo.schema.softwareApplication({
+		name: "Example",
+		applicationCategory: "WebApplication",
+		operatingSystem: "Any",
+		url: "/pricing",
+		offers: { price: "0", priceCurrency: "USD", description: "Free plan", url: "/signup" },
+		featureList: ["Full-text search", "Bulk export"],
+	}),
+	seo.schema.faq(questions),
+];
+
+<html>
+	<head>
+		<Seo title="Pricing" canonical={seo.canonical("/pricing")} site={seo.site} schema={schema} />
+	</head>
+	<body>
+		{questions.map((entry) => (
+			<details>
+				<summary>{entry.question}</summary>
+				<p>{entry.answer}</p>
+			</details>
+		))}
+	</body>
+</html>;
+```
+
+## Pattern: A Book Sold As Several Packages
+
+Each package is its own offer inside one `Book` node.
+
+```typescript
+import { createSeo } from "@sdxc/seo";
+
+let seo = createSeo({
+	baseUrl: "https://example.com",
+	siteName: "The Novel",
+	defaultDescription: "A novel about the places a language remembers.",
+});
+
+let book = seo.schema.book({
+	name: "The Novel",
+	author: { name: "Jane Doe", url: "/about" },
+	url: "/",
+	image: "/cover.jpg",
+	bookFormat: "https://schema.org/EBook",
+	inLanguage: "en",
+	numberOfPages: 180,
+	datePublished: new Date("2026-03-01"),
+	offers: [
+		{ price: "29", priceCurrency: "USD", description: "Book", url: "/checkout" },
+		{ price: "49", priceCurrency: "USD", description: "Book and workshop", url: "/checkout/pro" },
+	],
+});
 ```
 
 ## Pattern: Keeping A Page Out Of The Index
 
-Signed-in screens and thin filtered views say so per page; site-wide crawl policy belongs in
+Signed-in screens and thin filtered views opt out per page; site-wide crawl policy belongs in
 `robots.txt`.
 
 ```tsx
+import { createSeo, Seo } from "@sdxc/seo";
+
+let seo = createSeo({
+	baseUrl: "https://example.com",
+	siteName: "Example",
+	defaultDescription: "A searchable catalog of public datasets, with an API.",
+});
+
 <Seo.Meta
+	title="Your account"
 	canonical={seo.canonical(request.url)}
+	site={seo.site}
 	robots={seo.robotsTag({ index: false, follow: true })}
-/>
+/>;
+```
+
+## Pattern: Adding Structured Data Outside `remix/component`
+
+Where the HTML comes from elsewhere, such as a static page served by a Cloudflare Worker,
+serialize the nodes with `jsonLdString` and append the script to the existing `<head>`.
+
+```typescript
+import { createSeo } from "@sdxc/seo";
+
+let seo = createSeo({
+	baseUrl: "https://example.com",
+	siteName: "Example",
+	defaultDescription: "A searchable catalog of public datasets, with an API.",
+});
+
+let body = seo.jsonLdString([
+	seo.schema.organization({ name: "Example Inc", logo: "/icon-512.png" }),
+	seo.schema.webPage({ name: "Status", description: "Live service status.", url: "/status" }),
+]);
+
+let response = await fetch(request);
+
+return new HTMLRewriter()
+	.on("head", {
+		element(head) {
+			head.append(`<script type="application/ld+json">${body}</script>`, { html: true });
+		},
+	})
+	.transform(response);
 ```
 
 ## Versioning
