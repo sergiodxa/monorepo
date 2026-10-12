@@ -1,10 +1,10 @@
 # @sdxc/result
 
-Type-safe `Result` values that make success and failure explicit in your function signatures.
+Result type for error handling: success and failure as values, explicit in every function signature.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/result
 ```
 
@@ -15,40 +15,42 @@ npm add @sdxc/result
 ```typescript
 import type { Result } from "@sdxc/result";
 
-import { failure, isSuccess, success } from "@sdxc/result";
+import { failure, success } from "@sdxc/result";
 
 function divide(a: number, b: number): Result<number, Error> {
 	if (b === 0) return failure(new Error("Division by zero"));
 	return success(a / b);
 }
+```
+
+### Read it
+
+Narrow with a type guard, map both cases with `match`, or take the value with `unwrap`.
+
+```typescript
+import { isSuccess, match, unwrap } from "@sdxc/result";
 
 let result = divide(10, 2);
 
 if (isSuccess(result))
 	console.log(result.data); // 5
 else console.error(result.error.message);
-```
 
-### Handle both cases at once
-
-```typescript
-import { match } from "@sdxc/result";
-
-let message = match(await fetchUser(id), {
-	success: (user) => `Hello, ${user.name}!`,
-	failure: (error) => `Error: ${error.message}`,
+let label = match(result, {
+	success: (value) => `= ${value}`,
+	failure: (error) => `failed: ${error.message}`,
 });
+
+let value = unwrap(divide(1, 0), () => 0); // 0
 ```
 
 ### Wrap code that throws
 
 ```typescript
-import { wrap, isSuccess } from "@sdxc/result";
+import { wrap } from "@sdxc/result";
 
-let result = wrap(() => JSON.parse(input));
-if (isSuccess(result)) console.log(result.data);
-
-let response = await wrap(() => fetch("/api/posts").then((r) => r.json()));
+let parsed = wrap(() => JSON.parse(input)); // Result<any, Error>
+let body = await wrap(() => fetch(url).then((response) => response.json())); // async too
 ```
 
 ### Retry a failing operation
@@ -56,166 +58,50 @@ let response = await wrap(() => fetch("/api/posts").then((r) => r.json()));
 ```typescript
 import { retry } from "@sdxc/result";
 
-let result = await retry(() => fetchUser(id), {
-	times: 3,
-	delay: 100,
-	backoff: "exponential",
-});
-```
-
-### Split a batch of Results
-
-```typescript
-import { partition, wrap } from "@sdxc/result";
-
-let results = await Promise.all(urls.map((url) => wrap(() => fetch(url))));
-let [responses, errors] = partition(results);
-console.log(`${responses.length} succeeded, ${errors.length} failed`);
+let result = await retry(() => wrap(() => fetch(url)), { times: 3, delay: 100 });
 ```
 
 ## API
 
-### Types
+### `success<T>(data: T): Success<T>`
 
-#### `Result<T, E extends Error>`
+A Success holding `data`, with `status` typed as the literal `"success"` that `Result` narrows on.
 
-A discriminated union of `Success<T>` and `Failure<E>`, narrowed by `isSuccess` and `isFailure`.
+### `failure<E extends Error>(error: E): Failure<E>`
 
-```typescript
-type Result<T, E extends Error> = Success<T> | Failure<E>;
-```
+A Failure holding `error`. The error's own class stays in the type, so a custom subclass reaches every handler.
 
-#### `Success<T>`
+### `isSuccess(result): result is Success<T>` and `isFailure(result): result is Failure<E>`
 
-```typescript
-interface Success<T> {
-	status: "success";
-	data: T;
-}
-```
+Type guards, equivalent to `result.status === "success"` and `result.status === "failure"`.
 
-#### `Failure<E extends Error>`
+### `succeeded(result, message?): asserts result is Success<T>`
 
-```typescript
-interface Failure<E extends Error> {
-	status: "failure";
-	error: E;
-}
-```
+Narrows `result` to a Success for the rest of the scope. On a Failure it throws `new Error(message, { cause: result.error })`; `message` defaults to `"Result is a failure"`.
 
-### Functions
+### `failed(result, message?): asserts result is Failure<E>`
 
-#### `success<T>(data: T): Success<T>`
+The mirror of `succeeded`: on a Success it throws with the data as `cause`; `message` defaults to `"Result is a success"`.
 
-Create a Success holding `data`.
+### `unwrap(result, fallback?: (error: E) => T): T`
+
+The success data. On a Failure it answers `fallback(error)`, or throws the error when there is no fallback. Given a `Promise<Result>`, it answers a `Promise<T>`.
 
 ```typescript
-let user = success({ id: 1, name: "Alice" });
+let user = unwrap(await loadUser(id));
 // same as
-let user: Success<{ id: number; name: string }> = {
-	status: "success",
-	data: { id: 1, name: "Alice" },
-};
-```
-
-The annotation is what the constructor buys you: it keeps `status` as the literal `"success"` that `Result` narrows on.
-
-#### `failure<E extends Error>(error: E): Failure<E>`
-
-Create a Failure holding `error`.
-
-```typescript
-let result = failure(new Error("Not found"));
-// same as
-let result: Failure<Error> = { status: "failure", error: new Error("Not found") };
-```
-
-The error type is preserved, so a custom `Error` subclass stays visible in the signature and in every handler:
-
-```typescript
-class NotFoundError extends Error {}
-
-function fetchUser(id: string): Result<User, NotFoundError> {
-	let user = db.find(id);
-	if (!user) return failure(new NotFoundError(`User ${id} not found`));
-	return success(user);
-}
-```
-
-#### `isSuccess<T, E extends Error>(result: Result<T, E>): result is Success<T>`
-
-Type guard that narrows a Result to `Success<T>`.
-
-```typescript
-isSuccess(result);
-// same as
-result.status === "success";
-```
-
-#### `isFailure<T, E extends Error>(result: Result<T, E>): result is Failure<E>`
-
-Type guard that narrows a Result to `Failure<E>`.
-
-```typescript
-isFailure(result);
-// same as
-result.status === "failure";
-```
-
-#### `succeeded<T, E extends Error>(result: Result<T, E>, message?: string): asserts result is Success<T>`
-
-Assert a Result is a Success, narrowing it for the rest of the scope. On a Failure it throws an `Error` with `message` (default `"Result is a failure"`) and the original error as `cause`.
-
-```typescript
-let result = await fetchUser(id);
-succeeded(result, "Failed to load user data");
-console.log(result.data.name);
-```
-
-#### `failed<T, E extends Error>(result: Result<T, E>, message?: string): asserts result is Failure<E>`
-
-Assert a Result is a Failure, narrowing it for the rest of the scope. On a Success it throws an `Error` with `message` (default `"Result is a success"`) and the data as `cause`. Handy in tests.
-
-```typescript
-let result = validate({ email: "invalid" });
-failed(result, "Expected validation to fail");
-expect(result.error).toBeInstanceOf(ValidationError);
-```
-
-#### `unwrap<T, E extends Error>(result: Result<T, E> | Promise<Result<T, E>>, fallback?: (error: E) => T): T | Promise<T>`
-
-Return the success data. With a `fallback`, a Failure produces the fallback value; without one, the error is thrown. A promise of a Result returns a promise of the value.
-
-```typescript
-unwrap(success(42)); // 42
-unwrap(failure(new Error("not found")), () => 0); // 0
-let user = await unwrap(fetchUser(id));
-```
-
-```typescript
-let user = unwrap(await fetchUser(id));
-// same as
-let result = await fetchUser(id);
+let result = await loadUser(id);
 if (isFailure(result)) throw result.error;
 let user = result.data;
 ```
 
-#### `match<T, E extends Error, R>(result: Result<T, E> | Promise<Result<T, E>>, handlers: { success: (data: T) => R; failure: (error: E) => R }): R | Promise<R>`
+### `match(result, { success, failure }): R`
 
-Call `handlers.success` with the data or `handlers.failure` with the error, and return the handler's value. A promise of a Result returns a promise of that value.
+Calls `success(data)` or `failure(error)` and answers what the handler returns. Given a `Promise<Result>`, it answers a `Promise<R>`.
 
-```typescript
-let status = match(result, {
-	success: () => 200,
-	failure: (error) => (error instanceof NotFoundError ? 404 : 500),
-});
-// same as
-let status = isSuccess(result) ? 200 : result.error instanceof NotFoundError ? 404 : 500;
-```
+### `wrap<T>(fn: () => T): wrap.ReturnType<T>`
 
-#### `wrap<T>(fn: () => T): Result<T, Error> | Promise<Result<T, Error>>`
-
-Run `fn` and capture what it throws as a Failure. An async `fn` returns a promise of a Result. Thrown values that are not `Error` instances become `new Error(String(value))`.
+Runs `fn` and answers its value as a Success, or what it throws as a Failure. An `fn` returning a promise answers a `Promise<Result>` that captures the rejection. A synchronous throw of a non-`Error` value becomes `new Error(String(value))`.
 
 ```typescript
 let result = wrap(() => JSON.parse(input));
@@ -228,96 +114,88 @@ try {
 }
 ```
 
-#### `retry<T, E extends Error>(fn: () => Promise<Result<T, E>>, options: retry.Options<E>): Promise<Result<T, E | RetryError>>`
+### `retry<T, E>(fn: () => Promise<Result<T, E>>, options: retry.Options<E>): Promise<Result<T, E | RetryError>>`
 
-Call `fn` until it returns a Success, waiting between attempts. Once the attempts run out, or `when` declines an error, the returned Failure holds a `RetryError`.
+Calls `fn` until it answers a Success, waiting between attempts. When the attempts run out, or `when` declines an error, it answers a Failure holding a `RetryError`.
 
-- `times` — maximum number of attempts. Values of `0` or less throw a `RangeError`.
-- `delay` — base delay between attempts in milliseconds, or a function receiving the number of failures so far (from 1) and answering the milliseconds to wait.
-- `backoff` — `"constant"`, `"linear"`, or `"exponential"`, applied to a numeric `delay`. Defaults to `"exponential"`, which doubles the delay on every retry.
-- `when` — predicate receiving the error and the attempt number; return `true` to keep retrying.
+- `times`: maximum number of attempts; `0` or less throws a `RangeError`.
+- `delay`: milliseconds between attempts, or a function of the failures so far (from 1) answering the milliseconds to wait.
+- `backoff`: `"constant"`, `"linear"` or `"exponential"` (the default, doubling every retry), applied to a numeric `delay`.
+- `when`: `(error, attempts) => boolean`; `false` stops retrying.
 
-```typescript
-let result = await retry(() => fetchUser(id), {
-	times: 5,
-	delay: 1000,
-	when: (error) => error instanceof NetworkError,
-});
-```
+### `partition<T, E>(results: Result<T, E>[]): [T[], E[]]`
 
-A function `delay` plugs in a schedule with a ceiling and jitter, such as one from [`@sdxc/backoff`](https://www.npmjs.com/package/@sdxc/backoff):
+Splits Results into the success values and the failure errors, each in input order.
 
-```typescript
-import { createBackoff } from "@sdxc/backoff";
+### `RetryError`
 
-let backoff = createBackoff({ base: "1 second", max: "30 seconds", jitter: 0.2 });
+The error in `retry`'s final Failure, with the message `Failed after <n> attempts`.
 
-let result = await retry(() => fetchUser(id), {
-	times: 6,
-	delay: (attempt) => backoff.delay(attempt),
-});
-```
+### Types
 
-#### `partition<T, E extends Error>(results: Result<T, E>[]): [T[], E[]]`
+#### `Result<T, E extends Error>`
 
-Split an array of Results into the success values and the failure errors, in one pass.
+`Success<T> | Failure<E>`, discriminated on `status`.
 
-```typescript
-let [values, errors] = partition([success(1), failure(new Error("a")), success(2)]);
-// values = [1, 2], errors = [Error("a")]
-```
+#### `Success<T>`
 
-### Classes
+`{ status: "success"; data: T }`.
 
-#### `RetryError`
+#### `Failure<E extends Error>`
 
-The error `retry` puts in its Failure once the attempts are exhausted, with the message `Failed after <n> attempts`.
+`{ status: "failure"; error: E }`.
 
-```typescript
-let result = await retry(() => fetchUser(id), { times: 3, delay: 100 });
-if (isFailure(result) && result.error instanceof RetryError) {
-	console.log(result.error.message); // "Failed after 3 attempts"
-}
-```
+#### `retry.Options<E>`
 
-## Pattern: Railway-oriented programming
+The `times`, `delay`, `backoff` and `when` fields `retry` takes.
 
-Give every step the same `Result` shape, then chain them: each `isFailure` check
-returns the failure untouched, so the happy path runs straight through.
+#### `wrap.ReturnType<T>`
+
+What `wrap` answers for a function returning `T`: `Promise<Result<U, Error>>` for a promise of `U`, `Result<T, Error>` otherwise.
+
+## Pattern: Chain steps that can fail
+
+Give every step the same `Result` shape and return each failure as soon as it appears; the happy path runs straight down.
 
 ```typescript
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-function parseUser(json: string): Result<unknown, Error> {
+interface Order {
+	id: string;
+	quantity: number;
+}
+
+function parseOrder(json: string): Result<unknown, Error> {
 	return wrap(() => JSON.parse(json));
 }
 
-function validateUser(data: unknown): Result<User, Error> {
-	if (!isValidUser(data)) return failure(new Error("Invalid user data"));
-	return success(data as User);
+function validateOrder(data: unknown): Result<Order, Error> {
+	if (typeof data !== "object" || data === null || !("id" in data) || !("quantity" in data)) {
+		return failure(new Error("Invalid order"));
+	}
+	return success(data as Order);
 }
 
-function saveUser(user: User): Result<User, Error> {
-	return success(db.save(user));
+async function saveOrder(order: Order): Promise<Result<Order, Error>> {
+	return await wrap(() => db.orders.insert(order));
 }
 
-function processUserJson(json: string): Result<User, Error> {
-	let parsed = parseUser(json);
+async function placeOrder(json: string): Promise<Result<Order, Error>> {
+	let parsed = parseOrder(json);
 	if (isFailure(parsed)) return parsed;
 
-	let validated = validateUser(parsed.data);
+	let validated = validateOrder(parsed.data);
 	if (isFailure(validated)) return validated;
 
-	return saveUser(validated.data);
+	return await saveOrder(validated.data);
 }
 ```
 
-## Pattern: Custom error types
+## Pattern: Map error types to responses
 
-Give each failure mode its own `Error` subclass and the union accumulates as the
-steps compose, so a handler can tell the cases apart without parsing messages.
+Give each failure mode its own `Error` subclass; the union grows as steps compose, and `match` turns it into a response without parsing messages.
 
 ```typescript
 import type { Result } from "@sdxc/result";
@@ -333,60 +211,110 @@ class ValidationError extends Error {
 	}
 }
 
-class NetworkError extends Error {
-	constructor(
-		readonly status: number,
-		message: string,
-	) {
-		super(message);
-	}
-}
+class DeliveryError extends Error {}
 
 function validateEmail(email: string): Result<string, ValidationError> {
-	if (!email.includes("@")) {
-		return failure(new ValidationError("email", "Invalid email format"));
-	}
+	if (!email.includes("@")) return failure(new ValidationError("email", "Invalid email"));
 	return success(email);
 }
 
-async function sendWelcome(email: string): Promise<Result<void, NetworkError>> {
-	let response = await fetch("/api/welcome", { method: "POST", body: email });
-	if (!response.ok) return failure(new NetworkError(response.status, "Send failed"));
+async function sendWelcome(email: string): Promise<Result<void, DeliveryError>> {
+	let response = await fetch("https://mail.example.com/send", { method: "POST", body: email });
+	if (!response.ok) return failure(new DeliveryError(`Mail API answered ${response.status}`));
 	return success(undefined);
 }
 
-async function subscribe(email: string): Promise<Result<void, ValidationError | NetworkError>> {
+async function subscribe(email: string): Promise<Result<void, ValidationError | DeliveryError>> {
 	let validated = validateEmail(email);
 	if (isFailure(validated)) return validated;
 	return await sendWelcome(validated.data);
 }
 
-let status = match(await subscribe(input), {
-	success: () => 204,
-	failure: (error) => (error instanceof ValidationError ? 422 : 502),
-});
+async function handle(request: Request): Promise<Response> {
+	let form = await request.formData();
+	return await match(subscribe(String(form.get("email"))), {
+		success: () => new Response(null, { status: 204 }),
+		failure: (error) =>
+			error instanceof ValidationError
+				? Response.json({ field: error.field, message: error.message }, { status: 422 })
+				: Response.json({ message: error.message }, { status: 502 }),
+	});
+}
 ```
 
-## Pattern: Early returns
+## Pattern: Retry only transient failures with a custom schedule
 
-Handle each failure as soon as it appears and the happy path never indents.
+`when` keeps a permanent error from burning attempts, and a function `delay` takes a schedule with a ceiling and jitter, such as one from [`@sdxc/backoff`](https://www.npmjs.com/package/@sdxc/backoff).
 
 ```typescript
-import { isFailure } from "@sdxc/result";
+import type { Result } from "@sdxc/result";
 
-async function signup(request: Request): Promise<Response> {
-	let validated = await validateForm(request);
-	if (isFailure(validated)) {
-		return Response.json({ error: validated.error.message }, { status: 400 });
+import { createBackoff } from "@sdxc/backoff";
+import { failure, isFailure, retry, RetryError, success } from "@sdxc/result";
+
+class HttpError extends Error {
+	constructor(readonly status: number) {
+		super(`HTTP ${status}`);
 	}
-
-	let saved = await saveUser(validated.data);
-	if (isFailure(saved)) {
-		return Response.json({ error: saved.error.message }, { status: 500 });
-	}
-
-	return Response.json({ user: saved.data });
 }
+
+async function loadReport(url: string): Promise<Result<unknown, HttpError>> {
+	let response = await fetch(url);
+	if (!response.ok) return failure(new HttpError(response.status));
+	return success(await response.json());
+}
+
+let backoff = createBackoff({ base: "1 second", max: "30 seconds", jitter: 0.2 });
+
+let result = await retry(() => loadReport("https://api.example.com/report"), {
+	times: 6,
+	delay: (attempt) => backoff.delay(attempt),
+	when: (error) => error.status >= 500,
+});
+
+if (isFailure(result) && result.error instanceof RetryError) {
+	console.error(result.error.message); // "Failed after 1 attempts" for a 404
+}
+```
+
+## Pattern: Process a batch and report what failed
+
+Run every item through `wrap`, then `partition` the Results into the values to keep and the errors to report.
+
+```typescript
+import { partition, unwrap, wrap } from "@sdxc/result";
+
+let urls = ["https://example.com/a.json", "https://example.com/b.json"];
+
+let results = await Promise.all(
+	urls.map((url) => wrap(() => fetch(url).then((response) => response.json()))),
+);
+let [documents, errors] = partition(results);
+
+console.log(`${documents.length} loaded, ${errors.length} failed`);
+
+let first = unwrap(results[0]!, () => null); // a single Result, with a fallback
+```
+
+## Pattern: Assert outcomes in tests
+
+`succeeded` and `failed` narrow the Result, so the assertions that follow read `data` or `error` without a guard, and a wrong outcome fails with your message.
+
+```typescript
+import { failed, succeeded } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+test("divides", () => {
+	let result = divide(10, 2);
+	succeeded(result, "Expected division to succeed");
+	expect(result.data).toBe(5);
+});
+
+test("rejects division by zero", () => {
+	let result = divide(1, 0);
+	failed(result, "Expected division by zero to fail");
+	expect(result.error.message).toBe("Division by zero");
+});
 ```
 
 ## Versioning
