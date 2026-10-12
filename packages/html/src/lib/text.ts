@@ -15,7 +15,7 @@ import { isHidden, isNonRendered } from "./visibility.js";
  * Elements a browser lays out in the text flow, whose boundaries therefore add no
  * spacing to the text around them.
  */
-const INLINE_TAGS = new Set([
+export const INLINE_TAGS = new Set([
 	"a",
 	"abbr",
 	"b",

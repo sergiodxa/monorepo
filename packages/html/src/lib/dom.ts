@@ -44,8 +44,3 @@ export interface DOMElement extends DOMParent {
 export interface DOMDocument extends DOMParent {
 	body: DOMElement;
 }
-
-/** A style declaration, read one property at a time, which is all a visibility rule asks. */
-export interface DOMStyle {
-	getPropertyValue(property: string): string;
-}

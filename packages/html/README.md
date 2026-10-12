@@ -285,8 +285,8 @@ let document = parseDocument(source);
 ```
 
 `parseDocument` answers with the same `Result` the rest of the package does, and
-`DOMAttribute`, `DOMNode`, `DOMParent`, `DOMElement`, `DOMDocument` and `DOMStyle` are
-the vocabulary it is read through — declared by this package, so they describe the
+`DOMAttribute`, `DOMNode`, `DOMParent`, `DOMElement` and `DOMDocument` are the
+vocabulary it is read through — declared by this package, so they describe the
 objects the parser produces under every set of globals a consumer compiles with.
 
 ### Errors

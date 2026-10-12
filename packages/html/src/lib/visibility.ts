@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DOMElement, DOMStyle } from "./dom.js";
+import type { DOMElement } from "./dom.js";
 
 /** Elements a browser keeps out of the render tree, whatever the styles say. */
 const NON_RENDERED_TAGS = new Set([
@@ -46,23 +46,8 @@ export function isHidden(element: DOMElement): boolean {
 	return false;
 }
 
-/**
- * Reads an element's inline `style` attribute as a computed style, which is the
- * only style source the package has and what accessible-name computation consults
- * when it decides a subtree is hidden.
- */
-export function inlineStyle(element: DOMElement): DOMStyle {
-	let declarations = parseStyle(element.getAttribute("style"));
-
-	return {
-		getPropertyValue(property: string) {
-			return declarations.get(property) ?? "";
-		},
-	};
-}
-
 /** Applies the two inline declarations that take an element out of the render tree. */
-function hiddenByStyle(element: DOMElement): boolean {
+export function hiddenByStyle(element: DOMElement): boolean {
 	let declarations = parseStyle(element.getAttribute("style"));
 	if (declarations.get("display") === "none") return true;
 	let visibility = declarations.get("visibility");

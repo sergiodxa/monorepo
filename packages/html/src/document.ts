@@ -7,13 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type {
-	DOMAttribute,
-	DOMDocument,
-	DOMElement,
-	DOMNode,
-	DOMParent,
-	DOMStyle,
-} from "./lib/dom.js";
+export type { DOMAttribute, DOMDocument, DOMElement, DOMNode, DOMParent } from "./lib/dom.js";
 
 export { parseDocument } from "./lib/parse-document.js";

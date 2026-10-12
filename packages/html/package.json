@@ -13,7 +13,6 @@
 	},
 	"dependencies": {
 		"@sdxc/result": "workspace:*",
-		"dom-accessibility-api": "^0.7.1",
 		"linkedom": "^0.18.13"
 	}
 }

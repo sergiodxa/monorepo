@@ -125,8 +125,9 @@ the same answers.
 
 ### Built on a conforming parser, owning the query layer
 
-Tree construction and accessible-name computation are delegated — `linkedom` for the
-document, `dom-accessibility-api` for names. The query semantics above live in this
+Tree construction is delegated to `linkedom`. Accessible-name computation was delegated
+to `dom-accessibility-api` and now lives in the package
+([ADR-132](./ADR-132-html-owned-accessible-names.md)). The query semantics above live in this
 package, so the dependencies stay an implementation choice: a different parser changes
 no caller's results.
 
