@@ -4,50 +4,54 @@ Retry delay schedules with exponential, linear, constant or stepped growth, a ce
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/backoff
 ```
 
+Durations are [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) inputs, and jitter draws from a [`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random) stream; install `@sdxc/random` too when you pass a seeded one.
+
 ## Usage
 
-### A Growing Delay
+### Build a schedule
 
-`delay(attempt)` answers milliseconds to wait after `attempt` failures, counting from 1.
+`delay(attempt)` answers the milliseconds to wait after `attempt` failures, counting from 1.
 
 ```typescript
 import { createBackoff } from "@sdxc/backoff";
 
+let backoff = createBackoff({ base: "15 seconds", max: "12 hours" });
+
+backoff.delay(1); // 15_000
+backoff.delay(3); // 60_000
+backoff.delay(20); // 43_200_000, the ceiling
+```
+
+That schedule is `Math.min(15_000 * 2 ** (attempt - 1), 43_200_000)`.
+
+### Pick the growth
+
+`growth` changes the curve, and `steps` replaces it with a table whose last entry repeats.
+
+```typescript
+createBackoff({ base: "1 second", factor: 3 }); // 1s, 3s, 9s, 27s…
+createBackoff({ base: "30 seconds", growth: "linear" }); // 30s, 60s, 90s…
+createBackoff({ base: "5 seconds", growth: "constant" }); // 5s, 5s, 5s…
+createBackoff({ steps: ["15 seconds", "1 minute", "5 minutes", "2 hours"] }); // …2h, 2h
+```
+
+### Spread retries with jitter
+
+A fraction `f` draws each delay from `delay × (1 ± f)`; `"full"` draws from `[0, delay]`. Jitter applies after `max`, so retries waiting at the ceiling still spread out.
+
+```typescript
 let backoff = createBackoff({ base: "15 seconds", max: "12 hours", jitter: 0.2 });
 
-backoff.delay(1); // 15_000 ±20%
-backoff.delay(3); // 60_000 ±20%
-backoff.delay(20); // 43_200_000 ±20%: the ceiling, then jitter
+backoff.delay(1); // between 12_000 and 18_000
 ```
 
-Without jitter, the same schedule is `Math.min(15_000 * 2 ** (attempt - 1), 43_200_000)`.
+### Allow free attempts
 
-### A Stored Next Attempt
-
-`at(attempt, now)` is `now + delay(attempt)`, for a row that records when to try again.
-
-```typescript
-let nextAttemptAt = backoff.at(failureCount, Date.now());
-```
-
-### A Hand-Written Table
-
-`steps` replaces the curve. The last step repeats for every attempt past the end.
-
-```typescript
-let backoff = createBackoff({
-	steps: ["15 seconds", "1 minute", "5 minutes", "30 minutes", "2 hours"],
-	jitter: 0.2,
-});
-```
-
-### Free Attempts
-
-`free` attempts answer `0`, and the curve starts on the failure after them.
+The first `free` failures answer `0`, and the curve starts on the failure after them.
 
 ```typescript
 let lockout = createBackoff({ free: 3, base: "1 second", max: "15 minutes" });
@@ -57,47 +61,39 @@ lockout.delay(4); // 1_000
 lockout.delay(5); // 2_000
 ```
 
-### Exact Jitter In Tests
-
-Jitter draws from a [`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random) stream. Pass a seeded one and every delay is reproducible.
-
-```typescript
-import { createRandom } from "@sdxc/random";
-
-let backoff = createBackoff({ base: 1000, jitter: 0.2, random: createRandom("test") });
-```
-
 ## API
 
 ### `createBackoff(options: BackoffOptions): Backoff`
 
-Validate the options once and return the schedule. Throws `RangeError` for a negative or unparseable duration, a `factor` below 1, a `max` below `base`, a `jitter` outside `[0, 1]`, empty `steps`, or a `free` that is not a non-negative integer.
-
-Durations are [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) inputs: milliseconds or strings such as `"30 minutes"`.
+Validates the options once and returns the schedule, so `delay` and `at` never fail. Throws `RangeError` for a negative or unparseable duration, a `factor` below 1, a `max` below `base`, a `jitter` outside `[0, 1]`, empty `steps`, or a `free` that is not a non-negative integer.
 
 A curve schedule takes:
 
 - `base`: the delay after the first counted failure
-- `growth`: `"exponential"` (default) multiplies by `factor` per failure, `"linear"` adds `base` per failure, `"constant"` repeats `base`
+- `growth`: `"exponential"` (default) multiplies by `factor` per failure, `"linear"` adds `base`, `"constant"` repeats `base`
 - `factor`: the exponential multiplier, `2` by default
 - `max`: the ceiling before jitter; unbounded when omitted
 
-A stepped schedule takes `steps`, one delay per counted failure.
-
-Both take:
+A stepped schedule takes `steps`, one delay per counted failure. Both take:
 
 - `free`: failures that answer `0`, `0` by default
-- `jitter`: a fraction `f` draws from `delay × (1 ± f)`; `"full"` draws from `[0, delay]`; omitted means none. Applied after `max`, so retries waiting at the ceiling still spread out. Jittered delays are rounded to whole milliseconds.
+- `jitter`: a `Jitter`; none when omitted. Jittered delays round to whole milliseconds
 - `random`: the stream jitter draws from, `systemRandom()` by default
 
 ### `Backoff`
 
-- `delay(attempt)`: milliseconds after `attempt` failures; `0` for a non-positive or free attempt
-- `at(attempt, now)`: `now + delay(attempt)`
+- `delay(attempt: number): number`: milliseconds after `attempt` failures; `0` for a non-positive or free attempt
+- `at(attempt: number, now: number): number`: `now + delay(attempt)`, for storing when to try again
 
-### `BackoffOptions`, `BackoffCurveOptions`, `BackoffStepsOptions`, `BackoffSharedOptions` and `Jitter`
+### Types
 
-The option shapes above. `Jitter` is `number | "full"`.
+#### `BackoffOptions`
+
+`BackoffCurveOptions | BackoffStepsOptions`, both extending `BackoffSharedOptions` (`free`, `jitter`, `random`).
+
+#### `Jitter`
+
+`number | "full"`: a fraction in `[0, 1]`, or a draw from zero to the full delay.
 
 ## Pattern: Retrying A Queue Message
 
@@ -106,7 +102,7 @@ A queue consumer passes its delivery count straight in, so early retries come qu
 ```typescript
 import { createBackoff } from "@sdxc/backoff";
 
-const deliveryBackoff = createBackoff({ base: "1 minute", max: "6 hours", jitter: 0.2 });
+let deliveryBackoff = createBackoff({ base: "1 minute", max: "6 hours", jitter: 0.2 });
 
 export default {
 	async queue(batch: MessageBatch<{ url: string }>) {
@@ -120,9 +116,9 @@ export default {
 };
 ```
 
-## Pattern: Honoring Retry-After
+## Pattern: Retrying A Request And Honoring Retry-After
 
-When a server says how long to wait, wait at least that long. `Retry-After` is either a number of seconds or an HTTP date, so read both, and treat anything else as no answer.
+When a server says how long to wait, wait at least that long. `Retry-After` is either a number of seconds or an HTTP date; anything else counts as no answer.
 
 ```typescript
 import { createBackoff } from "@sdxc/backoff";
@@ -140,9 +136,57 @@ function retryAfterMs(response: Response, now: number): number {
 	return Number.isNaN(date) ? 0 : Math.max(date - now, 0);
 }
 
-function waitAfter(response: Response, attempt: number): number {
-	return Math.max(retryAfterMs(response, Date.now()), backoff.delay(attempt));
+async function fetchWithRetry(url: string, attempts = 5): Promise<Response> {
+	for (let attempt = 1; ; attempt++) {
+		let response = await fetch(url);
+		if (response.ok || attempt === attempts) return response;
+		let wait = Math.max(retryAfterMs(response, Date.now()), backoff.delay(attempt));
+		await new Promise((resolve) => setTimeout(resolve, wait));
+	}
 }
+```
+
+## Pattern: Locking Out Repeated Sign-In Failures
+
+A stored failure count and `at()` give a row the time its next attempt opens. The first three failures cost nothing.
+
+```typescript
+import { createBackoff } from "@sdxc/backoff";
+
+let lockout = createBackoff({ free: 3, steps: ["30 seconds", "5 minutes", "1 hour"] });
+
+interface SignInState {
+	failures: number;
+	lockedUntil: number;
+}
+
+function isLocked(state: SignInState, now: number): boolean {
+	return state.lockedUntil > now;
+}
+
+function recordFailure(state: SignInState, now: number): SignInState {
+	let failures = state.failures + 1;
+	return { failures, lockedUntil: lockout.at(failures, now) };
+}
+```
+
+## Pattern: Exact Delays In Tests
+
+Pass a seeded `Random` and every jittered delay is reproducible, so a test asserts exact values.
+
+```typescript
+import { createBackoff } from "@sdxc/backoff";
+import { createRandom } from "@sdxc/random";
+import { expect, test } from "vitest";
+
+test("jitter is reproducible", () => {
+	let first = createBackoff({ base: 1000, jitter: 0.2, random: createRandom("test") });
+	let second = createBackoff({ base: 1000, jitter: 0.2, random: createRandom("test") });
+
+	expect(first.delay(3)).toBe(second.delay(3));
+	expect(first.delay(3)).toBeGreaterThanOrEqual(3200);
+	expect(first.delay(3)).toBeLessThanOrEqual(4800);
+});
 ```
 
 ## Versioning
