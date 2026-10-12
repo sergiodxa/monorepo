@@ -13,7 +13,7 @@ import type { Database, TableRow } from "remix/data-table";
 import { Hex, randomBytes, randomToken, sha256 } from "@sdxc/crypto";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { and, column as c, eq, gt, isNull, notNull, table } from "remix/data-table";
 
 import type { OpenSessionMetering, OpenSessionSuccess } from "~/app/models/tenant/sessions";

@@ -32,7 +32,7 @@ import { Hex, open, randomToken, seal, sha256 } from "@sdxc/crypto";
 import { normalizeDomain } from "@sdxc/email-address";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
 
 import { organizationDomains } from "~/app/models/tenant/organizations";

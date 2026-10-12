@@ -22,7 +22,8 @@ import { Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { JWK, JWT } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID as generateTokenId } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, gt, inList, isNull, lt, table } from "remix/data-table";
 
@@ -456,7 +457,7 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 		aud: `${input.issuer}/userinfo`,
 		iat: issuedAt,
 		exp: accessExpiresAt,
-		jti: accessTokenId(generateUUID()).toString(),
+		jti: accessTokenId(generateTokenId()).toString(),
 		client_id: input.client.id,
 		scope: input.scopes.join(" "),
 		sid: input.sessionId,
@@ -1034,7 +1035,7 @@ export async function issueClientCredentialsToken(
 		aud: parsed.resource ?? `${parsed.issuer}/userinfo`,
 		iat: issuedAt,
 		exp: issuedAt + Math.floor(ACCESS_TOKEN_TTL_MS / 1000),
-		jti: accessTokenId(generateUUID()).toString(),
+		jti: accessTokenId(generateTokenId()).toString(),
 		scope: grantedScopes.join(" "),
 	}).sign(JWK.Algorithm.ES256, [keyPair]);
 
