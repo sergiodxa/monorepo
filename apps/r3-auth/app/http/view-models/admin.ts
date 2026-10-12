@@ -140,10 +140,7 @@ export namespace AdminView {
 		createdAt: string;
 	}
 
-	/**
-	 * A session as the subject detail page shows it. `id` is that session's refresh
-	 * token, carried here only because revoking needs a value to look the row up by.
-	 */
+	/** A session as the subject detail page shows it; `id` is what the revoke form posts. */
 	export interface SessionRow {
 		id: string;
 		device: string;

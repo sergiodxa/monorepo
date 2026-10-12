@@ -45,12 +45,14 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   subject holds a `grants` row for. Without one the answer is the missing-subject `404`,
   checked ahead of the KV cache so revoking an app's access in the account area applies
   on the next request.
-- MUST NOT change the refresh-token semantics: **`sessions.id` IS the refresh token**.
-  Rotation, revocation and the account area's session list all follow from that.
-- MUST keep the D1 schema frozen — the database is shared with the worker serving
-  production — and MUST keep timestamp columns as integers holding epoch milliseconds
+- MUST keep `sessions.id` a public UUID — it is the `sid` relying parties receive in
+  logout tokens and front-channel URLs, and the value the revoke forms post — and MUST
+  keep the refresh token apart from it, stored only as `sessions.refresh_token_hash` and
+  resolved through `Sessions.findByRefreshToken` ([ADR-003](../../docs/adr/r3-auth/ADR-003-session-public-id.md)).
+- MUST change the D1 schema only through a migration that keeps existing rows working,
+  and MUST keep timestamp columns as integers holding epoch milliseconds
   (`createDatabase()` sets `now: () => Date.now()` for exactly this reason).
-- MUST keep the KV key shapes shared with that worker interchangeable: `authz-code:<code>`
+- MUST keep the KV key shapes interchangeable across deployments: `authz-code:<code>`
   (10 min), `clients:<clientId>` and `clients:<clientId>:subjects:<subjectId>` (7 days).
   Own sessions live under `session:` and are this app's alone.
 - MUST keep the `op_browser_state` cookie's name, value derivation and attributes
@@ -253,5 +255,5 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   - `app/http/middleware/require-api-client.ts` <- JWKS-verified machine API guard
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
 - Data layer
-  - `database/schema.ts` <- The frozen D1 schema
+  - `database/schema.ts` <- The D1 schema
   - `app/models/` <- One `@sdxc/data-model` model per table, registered in `index.ts`

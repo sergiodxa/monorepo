@@ -54,12 +54,7 @@ function toDeviceType(type: ParsedDeviceType | null): DeviceType {
 
 /** One row of the account area's device list, ready to render. */
 export interface SessionRow {
-	/**
-	 * The session row's id, which is also the refresh token the client presents.
-	 *
-	 * It travels to the page only as the value the revoke form posts back, and only to
-	 * the person who owns it. Nothing may log it or show it as text.
-	 */
+	/** The session's public id, the value the revoke form posts back. */
 	id: string;
 	/** Browser family label. */
 	browser: string;
@@ -99,11 +94,11 @@ function formatDate(epochMs: number, locale: string): string {
 }
 
 /**
- * Maps a stored session onto its row. The session matching the current request's
- * token stays marked active, since this very request just touched it.
+ * Maps a stored session onto its row. The session the current request arrived on stays
+ * marked active, since this very request just touched it.
  *
- * @param currentSessionId - The refresh token this request arrived with, so the row it
- *   names can be marked and confirmed differently from the rest.
+ * @param currentSessionId - The id of the session this request arrived on, so its row
+ *   can be marked and confirmed differently from the rest.
  * @param locale - Language the dates are formatted for.
  */
 export function toSessionRow(

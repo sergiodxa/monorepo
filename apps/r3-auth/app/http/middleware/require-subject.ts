@@ -37,8 +37,8 @@ declare module "remix/router" {
 
 /**
  * Requires a signed-in subject, refreshing the access token as this server's own client,
- * the one its sign-in issued the session to. Both tokens are written back together, since
- * the refresh token is the session row's id and a stale one could never refresh again.
+ * the one its sign-in issued the session to. Both tokens are written back together, so the
+ * cookie session always holds the pair the token endpoint last answered with.
  */
 export const requireSubject: Middleware = async (ctx, next) => {
 	let accessToken = getAccessToken();

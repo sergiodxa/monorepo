@@ -63,6 +63,9 @@ let testSession = {
 	scope: ["openid"],
 };
 
+/** The refresh token issued on {@link testSession}, distinct from its public id. */
+const TEST_REFRESH_TOKEN = "refresh-token-abc";
+
 let testAuthzCode = {
 	clientId: "client-123",
 	subjectId: "subject-123",
@@ -87,6 +90,12 @@ function createMockRepository(): MockRepository {
 			uri === testClient.logoutUri ? testClient : null,
 		),
 		findSessionById: vi.fn(async (id: string) => (id === testSession.id ? testSession : null)),
+		findSessionByRefreshToken: vi.fn(async (token: string) =>
+			token === TEST_REFRESH_TOKEN ? testSession : null,
+		),
+		issueRefreshToken: vi.fn(async (id: string) =>
+			id === testSession.id ? TEST_REFRESH_TOKEN : null,
+		),
 		findAuthorizationCodeData: vi.fn(async () => testAuthzCode),
 		findSubjectById: vi.fn(async (id: string) => (id === testSubject.id ? testSubject : null)),
 		deleteSessionBySubjectId: vi.fn(async () => {}),
@@ -172,9 +181,9 @@ afterEach(() => {
 describe("OAuth2Provider", () => {
 	describe("token() - authorization_code grant", () => {
 		/**
-		 * The refresh token a redeemed code carries **is** the session id, which is what
-		 * revocation and the account area's device list are built on. `offline_access` is
-		 * what asks for it, so the exchange proving the identity has to request it.
+		 * A redeemed code carries the refresh token minted for its session, a value apart from
+		 * the session's public id. `offline_access` is what asks for it, so the exchange
+		 * proving the identity has to request it.
 		 */
 		test("exchanges valid authorization code for tokens", async () => {
 			let repo = createMockRepository();
@@ -191,9 +200,48 @@ describe("OAuth2Provider", () => {
 			})) as OIDCTokenResponse;
 
 			expect(result.access_token).toBeDefined();
-			expect(result.refresh_token).toBe(testSession.id);
+			expect(result.refresh_token).toBe(TEST_REFRESH_TOKEN);
+			expect(result.refresh_token).not.toBe(testSession.id);
+			expect(repo.issueRefreshToken).toHaveBeenCalledWith(testSession.id);
 			expect(result.expires_in).toBe(AccessToken.ttl);
 			expect(result.id_token).toBeDefined();
+		});
+
+		/** A session that vanished between authorization and redemption has nothing to refresh. */
+		test("refuses the exchange when the session is gone before its token is minted", async () => {
+			let repo = createMockRepository();
+			repo.issueRefreshToken = vi.fn(async () => null);
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			testAuthzCode.scope = ["openid", "offline_access"];
+
+			await expect(
+				provider.token({
+					type: "authorization_code",
+					code: "valid-code",
+					redirectUri: testClient.redirectUri,
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
+				}),
+			).rejects.toThrow(OIDC.InvalidGrantError);
+		});
+
+		test("mints no refresh token without offline_access", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			testAuthzCode.scope = ["openid"];
+
+			let result = await provider.token({
+				type: "authorization_code",
+				code: "valid-code",
+				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+			});
+
+			expect("refresh_token" in result).toBe(false);
+			expect(repo.issueRefreshToken).not.toHaveBeenCalled();
 		});
 
 		test("issues an access token carrying the RFC 9068 claims", async () => {
@@ -399,13 +447,13 @@ describe("OAuth2Provider", () => {
 
 			let result = (await provider.token({
 				type: "refresh_token",
-				refreshToken: testSession.id,
+				refreshToken: TEST_REFRESH_TOKEN,
 				clientId: testClient.id,
 				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			expect(result.access_token).toBeDefined();
-			expect(result.refresh_token).toBe(testSession.id);
+			expect(result.refresh_token).toBe(TEST_REFRESH_TOKEN);
 			expect(result.id_token).toBeDefined();
 			expect(repo.touchSession).toHaveBeenCalled();
 		});
@@ -416,7 +464,7 @@ describe("OAuth2Provider", () => {
 
 			let result = (await provider.token({
 				type: "refresh_token",
-				refreshToken: testSession.id,
+				refreshToken: TEST_REFRESH_TOKEN,
 				clientId: testClient.id,
 				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
@@ -430,7 +478,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects invalid refresh token", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = vi.fn(async () => null);
+			repo.findSessionByRefreshToken = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo, createMockLog());
 
 			await expect(
@@ -454,7 +502,7 @@ describe("OAuth2Provider", () => {
 			await expect(
 				provider.token({
 					type: "refresh_token",
-					refreshToken: testSession.id,
+					refreshToken: TEST_REFRESH_TOKEN,
 					clientId: testClient.id,
 					clientSecret: "",
 				}),
@@ -469,7 +517,7 @@ describe("OAuth2Provider", () => {
 			await expect(
 				provider.token({
 					type: "refresh_token",
-					refreshToken: testSession.id,
+					refreshToken: TEST_REFRESH_TOKEN,
 					clientId: testClient.id,
 					clientSecret: "wrong-secret",
 				}),
@@ -493,7 +541,7 @@ describe("OAuth2Provider", () => {
 
 			let refusal = provider.token({
 				type: "refresh_token",
-				refreshToken: testSession.id,
+				refreshToken: TEST_REFRESH_TOKEN,
 				clientId: otherClient.id,
 				clientSecret: otherClient.secret,
 			});
@@ -579,7 +627,7 @@ describe("OAuth2Provider", () => {
 			await provider.revoke({
 				clientId: testClient.id,
 				clientSecret: testClient.secret,
-				token: testSession.id,
+				token: TEST_REFRESH_TOKEN,
 				tokenTypeHint: "refresh_token",
 			});
 
@@ -588,7 +636,7 @@ describe("OAuth2Provider", () => {
 
 		test("returns success for already-revoked token (per RFC 7009)", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = vi.fn(async () => null);
+			repo.findSessionByRefreshToken = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo, createMockLog());
 
 			await provider.revoke({
@@ -600,7 +648,7 @@ describe("OAuth2Provider", () => {
 
 		test("rejects token belonging to different client", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = vi.fn(async () => ({
+			repo.findSessionByRefreshToken = vi.fn(async () => ({
 				...testSession,
 				clientId: "different-client",
 			}));
@@ -610,7 +658,7 @@ describe("OAuth2Provider", () => {
 				provider.revoke({
 					clientId: testClient.id,
 					clientSecret: testClient.secret,
-					token: testSession.id,
+					token: TEST_REFRESH_TOKEN,
 				}),
 			).rejects.toThrow(OIDC.UnauthorizedClientError);
 		});
@@ -623,7 +671,7 @@ describe("OAuth2Provider", () => {
 				provider.revoke({
 					clientId: testClient.id,
 					clientSecret: "wrong-secret",
-					token: testSession.id,
+					token: TEST_REFRESH_TOKEN,
 				}),
 			).rejects.toThrow(OIDC.InvalidClientError);
 		});
@@ -637,7 +685,7 @@ describe("OAuth2Provider", () => {
 			let result = await provider.introspect({
 				clientId: testClient.id,
 				clientSecret: testClient.secret,
-				token: testSession.id,
+				token: TEST_REFRESH_TOKEN,
 			});
 
 			expect(result.active).toBe(true);
@@ -737,7 +785,7 @@ describe("OAuth2Provider", () => {
 			let result = await provider.introspect({
 				clientId: SECOND_CLIENT.id,
 				clientSecret: SECOND_CLIENT.secret,
-				token: testSession.id,
+				token: TEST_REFRESH_TOKEN,
 			});
 
 			expect(result).toEqual({ active: false });
@@ -789,7 +837,7 @@ describe("OAuth2Provider", () => {
 
 		test("returns inactive for expired/invalid token", async () => {
 			let repo = createMockRepository();
-			repo.findSessionById = vi.fn(async () => null);
+			repo.findSessionByRefreshToken = vi.fn(async () => null);
 			let provider = new OIDC(ISSUER, repo, createMockLog());
 
 			let result = await provider.introspect({
@@ -809,7 +857,7 @@ describe("OAuth2Provider", () => {
 				provider.introspect({
 					clientId: testClient.id,
 					clientSecret: "wrong-secret",
-					token: testSession.id,
+					token: TEST_REFRESH_TOKEN,
 				}),
 			).rejects.toThrow(OIDC.InvalidClientError);
 		});

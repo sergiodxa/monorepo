@@ -129,8 +129,8 @@ export type ClientIntent = s.InferOutput<typeof ClientIntentSchema>;
 /**
  * The subject detail page's three intents.
  *
- * `revoke-session` carries the session id, which **is** that session's refresh token:
- * it is accepted here only as an opaque value to delete by, and never logged or echoed.
+ * `revoke-session` carries the session's public id, accepted as an opaque value to delete
+ * by within the subject the page is about.
  */
 export const SubjectIntentSchema = s.variant("intent", {
 	delete: s.object({ intent: s.literal<"delete">("delete") }),

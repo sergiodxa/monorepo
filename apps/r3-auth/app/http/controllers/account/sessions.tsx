@@ -1,8 +1,7 @@
 /**
- * `/account/sessions` — the device list and the two revocations it offers. Every session
- * row's id is a live refresh token, so the list and every revocation are scoped to the
- * subject the guard resolved, and the page is served no-store. Revoking the session this
- * request arrived on ends it here too, dropping this origin's cookies.
+ * `/account/sessions` — the device list and the two revocations it offers. The list and
+ * every revocation are scoped to the subject the guard resolved, and the page is served
+ * no-store. Revoking the session this request arrived on ends it here too, dropping cookies.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,16 +33,25 @@ import routes from "~/routes/web";
  */
 const CLEAR_COOKIES: HeadersInit = { "Clear-Site-Data": '"cookies"' };
 
-/**
- * Each rendered row carries a live refresh token, as the value its revoke form posts
- * back, so this response stays private to the browser that asked for it.
- */
+/** The page lists one person's devices and addresses, so it stays private to their browser. */
 const NO_STORE: HeadersInit = { "Cache-Control": "no-store, private" };
+
+/**
+ * Resolves the public id of the session this browser is signed in with, from the refresh
+ * token its cookie session holds, or `null` when it holds none that is still live.
+ */
+async function currentSessionId(ctx: RequestContext): Promise<string | null> {
+	let refreshToken = getRefreshToken();
+	if (!refreshToken) return null;
+	return (await ctx.models.sessions.findByRefreshToken(refreshToken))?.id ?? null;
+}
 
 async function sessionsPage(ctx: RequestContext): Promise<Response> {
 	let subject = ctx.subject;
-	let sessions = await ctx.models.sessions.findBySubjectId(subject.id);
-	let currentSessionId = getRefreshToken();
+	let [sessions, current] = await Promise.all([
+		ctx.models.sessions.findBySubjectId(subject.id),
+		currentSessionId(ctx),
+	]);
 
 	return await ctx.render(
 		<AccountLayout
@@ -101,7 +109,7 @@ async function sessionsPage(ctx: RequestContext): Promise<Response> {
 						cancel: ctx.intl.t("sessions.confirm.cancel"),
 					},
 				}}
-				sessions={sessions.map((session) => toSessionRow(session, currentSessionId, ctx.locale))}
+				sessions={sessions.map((session) => toSessionRow(session, current, ctx.locale))}
 			/>
 		</AccountLayout>,
 		{ headers: NO_STORE },
@@ -143,7 +151,7 @@ export default createController(routes.account.sessions, {
 		 */
 		action: async (ctx) => {
 			let subject = ctx.subject;
-			let currentSessionId = getRefreshToken();
+			let current = await currentSessionId(ctx);
 
 			let result = await validate(ctx.formData, SessionsIntentSchema);
 
@@ -156,7 +164,7 @@ export default createController(routes.account.sessions, {
 
 			if (submitted.intent === "revoke-all") {
 				let owned = await ctx.models.sessions.findBySubjectId(subject.id);
-				let others = owned.filter((session) => session.id !== currentSessionId);
+				let others = owned.filter((session) => session.id !== current);
 				for (let session of others) await ctx.models.sessions.delete(session.id);
 
 				ctx.log.set({ sessions: { revoked: others.length } });
@@ -181,7 +189,7 @@ export default createController(routes.account.sessions, {
 			ctx.log.set({ sessions: { revoked: 1 } });
 			ctx.log.note("session.revoked");
 
-			if (target.id === currentSessionId) return signOut();
+			if (target.id === current) return signOut();
 
 			let remaining = await ctx.models.sessions.findBySubjectId(subject.id);
 			if (remaining.length === 0) return signOut();

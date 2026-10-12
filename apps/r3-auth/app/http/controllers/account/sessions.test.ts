@@ -1,8 +1,7 @@
 /**
  * Router-level tests of the device list and its two revocations. The cases that matter
- * most are the ones where a session id is a live refresh token: revoking the current one
- * must end the browser session too, and a submitted id belonging to somebody else must
- * leave it alone and answer exactly as an already-revoked id does.
+ * most: revoking the current session must end the browser session too, and a submitted id
+ * belonging to somebody else must leave it alone and answer as an already-revoked id does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,6 +35,13 @@ async function post(fields: Record<string, string>): Promise<Response> {
 			body: new URLSearchParams(fields),
 		}),
 	);
+}
+
+/** Resolves the public id of the session a refresh token belongs to. */
+async function sessionIdOf(refreshToken: string): Promise<string> {
+	let session = await app.models.sessions.findByRefreshToken(refreshToken);
+	if (!session) throw new Error("The refresh token names no session");
+	return session.id;
 }
 
 /** Opens an extra session for the seeded subject, standing in for another device. */
@@ -94,6 +100,17 @@ describe("GET /account/sessions", () => {
 		expect(html).toContain("Client App");
 	});
 
+	/** The revoke form posts the public id, so the page carries no refresh token. */
+	test("renders no refresh token into the page", async () => {
+		let tokens = await signIn(app, fixtures);
+
+		let response = await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`));
+		let html = await response.text();
+
+		expect(html).toContain(await sessionIdOf(tokens.refresh_token));
+		expect(html).not.toContain(tokens.refresh_token);
+	});
+
 	test("marks exactly one row as the current session", async () => {
 		await signIn(app, fixtures);
 		await extraSession("Mozilla/5.0 (Macintosh) Chrome/120.0 Safari/537.36", "198.51.100.4");
@@ -115,7 +132,7 @@ describe("GET /account/sessions", () => {
 
 	test("says so when the subject holds no session", async () => {
 		let tokens = await signIn(app, fixtures);
-		await app.models.sessions.delete(tokens.refresh_token);
+		await app.models.sessions.deleteByRefreshToken(tokens.refresh_token);
 
 		let html = await (
 			await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`))
@@ -158,12 +175,15 @@ describe("POST /account/sessions intent=revoke", () => {
 		let tokens = await signIn(app, fixtures);
 		await extraSession("Mozilla/5.0 (X11; Linux) Firefox/121.0", "192.0.2.9");
 
-		let response = await post({ intent: "revoke", sessionId: tokens.refresh_token });
+		let response = await post({
+			intent: "revoke",
+			sessionId: await sessionIdOf(tokens.refresh_token),
+		});
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
 		expect(response.headers.get("clear-site-data")).toBe('"cookies"');
-		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.findByRefreshToken(tokens.refresh_token)).toBeNull();
 
 		let after = await app.fetch(
 			new Request(`${ORIGIN}${routes.account.sessions.index.href()}`, { redirect: "manual" }),
@@ -175,7 +195,10 @@ describe("POST /account/sessions intent=revoke", () => {
 	test("revoking the last remaining session signs the browser out", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		let response = await post({ intent: "revoke", sessionId: tokens.refresh_token });
+		let response = await post({
+			intent: "revoke",
+			sessionId: await sessionIdOf(tokens.refresh_token),
+		});
 
 		expect(response.headers.get("clear-site-data")).toBe('"cookies"');
 	});
@@ -271,13 +294,13 @@ describe("POST /account/sessions intent=revoke-all", () => {
 		expect(response.headers.get("clear-site-data")).toBeNull();
 		expect(await app.models.sessions.find(first)).toBeNull();
 		expect(await app.models.sessions.find(second)).toBeNull();
-		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.findByRefreshToken(tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("signs the browser out when its own session row was already gone", async () => {
 		let tokens = await signIn(app, fixtures);
 		await extraSession("Mozilla/5.0 (X11; Linux) Firefox/121.0", "192.0.2.9");
-		await app.models.sessions.delete(tokens.refresh_token);
+		await app.models.sessions.deleteByRefreshToken(tokens.refresh_token);
 
 		let response = await post({ intent: "revoke-all" });
 

@@ -1,8 +1,7 @@
 /**
  * Asks a subject to confirm the address their account is registered under, with a
- * button carrying a single-use token and the minutes it lasts. It carries no other
- * account facts and never a session id, since that value is this server's refresh
- * token; the caller builds the link and the lifetime it quotes, so the two agree.
+ * button carrying a single-use token and the minutes it lasts, and no other account
+ * facts; the caller builds the link and the lifetime it quotes, so the two agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

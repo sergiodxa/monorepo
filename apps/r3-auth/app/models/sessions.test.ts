@@ -16,8 +16,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AuthModels } from "~/app/models";
 
-import { SESSION_TTL } from "~/app/models/sessions";
-import { createTestModels } from "~/app/test/models";
+import { hashRefreshToken, SESSION_TTL } from "~/app/models/sessions";
+import { applyMigrations, createTestDatabase } from "~/app/test/db";
+import { bindModels, createTestModels } from "~/app/test/models";
 import { sessions } from "~/database/schema";
 
 let db: Database;
@@ -88,36 +89,143 @@ describe("sessions.create", () => {
 });
 
 describe("sessions.find", () => {
-	test("resolves a presented refresh token to its session", async () => {
+	test("resolves a session by its public id", async () => {
 		let session = await openSession();
 		expect((await models.sessions.find(session.id))?.subject_id).toBe(subjectId);
 	});
 
-	/** The id is the refresh token, so it is a random token, never a UUID. */
-	test("mints the refresh token as a random token", async () => {
+	/** The id is what relying parties see as `sid`, so it is a UUID and never a secret. */
+	test("gives the session a UUID as its public id", async () => {
 		let session = await openSession();
 
-		expect(session.id).toMatch(/^[\w-]{43}$/);
-		expect(isUUID(session.id)).toBe(false);
+		expect(isUUID(session.id)).toBe(true);
+		expect(session.refresh_token_hash).toBeNull();
 	});
 
-	/** Sessions opened before refresh tokens became random tokens carry UUID ids. */
-	test("resolves a refresh token issued as a UUID", async () => {
-		let legacy = unwrap(
-			await models.sessions.create({
-				id: generateUUID(),
-				subject_id: subjectId,
-				client_id: clientId,
-			}),
-		);
-
-		expect((await models.sessions.find(legacy.id))?.subject_id).toBe(subjectId);
-	});
-
-	test("returns null for a revoked or invented token", async () => {
+	test("returns null for an invented id", async () => {
 		expect(await models.sessions.find("not-a-session")).toBeNull();
 	});
 });
+
+describe("sessions.issueRefreshToken", () => {
+	test("mints a random token apart from the session's public id", async () => {
+		let session = await openSession();
+		let token = await models.sessions.issueRefreshToken(session.id);
+
+		expect(token).toMatch(/^[\w-]{43}$/);
+		expect(token).not.toBe(session.id);
+	});
+
+	/** A database read must yield nothing a client could present at the token endpoint. */
+	test("stores only the token's SHA-256 hash", async () => {
+		let session = await openSession();
+		let token = unwrapToken(await models.sessions.issueRefreshToken(session.id));
+		let row = await models.sessions.find(session.id);
+
+		expect(row?.refresh_token_hash).toBe(await hashRefreshToken(token));
+		expect(Object.values(row ?? {})).not.toContain(token);
+	});
+
+	test("returns null when the session no longer exists", async () => {
+		expect(await models.sessions.issueRefreshToken(generateUUID())).toBeNull();
+	});
+
+	test("replaces an earlier token, which stops resolving", async () => {
+		let session = await openSession();
+		let first = unwrapToken(await models.sessions.issueRefreshToken(session.id));
+		let second = unwrapToken(await models.sessions.issueRefreshToken(session.id));
+
+		expect(await models.sessions.findByRefreshToken(first)).toBeNull();
+		expect((await models.sessions.findByRefreshToken(second))?.id).toBe(session.id);
+	});
+});
+
+describe("sessions.findByRefreshToken", () => {
+	test("resolves an issued refresh token to its session", async () => {
+		let session = await openSession();
+		let token = unwrapToken(await models.sessions.issueRefreshToken(session.id));
+
+		expect((await models.sessions.findByRefreshToken(token))?.id).toBe(session.id);
+	});
+
+	/** Knowing a session's `sid` must never be enough to refresh it. */
+	test("refuses the public id as a refresh token", async () => {
+		let session = await openSession();
+		await models.sessions.issueRefreshToken(session.id);
+
+		expect(await models.sessions.findByRefreshToken(session.id)).toBeNull();
+	});
+
+	test("returns null for an invented token", async () => {
+		expect(await models.sessions.findByRefreshToken("not-a-token")).toBeNull();
+	});
+});
+
+describe("sessions.deleteByRefreshToken", () => {
+	test("revokes the session the token belongs to", async () => {
+		let session = await openSession();
+		let token = unwrapToken(await models.sessions.issueRefreshToken(session.id));
+
+		expect(await models.sessions.deleteByRefreshToken(token)).toBe(1);
+		expect(await models.sessions.find(session.id)).toBeNull();
+	});
+
+	test("leaves the session alone when given its public id", async () => {
+		let session = await openSession();
+		await models.sessions.issueRefreshToken(session.id);
+
+		expect(await models.sessions.deleteByRefreshToken(session.id)).toBe(0);
+		expect(await models.sessions.find(session.id)).not.toBeNull();
+	});
+});
+
+/**
+ * The migration that split the public id from the refresh token. Every id it finds was a
+ * refresh token, and possibly a leaked one, so the migration ends every session.
+ */
+describe("session public id migration", () => {
+	const MIGRATION = "20261012000000_session_public_id.sql";
+
+	test("deletes every session, so no pre-migration id refreshes again", async () => {
+		let { db, sqliteDb } = createTestDatabase((file) => file < MIGRATION);
+		let oldModels = bindModels(db);
+		unwrap(
+			await oldModels.clients.create({
+				id: clientId,
+				name: "Blog",
+				redirect_uri: "https://blog.example.com/auth/callback",
+				logout_uri: "https://blog.example.com/logout",
+			}),
+		);
+		unwrap(
+			await oldModels.subjects.create({
+				id: subjectId,
+				email_address: "jane@example.com",
+				display_name: "Jane Doe",
+				username: "jane",
+				avatar: "https://example.com/jane.png",
+			}),
+		);
+
+		let now = Date.now();
+		sqliteDb
+			.prepare(
+				"INSERT INTO sessions (id, created_at, updated_at, expires_at, subject_id, client_id, scope) VALUES (?, ?, ?, ?, ?, ?, ?)",
+			)
+			.run("old-token", now, now, now + SESSION_TTL, subjectId, clientId, "openid offline_access");
+
+		applyMigrations(sqliteDb, (file) => file >= MIGRATION);
+
+		expect(await oldModels.sessions.findBySubjectId(subjectId)).toEqual([]);
+		expect(await oldModels.sessions.findByRefreshToken("old-token")).toBeNull();
+	});
+});
+
+/** Narrows an issued token, failing the test when the session it was issued on is gone. */
+function unwrapToken(token: string | null): string {
+	if (token === null) throw new Error("The session vanished before its token was issued");
+	return token;
+}
 
 describe("sessions.findBySubjectId", () => {
 	test("loads each session with the client it was issued to, most recent first", async () => {

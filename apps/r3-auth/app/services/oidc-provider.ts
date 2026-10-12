@@ -304,16 +304,17 @@ export namespace OIDC {
 			}>
 		>;
 
-		findSessionById(sessionId: string): Promise<
-			Nullable<{
-				id: string;
-				clientId: string;
-				subjectId: string;
-				expiresAt: Date;
-				createdAt: Date;
-				scope: string[];
-			}>
-		>;
+		/** Resolves a session by its public id, the value relying parties see as `sid`. */
+		findSessionById(sessionId: string): Promise<Nullable<Session>>;
+
+		/** Resolves the session a presented refresh token belongs to. */
+		findSessionByRefreshToken(refreshToken: string): Promise<Nullable<Session>>;
+
+		/**
+		 * Mints a session's refresh token, keeping only what verifies it, so the returned
+		 * value is the one copy; `null` when the session no longer exists.
+		 */
+		issueRefreshToken(sessionId: string): Promise<Nullable<string>>;
 
 		findAuthorizationCodeData(code: string): Promise<
 			Nullable<{
@@ -394,6 +395,19 @@ export namespace OIDC {
 			subjectId: string,
 			excludeClientId?: string,
 		): Promise<SessionWithClient[]>;
+	}
+
+	/**
+	 * A subject's sign-in with one client. `id` is public: it is the `sid` logout
+	 * notifications carry, and it never authenticates anything on its own.
+	 */
+	export interface Session {
+		id: string;
+		clientId: string;
+		subjectId: string;
+		expiresAt: Date;
+		createdAt: Date;
+		scope: string[];
 	}
 
 	/** A PKCE challenge (RFC 7636), bound to a code so only its issuer can redeem it. */
@@ -577,7 +591,7 @@ export class OIDC {
 			return;
 		}
 
-		let session = await this.repository.findSessionById(args.token);
+		let session = await this.repository.findSessionByRefreshToken(args.token);
 		if (!session) {
 			return;
 		}
@@ -625,7 +639,7 @@ export class OIDC {
 		}
 
 		if (args.tokenTypeHint !== "access_token") {
-			let session = await this.repository.findSessionById(args.token);
+			let session = await this.repository.findSessionByRefreshToken(args.token);
 			if (session && session.expiresAt > new Date()) {
 				if (session.clientId !== args.clientId) return { active: false };
 
@@ -1208,8 +1222,8 @@ export class OIDC {
 	}
 
 	/**
-	 * Redeems an authorization code. A refresh token rides along only for a request that
-	 * asked for `offline_access` (OIDC Core §11), and the response names the scope it
+	 * Redeems an authorization code. A refresh token, minted here, rides along only for a request
+	 * that asked for `offline_access` (OIDC Core §11), and the response names the scope it
 	 * granted, so a client whose request was narrowed can see that (RFC 6749 §3.3).
 	 */
 	private async authorizationCodeGrant(args: {
@@ -1305,10 +1319,17 @@ export class OIDC {
 			),
 		);
 
+		let refreshToken: string | null = null;
+
+		if (authz.scope.includes("offline_access")) {
+			refreshToken = await this.repository.issueRefreshToken(session.id);
+			if (!refreshToken) throw new InvalidGrantError("Session not found");
+		}
+
 		return {
 			access_token: accessToken,
 			token_type: "Bearer" as const,
-			...(authz.scope.includes("offline_access") && { refresh_token: sessionId }),
+			...(refreshToken && { refresh_token: refreshToken }),
 			expires_in: AccessToken.ttl,
 			id_token: idToken,
 			scope: authz.scope.join(" "),
@@ -1370,7 +1391,7 @@ export class OIDC {
 			throw new InvalidClientError("Invalid client credentials");
 		}
 
-		let session = await this.repository.findSessionById(args.refreshToken);
+		let session = await this.repository.findSessionByRefreshToken(args.refreshToken);
 		if (!session || session.clientId !== client.id) {
 			throw new InvalidGrantError("Invalid or expired refresh token");
 		}
@@ -1414,7 +1435,7 @@ export class OIDC {
 			access_token: accessToken,
 			token_type: "Bearer" as const,
 			expires_in: AccessToken.ttl,
-			refresh_token: session.id,
+			refresh_token: args.refreshToken,
 			id_token: idToken,
 		};
 	}

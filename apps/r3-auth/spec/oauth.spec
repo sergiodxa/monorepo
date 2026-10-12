@@ -44,8 +44,8 @@ test "POST /oauth/token rejects a client-credentials request with a wrong secret
 }
 
 # POST /oauth/token, the `refresh_token` grant with no client credentials. RFC 6749 §6 has
-# a confidential client authenticate on refresh, so a refresh token on its own — a seeded,
-# live session id — is refused as `invalid_client` before the token is ever looked up.
+# a confidential client authenticate on refresh, so a refresh token on its own — even a
+# seeded live one — is refused as `invalid_client` before the token is ever looked up.
 test "POST /oauth/token refuses a refresh token presented with no client credentials" {
 	given {
 		seed_code_client
@@ -54,7 +54,7 @@ test "POST /oauth/token refuses a refresh token presented with no client credent
 	when {
 		let result = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
-			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			refresh_token: "spec-refresh-token-cccccccccccccccccccccccc"
 		}
 	}
 	then {
@@ -74,7 +74,7 @@ test "POST /oauth/token refuses a refresh token presented with a wrong client se
 	when {
 		let result = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
-			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			refresh_token: "spec-refresh-token-cccccccccccccccccccccccc"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "wrong-secret"
 	}
 	then {
@@ -96,8 +96,8 @@ test "POST /oauth/token rejects an empty request body as invalid_request" {
 	}
 }
 
-# POST /oauth/introspect with client_secret_basic and a live refresh token (a seeded
-# session id). The endpoint reports the token active and returns its subject and client.
+# POST /oauth/introspect with client_secret_basic and a live refresh token (the
+# seeded session's). The endpoint reports the token active and returns its subject and client.
 test "POST /oauth/introspect reports a live token as active" {
 	given {
 		seed_code_client
@@ -105,7 +105,7 @@ test "POST /oauth/introspect reports a live token as active" {
 	}
 	when {
 		let result = http.post "http://localhost:3002/oauth/introspect" basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret" form {
-			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			token: "spec-refresh-token-cccccccccccccccccccccccc"
 		}
 	}
 	then {
@@ -127,7 +127,7 @@ test "POST /oauth/introspect reports another client's live token as inactive" {
 	}
 	when {
 		let result = http.post "http://localhost:3002/oauth/introspect" basic "dddddddd-dddd-4ddd-8ddd-dddddddddddd" "other-secret" form {
-			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			token: "spec-refresh-token-cccccccccccccccccccccccc"
 		}
 	}
 	then {
@@ -176,10 +176,10 @@ test "POST /oauth/revoke invalidates a refresh token, which then introspects ina
 	}
 	when {
 		let revoked = http.post "http://localhost:3002/oauth/revoke" form {
-			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			token: "spec-refresh-token-cccccccccccccccccccccccc"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		let after = http.post "http://localhost:3002/oauth/introspect" form {
-			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			token: "spec-refresh-token-cccccccccccccccccccccccc"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 	}
 	then {

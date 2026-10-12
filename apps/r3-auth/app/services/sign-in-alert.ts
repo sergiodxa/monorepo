@@ -20,8 +20,8 @@ import { describeUserAgent } from "~/app/http/view-models/account-session";
 
 /**
  * The copy stays in {@link DEFAULT_EMAIL_LOCALE}, since its reader may be a
- * stranger to the sign-in. The log carries only the subject id: the address is
- * the person, and the session id is a refresh token.
+ * stranger to the sign-in. The log carries only the subject id, since the
+ * address is the person.
  *
  * @param ctx - The request the sign-in arrived on; its mailer, log, user-agent and
  *   client address are all read from it.

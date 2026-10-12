@@ -76,8 +76,8 @@ describe("POST /oauth/token", () => {
 
 describe("the refresh_token grant", () => {
 	/**
-	 * The session id *is* the refresh token, so refreshing hands back the same value:
-	 * rotation renews the access token and extends the session row.
+	 * Refreshing hands back the same refresh token: it renews the access token and
+	 * touches the session row the token resolves to.
 	 */
 	test("returns a new access token and the rotated refresh token", async () => {
 		let tokens = await signIn(app, fixtures);
@@ -114,7 +114,7 @@ describe("the refresh_token grant", () => {
 	test("a refresh token whose session was revoked is invalid_grant", async () => {
 		let tokens = await signIn(app, fixtures);
 		app.resetCookies();
-		await app.models.sessions.delete(tokens.refresh_token);
+		await app.models.sessions.deleteByRefreshToken(tokens.refresh_token);
 
 		let response = await post({
 			grant_type: "refresh_token",
@@ -122,6 +122,24 @@ describe("the refresh_token grant", () => {
 			client_id: fixtures.clientId,
 			client_secret: fixtures.clientSecret,
 		});
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({ error: "invalid_grant" });
+	});
+
+	/** The session id travels to relying parties as `sid`, so it must never refresh. */
+	test("a session's public id is not a refresh token", async () => {
+		let tokens = await signIn(app, fixtures);
+		app.resetCookies();
+		let session = await app.models.sessions.findByRefreshToken(tokens.refresh_token);
+
+		expect(session?.id).toBeTypeOf("string");
+		expect(session?.id).not.toBe(tokens.refresh_token);
+
+		let response = await post(
+			{ grant_type: "refresh_token", refresh_token: session?.id ?? "" },
+			{ Authorization: basic() },
+		);
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: "invalid_grant" });

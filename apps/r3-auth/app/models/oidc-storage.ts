@@ -62,7 +62,7 @@ function toEngineClient(client: SelectClient) {
  * Reshapes a session row for the engine. The timestamps become `Date`s here, since
  * the columns hold epoch milliseconds and the engine compares instants.
  */
-function toEngineSession(session: SelectSession) {
+function toEngineSession(session: SelectSession): OIDC.Session {
 	return {
 		id: session.id,
 		clientId: session.client_id,
@@ -178,10 +178,21 @@ export function createOidcRepository(models: AuthModels): OIDC.Repository {
 			return parsed.data;
 		},
 
-		/** Resolves a refresh token — which is a session id — to its session. */
+		/** Resolves a session by its public id, as an authorization code names it. */
 		async findSessionById(sessionId) {
 			let session = await models.sessions.find(sessionId);
 			return session ? toEngineSession(session) : null;
+		},
+
+		/** Resolves a presented refresh token to its session by the token's hash. */
+		async findSessionByRefreshToken(refreshToken) {
+			let session = await models.sessions.findByRefreshToken(refreshToken);
+			return session ? toEngineSession(session) : null;
+		},
+
+		/** Mints the session's refresh token, storing only its hash. */
+		async issueRefreshToken(sessionId) {
+			return await models.sessions.issueRefreshToken(sessionId);
 		},
 
 		/** Resolves a subject id to the identity claims tokens are built from. */
@@ -190,7 +201,7 @@ export function createOidcRepository(models: AuthModels): OIDC.Repository {
 			return subject ? toEngineSubject(subject) : null;
 		},
 
-		/** Revokes one session, invalidating the refresh token it is named by. */
+		/** Revokes one session, invalidating the refresh token issued on it. */
 		async deleteSessionById(sessionId) {
 			await models.sessions.delete(sessionId);
 		},
@@ -256,7 +267,10 @@ export function createOidcRepository(models: AuthModels): OIDC.Repository {
 			await models.credentials.updatePasswordHash(subjectId, passwordHash);
 		},
 
-		/** Opens a session, whose id is the refresh token the client will present. */
+		/**
+		 * Opens a session under a public id; its refresh token is minted only when a code
+		 * redemption earns one.
+		 */
 		async createSession(subjectId, clientId, ip, ua, scope) {
 			let session = unwrap(
 				await models.sessions.create({

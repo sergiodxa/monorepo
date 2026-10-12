@@ -35,8 +35,9 @@ command seed_other_client() {
 }
 
 # A subject and one of its live sessions, so the machine endpoints have real state to
-# act on. A session id IS the refresh token clients send to POST /oauth/token, so
-# seeding this fixed session lets a spec redeem the `refresh_token` grant — as the seeded
+# act on. The session stores only the SHA-256 hash of its refresh token, so seeding the
+# hash of `spec-refresh-token-cccccccccccccccccccccccc` lets a spec present that token to
+# POST /oauth/token and redeem the `refresh_token` grant — as the seeded
 # client, with its secret — for a genuine access token and a signed id_token, without the
 # browser code-extraction the runtime cannot express (see authorize-code.spec). The
 # same subject row is what GET /api/subjects/:id and GET /userinfo answer with.
@@ -51,7 +52,7 @@ command seed_refresh_session() {
 	db.query "DELETE FROM sessions WHERE id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'"
 	db.query "DELETE FROM subjects WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'"
 	db.query "INSERT INTO subjects (id, created_at, updated_at, email_verified_at, display_name, avatar, role, username, email_address) VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 1786300000000, 1786300000000, 1786300000000, 'Spec Refresh User', 'https://example.test/avatar.png', 'user', 'spec-refresh', 'spec-refresh@spec.test')"
-	db.query "INSERT INTO sessions (id, created_at, updated_at, expires_at, subject_id, client_id, user_agent, ip_address) VALUES ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 1786300000000, 1786300000000, 4102444800000, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', NULL, NULL)"
+	db.query "INSERT INTO sessions (id, created_at, updated_at, expires_at, subject_id, client_id, user_agent, ip_address, refresh_token_hash) VALUES ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 1786300000000, 1786300000000, 4102444800000, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', NULL, NULL, '771fb10dd37d8afd5081f5663748256281f0d13475cd7c982e77d0fec26c002e')"
 }
 
 # The seeded subject's consent for the seeded client, the row every real authorization

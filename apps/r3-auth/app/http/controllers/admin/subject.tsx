@@ -1,8 +1,8 @@
 /**
  * GET/POST /admin/subjects/:subjectId — one account with its live sessions and provider
  * links, plus the three intents that act on it: delete the account, revoke one session,
- * or revoke them all. Every session id handled here is that session's refresh token, so
- * it travels from the form into a delete scoped to this subject while logs record counts.
+ * or revoke them all. A submitted session id is deleted only within this subject, and logs
+ * record counts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

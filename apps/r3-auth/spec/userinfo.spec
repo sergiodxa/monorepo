@@ -22,7 +22,7 @@ test "GET /userinfo answers a refresh-minted bearer token with the subject's cla
 	when {
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
-			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			refresh_token: "spec-refresh-token-cccccccccccccccccccccccc"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		# The refresh grant stamps `openid`, so this token is one /userinfo will serve; the
 		# bearer is lifted straight from the token response.

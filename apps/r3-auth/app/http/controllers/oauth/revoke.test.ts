@@ -57,7 +57,7 @@ describe("POST /oauth/revoke", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.findByRefreshToken(tokens.refresh_token)).toBeNull();
 	});
 
 	test("answers 200 for a token that never existed", async () => {
@@ -88,7 +88,7 @@ describe("POST /oauth/revoke", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.findByRefreshToken(tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("refuses a caller with no credentials", async () => {
@@ -109,7 +109,7 @@ describe("POST /oauth/revoke", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.findByRefreshToken(tokens.refresh_token)).not.toBeNull();
 	});
 });
 

@@ -161,7 +161,7 @@ export interface TokenSet {
  * area's sign-in leaves behind, so a test can drive the guard's silent refresh with a
  * refresh token it is entitled to redeem.
  *
- * @returns The session id, which is the refresh token the guard presents.
+ * @returns The session's refresh token, the one the guard presents.
  */
 export async function openSelfSession(app: TestApp, fixtures: Fixtures): Promise<string> {
 	unwrap(await app.models.clients.ensureAuthServerClient(new URL(ORIGIN)));
@@ -174,7 +174,9 @@ export async function openSelfSession(app: TestApp, fixtures: Fixtures): Promise
 		}),
 	);
 
-	return session.id;
+	let refreshToken = await app.models.sessions.issueRefreshToken(session.id);
+	if (!refreshToken) throw new Error("The self session vanished before its token was issued");
+	return refreshToken;
 }
 
 /**

@@ -19,7 +19,7 @@ test "the refresh_token grant returns a genuinely ES256-signed id_token" {
 	when {
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
-			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			refresh_token: "spec-refresh-token-cccccccccccccccccccccccc"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		# Verifies the signature against the live JWKS; returns the payload only if it is
 		# genuinely signed by this server's key.
@@ -44,7 +44,7 @@ test "jwt.decode reads the id_token header and claims without verifying" {
 	when {
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
-			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+			refresh_token: "spec-refresh-token-cccccccccccccccccccccccc"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		let decoded = jwt.decode tokens.json.id_token
 	}

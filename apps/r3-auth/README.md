@@ -100,8 +100,9 @@ written inside the shared card in `app/emails/layout.tsx`.
   without a challenge still redeems without a verifier, so non-PKCE clients keep working.
 - **ES256 JWT signing** from a key pair stored in R2 and published at
   `/.well-known/jwks.json`.
-- **Single sign-on and session management**: `sessions.id` is the refresh token, the
-  account area lists and revokes sessions, and the `op_browser_state` cookie plus
+- **Single sign-on and session management**: each session has a public id, sent to relying
+  parties as `sid`, and a refresh token stored only as its SHA-256 hash; the account area
+  lists and revokes sessions, and the `op_browser_state` cookie plus
   `/oidc/check-session` implement OIDC Session Management 1.0. A refresh token redeems only
   for the client it was issued to, and only once that client authenticates.
 - **RP-initiated, back-channel and front-channel logout** (OIDC Logout 1.0): logout tokens
@@ -259,14 +260,14 @@ expires. Purge the `clients:<clientId>` key when a client must lose access immed
 
 ## Database
 
-The D1 database is shared with the worker serving production, so the schema is frozen: all
-six tables (`subjects`, `credentials`, `connections`, `sessions`, `clients`, `grants`) are
-mirrored in `database/schema.ts` and every timestamp column is an integer holding epoch
-milliseconds. `sessions.id` **is** the refresh token handed to clients.
+All six tables (`subjects`, `credentials`, `connections`, `sessions`, `clients`, `grants`)
+are mirrored in `database/schema.ts`, and every timestamp column is an integer holding epoch
+milliseconds. `sessions.id` is a public UUID, the `sid` relying parties see; the refresh
+token handed to clients is stored only as `sessions.refresh_token_hash`.
 
 Each table is read and written through an `@sdxc/data-model` model in `app/models/`, bound
 per request and per job as `ctx.models`. The models generate ids, client secrets and session
-expiries on create, so a row written through them always carries what the frozen schema
+expiries on create, so a row written through them always carries what the schema
 leaves to the application.
 
 Migrations are located in `database/migrations/`.

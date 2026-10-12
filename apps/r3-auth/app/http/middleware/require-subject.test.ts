@@ -95,7 +95,7 @@ describe("requireSubject", () => {
 		 * An access token already past its refresh threshold, paired with a session row
 		 * that has been revoked, drives the guard through refresh, failure, and sign-out.
 		 */
-		await app.models.sessions.delete(refreshToken);
+		await app.models.sessions.deleteByRefreshToken(refreshToken);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
 
 		let response = await app.fetch(
@@ -142,7 +142,7 @@ describe("requireSubject", () => {
 		 * second request through.
 		 */
 		expect((await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`))).status).toBe(200);
-		await app.models.sessions.delete(refreshToken);
+		await app.models.sessions.deleteByRefreshToken(refreshToken);
 
 		let second = await app.fetch(
 			new Request(`${ORIGIN}${guarded.subject.href()}`, { redirect: "manual" }),
@@ -151,20 +151,20 @@ describe("requireSubject", () => {
 		expect(second.status).toBe(200);
 	});
 
-	test("the refresh keeps the same refresh token, since it is the session row's id", async () => {
+	test("the refresh keeps the same refresh token and session row", async () => {
 		let refreshToken = await openSelfSession(app, fixtures);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
-		let before = await app.models.sessions.find(refreshToken);
+		let before = await app.models.sessions.findByRefreshToken(refreshToken);
 
 		await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`));
 
 		/**
-		 * The row keyed by the presented token stays in place and only its timestamp
-		 * updates, since replacing it with a new id would silently break every client
-		 * holding this refresh token.
+		 * The row the presented token resolves to stays in place and only its timestamp
+		 * updates, since replacing it would silently break every client holding this
+		 * refresh token.
 		 */
-		let after = await app.models.sessions.find(refreshToken);
-		expect(after).not.toBeNull();
+		let after = await app.models.sessions.findByRefreshToken(refreshToken);
+		expect(after?.id).toBe(before?.id);
 		expect(after?.updated_at).toBeGreaterThanOrEqual(before?.updated_at ?? 0);
 		expect(await app.models.sessions.findBySubjectId(fixtures.subjectId)).toHaveLength(1);
 	});

@@ -77,9 +77,9 @@ export type SelectConnection = TableRow<typeof connections>;
 export type InsertConnection = InsertRow<typeof connections>;
 
 /**
- * A subject's live session with one client. `id` is the refresh token value
- * clients send to the token endpoint, so treat it as a secret. `expires_at`
- * carries no database default — every insert computes it.
+ * A subject's live session with one client. `id` is public — relying parties see it as `sid`
+ * — and the refresh token is stored only as `refresh_token_hash`, null until a code
+ * redemption earns one. Every insert computes `expires_at`.
  */
 export const sessions = table({
 	name: "sessions",
@@ -94,6 +94,7 @@ export const sessions = table({
 		user_agent: c.text().nullable(),
 		ip_address: c.text().nullable(),
 		scope: c.text().default("openid"),
+		refresh_token_hash: c.text().nullable(),
 	},
 });
 

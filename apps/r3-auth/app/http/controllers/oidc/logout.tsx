@@ -112,7 +112,7 @@ export default createController(routes.oidc.logout, {
 
 			await provider.deliverBackchannelLogoutTokens(logout.subjectId, logout.backchannelSessions);
 
-			if (refreshToken) await ctx.models.sessions.delete(refreshToken);
+			if (refreshToken) await ctx.models.sessions.deleteByRefreshToken(refreshToken);
 
 			ctx.log.set({
 				subject: { id: logout.subjectId },
@@ -166,7 +166,7 @@ export default createController(routes.oidc.logout, {
 					await createOidcProvider(ctx.models).sendBackchannelLogoutTokens(subjectId);
 				}
 
-				await ctx.models.sessions.delete(refreshToken);
+				await ctx.models.sessions.deleteByRefreshToken(refreshToken);
 				ctx.log.set({ subject: { id: subjectId ?? undefined } });
 				ctx.log.note("oidc.logout.completed");
 				unsetTokens();

@@ -23,10 +23,15 @@ import { createSqliteDatabase } from "remix/data-table/sqlite";
  * production has already applied, so a test schema cannot drift from the live one.
  *
  * @param sqliteDb - An open SQLite database.
+ * @param include - Picks the files to apply by name, so a test can seed rows between two
+ *   migrations the way a live database holds them when the later one runs.
  */
-export function applyMigrations(sqliteDb: SqliteDatabaseClient): void {
+export function applyMigrations(
+	sqliteDb: SqliteDatabaseClient,
+	include: (file: string) => boolean = () => true,
+): void {
 	let files = readdirSync(migrationsDirectory())
-		.filter((file) => file.endsWith(".sql"))
+		.filter((file) => file.endsWith(".sql") && include(file))
 		.sort();
 
 	for (let file of files) {
@@ -92,13 +97,14 @@ function migrationsDirectory(): string {
  * production connection is, including the epoch-ms `now()` that keeps written timestamps
  * in step with the integers live rows hold.
  *
+ * @param include - Picks the migrations to apply, for a test that applies the rest itself.
  * @returns The `db` handle and the underlying SQLite instance.
  * @example
  * let { db } = createTestDatabase();
  */
-export function createTestDatabase() {
+export function createTestDatabase(include?: (file: string) => boolean) {
 	let sqliteDb = openSqliteClient();
-	applyMigrations(sqliteDb);
+	applyMigrations(sqliteDb, include);
 
 	let db = createSqliteDatabase(sqliteDb, { now: () => Date.now() });
 
