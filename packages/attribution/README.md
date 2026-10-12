@@ -8,7 +8,7 @@ Campaign parameters, click identifiers and referrers, kept as a visitor's first 
 npm add @sdxc/attribution
 ```
 
-The middleware runs on a `remix` router and reads its session from `remix/session`'s middleware or keeps its record in a `remix/cookie` cookie.
+The middleware runs on a [`remix`](https://www.npmjs.com/package/remix) router and keeps its record in a `remix/cookie` cookie or in the session from `remix/middleware/session`.
 
 ## Usage
 
@@ -33,6 +33,8 @@ let touch = readTouch(
 // }
 ```
 
+Every campaign value becomes a short slug, and the `channel` is derived from the medium, the click identifier and the referrer.
+
 ### Keep the first and last touch for every visitor
 
 ```typescript
@@ -52,12 +54,12 @@ let cookie = createCookie("attribution", {
 let router = createRouter({ middleware: [attribution({ store: cookie })] });
 
 router.post("/subscribe", (ctx) => {
-	let { first, last } = ctx.attribution;
-	// …
+	let { current, first, last } = ctx.attribution;
+	// first: the earliest touch in the last 90 days; last: the latest one that was not direct
 });
 ```
 
-With a session middleware already installed, pass `store: "session"` and install `attribution()` after it.
+The middleware records a touch on page navigations only, so the form post above reads what the visitor's earlier page views stored. Sign the cookie so a visitor cannot forge a campaign.
 
 ### Strip tracking parameters from a link
 
@@ -72,17 +74,15 @@ withoutTracking(new URL("https://example.com/post?p=123&utm_source=x&fbclid=abc"
 
 ### `readTouch(url: URL, options: ReadTouchOptions): Touch`
 
-The touch a request describes. Never throws: input it cannot use reads as absent.
+The touch a request describes. Input it cannot use reads as absent, so it always answers a touch.
 
-- `options.referrer`: the `Referer` header, or `null`.
+- `options.referrer`: the `Referer` header, or `null`. A referrer on the URL's own host is internal navigation and reads as none.
 - `options.now`: the `at` stamp in epoch milliseconds. Defaults to `Date.now()`.
 - `options.aliases`: extra parameters read for a `Utm` field when its `utm_*` parameter is absent, in order. Defaults to `{ source: ["ref"] }`.
-- `options.clickIds`: `"keep"` stores the click identifier's value, up to 256 characters, for an app that uploads offline conversions. Defaults to `"network"`, which keeps only the network's name.
+- `options.clickIds`: `"keep"` also stores the click identifier's value, up to 256 characters, for offline-conversion uploads. Defaults to `"network"`, which stores only the network's name.
 - `options.referrers`: extra `host → kind` entries merged over the built-in table.
 
-Every stored value is a disposable slug. A campaign value is trimmed, lowercased, has runs of whitespace turned into `-`, keeps only `[a-z0-9._+-]` and is cut at 64 characters. A value that holds `@` or `://` is an address or URL a merge tag put there, so it is dropped whole. The referrer keeps only its hostname without `www.`, and a referrer on the page's own host counts as internal navigation. Email-platform parameters that identify the subscriber, such as `mc_eid` and `_hsenc`, are never read into a touch. When they are present, they credit the touch to `email`.
-
-A touch's `channel` comes from the first rule that matches:
+Email-platform parameters such as `mc_eid` and `_hsenc` identify the subscriber, so their values are never read; their presence credits the touch to `email`. The channel comes from the first rule that matches:
 
 | Rule                                                                                                  | Channel          |
 | ----------------------------------------------------------------------------------------------------- | ---------------- |
@@ -97,97 +97,76 @@ A touch's `channel` comes from the first rule that matches:
 | Any other campaign parameter                                                                          | `other`          |
 | Nothing                                                                                               | `direct`         |
 
-`fbclid` and `igshid` count as unpaid. Meta adds them to every outbound click, paid or not.
+`fbclid` and `igshid` count as unpaid social clicks, since Meta adds them to every outbound link.
 
 ### `normalizeValue(raw: string): string | undefined`
 
-The slug rule above, applied to one value.
+The slug rule every campaign value goes through: trimmed, lowercased, whitespace runs joined by `-`, only `[a-z0-9._+-]` kept, cut at 64 characters. A value holding `@` or `://` (an address or URL a merge tag inserted) or one that normalizes to nothing answers `undefined`.
+
+```typescript
+normalizeValue("Launch Week"); // "launch-week"
+normalizeValue("jane@example.com"); // undefined
+```
 
 ### `classifyReferrer(header: string | null, options?: ClassifyReferrerOptions): Referrer | null`
 
-Returns the external site a `Referer` names, with its kind: `search`, `social`, `email` or `other`. It returns `null` when the header is absent, malformed, not `http(s)`, or on `options.host`. `options.referrers` adds or overrides `host → kind` entries.
+The external site a `Referer` names, as its hostname without `www.` and its kind (`search`, `social`, `email` or `other`). Answers `null` for an absent, malformed or non-`http(s)` header, or one on `options.host`. `options.referrers` adds or overrides `host → kind` entries; a host matches its nearest listed parent domain, so `mail.google.com` is `email` and `google.com` is `search`.
 
-### `toMetadata(attribution): Record<string, string>`
+### `toMetadata(attribution: Pick<Attribution, "first" | "last">): Record<string, string>`
 
-The first and last touch as snake_case keys prefixed `first_` and `last_`. Only the fields that are present are included: `channel`, `landing`, `at` (ISO 8601), `referrer`, `click` and the UTM fields. Two full touches give at most 28 keys, each under 300 characters, which fits the metadata limits of Polar and Stripe. Billing providers send the metadata back on orders and webhooks.
+The first and last touch as flat keys prefixed `first_` and `last_`: `channel`, `landing`, `at` (ISO 8601), and when present `referrer`, `click` and each UTM field (`first_source`, `last_campaign`, …). At most 28 keys of under 300 characters, which fits Stripe's and Polar's metadata limits. A kept click identifier is written `param=value`.
 
 ### `toUtmParams(touch: Touch | null): Record<string, string>`
 
-The touch's campaign fields under their `utm_*` names, for a provider that stores them. A `null` touch gives `{}`.
+The touch's campaign fields under their `utm_*` names; `{}` for a `null` touch or one without campaign fields.
 
 ### `toCampaign(touch: Touch | null, url: URL | string): Campaign | undefined`
 
-The touch as flat campaign fields: `source`, `medium`, `campaign`, `term` and `content` from its UTM values, `referrer` as the referring hostname, and `landingPage` as the landing path resolved against `url` into an absolute URL. Fields the touch lacks are left out, so the result spreads into another object, and a `null` touch gives `undefined`.
-
-```typescript
-import { toCampaign } from "@sdxc/attribution";
-
-toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url);
-// { source: "newsletter", medium: "email", campaign: "launch-week", landingPage: "https://example.com/pricing" }
-```
+The touch as flat fields: `source`, `medium`, `campaign`, `term` and `content`, `referrer` as the referring hostname, and `landingPage` as the landing path resolved against `url`. Missing fields are left out, so the result spreads into another object; a `null` touch answers `undefined`.
 
 ### `attribution(options: AttributionOptions): Middleware`
 
-From `@sdxc/attribution/middleware`. Publishes `ctx.attribution` on every request. Writes happen only on a page navigation: a `GET` with `Sec-Fetch-Dest: document`, or, from a browser that omits that header, an `Accept` that includes `text/html`. The first touch is set when there is none or the stored one is older than `window`. The last touch is set whenever the current one is not `direct`. A direct revisit, a bot (`isBot` from [@sdxc/user-agent](https://www.npmjs.com/package/@sdxc/user-agent)), a form submission and a `fetch` write nothing. A stored record that fails validation, such as a forged cookie, counts as no record.
+From `@sdxc/attribution/middleware`. Publishes `ctx.attribution` on every request and updates the stored record on a page navigation (a `GET` with `Sec-Fetch-Dest: document`, or an `Accept` naming `text/html`). The first touch is replaced when there is none or it is older than `window`; the last touch is replaced by every touch that is not `direct`. Bots ([`isBot`](https://www.npmjs.com/package/@sdxc/user-agent)) store nothing, and a stored record that fails validation counts as none.
 
-- `options.store`: `"session"` keeps the record under the session's `attribution` key, and `remix/session`'s middleware commits it. A `Cookie` keeps it as the cookie's value, about 400 bytes for two full touches. Sign it so a visitor cannot forge a campaign, and give it a `maxAge` that matches `window`. A response that sets the cookie also gets `Cache-Control: private`.
-- `options.window`: how long a first touch stands, as a [@sdxc/duration](https://www.npmjs.com/package/@sdxc/duration) input. Defaults to `"90 days"`.
-- `options.consent`: whether this visitor allows storage. When it returns `false`, `current` is still published, any stored record is removed, and nothing is written. Defaults to honoring [Global Privacy Control](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/globalPrivacyControl) (`Sec-GPC: 1`). An app that serves visitors under the ePrivacy Directive passes a function that reads its own consent cookie.
-- `options.redirect`: answers a page request that carries tracking parameters with a `302` to the same URL without them, after the touch is stored, with `Cache-Control: no-store`. Defaults to `false`: the redirect adds a round trip to the one page view the campaign paid for, and client-side analytics that read `utm_*` from `location` see a clean URL. A canonical link that omits the parameters handles SEO without a redirect.
+- `options.store`: `"session"` keeps the record under the session's `attribution` key, so install it after `remix/middleware/session`. A `Cookie` keeps the record as its value (about 400 bytes); responses that set it get `Cache-Control: private`.
+- `options.window`: how long a first touch stands, as a [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) input. Defaults to `"90 days"`.
+- `options.consent`: `(ctx) => boolean`. When it answers `false`, `current` is still published, any stored record is removed and nothing is written. Defaults to honoring [Global Privacy Control](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/globalPrivacyControl) (`Sec-GPC: 1`).
+- `options.redirect`: answers a page navigation carrying tracking parameters with a `302` to the same URL without them, after the touch is stored. Defaults to `false`.
 - `options.aliases`, `options.clickIds`, `options.referrers`: as for `readTouch`.
 
 ### `CurrentAttribution`
 
-The context key the middleware writes to, for code that reads `ctx.get(CurrentAttribution)`. Its default holds three `null`s.
+From `@sdxc/attribution/middleware`. The context key behind `ctx.attribution`, for code that reads `ctx.get(CurrentAttribution)`; its default holds three `null`s.
 
 ### `CAMPAIGN_PARAMETERS`, `CLICK_IDENTIFIERS`
 
-From `@sdxc/attribution/parameters`. `CAMPAIGN_PARAMETERS` maps each `Utm` field to its `utm_*` name. `CLICK_IDENTIFIERS` maps each click identifier (`gclid`, `gbraid`, `wbraid`, `dclid`, `msclkid`, `yclid`, `fbclid`, `igshid`, `ttclid`, `li_fat_id`, `twclid`, `rdt_cid`, `epik`, `sccid`) and email-platform parameter (`mc_cid`, `mc_eid`, `_hsenc`, `_hsmi`, `vero_conv`, `vero_id`, `oly_anon_id`, `oly_enc_id`) to its network, whether it marks a paid click, and its kind.
+From `@sdxc/attribution/parameters`. `CAMPAIGN_PARAMETERS` maps each `Utm` field to its `utm_*` name. `CLICK_IDENTIFIERS` maps each lowercase parameter name to a `ClickIdentifier`: ad networks (`gclid`, `gbraid`, `wbraid`, `dclid`, `msclkid`, `yclid`, `fbclid`, `igshid`, `ttclid`, `li_fat_id`, `twclid`, `rdt_cid`, `epik`, `sccid`) and email platforms (`mc_cid`, `mc_eid`, `_hsenc`, `_hsmi`, `vero_conv`, `vero_id`, `oly_anon_id`, `oly_enc_id`).
 
 ### `isTrackingParameter(name: string): boolean`
 
-Whether a query parameter is campaign metadata: any `utm_`-prefixed name or a listed identifier, compared case-insensitively.
+From `@sdxc/attribution/parameters`. Whether a query parameter is campaign metadata: any `utm_`-prefixed name or a listed identifier, compared case-insensitively.
 
 ### `withoutTracking(url: URL): URL`
 
-A copy of the URL without tracking parameters. Every other parameter keeps the order and encoding the publisher wrote.
+From `@sdxc/attribution/parameters`. A copy of the URL without tracking parameters; every other parameter keeps the order and encoding it had.
 
 ### Types
 
-#### `Touch`
+- `Touch`: one arrival — `at` (epoch ms), `landingPath` (up to 256 characters, no query string), `utm`, `click`, `referrer` and `channel`.
+- `Utm`: the nine campaign fields in camelCase — `source`, `medium`, `campaign`, `term`, `content`, `id`, `sourcePlatform`, `creativeFormat` and `marketingTactic`.
+- `Click`: `param`, `network`, `paid`, and `value` under `clickIds: "keep"`.
+- `Referrer`, `ReferrerKind`: the referring `host` and its `kind`.
+- `Channel`: the ten channels in the table above.
+- `Attribution`: `current` (this request's touch, `null` off a page navigation), `first` and `last`.
+- `ReadTouchOptions`, `ClassifyReferrerOptions`: the options above.
+- `AttributionOptions` from `./middleware`; `ClickIdentifier` (`network`, `paid`, `kind`) from `./parameters`.
 
-One arrival: `at` (epoch ms), `landingPath` (up to 256 characters, no query string), `utm`, `click`, `referrer` and `channel`.
+## Pattern: Carry the campaign into a checkout
 
-#### `Utm`
-
-The nine campaign fields in camelCase: `source`, `medium`, `campaign`, `term`, `content`, `id`, `sourcePlatform`, `creativeFormat` and `marketingTactic`.
-
-#### `Click`
-
-`param`, `network`, `paid`, and `value` only under `clickIds: "keep"`.
-
-#### `Referrer`, `ReferrerKind`
-
-The referrer's `host` and its `kind`.
-
-#### `Channel`
-
-The ten channels in the table above.
-
-#### `Campaign`
-
-What `toCampaign` returns: optional `source`, `medium`, `campaign`, `term`, `content`, `referrer` and `landingPage` strings.
-
-#### `Attribution`
-
-`current` is this request's touch, or `null` when the request is not a page navigation. `first` is the earliest touch within the window. `last` is the latest non-direct touch.
-
-## Pattern: Carry the campaign into a checkout and a newsletter
-
-A form that posts to the same origin sends the cookie with it, so the action reads `ctx.attribution` and the page needs no hidden fields.
+A form posting to the same origin sends the attribution cookie along, so the action reads `ctx.attribution` and the page needs no hidden fields. The billing provider returns the metadata on its orders and webhooks.
 
 ```typescript
-import { toMetadata, toUtmParams } from "@sdxc/attribution";
+import { toMetadata } from "@sdxc/attribution";
 import { attribution } from "@sdxc/attribution/middleware";
 import { createRouter } from "remix/router";
 
@@ -197,28 +176,103 @@ router.post("/checkout", async (ctx) => {
 	let checkout = await billing.checkouts.create({
 		product,
 		metadata: toMetadata(ctx.attribution),
+		// { first_channel: "email", first_landing: "/pricing", first_at: "…", first_source: "newsletter", last_channel: … }
 	});
 	return Response.redirect(checkout.url, 303);
 });
+```
+
+## Pattern: Hand campaign fields to a newsletter or CRM
+
+Credit a sign-up to the latest campaign, falling back to the first. `toUtmParams` suits a provider that stores `utm_*` names; `toCampaign` suits one with plain fields and an absolute landing page.
+
+```typescript
+import { toCampaign, toUtmParams } from "@sdxc/attribution";
 
 router.post("/subscribe", async (ctx) => {
 	let form = await ctx.request.formData();
-	await newsletter.subscribe(String(form.get("email")), {
-		...toUtmParams(ctx.attribution.last ?? ctx.attribution.first),
-	});
+	let touch = ctx.attribution.last ?? ctx.attribution.first;
+
+	await newsletter.subscribe(String(form.get("email")), { ...toUtmParams(touch) });
+	// { utm_source: "newsletter", utm_medium: "email", utm_campaign: "launch-week" }
+
+	await crm.createLead({ email: String(form.get("email")), ...toCampaign(touch, ctx.url) });
+	// { source: "newsletter", medium: "email", campaign: "launch-week", landingPage: "https://example.com/pricing" }
+
 	return new Response(null, { status: 204 });
 });
 ```
 
+## Pattern: Store the record in the session
+
+An app that already runs a session keeps the record there; the session middleware commits it, so it goes first.
+
+```typescript
+import { attribution } from "@sdxc/attribution/middleware";
+import { createCookie } from "remix/cookie";
+import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
+import { createCookieSessionStorage } from "remix/session-storage/cookie";
+
+let sessionCookie = createCookie("__session", { secrets: [secret] });
+
+let router = createRouter({
+	middleware: [
+		session(sessionCookie, createCookieSessionStorage()),
+		attribution({ store: "session", window: "30 days" }),
+	],
+});
+```
+
 ## Pattern: Ask for consent before storing
+
+Global Privacy Control is honored by default. A site that collects consent itself passes a function reading its own consent cookie; without consent the request still sees its `current` touch, and any stored record is cleared.
 
 ```typescript
 import { attribution } from "@sdxc/attribution/middleware";
 
 attribution({
 	store: cookie,
-	consent: (ctx) => /(?:^|;\s*)consent=analytics/.test(ctx.request.headers.get("cookie") ?? ""),
+	consent: (ctx) =>
+		ctx.request.headers.get("sec-gpc") !== "1" &&
+		/(?:^|;\s*)consent=analytics/.test(ctx.request.headers.get("cookie") ?? ""),
 });
+```
+
+## Pattern: Keep tracking parameters out of shared URLs
+
+`redirect: true` stores the touch, then sends the visitor to the clean URL so the address they copy and share carries no campaign. Without the redirect, a canonical link built with `withoutTracking` keeps search engines on the clean URL.
+
+```typescript
+import { attribution } from "@sdxc/attribution/middleware";
+import { withoutTracking } from "@sdxc/attribution/parameters";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [attribution({ store: cookie, redirect: true })] });
+
+function canonicalHref(url: URL) {
+	return withoutTracking(url).href; // for <link rel="canonical" href={canonicalHref(ctx.url)} />
+}
+```
+
+The redirect costs one round trip on the landing page view, and client-side analytics reading `utm_*` from `location` see the clean URL.
+
+## Pattern: Offline conversions and custom sources
+
+Keep click identifiers to upload conversions to the ad network later, read a site's own `?via=` links as the source, and classify referrers the built-in table does not know.
+
+```typescript
+import { attribution } from "@sdxc/attribution/middleware";
+
+attribution({
+	store: cookie,
+	clickIds: "keep",
+	aliases: { source: ["via", "ref"], campaign: ["promo"] },
+	referrers: { "news.example.org": "social", "mail.example.com": "email" },
+});
+
+// later, a touch from ?gclid=abc123 carries click: { param: "gclid", network: "google-ads", paid: true, value: "abc123" }
+// and toMetadata writes it as first_click: "gclid=abc123"
 ```
 
 ## Versioning
