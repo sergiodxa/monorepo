@@ -39,9 +39,14 @@ The factory takes the instance, so an app opens its database where the router is
 a router that is a module-level singleton, since opening a `remix/data-table` database over a D1
 binding only constructs an object. A test passes the instance it opened.
 
-The five apps delete their copies and import from the package. The job-side
-`app/jobs/middleware/database.ts` files stay in the apps: they are job middleware, a different
-type from router middleware.
+A `./jobs` entry exports `database(db)` as `@sdxc/jobs` job middleware, publishing the database
+under the same `Database` key as `ctx.db`, so a job handler and a route handler read it the same
+way. It also accepts a function, called once per run, because a dispatcher is a long-lived
+singleton and a test swaps the database between runs. `@sdxc/jobs` is an optional peer dependency,
+needed only by that entry.
+
+The five apps delete their copies, router and job middleware alike, and import from the package;
+job handlers that read `ctx.database` read `ctx.db`.
 
 ## Consequences
 

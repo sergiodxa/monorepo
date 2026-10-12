@@ -756,6 +756,15 @@
       "dependencies": {
         "remix": "3.0.0",
       },
+      "devDependencies": {
+        "@sdxc/jobs": "workspace:*",
+      },
+      "peerDependencies": {
+        "@sdxc/jobs": "workspace:*",
+      },
+      "optionalPeers": [
+        "@sdxc/jobs",
+      ],
     },
     "packages/dates": {
       "name": "@sdxc/dates",
