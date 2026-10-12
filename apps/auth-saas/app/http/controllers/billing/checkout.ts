@@ -16,7 +16,7 @@ import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
 import { dashboardRole } from "~/app/http/middleware/dashboard-role";
-import { polar } from "~/app/lib/billing";
+import { polar } from "~/app/initializers/billing";
 import { openCheckout } from "~/app/services/billing-checkout";
 import routes from "~/routes/web";
 

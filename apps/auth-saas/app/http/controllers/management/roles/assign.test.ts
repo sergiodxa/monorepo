@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildRolesHarness } from "~/app/http/controllers/management/roles/test-harness";
+import { buildRolesHarness } from "~/app/test/harness/management/roles";
 
 describe("POST /tenants/:tenantId/subjects/:subjectId/roles", () => {
 	test("assigns a role to a subject at the tenant scope", async () => {

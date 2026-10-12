@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildSubjectsHarness } from "~/app/http/controllers/management/subjects/test-harness";
+import { buildSubjectsHarness } from "~/app/test/harness/management/subjects";
 
 describe("PATCH /tenants/:tenantId/subjects/:subjectId", () => {
 	test("writes the given profile columns", async () => {

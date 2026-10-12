@@ -14,8 +14,8 @@ import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { authorizationServerMetadata, define } from "@sdxc/well-known/oauth-authorization-server";
 import { protectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 
-import { managementResourceServer } from "~/app/lib/management-resource";
-import { platformTenantStub } from "~/app/lib/platform-tenant";
+import { managementResourceServer } from "~/app/initializers/management-resource";
+import { platformTenantStub } from "~/app/initializers/platform-tenant";
 
 /**
  * Builds the middleware answering the three documents on the management host. The

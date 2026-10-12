@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildClientsHarness } from "~/app/http/controllers/management/clients/test-harness";
+import { buildClientsHarness } from "~/app/test/harness/management/clients";
 
 /** The body `POST /tenants/:tenantId/clients` accepts when a test does not care about most of it. */
 function baseBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {

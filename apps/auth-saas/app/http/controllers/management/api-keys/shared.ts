@@ -10,7 +10,7 @@
 
 import * as s from "remix/data-schema";
 
-import { managementProblem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/problem";
 
 /** Parses and requires the `:keyId` path param every single-key route matches. */
 export function keyIdParam(ctx: { params: Record<string, string | undefined> }): string {

@@ -69,7 +69,8 @@ bun run db:remote:migrate # Apply migrations to production
 ```
 
 Each tenant's own schema lives in `database/tenant-migrations/` and is applied by the
-tenant Durable Object itself on boot.
+tenant Durable Object itself on boot. That object is `app/models/tenant/object.ts`, which `bootstrap/worker.ts` exports as
+`Tenant`, over the per-table stores beside it.
 
 ## Scripts
 

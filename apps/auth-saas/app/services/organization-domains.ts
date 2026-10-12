@@ -1,6 +1,6 @@
 /**
  * The Worker-side half of organization domain verification (see
- * `database/organizations.ts`): looking up whether an arbitrary domain — an
+ * `app/models/tenant/organizations.ts`): looking up whether an arbitrary domain — an
  * organization's own, never a tenant's custom domain — has actually published the
  * TXT record `addOrganizationDomain` minted. The tenant object only ever trusts
  * that a lookup already ran; the lookup itself is network I/O, so it happens here,
@@ -19,7 +19,7 @@
 import { verifyTxtRecord } from "@sdxc/doh";
 import { isFailure } from "@sdxc/result";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 export interface VerifyOrganizationDomainInput {
 	organizationId: string;

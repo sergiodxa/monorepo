@@ -7,10 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import {
-	buildTenantsHarness,
-	grantMembership,
-} from "~/app/http/controllers/management/tenants/test-harness";
+import { buildTenantsHarness, grantMembership } from "~/app/test/harness/management/tenants";
 
 describe("GET /tenants/:tenantId", () => {
 	test("reads the tenant's own public record", async () => {

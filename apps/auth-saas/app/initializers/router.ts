@@ -1,0 +1,158 @@
+/**
+ * The platform router for `routes/web.ts`: the global middleware chain the bare platform
+ * domain runs (trailing slash, logging, database, rendering, form data, method override),
+ * and the public, signup, billing and dashboard routes, each imported on first use.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { Middleware } from "remix/router";
+
+import { Turnstile } from "@sdxc/captcha/turnstile";
+import getClientIP from "@sdxc/get-client-ip/middleware";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { wellKnown } from "@sdxc/well-known/middleware";
+import { env } from "cloudflare:workers";
+import { asyncContext } from "remix/middleware/async-context";
+import { formData } from "remix/middleware/form-data";
+import { methodOverride } from "remix/middleware/method-override";
+import { createRouter } from "remix/router";
+
+import { platformTenantForward } from "~/app/http/controllers/platform-tenant-forward";
+import { database } from "~/app/http/middleware/database";
+import i18n from "~/app/http/middleware/i18n";
+import { mail } from "~/app/http/middleware/mail";
+import { models } from "~/app/http/middleware/models";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
+import { htmlRenderer } from "~/app/http/render";
+import { createDatabase } from "~/app/initializers/database";
+import { logger } from "~/app/initializers/logger";
+import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
+import { securityTxtEntry } from "~/config/security-txt";
+import routes from "~/routes/web";
+
+/**
+ * The platform Worker's router. `headRequests()` runs first so every later middleware
+ * treats a `HEAD` probe as the `GET` behind it; the default handler forwards the platform
+ * tenant's own allowlisted hosted pages and answers `404` for anything else.
+ *
+ * @example
+ * return await webRouter.fetch(request);
+ */
+export const webRouter = createRouter({
+	middleware: [
+		headRequests(),
+		trailingSlash(),
+		log(logger),
+		getClientIP(),
+		trace(),
+		asyncContext(),
+		securityHeaders(PLATFORM_SECURITY_POLICY),
+		wellKnown({ "security.txt": securityTxtEntry }),
+		database(createDatabase),
+		models(),
+		mail(),
+		...htmlRenderer(),
+		formData(),
+		methodOverride(),
+	],
+	defaultHandler: platformTenantForward,
+});
+
+webRouter.map(
+	routes.index,
+	lazy(() => import("~/app/http/controllers/index")),
+);
+webRouter.map(
+	routes.health,
+	lazy(() => import("~/app/http/controllers/health")),
+);
+webRouter.map(
+	routes.cspReports,
+	lazy(() => import("~/app/http/controllers/csp-reports").then((it) => it.cspReports)),
+);
+webRouter.map(
+	routes.billing.checkout,
+	lazy(() => import("~/app/http/controllers/billing/checkout")),
+);
+webRouter.map(
+	routes.billing.checkoutReturn,
+	lazy(() => import("~/app/http/controllers/billing/checkout-return")),
+);
+webRouter.map(
+	routes.billing.portal,
+	lazy(() => import("~/app/http/controllers/billing/portal")),
+);
+webRouter.map(
+	routes.billing.webhook,
+	lazy(() => import("~/app/http/controllers/billing/webhook")),
+);
+
+webRouter.map(
+	routes.signup.show,
+	lazy(() => import("~/app/http/controllers/signup/show").then((it) => it.signupShow)),
+);
+/**
+ * `i18n` and the Turnstile check publish `ctx.intl` and `ctx.captcha`, which the submit
+ * handler reads through their global `RequestContext` augmentations, so both run as plain
+ * guards ahead of the loaded handler.
+ */
+webRouter.map(
+	routes.signup.submit,
+	lazy(
+		() => import("~/app/http/controllers/signup/show").then((it) => it.signupSubmit),
+		[
+			i18n as Middleware,
+			turnstileVerification(new Turnstile({ secretKey: env.TURNSTILE_SECRET_KEY })),
+		],
+	),
+);
+webRouter.map(
+	routes.signup.pending,
+	lazy(() => import("~/app/http/controllers/signup/pending")),
+);
+webRouter.map(
+	routes.signup.verify,
+	lazy(() => import("~/app/http/controllers/signup/verify")),
+);
+webRouter.map(
+	routes.signup.resend,
+	lazy(() => import("~/app/http/controllers/signup/resend")),
+);
+
+webRouter.map(
+	routes.dashboard.show,
+	lazy(() => import("~/app/http/controllers/dashboard/show").then((it) => it.dashboardShow)),
+);
+webRouter.map(
+	routes.dashboard.createTenant,
+	lazy(() =>
+		import("~/app/http/controllers/dashboard/show").then((it) => it.dashboardCreateTenant),
+	),
+);
+webRouter.map(
+	routes.dashboard.agentClients,
+	lazy(() =>
+		import("~/app/http/controllers/dashboard/agent-clients").then(
+			(it) => it.dashboardAgentClientsShow,
+		),
+	),
+);
+webRouter.map(
+	routes.dashboard.registerAgentClient,
+	lazy(() =>
+		import("~/app/http/controllers/dashboard/agent-clients").then(
+			(it) => it.dashboardAgentClientsRegister,
+		),
+	),
+);
+webRouter.map(
+	routes.dashboard.signOut,
+	lazy(() => import("~/app/http/controllers/dashboard/sign-out").then((it) => it.dashboardSignOut)),
+);

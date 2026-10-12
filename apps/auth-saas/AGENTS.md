@@ -31,40 +31,41 @@ bun run db:remote:migrate # Apply migrations to remote database
 - MUST check Remix docs on https://github.com/remix-run/remix for any questions about how to do things in Remix way
 - MUST follow MVC, use models for business logic, use controllers for handling requests and responses, use `remix/component` for UI
 - MUST read and write the control plane through `ctx.models` (the `@sdxc/data-model` models in `app/models/`, published by the `models()` middleware after `database()` in every router and in the job dispatcher), never ad-hoc queries on `ctx.db` for a table a model covers. A service that touches the control plane takes the bound registry (`Models` from `~/app/models`) as its first argument. Model writes answer `@sdxc/result` Results; a test binds the same registry with `bindModels(db)` from `app/test/models.ts`, seeds a tenant with `seedTenant`, and publishes models on a hand-built job context with `publishModels(ctx, db)`
-- MUST define a control-plane table in `database/schema.ts` and its model in `app/models/`, registered in `app/models/index.ts`; tenant state stays in the tenant Durable Object's own SqlStorage repositories under `database/`, which the control-plane models never reach
-- MUST link the hosted document's stylesheets and client entry through `documentAssets()` in `app/services/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `app/views/hosted/document.tsx`, in cascade order.
-- MUST give the import map, every `modulepreload` and every module script the document writes the response's CSP nonce, which the renderer in `app/http/middleware/render.tsx` hands the document; the policies allow scripts by `'self'` and nonce, and the import map is inline.
+- MUST define a control-plane table in `database/schema.ts` and its model in `app/models/`, registered in `app/models/index.ts`; tenant state stays in the tenant Durable Object's own SqlStorage stores under `app/models/tenant/` (their schema in `database/tenant-migrations/`), which the control-plane models never reach
+- MUST link the hosted document's stylesheets and client entry through `documentAssets()` in `app/initializers/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `resources/views/hosted/document.tsx`, in cascade order.
+- MUST give the import map, every `modulepreload` and every module script the document writes the response's CSP nonce, which the renderer in `app/http/render.tsx` hands the document; the policies allow scripts by `'self'` and nonce, and the import map is inline.
 - MUST list every module that calls `clientEntry()` in `bootstrap/browser.ts`'s glob, and only those: a view or route module in the client bundle ships a chunk no page asks for and lengthens every page's import map.
 
 ## Structure
 
-Laravel-style top-level layout: there is no `src/`, and each top-level directory names a
-role — `bootstrap/` for runtime entry points, `routes/` for the route table, `app/` for
-application logic, `resources/` for anything that renders, `config/` for ambient `*.d.ts`,
-`database/` for schema and migrations. Import across them with the `~/<dir>/*` aliases
-declared in `tsconfig.json` (e.g. `~/app/http/controllers/...`, `~/routes/web`); a
-relative path is only for a sibling inside the same directory.
+Organised by kind of code, one home per kind (ADR-129 in the repo's `docs/adr/`): there is
+no `src/`, and each top-level directory names a role. Import across them with the
+`~/<dir>/*` aliases declared in `tsconfig.json` (e.g. `~/app/http/controllers/...`,
+`~/routes/web`); a relative path is only for a sibling inside the same directory.
 
-- `bootstrap/` — runtime entry points: `worker.ts` (the Cloudflare `fetch` handler,
-  the only place Cloudflare APIs are used), `app.ts` (router assembly + global
-  middleware + route mapping).
-- `routes/web.ts` — the route registry mapped in `bootstrap/app.ts`.
-- `app/http/controllers/` and `app/http/middleware/` — the HTTP layer.
-- `app/models/` — control-plane models (`@sdxc/data-model` over the tables in
-  `database/schema.ts`, on the `PLATFORM_DB` D1 binding), bound per request and job
-  as `ctx.models`.
-- `app/services/` — service classes (analytics, email, tenant Durable Object API).
-- `app/jobs/` — scheduled jobs.
-- `app/lib/` — app-internal helpers (fetch-router action/middleware/form wrappers,
-  crypto, rate limiting).
-- `resources/layouts/` — server-rendered HTML layouts.
-- `database/tenant-do.ts` — the per-tenant Durable Object: typed RPC methods only,
-  no `fetch` handler, over its own SqlStorage database.
-- `database/tenant-migrations/` and `database/tenant-migrations.ts` — the tenant
-  object's schema registry and the runner that applies it on boot.
-- `database/schema.ts` — the control plane's `remix/data-table` table definitions.
-- `database/migrations/` — D1 control-plane migrations (`migrations_dir`).
-- `config/` — ambient `*.d.ts` (env + router-context augmentations).
+| Path                                                  | Holds                                                                                                                                                      |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bootstrap/worker.ts`                                 | The Worker entry: serves assets, picks the router by host (`api.` → management, `/mcp` → MCP, platform → web, otherwise a resolved tenant), cron and queue |
+| `bootstrap/browser.ts`                                | The browser entry that hydrates islands                                                                                                                    |
+| `app/models/tenant/object.ts`                         | The tenant Durable Object, exported from `bootstrap/worker.ts` as `Tenant`                                                                                 |
+| `routes/{web,tenant,management,mcp}.ts`               | The four route contracts                                                                                                                                   |
+| `app/initializers/router.ts`                          | `webRouter`, mapping `routes/web.ts` on the bare platform domain                                                                                           |
+| `app/initializers/tenant-router.ts`                   | `tenantRouter`, mapping `routes/tenant.ts` for a request resolved to one tenant                                                                            |
+| `app/initializers/management-router.ts`               | `managementRouter`, mapping `routes/management.ts` on `api.{PLATFORM_DOMAIN}`                                                                              |
+| `app/initializers/mcp-router.ts`, `mcp.ts`            | `mcpRouter` for `routes/mcp.ts`, and the MCP server it imports on first call                                                                               |
+| `app/initializers/`                                   | Every other single instance: logger, job dispatcher, database, billing, flags, cookies, hostname client, resource servers, assets                          |
+| `app/http/controllers/`, `middleware/`, `validators/` | The HTTP layer; `app/http/render.tsx` installs `ctx.render`; `app/http/openapi/` builds the management API document                                        |
+| `app/jobs/`                                           | Background jobs (`index.ts` declares them) and their middleware                                                                                            |
+| `app/mcp/`                                            | The MCP tools generated from the management API's operations, and the one handler that forwards each call                                                  |
+| `app/emails/`                                         | Email templates and their sender and link helpers                                                                                                          |
+| `app/models/`                                         | Control-plane models (`@sdxc/data-model` over `database/schema.ts`, on `PLATFORM_DB`), registered in `index.ts`; KV and R2 stores                          |
+| `app/models/tenant/`                                  | The tenant Durable Object's RPC surface (`object.ts`) and the SqlStorage stores it runs on                                                                 |
+| `app/services/`, `app/services/tenant/`               | Business logic across models or package instances, and the tenant object's pure rules                                                                      |
+| `app/test/`                                           | Test helpers; `app/test/harness/` builds the routers controller tests drive                                                                                |
+| `resources/views/`, `resources/locales/`              | Server-rendered views, islands and stylesheets; translations                                                                                               |
+| `config/`                                             | Static configuration (security policies, security.txt, connection catalog, job pacing) and ambient `*.d.ts` augmentations                                  |
+| `database/schema.ts`, `migrations/`                   | The control plane's table definitions and D1 migrations (`migrations_dir`)                                                                                 |
+| `database/tenant-migrations/`, `tenant-migrations.ts` | The tenant object's schema registry and the runner that applies it on boot                                                                                 |
 
 ## Key principle
 

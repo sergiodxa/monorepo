@@ -13,9 +13,9 @@ import type { RequestContext } from "remix/router";
 import { isFailure } from "@sdxc/result";
 import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
 
-import type { AttackSignalEnv } from "~/app/lib/attack-signals";
+import type { AttackSignalEnv } from "~/app/services/attack-signals";
 
-import { recordAttackSignal } from "~/app/lib/attack-signals";
+import { recordAttackSignal } from "~/app/services/attack-signals";
 
 /** Where a refused challenge records the tenant's own attack signal, and who it belongs to. */
 export interface TurnstileAttackSignal {

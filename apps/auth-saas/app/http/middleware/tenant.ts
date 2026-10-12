@@ -14,7 +14,7 @@ import type { Middleware } from "remix/router";
 import { badRequest } from "@sdxc/http/response/json";
 import { createContextKey } from "remix/router";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /** Where a resolved tenant's id, region and issuer cross into the tenant router. */
 export const TENANT_ID_HEADER = "x-auth-tenant-id";

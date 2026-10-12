@@ -21,16 +21,16 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Models } from "~/app/models";
 
-import { requireScope } from "~/app/http/lib/require-scope";
 import { database } from "~/app/http/middleware/database";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
-import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
+import { requireScope } from "~/app/http/require-scope";
+import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
+import TenantObject from "~/app/models/tenant/object";
+import { AccessToken } from "~/app/models/tenant/tokens";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
-import TenantObject from "~/database/tenant-do";
-import { AccessToken } from "~/database/tokens";
 
 const ISSUER = "https://api.example.com";
 

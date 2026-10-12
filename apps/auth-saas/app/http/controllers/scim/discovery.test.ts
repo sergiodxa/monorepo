@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildScimHarness, buildScimRouter, spyOnStub } from "./test-harness";
+import { buildScimHarness, buildScimRouter, spyOnStub } from "~/app/test/harness/scim";
 
 describe("SCIM discovery documents", () => {
 	test("ServiceProviderConfig answers the capability document with no call to the tenant object", async () => {

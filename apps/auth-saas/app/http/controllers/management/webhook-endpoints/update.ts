@@ -10,7 +10,7 @@ import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { UpdateWebhookEndpointResult } from "~/database/webhook-endpoints";
+import type { UpdateWebhookEndpointResult } from "~/app/models/tenant/webhook-endpoints";
 
 import {
 	endpointIdParam,
@@ -19,12 +19,12 @@ import {
 	webhookEntitlementRequired,
 	writableWebhookEndpoint,
 } from "~/app/http/controllers/management/webhook-endpoints/shared";
-import { patchResource } from "~/app/http/lib/merge-patch";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { patchResource } from "~/app/http/merge-patch";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { WEBHOOK_ENDPOINT_BODY_SCHEMA } from "~/app/http/openapi/webhook-endpoints";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** Maps every `updateWebhookEndpoint` refusal onto its own `problem+json` response. */

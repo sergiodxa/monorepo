@@ -19,10 +19,10 @@ import {
 	importRunIdParam,
 	importRunNotFound,
 } from "~/app/http/controllers/management/subjects/shared";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
-import { mintTransferDownloadTicket } from "~/app/lib/transfer-storage";
+import { requireScope } from "~/app/http/require-scope";
+import { mintTransferDownloadTicket } from "~/app/models/transfer-storage";
 import routes from "~/routes/management";
 
 /**

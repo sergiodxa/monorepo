@@ -10,11 +10,22 @@
  */
 
 import { BillingWebhook } from "@sdxc/billing";
+import { createAction } from "remix/router";
 
-import { billingDeliveries, polar } from "~/app/lib/billing";
-import { createDatabase } from "~/app/lib/database";
+import { billingDeliveries, polar } from "~/app/initializers/billing";
+import { createDatabase } from "~/app/initializers/database";
 import { models } from "~/app/models";
 import { createBillingWebhookHandlers } from "~/app/services/billing-sync";
+import routes from "~/routes/web";
+
+/** Verifies, deduplicates and applies each billing provider delivery. */
+let webhook = new BillingWebhook(
+	polar,
+	createBillingWebhookHandlers(models.bind({ db: createDatabase() }), polar),
+	{
+		store: billingDeliveries,
+	},
+);
 
 /**
  * The billing webhook endpoint.
@@ -22,10 +33,4 @@ import { createBillingWebhookHandlers } from "~/app/services/billing-sync";
  * @example
  * router.map(routes.billing.webhook, webhook);
  */
-export default new BillingWebhook(
-	polar,
-	createBillingWebhookHandlers(models.bind({ db: createDatabase() }), polar),
-	{
-		store: billingDeliveries,
-	},
-);
+export default createAction(routes.billing.webhook, (ctx) => webhook.handler(ctx));

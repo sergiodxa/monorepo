@@ -15,13 +15,13 @@ import { createAction } from "remix/router";
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { endpointIdParam } from "~/app/http/controllers/management/webhook-endpoints/shared";
-import { managementPaging } from "~/app/http/lib/management-pagination";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { managementPaging } from "~/app/http/management-pagination";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {

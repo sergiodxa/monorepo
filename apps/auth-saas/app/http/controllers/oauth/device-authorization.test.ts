@@ -19,7 +19,7 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
-import Tenant from "~/database/tenant-do";
+import Tenant from "~/app/models/tenant/object";
 import routes from "~/routes/tenant";
 
 import deviceAuthorization from "./device-authorization";

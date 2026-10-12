@@ -30,7 +30,7 @@ import { createAction } from "remix/router";
 
 import { scimGate } from "~/app/http/middleware/scim-gate";
 import { groupToScim, scimFailure } from "~/app/http/scim/response";
-import { SCIM_GROUP_DEFINITIONS, SCIM_MAX_PAGE_SIZE } from "~/database/scim-resources";
+import { SCIM_GROUP_DEFINITIONS, SCIM_MAX_PAGE_SIZE } from "~/app/services/tenant/scim-resources";
 import routes from "~/routes/tenant";
 
 /** Parses and requires the `:id` path param every single-resource group route matches. */

@@ -8,8 +8,8 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import { buildRolesHarness } from "~/app/http/controllers/management/roles/test-harness";
-import { grants } from "~/database/consent";
+import { grants } from "~/app/models/tenant/consent";
+import { buildRolesHarness } from "~/app/test/harness/management/roles";
 
 describe("GET /tenants/:tenantId/subjects/:subjectId/grants", () => {
 	test("pages a subject's own grants, most recently agreed to first", async () => {

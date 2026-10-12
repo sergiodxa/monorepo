@@ -30,7 +30,7 @@ import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /**
  * Created once and cleared with its own `reset()` between tests, rather than
@@ -52,8 +52,8 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	return { ...actual, env: createEnv<Cloudflare.Env>({ R2: bucket }) };
 });
 
-vi.doMock("~/app/jobs/lib/subjects-import-pacing", async (importOriginal) => {
-	let actual = await importOriginal<typeof import("~/app/jobs/lib/subjects-import-pacing")>();
+vi.doMock("~/config/subjects-import-pacing", async (importOriginal) => {
+	let actual = await importOriginal<typeof import("~/config/subjects-import-pacing")>();
 
 	return {
 		...actual,
@@ -69,7 +69,7 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels, publishModels } = await import("~/app/test/models");
-let TenantObject = (await import("~/database/tenant-do")).default;
+let TenantObject = (await import("~/app/models/tenant/object")).default;
 let subjectsImport = (await import("./subjects-import")).default;
 
 let db: Database;

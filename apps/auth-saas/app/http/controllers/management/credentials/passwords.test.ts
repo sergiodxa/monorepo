@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildCredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
+import { buildCredentialsHarness } from "~/app/test/harness/management/credentials";
 
 describe("POST /tenants/:tenantId/subjects/:subjectId/password/force-reset", () => {
 	test("marks a subject's current password as owing a change", async () => {

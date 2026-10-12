@@ -13,7 +13,7 @@ import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";

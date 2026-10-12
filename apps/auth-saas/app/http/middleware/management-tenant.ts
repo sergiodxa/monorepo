@@ -11,7 +11,7 @@
 
 import type { Middleware } from "remix/router";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 import { TenantStub } from "~/app/http/middleware/tenant";
 

@@ -7,10 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import {
-	buildRolesHarness,
-	grantEntitlement,
-} from "~/app/http/controllers/management/roles/test-harness";
+import { buildRolesHarness, grantEntitlement } from "~/app/test/harness/management/roles";
 
 describe("POST /tenants/:tenantId/roles", () => {
 	test("defines a custom role at a scope", async () => {

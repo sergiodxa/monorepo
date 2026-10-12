@@ -11,7 +11,7 @@ import { managementProblems } from "@sdxc/auth/management-client";
 import { createDocument } from "@sdxc/openapi";
 import { oauth2 } from "@sdxc/openapi/security";
 
-import { PUBLISHED_API_VERSIONS } from "~/app/http/lib/api-version";
+import { PUBLISHED_API_VERSIONS } from "~/app/http/middleware/api-version";
 import { AGENT_CLIENTS_OPERATIONS } from "~/app/http/openapi/agent-clients";
 import { API_KEYS_OPERATIONS } from "~/app/http/openapi/api-keys";
 import { AUDIT_OPERATIONS } from "~/app/http/openapi/audit";

@@ -16,7 +16,7 @@ import { unwrap } from "@sdxc/result";
 import type { Models } from "~/app/models";
 import type { DomainRow } from "~/app/models/domains";
 
-import { invalidateHostnameCache } from "~/app/lib/hostname-cache";
+import { invalidateHostnameCache } from "~/app/models/hostname-cache";
 
 /** How long a domain may sit `pending` before it is marked `failed`. */
 const PENDING_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;

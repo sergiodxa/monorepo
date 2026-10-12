@@ -16,7 +16,7 @@
 import { unwrap } from "@sdxc/result";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /** What a closed day is folded from the tenant's own record and into whom. */
 export interface CloseTenantMeteringDayInput {

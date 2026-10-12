@@ -25,10 +25,10 @@ import {
 	mountedMiddleware,
 	serializeMembership,
 } from "~/app/http/controllers/management/tenants/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { TENANT_MEMBERS_CREATE, TENANT_MEMBERS_UPDATE_ROLE } from "~/app/http/openapi/tenants";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /**

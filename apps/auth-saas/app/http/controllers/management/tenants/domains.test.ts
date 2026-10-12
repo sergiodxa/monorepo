@@ -20,7 +20,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { TenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
+import type { TenantsHarness } from "~/app/test/harness/management/tenants";
 
 import { bindModels } from "~/app/test/models";
 
@@ -32,7 +32,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 });
 
 let { buildTenantsHarness, HOSTNAME_ZONE_ID } =
-	await import("~/app/http/controllers/management/tenants/test-harness");
+	await import("~/app/test/harness/management/tenants");
 
 /** The Cloudflare custom-hostnames collection the test zone's handlers answer for. */
 const API_URL = `https://api.cloudflare.com/client/v4/zones/${HOSTNAME_ZONE_ID}/custom_hostnames`;

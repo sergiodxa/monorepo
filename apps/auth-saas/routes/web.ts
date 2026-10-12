@@ -11,7 +11,7 @@ import { get, post, route } from "remix/routes";
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for
- * building URLs and is used as the key when mapping controllers in `bootstrap/app.ts`.
+ * building URLs and is used as the key when mapping controllers in `app/initializers/router.ts`.
  *
  * @example
  * routes.index.href();

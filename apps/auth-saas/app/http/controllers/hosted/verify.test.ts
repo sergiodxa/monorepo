@@ -12,11 +12,11 @@ import type { MemoryTransport } from "@sdxc/mail/memory";
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
+import type { Harness } from "~/app/test/harness/hosted";
 
-import { buildHarness } from "~/app/http/controllers/hosted/test-harness";
-import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
-import { subjectIdentifiers } from "~/database/subjects";
+import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
+import { subjectIdentifiers } from "~/app/models/tenant/subjects";
+import { buildHarness } from "~/app/test/harness/hosted";
 
 let harness: Harness;
 

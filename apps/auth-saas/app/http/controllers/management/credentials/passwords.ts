@@ -12,16 +12,16 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { ForcePasswordResetResult } from "~/database/passwords";
+import type { ForcePasswordResetResult } from "~/app/models/tenant/passwords";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { PASSWORD_FORCE_RESET } from "~/app/http/openapi/credentials";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** Maps every `forcePasswordReset` refusal onto its own `problem+json` response. */

@@ -10,7 +10,7 @@
 import { idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { describe, expect, test } from "vitest";
 
-import { buildSubjectsHarness } from "~/app/http/controllers/management/subjects/test-harness";
+import { buildSubjectsHarness } from "~/app/test/harness/management/subjects";
 
 /** A subject-create body claiming one username. */
 function createBody(username: string): string {

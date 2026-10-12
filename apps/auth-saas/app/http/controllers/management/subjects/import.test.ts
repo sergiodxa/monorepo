@@ -19,7 +19,7 @@ import { createDurableObjectNamespace, createEnv, createR2Bucket } from "@sdxc/c
 import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /**
  * Created once and cleared between tests, so the "cloudflare:workers" mock
@@ -39,9 +39,8 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { publishModels } = await import("~/app/test/models");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let subjectsImport = (await import("~/app/jobs/subjects-import")).default;
-let { mintTransferDownloadTicket } = await import("~/app/lib/transfer-storage");
-let { buildSubjectsHarness, ISSUER } =
-	await import("~/app/http/controllers/management/subjects/test-harness");
+let { mintTransferDownloadTicket } = await import("~/app/models/transfer-storage");
+let { buildSubjectsHarness, ISSUER } = await import("~/app/test/harness/management/subjects");
 
 beforeEach(() => {
 	bucket.reset();

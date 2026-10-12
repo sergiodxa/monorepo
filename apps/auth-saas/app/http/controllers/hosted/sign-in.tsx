@@ -31,11 +31,11 @@ import {
 } from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { CREDENTIAL_FAILURE_SPEND } from "~/app/http/middleware/tenant-rate-limit";
-import { recordAttackSignal } from "~/app/lib/attack-signals";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { readTrustedDeviceToken } from "~/app/lib/trusted-device-cookie";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { SignInPage } from "~/app/views/hosted/sign-in";
+import { requestOrigin } from "~/app/http/request-origin";
+import { readTrustedDeviceToken } from "~/app/initializers/trusted-device-cookie";
+import { recordAttackSignal } from "~/app/services/attack-signals";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { SignInPage } from "~/resources/views/hosted/sign-in";
 import routes from "~/routes/tenant";
 
 /** Builds an absolute URL for one of this tenant's routes, carrying the current request's query along. */

@@ -27,20 +27,20 @@ import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import type { PasswordPolicy } from "~/database/passwords";
+import type { PasswordPolicy } from "~/app/models/tenant/passwords";
 
+import { verifyAddressLink } from "~/app/emails/links";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
+import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
-import { emailAddress } from "~/app/http/lib/email-address";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { verifyAddressLink } from "~/app/mail/links";
-import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
-import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { SignUpPage } from "~/app/views/hosted/sign-up";
+import { requestOrigin } from "~/app/http/request-origin";
+import { emailAddress } from "~/app/http/validators/email-address";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { SignUpPage } from "~/resources/views/hosted/sign-up";
 import routes from "~/routes/tenant";
 
 /** Builds an absolute URL for one of this tenant's routes, carrying the current request's query along. */

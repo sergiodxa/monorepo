@@ -11,13 +11,13 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { RevokeClientSecretResult } from "~/database/clients";
+import type { RevokeClientSecretResult } from "~/app/models/tenant/clients";
 
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** Parses and requires the `:clientId`/`:secretId` path params this route matches. */

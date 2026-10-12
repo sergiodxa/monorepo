@@ -22,19 +22,19 @@ import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import type { PasswordPolicy } from "~/database/passwords";
+import type { PasswordPolicy } from "~/app/models/tenant/passwords";
 
+import { resetPasswordLink } from "~/app/emails/links";
+import { ResetPasswordEmail } from "~/app/emails/reset-password-email";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import {
 	passesConditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { resetPasswordLink } from "~/app/mail/links";
-import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
-import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { ResetPage } from "~/app/views/hosted/reset";
+import { requestOrigin } from "~/app/http/request-origin";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { ResetPage } from "~/resources/views/hosted/reset";
 import routes from "~/routes/tenant";
 
 /** Builds an absolute URL for one of this tenant's routes, carrying the current request's query along. */

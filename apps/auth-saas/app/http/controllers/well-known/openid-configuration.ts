@@ -10,7 +10,7 @@ import { openIdConfiguration } from "@sdxc/well-known/openid-configuration";
 import { respond } from "@sdxc/well-known/response";
 import { createAction } from "remix/router";
 
-import { openIdConfigurationFor } from "~/database/metadata";
+import { openIdConfigurationFor } from "~/app/models/tenant/metadata";
 import routes from "~/routes/tenant";
 
 /**

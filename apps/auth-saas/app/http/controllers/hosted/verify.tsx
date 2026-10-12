@@ -18,12 +18,12 @@ import type { RequestContext } from "remix/router";
 
 import { createAction } from "remix/router";
 
+import { verifyAddressLink } from "~/app/emails/links";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
+import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
 import { redirectToErrorPage } from "~/app/http/controllers/hosted/outcome";
-import { verifyAddressLink } from "~/app/mail/links";
-import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
-import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { VerifyPage } from "~/app/views/hosted/verify";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { VerifyPage } from "~/resources/views/hosted/verify";
 import routes from "~/routes/tenant";
 
 /** Builds an absolute URL for one of this tenant's routes, carrying the current request's query along. */

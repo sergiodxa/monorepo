@@ -20,14 +20,14 @@ import {
 	sessionNotFound,
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
-import { managementPaging } from "~/app/http/lib/management-pagination";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { managementPaging } from "~/app/http/management-pagination";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SESSIONS_REVOKE, SESSIONS_REVOKE_ALL } from "~/app/http/openapi/credentials";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {

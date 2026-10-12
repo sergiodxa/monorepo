@@ -17,7 +17,6 @@ import {
 	TENANT_ISSUER_HEADER,
 	TENANT_REGION_HEADER,
 } from "~/app/http/middleware/tenant";
-
 import {
 	buildScimHarness,
 	buildScimRouter,
@@ -27,7 +26,7 @@ import {
 	setScimEntitled,
 	spyOnStub,
 	TENANT_ID,
-} from "./test-harness";
+} from "~/app/test/harness/scim";
 
 /** A `Request` resolved to the fixture tenant, with no `Authorization` header at all. */
 function tokenlessRequest(path: string, init: RequestInit = {}) {

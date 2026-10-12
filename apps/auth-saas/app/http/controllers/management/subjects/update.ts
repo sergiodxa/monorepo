@@ -15,15 +15,15 @@ import type {
 	AttributeValue,
 	DescribeSubjectResult,
 	UpdateSubjectResult,
-} from "~/database/subjects";
+} from "~/app/models/tenant/subjects";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { patchResource } from "~/app/http/lib/merge-patch";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { patchResource } from "~/app/http/merge-patch";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** The profile claims an administrator writes, each absent when the subject holds none. */

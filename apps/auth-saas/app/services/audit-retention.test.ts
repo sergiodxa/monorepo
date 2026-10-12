@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 import { sweepAuditRetention } from "./audit-retention";
 

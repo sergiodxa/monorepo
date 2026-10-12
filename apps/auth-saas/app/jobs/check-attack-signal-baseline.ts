@@ -12,19 +12,19 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
+import { AttackSignalAlertEmail } from "~/app/emails/attack-signal-alert-email";
+import { mailTranslator } from "~/app/emails/locale";
+import { parseSenderAddress, tenantSenderAddress } from "~/app/emails/sender";
 import jobs from "~/app/jobs";
-import { forEachProvisionedTenant } from "~/app/jobs/lib/for-each-tenant";
+import { dayOf } from "~/app/models/tenant/metering";
 import {
 	baselineHourlyAverage,
 	BASELINE_WINDOW_HOURS,
 	compareToBaseline,
 	sumFailedSignIns,
-} from "~/app/lib/attack-signal-baseline";
-import { readFailedSignInsByHour } from "~/app/lib/attack-signals";
-import { AttackSignalAlertEmail } from "~/app/mail/attack-signal-alert-email";
-import { mailTranslator } from "~/app/mail/locale";
-import { parseSenderAddress, tenantSenderAddress } from "~/app/mail/sender";
-import { dayOf } from "~/database/metering";
+} from "~/app/services/attack-signal-baseline";
+import { readFailedSignInsByHour } from "~/app/services/attack-signals";
+import { forEachProvisionedTenant } from "~/app/services/for-each-tenant";
 
 /** One hour, in milliseconds — the recent window's own span. */
 const HOUR_MS = 60 * 60 * 1000;

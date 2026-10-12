@@ -24,7 +24,7 @@ const MAX_LOGGED_VIOLATIONS = 20;
  * @example
  * router.map(routes.cspReports, cspReports);
  */
-export async function cspReports(ctx: RequestContext): Promise<Response> {
+export async function cspReports(ctx: Pick<RequestContext, "request" | "log">): Promise<Response> {
 	let parsed = await parseReports(ctx.request);
 	if (isFailure(parsed)) return new Response(null, { status: 400 });
 

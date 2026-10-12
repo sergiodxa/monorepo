@@ -9,7 +9,7 @@
  */
 
 import type { MembershipRole } from "~/app/models/memberships";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /** Every scope the management API ever checks, spelled `<resource>:<read|write>`. */
 export const MANAGEMENT_SCOPES = [

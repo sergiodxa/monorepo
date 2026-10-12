@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildScimHarness } from "./test-harness";
+import { buildScimHarness } from "~/app/test/harness/scim";
 
 describe("SCIM unsupported routes", () => {
 	test("POST /scim/v2/Bulk answers 501", async () => {

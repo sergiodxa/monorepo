@@ -184,7 +184,7 @@ const GENERATED_TOOLS: readonly GeneratedTool[] = MANAGEMENT_OPERATIONS.map(gene
 
 /**
  * Validates the generated set the same way a hand-written tool tree is validated:
- * every tool's own name must be unique. `bootstrap/mcp-app.ts` maps
+ * every tool's own name must be unique. `app/initializers/mcp.ts` maps
  * {@link GENERATED_TOOLS} one tool at a time, so this tree only runs the check.
  */
 tools(

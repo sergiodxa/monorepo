@@ -14,16 +14,16 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { SetSessionPolicyResult } from "~/database/tenant-do";
+import type { SetSessionPolicyResult } from "~/app/models/tenant/object";
 
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementEntitlement } from "~/app/http/middleware/management-entitlement";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { TENANT_SESSION_POLICY_SET } from "~/app/http/openapi/tenants";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** A caller whose tenant's plan does not include customizing session lifetimes. */

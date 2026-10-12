@@ -19,11 +19,11 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { INVITATIONS_ACCEPT } from "~/app/http/openapi/public";
-import { requestOrigin } from "~/app/lib/request-origin";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requestOrigin } from "~/app/http/request-origin";
 import routes from "~/routes/management";
 
 /**

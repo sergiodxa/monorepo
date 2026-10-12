@@ -22,13 +22,13 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SUBJECTS_EXPORT_BEGIN } from "~/app/http/openapi/subjects";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /**

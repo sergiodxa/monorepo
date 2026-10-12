@@ -1,10 +1,10 @@
 /**
  * Drives the platform's own administrative dashboard through a real router mapping
- * every `/dashboard` route, matching how `bootstrap/app.ts` mounts them: an
+ * every `/dashboard` route, matching how `app/initializers/router.ts` mounts them: an
  * unauthenticated request redirects to sign-in; a signed-in subject sees every
  * tenant they administer and can create another one, owned by the same customer;
  * registering an agent client goes through the real, public Management API route
- * (mounted here the same way `bootstrap/management-app.ts` mounts it), reached over
+ * (mounted here the same way `app/initializers/management-router.ts` mounts it), reached over
  * a `SELF` service-binding stand-in that forwards this same session cookie, and its
  * plaintext secret is shown exactly once; and a subject with no membership on a
  * tenant is refused that tenant's own agent-clients page.
@@ -36,7 +36,7 @@ import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
 
@@ -93,7 +93,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 
 let { database } = await import("~/app/http/middleware/database");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
-let render = (await import("~/app/http/middleware/render")).default;
+let { htmlRenderer } = await import("~/app/http/render");
 let { dashboardShow, dashboardCreateTenant } =
 	await import("~/app/http/controllers/dashboard/show");
 let { dashboardAgentClientsShow, dashboardAgentClientsRegister } =
@@ -104,12 +104,12 @@ let { createAgentClientsRegisterAction } =
 let { resolveDashboardSession, dashboardSignInUrl } =
 	await import("~/app/http/middleware/dashboard-session");
 let { serializeSessionCookie } = await import("~/app/http/middleware/hosted-session");
-let { sessionCookie } = await import("~/app/lib/session-cookie");
+let { sessionCookie } = await import("~/app/initializers/session-cookie");
 let webRoutes = (await import("~/routes/web")).default;
 let managementRoutes = (await import("~/routes/management")).default;
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels } = await import("~/app/test/models");
-let TenantObject = (await import("~/database/tenant-do")).default;
+let TenantObject = (await import("~/app/models/tenant/object")).default;
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 
@@ -118,12 +118,12 @@ let models: Models;
 buildTenant = (state) =>
 	new TenantObject(state, { TOTP_SEAL_KEY: randomToken({ bytes: 32 }) } as Cloudflare.Env);
 
-/** Builds the platform web router mapping every `/dashboard` route, matching how `bootstrap/app.ts` mounts them. */
+/** Builds the platform web router mapping every `/dashboard` route, matching how `app/initializers/router.ts` mounts them. */
 function buildDashboardRouter() {
 	let middleware: Middleware[] = [
 		database(() => db) as Middleware,
 		modelsMiddleware() as Middleware,
-		render as Middleware,
+		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
 	];
 	let router = createRouter({ middleware });
@@ -137,7 +137,7 @@ function buildDashboardRouter() {
 	return router;
 }
 
-/** Builds the management router mapping only `agentClientsRegister`, matching how `bootstrap/management-app.ts` mounts it. */
+/** Builds the management router mapping only `agentClientsRegister`, matching how `app/initializers/management-router.ts` mounts it. */
 function buildManagementRouter() {
 	let router = createRouter({
 		middleware: [database(() => db) as Middleware, modelsMiddleware() as Middleware],

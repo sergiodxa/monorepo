@@ -13,7 +13,7 @@ import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { DEVICE_CODE_GRANT_TYPE } from "~/database/device-authorization";
+import { DEVICE_CODE_GRANT_TYPE } from "~/app/models/tenant/device-authorization";
 import routes from "~/routes/tenant";
 
 /** How a client may present itself here, mirroring what the tenant's token module accepts. */

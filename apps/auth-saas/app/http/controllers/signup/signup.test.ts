@@ -36,7 +36,7 @@ import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
 const EMAIL_FROM = "Auth SaaS <noreply@auth.sergiodxa.com>";
@@ -66,7 +66,7 @@ function tenantStub(tenantDO: InstanceType<typeof Tenant>) {
 
 /**
  * Constructs a Durable Object stub for a name resolved through the namespace.
- * Assigned once `~/database/tenant-do`'s own default export loads below —
+ * Assigned once `~/app/models/tenant/object`'s own default export loads below —
  * referenced here only from inside the closures {@link tenantNamespace} calls
  * later, by which point every top-level `await` in this file has resolved.
  */
@@ -102,19 +102,19 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 let { database } = await import("~/app/http/middleware/database");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { Mail } = await import("~/app/http/middleware/mail");
-let render = (await import("~/app/http/middleware/render")).default;
+let { htmlRenderer } = await import("~/app/http/render");
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
 let { turnstileVerification } = await import("~/app/http/middleware/turnstile-verification");
 let i18n = (await import("~/app/http/middleware/i18n")).default;
 let signupPending = (await import("~/app/http/controllers/signup/pending")).default;
 let signupVerify = (await import("~/app/http/controllers/signup/verify")).default;
 let signupResend = (await import("~/app/http/controllers/signup/resend")).default;
-let { sessionCookie } = await import("~/app/lib/session-cookie");
+let { sessionCookie } = await import("~/app/initializers/session-cookie");
 let routes = (await import("~/routes/web")).default;
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels } = await import("~/app/test/models");
 let { customers: customersTable } = await import("~/database/schema");
-let TenantObject = (await import("~/database/tenant-do")).default;
+let TenantObject = (await import("~/app/models/tenant/object")).default;
 
 buildTenant = (state) =>
 	new TenantObject(state, { TOTP_SEAL_KEY: randomToken({ bytes: 32 }) } as Cloudflare.Env);
@@ -167,7 +167,7 @@ beforeEach(async () => {
 	mailTransport = new MemoryTransport();
 });
 
-/** Builds the platform web router mapping every `/signup` route, matching how `bootstrap/app.ts` mounts them. */
+/** Builds the platform web router mapping every `/signup` route, matching how `app/initializers/router.ts` mounts them. */
 function buildRouter() {
 	let mailer = new Mailer({
 		transport: mailTransport,
@@ -181,7 +181,7 @@ function buildRouter() {
 			ctx.set(Mail, mailer, { property: "mail" });
 			return next();
 		},
-		render as Middleware,
+		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
 	];
 	let router = createRouter({ middleware });

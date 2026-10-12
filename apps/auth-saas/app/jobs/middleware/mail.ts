@@ -14,7 +14,7 @@ import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { env } from "cloudflare:workers";
 import { createContextKey } from "remix/router";
 
-import { parseSenderAddress } from "~/app/mail/sender";
+import { parseSenderAddress } from "~/app/emails/sender";
 
 /** Where a job's mailer lives on the context, installed as `ctx.mail`. */
 export const Mail = createContextKey<MailClient>();

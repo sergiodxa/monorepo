@@ -8,8 +8,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildClientsHarness } from "~/app/http/controllers/management/clients/test-harness";
-import { clientSecrets } from "~/database/clients";
+import { clientSecrets } from "~/app/models/tenant/clients";
+import { buildClientsHarness } from "~/app/test/harness/management/clients";
 
 /** The record `registerClient` accepts when a test does not care about most of it. */
 function baseInput(overrides: Record<string, unknown> = {}) {

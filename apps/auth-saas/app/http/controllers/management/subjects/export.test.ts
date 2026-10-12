@@ -20,7 +20,7 @@ import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /**
  * The platform's own tenant hostname the job resolves owners against.
@@ -55,9 +55,8 @@ let { publishModels } = await import("~/app/test/models");
 let { Mail } = await import("~/app/jobs/middleware/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let subjectsExport = (await import("~/app/jobs/subjects-export")).default;
-let { mintTransferDownloadTicket } = await import("~/app/lib/transfer-storage");
-let { buildSubjectsHarness, ISSUER } =
-	await import("~/app/http/controllers/management/subjects/test-harness");
+let { mintTransferDownloadTicket } = await import("~/app/models/transfer-storage");
+let { buildSubjectsHarness, ISSUER } = await import("~/app/test/harness/management/subjects");
 
 beforeEach(() => {
 	bucket.reset();

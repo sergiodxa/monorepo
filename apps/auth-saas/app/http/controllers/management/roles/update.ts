@@ -10,20 +10,20 @@ import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { UpdateRoleResult } from "~/database/roles";
+import type { UpdateRoleResult } from "~/app/models/tenant/roles";
 
 import {
 	roleIdParam,
 	roleNotFound,
 	rolesEntitlementRequired,
 } from "~/app/http/controllers/management/roles/shared";
-import { readPatchBody } from "~/app/http/lib/merge-patch";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { readPatchBody } from "~/app/http/merge-patch";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { ROLE_PATCH } from "~/app/http/openapi/roles";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** Maps every `updateRole` refusal onto its own `problem+json` response. */

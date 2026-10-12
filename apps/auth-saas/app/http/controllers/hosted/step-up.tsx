@@ -19,9 +19,9 @@ import {
 	respondToAuthorizationOutcome,
 } from "~/app/http/controllers/hosted/outcome";
 import { activeSession } from "~/app/http/middleware/hosted-session";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { EnrolTotpFactorPage } from "~/app/views/hosted/enrol-totp-factor";
-import { RecoveryCodesPage } from "~/app/views/hosted/recovery-codes";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { EnrolTotpFactorPage } from "~/resources/views/hosted/enrol-totp-factor";
+import { RecoveryCodesPage } from "~/resources/views/hosted/recovery-codes";
 import routes from "~/routes/tenant";
 
 /** Builds an absolute URL for one of this tenant's routes, carrying the interaction id. */

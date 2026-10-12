@@ -8,9 +8,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { PasswordPolicyFailure } from "~/database/passwords";
+import type { PasswordPolicyFailure } from "~/app/models/tenant/passwords";
 
-import { mailTranslator } from "~/app/mail/locale";
+import { mailTranslator } from "~/app/emails/locale";
 
 import { passwordPolicyIssue } from "./password-policy-issue";
 

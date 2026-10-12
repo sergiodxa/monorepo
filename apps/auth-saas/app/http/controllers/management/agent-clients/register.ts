@@ -13,20 +13,20 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { RegisterClientResult } from "~/database/clients";
+import type { RegisterClientResult } from "~/app/models/tenant/clients";
 
 import {
 	clientEntitlementRequired,
 	clientRecordValidationFailure,
 } from "~/app/http/controllers/management/clients/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { AGENT_CLIENTS_REGISTER } from "~/app/http/openapi/agent-clients";
-import { platformTenantStub } from "~/app/lib/platform-tenant";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
+import { platformTenantStub } from "~/app/initializers/platform-tenant";
 import { seedManagementScopes } from "~/app/services/management-scopes";
 import routes from "~/routes/management";
 

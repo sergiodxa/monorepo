@@ -30,14 +30,14 @@ import {
 	dashboardSignInUrl,
 	resolveTenantMember,
 } from "~/app/http/middleware/dashboard-session";
-import { callManagementApi } from "~/app/lib/management-client";
+import { callManagementApi } from "~/app/services/management-client";
 import {
 	MANAGEMENT_SCOPES,
 	MANAGEMENT_SCOPE_DESCRIPTIONS,
 	MANAGEMENT_SCOPE_TITLES,
 } from "~/app/services/management-scopes";
-import { AgentClientsPage } from "~/app/views/dashboard";
-import { PublicDocument } from "~/app/views/landing";
+import { AgentClientsPage } from "~/resources/views/dashboard";
+import { PublicDocument } from "~/resources/views/landing";
 import routes from "~/routes/web";
 
 /** `POST .../agent-clients`'s own form schema: a name, and one or more scopes. */

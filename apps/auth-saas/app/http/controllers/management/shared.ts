@@ -14,7 +14,7 @@ import type { HostnameClient } from "@sdxc/hostname";
 import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { RequestContext } from "remix/router";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /** The options a management resource controller's own factory takes. */
 export interface ManagementControllerOptions {

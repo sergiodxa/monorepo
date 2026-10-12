@@ -1,6 +1,6 @@
 /**
  * Drives `POST /invitations/accept` through a real router, standing the route
- * up the same way `bootstrap/management-app.ts` itself mounts it: no bearer
+ * up the same way `app/initializers/management-router.ts` itself mounts it: no bearer
  * token, the invitation's own token as the whole credential. A full
  * invite-then-accept round trip creates a real membership and signs the
  * invited address into the platform dashboard; accepting the same token twice,
@@ -30,7 +30,7 @@ import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
 
@@ -74,16 +74,16 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	};
 });
 
-let { conformance } = await import("~/app/http/controllers/management/test-harness");
+let { conformance } = await import("~/app/test/harness/management");
 let { database } = await import("~/app/http/middleware/database");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
-let { sessionCookie } = await import("~/app/lib/session-cookie");
+let { sessionCookie } = await import("~/app/initializers/session-cookie");
 let invitationsAccept = (await import("~/app/http/controllers/management/invitations/accept"))
 	.default;
 let routes = (await import("~/routes/management")).default;
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels } = await import("~/app/test/models");
-let TenantObject = (await import("~/database/tenant-do")).default;
+let TenantObject = (await import("~/app/models/tenant/object")).default;
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 

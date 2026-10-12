@@ -13,11 +13,11 @@ import type { RequestContext } from "remix/router";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import { mailTranslator } from "~/app/mail/locale";
-import { PlatformSignupVerifyEmail } from "~/app/mail/platform-signup-verify-email";
-import { parseSenderAddress } from "~/app/mail/sender";
-import { PublicDocument } from "~/app/views/landing";
-import { SignUpPendingPage } from "~/app/views/signup";
+import { mailTranslator } from "~/app/emails/locale";
+import { PlatformSignupVerifyEmail } from "~/app/emails/platform-signup-verify-email";
+import { parseSenderAddress } from "~/app/emails/sender";
+import { PublicDocument } from "~/resources/views/landing";
+import { SignUpPendingPage } from "~/resources/views/signup";
 import routes from "~/routes/web";
 
 /** Renders the "check your email" state, noting a resend when one went out. */

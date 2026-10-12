@@ -15,7 +15,7 @@ import type { Middleware } from "remix/router";
 import { CloudflareAdapter, tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 
-import { managementProblem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/problem";
 
 /** Which budget a route spends from. Import and export runs are their own bucket, opted into explicitly rather than inferred from the HTTP method. */
 export type ManagementRateLimitBucket = "read" | "write" | "import_export";

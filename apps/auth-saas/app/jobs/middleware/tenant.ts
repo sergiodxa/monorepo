@@ -10,7 +10,7 @@ import type { JobMiddleware } from "@sdxc/jobs";
 import { env } from "cloudflare:workers";
 import { createContextKey } from "remix/router";
 
-import type TenantObject from "~/database/tenant-do";
+import type TenantObject from "~/app/models/tenant/object";
 
 /** The tenant Durable Object namespace binding, published as `ctx.tenant`. */
 export const TenantNamespace = createContextKey<DurableObjectNamespace<TenantObject>>();

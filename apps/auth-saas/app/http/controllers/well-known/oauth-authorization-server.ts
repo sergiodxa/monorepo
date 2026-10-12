@@ -10,7 +10,7 @@ import { authorizationServerMetadata } from "@sdxc/well-known/oauth-authorizatio
 import { respond } from "@sdxc/well-known/response";
 import { createAction } from "remix/router";
 
-import { authorizationServerMetadataFor } from "~/database/metadata";
+import { authorizationServerMetadataFor } from "~/app/models/tenant/metadata";
 import routes from "~/routes/tenant";
 
 /**

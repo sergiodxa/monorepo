@@ -15,7 +15,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { dashboardRole } from "~/app/http/middleware/dashboard-role";
-import { polar } from "~/app/lib/billing";
+import { polar } from "~/app/initializers/billing";
 import { openPortal } from "~/app/services/billing-portal";
 import routes from "~/routes/web";
 

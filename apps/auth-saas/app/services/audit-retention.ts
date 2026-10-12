@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /** How many rows one call to the tenant object may remove, when a caller does not choose. */
 const DEFAULT_LIMIT = 500;

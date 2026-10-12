@@ -7,10 +7,10 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import type { AuditHarness } from "~/app/http/controllers/management/audit/test-harness";
+import type { AuditHarness } from "~/app/test/harness/management/audit";
 
-import { buildAuditHarness } from "~/app/http/controllers/management/audit/test-harness";
-import { sessions } from "~/database/sessions";
+import { sessions } from "~/app/models/tenant/sessions";
+import { buildAuditHarness } from "~/app/test/harness/management/audit";
 
 /** Inserts a live session row directly, the row shape `openSession` would have stored. */
 async function insertSession(

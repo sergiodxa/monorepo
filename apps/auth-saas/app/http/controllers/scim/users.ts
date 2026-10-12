@@ -39,7 +39,7 @@ import {
 	SCIM_MAX_PAGE_SIZE,
 	SCIM_USER_DEFINITIONS,
 	SCIM_USER_EXTENSIONS,
-} from "~/database/scim-resources";
+} from "~/app/services/tenant/scim-resources";
 import routes from "~/routes/tenant";
 
 /** Parses and requires the `:id` path param every single-resource user route matches. */

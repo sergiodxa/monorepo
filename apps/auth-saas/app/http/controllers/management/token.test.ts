@@ -18,12 +18,12 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { conformance } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
-import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
+import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
+import TenantObject from "~/app/models/tenant/object";
 import { createTestDatabase } from "~/app/test/db";
-import TenantObject from "~/database/tenant-do";
+import { conformance } from "~/app/test/harness/management";
 import routes from "~/routes/management";
 
 import token from "./token";

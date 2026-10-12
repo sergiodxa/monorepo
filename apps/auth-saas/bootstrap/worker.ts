@@ -21,21 +21,19 @@ import {
 	TENANT_ISSUER_HEADER,
 	TENANT_REGION_HEADER,
 } from "~/app/http/middleware/tenant";
-import { dispatcher } from "~/app/jobs/dispatcher";
-import { HostMetadataSchema } from "~/app/lib/host-metadata";
+import { HostMetadataSchema } from "~/app/http/validators/host-metadata";
+import { dispatcher } from "~/app/initializers/dispatcher";
+import { managementRouter } from "~/app/initializers/management-router";
+import { mcpRouter } from "~/app/initializers/mcp-router";
+import { webRouter } from "~/app/initializers/router";
+import { tenantRouter } from "~/app/initializers/tenant-router";
 import {
 	readHostnameCache,
 	writeHostnameCache,
 	writeHostnameCacheMiss,
-} from "~/app/lib/hostname-cache";
-import Tenant from "~/database/tenant-do";
+} from "~/app/models/hostname-cache";
 
-import { router } from "./app";
-import { managementRouter } from "./management-app";
-import { mcpRouter } from "./mcp-app";
-import { tenantRouter } from "./tenant-app";
-
-export { Tenant };
+export { default as Tenant } from "~/app/models/tenant/object";
 
 /** Both worker handlers, bound to the dispatcher they delegate to. */
 const jobHandlers = cloudflare.worker(dispatcher);
@@ -139,7 +137,7 @@ export default {
 			if (url.pathname === "/mcp" || url.pathname === "/.well-known/oauth-protected-resource") {
 				return await mcpRouter.fetch(request);
 			}
-			return await router.fetch(request);
+			return await webRouter.fetch(request);
 		}
 
 		let hostMetadata = request.cf?.hostMetadata;

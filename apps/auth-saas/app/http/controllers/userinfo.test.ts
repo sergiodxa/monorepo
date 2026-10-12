@@ -25,10 +25,10 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
-import { userinfoMetadataEntry } from "~/app/lib/userinfo-resource";
-import { authorizationCodes } from "~/database/authorization";
-import { openSession } from "~/database/sessions";
-import Tenant from "~/database/tenant-do";
+import { userinfoMetadataEntry } from "~/app/initializers/userinfo-resource";
+import { authorizationCodes } from "~/app/models/tenant/authorization";
+import Tenant from "~/app/models/tenant/object";
+import { openSession } from "~/app/models/tenant/sessions";
 import routes from "~/routes/tenant";
 
 import { userinfoGet, userinfoPost } from "./userinfo";

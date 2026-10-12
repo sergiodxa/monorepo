@@ -10,7 +10,7 @@ import type { JobMiddleware } from "@sdxc/jobs";
 
 import { createContextKey } from "remix/router";
 
-import { createHostnameClient } from "~/app/lib/hostnames";
+import { createHostnameClient } from "~/app/initializers/hostnames";
 
 /** The custom-hostname client, published as `ctx.hostnames`. */
 export const Hostnames = createContextKey<HostnameClient>();

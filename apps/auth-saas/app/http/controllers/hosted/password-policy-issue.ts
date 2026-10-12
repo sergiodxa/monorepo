@@ -11,7 +11,7 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Form } from "@sdxc/ui";
 
-import type { PasswordPolicyFailure } from "~/database/passwords";
+import type { PasswordPolicyFailure } from "~/app/models/tenant/passwords";
 
 /**
  * Builds the form issue a password policy refusal renders on the given field.

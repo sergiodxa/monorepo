@@ -16,19 +16,19 @@ import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
+import { CredentialsExportStartedEmail } from "~/app/emails/credentials-export-started-email";
+import { mailTranslator } from "~/app/emails/locale";
+import { parseSenderAddress, tenantSenderAddress } from "~/app/emails/sender";
 import jobs from "~/app/jobs";
+import { readTransferFileLines, writeTransferFile } from "~/app/models/transfer-storage";
+import { recordCost } from "~/app/services/cost-ledger";
 import {
 	BACKPRESSURE_DELAY_MS,
 	BACKPRESSURE_THRESHOLD_MS,
 	MAX_PAGES_PER_RUN_PER_TICK,
 	PAGE_SIZE,
 	TICK_TIME_BUDGET_MS,
-} from "~/app/jobs/lib/subjects-export-pacing";
-import { recordCost } from "~/app/lib/cost-ledger";
-import { readTransferFileLines, writeTransferFile } from "~/app/lib/transfer-storage";
-import { CredentialsExportStartedEmail } from "~/app/mail/credentials-export-started-email";
-import { mailTranslator } from "~/app/mail/locale";
-import { parseSenderAddress, tenantSenderAddress } from "~/app/mail/sender";
+} from "~/config/subjects-export-pacing";
 
 /** Awaits a plain delay; the one pause this job ever inserts is small enough that a local wrapper covers it. */
 function sleep(ms: number): Promise<void> {

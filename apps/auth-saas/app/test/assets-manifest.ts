@@ -49,7 +49,7 @@ const MANIFEST: BuildAssetsManifest = {
 		ssr: {
 			role: "server",
 			modules: {
-				"app/views/hosted/document.tsx": { preloads: [], stylesheets: [STYLESHEET_HREF] },
+				"resources/views/hosted/document.tsx": { preloads: [], stylesheets: [STYLESHEET_HREF] },
 			},
 		},
 	},

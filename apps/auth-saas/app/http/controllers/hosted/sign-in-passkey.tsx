@@ -16,7 +16,7 @@ import { createAction } from "remix/router";
 
 import { resolveOutcomeRedirect } from "~/app/http/controllers/hosted/outcome";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
-import { requestOrigin } from "~/app/lib/request-origin";
+import { requestOrigin } from "~/app/http/request-origin";
 import routes from "~/routes/tenant";
 
 /** The relying party id and origins a WebAuthn ceremony runs under: the current request's own host. */

@@ -12,7 +12,7 @@
 import { badGateway, badRequest, ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { polar } from "~/app/lib/billing";
+import { polar } from "~/app/initializers/billing";
 import { finishCheckout } from "~/app/services/billing-checkout";
 import routes from "~/routes/web";
 

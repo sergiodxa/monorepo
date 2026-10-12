@@ -6,8 +6,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestHandler } from "remix/router";
-
 /**
  * Fallback handler for unmatched routes.
  *
@@ -16,8 +14,8 @@ import type { RequestHandler } from "remix/router";
  * // Wired as the router's default/not-found handler.
  * export default notFound;
  */
-const notFound: RequestHandler = () => {
+function notFound(): Response {
 	return new Response("Not Found", { status: 404 });
-};
+}
 
 export default notFound;

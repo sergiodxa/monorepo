@@ -18,12 +18,9 @@ import type {
 	RemoveIdentifierResult,
 	SetPrimaryIdentifierResult,
 	VerifyIdentifierResult,
-} from "~/database/subjects";
+} from "~/app/models/tenant/subjects";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
@@ -33,6 +30,9 @@ import {
 	SUBJECT_IDENTIFIERS_SET_PRIMARY,
 	SUBJECT_IDENTIFIERS_VERIFY,
 } from "~/app/http/openapi/subjects";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** An identifier named in a route's own path or body that this subject does not hold. */

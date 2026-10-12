@@ -23,12 +23,12 @@ import {
 	trustedDeviceNotFound,
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SECOND_FACTOR_RESET } from "~/app/http/openapi/credentials";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions) {

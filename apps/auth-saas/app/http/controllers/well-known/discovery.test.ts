@@ -17,7 +17,7 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
-import Tenant from "~/database/tenant-do";
+import Tenant from "~/app/models/tenant/object";
 import routes from "~/routes/tenant";
 
 import jwks from "./jwks";
@@ -35,7 +35,7 @@ beforeEach(async () => {
 	await tenantDO.provision({ tenantId: TENANT_ID, issuer: ISSUER });
 });
 
-/** Builds a tenant router wired to the constructed Durable Object, the way `bootstrap/tenant-app.ts` does. */
+/** Builds a tenant router wired to the constructed Durable Object, the way `app/initializers/tenant-router.ts` does. */
 function buildRouter() {
 	let router = createRouter({
 		middleware: [tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>)],

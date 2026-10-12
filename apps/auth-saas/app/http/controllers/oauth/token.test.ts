@@ -26,12 +26,15 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
-import { authorizationCodes } from "~/database/authorization";
-import { DEVICE_CODE_GRANT_TYPE, deviceAuthorizations } from "~/database/device-authorization";
-import { openSession } from "~/database/sessions";
-import { signingKeys } from "~/database/signing-keys";
-import Tenant from "~/database/tenant-do";
-import { IdToken } from "~/database/tokens";
+import { authorizationCodes } from "~/app/models/tenant/authorization";
+import {
+	DEVICE_CODE_GRANT_TYPE,
+	deviceAuthorizations,
+} from "~/app/models/tenant/device-authorization";
+import Tenant from "~/app/models/tenant/object";
+import { openSession } from "~/app/models/tenant/sessions";
+import { signingKeys } from "~/app/models/tenant/signing-keys";
+import { IdToken } from "~/app/models/tenant/tokens";
 import routes from "~/routes/tenant";
 
 import jwks from "../well-known/jwks";

@@ -9,7 +9,7 @@
 
 import * as s from "remix/data-schema";
 
-import { managementProblem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/problem";
 
 /** Parses and requires the `:credentialId` path param every single-passkey route matches. */
 export function credentialIdParam(ctx: { params: Record<string, string | undefined> }): string {

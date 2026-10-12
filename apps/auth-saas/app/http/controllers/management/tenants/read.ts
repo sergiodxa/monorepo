@@ -18,7 +18,7 @@ import {
 	serializeTenant,
 	tenantNotFound,
 } from "~/app/http/controllers/management/tenants/shared";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /**

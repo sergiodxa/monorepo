@@ -10,7 +10,10 @@
  */
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { PrepareDeliveryResult, SettleDeliveryOutcome } from "~/database/webhook-deliveries";
+import type {
+	PrepareDeliveryResult,
+	SettleDeliveryOutcome,
+} from "~/app/models/tenant/webhook-deliveries";
 
 import jobs from "~/app/jobs";
 

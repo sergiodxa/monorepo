@@ -7,13 +7,10 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import type { ApiKeysHarness } from "~/app/http/controllers/management/api-keys/test-harness";
-import type { AuditActor } from "~/database/audit-events";
+import type { AuditActor } from "~/app/models/tenant/audit-events";
+import type { ApiKeysHarness } from "~/app/test/harness/management/api-keys";
 
-import {
-	buildApiKeysHarness,
-	grantEntitlement,
-} from "~/app/http/controllers/management/api-keys/test-harness";
+import { buildApiKeysHarness, grantEntitlement } from "~/app/test/harness/management/api-keys";
 
 let ACTOR: AuditActor = { type: "platform", id: "system" };
 

@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildSubjectsHarness } from "~/app/http/controllers/management/subjects/test-harness";
+import { buildSubjectsHarness } from "~/app/test/harness/management/subjects";
 
 describe("GET /tenants/:tenantId/subjects", () => {
 	test("pages the tenant's subjects, newest first", async () => {

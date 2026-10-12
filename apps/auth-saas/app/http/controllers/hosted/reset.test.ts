@@ -13,15 +13,15 @@ import type { MemoryTransport } from "@sdxc/mail/memory";
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
+import type { Harness } from "~/app/test/harness/hosted";
 
+import { ResetPasswordEmail } from "~/app/emails/reset-password-email";
 import {
 	buildHarness,
 	createTestClient,
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
-} from "~/app/http/controllers/hosted/test-harness";
-import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
+} from "~/app/test/harness/hosted";
 
 let harness: Harness;
 

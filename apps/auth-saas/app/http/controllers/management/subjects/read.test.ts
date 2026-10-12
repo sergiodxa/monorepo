@@ -8,10 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import {
-	buildSubjectsHarness,
-	grantMembership,
-} from "~/app/http/controllers/management/subjects/test-harness";
+import { buildSubjectsHarness, grantMembership } from "~/app/test/harness/management/subjects";
 
 describe("GET /tenants/:tenantId/subjects/:subjectId", () => {
 	test("reads a subject's assembled profile", async () => {

@@ -11,7 +11,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildTenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
+import { buildTenantsHarness } from "~/app/test/harness/management/tenants";
 import { bindModels } from "~/app/test/models";
 
 describe("POST /tenants/:tenantId/members/invite", () => {

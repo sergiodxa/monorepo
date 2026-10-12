@@ -31,7 +31,7 @@ import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /**
  * The platform's own tenant hostname, the name its dashboard subjects live
@@ -67,8 +67,8 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 	};
 });
 
-vi.doMock("~/app/jobs/lib/subjects-export-pacing", async (importOriginal) => {
-	let actual = await importOriginal<typeof import("~/app/jobs/lib/subjects-export-pacing")>();
+vi.doMock("~/config/subjects-export-pacing", async (importOriginal) => {
+	let actual = await importOriginal<typeof import("~/config/subjects-export-pacing")>();
 
 	return {
 		...actual,
@@ -85,7 +85,7 @@ let { Mail } = await import("~/app/jobs/middleware/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels, publishModels } = await import("~/app/test/models");
-let TenantObject = (await import("~/database/tenant-do")).default;
+let TenantObject = (await import("~/app/models/tenant/object")).default;
 let subjectsExport = (await import("./subjects-export")).default;
 
 let db: Database;

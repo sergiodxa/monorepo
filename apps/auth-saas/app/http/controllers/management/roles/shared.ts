@@ -15,7 +15,7 @@
 
 import * as s from "remix/data-schema";
 
-import { managementProblem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/problem";
 
 /** Parses and requires the `:roleId` path param every single-role route matches. */
 export function roleIdParam(ctx: { params: Record<string, string | undefined> }): string {

@@ -14,13 +14,13 @@
 
 import type { RequestContext } from "remix/router";
 
-import type { AuthorizationOutcome } from "~/database/authorization";
-import type { ConsentScreen } from "~/database/consent";
+import type { AuthorizationOutcome } from "~/app/models/tenant/authorization";
+import type { ConsentScreen } from "~/app/models/tenant/consent";
 
-import { ConsentPage } from "~/app/views/hosted/consent";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { ErrorPage } from "~/app/views/hosted/error";
-import { StepUpPage } from "~/app/views/hosted/step-up";
+import { ConsentPage } from "~/resources/views/hosted/consent";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { ErrorPage } from "~/resources/views/hosted/error";
+import { StepUpPage } from "~/resources/views/hosted/step-up";
 import routes from "~/routes/tenant";
 
 export interface RespondToOutcomeOptions {

@@ -1,0 +1,613 @@
+/**
+ * Drives `sessions.ts` directly against a `Database` over a real SQLite-backed
+ * `SqlStorage`, the way `passkeys.test.ts` drives the tenant object's passkey
+ * functions: nothing here can wire a new RPC method onto the tenant object, so these
+ * functions are exercised the same way it will eventually call them.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { Database } from "remix/data-table";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { EffectiveSessionPolicy } from "~/app/services/tenant/session-policy";
+
+import { readAuditPage } from "~/app/models/tenant/audit-events";
+import { createDauCache } from "~/app/models/tenant/metering";
+import {
+	listSubjectSessions,
+	openSession,
+	resolveSession,
+	revokeSession,
+	revokeSubjectSessions,
+	sessions,
+	sweepExpiredSessions,
+} from "~/app/models/tenant/sessions";
+import { createSubject } from "~/app/models/tenant/subjects";
+import { DEFAULT_EFFECTIVE_SESSION_POLICY } from "~/app/services/tenant/session-policy";
+import { runMigrations } from "~/database/tenant-migrations";
+import sessionsMigration from "~/database/tenant-migrations/0005-sessions.sql?raw";
+
+let db: Database;
+
+beforeEach(async () => {
+	let state = createDurableObjectState();
+	let driver = createSQLStorageDatabaseAdapter(state.storage.sql);
+	await runMigrations(driver);
+	await driver.executeScript(sessionsMigration);
+	db = new Database(driver);
+});
+
+afterEach(() => {
+	vi.useRealTimers();
+});
+
+/** Creates a bare subject with a username, the shape most tests open a session for. */
+async function createTestSubject(username = "jane"): Promise<string> {
+	let created = await createSubject(db, { identifiers: [{ kind: "username", value: username }] });
+	if (!created.ok) throw new Error("unreachable");
+	return created.subjectId;
+}
+
+describe("openSession", () => {
+	test("mints a token that resolves back to the subject", async () => {
+		let subjectId = await createTestSubject();
+
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		expect(opened.sessionId).toMatch(/^sess_/);
+		expect(opened.expiresAt).toBeGreaterThan(opened.authTime);
+		expect(opened.idleExpiresAt).toBeGreaterThan(opened.authTime);
+
+		let resolved = await resolveSession(db, { token: opened.token });
+
+		expect(resolved).toEqual({
+			status: "active",
+			sessionId: opened.sessionId,
+			subjectId,
+			authTime: opened.authTime,
+			amr: ["pwd"],
+			expiresAt: opened.expiresAt,
+			idleExpiresAt: opened.idleExpiresAt,
+		});
+	});
+
+	test("stores only the token's digest, never the token itself", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let row = await db.find(sessions, { id: opened.sessionId });
+
+		expect(row?.token_hash).not.toBe(opened.token);
+		expect(row?.token_hash).toMatch(/^[0-9a-f]{64}$/);
+	});
+
+	test("carries a metering report when a caller opts into it, and stays under cap", async () => {
+		let subjectId = await createTestSubject();
+		let cache = createDauCache();
+
+		let opened = await openSession(
+			db,
+			{ subjectId, amr: ["pwd"], remembered: true },
+			{ cache, cap: 100, hard: true },
+		);
+
+		expect(opened).toMatchObject({
+			ok: true,
+			metering: { subjects: 1, cap: 100, notice: "none" },
+		});
+	});
+
+	test("refuses a genuinely new subject once a hard cap is reached, without opening a session", async () => {
+		let counted = await createTestSubject("jane");
+		let refused = await createTestSubject("john");
+		let cache = createDauCache();
+
+		await openSession(
+			db,
+			{ subjectId: counted, amr: ["pwd"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		let result = await openSession(
+			db,
+			{ subjectId: refused, amr: ["pwd"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		expect(result).toEqual({
+			ok: false,
+			reason: "dau_cap_reached",
+			day: expect.any(Number),
+			subjects: 1,
+			cap: 1,
+		});
+
+		let rows = await db.findMany(sessions, { where: { subject_id: refused } });
+		expect(rows).toHaveLength(0);
+	});
+
+	test("never refuses a subject the meter already counted today, even past a hard cap", async () => {
+		let subjectId = await createTestSubject();
+		let cache = createDauCache();
+
+		await openSession(
+			db,
+			{ subjectId, amr: ["pwd"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		let second = await openSession(
+			db,
+			{ subjectId, amr: ["webauthn"], remembered: true },
+			{ cache, cap: 1, hard: true },
+		);
+
+		expect(second).toMatchObject({ ok: true });
+	});
+});
+
+describe("resolveSession", () => {
+	test("answers unknown for a token that was never minted", async () => {
+		expect(await resolveSession(db, { token: "not-a-real-token" })).toEqual({ status: "unknown" });
+	});
+
+	test("answers revoked for a session that was revoked", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, { subjectId, sessionId: opened.sessionId, reason: "sign-out" });
+
+		expect(await resolveSession(db, { token: opened.token })).toEqual({ status: "revoked" });
+	});
+
+	test("answers expired once the absolute lifetime has passed", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await db.update(sessions, { id: opened.sessionId }, { expires_at: Date.now() - 1 });
+
+		expect(await resolveSession(db, { token: opened.token })).toEqual({ status: "expired" });
+	});
+
+	test("answers expired once the idle lifetime has passed", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await db.update(sessions, { id: opened.sessionId }, { idle_expires_at: Date.now() - 1 });
+
+		expect(await resolveSession(db, { token: opened.token })).toEqual({ status: "expired" });
+	});
+
+	describe("the last-seen throttle", () => {
+		test("leaves last_seen_at and the idle window untouched inside the throttle window", async () => {
+			vi.useFakeTimers();
+			vi.setSystemTime(1_700_000_000_000);
+
+			let subjectId = await createTestSubject();
+			let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+			vi.setSystemTime(1_700_000_000_000 + 30_000);
+			await resolveSession(db, { token: opened.token });
+
+			let row = await db.find(sessions, { id: opened.sessionId });
+			expect(row?.last_seen_at).toBe(1_700_000_000_000);
+			expect(row?.idle_expires_at).toBe(opened.idleExpiresAt);
+		});
+
+		test("slides last_seen_at and the idle window once the throttle window has passed", async () => {
+			vi.useFakeTimers();
+			vi.setSystemTime(1_700_000_000_000);
+
+			let subjectId = await createTestSubject();
+			let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+			let later = 1_700_000_000_000 + 61_000;
+			vi.setSystemTime(later);
+			let resolved = await resolveSession(db, { token: opened.token });
+
+			expect(resolved).toMatchObject({
+				status: "active",
+				idleExpiresAt: later + 7 * 24 * 60 * 60 * 1000,
+			});
+
+			let row = await db.find(sessions, { id: opened.sessionId });
+			expect(row?.last_seen_at).toBe(later);
+			expect(row?.idle_expires_at).toBe(later + 7 * 24 * 60 * 60 * 1000);
+		});
+	});
+});
+
+describe("listSubjectSessions", () => {
+	test("pages newest first and flags the caller's own session", async () => {
+		let subjectId = await createTestSubject();
+
+		let first = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		await db.update(sessions, { id: first.sessionId }, { created_at: 1_000 });
+
+		let second = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		await db.update(sessions, { id: second.sessionId }, { created_at: 2_000 });
+
+		let third = await openSession(db, { subjectId, amr: ["webauthn"], remembered: true });
+		await db.update(sessions, { id: third.sessionId }, { created_at: 3_000 });
+
+		let page = await listSubjectSessions(db, {
+			subjectId,
+			callerSessionId: third.sessionId,
+			limit: 2,
+		});
+		if (!page.ok) throw new Error("unreachable");
+
+		expect(page.sessions.map((session) => session.id)).toEqual([third.sessionId, second.sessionId]);
+		expect(page.sessions[0]).toMatchObject({ isCurrent: true, amr: ["webauthn"] });
+		expect(page.sessions[1]).toMatchObject({ isCurrent: false });
+		expect(page.cursors.next).not.toBeNull();
+
+		let next = await listSubjectSessions(db, {
+			subjectId,
+			callerSessionId: third.sessionId,
+			cursor: page.cursors.next,
+			limit: 2,
+		});
+		if (!next.ok) throw new Error("unreachable");
+
+		expect(next.sessions.map((session) => session.id)).toEqual([first.sessionId]);
+		expect(next.cursors.next).toBeNull();
+	});
+
+	test("excludes a revoked session from the page", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		await revokeSession(db, { subjectId, sessionId: opened.sessionId, reason: "sign-out" });
+
+		let page = await listSubjectSessions(db, { subjectId, callerSessionId: opened.sessionId });
+		if (!page.ok) throw new Error("unreachable");
+
+		expect(page.sessions).toEqual([]);
+	});
+
+	test("answers bad-cursor for a cursor this ordering did not mint", async () => {
+		let subjectId = await createTestSubject();
+		await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let page = await listSubjectSessions(db, {
+			subjectId,
+			callerSessionId: "sess_missing",
+			cursor: "not-a-real-cursor",
+		});
+
+		expect(page).toEqual({ ok: false, reason: "bad-cursor" });
+	});
+});
+
+describe("revokeSession", () => {
+	test("refuses a session belonging to another subject", async () => {
+		let owner = await createTestSubject("owner");
+		let stranger = await createTestSubject("stranger");
+		let opened = await openSession(db, { subjectId: owner, amr: ["pwd"], remembered: true });
+
+		let result = await revokeSession(db, {
+			subjectId: stranger,
+			sessionId: opened.sessionId,
+			reason: "not-yours",
+		});
+
+		expect(result).toEqual({ ok: false, reason: "not-found" });
+		expect(await resolveSession(db, { token: opened.token })).toMatchObject({ status: "active" });
+	});
+
+	test("revokes a session belonging to the given subject", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let result = await revokeSession(db, {
+			subjectId,
+			sessionId: opened.sessionId,
+			reason: "sign-out",
+		});
+
+		expect(result).toEqual({ ok: true });
+		expect(await resolveSession(db, { token: opened.token })).toEqual({ status: "revoked" });
+	});
+
+	test("attributes the revocation to the subject itself when no actor is given", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, { subjectId, sessionId: opened.sessionId, reason: "sign-out" });
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "session.revoked",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([{ actorType: "subject", actorId: subjectId }]);
+	});
+
+	test("attributes the revocation to a given actor, for an admin ending someone else's session", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, {
+			subjectId,
+			sessionId: opened.sessionId,
+			reason: "admin_revoked",
+			actor: { type: "client", id: "mgmt_client_1" },
+		});
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "session.revoked",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([{ actorType: "client", actorId: "mgmt_client_1" }]);
+	});
+});
+
+describe("revokeSubjectSessions", () => {
+	test("revokes every session but the one spared", async () => {
+		let subjectId = await createTestSubject();
+		let kept = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		let first = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		let second = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let result = await revokeSubjectSessions(db, {
+			subjectId,
+			reason: "password-changed",
+			exceptSessionId: kept.sessionId,
+		});
+
+		expect(result).toEqual({ revoked: 2 });
+		expect(await resolveSession(db, { token: kept.token })).toMatchObject({ status: "active" });
+		expect(await resolveSession(db, { token: first.token })).toEqual({ status: "revoked" });
+		expect(await resolveSession(db, { token: second.token })).toEqual({ status: "revoked" });
+	});
+
+	test("revokes every session when nothing is spared", async () => {
+		let subjectId = await createTestSubject();
+		let first = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		let second = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let result = await revokeSubjectSessions(db, { subjectId, reason: "blocked" });
+
+		expect(result).toEqual({ revoked: 2 });
+		expect(await resolveSession(db, { token: first.token })).toEqual({ status: "revoked" });
+		expect(await resolveSession(db, { token: second.token })).toEqual({ status: "revoked" });
+	});
+});
+
+describe("sweepExpiredSessions", () => {
+	test("deletes a bounded batch and reports whether more remain", async () => {
+		let subjectId = await createTestSubject();
+		let now = Date.now();
+
+		let ids: string[] = [];
+		for (let i = 0; i < 3; i++) {
+			let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+			await db.update(sessions, { id: opened.sessionId }, { expires_at: now - 1000 });
+			ids.push(opened.sessionId);
+		}
+
+		let firstBatch = await sweepExpiredSessions(db, { now, batchSize: 2 });
+		expect(firstBatch).toEqual({ deleted: 2, more: true });
+
+		let secondBatch = await sweepExpiredSessions(db, { now, batchSize: 2 });
+		expect(secondBatch).toEqual({ deleted: 1, more: false });
+
+		for (let id of ids) expect(await db.find(sessions, { id })).toBeNull();
+	});
+
+	test("leaves a session that has not expired alone", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let swept = await sweepExpiredSessions(db);
+
+		expect(swept).toEqual({ deleted: 0, more: false });
+		expect(await db.find(sessions, { id: opened.sessionId })).not.toBeNull();
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("session.created lands when a session is opened", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let rows = await auditRowsFor("session.created");
+		expect(rows).toMatchObject([
+			{ actorId: subjectId, outcome: "succeeded", detail: { sessionId: opened.sessionId } },
+		]);
+	});
+
+	test("session.revoked lands once for a single revocation", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		await revokeSession(db, { subjectId, sessionId: opened.sessionId, reason: "logout" });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([
+			{ targetType: "session", targetId: opened.sessionId, detail: { reason: "logout" } },
+		]);
+	});
+
+	test("session.revoked lands once per call, not once per session, for a bulk revoke", async () => {
+		let subjectId = await createTestSubject();
+		await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+		await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let result = await revokeSubjectSessions(db, { subjectId, reason: "blocked" });
+		expect(result).toEqual({ revoked: 2 });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([
+			{
+				targetType: "subject",
+				targetId: subjectId,
+				detail: { reason: "blocked", revokedCount: 2 },
+			},
+		]);
+	});
+
+	test("session.revoked does not land for a bulk revoke that touched nothing", async () => {
+		let subjectId = await createTestSubject();
+
+		let result = await revokeSubjectSessions(db, { subjectId, reason: "blocked" });
+		expect(result).toEqual({ revoked: 0 });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toEqual([]);
+	});
+});
+
+describe("session policy", () => {
+	test("openSession opens a session on the given policy's own lifetimes, not the platform defaults", async () => {
+		let subjectId = await createTestSubject();
+		let policy: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			absoluteLifetimeMs: 60 * 60 * 1000,
+			idleLifetimeMs: 30 * 60 * 1000,
+		};
+
+		let opened = await openSession(
+			db,
+			{ subjectId, amr: ["pwd"], remembered: true },
+			undefined,
+			policy,
+		);
+		if (!opened.ok) throw new Error("unreachable");
+
+		expect(opened.expiresAt - opened.authTime).toBe(60 * 60 * 1000);
+		expect(opened.idleExpiresAt - opened.authTime).toBe(30 * 60 * 1000);
+	});
+
+	test("a shortened absolute lifetime expires a session on its next resolve, with the row never rewritten ahead of time", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		// The row still carries the 30-day default it was opened under; only the
+		// policy handed to `resolveSession` has tightened.
+		let tightened: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			absoluteLifetimeMs: 1,
+		};
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+
+		expect(await resolveSession(db, { token: opened.token }, tightened)).toEqual({
+			status: "expired",
+		});
+
+		let row = await db.find(sessions, { id: opened.sessionId });
+		expect(row?.expires_at).toBe(opened.expiresAt);
+	});
+
+	test("a shortened idle lifetime expires a session on its next resolve the same way", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let tightened: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			idleLifetimeMs: 1,
+		};
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+
+		expect(await resolveSession(db, { token: opened.token }, tightened)).toEqual({
+			status: "expired",
+		});
+	});
+
+	test("a lengthened policy never overrides what a row already has stored", async () => {
+		let subjectId = await createTestSubject();
+		let opened = await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+
+		let loosened: EffectiveSessionPolicy = {
+			...DEFAULT_EFFECTIVE_SESSION_POLICY,
+			absoluteLifetimeMs: 365 * 24 * 60 * 60 * 1000,
+			idleLifetimeMs: 365 * 24 * 60 * 60 * 1000,
+		};
+
+		let resolved = await resolveSession(db, { token: opened.token }, loosened);
+
+		expect(resolved).toMatchObject({
+			status: "active",
+			expiresAt: opened.expiresAt,
+			idleExpiresAt: opened.idleExpiresAt,
+		});
+	});
+
+	describe("the concurrent session limit", () => {
+		test("trims the oldest sessions beyond the limit, revoking them with reason concurrent_limit", async () => {
+			vi.useFakeTimers();
+			vi.setSystemTime(1_700_000_000_000);
+
+			let subjectId = await createTestSubject();
+			let policy: EffectiveSessionPolicy = {
+				...DEFAULT_EFFECTIVE_SESSION_POLICY,
+				concurrentSessionLimit: 2,
+			};
+
+			let first = await openSession(
+				db,
+				{ subjectId, amr: ["pwd"], remembered: true },
+				undefined,
+				policy,
+			);
+			if (!first.ok) throw new Error("unreachable");
+
+			vi.setSystemTime(1_700_000_000_000 + 1000);
+			let second = await openSession(
+				db,
+				{ subjectId, amr: ["pwd"], remembered: true },
+				undefined,
+				policy,
+			);
+			if (!second.ok) throw new Error("unreachable");
+
+			vi.setSystemTime(1_700_000_000_000 + 2000);
+			let third = await openSession(
+				db,
+				{ subjectId, amr: ["pwd"], remembered: true },
+				undefined,
+				policy,
+			);
+			if (!third.ok) throw new Error("unreachable");
+
+			expect(await resolveSession(db, { token: first.token })).toEqual({ status: "revoked" });
+			expect(await resolveSession(db, { token: second.token })).toMatchObject({ status: "active" });
+			expect(await resolveSession(db, { token: third.token })).toMatchObject({ status: "active" });
+
+			let revokedRow = await db.find(sessions, { id: first.sessionId });
+			expect(revokedRow?.revoked_reason).toBe("concurrent_limit");
+		});
+
+		test("never trims when the limit is unlimited", async () => {
+			let subjectId = await createTestSubject();
+
+			for (let i = 0; i < 5; i++) {
+				await openSession(db, { subjectId, amr: ["pwd"], remembered: true });
+			}
+
+			let rows = await db.findMany(sessions, { where: { subject_id: subjectId } });
+			expect(rows.filter((row) => row.revoked_at === null)).toHaveLength(5);
+		});
+	});
+});

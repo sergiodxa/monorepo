@@ -16,16 +16,16 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 import i18n from "~/app/http/middleware/i18n";
-import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
 import { interactiveCredentialRateLimit } from "~/app/http/middleware/tenant-rate-limit";
+import { htmlRenderer } from "~/app/http/render";
+import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import routes from "~/routes/tenant";
 
 import { signInSubmit } from "./sign-in";
-import { buildHarness, createTestSubjectWithPassword } from "./test-harness";
 
 /** A rate limiter binding that counts real calls per key, the way Cloudflare's own binding would within one window. */
 function countingLimiter(limit: number): RateLimiterBinding {
@@ -50,7 +50,7 @@ describe("signInSubmit under interactiveCredentialRateLimit", () => {
 		let limiter = countingLimiter(10);
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-			render as Middleware,
+			...(htmlRenderer() as readonly Middleware[]),
 			formData() as Middleware,
 			i18n as Middleware,
 		];
@@ -92,7 +92,7 @@ describe("signInSubmit under interactiveCredentialRateLimit", () => {
 		let limiter = countingLimiter(10);
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-			render as Middleware,
+			...(htmlRenderer() as readonly Middleware[]),
 			formData() as Middleware,
 			i18n as Middleware,
 		];

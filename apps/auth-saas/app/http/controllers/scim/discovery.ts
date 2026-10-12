@@ -18,7 +18,7 @@ import {
 	SCIM_GROUP_DEFINITIONS,
 	SCIM_MAX_PAGE_SIZE,
 	SCIM_USER_DEFINITIONS,
-} from "~/database/scim-resources";
+} from "~/app/services/tenant/scim-resources";
 import routes from "~/routes/tenant";
 
 /** `GET /scim/v2/ServiceProviderConfig` — what this connection supports, and nothing it does not. */

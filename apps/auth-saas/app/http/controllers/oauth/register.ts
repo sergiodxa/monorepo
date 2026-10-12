@@ -13,7 +13,7 @@ import { json } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { RegisterClientResult } from "~/database/clients";
+import type { RegisterClientResult } from "~/app/models/tenant/clients";
 
 import routes from "~/routes/tenant";
 

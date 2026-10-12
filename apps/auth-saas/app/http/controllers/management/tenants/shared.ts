@@ -20,9 +20,9 @@ import type { DomainRow } from "~/app/models/domains";
 import type { MembershipRow } from "~/app/models/memberships";
 import type { TenantRow } from "~/app/models/tenants";
 
-import { managementProblem } from "~/app/http/lib/problem";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
+import { managementProblem } from "~/app/http/problem";
 
 /**
  * Builds the auth and rate-limit middleware a control-plane route mounts.

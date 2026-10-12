@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildTenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
+import { buildTenantsHarness } from "~/app/test/harness/management/tenants";
 
 describe("POST /tenants/:tenantId/mfa-policy", () => {
 	test("sets the tenant's second-factor policy", async () => {

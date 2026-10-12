@@ -20,9 +20,12 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { FailedSignInsByHour, ReadFailedSignInsByHourInput } from "~/app/lib/attack-signals";
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
+import type {
+	FailedSignInsByHour,
+	ReadFailedSignInsByHourInput,
+} from "~/app/services/attack-signals";
 
 /** One hour, matching the job's own recent-window span. */
 const HOUR_MS = 60 * 60 * 1000;
@@ -50,8 +53,8 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
-vi.doMock("~/app/lib/attack-signals", async (importOriginal) => {
-	let actual = await importOriginal<typeof import("~/app/lib/attack-signals")>();
+vi.doMock("~/app/services/attack-signals", async (importOriginal) => {
+	let actual = await importOriginal<typeof import("~/app/services/attack-signals")>();
 	return { ...actual, readFailedSignInsByHour };
 });
 
@@ -62,7 +65,7 @@ let { Mail } = await import("~/app/jobs/middleware/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels, publishModels } = await import("~/app/test/models");
-let { dayOf } = await import("~/database/metering");
+let { dayOf } = await import("~/app/models/tenant/metering");
 let checkAttackSignalBaseline = (await import("./check-attack-signal-baseline")).default;
 
 let db: Database;

@@ -16,10 +16,10 @@ import type {
 	ClientRecord,
 	ClientRecordValidationFailure,
 	RedirectUriValidationFailureReason,
-} from "~/database/clients";
+} from "~/app/models/tenant/clients";
 
-import { managementProblem } from "~/app/http/lib/problem";
 import { CLIENT_BODY_SCHEMA } from "~/app/http/openapi/clients";
+import { managementProblem } from "~/app/http/problem";
 
 /** Projects a client's record onto {@link CLIENT_BODY_SCHEMA}, the resource a merge patch edits. */
 export function writableClient(client: ClientRecord): s.InferOutput<typeof CLIENT_BODY_SCHEMA> {

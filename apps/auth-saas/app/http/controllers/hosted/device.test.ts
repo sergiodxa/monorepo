@@ -19,20 +19,16 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
+import type { Harness } from "~/app/test/harness/hosted";
 
 import { hostedDeviceShow } from "~/app/http/controllers/hosted/device";
-import {
-	buildHarness,
-	cookieFrom,
-	createTestSubjectWithPassword,
-} from "~/app/http/controllers/hosted/test-harness";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import i18n from "~/app/http/middleware/i18n";
-import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
 import { deviceApprovalRateLimit } from "~/app/http/middleware/tenant-rate-limit";
+import { htmlRenderer } from "~/app/http/render";
+import { buildHarness, cookieFrom, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import routes from "~/routes/tenant";
 
 const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
@@ -279,7 +275,7 @@ function memoryKv(): RateLimitKVNamespace {
 function buildRateLimitedRouter(sessionKv: RateLimitKVNamespace, addressKv: RateLimitKVNamespace) {
 	let middleware: Middleware[] = [
 		tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-		render as Middleware,
+		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
 		i18n as Middleware,
 	];

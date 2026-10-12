@@ -15,13 +15,13 @@ import type { Middleware, RequestContext } from "remix/router";
 import { JWK } from "@sdxc/jwt";
 import { createContextKey } from "remix/router";
 
-import type { ManagementResourceServer } from "~/app/lib/management-resource";
+import type { ManagementResourceServer } from "~/app/initializers/management-resource";
 
-import { managementProblem } from "~/app/http/lib/problem";
-import { managementResourceServer } from "~/app/lib/management-resource";
-import { platformTenantIssuer, platformTenantStub } from "~/app/lib/platform-tenant";
+import { managementProblem } from "~/app/http/problem";
+import { managementResourceServer } from "~/app/initializers/management-resource";
+import { platformTenantIssuer, platformTenantStub } from "~/app/initializers/platform-tenant";
+import { AccessToken } from "~/app/models/tenant/tokens";
 import { scopesForRole } from "~/app/services/management-scopes";
-import { AccessToken } from "~/database/tokens";
 
 /** Who is calling, and the scopes that credential resolved to. */
 export interface ManagementCaller {

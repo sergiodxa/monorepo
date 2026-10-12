@@ -8,10 +8,10 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import type { CredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
+import type { CredentialsHarness } from "~/app/test/harness/management/credentials";
 
-import { buildCredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
-import { passkeys } from "~/database/passkeys";
+import { passkeys } from "~/app/models/tenant/passkeys";
+import { buildCredentialsHarness } from "~/app/test/harness/management/credentials";
 
 /** Inserts a passkey row directly, the row shape a real ceremony would have stored. */
 async function insertPasskey(

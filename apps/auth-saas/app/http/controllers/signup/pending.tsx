@@ -8,8 +8,8 @@
 
 import { createAction } from "remix/router";
 
-import { PublicDocument } from "~/app/views/landing";
-import { SignUpPendingPage } from "~/app/views/signup";
+import { PublicDocument } from "~/resources/views/landing";
+import { SignUpPendingPage } from "~/resources/views/signup";
 import routes from "~/routes/web";
 
 /**

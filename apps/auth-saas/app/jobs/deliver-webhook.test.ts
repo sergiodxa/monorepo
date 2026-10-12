@@ -17,8 +17,11 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import type Tenant from "~/database/tenant-do";
-import type { PrepareDeliveryResult, SettleDeliveryResult } from "~/database/webhook-deliveries";
+import type Tenant from "~/app/models/tenant/object";
+import type {
+	PrepareDeliveryResult,
+	SettleDeliveryResult,
+} from "~/app/models/tenant/webhook-deliveries";
 
 import jobs from "~/app/jobs";
 import { TenantNamespace } from "~/app/jobs/middleware/tenant";

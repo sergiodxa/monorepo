@@ -26,13 +26,13 @@ import {
 	safeReturnTo,
 } from "~/app/http/controllers/hosted/outcome";
 import { activeSession } from "~/app/http/middleware/hosted-session";
-import { recordAttackSignal } from "~/app/lib/attack-signals";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { serializeTrustedDeviceCookie } from "~/app/lib/trusted-device-cookie";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { EnrolTotpFactorPage } from "~/app/views/hosted/enrol-totp-factor";
-import { RecoveryCodesPage } from "~/app/views/hosted/recovery-codes";
-import { SecondFactorPage } from "~/app/views/hosted/second-factor";
+import { requestOrigin } from "~/app/http/request-origin";
+import { serializeTrustedDeviceCookie } from "~/app/initializers/trusted-device-cookie";
+import { recordAttackSignal } from "~/app/services/attack-signals";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { EnrolTotpFactorPage } from "~/resources/views/hosted/enrol-totp-factor";
+import { RecoveryCodesPage } from "~/resources/views/hosted/recovery-codes";
+import { SecondFactorPage } from "~/resources/views/hosted/second-factor";
 import routes from "~/routes/tenant";
 
 /** What this screen resumes with at the end of every leg: an interaction id, or a `return_to` path when there is none. */

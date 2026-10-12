@@ -17,16 +17,16 @@ import { MailError } from "@sdxc/mail";
 import { failure } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
+import type { Harness } from "~/app/test/harness/hosted";
 
+import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
+import { subjectIdentifiers, subjects } from "~/app/models/tenant/subjects";
 import {
 	buildHarness,
 	createTestClient,
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
-} from "~/app/http/controllers/hosted/test-harness";
-import { VerifyAddressEmail } from "~/app/mail/verify-address-email";
-import { subjectIdentifiers, subjects } from "~/database/subjects";
+} from "~/app/test/harness/hosted";
 
 /** A transport that always refuses delivery, for exercising a failed sign-up send. */
 class FailingTransport {

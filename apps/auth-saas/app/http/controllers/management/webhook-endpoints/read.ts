@@ -15,10 +15,10 @@ import {
 	endpointIdParam,
 	endpointNotFound,
 } from "~/app/http/controllers/management/webhook-endpoints/shared";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /**

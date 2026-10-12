@@ -17,11 +17,11 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
-import { writeTransferFile } from "~/app/lib/transfer-storage";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
+import { writeTransferFile } from "~/app/models/transfer-storage";
 import routes from "~/routes/management";
 
 /** Narrows a `mode` query value to the two modes an import run accepts. */

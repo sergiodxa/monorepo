@@ -28,7 +28,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ HOSTNAMES_KV: hostnamesKv }),
 }));
 
-let { hostnameCacheKey } = await import("~/app/lib/hostname-cache");
+let { hostnameCacheKey } = await import("~/app/models/hostname-cache");
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels } = await import("~/app/test/models");
 let { attachCustomDomain, refreshDomainStatus, removeDomain } = await import("./domain");

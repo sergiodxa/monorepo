@@ -13,20 +13,20 @@ import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { RevokePasskeyResult } from "~/database/passkeys";
+import type { RevokePasskeyResult } from "~/app/models/tenant/passkeys";
 
 import {
 	credentialIdParam,
 	passkeyNotFound,
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
-import { readPatchBody } from "~/app/http/lib/merge-patch";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
+import { readPatchBody } from "~/app/http/merge-patch";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { PASSKEY_PATCH } from "~/app/http/openapi/credentials";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {

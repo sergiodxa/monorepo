@@ -22,23 +22,23 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
+import type { Harness } from "~/app/test/harness/hosted";
 
+import { MagicLinkNoAccountEmail } from "~/app/emails/magic-link-no-account-email";
+import { MagicLinkSignInEmail } from "~/app/emails/magic-link-sign-in-email";
+import i18n from "~/app/http/middleware/i18n";
+import { platformSender } from "~/app/http/middleware/mail-sender";
+import { tenant } from "~/app/http/middleware/tenant";
+import { magicLinkRateLimit } from "~/app/http/middleware/tenant-rate-limit";
+import { htmlRenderer } from "~/app/http/render";
 import {
 	buildHarness,
 	cookieFrom,
 	createTestClient,
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
-} from "~/app/http/controllers/hosted/test-harness";
-import i18n from "~/app/http/middleware/i18n";
-import { platformSender } from "~/app/http/middleware/mail-sender";
-import render from "~/app/http/middleware/render";
-import { tenant } from "~/app/http/middleware/tenant";
-import { magicLinkRateLimit } from "~/app/http/middleware/tenant-rate-limit";
-import { MagicLinkNoAccountEmail } from "~/app/mail/magic-link-no-account-email";
-import { MagicLinkSignInEmail } from "~/app/mail/magic-link-sign-in-email";
+} from "~/app/test/harness/hosted";
 import routes from "~/routes/tenant";
 
 import { magicLinkSubmit } from "./magic-link";
@@ -395,7 +395,7 @@ describe("magicLinkSubmit under magicLinkRateLimit", () => {
 		let testSender = { email: "no-reply@example.com", name: "Test Sender" };
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-			render as Middleware,
+			...(htmlRenderer() as readonly Middleware[]),
 			formData() as Middleware,
 			i18n as Middleware,
 			platformSender(testSender),

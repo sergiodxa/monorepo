@@ -12,7 +12,7 @@ import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import { resolveDashboardSession } from "~/app/http/middleware/dashboard-session";
-import { sessionCookie } from "~/app/lib/session-cookie";
+import { sessionCookie } from "~/app/initializers/session-cookie";
 import routes from "~/routes/web";
 
 /**

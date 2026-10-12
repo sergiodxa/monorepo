@@ -16,8 +16,8 @@ import { createAction } from "remix/router";
 
 import { redirectToErrorPage, renderConsentPage } from "~/app/http/controllers/hosted/outcome";
 import { activeSession } from "~/app/http/middleware/hosted-session";
-import { DeviceCodePage, DeviceDonePage } from "~/app/views/hosted/device";
-import { HostedDocument } from "~/app/views/hosted/document";
+import { DeviceCodePage, DeviceDonePage } from "~/resources/views/hosted/device";
+import { HostedDocument } from "~/resources/views/hosted/document";
 import routes from "~/routes/tenant";
 
 /** The `/device` request this session-less visit should return to once signed in. */

@@ -26,20 +26,20 @@ import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import type { PasswordPolicy } from "~/database/passwords";
+import type { PasswordPolicy } from "~/app/models/tenant/passwords";
 
+import { mailTranslator } from "~/app/emails/locale";
+import { PlatformSignupVerifyEmail } from "~/app/emails/platform-signup-verify-email";
+import { parseSenderAddress } from "~/app/emails/sender";
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
-import { emailAddress } from "~/app/http/lib/email-address";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { mailTranslator } from "~/app/mail/locale";
-import { PlatformSignupVerifyEmail } from "~/app/mail/platform-signup-verify-email";
-import { parseSenderAddress } from "~/app/mail/sender";
-import { PublicDocument } from "~/app/views/landing";
-import { SignUpForm } from "~/app/views/signup";
+import { requestOrigin } from "~/app/http/request-origin";
+import { emailAddress } from "~/app/http/validators/email-address";
+import { PublicDocument } from "~/resources/views/landing";
+import { SignUpForm } from "~/resources/views/signup";
 import routes from "~/routes/web";
 
 /**

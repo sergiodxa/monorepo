@@ -11,10 +11,10 @@ import { JWK } from "@sdxc/jwt";
 import { createAction } from "remix/router";
 
 import type { ResolvedTenant } from "~/app/http/middleware/tenant";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
-import { userinfoResourceServer } from "~/app/lib/userinfo-resource";
-import { AccessToken } from "~/database/tokens";
+import { userinfoResourceServer } from "~/app/initializers/userinfo-resource";
+import { AccessToken } from "~/app/models/tenant/tokens";
 import routes from "~/routes/tenant";
 
 /**

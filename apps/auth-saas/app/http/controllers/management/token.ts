@@ -14,7 +14,7 @@ import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import { resolveClientAuth, tokenError } from "~/app/http/controllers/oauth/token";
-import { platformTenantStub } from "~/app/lib/platform-tenant";
+import { platformTenantStub } from "~/app/initializers/platform-tenant";
 import routes from "~/routes/management";
 
 /**

@@ -8,7 +8,7 @@
 
 import { createAction } from "remix/router";
 
-import { LandingPage, PublicDocument } from "~/app/views/landing";
+import { LandingPage, PublicDocument } from "~/resources/views/landing";
 import routes from "~/routes/web";
 
 /**

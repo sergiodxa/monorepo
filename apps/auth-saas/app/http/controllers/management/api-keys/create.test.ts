@@ -7,14 +7,11 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { ApiKeysHarness } from "~/app/http/controllers/management/api-keys/test-harness";
-import type { AuditActor } from "~/database/audit-events";
+import type { AuditActor } from "~/app/models/tenant/audit-events";
+import type { ApiKeysHarness } from "~/app/test/harness/management/api-keys";
 
-import {
-	buildApiKeysHarness,
-	grantEntitlement,
-} from "~/app/http/controllers/management/api-keys/test-harness";
-import { assignRole, definePermission, TENANT_SCOPE } from "~/database/roles";
+import { assignRole, definePermission, TENANT_SCOPE } from "~/app/models/tenant/roles";
+import { buildApiKeysHarness, grantEntitlement } from "~/app/test/harness/management/api-keys";
 
 let ACTOR: AuditActor = { type: "platform", id: "system" };
 
@@ -29,7 +26,7 @@ async function provisionedHarness(): Promise<ApiKeysHarness> {
 /**
  * A subject granted the `owner` system role, so it holds every declared
  * scope. Declares each permission and assigns the role directly against
- * `tenantDb`, the same bypass `database/api-keys.test.ts` uses, since custom
+ * `tenantDb`, the same bypass `app/models/tenant/api-keys.test.ts` uses, since custom
  * roles are their own entitlement this test has no need to grant.
  */
 async function createSubjectHolding(harness: ApiKeysHarness, scopes: string[]): Promise<string> {

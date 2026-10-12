@@ -8,12 +8,9 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { TenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
+import type { TenantsHarness } from "~/app/test/harness/management/tenants";
 
-import {
-	buildTenantsHarness,
-	grantEntitlement,
-} from "~/app/http/controllers/management/tenants/test-harness";
+import { buildTenantsHarness, grantEntitlement } from "~/app/test/harness/management/tenants";
 import { bindModels } from "~/app/test/models";
 
 /**

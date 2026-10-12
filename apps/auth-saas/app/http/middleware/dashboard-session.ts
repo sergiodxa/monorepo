@@ -17,8 +17,8 @@ import { env } from "cloudflare:workers";
 import type { MembershipRole } from "~/app/models/memberships";
 import type { TenantRow } from "~/app/models/tenants";
 
-import { requestOrigin } from "~/app/lib/request-origin";
-import { sessionCookie } from "~/app/lib/session-cookie";
+import { requestOrigin } from "~/app/http/request-origin";
+import { sessionCookie } from "~/app/initializers/session-cookie";
 import tenantRoutes from "~/routes/tenant";
 
 /** A live platform dashboard session's subject and session id. */

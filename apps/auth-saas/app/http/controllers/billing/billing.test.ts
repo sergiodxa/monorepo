@@ -1,6 +1,6 @@
 /**
  * Drives `POST /billing/tenants/:tenantId/portal` and `.../checkout` through a real
- * router mapping both, matching how `bootstrap/app.ts` mounts them: only the
+ * router mapping both, matching how `app/initializers/router.ts` mounts them: only the
  * tenant owner's own dashboard session reaches the billing platform, and anyone
  * else is refused before a portal session or a checkout is opened.
  *
@@ -23,7 +23,7 @@ import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
 
@@ -51,7 +51,7 @@ let billing = new MemoryBilling({
 	catalog: { pro: { amount: 2900, currency: "usd", interval: "month" } },
 });
 
-vi.doMock("~/app/lib/billing", () => ({ polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ polar: billing }));
 
 let { database } = await import("~/app/http/middleware/database");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
@@ -62,13 +62,13 @@ let { ensureProviderCustomer } = await import("~/app/services/billing-customer")
 let webRoutes = (await import("~/routes/web")).default;
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels } = await import("~/app/test/models");
-let TenantObject = (await import("~/database/tenant-do")).default;
+let TenantObject = (await import("~/app/models/tenant/object")).default;
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 
 let models: Models;
 
-/** Builds the platform web router mapping both billing routes, matching how `bootstrap/app.ts` mounts them. */
+/** Builds the platform web router mapping both billing routes, matching how `app/initializers/router.ts` mounts them. */
 function buildBillingRouter() {
 	let router = createRouter({
 		middleware: [

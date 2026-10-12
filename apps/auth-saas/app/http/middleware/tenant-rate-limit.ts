@@ -23,14 +23,14 @@ import { addressKey, CloudflareAdapter, KVAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { createContextKey } from "remix/router";
 
-import type { AttackSignalEnv, AttackSignalSurface } from "~/app/lib/attack-signals";
+import type { AttackSignalEnv, AttackSignalSurface } from "~/app/services/attack-signals";
 
 import { renderRateLimitedPage } from "~/app/http/controllers/hosted/rate-limited";
 import { resolveClientAuth } from "~/app/http/controllers/oauth/token";
 import { activeSessionId } from "~/app/http/middleware/hosted-session";
-import { recordAttackSignal } from "~/app/lib/attack-signals";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { foldIdentifier } from "~/database/subject-identifiers";
+import { requestOrigin } from "~/app/http/request-origin";
+import { recordAttackSignal } from "~/app/services/attack-signals";
+import { foldIdentifier } from "~/app/services/tenant/subject-identifiers";
 
 /**
  * Wraps a class's own middleware so a refusal it already decided also

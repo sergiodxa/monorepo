@@ -8,11 +8,11 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import type { CredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
+import type { CredentialsHarness } from "~/app/test/harness/management/credentials";
 
-import { buildCredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
-import { readAuditPage } from "~/database/audit-events";
-import { sessions } from "~/database/sessions";
+import { readAuditPage } from "~/app/models/tenant/audit-events";
+import { sessions } from "~/app/models/tenant/sessions";
+import { buildCredentialsHarness } from "~/app/test/harness/management/credentials";
 
 /** Inserts a live session row directly, the row shape `openSession` would have stored. */
 async function insertSession(

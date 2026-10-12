@@ -12,7 +12,11 @@
 import { PATCH_OP_SCHEMA } from "@sdxc/scim";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { buildScimHarness, createScimConnectionToken, setScimEntitled } from "./test-harness";
+import {
+	buildScimHarness,
+	createScimConnectionToken,
+	setScimEntitled,
+} from "~/app/test/harness/scim";
 
 let harness: Awaited<ReturnType<typeof buildScimHarness>>;
 let token: string;

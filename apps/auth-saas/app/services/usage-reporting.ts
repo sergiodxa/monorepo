@@ -27,10 +27,10 @@ import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { LedgerSource } from "~/app/lib/cost-ledger";
 import type { Models } from "~/app/models";
+import type { LedgerSource } from "~/app/services/cost-ledger";
 
-import { dayOf } from "~/database/metering";
+import { dayOf } from "~/app/models/tenant/metering";
 
 /** One UTC day, in milliseconds — the same unit `metering.ts`'s `dayOf` keys against. */
 const DAY_MS = 24 * 60 * 60 * 1000;

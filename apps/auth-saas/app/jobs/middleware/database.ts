@@ -10,7 +10,7 @@ import type { Database as DataTable } from "remix/data-table";
 
 import { createContextKey } from "remix/router";
 
-import { createDatabase } from "~/app/lib/database";
+import { createDatabase } from "~/app/initializers/database";
 
 /** The control-plane database, published as `ctx.database`. */
 export const Database = createContextKey<DataTable>();

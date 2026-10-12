@@ -13,7 +13,7 @@ import type { Result } from "@sdxc/result";
 
 import { idempotency } from "@sdxc/idempotency/middleware";
 
-import { managementProblem } from "~/app/http/lib/problem";
+import { managementProblem } from "~/app/http/problem";
 
 /** The catalog's four refusals, each carrying an `instance` like every management problem. */
 const PROBLEMS: IdempotencyProblems = {

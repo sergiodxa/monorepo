@@ -31,6 +31,10 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
+import { magicLinkSignInLink } from "~/app/emails/links";
+import { MagicLinkNoAccountEmail } from "~/app/emails/magic-link-no-account-email";
+import { MagicLinkSignInEmail } from "~/app/emails/magic-link-sign-in-email";
+import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
 import {
 	redirectToErrorPage,
 	redirectToReturnTo,
@@ -41,21 +45,17 @@ import {
 	passesConditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
-import { emailAddress } from "~/app/http/lib/email-address";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
-import { recordAttackSignal } from "~/app/lib/attack-signals";
+import { requestOrigin } from "~/app/http/request-origin";
+import { emailAddress } from "~/app/http/validators/email-address";
 import {
 	mintMagicLinkNonce,
 	readMagicLinkNonce,
 	serializeMagicLinkNonceCookie,
-} from "~/app/lib/magic-link-nonce-cookie";
-import { requestOrigin } from "~/app/lib/request-origin";
-import { magicLinkSignInLink } from "~/app/mail/links";
-import { MagicLinkNoAccountEmail } from "~/app/mail/magic-link-no-account-email";
-import { MagicLinkSignInEmail } from "~/app/mail/magic-link-sign-in-email";
-import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
-import { HostedDocument } from "~/app/views/hosted/document";
-import { MagicLinkPage } from "~/app/views/hosted/magic-link";
+} from "~/app/initializers/magic-link-nonce-cookie";
+import { recordAttackSignal } from "~/app/services/attack-signals";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { MagicLinkPage } from "~/resources/views/hosted/magic-link";
 import routes from "~/routes/tenant";
 
 /** Builds an absolute URL for one of this tenant's routes, carrying the current request's query along. */

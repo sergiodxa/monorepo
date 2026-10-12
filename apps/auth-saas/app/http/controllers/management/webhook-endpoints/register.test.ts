@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 import {
 	buildWebhookEndpointsHarness,
 	grantEntitlement,
-} from "~/app/http/controllers/management/webhook-endpoints/test-harness";
+} from "~/app/test/harness/management/webhook-endpoints";
 
 /** The body `POST /tenants/:tenantId/webhook-endpoints` accepts when a test does not care about most of it. */
 function baseBody(overrides: Record<string, unknown> = {}): Record<string, unknown> {

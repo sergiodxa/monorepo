@@ -13,7 +13,7 @@ import type { Middleware } from "remix/router";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { define, protectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 
-import { platformTenantIssuer } from "~/app/lib/platform-tenant";
+import { platformTenantIssuer } from "~/app/initializers/platform-tenant";
 import { MANAGEMENT_SCOPES } from "~/app/services/management-scopes";
 
 /**

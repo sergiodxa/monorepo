@@ -16,8 +16,8 @@ import { trace } from "@sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
 import { expect, test } from "vitest";
 
+import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
-import { logger } from "~/bootstrap/logger";
 
 /** A caller's `traceparent`, the W3C specification's own example. */
 const CALLER_TRACEPARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";

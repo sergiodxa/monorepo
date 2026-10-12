@@ -17,19 +17,19 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 import i18n from "~/app/http/middleware/i18n";
-import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
 import { TurnstileChallengeContext } from "~/app/http/middleware/turnstile-challenge";
 import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
-import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
+import { htmlRenderer } from "~/app/http/render";
+import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
+import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/tenant";
 
 import { resetShow, resetSubmit } from "./reset";
 import { signInShow, signInSubmit } from "./sign-in";
-import { buildHarness, createTestSubjectWithPassword } from "./test-harness";
 
 let turnstile = new MemoryCaptcha({ field: "cf-turnstile-response" });
 beforeEach(() => turnstile.reset());
@@ -57,7 +57,7 @@ async function buildChallengeRouter(challenged: boolean) {
 	let middleware: Middleware[] = [
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-		render as Middleware,
+		...(htmlRenderer() as readonly Middleware[]),
 		formData() as Middleware,
 		i18n as Middleware,
 	];

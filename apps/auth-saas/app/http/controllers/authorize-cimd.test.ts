@@ -14,14 +14,10 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
+import type { Harness } from "~/app/test/harness/hosted";
 
-import {
-	buildHarness,
-	cookieFrom,
-	createTestSubjectWithPassword,
-} from "~/app/http/controllers/hosted/test-harness";
-import { clients } from "~/database/clients";
+import { clients } from "~/app/models/tenant/clients";
+import { buildHarness, cookieFrom, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 
 const CLIENT_METADATA_URL = "https://mcp.example.com/oauth/client-metadata.json";
 const CIMD_REDIRECT_URI = "https://mcp.example.com/callback";

@@ -25,8 +25,8 @@ import {
 	resolveDashboardSession,
 } from "~/app/http/middleware/dashboard-session";
 import { provisionTenant } from "~/app/services/tenant-provisioning";
-import { DashboardHomePage } from "~/app/views/dashboard";
-import { PublicDocument } from "~/app/views/landing";
+import { DashboardHomePage } from "~/resources/views/dashboard";
+import { PublicDocument } from "~/resources/views/landing";
 import routes from "~/routes/web";
 
 /** `POST /dashboard/tenants`'s own form schema: an organization name, nothing else. */

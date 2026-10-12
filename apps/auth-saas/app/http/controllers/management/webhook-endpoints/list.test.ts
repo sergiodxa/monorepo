@@ -8,12 +8,12 @@
 
 import { describe, expect, test, vi } from "vitest";
 
-import type { AuditActor } from "~/database/audit-events";
+import type { AuditActor } from "~/app/models/tenant/audit-events";
 
 import {
 	buildWebhookEndpointsHarness,
 	grantEntitlement,
-} from "~/app/http/controllers/management/webhook-endpoints/test-harness";
+} from "~/app/test/harness/management/webhook-endpoints";
 
 let ACTOR: AuditActor = { type: "platform", id: "system" };
 

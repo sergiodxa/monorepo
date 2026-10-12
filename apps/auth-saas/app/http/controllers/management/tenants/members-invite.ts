@@ -20,16 +20,16 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
+import { mailTranslator } from "~/app/emails/locale";
+import { TenantInvitationEmail } from "~/app/emails/tenant-invitation-email";
 import { mountedMiddleware } from "~/app/http/controllers/management/tenants/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { managementProblem } from "~/app/http/lib/problem";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { TENANT_MEMBERS_INVITE } from "~/app/http/openapi/tenants";
-import { mailTranslator } from "~/app/mail/locale";
-import { TenantInvitationEmail } from "~/app/mail/tenant-invitation-email";
-import { foldIdentifier } from "~/database/subject-identifiers";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { managementProblem } from "~/app/http/problem";
+import { requireScope } from "~/app/http/require-scope";
+import { foldIdentifier } from "~/app/services/tenant/subject-identifiers";
 import routes from "~/routes/management";
 
 /** How long a minted invitation stands before it can no longer be accepted. */

@@ -17,7 +17,7 @@ import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Models } from "~/app/models";
-import type Tenant from "~/database/tenant-do";
+import type Tenant from "~/app/models/tenant/object";
 
 /** The `QUEUE` binding `dispatcher.enqueueMany` writes `deliverWebhook` messages through. */
 let queue: QueueMock = createQueue();

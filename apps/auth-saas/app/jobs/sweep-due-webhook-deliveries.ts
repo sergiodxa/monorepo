@@ -11,10 +11,9 @@
  */
 import { createJobHandler } from "@sdxc/jobs";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { forEachProvisionedTenant } from "~/app/jobs/lib/for-each-tenant";
-
-import { dispatcher } from "./dispatcher";
+import { forEachProvisionedTenant } from "~/app/services/for-each-tenant";
 
 /** How many due deliveries one tenant's own claim reads per sweep. */
 const CLAIM_BATCH_SIZE = 100;

@@ -11,19 +11,19 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { RegisterClientResult } from "~/database/clients";
+import type { RegisterClientResult } from "~/app/models/tenant/clients";
 
 import {
 	clientEntitlementRequired,
 	clientRecordValidationFailure,
 } from "~/app/http/controllers/management/clients/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { CLIENTS_REGISTER } from "~/app/http/openapi/clients";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /** Maps every `registerClient` refusal onto its own `problem+json` response. */

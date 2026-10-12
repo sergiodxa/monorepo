@@ -1,0 +1,1769 @@
+/**
+ * Exercises `passwords.ts` directly against a `Database`, the style `subjects.test.ts`
+ * prefers for logic that does not yet need a Durable Object around it: this module is
+ * not wired into the tenant object yet, so these tests build a database over the same
+ * migrations `object.ts` applies rather than constructing `Tenant` itself.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
+
+import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { password } from "@sdxc/crypto";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { Log } from "@sdxc/logger";
+import { PWNED_PASSWORDS_RANGE_URL } from "@sdxc/password-policy/breached";
+import { unwrap } from "@sdxc/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { Database } from "remix/data-table";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { readAuditPage } from "~/app/models/tenant/audit-events";
+import { createDauCache } from "~/app/models/tenant/metering";
+import {
+	addOrganizationDomain,
+	confirmOrganizationDomain,
+	createOrganization,
+	organizationMembers,
+} from "~/app/models/tenant/organizations";
+import * as Passwords from "~/app/models/tenant/passwords";
+import { openSession, resolveSession } from "~/app/models/tenant/sessions";
+import * as Subjects from "~/app/models/tenant/subjects";
+import { totpFactors } from "~/app/models/tenant/totp";
+import m0001 from "~/database/tenant-migrations/0001-init.sql?raw";
+import m0002 from "~/database/tenant-migrations/0002-subjects.sql?raw";
+import m0003 from "~/database/tenant-migrations/0003-passwords.sql?raw";
+import m0005 from "~/database/tenant-migrations/0005-sessions.sql?raw";
+import m0011 from "~/database/tenant-migrations/0011-mail-rate-limit.sql?raw";
+import m0013 from "~/database/tenant-migrations/0013-dau.sql?raw";
+import m0014 from "~/database/tenant-migrations/0014-audit.sql?raw";
+import m0015 from "~/database/tenant-migrations/0015-totp.sql?raw";
+import m0016 from "~/database/tenant-migrations/0016-second-factor-sign-in.sql?raw";
+import m0022 from "~/database/tenant-migrations/0022-organizations.sql?raw";
+import m0027 from "~/database/tenant-migrations/0027-webhook-endpoints.sql?raw";
+import m0028 from "~/database/tenant-migrations/0028-webhook-deliveries.sql?raw";
+import m0029 from "~/database/tenant-migrations/0029-authentication-backoff.sql?raw";
+import m0030 from "~/database/tenant-migrations/0030-totp-backoff.sql?raw";
+
+let db: Database;
+
+let server = setupServer();
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** The uppercase SHA-1 hex of a password, the form the Pwned Passwords range API indexes. */
+async function sha1Hex(value: string): Promise<string> {
+	let digest = await crypto.subtle.digest(
+		"SHA-1",
+		new TextEncoder().encode(value.normalize("NFC")),
+	);
+	return [...new Uint8Array(digest)]
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("")
+		.toUpperCase();
+}
+
+/** Answers every range lookup as though `breached` appeared in `occurrences` breaches. */
+async function answerPwnedRange(breached: string, occurrences: number): Promise<void> {
+	let hash = await sha1Hex(breached);
+	server.use(
+		http.get(`${PWNED_PASSWORDS_RANGE_URL}:prefix`, ({ params }) => {
+			let body = params.prefix === hash.slice(0, 5) ? `${hash.slice(5)}:${occurrences}\r\n` : "";
+			return new HttpResponse(`${body}0000000000000000000000000000000000A:0`);
+		}),
+	);
+}
+
+let subjectActor = { kind: "subject" } as const;
+
+beforeEach(async () => {
+	let state: DurableObjectStateMock = createDurableObjectState();
+	let driver = createSQLStorageDatabaseAdapter(state.storage.sql);
+
+	await driver.executeScript(m0001);
+	await driver.executeScript(m0002);
+	await driver.executeScript(m0003);
+	await driver.executeScript(m0005);
+	await driver.executeScript(m0011);
+	await driver.executeScript(m0013);
+	await driver.executeScript(m0014);
+	await driver.executeScript(m0015);
+	await driver.executeScript(m0016);
+	await driver.executeScript(m0022);
+	await driver.executeScript(m0027);
+	await driver.executeScript(m0028);
+	await driver.executeScript(m0029);
+	await driver.executeScript(m0030);
+
+	db = new Database(driver);
+});
+
+afterEach(() => {
+	vi.restoreAllMocks();
+	vi.useRealTimers();
+});
+
+/** Creates a subject with one verified email, the shape most tests sign in against. */
+async function createVerifiedSubject(email: string): Promise<string> {
+	let created = await Subjects.createSubject(db, {
+		identifiers: [{ kind: "email", value: email }],
+	});
+	if (!created.ok) throw new Error("unreachable");
+
+	let added = await Subjects.addIdentifier(db, {
+		subjectId: created.subjectId,
+		kind: "email",
+		value: email,
+		actor: subjectActor,
+	});
+	if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+
+	await Subjects.verifyIdentifier(db, { ticket: added.ticket });
+
+	return created.subjectId;
+}
+
+/** Creates a subject with only an unverified username: no readable credential at all. */
+async function createBareSubject(username: string): Promise<string> {
+	let created = await Subjects.createSubject(db, {
+		identifiers: [{ kind: "username", value: username }],
+	});
+	if (!created.ok) throw new Error("unreachable");
+	return created.subjectId;
+}
+
+describe("describePasswordPolicy", () => {
+	test("defaults to length 8, no denied terms, no expiry, and a history of 1", async () => {
+		let policy = await Passwords.describePasswordPolicy(db);
+
+		expect(policy).toEqual({
+			minLength: 8,
+			deniedTerms: [],
+			expiryIntervalMs: null,
+			historyDepth: 1,
+		});
+	});
+});
+
+describe("setPassword: policy rejections", () => {
+	test("refuses an unknown subject", async () => {
+		let result = await Passwords.setPassword(db, {
+			subjectId: "sub_does_not_exist",
+			password: "a-perfectly-fine-password-1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a password shorter than the minimum length", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "short1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "too-short", minLength: 8, length: 6 });
+	});
+
+	test("refuses a well-known common password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "password",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "common" });
+	});
+
+	test("refuses a password containing the subject's own email local part", async () => {
+		let subjectId = await createVerifiedSubject("janedoe@example.com");
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "janedoe-secret-1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "similar-to-identifier", fragment: "janedoe" });
+	});
+
+	test("refuses a common password the former 40-entry list never held", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "michelle",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "common" });
+	});
+
+	test("refuses a password Have I Been Pwned reports breached, once enabled", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await answerPwnedRange("a-perfectly-fine-password-1", 42);
+
+		let result = await Passwords.setPassword(
+			db,
+			{ subjectId, password: "a-perfectly-fine-password-1", actor: subjectActor },
+			{ breachCheck: true },
+		);
+
+		expect(result).toEqual({ ok: false, reason: "breached", occurrences: 42 });
+	});
+
+	test("accepts a password the local rules pass when Have I Been Pwned is unreachable", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		server.use(http.get(`${PWNED_PASSWORDS_RANGE_URL}:prefix`, () => HttpResponse.error()));
+
+		let result = await Passwords.setPassword(
+			db,
+			{ subjectId, password: "a-perfectly-fine-password-1", actor: subjectActor },
+			{ breachCheck: true },
+		);
+
+		expect(result.ok).toBe(true);
+	});
+
+	test("refuses a password containing a tenant-denied term", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await db.update(Passwords.passwordPolicy, { id: "default" }, { denied_terms: ["acmecorp"] });
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "acmecorp-rocks-1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "denied-term", term: "acmecorp" });
+	});
+
+	test("accepts a password that clears every check", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "a-perfectly-fine-password-1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({
+			ok: true,
+			passwordId: expect.stringMatching(/^pw_/),
+			expiresAt: null,
+		});
+	});
+
+	test("stamps expires_at from the tenant's expiry interval", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await db.update(Passwords.passwordPolicy, { id: "default" }, { expiry_interval_ms: 60_000 });
+
+		let before = Date.now();
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "a-perfectly-fine-password-1",
+			actor: subjectActor,
+		});
+		if (!result.ok) throw new Error("unreachable");
+
+		expect(result.expiresAt).not.toBeNull();
+		expect(result.expiresAt as number).toBeGreaterThanOrEqual(before + 60_000);
+	});
+});
+
+describe("setPassword: reuse and history", () => {
+	test("refuses setting the same password twice in a row", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let first = await Passwords.setPassword(db, {
+			subjectId,
+			password: "a-perfectly-fine-password-1",
+			actor: subjectActor,
+		});
+		expect(first.ok).toBe(true);
+
+		let second = await Passwords.setPassword(db, {
+			subjectId,
+			password: "a-perfectly-fine-password-1",
+			actor: subjectActor,
+		});
+		expect(second).toEqual({ ok: false, reason: "reused", index: 0 });
+	});
+
+	test("compares a reuse on the NFKC form it hashes, so a full-width spelling matches", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "ｆｕｌｌ-ｗｉｄｔｈ-horse-1",
+			actor: subjectActor,
+		});
+		let reused = await Passwords.setPassword(db, {
+			subjectId,
+			password: "full-width-horse-1",
+			actor: subjectActor,
+		});
+
+		expect(reused).toEqual({ ok: false, reason: "reused", index: 0 });
+	});
+
+	test("lets a write through, logged, when a stored hash cannot be verified", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: "password-a-1", actor: subjectActor });
+		await db.updateMany(
+			Passwords.passwords,
+			{ hash: "$scrypt$damaged" },
+			{ where: { subject_id: subjectId } },
+		);
+
+		let records: Record<string, unknown>[] = [];
+		let log = new Log({ kind: "request", sink: (record) => records.push(record) });
+		let result = await log.run(() =>
+			Passwords.setPassword(db, { subjectId, password: "password-b-1", actor: subjectActor }),
+		);
+
+		expect(result.ok).toBe(true);
+		expect(log.outcome).toBe("degraded");
+		expect(JSON.stringify(records)).toContain("password.history_check_unavailable");
+	});
+
+	test("still refuses a reuse when an older stored hash cannot be verified", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await db.update(Passwords.passwordPolicy, { id: "default" }, { history_depth: 3 });
+		await Passwords.setPassword(db, { subjectId, password: "password-a-1", actor: subjectActor });
+		let oldest = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		await Passwords.setPassword(db, { subjectId, password: "password-b-1", actor: subjectActor });
+		await db.update(Passwords.passwords, { id: oldest?.id ?? "" }, { hash: "$scrypt$damaged" });
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "password-b-1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "reused", index: 0 });
+	});
+
+	test("trims history to the tenant's depth, keeping only the newest N rows", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await db.update(Passwords.passwordPolicy, { id: "default" }, { history_depth: 3 });
+
+		let candidates = ["password-one-1", "password-two-1", "password-three-1", "password-four-1"];
+		for (let candidate of candidates) {
+			let result = await Passwords.setPassword(db, {
+				subjectId,
+				password: candidate,
+				actor: subjectActor,
+			});
+			expect(result.ok).toBe(true);
+		}
+
+		let count = await db.count(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(count).toBe(3);
+	});
+
+	test("refuses a reuse inside the history window, and accepts it again once trimmed out", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await db.update(Passwords.passwordPolicy, { id: "default" }, { history_depth: 3 });
+
+		await Passwords.setPassword(db, { subjectId, password: "password-a-1", actor: subjectActor });
+		await Passwords.setPassword(db, { subjectId, password: "password-b-1", actor: subjectActor });
+		await Passwords.setPassword(db, { subjectId, password: "password-c-1", actor: subjectActor });
+
+		let reuseWithinWindow = await Passwords.setPassword(db, {
+			subjectId,
+			password: "password-a-1",
+			actor: subjectActor,
+		});
+		expect(reuseWithinWindow).toEqual({ ok: false, reason: "reused", index: 2 });
+
+		// A fourth distinct password trims "password-a-1" out of the retained rows.
+		await Passwords.setPassword(db, { subjectId, password: "password-d-1", actor: subjectActor });
+
+		let reuseOutsideWindow = await Passwords.setPassword(db, {
+			subjectId,
+			password: "password-a-1",
+			actor: subjectActor,
+		});
+		expect(reuseOutsideWindow.ok).toBe(true);
+	});
+});
+
+describe("changePassword", () => {
+	test("refuses an unknown subject", async () => {
+		let result = await Passwords.changePassword(db, {
+			subjectId: "sub_does_not_exist",
+			currentPassword: "whatever",
+			newPassword: "a-perfectly-fine-password-1",
+			keepSessionId: "sess_test",
+		});
+		expect(result).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a subject with no password set", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "whatever",
+			newPassword: "a-perfectly-fine-password-1",
+			keepSessionId: "sess_test",
+		});
+		expect(result).toEqual({ ok: false, reason: "no-password" });
+	});
+
+	test("refuses the wrong current password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "wrong-password-1",
+			newPassword: "a-new-password-1",
+			keepSessionId: "sess_test",
+		});
+		expect(result).toEqual({ ok: false, reason: "wrong-password" });
+	});
+
+	test("writes the new password once the current one verifies", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "original-password-1",
+			newPassword: "a-new-password-1",
+			keepSessionId: "sess_test",
+		});
+		expect(result.ok).toBe(true);
+
+		let signIn = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "a-new-password-1",
+			remembered: false,
+		});
+		expect(signIn).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("revoke-others (the default) spares the session performing the change", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let current = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+		let other = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let result = await Passwords.changePassword(
+			db,
+			{
+				subjectId,
+				currentPassword: "original-password-1",
+				newPassword: "a-new-password-1",
+				keepSessionId: current.sessionId,
+			},
+			"revoke-others",
+		);
+		expect(result.ok).toBe(true);
+
+		expect(await resolveSession(db, { token: current.token })).toMatchObject({ status: "active" });
+		expect(await resolveSession(db, { token: other.token })).toEqual({ status: "revoked" });
+	});
+
+	test("revoke-all ends the session performing the change too", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let current = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+		let other = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let result = await Passwords.changePassword(
+			db,
+			{
+				subjectId,
+				currentPassword: "original-password-1",
+				newPassword: "a-new-password-1",
+				keepSessionId: current.sessionId,
+			},
+			"revoke-all",
+		);
+		expect(result.ok).toBe(true);
+
+		expect(await resolveSession(db, { token: current.token })).toEqual({ status: "revoked" });
+		expect(await resolveSession(db, { token: other.token })).toEqual({ status: "revoked" });
+	});
+
+	test("omitting the policy parameter defaults to revoke-others, the behavior this function has always had", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "original-password-1",
+			actor: subjectActor,
+		});
+
+		let current = await openSession(db, { subjectId, amr: ["pwd"], remembered: false });
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "original-password-1",
+			newPassword: "a-new-password-1",
+			keepSessionId: current.sessionId,
+		});
+		expect(result.ok).toBe(true);
+
+		expect(await resolveSession(db, { token: current.token })).toMatchObject({ status: "active" });
+	});
+});
+
+describe("importPasswordHash", () => {
+	test("imports a hash this module produced, and it verifies at a normal sign-in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let hashed = unwrap(await password.hash("correct-password-1"));
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId,
+			hash: hashed,
+		});
+		expect(imported).toMatchObject({ ok: true });
+
+		let signIn = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+		expect(signIn).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("refuses an unknown subject", async () => {
+		let hashed = unwrap(await password.hash("correct-password-1"));
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId: "sub_does_not_exist",
+			hash: hashed,
+		});
+		expect(imported).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a foreign-looking hash, writing nothing", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let bcryptHash = "$2a$10$N9qo8uLOickgx2ZMRZoMye.OmWJc0.vv.rMIFZQMWLQihlT4YLu8W";
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId,
+			hash: bcryptHash,
+		});
+		expect(imported).toEqual({ ok: false, reason: "unrecognized-hash" });
+
+		let count = await db.count(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(count).toBe(0);
+	});
+
+	test("carries mustChange through to the written row", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let hashed = unwrap(await password.hash("correct-password-1"));
+
+		let imported = await Passwords.importPasswordHash(db, {
+			subjectId,
+			hash: hashed,
+			mustChange: true,
+		});
+		if (!imported.ok) throw new Error("unreachable");
+
+		let row = await db.find(Passwords.passwords, { id: imported.passwordId });
+		expect(row?.must_change).toBe(true);
+	});
+});
+
+describe("signInWithPassword", () => {
+	test("succeeds with the correct password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({
+			ok: true,
+			subjectId,
+			secondFactorRequired: false,
+			mustChangePassword: false,
+			sessionId: expect.stringMatching(/^sess_/),
+			token: expect.any(String),
+		});
+	});
+
+	test("signs in from any casing of the address, folded the same way as sign-up", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "JANE@EXAMPLE.COM",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("blocks a password past its expiry", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(Passwords.passwords, { id: set.passwordId }, { expires_at: Date.now() - 1000 });
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "password_expired" });
+	});
+
+	test("reports what a forced reset left owed", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		await Passwords.forcePasswordReset(db, { subjectId, reason: "suspected compromise" });
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, mustChangePassword: true });
+	});
+
+	describe("constant-time shape: every negative path derives for real before answering", () => {
+		test("an identifier that resolves to nobody", async () => {
+			let verifySpy = vi.spyOn(password, "verify");
+
+			let result = await Passwords.signInWithPassword(db, {
+				identifier: "nobody@example.com",
+				password: "whatever-1",
+				remembered: false,
+			});
+
+			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+			expect(verifySpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("a subject that holds no password", async () => {
+			await createVerifiedSubject("jane@example.com");
+			let verifySpy = vi.spyOn(password, "verify");
+
+			let result = await Passwords.signInWithPassword(db, {
+				identifier: "jane@example.com",
+				password: "whatever-1",
+				remembered: false,
+			});
+
+			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+			expect(verifySpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("a blocked subject with a real password set", async () => {
+			let subjectId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			await Subjects.blockSubject(db, { subjectId, reason: "fraud" });
+
+			let verifySpy = vi.spyOn(password, "verify");
+
+			let result = await Passwords.signInWithPassword(db, {
+				identifier: "jane@example.com",
+				password: "correct-password-1",
+				remembered: false,
+			});
+
+			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+			expect(verifySpy).toHaveBeenCalledTimes(1);
+		});
+
+		test("a wrong password against a real account, in the same shape as the above", async () => {
+			let subjectId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+
+			let verifySpy = vi.spyOn(password, "verify");
+
+			let result = await Passwords.signInWithPassword(db, {
+				identifier: "jane@example.com",
+				password: "wrong-password-1",
+				remembered: false,
+			});
+
+			expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+			expect(verifySpy).toHaveBeenCalledTimes(1);
+		});
+	});
+
+	describe("metering", () => {
+		test("a sign-in under cap succeeds and carries the day's metering report", async () => {
+			let subjectId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			let cache = createDauCache();
+
+			let result = await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 100, hard: true },
+			);
+
+			expect(result).toMatchObject({
+				ok: true,
+				subjectId,
+				metering: { subjects: 1, cap: 100, notice: "none" },
+			});
+		});
+
+		test("refuses a genuinely new subject once a hard cap is reached", async () => {
+			let countedId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId: countedId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			let refusedId = await createVerifiedSubject("john@example.com");
+			await Passwords.setPassword(db, {
+				subjectId: refusedId,
+				password: "correct-password-2",
+				actor: subjectActor,
+			});
+			let cache = createDauCache();
+
+			await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			let refused = await Passwords.signInWithPassword(
+				db,
+				{ identifier: "john@example.com", password: "correct-password-2", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			expect(refused).toEqual({ ok: false, reason: "dau_cap_reached" });
+		});
+
+		test("never refuses a subject already counted today, even past the cap", async () => {
+			let subjectId = await createVerifiedSubject("jane@example.com");
+			await Passwords.setPassword(db, {
+				subjectId,
+				password: "correct-password-1",
+				actor: subjectActor,
+			});
+			let cache = createDauCache();
+
+			await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			let again = await Passwords.signInWithPassword(
+				db,
+				{ identifier: "jane@example.com", password: "correct-password-1", remembered: false },
+				{ cache, cap: 1, hard: true },
+			);
+
+			expect(again).toMatchObject({ ok: true, subjectId });
+		});
+	});
+});
+
+describe("signInWithPassword: authentication backoff", () => {
+	test("a failure below the threshold increments the counter without opening a backoff window", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 1, retry_after: null });
+	});
+
+	test("crossing the tenant's threshold opens a backoff, doubling from one second, and echoes it back", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		for (let i = 0; i < 3; i++) {
+			await Passwords.signInWithPassword(db, {
+				identifier: "jane@example.com",
+				password: "wrong-password-1",
+				remembered: false,
+			});
+		}
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 1000,
+		});
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 4, retry_after: 1_700_000_000_000 + 1000 });
+	});
+
+	test("the backoff delay keeps doubling past the threshold and caps at fifteen minutes", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		// Ten failures past the default threshold of four would double to over
+		// seventeen minutes; seeding the count directly here is what keeps this
+		// test to one real derivation instead of thirteen.
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 13, last_failure_at: 1_700_000_000_000 },
+		);
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 15 * 60 * 1000,
+		});
+	});
+
+	test("a request during an active backoff window derives against the dummy hash and echoes the same retryAfter, even for the right password", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		let retryAfter = 1_700_000_000_000 + 60_000;
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 5, retry_after: retryAfter, last_failure_at: 1_700_000_000_000 },
+		);
+
+		vi.setSystemTime(1_700_000_000_000 + 1000);
+
+		let verifySpy = vi.spyOn(password, "verify");
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "invalid-credentials", retryAfter });
+		expect(verifySpy).toHaveBeenCalledTimes(1);
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 5, retry_after: retryAfter });
+	});
+
+	test("a backoff-window refusal has the same shape as a plain wrong password, plus the deliberate retryAfter signal", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		let plainWrong = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ retry_after: Date.now() + 60_000 },
+		);
+
+		let duringBackoff = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		if (plainWrong.ok || duringBackoff.ok) throw new Error("unreachable");
+
+		expect(Object.keys(plainWrong).sort()).toEqual(["ok", "reason"]);
+		expect(Object.keys(duringBackoff).sort()).toEqual(["ok", "reason", "retryAfter"]);
+		expect(duringBackoff.ok).toBe(plainWrong.ok);
+		expect(duringBackoff.reason).toBe(plainWrong.reason);
+	});
+
+	test("a successful sign-in clears the failure counter and any backoff window", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 3, retry_after: null, last_failure_at: Date.now() },
+		);
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 0, retry_after: null, last_failure_at: null });
+	});
+
+	test("a counter untouched for more than a day starts over instead of continuing", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 3, last_failure_at: 1_700_000_000_000 },
+		);
+
+		vi.setSystemTime(1_700_000_000_000 + 25 * 60 * 60 * 1000);
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "wrong-password-1",
+			remembered: false,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 1 });
+	});
+
+	test("a tenant configured at a threshold of 3 opens backoff on the third failure", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 1, last_failure_at: 1_700_000_000_000 },
+		);
+
+		let second = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			3,
+		);
+		expect(second).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let third = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			3,
+		);
+		expect(third).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 1000,
+		});
+	});
+
+	test("a tenant configured at a threshold of 10 tolerates nine failures with no backoff, opening one at the tenth", async () => {
+		vi.useFakeTimers();
+		vi.setSystemTime(1_700_000_000_000);
+
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 8, last_failure_at: 1_700_000_000_000 },
+		);
+
+		let ninth = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			10,
+		);
+		expect(ninth).toEqual({ ok: false, reason: "invalid-credentials" });
+
+		let tenth = await Passwords.signInWithPassword(
+			db,
+			{ identifier: "jane@example.com", password: "wrong-password-1", remembered: false },
+			undefined,
+			"optional",
+			false,
+			10,
+		);
+		expect(tenth).toEqual({
+			ok: false,
+			reason: "invalid-credentials",
+			retryAfter: 1_700_000_000_000 + 1000,
+		});
+	});
+});
+
+describe("clearAuthenticationBackoff", () => {
+	test("resets the counter and window, and writes its audit event", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 5, retry_after: Date.now() + 60_000, last_failure_at: Date.now() },
+		);
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #123",
+		});
+
+		expect(result).toEqual({ ok: true });
+
+		let row = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(row).toMatchObject({ failed_attempts: 0, retry_after: null, last_failure_at: null });
+
+		let page = await readAuditPage(db, {
+			from: 0,
+			to: Date.now() + 60_000,
+			action: "password.backoff_cleared",
+		});
+		if (!page.ok) throw new Error("unreachable");
+		expect(page.events).toMatchObject([
+			{ targetId: subjectId, outcome: "succeeded", detail: { reason: "support ticket #123" } },
+		]);
+	});
+
+	test("refuses when the subject holds neither a password row nor a TOTP factor", async () => {
+		let subjectId = await createBareSubject("nopassword");
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #123",
+		});
+
+		expect(result).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("clears a subject's TOTP factor backoff state alongside its password row", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwords,
+			{ id: set.passwordId },
+			{ failed_attempts: 5, retry_after: Date.now() + 60_000, last_failure_at: Date.now() },
+		);
+
+		await db.create(totpFactors, {
+			subject_id: subjectId,
+			sealed_secret: "sealed",
+			label: "Authenticator app",
+			activated_at: Date.now(),
+			last_used_at: null,
+			failed_attempts: 5,
+			retry_after: Date.now() + 60_000,
+			last_failure_at: Date.now(),
+		});
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #123",
+		});
+
+		expect(result).toEqual({ ok: true });
+
+		let passwordRow = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(passwordRow).toMatchObject({
+			failed_attempts: 0,
+			retry_after: null,
+			last_failure_at: null,
+		});
+
+		let factorRow = await db.find(totpFactors, { subject_id: subjectId });
+		expect(factorRow).toMatchObject({
+			failed_attempts: 0,
+			retry_after: null,
+			last_failure_at: null,
+		});
+	});
+
+	test("clears a TOTP factor's backoff state alone, for a subject with no password row", async () => {
+		let subjectId = await createBareSubject("totp-only");
+
+		await db.create(totpFactors, {
+			subject_id: subjectId,
+			sealed_secret: "sealed",
+			label: "Authenticator app",
+			activated_at: Date.now(),
+			last_used_at: null,
+			failed_attempts: 5,
+			retry_after: Date.now() + 60_000,
+			last_failure_at: Date.now(),
+		});
+
+		let result = await Passwords.clearAuthenticationBackoff(db, {
+			subjectId,
+			actor: { type: "platform", id: "system" },
+			reason: "support ticket #124",
+		});
+
+		expect(result).toEqual({ ok: true });
+
+		let factorRow = await db.find(totpFactors, { subject_id: subjectId });
+		expect(factorRow).toMatchObject({
+			failed_attempts: 0,
+			retry_after: null,
+			last_failure_at: null,
+		});
+	});
+});
+
+describe("signInWithPassword: organization domain membership", () => {
+	/** Claims and verifies a domain for a fresh organization, for tests that need one already earning membership. */
+	async function createVerifiedAutoJoinDomain(domain: string): Promise<string> {
+		let owner = await createVerifiedSubject(`owner-${domain}@example.com`);
+		let created = await createOrganization(db, {
+			name: "Acme",
+			slug: domain.replace(/\./g, "-"),
+			creatorSubjectId: owner,
+			actor: { type: "subject", id: owner },
+		});
+		if (!created.ok) throw new Error("setup failed");
+
+		let added = await addOrganizationDomain(db, {
+			organizationId: created.organization.id,
+			domain,
+			mode: "auto_join",
+			actor: { type: "subject", id: owner },
+		});
+		if (!added.ok) throw new Error("setup failed");
+		await confirmOrganizationDomain(db, { organizationId: created.organization.id, domain });
+
+		return created.organization.id;
+	}
+
+	test("never touches organizations, and carries neither field, when the caller does not opt in", async () => {
+		let organizationId = await createVerifiedAutoJoinDomain("acme-untouched.example");
+		let subjectId = await createVerifiedSubject("person@acme-untouched.example");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "person@acme-untouched.example",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+		if (!result.ok) throw new Error("unreachable");
+		expect(result).not.toHaveProperty("organizationMemberships");
+		expect(result).not.toHaveProperty("suggestedOrganizations");
+
+		// The domain earns nothing because this call never asked for it to be resolved.
+		let membership = await db.find(organizationMembers, {
+			organization_id: organizationId,
+			subject_id: subjectId,
+		});
+		expect(membership).toBeNull();
+	});
+
+	test("writes the domain-earned membership and reports it when the caller opts in", async () => {
+		let organizationId = await createVerifiedAutoJoinDomain("acme-opted-in.example");
+		let subjectId = await createVerifiedSubject("person@acme-opted-in.example");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.signInWithPassword(
+			db,
+			{
+				identifier: "person@acme-opted-in.example",
+				password: "correct-password-1",
+				remembered: false,
+			},
+			undefined,
+			"optional",
+			true,
+		);
+
+		expect(result).toMatchObject({
+			ok: true,
+			subjectId,
+			organizationMemberships: [{ organizationId, role: "member" }],
+			suggestedOrganizations: [],
+		});
+	});
+});
+
+describe("removePassword", () => {
+	test("refuses an unknown subject", async () => {
+		let result = await Passwords.removePassword(db, { subjectId: "sub_does_not_exist" });
+		expect(result).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a subject with no password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.removePassword(db, { subjectId });
+		expect(result).toEqual({ ok: false, reason: "no-password" });
+	});
+
+	test("refuses to leave a subject with no readable credential", async () => {
+		let subjectId = await createBareSubject("jane");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.removePassword(db, { subjectId });
+		expect(result).toEqual({ ok: false, reason: "last-credential" });
+	});
+
+	test("removes every row when a verified identifier remains", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let result = await Passwords.removePassword(db, { subjectId });
+		expect(result).toEqual({ ok: true });
+
+		let count = await db.count(Passwords.passwords, { where: { subject_id: subjectId } });
+		expect(count).toBe(0);
+	});
+});
+
+describe("forcePasswordReset", () => {
+	test("refuses an unknown subject", async () => {
+		let result = await Passwords.forcePasswordReset(db, {
+			subjectId: "sub_does_not_exist",
+			reason: "x",
+		});
+		expect(result).toEqual({ ok: false, reason: "not-found" });
+	});
+
+	test("refuses a subject with no password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.forcePasswordReset(db, { subjectId, reason: "x" });
+		expect(result).toEqual({ ok: false, reason: "no-password" });
+	});
+
+	test("marks the newest row and records the reason, and the flag reaches sign-in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		let result = await Passwords.forcePasswordReset(db, {
+			subjectId,
+			reason: "suspected compromise",
+		});
+		expect(result).toEqual({
+			ok: true,
+			passwordId: set.passwordId,
+			reason: "suspected compromise",
+		});
+
+		let signIn = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+		expect(signIn).toMatchObject({ ok: true, mustChangePassword: true });
+	});
+});
+
+describe("beginPasswordReset / completePasswordReset", () => {
+	test("an unknown identifier returns the same shape as a known one, with a null address", async () => {
+		let result = await Passwords.beginPasswordReset(db, { identifier: "nobody@example.com" });
+
+		expect(result).toEqual({ ok: true, ticket: expect.any(String), address: null });
+	});
+
+	test("a known verified address gets a ticket and its own address back", async () => {
+		await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		expect(result).toEqual({ ok: true, ticket: expect.any(String), address: "jane@example.com" });
+	});
+
+	test("completes a reset, opening the way for the new password and closing the ticket", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		let completed = await Passwords.completePasswordReset(db, {
+			ticket: begun.ticket,
+			newPassword: "a-reset-password-1",
+		});
+		expect(completed).toEqual({
+			ok: true,
+			subjectId,
+			passwordId: expect.stringMatching(/^pw_/),
+		});
+
+		let signIn = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "a-reset-password-1",
+			remembered: false,
+		});
+		expect(signIn).toMatchObject({ ok: true, subjectId });
+
+		let secondAttempt = await Passwords.completePasswordReset(db, {
+			ticket: begun.ticket,
+			newPassword: "another-password-1",
+		});
+		expect(secondAttempt).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+
+	test("refuses a ticket that never existed", async () => {
+		let result = await Passwords.completePasswordReset(db, {
+			ticket: "not-a-real-ticket",
+			newPassword: "a-reset-password-1",
+		});
+		expect(result).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+
+	test("refuses an expired ticket, and the attempt still spends it", async () => {
+		await createVerifiedSubject("jane@example.com");
+		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		let ticketRows = await db.findMany(Passwords.passwordResetTickets);
+		let ticketRow = ticketRows[0];
+		if (!ticketRow) throw new Error("unreachable");
+
+		await db.update(
+			Passwords.passwordResetTickets,
+			{ id: ticketRow.id },
+			{ expires_at: Date.now() - 1000 },
+		);
+
+		let result = await Passwords.completePasswordReset(db, {
+			ticket: begun.ticket,
+			newPassword: "a-reset-password-1",
+		});
+		expect(result).toEqual({ ok: false, reason: "invalid-ticket" });
+
+		let secondAttempt = await Passwords.completePasswordReset(db, {
+			ticket: begun.ticket,
+			newPassword: "a-reset-password-1",
+		});
+		expect(secondAttempt).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+
+	test("spends the ticket even when the new password fails policy", async () => {
+		await createVerifiedSubject("jane@example.com");
+		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		let tooShort = await Passwords.completePasswordReset(db, {
+			ticket: begun.ticket,
+			newPassword: "short",
+		});
+		expect(tooShort).toEqual({ ok: false, reason: "too-short", minLength: 8, length: 5 });
+
+		let secondAttempt = await Passwords.completePasswordReset(db, {
+			ticket: begun.ticket,
+			newPassword: "a-perfectly-fine-password-1",
+		});
+		expect(secondAttempt).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+});
+
+describe("beginPasswordReset: the shared mail send envelope", () => {
+	test("stops minting a ticket for an address once its envelope is spent", async () => {
+		await createVerifiedSubject("jane@example.com");
+
+		// One send already happened inside `createVerifiedSubject`'s own `addIdentifier`
+		// call, so four more here reach the shared cap of five.
+		for (let i = 0; i < 4; i++) {
+			let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+			expect(begun.address).toBe("jane@example.com");
+		}
+
+		let capped = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		expect(capped).toEqual({ ok: true, ticket: expect.any(String), address: null });
+	});
+
+	test("is spent by addIdentifier's resends and refuses beginPasswordReset for the same address", async () => {
+		let created = await Subjects.createSubject(db, {
+			identifiers: [{ kind: "email", value: "jane@example.com" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let lastTicket = "";
+
+		// The first mint plus four resends spend the whole shared cap of five, all
+		// through `addIdentifier` alone; the address is never verified in between.
+		for (let i = 0; i < 5; i++) {
+			let added = await Subjects.addIdentifier(db, {
+				subjectId: created.subjectId,
+				kind: "email",
+				value: "jane@example.com",
+				actor: subjectActor,
+			});
+			if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+			lastTicket = added.ticket;
+		}
+
+		let refusedResend = await Subjects.addIdentifier(db, {
+			subjectId: created.subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		});
+		expect(refusedResend).toEqual({
+			ok: false,
+			reason: "rate-limited",
+			retryAfterSeconds: expect.any(Number),
+		});
+
+		await Subjects.verifyIdentifier(db, { ticket: lastTicket });
+
+		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		expect(begun).toEqual({ ok: true, ticket: expect.any(String), address: null });
+	});
+});
+
+describe("audit", () => {
+	async function auditRowsFor(action: string) {
+		let page = await readAuditPage(db, { from: 0, to: Date.now() + 60_000, action });
+		if (!page.ok) throw new Error("unreachable");
+		return page.events;
+	}
+
+	test("password.changed lands when setPassword writes a fresh credential", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		let rows = await auditRowsFor("password.changed");
+		expect(rows).toMatchObject([
+			{ targetId: subjectId, outcome: "succeeded", detail: { via: "set" } },
+		]);
+	});
+
+	test("password.changed lands when changePassword replaces the current one", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		let set = await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		if (!set.ok) throw new Error("unreachable");
+
+		await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: "correct-password-1",
+			newPassword: "correct-password-2",
+			keepSessionId: "sess_current",
+		});
+
+		let rows = await auditRowsFor("password.changed");
+		expect(rows).toMatchObject([{ detail: { via: "change" } }, { detail: { via: "set" } }]);
+	});
+
+	test("forcing a password reset attributes the session revocation it cascades to the platform, not the subject", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		await Passwords.forcePasswordReset(db, { subjectId, reason: "suspected compromise" });
+
+		let rows = await auditRowsFor("session.revoked");
+		expect(rows).toMatchObject([{ actorType: "platform", actorId: "system" }]);
+	});
+
+	test("password.removed lands when a password is taken away", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		await Passwords.removePassword(db, { subjectId }, true);
+
+		let rows = await auditRowsFor("password.removed");
+		expect(rows).toMatchObject([{ targetId: subjectId, outcome: "succeeded" }]);
+	});
+
+	test("authentication.succeeded lands on a correct sign-in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.succeeded");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "succeeded" }]);
+	});
+
+	test("authentication.failed lands on a wrong password", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "the-wrong-password",
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.failed");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "failed" }]);
+	});
+
+	test("authentication.denied lands when a blocked subject attempts to sign in", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "correct-password-1",
+			actor: subjectActor,
+		});
+		await Subjects.blockSubject(db, { subjectId, reason: "fraud" });
+
+		await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "correct-password-1",
+			remembered: false,
+		});
+
+		let rows = await auditRowsFor("authentication.denied");
+		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "denied" }]);
+	});
+});
+
+describe("password normalization: one form hashed and verified", () => {
+	/** Typed with full-width letters and the `ﬁ` ligature, so its NFKC form differs from it. */
+	let typed = "ｆｕｌｌ-ｗｉｄｔｈ-ﬁne-horse-1";
+
+	test("signs in with a password whose NFKC form differs from what was typed", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: typed, actor: subjectActor });
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: typed,
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("changes a password whose NFKC form differs from what was typed", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: typed, actor: subjectActor });
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: typed,
+			newPassword: "a-new-password-1",
+			keepSessionId: "sess_test",
+		});
+
+		expect(result).toMatchObject({ ok: true });
+	});
+
+	test("rehashes the NFKC form on sign-in, so the next sign-in still verifies", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: typed, actor: subjectActor });
+
+		let needsRehash = vi.spyOn(password, "needsRehash").mockReturnValue(true);
+		let first = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: typed,
+			remembered: false,
+		});
+		needsRehash.mockRestore();
+
+		let second = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "full-width-fine-horse-1",
+			remembered: false,
+		});
+
+		expect(first).toMatchObject({ ok: true, subjectId });
+		expect(second).toMatchObject({ ok: true, subjectId });
+	});
+});

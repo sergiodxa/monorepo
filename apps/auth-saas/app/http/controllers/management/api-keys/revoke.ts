@@ -11,12 +11,12 @@ import { createAction } from "remix/router";
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { apiKeyNotFound, keyIdParam } from "~/app/http/controllers/management/api-keys/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { API_KEYS_REVOKE } from "~/app/http/openapi/api-keys";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { requireScope } from "~/app/http/require-scope";
 import routes from "~/routes/management";
 
 /**

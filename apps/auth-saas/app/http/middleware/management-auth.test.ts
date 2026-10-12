@@ -26,12 +26,12 @@ import type { Models } from "~/app/models";
 
 import { database } from "~/app/http/middleware/database";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
-import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
+import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
+import { authorizationCodes } from "~/app/models/tenant/authorization";
+import TenantObject from "~/app/models/tenant/object";
+import { openSession } from "~/app/models/tenant/sessions";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
-import { authorizationCodes } from "~/database/authorization";
-import { openSession } from "~/database/sessions";
-import TenantObject from "~/database/tenant-do";
 
 import { managementAuth } from "./management-auth";
 

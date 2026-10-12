@@ -7,12 +7,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { RolesHarness } from "~/app/http/controllers/management/roles/test-harness";
+import type { RolesHarness } from "~/app/test/harness/management/roles";
 
-import {
-	buildRolesHarness,
-	grantEntitlement,
-} from "~/app/http/controllers/management/roles/test-harness";
+import { buildRolesHarness, grantEntitlement } from "~/app/test/harness/management/roles";
 
 async function defineCustomRole(harness: RolesHarness): Promise<string> {
 	let defined = await harness.tenantDO.defineRole({

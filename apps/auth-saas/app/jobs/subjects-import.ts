@@ -14,18 +14,18 @@ import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { ImportRowOutcome, ImportSubjectRow } from "~/database/subject-import";
+import type { ImportRowOutcome, ImportSubjectRow } from "~/app/models/tenant/subject-import";
 
 import jobs from "~/app/jobs";
+import { readTransferFileLines, writeTransferFile } from "~/app/models/transfer-storage";
+import { recordCost } from "~/app/services/cost-ledger";
 import {
 	BACKPRESSURE_DELAY_MS,
 	BACKPRESSURE_THRESHOLD_MS,
 	BATCH_SIZE,
 	MAX_BATCHES_PER_RUN_PER_TICK,
 	TICK_TIME_BUDGET_MS,
-} from "~/app/jobs/lib/subjects-import-pacing";
-import { recordCost } from "~/app/lib/cost-ledger";
-import { readTransferFileLines, writeTransferFile } from "~/app/lib/transfer-storage";
+} from "~/config/subjects-import-pacing";
 
 /** Awaits a plain delay; the one pause this job ever inserts is small enough that a local wrapper covers it. */
 function sleep(ms: number): Promise<void> {

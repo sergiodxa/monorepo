@@ -9,8 +9,8 @@
 
 import type { RequestContext } from "remix/router";
 
-import { HostedDocument } from "~/app/views/hosted/document";
-import { ErrorPage } from "~/app/views/hosted/error";
+import { HostedDocument } from "~/resources/views/hosted/document";
+import { ErrorPage } from "~/resources/views/hosted/error";
 
 /**
  * Renders the rate-limited state for a hosted form's own submission, at

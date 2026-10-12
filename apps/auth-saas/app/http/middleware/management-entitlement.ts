@@ -14,8 +14,8 @@ import billing, { requireEntitlement } from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { NoopProvider } from "@sdxc/flags/provider/noop";
 
-import { EntitlementProvider } from "~/app/lib/entitlement-provider";
 import { buildTenantFlagContext, entitlementFlags } from "~/app/services/billing/entitlement-flags";
+import { EntitlementProvider } from "~/app/services/entitlement-provider";
 
 /**
  * The entitlement namespace evaluated straight over the context a caller hands it,

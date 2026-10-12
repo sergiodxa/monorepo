@@ -9,10 +9,13 @@
 
 import { errorResponse, ScimError } from "@sdxc/scim";
 
-import type { ScimFilterRefusal, ScimPatchRefusal } from "~/database/scim";
-import type { ScimGroupRepresentation, ScimUserRepresentation } from "~/database/scim-resources";
+import type { ScimFilterRefusal, ScimPatchRefusal } from "~/app/models/tenant/scim";
+import type {
+	ScimGroupRepresentation,
+	ScimUserRepresentation,
+} from "~/app/services/tenant/scim-resources";
 
-import { groupWire, userWire } from "~/database/scim-resources";
+import { groupWire, userWire } from "~/app/services/tenant/scim-resources";
 import routes from "~/routes/tenant";
 
 /**

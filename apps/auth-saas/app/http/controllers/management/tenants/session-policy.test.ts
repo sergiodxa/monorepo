@@ -7,7 +7,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildTenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
+import { buildTenantsHarness } from "~/app/test/harness/management/tenants";
 
 const SESSION_ABSOLUTE_LIFETIME_DEFAULT_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_IDLE_LIFETIME_DEFAULT_MS = 7 * 24 * 60 * 60 * 1000;

@@ -22,10 +22,10 @@ import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
-import { requestOrigin } from "~/app/lib/request-origin";
+import { requestOrigin } from "~/app/http/request-origin";
 import { provisionTenant } from "~/app/services/tenant-provisioning";
-import { PublicDocument } from "~/app/views/landing";
-import { SignUpCompletePage, SignUpInvalidPage, SignUpPendingPage } from "~/app/views/signup";
+import { PublicDocument } from "~/resources/views/landing";
+import { SignUpCompletePage, SignUpInvalidPage, SignUpPendingPage } from "~/resources/views/signup";
 import routes from "~/routes/tenant";
 import webRoutes from "~/routes/web";
 

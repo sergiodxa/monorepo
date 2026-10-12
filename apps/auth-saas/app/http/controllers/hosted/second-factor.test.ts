@@ -12,14 +12,14 @@ import { totp } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { Harness } from "~/app/http/controllers/hosted/test-harness";
+import type { Harness } from "~/app/test/harness/hosted";
 
 import {
 	buildHarness,
 	createTestClient,
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
-} from "~/app/http/controllers/hosted/test-harness";
+} from "~/app/test/harness/hosted";
 
 let harness: Harness;
 

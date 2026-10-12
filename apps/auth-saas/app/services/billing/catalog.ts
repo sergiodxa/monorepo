@@ -2,7 +2,7 @@
  * The plan and add-on catalog: `PLANS` and `ADDONS` are the one place the
  * price, the cap, the retention and the feature set a slug grants are written
  * down, so the number a page would render and the number a gate enforces stay
- * the same number. `app/lib/billing.ts` merges these slugs with the sandbox
+ * the same number. `app/initializers/billing.ts` merges these slugs with the sandbox
  * or production Polar organization's own ids to construct the provider.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

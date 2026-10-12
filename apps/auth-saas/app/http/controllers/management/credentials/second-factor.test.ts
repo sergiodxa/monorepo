@@ -11,10 +11,10 @@ import { totp } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { CredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
+import type { CredentialsHarness } from "~/app/test/harness/management/credentials";
 
-import { buildCredentialsHarness } from "~/app/http/controllers/management/credentials/test-harness";
-import { trustedDevices } from "~/database/totp";
+import { trustedDevices } from "~/app/models/tenant/totp";
+import { buildCredentialsHarness } from "~/app/test/harness/management/credentials";
 
 /** Enrols and activates a TOTP factor for a subject, the way `activateTotpFactor`'s own tests prove one. */
 async function enrolAndActivate(harness: CredentialsHarness, subjectId: string): Promise<void> {

@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { buildSubjectsHarness } from "~/app/http/controllers/management/subjects/test-harness";
+import { buildSubjectsHarness } from "~/app/test/harness/management/subjects";
 
 describe("POST /tenants/:tenantId/subjects/:subjectId/identifiers", () => {
 	test("claims a new identifier, minting a ticket for an email", async () => {

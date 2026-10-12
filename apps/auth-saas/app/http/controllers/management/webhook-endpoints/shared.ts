@@ -15,10 +15,10 @@ import type {
 	WebhookEndpointRecord,
 	WebhookEndpointValidationFailure,
 	WebhookUrlValidationFailureReason,
-} from "~/database/webhook-endpoints";
+} from "~/app/models/tenant/webhook-endpoints";
 
-import { managementProblem } from "~/app/http/lib/problem";
 import { WEBHOOK_ENDPOINT_BODY_SCHEMA } from "~/app/http/openapi/webhook-endpoints";
+import { managementProblem } from "~/app/http/problem";
 
 /** Projects an endpoint's record onto {@link WEBHOOK_ENDPOINT_BODY_SCHEMA}, the resource a merge patch edits. */
 export function writableWebhookEndpoint(

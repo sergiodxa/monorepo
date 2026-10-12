@@ -30,10 +30,10 @@ import {
 	serializeDomain,
 	serializeDomainVerification,
 } from "~/app/http/controllers/management/tenants/shared";
-import { operationInputProblem } from "~/app/http/lib/parse-body";
-import { requireScope } from "~/app/http/lib/require-scope";
 import { managementEntitlement } from "~/app/http/middleware/management-entitlement";
 import { TENANT_DOMAINS_ATTACH } from "~/app/http/openapi/tenants";
+import { operationInputProblem } from "~/app/http/parse-body";
+import { requireScope } from "~/app/http/require-scope";
 import { attachCustomDomain, removeDomain } from "~/app/services/domain";
 import routes from "~/routes/management";
 

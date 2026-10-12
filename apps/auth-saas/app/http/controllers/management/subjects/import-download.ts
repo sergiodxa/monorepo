@@ -19,9 +19,9 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { managementProblem } from "~/app/http/lib/problem";
-import { recordCost } from "~/app/lib/cost-ledger";
-import { spendTransferDownloadTicket } from "~/app/lib/transfer-storage";
+import { managementProblem } from "~/app/http/problem";
+import { spendTransferDownloadTicket } from "~/app/models/transfer-storage";
+import { recordCost } from "~/app/services/cost-ledger";
 import routes from "~/routes/management";
 
 /** A ticket that does not spend, or does not name the tenant this route's own path addresses. */
