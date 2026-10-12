@@ -3,34 +3,27 @@
 Sign and verify [Standard Webhooks](https://www.standardwebhooks.com/) deliveries, reporting
 every failure as a typed value.
 
-Inbound webhook verification is request authentication: if it is wrong, anyone can post an
-event. This package implements the specification directly on
-[`@sdxc/crypto`](https://www.npmjs.com/package/@sdxc/crypto) — `HMAC-SHA256` over
-`id.timestamp.body`, compared in constant time — with no vendor SDK in the path.
-
-Nothing throws. Every failure is a value naming what went wrong, and none of them carries a
-secret or a signature, because these values are what gets logged.
+Signatures are `HMAC-SHA256` over `id.timestamp.body`, computed with
+[`@sdxc/crypto`](https://www.npmjs.com/package/@sdxc/crypto) and compared in constant time.
+Every failure is an error value that names what went wrong and carries no secret or signature,
+so it is safe to log.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/webhooks
 ```
 
-Every function reports its outcome as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure` and
-`unwrap` come from. The `tolerance` and `ttl` options take a `DurationInput` from
-[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration). Both install alongside this
-package.
+Results come from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) (`isFailure`,
+`unwrap`), and durations such as `tolerance` and `ttl` take a `DurationInput` from
+[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration).
 
 ## Usage
 
-The package exports plain functions and reads well as a namespace import, so a call site says
-what is being signed or verified.
-
-### Verify An Inbound Request
+### Verify an inbound request
 
 ```typescript
+import { env } from "cloudflare:workers";
 import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
 
@@ -40,352 +33,307 @@ if (isFailure(result)) return new Response(null, { status: 401 });
 let { id, timestamp, body, payload } = result.data;
 ```
 
-The body is read once, as text, and verified exactly as received. It comes back on the
-result, so a handler can store the raw delivery without re-serializing anything. Verify
-before anything else reads the request: a stream is readable once, and a body consumed
-upstream fails with `UnreadableBodyError`.
+`verify()` reads the body itself, so call it before anything else reads the request. `body` is
+the exact text the signature covers, and `payload` is that body JSON decoded.
 
-### Type The Payload
+### Type the payload
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
 import * as s from "remix/data-schema";
 
-let InvoiceEvent = s.object({ type: s.string(), amount: s.number() });
+let InvoicePaid = s.object({ type: s.literal("invoice.paid"), amount: s.number() });
 
-let result = await Webhooks.verify(request, { secret, schema: InvoiceEvent });
+let result = await Webhooks.verify(request, { secret, schema: InvoicePaid });
 if (isFailure(result)) return new Response(null, { status: 401 });
 
 result.data.payload.amount; // number
 ```
 
-Any [Standard Schema](https://standardschema.dev) works, so a schema written with another
-library needs no adapter. Without a `schema`, the body is still JSON decoded and `payload`
-is typed `unknown`.
+Any [Standard Schema](https://standardschema.dev) works. Without one, `payload` is `unknown`.
 
-### Accept More Than One Secret
-
-```typescript
-import * as Webhooks from "@sdxc/webhooks";
-
-await Webhooks.verify(request, { secrets: [env.WEBHOOK_SECRET, env.WEBHOOK_SECRET_PREVIOUS] });
-```
-
-A delivery is accepted when any configured secret matches, which is what makes a rotation
-possible without a window of rejected deliveries.
-
-### Sign An Outbound Delivery
+### Sign an outbound delivery
 
 ```typescript
 import { unwrap } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
 
-let signed = unwrap(await Webhooks.sign(event, { secret, id: deliveryId, timestamp: new Date() }));
+let signed = unwrap(
+	await Webhooks.sign(
+		{ type: "invoice.paid", amount: 42 },
+		{ secret, id: "msg_1", timestamp: new Date() },
+	),
+);
 
 signed.headers.set("Content-Type", "application/json");
 
 await fetch(endpoint, { method: "POST", headers: signed.headers, body: signed.body });
 ```
 
-Send `signed.body`: it is the exact text the signature covers. `sign()` sets only the three
-signature headers, so a receiver that requires JSON needs the content type added here.
+Send `signed.body`, the exact text that was signed. `signed.headers` holds only the three
+signature headers and is yours to add to.
 
-### Reject Replays
+### Reject replays
 
 ```typescript
+import { env } from "cloudflare:workers";
 import * as Webhooks from "@sdxc/webhooks";
 
 let store = new Webhooks.KVReplayStore(env.WEBHOOKS);
 
-await Webhooks.verify(request, { secret, store });
+let result = await Webhooks.verify(request, { secret, store });
 ```
 
-Timestamp tolerance bounds how long a captured request stays replayable; a store closes the
-window by rejecting a delivery id that was already accepted.
+The timestamp tolerance limits how long a captured request stays valid; a store also rejects a
+delivery id it has already accepted, with `DuplicateDeliveryError`.
 
 ## API
 
-### `verify(request, options)`
+### `verify(request: Request, options: VerifyOptions): Promise<Result<VerifiedDelivery, WebhookError>>`
 
-Verifies a Standard Webhooks request and returns the delivery it carried, as a
-`Result<VerifiedDelivery, WebhookError>`.
+Verifies a request's headers, timestamp and signature against its exact body, then consults the
+store and parses the payload. An id reaches the store only once the delivery is fully accepted.
 
-- `request`: Inbound request, with its body still unread
-- `options.secret`: Signing secret, base64, with or without the `whsec_` prefix
-- `options.secrets`: Secrets to try, for the receiver's own rotation; combined with `secret`
-  when both are given
-- `options.tolerance`: Accepted clock skew as a `DurationInput`, applied in both directions —
-  defaults to `"5 minutes"`
-- `options.schema`: Standard Schema the verified body is parsed with
-- `options.store`: `ReplayStore` consulted to reject a delivery id that was already accepted
-- `options.ttl`: How long an accepted id is remembered — defaults to twice the tolerance
+- `secret`: signing secret, base64, with or without the `whsec_` prefix
+- `secrets`: more secrets to try, after `secret`; a delivery verifies when any one matches.
+  Every entry must decode, and with none configured every delivery fails
+- `tolerance`: accepted clock skew, in both directions; defaults to `"5 minutes"`
+- `schema`: Standard Schema the decoded body is parsed with, which types `payload`
+- `store`: `ReplayStore` that rejects already accepted delivery ids
+- `ttl`: how long the store remembers an id; defaults to twice the tolerance
 
-```typescript
-let result = await Webhooks.verify(request, { secret, tolerance: "2 minutes" });
-```
+### `sign(payload: unknown, options: SignOptions): Promise<Result<SignedDelivery, WebhookError>>`
 
-Secrets are resolved, headers are read, the timestamp is bounded, the signature is compared,
-the store is consulted, and only then is the payload parsed. Nothing but an authenticated
-delivery ever reaches the store, and an id is remembered only once the delivery is fully
-accepted, so a sender retrying a body this endpoint rejected is not answered with a
-duplicate-id failure.
+Signs a payload into the three Standard Webhooks headers. A string payload is signed as given;
+anything else is JSON encoded once.
 
-Every configured secret must decode: one unusable entry fails the call, because a silently
-skipped secret is how a rotation stops working without anyone noticing. An endpoint whose
-secret is unset fails closed, rejecting every delivery rather than accepting them all.
-
-### `sign(payload, options)`
-
-Signs a payload and returns the headers and body to deliver, as a
-`Result<SignedDelivery, WebhookError>`.
-
-- `payload`: Body to send; a string is signed as given, anything else is JSON encoded once
-- `options.secret`: Signing secret, base64, with or without the `whsec_` prefix
-- `options.id`: Unique delivery id; a retry of the same delivery reuses it, a new delivery
-  must not
-- `options.timestamp`: `Date`, or a number read as whole seconds since the epoch, so
-  `Date.now()` is passed as a `Date`
-
-```typescript
-let signed = unwrap(
-	await Webhooks.sign({ type: "invoice.paid" }, { secret, id, timestamp: new Date() }),
-);
-```
-
-`signed.headers` is a `Headers` instance built fresh per call and owned by the caller: add a
-content type or a user agent by mutating it. Copy it with `new Headers(signed.headers)`, since
-spreading a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) instance
-into an object literal yields no entries.
+- `secret`: signing secret, base64, with or without the `whsec_` prefix
+- `id`: delivery id; retries of one delivery reuse it
+- `timestamp`: a `Date`, or whole seconds since the epoch
 
 ### `KVReplayStore`
 
-A `ReplayStore` backed by Workers KV, where each accepted delivery id is a key that expires on
-its own.
+A `ReplayStore` over Workers KV, each accepted id a key that expires on its own. KV is
+eventually consistent, so a near-simultaneous duplicate from another location can still pass.
 
 #### `new KVReplayStore(kv: ReplayKVNamespace, options?: KVReplayStoreOptions)`
 
-- `kv`: Workers KV binding to store delivery ids in
-- `options.prefix`: Prefix put in front of every id — defaults to `"webhook-replay:"`; give
-  each sender its own prefix when several share a namespace
-
-```typescript
-let store = new Webhooks.KVReplayStore(env.WEBHOOKS, { prefix: "billing:" });
-```
+`options.prefix` goes in front of every key, defaulting to `"webhook-replay:"`; give each sender
+its own when several share a namespace.
 
 #### `store.seen(id: string): Promise<boolean>`
 
-Resolves `true` while the id is still remembered.
+Resolves `true` while the id is remembered.
 
 #### `store.remember(id: string, ttl: DurationInput): Promise<void>`
 
-Records the id for the given duration, raised to KV's one-minute minimum when shorter.
-
-KV reads are eventually consistent, so a duplicate arriving within seconds of the original in
-another location can be missed: deduplication narrows the replay window, and an idempotent
-handler is what makes repeated work harmless.
+Remembers the id for `ttl`, raised to KV's one-minute minimum.
 
 ### Errors
 
-Every failure extends `WebhookError`, so one `instanceof` covers the package. Read `name` as
-the failure kind and `deliveryId` as the delivery it belongs to; both are safe to log.
+Every failure extends `WebhookError`, whose `name` is the failure kind and whose `deliveryId` is
+the `webhook-id` the request presented, or `null` before that header is read.
 
-| Error                       | Meaning                                                       | Authentic? |
-| --------------------------- | ------------------------------------------------------------- | ---------- |
-| `InvalidSecretError`        | No usable secret was configured (absent, empty, not base64)   | unknown    |
-| `MissingHeaderError`        | One of the three headers is absent; `header` names it         | no         |
-| `MalformedSignatureError`   | No readable `v1` value in the signature header                | no         |
-| `MalformedTimestampError`   | The timestamp header is not a second count                    | no         |
-| `StaleTimestampError`       | Outside `tolerance`, in either direction                      | no         |
-| `SignatureMismatchError`    | No presented signature matched any configured secret          | no         |
-| `DuplicateDeliveryError`    | The delivery id was already accepted                          | yes        |
-| `PayloadValidationError`    | Verified, but not the expected shape; keeps `body` and issues | yes        |
-| `ReplayStoreError`          | The store could not be read or written; `operation` names it  | unknown    |
-| `UnreadableBodyError`       | The request body was already consumed upstream                | unknown    |
-| `InvalidDeliveryError`      | `sign()` was given an unusable id, timestamp, or payload      | n/a        |
-| `SignatureComputationError` | The runtime refused to compute the MAC                        | unknown    |
-
-Answer `401` for the failures that say "no": those are authentication failures. A
-`PayloadValidationError` means the delivery was authentic, so a retry of it changes nothing,
-and a `DuplicateDeliveryError` means the work already happened, so a success response is the
-honest answer that stops the retries.
+| Error                       | Meaning                                                                   | Authentic? |
+| --------------------------- | ------------------------------------------------------------------------- | ---------- |
+| `InvalidSecretError`        | No usable secret: absent, empty, or not base64                            | unknown    |
+| `MissingHeaderError`        | A signature header is absent; `header` names it                           | no         |
+| `MalformedTimestampError`   | `webhook-timestamp` is not whole seconds                                  | no         |
+| `StaleTimestampError`       | Outside `tolerance`; carries `timestamp` and `toleranceMs`                | no         |
+| `MalformedSignatureError`   | No readable `v1` value in `webhook-signature`                             | no         |
+| `SignatureMismatchError`    | No signature matched any configured secret                                | no         |
+| `DuplicateDeliveryError`    | The store already accepted this delivery id                               | yes        |
+| `PayloadValidationError`    | Not JSON or not the schema's shape; carries `body`, `timestamp`, `issues` | yes        |
+| `ReplayStoreError`          | The store threw; `operation` is `"seen"` or `"remember"`                  | unknown    |
+| `UnreadableBodyError`       | The request body was already read                                         | unknown    |
+| `InvalidDeliveryError`      | `sign()` got an empty id, a bad timestamp, or a non-JSON payload          | n/a        |
+| `SignatureComputationError` | The runtime refused to compute the HMAC                                   | unknown    |
 
 ### Types
 
-#### `VerifiedDelivery<Payload>`
+#### `VerifyOptions` and `SecretOptions`
 
-```typescript
-interface VerifiedDelivery<Payload = unknown> {
-	id: string; // from webhook-id
-	timestamp: Date; // from webhook-timestamp
-	body: string; // exact text the signature covers
-	payload: Payload; // parsed body, typed by the schema
-}
-```
+The options of `verify()`; `SecretOptions` holds `secret` and `secrets`. Pass them inline, since
+`payload` is typed from the object literal.
 
-#### `VerifyOptions`
+#### `VerifiedDelivery<Payload = unknown>`
 
-```typescript
-interface VerifyOptions extends SecretOptions {
-	tolerance?: DurationInput;
-	schema?: StandardSchemaV1;
-	store?: ReplayStore;
-	ttl?: DurationInput;
-}
-```
-
-Pass the options inline: the payload type is read off the object literal, so annotating a
-variable with this interface widens `payload` back to `unknown`.
+`{ id: string; timestamp: Date; body: string; payload: Payload }`.
 
 #### `VerifiedPayload<Options>`
 
-The payload type a `verify()` call resolves to: the schema's output type when the call passed
-one, `unknown` otherwise.
-
-#### `SecretOptions`
-
-```typescript
-interface SecretOptions {
-	secret?: string;
-	secrets?: readonly string[];
-}
-```
-
-Both are optional in the type, and at least one must resolve at runtime.
+The payload type a `verify()` call resolves to: the schema's output, or `unknown`.
 
 #### `SignOptions` and `SignedDelivery`
 
-```typescript
-interface SignOptions {
-	secret: string;
-	id: string;
-	timestamp: Date | number;
-}
-
-interface SignedDelivery {
-	headers: Headers; // webhook-id, webhook-timestamp, webhook-signature
-	body: string; // exact text that was signed
-	id: string;
-	timestamp: number; // whole seconds, as sent
-	signature: string; // the webhook-signature value
-}
-```
+`SignOptions` is `{ secret; id; timestamp }`. `SignedDelivery` is `{ headers; body; id;
+timestamp; signature }`, with `timestamp` in whole seconds and `signature` the
+`webhook-signature` value.
 
 #### `ReplayStore`
 
-```typescript
-interface ReplayStore {
-	seen(id: string): Promise<boolean>;
-	remember(id: string, ttl: DurationInput): Promise<void>;
-}
-```
-
-Implement it over any storage with a TTL — a table an operator can inspect, for instance.
-`seen()` reports only ids that were remembered, since a false positive rejects an authentic
-delivery.
+`{ seen(id): Promise<boolean>; remember(id, ttl): Promise<void> }`, implementable over any
+storage with expiry.
 
 #### `ReplayKVNamespace` and `KVReplayStoreOptions`
 
-`ReplayKVNamespace` declares the two methods `KVReplayStore` calls — `get` and `put` — as a
-subset, so a Workers `KVNamespace` binding satisfies it with no cast.
-`KVReplayStoreOptions` carries the single `prefix` field.
+The `get`/`put` subset of a Workers `KVNamespace` the store calls, and `{ prefix?: string }`.
 
 ## Pattern: A Fail-Closed Endpoint
 
-Distinguish "not authentic" from "authentic but unmodelled", so an unknown event type is not
-treated as an attack and the sender is not told to retry forever.
+Answer each failure for what it means: an authentic duplicate already did its work, an authentic
+but unmodelled event should not be retried, and everything else is rejected.
 
 ```typescript
+import { env } from "cloudflare:workers";
 import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
+import * as s from "remix/data-schema";
 
-async function handleWebhook(request: Request): Promise<Response> {
+let Event = s.object({ type: s.string(), data: s.object({ id: s.string() }) });
+
+export async function handleWebhook(request: Request): Promise<Response> {
 	let result = await Webhooks.verify(request, {
 		secret: env.WEBHOOK_SECRET,
+		schema: Event,
 		store: new Webhooks.KVReplayStore(env.WEBHOOKS),
 	});
 
 	if (isFailure(result)) {
 		if (result.error instanceof Webhooks.DuplicateDeliveryError) {
-			return new Response(null, { status: 200 }); // already processed, stop the retries
+			return new Response(null, { status: 200 });
 		}
-
 		if (result.error instanceof Webhooks.PayloadValidationError) {
-			return new Response(null, { status: 202 }); // authentic, nothing here models it
+			return new Response(null, { status: 202 });
 		}
-
-		logger.warn("webhook rejected", {
-			kind: result.error.name,
-			delivery: result.error.deliveryId,
-		});
-
+		if (
+			result.error instanceof Webhooks.ReplayStoreError ||
+			result.error instanceof Webhooks.SignatureComputationError
+		) {
+			return new Response(null, { status: 503 });
+		}
 		return new Response(null, { status: 401 });
 	}
 
-	await enqueue(result.data.payload);
-
+	await processEvent(result.data.payload);
 	return new Response(null, { status: 202 });
 }
 ```
 
-## Pattern: Delivering And Retrying
+## Pattern: Delivering With Retries
 
-Sign once per attempt, reusing the delivery id so the receiver can de-duplicate the retries of
-one event, and refreshing the timestamp so a slow retry arrives inside the receiver's
-tolerance.
+Reuse the delivery id across attempts so the receiver can de-duplicate them, and sign each
+attempt with a fresh timestamp so a late retry still lands inside the receiver's tolerance.
 
 ```typescript
-import { unwrap } from "@sdxc/result";
+import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
 
-async function deliver(endpoint: string, event: unknown, deliveryId: string): Promise<Response> {
-	let signed = unwrap(
-		await Webhooks.sign(event, { secret, id: deliveryId, timestamp: new Date() }),
-	);
+async function deliver(endpoint: string, event: unknown, id: string, secret: string) {
+	let lastFailure: Webhooks.WebhookError | Response | null = null;
 
-	signed.headers.set("Content-Type", "application/json");
-	signed.headers.set("User-Agent", "acme-webhooks/1");
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		let signed = await Webhooks.sign(event, { secret, id, timestamp: new Date() });
+		if (isFailure(signed)) return signed.error;
 
-	return await fetch(endpoint, { method: "POST", headers: signed.headers, body: signed.body });
+		signed.data.headers.set("Content-Type", "application/json");
+
+		let response = await fetch(endpoint, {
+			method: "POST",
+			headers: signed.data.headers,
+			body: signed.data.body,
+		});
+		if (response.ok) return null;
+		lastFailure = response;
+	}
+
+	return lastFailure;
 }
 ```
 
-## Pattern: Reproducible Signatures In Tests
+## Pattern: Rotating a Secret
 
-Because the id and the timestamp are parameters rather than generated inside `sign()`, a
-delivery can be re-signed byte for byte, which is what lets a test round-trip through
-`verify()`.
+List the new secret first and keep the old one until every delivery signed with it has drained.
 
 ```typescript
-import { unwrap } from "@sdxc/result";
-import * as Webhooks from "@sdxc/webhooks";
-
-let signed = unwrap(await Webhooks.sign(body, { secret, id: "msg_1", timestamp: 1614265330 }));
-
-let request = new Request(endpoint, {
-	method: "POST",
-	headers: signed.headers,
-	body: signed.body,
-});
-
-let result = await Webhooks.verify(request, { secret, tolerance: "3650 days" });
-```
-
-## Pattern: Rotating A Receiver's Secret
-
-Add the new secret to the front of the list, wait for the sender's queue to drain, then drop
-the old one.
-
-```typescript
+import { env } from "cloudflare:workers";
 import * as Webhooks from "@sdxc/webhooks";
 
 let secrets = [env.WEBHOOK_SECRET, env.WEBHOOK_SECRET_PREVIOUS].filter(Boolean);
 
-await Webhooks.verify(request, { secrets });
+let result = await Webhooks.verify(request, { secrets });
 ```
 
-Keep `tolerance` small while a store is configured: it stays the narrow replay window, and the
-store is what lets a slow retry still be recognized rather than rejected.
+## Pattern: A Replay Store Over a Table
+
+Keep accepted ids in a table you can inspect by implementing `ReplayStore`. Report `seen` only
+for ids that were remembered and have not expired.
+
+```typescript
+import { env } from "cloudflare:workers";
+import { toMs } from "@sdxc/duration";
+import * as Webhooks from "@sdxc/webhooks";
+
+let store: Webhooks.ReplayStore = {
+	async seen(id) {
+		let row = await env.DB.prepare("SELECT 1 FROM deliveries WHERE id = ? AND expires_at > ?")
+			.bind(id, Date.now())
+			.first();
+		return row !== null;
+	},
+	async remember(id, ttl) {
+		await env.DB.prepare("INSERT OR REPLACE INTO deliveries (id, expires_at) VALUES (?, ?)")
+			.bind(id, Date.now() + toMs(ttl))
+			.run();
+	},
+};
+
+let result = await Webhooks.verify(request, { secret: env.WEBHOOK_SECRET, store, ttl: "1 day" });
+```
+
+## Pattern: Round-Tripping in Tests
+
+The id and timestamp are inputs to `sign()`, so a test builds a request a receiver accepts and
+asserts on the result.
+
+```typescript
+import { isFailure, unwrap } from "@sdxc/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { expect, test } from "vitest";
+
+let secret = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+
+test("accepts a signed delivery", async () => {
+	let signed = unwrap(
+		await Webhooks.sign({ type: "ping" }, { secret, id: "msg_1", timestamp: new Date() }),
+	);
+
+	let request = new Request("https://example.com/webhooks", {
+		method: "POST",
+		headers: signed.headers,
+		body: signed.body,
+	});
+
+	let delivery = unwrap(await Webhooks.verify(request, { secret }));
+	expect(delivery.payload).toEqual({ type: "ping" });
+});
+
+test("rejects a tampered body", async () => {
+	let signed = unwrap(
+		await Webhooks.sign({ type: "ping" }, { secret, id: "msg_2", timestamp: new Date() }),
+	);
+
+	let request = new Request("https://example.com/webhooks", {
+		method: "POST",
+		headers: signed.headers,
+		body: '{"type":"pong"}',
+	});
+
+	let result = await Webhooks.verify(request, { secret });
+	expect(isFailure(result) && result.error).toBeInstanceOf(Webhooks.SignatureMismatchError);
+});
+```
 
 ## Versioning
 
