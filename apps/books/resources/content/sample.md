@@ -250,7 +250,7 @@ Later, when exchanging the authorization code for tokens, the Client Application
 Here’s a simplified version of how the PKCE exchange looks in code:
 
 ```ts
-let codeVerifier = crypto.randomUUID().replace(/-/g, "");
+let codeVerifier = randomToken({ bytes: 32 }); // 43 base64url characters
 let codeChallenge = await sha256Base64Url(codeVerifier);
 
 let authorizeUrl = new URL("https://auth.example.com/authorize");

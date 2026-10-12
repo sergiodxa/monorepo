@@ -27,7 +27,6 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/newsletter": "workspace:*",
-		"@sdxc/response": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/seo": "workspace:*",
 		"@sdxc/trace-context": "workspace:*",
