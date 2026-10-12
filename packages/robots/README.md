@@ -2,51 +2,60 @@
 
 Read, write and evaluate robots.txt and robots directives.
 
+`parse`, `stringify` and `isAllowed` implement the robots.txt rules of
+[RFC 9309](https://www.rfc-editor.org/rfc/rfc9309): groups picked by the agent's product token,
+the longest matching `Allow` or `Disallow` deciding, `*` and `$` wildcards. `./fetch` retrieves
+an origin's file and turns every HTTP result into the decision the RFC assigns it, and
+`./directives` reads and writes the per-page `X-Robots-Tag` header and `robots` meta tag.
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/robots
 ```
 
-[RFC 9309](https://www.rfc-editor.org/rfc/rfc9309) standardized the Robots Exclusion Protocol:
-how `robots.txt` groups rules by user agent, how a crawler picks its group, how `Allow` and
-`Disallow` patterns match (longest match wins, `*` and `$` wildcards), how much of the file a
-crawler must read, and what an HTTP error fetching it means. `parse` and `stringify` cover the
-file, `isAllowed` and `crawlDelay` evaluate a parsed document, and `fetchRobots` turns every
-HTTP outcome into the decision the RFC assigns it.
-
-`parse` always returns a document. The RFC defines every file as readable: a parser skips what
-it cannot read, so a page of HTML parses to a document with no groups, which allows everything.
-Matching normalizes percent-encoding in both the pattern and the path.
-
-The per-page counterpart, the `robots` meta tag and the `X-Robots-Tag` header, is documented by
-the search engines. `@sdxc/robots/directives` reads and writes that grammar, including
-bot-scoped sets and value-carrying directives such as `max-snippet`.
-
 ## Usage
-
-### Check a URL before crawling it
-
-```typescript
-import { fetchRobots, isAllowedBy } from "@sdxc/robots/fetch";
-
-const AGENT = "ExampleBot/1.0 (+https://example.com/bot)";
-
-let outcome = await fetchRobots(url, { userAgent: AGENT });
-if (!isAllowedBy(outcome, AGENT, url)) return refuse();
-```
 
 ### Evaluate a file you already hold
 
 ```typescript
 import { crawlDelay, isAllowed, parse } from "@sdxc/robots";
 
-let document = parse(text);
-isAllowed(document, "ExampleBot/1.0", "https://example.com/private/x"); // false
-crawlDelay(document, "ExampleBot/1.0"); // 10, or undefined
+let document = parse(`
+User-agent: *
+Disallow: /private/
+Allow: /private/press/
+Crawl-delay: 10
+
+Sitemap: https://example.com/sitemap.xml
+`);
+
+isAllowed(document, "ExampleBot/1.0", "https://example.com/private/report"); // false
+isAllowed(document, "ExampleBot/1.0", "/private/press/launch"); // true
+crawlDelay(document, "ExampleBot/1.0"); // 10
+document.sitemaps; // ["https://example.com/sitemap.xml"]
 ```
 
-### Serve a robots.txt
+`parse` reads any text and always returns a document: lines that are not records are skipped, so
+an HTML page parses to a document with no groups, which allows everything.
+
+### Check a URL before crawling it
+
+```typescript
+import { fetchRobots, isAllowedBy } from "@sdxc/robots/fetch";
+
+let AGENT = "ExampleBot/1.0 (+https://example.com/bot)";
+
+let outcome = await fetchRobots("https://example.com/articles/1", { userAgent: AGENT });
+if (isAllowedBy(outcome, AGENT, "https://example.com/articles/1")) {
+	// fetch the page
+}
+```
+
+A 2xx is parsed, a 4xx allows everything, and a 5xx, a 429 or a network failure disallows
+everything. `outcome.lifetimeMs` says how long to keep the decision.
+
+### Write a robots.txt
 
 ```typescript
 import { stringify } from "@sdxc/robots";
@@ -57,7 +66,7 @@ let body = stringify({
 			userAgents: ["*"],
 			rules: [
 				{ allow: true, pattern: "/" },
-				{ allow: false, pattern: "/cms" },
+				{ allow: false, pattern: "/admin" },
 			],
 			contentSignals: { search: true, "ai-input": true, "ai-train": false },
 		},
@@ -67,12 +76,18 @@ let body = stringify({
 });
 ```
 
-### Read a page's own directives
+What `stringify` writes parses back to the same document.
+
+### Read and write per-page directives
 
 ```typescript
-import { directivesFor } from "@sdxc/robots/directives";
+import { directivesFor, stringifyDirectives } from "@sdxc/robots/directives";
 
-let mayCache = !directivesFor(response, AGENT).noarchive;
+let directives = directivesFor(response, "ExampleBot/1.0");
+directives.noindex; // true when any X-Robots-Tag for this bot or every bot says so
+
+stringifyDirectives({ noindex: true }, { explicit: true }); // "noindex, follow"
+stringifyDirectives({ botName: "examplebot", nosnippet: true }); // "examplebot: nosnippet"
 ```
 
 ## API
@@ -81,144 +96,217 @@ let mayCache = !directivesFor(response, AGENT).noarchive;
 
 #### `parse(source: string, options?: Robots.ParseOptions): Robots.Document`
 
-Reads any text as robots.txt. A leading byte order mark is dropped, CR, LF and CRLF all end a
-line, `#` starts a comment, and field names are case-insensitive. Only the whole lines within
-`maxBytes` (default `512_000`, the RFC's 500 KiB floor) are read.
-
-- A group is one or more `User-agent` lines and the lines after them. `Allow`, `Disallow`,
-  `Crawl-delay` and `Content-Signal` are group members and end the run of user-agent lines;
-  `Sitemap` and unknown records do not, so they never split a group (§2.2.4).
-- Rules before the first group are dropped (§2.2.2).
-- `Crawl-delay` is non-standard, read per group in seconds, last value wins.
-- `Content-Signal: search=yes, ai-train=no` is read per group into `contentSignals`.
-- `Sitemap` lines are collected from anywhere; every other record is kept in `records`.
-
-```typescript
-interface Document {
-	groups: {
-		userAgents: string[];
-		rules: { allow: boolean; pattern: string }[];
-		crawlDelay?: number;
-		contentSignals?: ContentSignals;
-	}[];
-	sitemaps: string[];
-	records: { name: string; value: string }[]; // name lower-cased
-}
-```
+Reads any text as robots.txt, up to the last whole line within `maxBytes` (default `512_000`).
+`Crawl-delay` and `Content-Signal` lines are read into the group they follow, `Sitemap` lines
+are collected from anywhere, rules before the first group are dropped, and every other record is
+kept in `records`.
 
 #### `stringify(document: Robots.Document): string`
 
-Writes groups, then sitemaps, then other records, one field per line with LF line ends and a
-blank line between sections. What it writes parses back to the same document.
+Writes groups, then sitemaps, then other records, with LF line ends and a blank line between
+sections; an empty document writes `""`.
 
-#### `isAllowed(robots, userAgent, url): boolean`
+#### `isAllowed(robots: Robots.Document, userAgent: string, url: string | URL): boolean`
 
-Whether an agent may fetch a URL (absolute, or a path starting with `/`). The agent's product
-token picks every group naming it, merged into one; with none, the `*` groups apply; with
-neither, everything is allowed. The longest matching pattern decides, `Allow` wins a tie, and
-`/robots.txt` is always allowed. Patterns and paths are both normalized first: non-ASCII
-percent-encoded as UTF-8, escapes uppercased, escapes of unreserved characters decoded, and a
-raw `*` or `$` in the URL encoded so `%2A` and `%24` in a pattern match them.
+Whether an agent may fetch an absolute URL or a `/`-rooted path. Every group naming the agent's
+product token applies, merged; with none, the `*` groups apply. The longest matching pattern
+decides, `Allow` wins a tie, an unmatched path and `/robots.txt` are allowed, and percent-encoding
+is normalized in both pattern and path before matching.
 
-#### `crawlDelay(robots, userAgent): number | undefined`
+#### `crawlDelay(robots: Robots.Document, userAgent: string): number | undefined`
 
-The `Crawl-delay` of the groups that apply to the agent, in seconds.
+The `Crawl-delay`, in seconds, of the groups that apply to the agent.
 
 #### `productToken(userAgent: string): string`
 
-The lower-cased leading `[A-Za-z_-]+` run: `"ExampleBot/1.0 (+https://…)"` gives
-`"examplebot"`. User-agent lines in the file are reduced the same way, so `User-agent: Foo Bar`
-applies to `foo`.
+The lower-cased leading run of letters, `_` and `-`: `"ExampleBot/1.0 (+https://…)"` gives
+`"examplebot"`. Both the agent and every `User-agent` line are compared through it.
 
 #### `robotsUrl(url: string | URL): string | null`
 
-The origin's `/robots.txt`, or `null` for text that is not a URL or a URL with no origin.
+The origin's `/robots.txt` URL, or `null` for text that is not a URL or a URL with no origin.
 
 ### `@sdxc/robots/fetch`
 
-#### `fetchRobots(url, options): Promise<RobotsFetch.Outcome>`
+#### `fetchRobots(url: string | URL, options: RobotsFetch.Options): Promise<RobotsFetch.Outcome>`
 
-Fetches the origin's robots.txt with the caller's `User-Agent`, `Accept: text/plain` and no
-credentials, walking redirects itself so `maxRedirects` (default `5`) holds across hosts. Every
-outcome is a decision:
+Fetches the robots.txt of `url`'s origin, sending `options.userAgent`, following up to
+`maxRedirects` (default `5`) redirects within `timeoutMs` (default `10_000`) for the whole
+retrieval, and parsing up to `maxBytes` (default `512_000`). `signal` aborts it. It always
+resolves:
 
-| Result                                                                      | Outcome                                 | Evaluates as | `lifetimeMs` |
-| --------------------------------------------------------------------------- | --------------------------------------- | ------------ | ------------ |
-| 2xx                                                                         | `{ status: "parsed", document }`        | the rules    | 24 hours     |
-| 4xx other than 429                                                          | `{ status: "unavailable", httpStatus }` | allow all    | 24 hours     |
-| 5xx, 429, other statuses, network error, timeout, too many redirects, abort | `{ status: "unreachable", httpStatus }` | disallow all | 1 hour       |
+| Result                                                      | `status`        | Evaluates as | `lifetimeMs` |
+| ----------------------------------------------------------- | --------------- | ------------ | ------------ |
+| 2xx                                                         | `"parsed"`      | its rules    | 24 hours     |
+| 4xx other than 429                                          | `"unavailable"` | allow all    | 24 hours     |
+| 5xx, 429, network error, timeout, too many redirects, abort | `"unreachable"` | disallow all | 1 hour       |
 
-The body is read up to `maxBytes` (default `512_000`) and parsed to the last whole line within
-it. The outcome is plain data, so a cache stores it as JSON for `lifetimeMs`. Options:
-`userAgent` (required), `timeoutMs` (default `10_000`, for the whole retrieval), `maxBytes`,
-`maxRedirects`, `signal`.
+#### `isAllowedBy(outcome: RobotsFetch.Outcome, userAgent: string, url: string | URL): boolean`
 
-#### `isAllowedBy(outcome, userAgent, url): boolean`
-
-`isAllowed` over an outcome: parsed documents are evaluated, unavailable allows, and unreachable
-refuses everything but `/robots.txt` itself.
+`isAllowed` over an outcome, fresh or from a cache: a parsed document is evaluated, unavailable
+allows everything, and unreachable refuses everything but `/robots.txt`.
 
 ### `@sdxc/robots/directives`
 
 #### `parseDirectives(value: string): Directives.Set[]`
 
-Reads one `X-Robots-Tag` value or `robots` meta content. `name:` that is not a value-carrying
-directive scopes what follows to that bot, until the next scope; directives before any scope form
-an unscoped set (`botName: null`).
-
-```typescript
-interface Set {
-	botName: string | null;
-	noindex: boolean; // "none" sets noindex and nofollow
-	nofollow: boolean;
-	noarchive: boolean;
-	nosnippet: boolean;
-	noimageindex: boolean;
-	notranslate: boolean;
-	maxSnippet?: number; // -1 for no limit
-	maxImagePreview?: "none" | "standard" | "large";
-	maxVideoPreview?: number;
-	unavailableAfter?: Date; // ISO 8601, RFC 822 and RFC 850 dates
-	other: string[]; // unknown directives, lower-cased, e.g. "noai"
-}
-```
+Reads one `X-Robots-Tag` value or `robots` meta content into one set per bot, in order of first
+appearance. `name:` scopes what follows to that bot until the next scope; directives before any
+scope form the unscoped set (`botName: null`).
 
 #### `directivesFor(response: Response, userAgent: string): Directives.Set`
 
-Merges every `X-Robots-Tag` on the response into the set for one bot: the unscoped sets plus
-those naming its product token. The more restrictive value wins: any flag set is on, and the
-smaller limit, smaller image preview and earlier `unavailable_after` apply.
+Merges the response's `X-Robots-Tag` headers into the set for one bot: the unscoped sets plus
+those naming its product token. The more restrictive value wins: a flag set anywhere is on, and
+the smaller limit, smaller image preview and earlier `unavailableAfter` apply.
 
-#### `stringifyDirectives(set, options?): string`
+#### `stringifyDirectives(set: Partial<Directives.Set>, options?: Directives.StringifyOptions): string`
 
-Writes a set, prefixed with `botName:` when it has one. Defaults are omitted unless
-`explicit: true` spells out `index` and `follow`:
-`stringifyDirectives({ noindex: true }, { explicit: true })` is `"noindex, follow"`.
+Writes a set, prefixed with `botName:` when it has one. Missing fields are off, and defaults are
+omitted unless `explicit: true` spells out `index` and `follow`.
 
-## Pattern: Cache The Outcome, Not The Text
+### Types
+
+#### `Robots.Document`
+
+`{ groups, sitemaps, records }`: groups in file order, sitemap URLs, and every other record as
+`{ name, value }` with `name` lower-cased (`Robots.Record`).
+
+#### `Robots.Group`
+
+`userAgents` as written (`*` for the wildcard), `rules` as `Robots.Rule` (`{ allow, pattern }`;
+an empty pattern matches nothing), an optional `crawlDelay` in seconds, and optional
+`contentSignals`.
+
+#### `Robots.ContentSignals`
+
+`Content-Signal` keys mapped to `true` (`yes`) or `false` (`no`); `search`, `ai-input` and
+`ai-train` are typed, and any other key is kept.
+
+#### `Robots.ParseOptions`
+
+`{ maxBytes?: number }`.
+
+#### `RobotsFetch.Outcome`
+
+`RobotsFetch.Parsed` (`{ status: "parsed", document, lifetimeMs }`), `RobotsFetch.Unavailable`
+(`{ status: "unavailable", httpStatus, lifetimeMs }`) or `RobotsFetch.Unreachable`
+(`{ status: "unreachable", httpStatus: number | null, lifetimeMs }`). It is plain data, so it
+stores as JSON.
+
+#### `RobotsFetch.Options`
+
+`{ userAgent: string; timeoutMs?: number; maxBytes?: number; maxRedirects?: number; signal?: AbortSignal }`.
+
+#### `Directives.Set`
+
+`botName` (lower-cased, or `null`), the `Directives.Flags` booleans `noindex`, `nofollow`,
+`noarchive`, `nosnippet`, `noimageindex` and `notranslate` (`none` sets the first two),
+`maxSnippet` and `maxVideoPreview` (`-1` for no limit), `maxImagePreview`
+(`"none" | "standard" | "large"`), `unavailableAfter` as a `Date`, and `other` for unknown
+directives such as `noai`, lower-cased.
+
+#### `Directives.StringifyOptions`
+
+`{ explicit?: boolean }`.
+
+## Pattern: Cache The Outcome Per Origin
 
 The outcome carries its own lifetime, so an unreachable origin is asked again within the hour
-instead of being disallowed for a day.
+while a parsed file is kept for a day.
 
 ```typescript
 import type { RobotsFetch } from "@sdxc/robots/fetch";
 
 import { fetchRobots, isAllowedBy } from "@sdxc/robots/fetch";
 
+let AGENT = "ExampleBot/1.0 (+https://example.com/bot)";
+let cache = new Map<string, { outcome: RobotsFetch.Outcome; expiresAt: number }>();
+
 async function robotsFor(url: string): Promise<RobotsFetch.Outcome> {
-	let key = `robots:v2:${new URL(url).origin}`;
-	let held = await cache.read<RobotsFetch.Outcome>(key);
-	if (held !== null) return held;
+	let origin = new URL(url).origin;
+	let held = cache.get(origin);
+	if (held !== undefined && held.expiresAt > Date.now()) return held.outcome;
 
 	let outcome = await fetchRobots(url, { userAgent: AGENT });
-	await cache.write(key, outcome, { ttl: outcome.lifetimeMs });
+	cache.set(origin, { outcome, expiresAt: Date.now() + outcome.lifetimeMs });
 	return outcome;
 }
 
-if (!isAllowedBy(await robotsFor(url), AGENT, url)) return refuse();
+async function mayCrawl(url: string): Promise<boolean> {
+	return isAllowedBy(await robotsFor(url), AGENT, url);
+}
 ```
 
-## Pattern: A Meta Tag From Two Booleans
+RFC 9309 lets a crawler treat an origin unreachable for a long time (30 days) as unavailable; a
+cache that keeps history can apply that by swapping the outcome before calling `isAllowedBy`.
+
+## Pattern: Pace Requests And Discover Sitemaps
+
+A parsed outcome carries the whole document, so one retrieval answers what to crawl, how fast,
+and where the sitemaps are.
+
+```typescript
+import { crawlDelay } from "@sdxc/robots";
+import { fetchRobots, isAllowedBy } from "@sdxc/robots/fetch";
+
+let AGENT = "ExampleBot/1.0 (+https://example.com/bot)";
+
+async function crawlSite(origin: string, paths: string[]) {
+	let outcome = await fetchRobots(origin, { userAgent: AGENT, timeoutMs: 5_000 });
+	let delaySeconds = outcome.status === "parsed" ? (crawlDelay(outcome.document, AGENT) ?? 1) : 1;
+	let sitemaps = outcome.status === "parsed" ? outcome.document.sitemaps : [];
+
+	for (let path of [...sitemaps, ...paths]) {
+		let url = new URL(path, origin).toString();
+		if (!isAllowedBy(outcome, AGENT, url)) continue;
+		await fetch(url, { headers: { "user-agent": AGENT } });
+		await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
+	}
+}
+```
+
+## Pattern: Serve robots.txt With Per-Bot Rules
+
+Groups name one or more agents; a bot named in a group follows only that group, every other bot
+follows `*`.
+
+```typescript
+import { stringify } from "@sdxc/robots";
+
+function robotsTxt(origin: string): Response {
+	let body = stringify({
+		groups: [
+			{
+				userAgents: ["*"],
+				rules: [
+					{ allow: false, pattern: "/search" },
+					{ allow: false, pattern: "/*.json$" },
+				],
+				contentSignals: { search: true, "ai-train": false },
+			},
+			{
+				userAgents: ["GPTBot", "CCBot"],
+				rules: [{ allow: false, pattern: "/" }],
+			},
+			{
+				userAgents: ["SlowBot"],
+				rules: [{ allow: true, pattern: "/" }],
+				crawlDelay: 30,
+			},
+		],
+		sitemaps: [`${origin}/sitemap.xml`],
+		records: [],
+	});
+
+	return new Response(body, { headers: { "content-type": "text/plain; charset=utf-8" } });
+}
+```
+
+## Pattern: Send Page Directives As Header And Meta Tag
+
+`stringifyDirectives` writes the same value for both places; one header per bot scopes a policy
+to it.
 
 ```typescript
 import { stringifyDirectives } from "@sdxc/robots/directives";
@@ -226,21 +314,47 @@ import { stringifyDirectives } from "@sdxc/robots/directives";
 function robotsMeta({ index = true, follow = true }) {
 	return stringifyDirectives({ noindex: !index, nofollow: !follow }, { explicit: true });
 }
+
+let headers = new Headers({ "content-type": "text/html; charset=utf-8" });
+headers.append("X-Robots-Tag", stringifyDirectives({ maxSnippet: 160, maxImagePreview: "large" }));
+headers.append("X-Robots-Tag", stringifyDirectives({ botName: "examplebot", noarchive: true }));
+headers.append(
+	"X-Robots-Tag",
+	stringifyDirectives({ unavailableAfter: new Date("2026-12-31T00:00:00Z") }),
+);
+
+let metaContent = robotsMeta({ index: false }); // "noindex, follow", for <meta name="robots">
 ```
 
-## Conformance
+## Pattern: Honor A Page's Directives When Indexing
 
-The tests run RFC 9309's §5 examples and its percent-encoding tables, and the RFC matching cases
-from [Google's open-source robots.txt parser](https://github.com/google/robotstxt). Google-only
-extensions in that suite are outside the RFC and stay out: a missing colon read as one,
-`index.html` read as its directory, the 16 KiB line limit, and an empty URL refused. Two of its
-assertions differ by design: this package parses the URL, so a raw `/foo/bar/ツ` matches its
-encoded pattern, and it decodes unreserved escapes as §2.2.2 asks, so `%62%61%7A` in a pattern
-matches `/baz`.
+`directivesFor` reads the headers; the meta tag's content goes through `parseDirectives`, whose
+sets a crawler picks by `botName`.
 
-Two decisions stay with the caller. RFC 9309 lets a crawler treat an origin unreachable for a
-month as unavailable, which only a cache with history can tell. And a `429` evaluates as
-unreachable: an origin rate-limiting you is asking you to stay away.
+```typescript
+import { productToken } from "@sdxc/robots";
+import { directivesFor, parseDirectives } from "@sdxc/robots/directives";
+
+let AGENT = "ExampleBot/1.0 (+https://example.com/bot)";
+
+function indexPolicy(response: Response, metaContent: string | null) {
+	let header = directivesFor(response, AGENT);
+	let meta = parseDirectives(metaContent ?? "").filter(
+		(set) => set.botName === null || set.botName === productToken(AGENT),
+	);
+
+	let noindex = header.noindex || meta.some((set) => set.noindex);
+	let expired = header.unavailableAfter !== undefined && header.unavailableAfter < new Date();
+	let snippetLength = header.maxSnippet === -1 ? Infinity : (header.maxSnippet ?? Infinity);
+
+	return {
+		index: !noindex && !expired,
+		follow: !header.nofollow && !meta.some((set) => set.nofollow),
+		cache: !header.noarchive,
+		snippetLength: header.nosnippet ? 0 : snippetLength,
+	};
+}
+```
 
 ## Versioning
 
