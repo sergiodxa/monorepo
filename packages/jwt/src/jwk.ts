@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as jose from "jose";
 
 import type { KeyStorage } from "./key-storage.js";
@@ -152,7 +153,7 @@ export namespace JWK {
 		let key = await jose.generateKeyPair(alg, { extractable: true });
 
 		return {
-			id: crypto.randomUUID(),
+			id: generateUUID(),
 			publicKey: await jose.exportSPKI(key.publicKey),
 			privateKey: await jose.exportPKCS8(key.privateKey),
 			created: Date.now(),
