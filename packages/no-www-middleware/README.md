@@ -4,15 +4,15 @@ Router middleware that permanently redirects a `www.` hostname to the apex domai
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/no-www-middleware
 ```
 
-It goes on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com/package/remix) (v3) installs alongside it.
+It runs on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com/package/remix) (v3) installs alongside it.
 
 ## Usage
 
-### Redirect To The Apex Domain
+### Redirect to the apex domain
 
 ```typescript
 import { noWWW } from "@sdxc/no-www-middleware";
@@ -25,7 +25,7 @@ let router = createRouter({ middleware: [noWWW()] });
 // GET https://blog.example.com/            -> the matched handler
 ```
 
-### The Longhand
+### The longhand
 
 `noWWW()` stands in for this hand-written middleware:
 
@@ -44,16 +44,11 @@ let stripWWW: Middleware = (context, next) => {
 
 ### `noWWW(): Middleware`
 
-Returns a middleware for a router's, controller's, or route's `middleware` chain. A request whose hostname starts with `www.` gets a `308` whose `Location` is the request URL with that leading label removed, so scheme, port, path and query string carry over. Every other request passes to `next()` untouched.
+Returns a middleware that answers a request whose hostname starts with the `www.` label with a `308` to the same URL minus that one label, keeping scheme, port, path and query string; every other request goes to `next()`. The hostname is matched as the URL parser lowercases it, so `WWW.Example.com` redirects to `example.com`, while `blog.www.example.com` and `wwwexample.com` pass through.
 
-- Only the first label is checked: `www.example.com` redirects, while `blog.www.example.com` and `wwwexample.com` pass through.
-- Only one label is removed, so `www.www.example.com` redirects to `www.example.com`, which redirects again.
-- The hostname is compared as the URL parser normalizes it, so `WWW.Example.com` redirects to `example.com`.
-- A `308` makes the client repeat the method and body, so a `POST` to `www.example.com/comments` arrives at `example.com/comments` as a `POST`.
+## Pattern: Canonical Host Ahead of Other Middleware
 
-## Pattern: Placing It First
-
-Install it near the top of the router's chain, ahead of sessions, authentication and body parsing, so a redirected request skips work its retry on the apex domain runs anyway. A middleware above it, such as a logger, still sees the redirect.
+Put it at the top of the chain, before sessions, authentication and body parsing, so a redirected request skips work its retry on the apex domain repeats. Pair it with [`@sdxc/trailing-slash-middleware`](https://www.npmjs.com/package/@sdxc/trailing-slash-middleware) to settle the whole canonical URL.
 
 ```typescript
 import { noWWW } from "@sdxc/no-www-middleware";
@@ -65,7 +60,45 @@ let router = createRouter({ middleware: [noWWW(), trailingSlash()] });
 router.get("/posts", () => new Response("posts"));
 ```
 
-The `www.` host must still reach the Worker for the redirect to run: route it to the same Worker (or point its DNS record at it) alongside the apex domain. Browsers cache a `308`, so keep the apex domain as the canonical host once it is live.
+The `www.` host has to reach the same Worker for the redirect to run, so route both hostnames to it. Browsers cache a `308`, so keep the apex domain canonical once it is live.
+
+## Pattern: Form Posts Through the Redirect
+
+A `308` makes the client repeat the method and body, so a form that posts to the `www.` host still arrives as a `POST` on the apex domain.
+
+```typescript
+import { noWWW } from "@sdxc/no-www-middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [noWWW()] });
+
+router.post("/comments", async ({ request }) => {
+	let form = await request.formData();
+	return Response.json({ text: form.get("text") });
+});
+
+// POST https://www.example.com/comments -> 308, Location: https://example.com/comments
+// the browser re-sends the POST and its body to https://example.com/comments
+```
+
+## Pattern: Observe Redirects From an Outer Middleware
+
+A middleware above `noWWW()` receives the redirect like any other response, so it can log it or add headers.
+
+```typescript
+import type { Middleware } from "remix/router";
+
+import { noWWW } from "@sdxc/no-www-middleware";
+import { createRouter } from "remix/router";
+
+let poweredBy: Middleware = async (_context, next) => {
+	let response = await next();
+	response.headers.set("X-Powered-By", "example");
+	return response;
+};
+
+let router = createRouter({ middleware: [poweredBy, noWWW()] });
+```
 
 ## Versioning
 
