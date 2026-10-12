@@ -52,7 +52,7 @@ describe("RATES", () => {
 
 describe("COST_RESOURCES", () => {
 	test("keeps every resource at the position already recorded measurements use", () => {
-		expect(COST_RESOURCES.slice(0, 16)).toEqual([
+		expect(COST_RESOURCES.slice(0, 21)).toEqual([
 			"workerRequests",
 			"workerCpuMs",
 			"doRequests",
@@ -69,6 +69,11 @@ describe("COST_RESOURCES", () => {
 			"analyticsQueries",
 			"queueOperations",
 			"emailSent",
+			"d1RowsRead",
+			"d1RowsWritten",
+			"r2ClassAOperations",
+			"r2ClassBOperations",
+			"workerLogEvents",
 		]);
 	});
 });

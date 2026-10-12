@@ -15,9 +15,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Meter } from "@sdxc/cloudflare-pricing";
+import type { RateCardQuantities, RateCardResource } from "@sdxc/cloudflare-pricing";
 
-import { centsPerGbDay, centsPerUnit } from "@sdxc/cloudflare-pricing";
+import { centsPerGbDay, centsPerUnit, defineRateCard } from "@sdxc/cloudflare-pricing";
 import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
 import * as D1 from "@sdxc/cloudflare-pricing/d1";
 import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
@@ -35,60 +35,11 @@ import * as Workers from "@sdxc/cloudflare-pricing/workers";
 export const RATE_CARD_VERSION = "2026-09-28";
 
 /**
- * The resource order every recorded measurement positions its quantities by. Appended to
- * as a new resource is metered, never reordered or pruned — reordering would orphan every
- * point already stored under the position a resource used to hold. `d1Rows` is retired:
- * reads and writes bill 1,000 times apart, so they are metered as `d1RowsRead` and
- * `d1RowsWritten`, and `d1Rows` keeps its position at zero.
+ * Cents per unit for every metered resource, at Workers Paid overage prices. **Key order is the
+ * order stored measurements position quantities by**: append new resources, never reorder or
+ * prune. The retired `d1Rows`, split into reads and writes, holds its position priced at zero.
  */
-export const COST_RESOURCES = [
-	"workerRequests",
-	"workerCpuMs",
-	"doRequests",
-	"doDurationMs",
-	"doRowsRead",
-	"doRowsWritten",
-	"doStorageGbDays",
-	"d1Rows",
-	"d1StorageGbDays",
-	"kvReads",
-	"kvMutations",
-	"kvStorageGbDays",
-	"analyticsPoints",
-	"analyticsQueries",
-	"queueOperations",
-	"emailSent",
-	"d1RowsRead",
-	"d1RowsWritten",
-	"r2ClassAOperations",
-	"r2ClassBOperations",
-	"workerLogEvents",
-] as const;
-
-/** One resource this rate card prices. */
-export type CostResource = (typeof COST_RESOURCES)[number];
-
-/** How much of each resource a unit of work consumed. */
-export type CostQuantities = Record<CostResource, number>;
-
-/**
- * Analytics Engine prices at zero until Cloudflare invoices it, so the points and queries
- * stay metered and start costing the day the pricing package reports billing as active.
- *
- * @param meter - An Analytics Engine meter.
- * @returns Cents per unit of `meter`, or zero while Analytics Engine is unbilled.
- */
-function analyticsEngineCents(meter: Meter): number {
-	return AnalyticsEngine.BILLING_ACTIVE ? centsPerUnit(meter) : 0;
-}
-
-/**
- * Cents per unit for every resource the platform meters, at Cloudflare's published
- * Workers Paid overage prices. Durable Object duration is per active millisecond of one
- * object, KV mutations are key writes, R2 operations are Standard storage's, and the
- * retired `d1Rows` prices at zero because nothing records it.
- */
-export const RATES: CostQuantities = {
+export const COST_RATE_CARD = defineRateCard({
 	workerRequests: centsPerUnit(Workers.REQUESTS),
 	workerCpuMs: centsPerUnit(Workers.CPU_MS),
 	doRequests: centsPerUnit(DurableObjects.REQUESTS),
@@ -101,8 +52,8 @@ export const RATES: CostQuantities = {
 	kvReads: centsPerUnit(KV.READS),
 	kvMutations: centsPerUnit(KV.WRITES),
 	kvStorageGbDays: centsPerGbDay(KV.STORAGE),
-	analyticsPoints: analyticsEngineCents(AnalyticsEngine.DATA_POINTS_WRITTEN),
-	analyticsQueries: analyticsEngineCents(AnalyticsEngine.READ_QUERIES),
+	analyticsPoints: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN),
+	analyticsQueries: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.READ_QUERIES),
 	queueOperations: centsPerUnit(Queues.OPERATIONS),
 	emailSent: centsPerUnit(EmailService.EMAILS_SENT),
 	d1RowsRead: centsPerUnit(D1.ROWS_READ),
@@ -110,7 +61,19 @@ export const RATES: CostQuantities = {
 	r2ClassAOperations: centsPerUnit(R2.CLASS_A_OPERATIONS),
 	r2ClassBOperations: centsPerUnit(R2.CLASS_B_OPERATIONS),
 	workerLogEvents: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
-};
+});
+
+/** Every resource, in the order recorded measurements position their quantities by. */
+export const COST_RESOURCES = COST_RATE_CARD.resources;
+
+/** One resource this rate card prices. */
+export type CostResource = RateCardResource<typeof COST_RATE_CARD>;
+
+/** How much of each resource a unit of work consumed. */
+export type CostQuantities = RateCardQuantities<CostResource>;
+
+/** Cents per unit of every resource. Analytics Engine prices at zero until it is invoiced. */
+export const RATES = COST_RATE_CARD.rates;
 
 /**
  * A zeroed set of quantities, one field per {@link COST_RESOURCES} entry, so accumulating
@@ -122,9 +85,7 @@ export const RATES: CostQuantities = {
  * quantities.doRowsWritten += 1;
  */
 export function createCostQuantities(): CostQuantities {
-	let quantities = {} as CostQuantities;
-	for (let resource of COST_RESOURCES) quantities[resource] = 0;
-	return quantities;
+	return COST_RATE_CARD.zero();
 }
 
 /**
@@ -137,14 +98,7 @@ export function createCostQuantities(): CostQuantities {
  * @example priceCostQuantities({ doRowsWritten: 3, workerRequests: 1 });
  */
 export function priceCostQuantities(quantities: Partial<CostQuantities>): number {
-	let cents = 0;
-
-	for (let resource of COST_RESOURCES) {
-		let units = quantities[resource] ?? 0;
-		cents += Math.max(0, units) * RATES[resource];
-	}
-
-	return cents;
+	return COST_RATE_CARD.price(quantities);
 }
 
 /**
