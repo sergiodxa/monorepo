@@ -94,10 +94,18 @@ describe("a releases post's public pages", () => {
 		expect(await topic.text()).toContain(href);
 	});
 
+	test("names its week on the /releases topic and in its feed, since every week shares a title", async () => {
+		let title = `What I released this week (${SLUG.toUpperCase()})`;
+
+		expect(await (await fetchPath("/releases")).text()).toContain(title);
+		expect(await (await fetchPath("/releases.rss")).text()).toContain(title);
+	});
+
 	test("is an entry of the site feed", async () => {
 		let body = await (await fetchPath(routes.rss.feed.href())).text();
 
 		expect(body).toContain(`/releases/${SLUG}`);
+		expect(body).toContain("weekly releases");
 	});
 
 	test("federates as a Note", async () => {

@@ -16,6 +16,7 @@ import { isFailure } from "@sdxc/result";
 import type { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import type { Syndication } from "~/app/http/view-models/syndication";
 import type { Kind } from "~/app/models/kinds";
+import type { PostSearch } from "~/app/models/search";
 import type { TopicPost } from "~/app/services/topics";
 import type { SelectTopic } from "~/database/schema";
 
@@ -32,6 +33,7 @@ import {
 	tilEntry,
 } from "~/app/http/view-models/syndication";
 import { POST_KINDS } from "~/app/models/kinds";
+import { releaseTitle } from "~/app/models/post-values";
 import { isBuiltInTopic } from "~/app/models/topics";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
@@ -238,7 +240,7 @@ export class TopicViewModel {
 					kind: hit.kind,
 					kindLabel: POST_KINDS[hit.kind].label,
 					href: hit.url,
-					label: hit.title,
+					label: hitTitle(hit),
 					description: hit.excerpt?.trim() || null,
 					date: hit.publishedAt,
 				};
@@ -297,7 +299,7 @@ function feedEntry(post: TopicPost, base: URL): Syndication.Entry {
 			let url = new URL(post.hit.url, base).toString();
 			return {
 				id: post.post.id,
-				title: post.hit.title,
+				title: hitTitle(post.hit),
 				summary: post.hit.excerpt?.trim() || url,
 				url,
 				published: iso(post.post.published_at ?? post.post.created_at),
@@ -305,6 +307,14 @@ function feedEntry(post: TopicPost, base: URL): Syndication.Entry {
 			};
 		}
 	}
+}
+
+/**
+ * What a match from a kind with no listing of its own is called: a weekly releases post with
+ * its week, which every week's post needs since they share one title, and any other by its title.
+ */
+function hitTitle(hit: Pick<PostSearch.Hit, "kind" | "title" | "slug">): string {
+	return hit.kind === "release" ? releaseTitle(hit) : hit.title;
 }
 
 /** A description's Markdown parsed for rendering, `null` when blank or unparseable. */

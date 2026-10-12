@@ -83,7 +83,7 @@ export class Feed {
 	}
 
 	/**
-	 * Builds the public activity feed from articles, tutorials, notes, TILs,
+	 * Builds the public activity feed from articles, tutorials, notes, TILs, weekly releases,
 	 * bookmarks, and glossary terms. Items whose date cannot be parsed are dropped, and dates are
 	 * emitted as ISO strings for API and UI stability.
 	 *

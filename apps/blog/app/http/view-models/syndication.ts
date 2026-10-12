@@ -16,7 +16,7 @@ import type { Til } from "~/app/models/tils";
 import type { Tutorial } from "~/app/models/tutorials";
 
 import { POST_KINDS } from "~/app/models/kinds";
-import { bookmarkLabel, noteTitle, plainText } from "~/app/models/post-values";
+import { bookmarkLabel, noteTitle, plainText, releaseTitle } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /** Type contracts shared by the feed controllers. */
@@ -57,7 +57,7 @@ export function syndicationChannel(base: URL): Syndication.Channel {
 	return {
 		title: "Sergio Xalambrí",
 		description:
-			"Articles, tutorials, notes, TILs, bookmarks, and glossary terms by Sergio Xalambrí.",
+			"Articles, tutorials, notes, TILs, weekly releases, bookmarks, and glossary terms by Sergio Xalambrí.",
 		home: base.origin,
 	};
 }
@@ -100,7 +100,7 @@ export async function syndicationEntries(
 	for (let release of releases) {
 		entries.push({
 			id: release.id,
-			title: `${release.meta.title} (${release.meta.slug.toUpperCase()})`,
+			title: releaseTitle(release.meta),
 			summary: plainText(release.meta.content),
 			url: new URL(
 				routes.post.href({ postType: POST_KINDS.release.topic, postSlug: release.meta.slug }),

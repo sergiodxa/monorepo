@@ -176,6 +176,16 @@ export function plainText(content: string): string {
 }
 
 /**
+ * What a weekly releases post is called in a list or feed: its title with its ISO week, since
+ * every week's post shares one title and a reader tells them apart by the week.
+ *
+ * @example releaseTitle({ title: "What I released this week", slug: "2026-w41" }) // "What I released this week (2026-W41)"
+ */
+export function releaseTitle(meta: { title: string; slug: string }): string {
+	return `${meta.title} (${meta.slug.toUpperCase()})`;
+}
+
+/**
  * What a note is called where a title is required (a feed entry, a search result, a page's
  * `<title>`): its prose on one line, cut at a word with "…".
  */
