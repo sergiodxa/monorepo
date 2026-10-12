@@ -42,6 +42,28 @@ let included = Queues.OPERATIONS.included?.quantity ?? 0; // 1,000,000 a month o
 let billable = Math.max(0, operationsThisMonth - included);
 ```
 
+### Price Quantities With A Rate Card
+
+`defineRateCard()` takes cents per unit keyed by resource. Accumulate into `zero()`, then `price()` the total.
+
+```typescript
+import { centsPerUnit, defineRateCard } from "@sdxc/cloudflare-pricing";
+import * as D1 from "@sdxc/cloudflare-pricing/d1";
+import * as Workers from "@sdxc/cloudflare-pricing/workers";
+
+const RATE_CARD = defineRateCard({
+	workerRequests: centsPerUnit(Workers.REQUESTS),
+	d1RowsRead: centsPerUnit(D1.ROWS_READ),
+	d1RowsWritten: centsPerUnit(D1.ROWS_WRITTEN),
+});
+
+let quantities = RATE_CARD.zero();
+quantities.workerRequests += 1;
+quantities.d1RowsRead += 1_200;
+
+let cents = RATE_CARD.price(quantities);
+```
+
 ## API
 
 ### `@sdxc/cloudflare-pricing`
@@ -69,6 +91,35 @@ centsPerGbDay(D1.STORAGE); // 2.5
 #### `DAYS_PER_BILLING_MONTH`
 
 `30`, the billing period Cloudflare averages a GB-month over.
+
+#### `defineRateCard(rates: Record<R, number>): RateCard<R>`
+
+Builds a frozen rate card from cents per unit keyed by resource name. The key order becomes `resources`, so a store that writes quantities by position stays readable as long as new resources are appended after the existing ones. Integer-like keys such as `"0"` sort ahead of every other key in JavaScript, so name resources with words.
+
+```typescript
+let card = defineRateCard({ reads: centsPerUnit(KV.READS), writes: centsPerUnit(KV.WRITES) });
+
+card.resources; // ["reads", "writes"]
+card.rates.writes; // 0.0005
+card.zero(); // { reads: 0, writes: 0 }, a fresh object every call
+card.price({ writes: 10 }); // 0.005
+```
+
+`price()` accepts a partial set: a missing resource prices at zero, and so does a negative quantity, so every line is `max(0, units) × rate`.
+
+```typescript
+interface RateCard<R extends string> {
+	readonly resources: readonly R[];
+	readonly rates: Readonly<Record<R, number>>;
+	zero(): RateCardQuantities<R>;
+	price(quantities: Partial<RateCardQuantities<R>>): number;
+}
+
+type RateCardQuantities<R extends string> = Record<R, number>;
+
+/** The resource names of a card: `RateCardResource<typeof card>` is `"reads" | "writes"`. */
+type RateCardResource<C> = C extends RateCard<infer R> ? R : never;
+```
 
 #### Types
 
@@ -153,6 +204,14 @@ DurableObjects.centsPerActiveMs(); // 0.00000016
 
 `DATA_POINTS_WRITTEN` and `READ_QUERIES`. `BILLING_ACTIVE` is `false`: Cloudflare publishes these prices ahead of invoicing them.
 
+`billedCentsPerUnit(meter)` is the rate a ledger should charge for either meter: `centsPerUnit(meter)` once `BILLING_ACTIVE` is `true`, zero until then. A rate card built with it keeps counting points and queries, and they start costing in the release that marks billing active.
+
+```typescript
+let card = defineRateCard({
+	analyticsPoints: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN),
+});
+```
+
 #### `@sdxc/cloudflare-pricing/email-service`
 
 `EMAILS_SENT`, outbound sends through the `send_email` binding. Sending to arbitrary recipients requires Workers Paid, so `freeLimit` is `null`; sends to verified destination addresses are free on every plan.
@@ -163,31 +222,36 @@ DurableObjects.centsPerActiveMs(); // 0.00000016
 
 ## Pattern: A Rate Card For A Cost Ledger
 
-Derive every rate once, at the boundary where measured quantities meet money, and store quantities rather than cents so a corrected price can re-price history.
+Derive every rate once, at the boundary where measured quantities meet money, and store quantities rather than cents so a corrected price can re-price history. Writing quantities by position in `resources` keeps each stored record compact, which is why the card's key order is append-only, and stamping each record with a dated version lets a price correction become a new card instead of rewriting history.
 
 ```typescript
-import { centsPerGbDay, centsPerUnit } from "@sdxc/cloudflare-pricing";
+import type { RateCardQuantities, RateCardResource } from "@sdxc/cloudflare-pricing";
+
+import { centsPerGbDay, centsPerUnit, defineRateCard } from "@sdxc/cloudflare-pricing";
 import * as D1 from "@sdxc/cloudflare-pricing/d1";
 import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
 import * as Workers from "@sdxc/cloudflare-pricing/workers";
 
-const RATES = {
+const RATE_CARD_VERSION = "2026-09-28";
+
+const COST_RATE_CARD = defineRateCard({
 	workerRequests: centsPerUnit(Workers.REQUESTS),
 	workerCpuMs: centsPerUnit(Workers.CPU_MS),
 	objectActiveMs: DurableObjects.centsPerActiveMs(),
 	d1RowsRead: centsPerUnit(D1.ROWS_READ),
 	d1RowsWritten: centsPerUnit(D1.ROWS_WRITTEN),
 	d1StorageGbDays: centsPerGbDay(D1.STORAGE),
-};
+});
 
-type Quantities = Record<keyof typeof RATES, number>;
+type CostResource = RateCardResource<typeof COST_RATE_CARD>;
+type CostQuantities = RateCardQuantities<CostResource>;
 
-function priceCents(quantities: Quantities) {
-	let cents = 0;
-	for (let key of Object.keys(RATES) as (keyof typeof RATES)[]) {
-		cents += quantities[key] * RATES[key];
-	}
-	return cents;
+function toRecord(quantities: CostQuantities) {
+	return {
+		version: RATE_CARD_VERSION,
+		cents: COST_RATE_CARD.price(quantities),
+		quantities: COST_RATE_CARD.resources.map((resource) => quantities[resource]),
+	};
 }
 ```
 

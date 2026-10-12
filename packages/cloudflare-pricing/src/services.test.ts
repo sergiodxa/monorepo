@@ -99,3 +99,19 @@ describe("derived cents per unit", () => {
 		expect(centsPerGbDay(R2.STORAGE)).toBeCloseTo(0.05, 10);
 	});
 });
+
+describe("billedCentsPerUnit", () => {
+	test("follows whether Analytics Engine is invoiced", () => {
+		let expected = AnalyticsEngine.BILLING_ACTIVE
+			? centsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN)
+			: 0;
+
+		expect(AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN)).toBe(expected);
+	});
+
+	test("prices both meters at zero while billing is inactive", () => {
+		expect(AnalyticsEngine.BILLING_ACTIVE).toBe(false);
+		expect(AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN)).toBe(0);
+		expect(AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.READ_QUERIES)).toBe(0);
+	});
+});

@@ -10,6 +10,8 @@
 
 import type { Meter } from "./meter.js";
 
+import { centsPerUnit } from "./meter.js";
+
 /** The official page every price in this module is transcribed from. */
 export const PRICING_DOCS_URL =
 	"https://developers.cloudflare.com/analytics/analytics-engine/pricing/";
@@ -42,3 +44,16 @@ export const READ_QUERIES: Meter<"read query"> = {
 	included: { quantity: 1_000_000, period: "month" },
 	freeLimit: { quantity: 10_000, period: "day" },
 };
+
+/**
+ * Cents per unit of an Analytics Engine meter as the invoice charges it: the list price once
+ * {@link BILLING_ACTIVE} is `true`, zero until then. A ledger rated with it keeps counting
+ * points and queries, and they start costing the release that marks billing active.
+ *
+ * @param meter - {@link DATA_POINTS_WRITTEN} or {@link READ_QUERIES}.
+ * @returns Cents per unit, or zero while Analytics Engine is unbilled.
+ * @example billedCentsPerUnit(DATA_POINTS_WRITTEN); // 0 until Cloudflare invoices it
+ */
+export function billedCentsPerUnit(meter: Meter<"data point" | "read query">): number {
+	return BILLING_ACTIVE ? centsPerUnit(meter) : 0;
+}
