@@ -2,142 +2,229 @@
 
 Read and write OPML subscription lists.
 
-OPML is how someone moves between feed readers: one exports the list, the other imports
-it. This package is both halves of that, `parse` and `stringify`, over a document shape
-that has barely changed in twenty years.
-
-Reading is deliberately forgiving. A real export is a tree, because readers let people
-file feeds into folders, and its attributes are spelled however the exporter felt like
-spelling them. Reading flattens the tree, keeps the feeds inside the folders, carries the
-name of the nearest folder around each feed, and falls through the attributes an outline
-might carry its title in, so what comes back is the flat list an import actually wants,
-filed the way it arrived.
-
-Writing is deliberately plain: valid OPML 2.0, one `<outline>` per subscription, every
-value escaped by the XML layer. A document this package writes reads back as the
-subscriptions that went into it.
+OPML is how a list of feeds moves between readers: one exports it, another imports it. `parse`
+turns any reader's export, folders and all, into a flat list of subscriptions, and `stringify`
+writes that list back as an OPML 2.0 document.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/opml
 ```
 
-The XML layer beneath it and the `Result` that reading returns, from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), install alongside this
-package.
+`parse` answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+which installs alongside it.
 
 ## Usage
 
-### Import A Subscription List
+### Read a subscription list
 
 ```typescript
 import { parse } from "@sdxc/opml";
 import { isFailure } from "@sdxc/result";
 
-let result = parse(await file.text());
-if (isFailure(result)) throw result.error;
+let result = parse(source);
+if (isFailure(result)) return result.error.message; // not XML, or not OPML
 
-let outlines = result.data;
-if (outlines.length === 0) return reportNothingToImport();
-
-for (let outline of outlines) {
+for (let outline of result.data) {
 	await subscribe(outline.feedUrl, { title: outline.title, siteUrl: outline.siteUrl });
 }
 ```
 
-An empty list is a success, not a failure: a well-formed document that happens to list no
-feeds is a different thing from a file that is not a subscription list, and only the
-caller knows what to say about each.
+Subscriptions come back in document order, each feed URL once. A well-formed document that lists
+no feeds succeeds with an empty array.
 
-### Export One
+### Keep the folders
+
+Readers let people file feeds into folders. Every subscription inside one carries the name of the
+nearest folder around it:
+
+```typescript
+let source = `<opml version="2.0"><body>
+	<outline text="Tech">
+		<outline text="Blog" xmlUrl="https://example.com/feed.xml" />
+	</outline>
+	<outline text="News" xmlUrl="https://news.example.com/rss" />
+</body></opml>`;
+
+parse(source);
+// success([
+//   { title: "Blog", feedUrl: "https://example.com/feed.xml", folder: "Tech" },
+//   { title: "News", feedUrl: "https://news.example.com/rss" },
+// ])
+```
+
+### Write a subscription list
 
 ```typescript
 import { stringify } from "@sdxc/opml";
 
 let source = stringify(
-	subscriptions.map((subscription) => ({
-		title: subscription.title,
-		feedUrl: subscription.feedUrl,
-		siteUrl: subscription.siteUrl,
-	})),
+	[
+		{ title: "Blog", feedUrl: "https://example.com/feed.xml", folder: "Tech" },
+		{ title: "News", feedUrl: "https://news.example.com/rss", siteUrl: "https://news.example.com" },
+	],
 	{ title: "Subscriptions", dateCreated: new Date() },
 );
-
-return new Response(source, {
-	headers: {
-		"Content-Type": "text/x-opml",
-		"Content-Disposition": `attachment; filename="subscriptions.opml"`,
-	},
-});
 ```
+
+Each folder becomes one `<outline>` holding its subscriptions; folders come first, sorted by name,
+followed by the unfiled subscriptions in the order given. Every value is escaped, so reading the
+document back yields the same subscriptions.
 
 ## API
 
 ### `parse(source: string): Result<OPML.Outline[], OPMLParseError>`
 
-Reads every subscription a document lists, in document order.
-
-- Outlines nest, and every level is visited, so a grouped export yields the same list as
-  a flat one.
-- An outline with no `xmlUrl` is a folder: it is skipped, and the feeds under it are not.
-- `folder` is the name of the nearest enclosing folder, so a feed two levels down carries
-  the name written directly over it rather than the outermost one or a joined path.
-- The title comes from `text`, then `title`, then `htmlUrl`, then `xmlUrl`, so every
-  subscription carries something a row can be labelled with.
-- `siteUrl` comes from `htmlUrl`, and is absent when the outline named no site.
-- A feed listed more than once appears once, at its first position.
-- Values are trimmed, and attribute names are matched without regard to case.
+Reads every outline with an `xmlUrl` anywhere under the `<opml>` root, as a flat list in document
+order. An outline without `xmlUrl` is a folder, and its name becomes the `folder` of the feeds
+under it. The title falls back from `text` to `title`, `htmlUrl`, then `xmlUrl`; `siteUrl` comes
+from `htmlUrl`. Attribute names match in any case, values are trimmed, and a repeated feed URL
+keeps its first entry. Fails with `OPMLParseError` when the text is not XML or the root element is
+not `<opml>`.
 
 ### `stringify(outlines: OPML.Outline[], options?: OPML.StringifyOptions): string`
 
-Writes subscriptions as an OPML 2.0 document with the `head`/`body` structure.
+Writes an OPML 2.0 document. Each subscription becomes `<outline type="rss">` with its title in
+both `text` and `title`, plus `htmlUrl` when it has a `siteUrl`. The `<head>` carries only the
+options given.
 
-- `options.title` — the document's own title, which a reader shows when importing it.
-- `options.dateCreated` — when the document was written, emitted in the format the head
-  reads.
+### `OPMLParseError`
 
-Subscriptions carrying a `folder` are written inside one `<outline>` per folder, folders
-in the order their names read, and the rest at the top level after them.
-
-### Errors
-
-`OPMLParseError` reports text that is not XML, or XML whose root element says it is not
-OPML. Nothing a document contains below the root is an error.
+The `Error` `parse` fails with; its `message` says whether the text was not XML or which root
+element arrived instead of `<opml>`.
 
 ### Types
 
-`OPML.Outline` is `{ title: string; feedUrl: string; siteUrl?: string; folder?: string }`.
-`OPML.StringifyOptions` is `{ title?: string; dateCreated?: Date }`.
+#### `OPML.Outline`
 
-## Pattern: Round-Tripping A List
+`{ title: string; feedUrl: string; siteUrl?: string; folder?: string }`: one subscription.
+`folder` is the name of the nearest folder around it when read, and the folder it is written
+inside of.
 
-Reading back a document this package wrote returns the outlines it was given, so an
-export and the import beside it can be tested against each other without a fixture:
+#### `OPML.StringifyOptions`
+
+- `title`: the document's own title, which a reader shows when importing it.
+- `dateCreated`: when the document was written, emitted as a UTC date string.
+
+## Pattern: Import an uploaded file
+
+Read the file a form uploads, tell a broken file apart from an empty list, and subscribe to each
+feed.
+
+```typescript
+import { parse } from "@sdxc/opml";
+import { isFailure } from "@sdxc/result";
+
+async function importSubscriptions(request: Request) {
+	let form = await request.formData();
+	let file = form.get("opml");
+	if (!(file instanceof File)) return Response.json({ error: "Choose a file" }, { status: 400 });
+
+	let result = parse(await file.text());
+	if (isFailure(result)) {
+		return Response.json({ error: "That file is not an OPML export" }, { status: 422 });
+	}
+
+	if (result.data.length === 0) {
+		return Response.json({ error: "That file lists no feeds" }, { status: 422 });
+	}
+
+	for (let outline of result.data) {
+		await subscribe({
+			feedUrl: outline.feedUrl,
+			title: outline.title,
+			siteUrl: outline.siteUrl,
+			folder: outline.folder,
+		});
+	}
+
+	return Response.json({ imported: result.data.length });
+}
+```
+
+Feed URLs arrive exactly as the document wrote them; resolving or fetching them is up to you.
+
+## Pattern: Serve an export as a download
+
+```typescript
+import { stringify } from "@sdxc/opml";
+
+function exportSubscriptions(subscriptions: Subscription[]) {
+	let source = stringify(
+		subscriptions.map((subscription) => ({
+			title: subscription.title,
+			feedUrl: subscription.feedUrl,
+			siteUrl: subscription.siteUrl,
+			folder: subscription.folder,
+		})),
+		{ title: "Subscriptions", dateCreated: new Date() },
+	);
+
+	return new Response(source, {
+		headers: {
+			"Content-Type": "text/x-opml",
+			"Content-Disposition": `attachment; filename="subscriptions.opml"`,
+		},
+	});
+}
+```
+
+## Pattern: Merge an import into existing subscriptions
+
+`parse` removes duplicates within one document; skip the feeds a person already follows before
+saving.
+
+```typescript
+import { parse } from "@sdxc/opml";
+import { isFailure } from "@sdxc/result";
+
+let result = parse(source);
+if (isFailure(result)) throw result.error;
+
+let followed = new Set(existing.map((subscription) => subscription.feedUrl));
+let added = result.data.filter((outline) => !followed.has(outline.feedUrl));
+```
+
+## Pattern: Group subscriptions by folder
+
+Rebuild the folder tree for display from the flat list.
+
+```typescript
+import type { OPML } from "@sdxc/opml";
+
+function groupByFolder(outlines: OPML.Outline[]) {
+	let groups = new Map<string, OPML.Outline[]>();
+	for (let outline of outlines) {
+		let key = outline.folder ?? "Unfiled";
+		groups.set(key, [...(groups.get(key) ?? []), outline]);
+	}
+	return groups;
+}
+```
+
+## Pattern: Test an export against its import
+
+A document `stringify` writes reads back as the subscriptions that went into it, so an export and
+an import can be tested against each other without a fixture.
 
 ```typescript
 import { parse, stringify } from "@sdxc/opml";
 import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
 
-let outlines = [{ title: "Tom & Jerry", feedUrl: "https://example.com/feed?a=1&b=2" }];
+test("round-trips subscriptions", () => {
+	let outlines = [
+		{ title: "Tom & Jerry", feedUrl: "https://example.com/feed?a=1&b=2", folder: "Cartoons" },
+		{ title: "News", feedUrl: "https://news.example.com/rss" },
+	];
 
-expect(unwrap(parse(stringify(outlines)))).toEqual(outlines);
+	expect(unwrap(parse(stringify(outlines)))).toEqual(outlines);
+});
 ```
 
-## Notes
-
-1. **Only the root element decides whether a document is OPML.** A file whose root is
-   anything else fails, which is how an error page served under a `200` in an export's
-   place reports itself rather than reading as a list with nothing in it.
-2. **Outlines are found anywhere under the root.** The specification puts them in
-   `<body>`, and exports that omit it, or nest one oddly, still yield their feeds.
-3. **The title is written twice, to `text` and `title`.** The specification requires
-   `text`; readers exist that label a row from `title` alone, and one value fills both.
-4. **Only subscription outlines survive a round trip.** An outline type OPML also allows
-   — an inclusion, a directory entry, a line of an outliner document — is read only for
-   the feed it names, and everything else about it is dropped.
-5. **Nothing is fetched.** A subscription's feed URL arrives exactly as the document
-   wrote it, relative forms included; resolving or retrieving one is the caller's.
+Folders are written first and sorted by name, so list filed subscriptions in that order when the
+comparison needs to match exactly.
 
 ## Versioning
 
