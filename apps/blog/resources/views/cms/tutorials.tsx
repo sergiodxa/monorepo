@@ -13,7 +13,7 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { minBs, p } from "@sdxc/u/size";
-import { font, textAlign } from "@sdxc/u/typography";
+import { font, textAlign, whiteSpace } from "@sdxc/u/typography";
 import {
 	Badge,
 	Button,
@@ -156,7 +156,12 @@ export function CMSTutorialsIndexView() {
 														</Badge>
 													</Table.Cell>
 													<Table.Cell>
-														<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
+														<div
+															mix={[
+																hstack({ gap: 2, align: "center", justify: "end" }),
+																whiteSpace("nowrap"),
+															]}
+														>
 															<LinkButton
 																href={item.shareHref}
 																target="_blank"

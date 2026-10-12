@@ -12,7 +12,7 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
-import { textAlign } from "@sdxc/u/typography";
+import { textAlign, whiteSpace } from "@sdxc/u/typography";
 import {
 	Badge,
 	Button,
@@ -120,7 +120,12 @@ export function CMSShortPostsIndexView() {
 														</Badge>
 													</Table.Cell>
 													<Table.Cell>
-														<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
+														<div
+															mix={[
+																hstack({ gap: 2, align: "center", justify: "end" }),
+																whiteSpace("nowrap"),
+															]}
+														>
 															<LinkButton
 																href={item.shareHref}
 																target="_blank"
