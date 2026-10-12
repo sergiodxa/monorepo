@@ -31,7 +31,7 @@ export const posts = table({
 		created_at: c.text(),
 		updated_at: c.text(),
 		author_id: c.text().references("users", "id", "fk_posts_author_id").onDelete("cascade"),
-		type: c.enum(["like", "tutorial", "article", "comment", "glossary"]),
+		type: c.enum(["like", "tutorial", "article", "comment", "glossary", "release"]),
 		published_at: c.text().nullable(),
 		/** Set when the post is deleted; its URL then answers 410 instead of 404. */
 		deleted_at: c.text().nullable(),

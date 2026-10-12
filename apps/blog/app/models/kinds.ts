@@ -94,6 +94,17 @@ export const POST_KINDS = {
 		plural: "Bookmarks",
 		objectType: null,
 	},
+	release: {
+		type: "release",
+		names: ["release", "releases"],
+		topic: "releases",
+		permalink: "page",
+		icon: "📦",
+		tint: "success",
+		label: "Release",
+		plural: "Releases",
+		objectType: "Note",
+	},
 } as const satisfies Record<string, PostKind.Definition>;
 
 /** The registry's literal type, which keeps each entry's values narrow. */

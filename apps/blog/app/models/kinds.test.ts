@@ -23,7 +23,7 @@ import {
 
 describe("the post kind registry", () => {
 	test("lists the kinds in the order search tabs show them", () => {
-		expect(KINDS).toEqual(["article", "tutorial", "glossary", "bookmark"]);
+		expect(KINDS).toEqual(["article", "tutorial", "glossary", "bookmark", "release"]);
 	});
 
 	test.each([
@@ -34,6 +34,7 @@ describe("the post kind registry", () => {
 		[" bookmarks ", "bookmark"],
 		["like", "bookmark"],
 		["LIKES", "bookmark"],
+		["releases", "release"],
 		["comment", null],
 		["", null],
 	] as const)("reads kind:%s as %s", (name, kind) => {
@@ -46,9 +47,9 @@ describe("the post kind registry", () => {
 		expect(kindOfType("comment")).toBeNull();
 	});
 
-	test("serves only articles and tutorials on the public post page", () => {
-		expect(PUBLIC_TYPE_PATHS).toEqual(["articles", "tutorials"]);
-		expect(PUBLIC_POST_TYPES).toEqual(["article", "tutorial"]);
+	test("serves the kinds with permalinks on the public post page", () => {
+		expect(PUBLIC_TYPE_PATHS).toEqual(["articles", "tutorials", "releases"]);
+		expect(PUBLIC_POST_TYPES).toEqual(["article", "tutorial", "release"]);
 		expect(isPublicTypePath("tutorials")).toBe(true);
 		expect(isPublicTypePath("glossary")).toBe(false);
 		expect(isPublicTypePath(undefined)).toBe(false);
@@ -56,9 +57,13 @@ describe("the post kind registry", () => {
 		expect(publicTypePathOf("like")).toBeNull();
 	});
 
-	test("federates the public post page's kinds as Article", () => {
+	test("federates articles and tutorials as Article", () => {
 		expect(objectTypeAt("articles")).toBe("Article");
 		expect(objectTypeAt("tutorials")).toBe("Article");
+	});
+
+	test("federates a weekly releases post as a Note", () => {
+		expect(objectTypeAt("releases")).toBe("Note");
 	});
 
 	test("gives every kind a distinct topic and emoji", () => {

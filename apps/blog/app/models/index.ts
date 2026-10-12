@@ -22,6 +22,7 @@ export const models = createModels({
 	tutorials: () => import("./tutorials"),
 	likes: () => import("./likes"),
 	glossary: () => import("./glossary"),
+	releases: () => import("./releases"),
 	topics: () => import("./topics"),
 });
 

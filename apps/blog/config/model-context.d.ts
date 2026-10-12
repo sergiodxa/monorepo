@@ -12,6 +12,7 @@ import type { Bookmarks } from "~/app/models/bookmarks";
 import type { Glossary } from "~/app/models/glossary";
 import type { Likes } from "~/app/models/likes";
 import type { Posts } from "~/app/models/posts";
+import type { Releases } from "~/app/models/releases";
 import type { Topics } from "~/app/models/topics";
 import type { Tutorials } from "~/app/models/tutorials";
 import type { Users } from "~/app/models/users";
@@ -34,6 +35,7 @@ interface BlogModelEntries {
 	tutorials: typeof Tutorials;
 	likes: typeof Likes;
 	glossary: typeof Glossary;
+	releases: typeof Releases;
 	topics: typeof Topics;
 }
 

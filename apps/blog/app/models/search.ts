@@ -520,6 +520,12 @@ export class PostSearch {
 			return { title: bookmark.meta.title, tags: [], content: content.filter(Boolean).join("\n") };
 		}
 
+		if (type === "release") {
+			let release = await models.releases.find(id);
+			if (!release) return null;
+			return { title: release.meta.title, tags: [], content: release.meta.content };
+		}
+
 		if (type === "glossary") {
 			let entry = await models.glossary.find(id);
 			if (!entry) return null;
