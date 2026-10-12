@@ -15,7 +15,6 @@
 		"@sdxc/backoff": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
-		"@sdxc/digest-fields": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/html": "workspace:*",
 		"@sdxc/http": "workspace:*",
@@ -23,9 +22,8 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/validate": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
-		"@standard-schema/spec": "^1.1.0",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {

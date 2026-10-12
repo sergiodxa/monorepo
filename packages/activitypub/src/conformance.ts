@@ -8,6 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type {
@@ -417,7 +418,7 @@ export function localObjectsConformance({
 		test("answers null for an IRI it serves nothing under", async () => {
 			let objects = await create();
 
-			expect(unwrap(await objects.find(`https://remote.com/${crypto.randomUUID()}`))).toBeNull();
+			expect(unwrap(await objects.find(`https://remote.com/${generateUUID()}`))).toBeNull();
 		});
 	});
 }
@@ -451,7 +452,7 @@ export function keyProviderConformance({
 			let provider = await create();
 
 			expect(
-				unwrap(await provider.keysOf(`https://remote.com/users/${crypto.randomUUID()}`)),
+				unwrap(await provider.keysOf(`https://remote.com/users/${generateUUID()}`)),
 			).toBeNull();
 		});
 	});
