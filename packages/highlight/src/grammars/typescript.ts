@@ -72,6 +72,6 @@ const declarations: Grammar = {
  * Highlights TypeScript: every JavaScript construct, plus the keywords, builtin
  * types, decorators and type arguments the types are written with.
  *
- * @example scan("let id: string = crypto.randomUUID()", typescript)
+ * @example scan("let total: number = sum(prices)", typescript)
  */
 export const typescript: Grammar = compose(declarations, javascript);
