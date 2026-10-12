@@ -30,6 +30,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Client } from "@sdxc/flags";
 import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
@@ -77,9 +78,9 @@ import {
 	timelineCopy,
 	timelineEntries,
 } from "~/app/http/controllers/timeline-entries";
+import { isFrameRequest } from "~/app/http/frames";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { isFrameRequest } from "~/app/http/render";
 import { features } from "~/app/initializers/flags";
 import { userStore } from "~/app/models/user-store";
 import { SAVED_SEARCH_LIMIT, SEARCH_NAME_LENGTH } from "~/database/schema";
@@ -341,9 +342,10 @@ export namespace ReadingQueue {
 	/**
 	 * What the page needs off the request. Narrower than the full `RequestContext` so the
 	 * follow action, which renders this page from its own handler, hands over exactly the
-	 * renderer, dictionary, language and query the page reads.
+	 * document assets, renderer, dictionary, language and query the page reads.
 	 */
 	export interface Context {
+		assets: DocumentAssets;
 		render: Renderer<RemixNode>;
 		intl: I18n;
 		locale: string;
@@ -629,6 +631,7 @@ export async function renderReadingQueue(
 
 	return ctx.render(
 		<AppLayout
+			assets={ctx.assets}
 			documentTitle={heading}
 			heading={heading}
 			/**

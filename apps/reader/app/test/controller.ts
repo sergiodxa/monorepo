@@ -23,8 +23,8 @@ import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import { htmlRendering } from "~/app/http/render";
 import { flags } from "~/app/initializers/flags";
+import { documentRendering } from "~/app/test/rendering";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
@@ -94,7 +94,7 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			 * test dispatches against and a band of a page fetched in its own request is
 			 * asserted on as part of the page.
 			 */
-			...htmlRendering(),
+			...documentRendering(),
 		],
 	});
 

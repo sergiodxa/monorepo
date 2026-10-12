@@ -19,7 +19,7 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 		defaultSrc: ["none"],
 		/**
 		 * The document's import map is the one inline script, admitted by this response's
-		 * nonce; a response that renders no document advertises none.
+		 * nonce; a frame's response, which renders no document, advertises none.
 		 */
 		scriptSrc: ["self", "nonce"],
 		/**

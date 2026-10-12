@@ -7,6 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createLogger } from "@sdxc/logger";
+import { createLogger, currentLog } from "@sdxc/logger";
 
 export const logger = createLogger({ service: "reader" });
+
+/**
+ * Sends a render failure to the request's log, as the renderer's `onError`. A Worker discards
+ * the default console-based error hook, so without it a page that failed mid-stream leaves no
+ * trace.
+ *
+ * @param error - What the render threw.
+ */
+export function logRenderFailure(error: unknown): void {
+	currentLog()?.fail(error, { render: { failed: true } });
+}

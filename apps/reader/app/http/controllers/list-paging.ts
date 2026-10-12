@@ -17,7 +17,7 @@
  * @copyright Sergio Xalambrí
  */
 
-import { FRAME_NEWER, FRAME_OLDER, FRAME_PARAM } from "~/app/http/render";
+import { FRAME_NEWER, FRAME_OLDER, FRAME_PARAM } from "~/app/http/frames";
 
 /**
  * The parameter carrying how far into the list a page begins. A cursor records where to

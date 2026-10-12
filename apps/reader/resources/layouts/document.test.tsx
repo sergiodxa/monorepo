@@ -24,10 +24,10 @@ import { describe, expect, test } from "vitest";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import { htmlRendering } from "~/app/http/render";
 import { writePresentation } from "~/app/initializers/cookies";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { ORIGIN } from "~/app/test/controller";
+import { documentRendering } from "~/app/test/rendering";
 import { SECURITY_POLICY } from "~/config/security-policy";
 
 /**
@@ -38,7 +38,13 @@ import { SECURITY_POLICY } from "~/config/security-policy";
  */
 async function render(cookie?: string): Promise<string> {
 	let router = createRouter({
-		middleware: [asyncContext(), formData() as Middleware, i18n, presentation, ...htmlRendering()],
+		middleware: [
+			asyncContext(),
+			formData() as Middleware,
+			i18n,
+			presentation,
+			...documentRendering(),
+		],
 		defaultHandler,
 	});
 
@@ -60,7 +66,7 @@ async function serve(): Promise<Response> {
 			i18n,
 			presentation,
 			securityHeaders(SECURITY_POLICY) as Middleware,
-			...htmlRendering(),
+			...documentRendering(),
 		],
 		defaultHandler,
 	});

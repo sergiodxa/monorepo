@@ -16,6 +16,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import {
@@ -342,6 +343,8 @@ export namespace AppLayout {
 	}
 
 	export interface Props {
+		/** What the document links, which a page passes on from `ctx.assets`. */
+		assets: DocumentAssets;
 		/** Text for the `<title>` element. */
 		documentTitle: string;
 		/** The page's own name, which the header carries. */
@@ -831,6 +834,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 	return () => {
 		let {
 			actions,
+			assets,
 			children,
 			currentPath,
 			documentTitle,
@@ -855,7 +859,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 		}
 
 		return (
-			<DocumentLayout title={documentTitle} locale={locale}>
+			<DocumentLayout assets={assets} title={documentTitle} locale={locale}>
 				{/**
 				 * Two columns from the width the rail earns, and one below it, where the sidebar
 				 * has left the flow to wait behind its own trigger. The page's own pane is told

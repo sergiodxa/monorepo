@@ -31,8 +31,8 @@ import type { UserStore } from "~/app/models/user-store";
 import type { Shortcuts } from "~/resources/components/shortcuts";
 import type { AppLayout } from "~/resources/layouts/app";
 
+import { FRAME_PARAM } from "~/app/http/frames";
 import { getViewer } from "~/app/http/middleware/auth";
-import { FRAME_PARAM } from "~/app/http/render";
 import { features } from "~/app/initializers/flags";
 import { userStore } from "~/app/models/user-store";
 import { proxiedImage } from "~/app/services/media";

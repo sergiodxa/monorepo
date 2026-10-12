@@ -41,6 +41,7 @@ export default createAction(routes.home, (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={ctx.intl.t("landing.meta.title")}
 			description={ctx.intl.t("landing.meta.description")}
 			locale={ctx.locale}

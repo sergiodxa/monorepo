@@ -1,5 +1,5 @@
 /**
- * Tests the app's rendering chain end to end: a page drawing a `<Frame>` through the router,
+ * Tests frames end to end through the app's rendering chain: a page drawing a `<Frame>`,
  * where a frame that answers with content is written into the page as it came, and one that
  * fails behind `frameFallback` leaves the note saying a piece of the page is missing rather
  * than the status line or message it failed with, inside a page that still arrives whole.
@@ -16,9 +16,10 @@ import { createRouter } from "remix/router";
 import { get, route } from "remix/routes";
 import { describe, expect, test } from "vitest";
 
+import { isFrameRequest } from "~/app/http/frames";
 import frameFallback from "~/app/http/middleware/frame-fallback";
 import i18n from "~/app/http/middleware/i18n";
-import { htmlRendering, isFrameRequest } from "~/app/http/render";
+import { documentRendering } from "~/app/test/rendering";
 
 /** The origin every test request is made against. */
 const ORIGIN = "https://reader.test";
@@ -41,7 +42,7 @@ const ERROR_DOCUMENT =
  */
 function pageRouter() {
 	let router = createRouter({
-		middleware: [asyncContext() as Middleware, i18n, ...htmlRendering()],
+		middleware: [asyncContext() as Middleware, i18n, ...documentRendering()],
 	});
 
 	router.map(routes.page, (ctx) =>

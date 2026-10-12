@@ -34,9 +34,9 @@ import type { Article as Extracted, ArticleOutcome } from "~/app/services/articl
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { exactDate } from "~/app/http/controllers/timeline-entries";
+import { FRAME_PARAM, isFrameRequest } from "~/app/http/frames";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { FRAME_PARAM, isFrameRequest } from "~/app/http/render";
 import { userStore } from "~/app/models/user-store";
 import { peekArticle, readArticle } from "~/app/services/article";
 import SaveToggle from "~/resources/components/save-toggle";
@@ -198,6 +198,7 @@ export default createAction(routes.post, {
 
 			return ctx.render(
 				<AppLayout
+					assets={ctx.assets}
 					documentTitle={ctx.intl.t("post.notFound.title")}
 					heading={ctx.intl.t("post.notFound.title")}
 					locale={ctx.locale}
@@ -255,6 +256,7 @@ export default createAction(routes.post, {
 
 		return ctx.render(
 			<AppLayout
+				assets={ctx.assets}
 				documentTitle={item.title}
 				heading={item.title}
 				locale={ctx.locale}

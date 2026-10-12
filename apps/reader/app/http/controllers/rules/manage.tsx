@@ -236,6 +236,7 @@ async function rulesView(
 
 	return ctx.render(
 		<AppLayout
+			assets={ctx.assets}
 			documentTitle={ctx.intl.t("rules.title")}
 			heading={ctx.intl.t("rules.heading")}
 			locale={ctx.locale}

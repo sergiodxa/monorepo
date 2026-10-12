@@ -31,9 +31,9 @@ import {
 	timelineCopy,
 	timelineEntries,
 } from "~/app/http/controllers/timeline-entries";
+import { isFrameRequest } from "~/app/http/frames";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { isFrameRequest } from "~/app/http/render";
 import { features } from "~/app/initializers/flags";
 import { userStore } from "~/app/models/user-store";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
@@ -194,6 +194,7 @@ export default createAction(routes.saved, {
 
 		return ctx.render(
 			<AppLayout
+				assets={ctx.assets}
 				documentTitle={ctx.intl.t("saved.title")}
 				heading={heading}
 				locale={ctx.locale}

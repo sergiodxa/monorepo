@@ -20,12 +20,14 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /** Renders the 404 document for unmatched routes. */
-export default function defaultHandler(ctx: Pick<RequestContext, "render" | "intl" | "locale">) {
+export default function defaultHandler(
+	ctx: Pick<RequestContext, "assets" | "render" | "intl" | "locale">,
+) {
 	let title = ctx.intl.t("notFound.title");
 	let description = ctx.intl.t("notFound.description");
 
 	return ctx.render(
-		<DocumentLayout title={title} description={description} locale={ctx.locale}>
+		<DocumentLayout assets={ctx.assets} title={title} description={description} locale={ctx.locale}>
 			<main
 				mix={[
 					vstack({ gap: 4, align: "center", justify: "center" }),

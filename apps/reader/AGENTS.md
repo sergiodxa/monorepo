@@ -96,14 +96,18 @@ indicate requirement levels.
   derives as the role; numbers a tier caps stay in `TIER_LIMITS`, keyed by the same names.
   A refusal crosses RPC as `not-entitled` or `switched-off`, never as a raw decision.
 - MUST build markup from `@sdxc/ui` components styled with `@sdxc/u` mixins through `mix`.
-- MUST link the document's stylesheets and client entry through `documentAssets()` in
-  `app/initializers/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes:
-  a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet
-  import names a file the next build renames. A stylesheet joins by a side-effect
-  `import "….css"` in `resources/layouts/document.tsx`, in cascade order. The app's router
-  installs `ctx.render` as `render({ assets })` followed by `renderWith(withDocumentAssets)`
-  from `app/http/render.tsx`, and every test router through `htmlRendering()` there; the
-  wrapper adds the nonce the inline import map is admitted by under `script-src`.
+- MUST link the document's stylesheets and client entry through `ctx.assets`, which the
+  router's `documentShellAssets` middleware (`app/http/middleware/assets.ts`) publishes once
+  per request from `assetResolver` in `app/initializers/assets.ts`, reading the asset manifest
+  `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written
+  `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A
+  stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in
+  cascade order. Every page passes the assets explicitly, `<DocumentLayout assets={ctx.assets}>`
+  or `<AppLayout assets={ctx.assets}>`; a helper without `ctx` takes them as an argument. The
+  middleware sits after `securityHeaders()`, so `ctx.assets.nonce` carries the nonce the inline
+  import map is admitted by under `script-src` (none on a frame request). The router installs
+  stock `render({ assets: assetResolver, onError: logRenderFailure })` after it, and every test
+  router installs both through `documentRendering()` in `app/test/rendering.ts`.
 - MUST identify every island as `clientEntry(import.meta.url, …)`, a named top-level export:
   the build maps that identity to the island's own chunk, and `bootstrap/browser.test.ts`
   fails on any other first argument. A package's island goes in `bootstrap/browser.ts`'s
@@ -172,8 +176,9 @@ indicate requirement levels.
   - `app/models/catalog/index.ts` <- The catalog and billing models, bound once per
     isolate beside the D1 connection
 - Rendering
-  - `app/initializers/assets.ts` <- The stylesheets and client entry the asset manifest names
-  - `app/http/render.tsx` <- The renderer chain, which resolves islands and hands the shell its assets and nonce
+  - `app/initializers/assets.ts` <- The resolver over the asset manifest, for islands and the document
+  - `app/http/middleware/assets.ts` <- Publishes `ctx.assets`: the shell's stylesheets, client entry and nonce
+  - `app/http/frames.ts` <- How a request says it is for a fragment of a page
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
   - `resources/views/timeline.tsx` <- The post list both reading surfaces render

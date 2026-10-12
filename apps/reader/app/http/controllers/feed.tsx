@@ -76,9 +76,9 @@ import {
 	timelineCopy,
 	timelineEntries,
 } from "~/app/http/controllers/timeline-entries";
+import { isFrameRequest } from "~/app/http/frames";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { isFrameRequest } from "~/app/http/render";
 import { features } from "~/app/initializers/flags";
 import { feedStore } from "~/app/models/feed-store";
 import { userStore } from "~/app/models/user-store";
@@ -301,6 +301,7 @@ export default createAction(routes.feed, {
 		if (!feed) {
 			return ctx.render(
 				<AppLayout
+					assets={ctx.assets}
 					documentTitle={ctx.intl.t("feeds.show.notFound.title")}
 					heading={ctx.intl.t("feeds.show.notFound.title")}
 					locale={ctx.locale}
@@ -516,6 +517,7 @@ export default createAction(routes.feed, {
 
 		return ctx.render(
 			<AppLayout
+				assets={ctx.assets}
 				documentTitle={feed.title}
 				heading={feed.title}
 				/**

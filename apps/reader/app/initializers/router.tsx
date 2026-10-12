@@ -1,8 +1,8 @@
 /**
  * The reader's fetch-router: the global middleware chain (head requests, async context,
  * logging, form data, method override, session, auth, flags, language, cross-origin
- * protection, security headers, HTML rendering) and every route mapped to its controller.
- * The worker and every router-level test build it through `createWebRouter()`.
+ * protection, security headers, document assets, HTML rendering) and every route mapped to
+ * its controller. The worker and every router-level test build it through `createWebRouter()`.
  *
  * Every route is mapped through `lazy()`, so the URL surface is complete at startup while
  * each controller is imported by the first request that reaches it.
@@ -24,19 +24,19 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { render, renderWith } from "remix/middleware/render";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import agentRateLimit from "~/app/http/middleware/agent-rate-limit";
+import documentShellAssets from "~/app/http/middleware/assets";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
-import { logRenderFailure, withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { flags } from "~/app/initializers/flags";
-import { logger } from "~/app/initializers/logger";
+import { logger, logRenderFailure } from "~/app/initializers/logger";
 import requireAgent from "~/app/mcp/agent";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { SECURITY_TXT } from "~/config/security-txt";
@@ -115,7 +115,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			 */
 			cop({ insecureBypassPatterns: [WEBSUB_CALLBACK, AGENT_ENDPOINT] }),
 			/**
-			 * Immediately before the renderer, so what it decorates is the response the renderer
+			 * Ahead of the renderer, so what it decorates is the response the renderer
 			 * produced and every surface this app adds later is covered without being asked.
 			 */
 			securityHeaders(SECURITY_POLICY),
@@ -124,8 +124,12 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * policy as every other response.
 			 */
 			wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
-			render({ assets, onError: logRenderFailure }),
-			renderWith(withDocumentAssets),
+			/**
+			 * After the security headers, whose nonce it publishes on `ctx.assets` for the
+			 * document's inline import map, and before the renderer, so every page reads one lookup.
+			 */
+			documentShellAssets,
+			render({ assets: assetResolver, onError: logRenderFailure }),
 		],
 		defaultHandler,
 	});

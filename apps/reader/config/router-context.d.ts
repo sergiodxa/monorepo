@@ -13,9 +13,9 @@ import type {} from "remix/router";
 import type { Presentation } from "~/app/initializers/cookies";
 
 /**
- * The router installs `formData()` and `renderWith(withDocumentAssets)`, both of which
- * populate the context through a transform rather than through the route handler's own
- * typing, so this augmentation is what surfaces them to a controller.
+ * The router installs `formData()` and `render()`, both of which populate the context
+ * through a transform rather than through the route handler's own typing, so this
+ * augmentation is what surfaces them to a controller.
  */
 declare module "remix/router" {
 	interface RequestContext {

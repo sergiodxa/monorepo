@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { bg, colorScheme, fg } from "@sdxc/u/color";
@@ -16,7 +17,6 @@ import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 import { getContext } from "remix/middleware/async-context";
 
-import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 import type { Theme } from "~/database/schema";
 
 import "@sdxc/ui/reset.css";
@@ -34,30 +34,13 @@ const CHROME_SCHEME: Record<Theme, string> = {
 	dark: "only dark",
 };
 
-namespace DocumentAssets {
-	/** The assets the renderer looked up, and the nonce this response's policy admits. */
-	export interface Value extends Assets {
-		/**
-		 * The nonce the inline import map carries, which is the one script the policy admits
-		 * by nonce; absent where no policy is installed, as in a test router without one.
-		 */
-		nonce?: string;
-	}
-}
-
-/**
- * Hands the document the assets the renderer looked up, which it reads where a component
- * cannot await them itself.
- */
-export function DocumentAssets(
-	handle: Handle<{ value: DocumentAssets.Value; children: RemixNode }, DocumentAssets.Value>,
-) {
-	handle.context.set(handle.props.value);
-	return () => handle.props.children;
-}
-
 namespace DocumentLayout {
 	export interface Props {
+		/**
+		 * The stylesheets, client entry and nonce a page passes on from `ctx.assets`; the nonce
+		 * goes on the inline import map, the one script the policy admits by nonce.
+		 */
+		assets: DocumentAssets;
 		/** The page's content, rendered inside `<body>`. */
 		children: RemixNode;
 		/** The document title. */
@@ -76,7 +59,7 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { children, description, locale = "en", title } = handle.props;
+		let { assets, children, description, locale = "en", title } = handle.props;
 
 		/**
 		 * Read off the request rather than taken as a prop, since every page in the app
@@ -85,7 +68,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		 * decided by the time the first byte is written.
 		 */
 		let { face, theme } = getContext().presentation;
-		let { nonce, script, stylesheets } = handle.context.get(DocumentAssets);
+		let { nonce, script, stylesheets } = assets;
 
 		return (
 			<html

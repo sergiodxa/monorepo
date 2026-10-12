@@ -87,6 +87,7 @@ export default createAction(routes.items.read, {
 
 		return ctx.render(
 			<AppLayout
+				assets={ctx.assets}
 				documentTitle={ctx.intl.t("items.read.title")}
 				heading={ctx.intl.t("items.read.title")}
 				locale={ctx.locale}

@@ -34,6 +34,7 @@ export default createAction(routes.mcp.index, {
 
 		return ctx.render(
 			<AppLayout
+				assets={ctx.assets}
 				documentTitle={ctx.intl.t("agent.page.title")}
 				heading={ctx.intl.t("agent.page.heading")}
 				locale={ctx.locale}

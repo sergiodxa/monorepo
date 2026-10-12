@@ -72,6 +72,7 @@ export default createAction(routes.tokens.create, {
 
 		return ctx.render(
 			<AppLayout
+				assets={ctx.assets}
 				documentTitle={ctx.intl.t("agent.minted.title")}
 				heading={ctx.intl.t("agent.minted.heading")}
 				locale={ctx.locale}

@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { isOneClickUnsubscribe } from "@sdxc/mail/unsubscribe";
@@ -29,13 +30,19 @@ const Params = s.object({ token: s.string() });
 
 /** The centered column every state of this page is drawn in, below its heading and copy. */
 function UnsubscribePage(
-	handle: Handle<{ title: string; description: string; locale: string; children?: RemixNode }>,
+	handle: Handle<{
+		assets: DocumentAssets;
+		title: string;
+		description: string;
+		locale: string;
+		children?: RemixNode;
+	}>,
 ) {
 	return () => {
-		let { title, description, locale, children } = handle.props;
+		let { assets, title, description, locale, children } = handle.props;
 
 		return (
-			<DocumentLayout title={title} locale={locale}>
+			<DocumentLayout assets={assets} title={title} locale={locale}>
 				<main
 					mix={[
 						vstack({ gap: 6, align: "center", justify: "center" }),
@@ -80,6 +87,7 @@ export default createController(routes.unsubscribe, {
 			if ((await unsubscribingReader(token)) === null) {
 				return ctx.render(
 					<UnsubscribePage
+						assets={ctx.assets}
 						title={t("unsubscribe.invalidTitle")}
 						description={t("unsubscribe.invalidDescription")}
 						locale={ctx.locale}
@@ -92,6 +100,7 @@ export default createController(routes.unsubscribe, {
 
 			return ctx.render(
 				<UnsubscribePage
+					assets={ctx.assets}
 					title={t("unsubscribe.title")}
 					description={t("unsubscribe.description")}
 					locale={ctx.locale}
@@ -125,6 +134,7 @@ export default createController(routes.unsubscribe, {
 			if (subject === null) {
 				return ctx.render(
 					<UnsubscribePage
+						assets={ctx.assets}
 						title={t("unsubscribe.invalidTitle")}
 						description={t("unsubscribe.invalidDescription")}
 						locale={ctx.locale}
@@ -137,6 +147,7 @@ export default createController(routes.unsubscribe, {
 
 			return ctx.render(
 				<UnsubscribePage
+					assets={ctx.assets}
 					title={t("unsubscribe.doneTitle")}
 					description={t("unsubscribe.doneDescription")}
 					locale={ctx.locale}

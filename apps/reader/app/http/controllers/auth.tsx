@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
@@ -32,6 +33,7 @@ import routes from "~/routes/web";
 
 /** The slice of `remix/router`'s `RequestContext` the sign-in failure page renders from. */
 interface AuthErrorContext {
+	assets: DocumentAssets;
 	render: Renderer<RemixNode>;
 	intl: I18n;
 	locale: string;
@@ -42,7 +44,7 @@ function authError(ctx: AuthErrorContext, message: string) {
 	let title = ctx.intl.t("auth.error.title");
 
 	return ctx.render(
-		<DocumentLayout title={title} locale={ctx.locale}>
+		<DocumentLayout assets={ctx.assets} title={title} locale={ctx.locale}>
 			<main
 				mix={[
 					vstack({ gap: 3, align: "center", justify: "center" }),

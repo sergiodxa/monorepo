@@ -47,7 +47,13 @@ export default createAction(routes.feeds.unfollow, {
 		let title = ctx.intl.t("feeds.show.notFound.title");
 
 		return ctx.render(
-			<AppLayout documentTitle={title} heading={title} locale={ctx.locale} {...await chrome(ctx)}>
+			<AppLayout
+				assets={ctx.assets}
+				documentTitle={title}
+				heading={title}
+				locale={ctx.locale}
+				{...await chrome(ctx)}
+			>
 				<div mix={[vstack({ gap: 4, align: "start" })]}>
 					<Text mix={[text("sm"), leading("relaxed"), fg("neutral.muted"), maxIs("42rem")]}>
 						{ctx.intl.t("feeds.show.notFound.description")}

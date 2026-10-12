@@ -542,6 +542,7 @@ async function settingsPage(
 
 	return ctx.render(
 		<AppLayout
+			assets={ctx.assets}
 			documentTitle={ctx.intl.t("settings.title")}
 			heading={ctx.intl.t("settings.heading")}
 			locale={ctx.locale}

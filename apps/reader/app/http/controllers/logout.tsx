@@ -37,7 +37,7 @@ export default createController(routes.logout, {
 			let title = ctx.intl.t("logout.title");
 
 			return ctx.render(
-				<DocumentLayout title={title} locale={ctx.locale}>
+				<DocumentLayout assets={ctx.assets} title={title} locale={ctx.locale}>
 					<main
 						mix={[
 							vstack({ gap: 6, align: "center", justify: "center" }),
