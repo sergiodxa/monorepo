@@ -4,7 +4,7 @@ Router middleware that redirects every path to one canonical trailing-slash form
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/trailing-slash-middleware
 ```
 
@@ -12,9 +12,9 @@ It goes on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com
 
 ## Usage
 
-### Strip Trailing Slashes
+### Strip trailing slashes
 
-The default makes the slash-free form canonical.
+The default makes the slash-free form canonical. Only the path changes, so the query string carries over.
 
 ```typescript
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -23,13 +23,14 @@ import { createRouter } from "remix/router";
 let router = createRouter({ middleware: [trailingSlash()] });
 
 // GET /posts/?page=2 -> 308, Location: https://example.com/posts?page=2
+// GET /posts///      -> 308, Location: https://example.com/posts
 // GET /posts         -> the matched handler
 // GET /              -> the matched handler
 ```
 
-### Enforce A Trailing Slash
+### Enforce a trailing slash
 
-`{ mode: "always" }` makes the slashed form canonical, and leaves files in the form they arrived in.
+`{ mode: "always" }` makes the slashed form canonical, and lets a file name such as `/robots.txt` through as it arrived.
 
 ```typescript
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -42,9 +43,9 @@ let router = createRouter({ middleware: [trailingSlash({ mode: "always" })] });
 // GET /robots.txt -> the matched handler
 ```
 
-### The Longhand
+### The longhand
 
-In the default mode, `trailingSlash()` stands in for this hand-written middleware, with a `308` in place of the `301` such copies usually send:
+In the default mode, `trailingSlash()` stands in for this hand-written middleware:
 
 ```typescript
 import type { Middleware } from "remix/router";
@@ -61,17 +62,13 @@ let stripTrailingSlash: Middleware = (context, next) => {
 
 ### `trailingSlash(options?: TrailingSlashOptions): Middleware`
 
-Returns a middleware for a router's, controller's, or route's `middleware` chain. A request in canonical form passes to `next()` untouched; any other gets a `308` whose `Location` is the request URL with only the path changed, so origin, port and query string carry over. A `308` makes the client repeat the method and body, so a `POST` to `/comments/` arrives at `/comments` as a `POST`.
+Returns a middleware that passes a request in canonical form to `next()` and answers any other with a `308` to the same URL with only the path changed. `/` is canonical in both modes, and a run of trailing slashes reaches the canonical form in one redirect.
 
-`options.mode` is `"never"` (default, `/posts` is canonical) or `"always"` (`/posts/` is canonical). The canonical form follows these rules:
+- `options.mode`: `"never"` (default) makes `/posts` canonical and strips every non-root trailing slash. `"always"` makes `/posts/` canonical, except that a slash-free path whose last segment contains a `.` (`/robots.txt`, `/.well-known/security.txt`) is a file and passes through.
 
-- `/` is canonical in both modes and never redirects. A path made only of slashes (`//`) redirects to `/`.
-- A run of trailing slashes counts as one, so `/posts///` reaches `/posts` (or `/posts/`) in a single redirect.
-- In `"always"` mode, a slash-free path whose **last segment** contains a literal `.` is a file and passes through: `/robots.txt`, `/feed.xml`, `/assets/app.min.js`, `/.well-known/security.txt`. A dot in an earlier segment does not count, so `/v1.2/docs` redirects to `/v1.2/docs/`. A slashed path such as `/tags/node.js/` already has its one slash and passes through too.
-- In `"never"` mode every non-root trailing slash is stripped, file-like paths included: `/robots.txt/` redirects to `/robots.txt`.
-- Only the trailing run of slashes is canonicalized. Slashes inside the path (`/a//b`) stay as they are, a percent-encoded dot (`%2E`) is not a file dot, and a file without a dot in its name (`/LICENSE`) gets a slash in `"always"` mode.
+### Types
 
-### `TrailingSlashOptions`
+#### `TrailingSlashOptions`
 
 ```typescript
 interface TrailingSlashOptions {
@@ -81,7 +78,7 @@ interface TrailingSlashOptions {
 
 ## Pattern: Placing It First
 
-Install it at the top of the router's chain. A redirected request then skips the session, authentication and body parsing that its canonical retry runs anyway, while a middleware above it — a logger, server timing — still sees the redirect and may add headers to it.
+Router middleware runs before route matching, so the router's chain sees both forms of every path. Put `trailingSlash()` at the top: a redirected request skips the session, authentication and body parsing its canonical retry runs anyway, while a middleware above it, such as a logger, still sees the redirect.
 
 ```typescript
 import { catchResponse } from "@sdxc/catch-response-middleware";
@@ -93,7 +90,63 @@ let router = createRouter({ middleware: [trailingSlash(), catchResponse()] });
 router.get("/posts", () => new Response("posts"));
 ```
 
-Generate links in the canonical form, so a click never costs a redirect; the middleware catches the links other sites and users write by hand. Browsers cache a `308`, so switching a live site from one mode to the other sends returning visitors into a redirect loop until those cached entries expire — pick the mode once.
+## Pattern: Forms Keep Their Method
+
+A `308` makes the client repeat the method and body, so a form that posts to the non-canonical path still reaches its handler as a `POST`.
+
+```typescript
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [trailingSlash()] });
+
+router.post("/comments", async ({ request }) => {
+	let form = await request.formData();
+	return new Response(`Saved: ${form.get("body")}`, { status: 201 });
+});
+
+// POST /comments/ -> 308, Location: https://example.com/comments
+// POST /comments  -> 201, with the same body
+```
+
+## Pattern: Directory URLs Beside Static Files
+
+In `"always"` mode, only a dot in the last segment marks a file. A file without one (`/LICENSE`) gets a slash, a dot in an earlier segment (`/v1.2/docs`) does not count, and a slashed path such as `/tags/node.js/` already has its slash and passes through.
+
+```typescript
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [trailingSlash({ mode: "always" })] });
+
+router.get(
+	"/feed.xml",
+	() => new Response("<feed />", { headers: { "Content-Type": "application/atom+xml" } }),
+);
+router.get("/v1.2/docs/", () => new Response("docs"));
+
+// GET /feed.xml          -> the matched handler
+// GET /assets/app.min.js -> passes through
+// GET /v1.2/docs         -> 308, Location: https://example.com/v1.2/docs/
+// GET /LICENSE           -> 308, Location: https://example.com/LICENSE/
+```
+
+## Pattern: Picking The Mode Once
+
+Generate links in the canonical form, so a click never costs a redirect; the middleware catches the links other sites and people write by hand. Browsers cache a `308`, so switching a live site from one mode to the other sends returning visitors into a redirect loop until those entries expire.
+
+```typescript
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [trailingSlash({ mode: "always" })] });
+
+router.get(
+	"/posts/",
+	() =>
+		new Response('<a href="/posts/2026/">2026</a>', { headers: { "Content-Type": "text/html" } }),
+);
+```
 
 ## Versioning
 
