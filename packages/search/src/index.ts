@@ -16,6 +16,7 @@ export type {
 	ParseQueryOptions,
 	SearchClause,
 	SearchFilter,
+	SearchOrder,
 	SearchTerm,
 } from "./query.js";
 export type {

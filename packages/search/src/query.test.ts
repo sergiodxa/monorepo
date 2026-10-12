@@ -53,6 +53,7 @@ describe("parseQuery", () => {
 				one(word("data")),
 			],
 			filters: [],
+			order: "relevance",
 		});
 	});
 
@@ -241,6 +242,56 @@ describe("parseQuery", () => {
 
 		test("joins scoped and unscoped terms with OR", () => {
 			expect(shape(parsed("title:remix OR react", QUALIFIED))).toEqual(["remix|react"]);
+		});
+	});
+
+	describe("order", () => {
+		test("defaults to relevance", () => {
+			expect(parsed("remix").order).toBe("relevance");
+		});
+
+		test.each([
+			["remix order:asc", "asc"],
+			["order:desc remix", "desc"],
+			["remix order:relevance", "relevance"],
+			["remix ORDER:DESC", "desc"],
+			[`remix order:"asc"`, "asc"],
+		] as const)("reads %s as %s, leaving it out of the terms", (input, order) => {
+			let query = parsed(input);
+			expect(query.order).toBe(order);
+			expect(shape(query)).toEqual(["remix"]);
+		});
+
+		test("keeps the last directive", () => {
+			expect(parsed("remix order:asc order:desc").order).toBe("desc");
+		});
+
+		test("accepts a query of filters with a directive", () => {
+			let query = parsed("tag:remix order:asc", QUALIFIED);
+			expect(query.order).toBe("asc");
+			expect(query.clauses).toEqual([]);
+		});
+
+		test("counts the directive against neither maxTerms nor the terms to find", () => {
+			expect(isFailure(parseQuery("a b order:asc", { maxTerms: 2 }))).toBe(false);
+			expect(isFailure(parseQuery("order:asc"))).toBe(true);
+		});
+
+		test("keeps an unknown, signed or empty order as text", () => {
+			let query = parsed("order:newest +order:asc order: remix");
+			expect(query.order).toBe("relevance");
+			expect(shape(query)).toEqual(["order:newest", "order:asc", "order:", "remix"]);
+			expect(shape(parsed("remix -order:asc"))).toEqual(["remix", "-order:asc"]);
+		});
+
+		test("reads OR across a directive as AND", () => {
+			expect(shape(parsed("remix OR order:asc react"))).toEqual(["remix", "react"]);
+		});
+
+		test("lets a declared field or filter named order win", () => {
+			let query = parsed("remix order:asc", { filters: ["order"] });
+			expect(query.order).toBe("relevance");
+			expect(query.filters).toEqual([{ name: "order", values: ["asc"], exclude: false }]);
 		});
 	});
 });

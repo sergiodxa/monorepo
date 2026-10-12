@@ -70,6 +70,16 @@ export interface SearchFilter {
 }
 
 /**
+ * The direction somebody asked results in with `order:`. `"relevance"` ranks by how well a
+ * result matches; `"asc"` and `"desc"` name a direction only, so the caller picks the column
+ * they sort, such as a publish date.
+ */
+export type SearchOrder = "relevance" | "asc" | "desc";
+
+/** Every value `order:` accepts, so any other value stays an ordinary word. */
+const SEARCH_ORDERS: readonly SearchOrder[] = ["relevance", "asc", "desc"];
+
+/**
  * A query ready to search with: every clause must match and every filter must hold, and
  * at least one clause or filter is positive.
  */
@@ -80,6 +90,8 @@ export interface ParsedQuery {
 	clauses: SearchClause[];
 	/** Exact-value filters, in the order they were typed. */
 	filters: SearchFilter[];
+	/** The last `order:` typed, or `"relevance"` when there is none. */
+	order: SearchOrder;
 }
 
 /** How a search box's text becomes clauses and filters. */
@@ -172,8 +184,9 @@ interface Token {
 /**
  * Parses search box text with a Lucene-style syntax read leniently: words must all match,
  * `"quoted"` runs are phrases, `-word` or `NOT word` excludes, `a OR b` accepts either,
- * `+` and `AND` are accepted, and a declared `field:value` or `filter:value` scopes or
- * filters. Anything the syntax cannot place falls back to text, so input never fails for it.
+ * `+` and `AND` are accepted, a declared `field:value` or `filter:value` scopes or filters,
+ * and `order:relevance|asc|desc` sets `order`. Anything the syntax cannot place falls back to
+ * text, so input never fails for it.
  *
  * Terms holding no letter or number are dropped, since a tokenizer keeps nothing of them.
  *
@@ -200,7 +213,7 @@ export function parseQuery(
 
 	let fields = new Set((options.fields ?? []).map((name) => name.toLowerCase()));
 	let filterNames = new Set((options.filters ?? []).map((name) => name.toLowerCase()));
-	let tokens = tokenize(text, fields, filterNames);
+	let { tokens, order } = tokenize(text, fields, filterNames);
 
 	let maxTerms = options.maxTerms ?? DEFAULT_MAX_QUERY_TERMS;
 	if (tokens.length > maxTerms) {
@@ -245,7 +258,7 @@ export function parseQuery(
 		clauses.some((clause) => !clause.exclude) || filters.some((filter) => !filter.exclude);
 	if (!searchable) return failure(invalid("A search needs at least one term to find."));
 
-	return success({ text, clauses, filters });
+	return success({ text, clauses, filters, order });
 }
 
 /**
@@ -266,9 +279,16 @@ function invalid(message: string): ValidationError {
 /** A `name:` that may qualify a term, read up to the colon. */
 const QUALIFIER = /^([\p{L}\p{N}_-]+):/u;
 
+/** The tokens of a query and the order its last `order:` directive asked for. */
+interface Tokenized {
+	tokens: Token[];
+	order: SearchOrder;
+}
+
 /**
  * Splits normalized text into tokens. Uppercase `OR`, `AND` and `NOT` are operators, `-`
  * and `+` prefix a token, and a declared `name:` qualifies the word or phrase after it.
+ * An unsigned `order:` with a known value is a directive, unless `order` is a declared name.
  * A quote inside a word belongs to the word, so `foo"bar` is one term; only a quote that
  * opens a token starts a phrase, and an unclosed one closes at the end.
  */
@@ -276,8 +296,9 @@ function tokenize(
 	text: string,
 	fields: ReadonlySet<string>,
 	filters: ReadonlySet<string>,
-): Token[] {
+): Tokenized {
 	let tokens: Token[] = [];
+	let order: SearchOrder = "relevance";
 	let characters = Array.from(text);
 	let index = 0;
 	let pendingOr = false;
@@ -302,6 +323,15 @@ function tokenize(
 			name = qualified;
 			kind = filters.has(qualified) ? "filter" : "term";
 			index = valueStart;
+		} else if (qualified === "order" && hasValue && !exclude && sign !== "+") {
+			let value = readValue(characters, valueStart);
+			let directive = toOrder(value.raw);
+			if (directive !== null) {
+				order = directive;
+				index = value.next;
+				pendingOr = false;
+				continue;
+			}
 		}
 
 		let read = readValue(characters, index);
@@ -337,7 +367,13 @@ function tokenize(
 		pendingOr = false;
 	}
 
-	return tokens;
+	return { tokens, order };
+}
+
+/** The order a directive's value names, compared without case, or `null` for any other value. */
+function toOrder(value: string): SearchOrder | null {
+	let lowered = value.toLowerCase();
+	return SEARCH_ORDERS.find((order) => order === lowered) ?? null;
 }
 
 /** One word or quoted phrase read from `start`, and where reading stopped. */

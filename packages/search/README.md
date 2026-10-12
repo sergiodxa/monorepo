@@ -47,9 +47,13 @@ The syntax is a lenient Lucene-style subset, so input is never a syntax error an
 | `remix OR react`                       | Either of the terms on each side        |
 | `title:remix`, `title:"route pattern"` | A word or phrase in one declared field  |
 | `tag:"react router"`, `-tag:legacy`    | An exact value for a declared filter    |
+| `order:asc`, `order:desc`              | Sort ascending or descending            |
+| `order:relevance`                      | Sort by relevance, the default          |
 
 Operators count only in capitals; an undeclared `name:value` stays text, and an `OR` that cannot
-apply reads as plain AND.
+apply reads as plain AND. `order:` sets `parsed.order` and never becomes a term: the package
+knows only the direction, so you choose the column it sorts (see
+[Letting a query pick its order](#pattern-letting-a-query-pick-its-order)).
 
 ### Search a table
 
@@ -133,6 +137,9 @@ NFKC-normalized and terms with no letter or number are dropped.
 | `filters`   | `[]`    | Names that read an exact value into `filters`                                     |
 
 Phrases always match exactly, and a trailing `*` makes its word a prefix whatever `prefix` says.
+`order:` reads `relevance`, `asc` or `desc` in any case, and the last one typed wins; any other
+value, a signed `order:`, or a declared field or filter named `order` reads as the syntax above.
+It counts toward neither `maxTerms` nor the positive clause a query needs.
 
 ### `highlight(text, query, options?): HighlightSegment[]`
 
@@ -203,7 +210,8 @@ A `SearchError` raised before a statement runs when it would bind more than
 
 ### Types
 
-`ParsedQuery` holds `text`, `clauses` and `filters`. A `SearchClause` is `{ terms, exclude }`,
+`ParsedQuery` holds `text`, `clauses`, `filters` and `order`, a `SearchOrder` of
+`"relevance"` (the default), `"asc"` or `"desc"`. A `SearchClause` is `{ terms, exclude }`,
 matching when any of its `SearchTerm`s `{ text, phrase, prefix, field }` does; a `SearchFilter` is
 `{ name, values, exclude }`. `ParseQueryOptions`, `HighlightOptions`, `HighlightSegment`,
 `ExcerptOptions` and `Excerpt` type the query entry point. `Search<Table>`, `SearchQuery<Table>`,
@@ -223,7 +231,6 @@ CREATE TABLE "articles" (
 	"title" TEXT NOT NULL,
 	"tags" TEXT NOT NULL DEFAULT '',
 	"summary" TEXT,
-	"author" TEXT NOT NULL,
 	"published_at" INTEGER
 );
 
@@ -399,6 +406,22 @@ let page = await Pagination.byKeyset(ITEM_SEARCH.query(db, query).where({ feed_i
 	cursor: url.searchParams.get("cursor"),
 	limit: 50,
 });
+```
+
+## Pattern: Letting a query pick its order
+
+`parsed.order` is a direction for you to apply: keep `rank` for `"relevance"`, and sort the column
+that fits your data for `"asc"` and `"desc"`.
+
+```typescript
+import { ARTICLE_SEARCH } from "./search.js";
+
+let query = ARTICLE_SEARCH.query(db, parsed);
+if (parsed.order !== "relevance") {
+	query = query.orderBy("published_at", parsed.order).orderBy("id", parsed.order);
+}
+
+let rows = await query.limit(20).all();
 ```
 
 ## Pattern: Matching inside your own statement
