@@ -1,7 +1,7 @@
 /**
  * The blog's activity feed model. Composes a single time-ordered public activity
- * feed by loading articles, tutorials, bookmarks, and glossary entries in
- * parallel, normalizing them to a shared item shape, and sorting newest-first.
+ * feed by loading articles, tutorials, notes, TILs, bookmarks, and glossary entries
+ * in parallel, normalizing them to a shared item shape, and sorting newest-first.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,6 +32,8 @@ export namespace Feed {
 		title: string;
 		slug?: string;
 		url?: string;
+		/** A note's or TIL's Markdown, which the index shows in place; other kinds carry none. */
+		content?: string;
 		/** Activity date in ISO-8601 format. */
 		date: string;
 		/** True when the publish date is in the future. */
@@ -81,8 +83,8 @@ export class Feed {
 	}
 
 	/**
-	 * Builds the public activity feed from articles, tutorials, bookmarks, and
-	 * glossary terms. Items whose date cannot be parsed are dropped, and dates are
+	 * Builds the public activity feed from articles, tutorials, notes, TILs,
+	 * bookmarks, and glossary terms. Items whose date cannot be parsed are dropped, and dates are
 	 * emitted as ISO strings for API and UI stability.
 	 *
 	 * @param models The invocation's models, read for every post type.
@@ -92,11 +94,14 @@ export class Feed {
 	static async listActivity(models: BlogModels, limit?: number): Promise<Array<Feed.ActivityItem>> {
 		if (typeof limit === "number" && limit <= 0) return [];
 
-		let [articles, tutorials, bookmarks, glossary] = await Promise.all([
+		let [articles, tutorials, bookmarks, glossary, notes, tils, releases] = await Promise.all([
 			models.articles.findAll({ includePreview: false }),
 			models.tutorials.findAll({ includePreview: false }),
 			models.likes.findAll(),
 			models.glossary.findAll(),
+			models.notes.findAll({ includePreview: false }),
+			models.tils.findAll({ includePreview: false }),
+			models.releases.findAll({ includePreview: false }),
 		]);
 
 		let rawActivity: Array<{
@@ -104,6 +109,7 @@ export class Feed {
 			title: string;
 			slug?: string;
 			url?: string;
+			content?: string;
 			date: number;
 			preview: boolean;
 		}> = [
@@ -151,6 +157,29 @@ export class Feed {
 					preview: this.isPreview(entry),
 				};
 			}),
+			...notes.map((note) => ({
+				kind: "note" as const,
+				title: "",
+				slug: note.meta.slug,
+				content: note.meta.content,
+				date: this.activityTimestamp(note),
+				preview: this.isPreview(note),
+			})),
+			...tils.map((til) => ({
+				kind: "til" as const,
+				title: til.meta.title,
+				slug: til.meta.slug,
+				content: til.meta.content,
+				date: this.activityTimestamp(til),
+				preview: this.isPreview(til),
+			})),
+			...releases.map((release) => ({
+				kind: "release" as const,
+				title: release.meta.title,
+				slug: release.meta.slug,
+				date: this.activityTimestamp(release),
+				preview: this.isPreview(release),
+			})),
 		]
 			.filter((item) => Number.isFinite(item.date))
 			.sort((a, b) => b.date - a.date)
@@ -161,6 +190,7 @@ export class Feed {
 			title: item.title,
 			slug: item.slug,
 			url: item.url,
+			content: item.content,
 			date: new Date(item.date).toISOString(),
 			preview: item.preview,
 		}));

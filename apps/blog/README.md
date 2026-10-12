@@ -26,7 +26,7 @@ Production URL: https://sergiodxa.com
 | Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support budget per IPv4 or IPv6 /64  |
 | Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
 | Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
-| Secret      | `GITHUB_TOKEN`                                        | Reads the public GitHub Sponsors roster     |
+| Secret      | `GITHUB_TOKEN`                                        | Reads GitHub Sponsors and weekly releases   |
 | Secret      | `GITHUB_SPONSORS_WEBHOOK_SECRET`                      | Verifies GitHub's sponsorship webhook       |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
 | Secrets     | `WAYBACK_ACCESS_KEY`, `WAYBACK_SECRET_KEY`            | archive.org keys from Secrets Store         |
@@ -48,6 +48,26 @@ with it empty, is answered with a 500.
   live under `/topics/`. The query is stored canonical, so one search is one topic. The CMS
   manages them at `/cms/topics`, and `/search` offers the signed-in author "Save as topic". A
   post's tags link to the topic saving exactly that tag, else to the search for it.
+- Notes and TILs: short posts written in the CMS (`/cms/notes`, `/cms/til`). A note is Markdown
+  content alone, read at `/notes/<slug>` where the slug is its publish instant in base-36
+  seconds (a digit appended when two share a second); a TIL has a title, content and tags, read
+  at `/til/<title slug>`. Both are listed in place on the home page's Activity list (the date
+  links to the permalink), at `/notes` and `/til` with their feeds, in `/rss`, `/atom.xml` and
+  `/feed.json` (a note titled by its content shortened), found by `kind:note` and `kind:til`,
+  send Webmentions, and federate as an ActivityPub `Note`, whose Fediverse replies render on
+  the permalink. "Post on X" shares a note as `{content} {permalink}` and a TIL as
+  `TIL {content} {permalink}`, every Markdown link a bare URL; the CMS refuses content that
+  would not fit X (256 for a note, 252 for a TIL, a link weighing 23) with how much to cut,
+  and counts what is left while typing.
+- Weekly releases: every Friday at 17:00 UTC (noon in Peru) the `releases.weekly` job reads
+  the GitHub releases of the repositories in `config/releases.ts` for the seven days before
+  and, when they shipped a package, publishes "What I released this week" at
+  `/releases/<ISO year>-w<ISO week>`: a Markdown list linking each package, found by
+  `kind:release`, listed at `/releases`, in the Activity list and the site feeds, and
+  federated as a `Note`. A week without a package posts nothing. A week that already has its
+  post, even one the author edited or deleted in the CMS (`/cms/releases`), keeps it as it is,
+  so a retried run never duplicates or overwrites it. "Post on X" shares it as "This week I
+  released {packages} {permalink}", listing as many packages as fit and "and N more".
 - CMS layout and authenticated routes for content management. Opening a CMS page without a
   session sends you to `/login?next=<path and query>`, and signing in lands back on that page,
   so a link such as `/cms/bookmarks/new?url=…` survives an expired session. `next` accepts
@@ -67,13 +87,14 @@ with it empty, is answered with a 500.
 - Webmention receiving: `POST /webmention` queues verification, verified mentions wait in
   the CMS moderation queue (`/cms/webmentions`), and approved ones render under the post.
   Deleted posts answer 410 Gone.
-- Webmention sending: creating, updating or deleting an article or tutorial notifies every
+- Webmention sending: creating, updating or deleting a post with a page notifies every
   page it links to (and every page it stopped linking to); a cron every 15 minutes sends
   for posts whose scheduled publish date has arrived.
 - ActivityPub: the blog is one fediverse account, `@hello@sergiodxa.com` (a `Person` at
   `/activitypub/actor`, found through WebFinger), that anyone can follow; follows are
   accepted on arrival. Creating an article or tutorial delivers it to followers as an
-  `Article`, editing it delivers an `Update`, and deleting it a `Delete`; a cron every 15
+  `Article`, and a note or TIL as a `Note`; editing it delivers an `Update`, and deleting
+  it a `Delete`; a cron every 15
   minutes delivers posts whose scheduled publish date has arrived. Posts public before
   federation started are in the outbox but were never pushed. Replies, quotes, mentions,
   likes and boosts of a post are stored as Webmentions: they join the same moderation queue,
@@ -158,6 +179,12 @@ with it empty, is answered with a 500.
 | `/tutorials/:slug.epub`  | Tutorial as an EPUB ebook                             |
 | `/bookmarks`             | Bookmarks topic                                       |
 | `/glossary`              | Glossary topic, every entry at `#<slug>`              |
+| `/notes`                 | Notes topic                                           |
+| `/notes/:slug`           | One note, `:slug` its publish instant in base 36      |
+| `/til`                   | TIL topic                                             |
+| `/til/:slug`             | One TIL                                               |
+| `/releases`              | Weekly releases topic                                 |
+| `/releases/:slug`        | One week's releases post, `:slug` as `2026-w42`       |
 | `/topics`                | Every topic                                           |
 | `/topics/:slug`          | An author's topic                                     |
 | `/topics/:slug.rss`      | An author's topic as RSS (also `.atom`, `.json`)      |
@@ -297,6 +324,7 @@ expired session signs in first and comes back to the form.
 | `activityPub.process`   | Queued by the federation   | One inbox activity, one fan-out, or one signed delivery          |
 | `activityPub.publish`   | CMS create, update, delete | Picks `Create`, `Update` or `Delete` for a post and publishes it |
 | `activityPub.scheduled` | `*/15 * * * *`             | Publishes posts whose scheduled date arrived and never federated |
+| `releases.weekly`       | `0 17 * * 5`               | Publishes the week's releases post from GitHub releases          |
 
 `activityPub.process` retries what the next attempt can change (a server error, a timeout,
 a `429`, a failing store) on the federation's backoff, about 21 hours over the queue's five

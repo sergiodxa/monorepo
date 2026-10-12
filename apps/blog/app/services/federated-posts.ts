@@ -1,7 +1,7 @@
 /**
- * The blog's articles and tutorials as ActivityPub objects: each post is a public `Article`
- * under its canonical permalink, attributed to the blog's actor, plus the `Create`, `Update`
- * and `Delete` activities that federate its lifecycle and the lookup the inbox resolves.
+ * The blog's posts as ActivityPub objects: an article or tutorial is a public `Article` and a
+ * short post a `Note`, under its canonical permalink and attributed to the blog's actor, plus
+ * the `Create`, `Update` and `Delete` activities that federate it and the inbox's lookup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,8 +33,8 @@ import { PROFILE } from "~/config/profile";
  */
 const ARTICLE_BYTES_LIMIT = 100_000;
 
-/** A post permalink path, `/articles/:slug` or `/tutorials/:slug`, with no extension. */
-const POST_PATH = /^\/(articles|tutorials)\/([^/.]+)$/;
+/** A post permalink path, `/<topic>/:slug` with no extension; the topic must have post pages. */
+const POST_PATH = /^\/([^/.]+)\/([^/.]+)$/;
 
 /** The keyset the outbox pages by, matching the order `posts.findFederatable()` lists in. */
 const OUTBOX_KEYS = ["timestamp", "id"] as const;
@@ -52,6 +52,17 @@ export namespace FederatedPosts {
 		postType: PublicTypePath;
 		slug: string;
 		deleted_at: string | null;
+	}
+
+	/** What a short post federates as a `Note` from: its permalink, Markdown and tags. */
+	export interface Short {
+		postType: PublicTypePath;
+		slug: string;
+		/** The Markdown the `Note` carries as HTML, exactly what a reader of the post sees. */
+		content: string;
+		tags: ReadonlyArray<string>;
+		/** When it was published, or `null` when the stored date does not parse. */
+		published: Date | null;
 	}
 
 	/** One page of the outbox: the posts' `Create`s, and the cursor of the next page. */
@@ -74,6 +85,33 @@ export function article(
 	post: FederatedPosts.Published,
 	updated: Date | null = null,
 ): ActivityPub.Object {
+	if (post.postType === "notes" || post.postType === "til") {
+		let til = post.postType === "til" ? post : null;
+		return note(
+			{
+				postType: post.postType,
+				slug: post.post.meta.slug,
+				content: til ? `TIL ${til.post.meta.content}` : post.post.meta.content,
+				tags: til?.tags ?? [],
+				published: dateOf(timestampFromPublishedOrCreated(post.post)),
+			},
+			updated,
+		);
+	}
+
+	if (post.postType === "releases") {
+		return note(
+			{
+				postType: post.postType,
+				slug: post.post.meta.slug,
+				content: `${post.post.meta.title}\n\n${post.post.meta.content}`,
+				tags: [],
+				published: dateOf(timestampFromPublishedOrCreated(post.post)),
+			},
+			updated,
+		);
+	}
+
 	let id = permalink({ postType: post.postType, slug: post.post.meta.slug }).href;
 	let summary = post.post.meta.excerpt?.trim() || null;
 	let object: ActivityPub.Object = {
@@ -103,6 +141,43 @@ export function article(
 
 	if (byteLength(stringify(object)) <= ARTICLE_BYTES_LIMIT) return object;
 	return { ...object, content: linkTo(id, summary) };
+}
+
+/**
+ * The public `Note` a short post is served and federated as: its content as HTML and nothing
+ * else, since a `Note` has no title and Mastodon shows it whole, with its tags as hashtags. A
+ * TIL's content opens with "TIL", as the text shared on X does.
+ *
+ * @param post The post's permalink parts, Markdown, tags and publish date.
+ * @param updated When its content last changed, which an `Update` carries.
+ * @example return respond(note({ postType: "notes", slug, content, tags: [], published }), options);
+ */
+export function note(post: FederatedPosts.Short, updated: Date | null = null): ActivityPub.Object {
+	let id = permalink({ postType: post.postType, slug: post.slug }).href;
+	return {
+		id,
+		type: "Note",
+		attributedTo: [ACTOR_ID],
+		to: [PUBLIC],
+		cc: [FOLLOWERS_ID],
+		bto: [],
+		bcc: [],
+		name: null,
+		nameMap: {},
+		summary: null,
+		summaryMap: {},
+		content: htmlOf(post.content) ?? linkTo(id, null),
+		contentMap: {},
+		url: id,
+		inReplyTo: null,
+		quote: null,
+		published: post.published,
+		updated,
+		sensitive: false,
+		tag: hashtags(post.tags),
+		attachment: [],
+		proof: [],
+	};
 }
 
 /**
@@ -182,7 +257,7 @@ export function remove(post: FederatedPosts.Deleted): ActivityPub.Draft<Activity
 }
 
 /**
- * The blog's posts as the inbox resolves them: a published article or tutorial under its
+ * The blog's posts as the inbox resolves them: a published post with a page, under its
  * exact canonical permalink. Any other IRI, a preview, a deleted post, or a spelling of the
  * permalink other than the canonical one finds `null`.
  */
@@ -194,7 +269,7 @@ export class FederatedPosts implements LocalObjects {
 		this.#models = models;
 	}
 
-	/** The `Article` served under `id`, or `null` when the blog serves no post there. */
+	/** The object served under `id`, or `null` when the blog serves no post there. */
 	async find(id: string): Promise<Result<ActivityPub.Object | null, Error>> {
 		let location = postLocation(id);
 		if (location === null) return success(null);
@@ -209,7 +284,7 @@ export class FederatedPosts implements LocalObjects {
 		return success(object.id === id ? object : null);
 	}
 
-	/** How many posts the outbox lists: every published, live article and tutorial. */
+	/** How many posts the outbox lists: every published, live post with a page. */
 	async count(): Promise<Result<number, Error>> {
 		let rows = await wrap(() => this.#models.posts.findFederatable());
 		if (isFailure(rows)) return rows;
@@ -263,8 +338,8 @@ export class FederatedPosts implements LocalObjects {
 }
 
 /**
- * A post by id as the post page loads it, or `null` once it is deleted or no longer an
- * article or tutorial. Its publish state is the caller's to check.
+ * A post by id as the post page loads it, or `null` once it is deleted or of a kind without
+ * post pages. Its publish state is the caller's to check.
  *
  * @param models The request's or job's models.
  * @param id The post's id.

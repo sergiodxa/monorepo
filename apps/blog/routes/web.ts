@@ -99,6 +99,8 @@ export default route({
 	bookmarks: get("/bookmarks"),
 	glossary: get("/glossary"),
 	releases: get("/releases"),
+	notes: get("/notes"),
+	til: get("/til"),
 
 	/** Every topic, kinds' and author's, by title. */
 	topics: get("/topics"),

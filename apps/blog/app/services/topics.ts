@@ -17,7 +17,9 @@ import type { BlogModels } from "~/app/models";
 import type { Article } from "~/app/models/articles";
 import type { GlossaryEntry } from "~/app/models/glossary";
 import type { Like } from "~/app/models/likes";
+import type { Note } from "~/app/models/notes";
 import type { Post } from "~/app/models/posts";
+import type { Til } from "~/app/models/tils";
 import type { Tutorial } from "~/app/models/tutorials";
 import type { SelectTopic } from "~/database/schema";
 
@@ -34,6 +36,8 @@ export type TopicPost =
 	| { kind: "tutorial"; hit: PostSearch.Hit; post: Tutorial }
 	| { kind: "glossary"; hit: PostSearch.Hit; post: GlossaryEntry }
 	| { kind: "bookmark"; hit: PostSearch.Hit; post: Like }
+	| { kind: "note"; hit: PostSearch.Hit; post: Note }
+	| { kind: "til"; hit: PostSearch.Hit; post: Til }
 	| { kind: "other"; hit: PostSearch.Hit; post: Post };
 
 /**
@@ -84,14 +88,16 @@ export async function topicPosts(
 	hits: ReadonlyArray<PostSearch.Hit>,
 ): Promise<Array<TopicPost>> {
 	let idsOf = (kind: string) => hits.filter((hit) => hit.kind === kind).map((hit) => hit.id);
-	let known = new Set<string>(["article", "tutorial", "glossary", "bookmark"]);
+	let known = new Set<string>(["article", "tutorial", "glossary", "bookmark", "note", "til"]);
 	let others = hits.filter((hit) => !known.has(hit.kind)).map((hit) => hit.id);
 
-	let [articles, tutorials, glossary, bookmarks, rest] = await Promise.all([
+	let [articles, tutorials, glossary, bookmarks, notes, tils, rest] = await Promise.all([
 		byIds(idsOf("article"), (ids) => models.articles.query().where(inList("id", ids)).all()),
 		byIds(idsOf("tutorial"), (ids) => models.tutorials.query().where(inList("id", ids)).all()),
 		byIds(idsOf("glossary"), (ids) => models.glossary.query().where(inList("id", ids)).all()),
 		byIds(idsOf("bookmark"), (ids) => models.likes.query().where(inList("id", ids)).all()),
+		byIds(idsOf("note"), (ids) => models.notes.query().where(inList("id", ids)).all()),
+		byIds(idsOf("til"), (ids) => models.tils.query().where(inList("id", ids)).all()),
 		byIds(others, (ids) => models.posts.query().where(inList("id", ids)).all()),
 	]);
 
@@ -104,6 +110,8 @@ export async function topicPosts(
 			return found(glossary, hit, (post) => ({ kind: "glossary", hit, post }));
 		if (hit.kind === "bookmark")
 			return found(bookmarks, hit, (post) => ({ kind: "bookmark", hit, post }));
+		if (hit.kind === "note") return found(notes, hit, (post) => ({ kind: "note", hit, post }));
+		if (hit.kind === "til") return found(tils, hit, (post) => ({ kind: "til", hit, post }));
 		return found(rest, hit, (post) => ({ kind: "other", hit, post }));
 	});
 }

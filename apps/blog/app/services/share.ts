@@ -9,11 +9,14 @@
 
 import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Kind as RegistryKind } from "~/app/models/kinds";
 
 import { POST_KINDS } from "~/app/models/kinds";
+import { PROFILE } from "~/config/profile";
 
 /** The most a post on X may weigh. */
 export const X_LIMIT = 280;
@@ -48,6 +51,18 @@ export namespace PostShare {
 	/** The kinds shared as a titled post with a teaser line. */
 	export type Kind = Extract<RegistryKind, "article" | "tutorial">;
 
+	/** The kinds shared whole: their content, then the permalink. */
+	export type ShortKind = Extract<RegistryKind, "note" | "til">;
+
+	/** What a note's or TIL's share text is built from. */
+	export interface Short {
+		kind: ShortKind;
+		/** The Markdown as stored; its links are posted as their bare URLs. */
+		content: string;
+		/** The absolute URL the post is read at. */
+		permalink: string;
+	}
+
 	/** What a titled post's share text is built from. */
 	export interface Post {
 		kind: Kind;
@@ -65,8 +80,11 @@ export namespace PostShare {
 export class ShareTextOverflow extends Error {
 	override name = "ShareTextOverflow";
 
-	/** The part to shorten: the typed teaser, or the title once no teaser is left to cut. */
-	readonly field: "teaser" | "title";
+	/**
+	 * The part to shorten: the typed teaser, the title once no teaser is left to cut, or a
+	 * note's or TIL's content.
+	 */
+	readonly field: "teaser" | "title" | "content";
 
 	/** How much weight the text carries past the limit, which is how much to cut. */
 	readonly over: number;
@@ -75,7 +93,7 @@ export class ShareTextOverflow extends Error {
 	 * @param field The part to shorten.
 	 * @param over How much weight the text carries past the limit.
 	 */
-	constructor(field: "teaser" | "title", over: number) {
+	constructor(field: "teaser" | "title" | "content", over: number) {
 		super(`The ${field} is ${String(over)} characters too long to share on X`);
 		this.field = field;
 		this.over = over;
@@ -246,4 +264,71 @@ export function releaseShareText(post: {
 		if (xLength(text) <= X_LIMIT) return text;
 	}
 	return `This week I released ${String(post.packages.length)} packages ${post.permalink}`;
+}
+
+/** What opens a short post's share text before its content: "TIL" for a TIL, nothing for a note. */
+const SHORT_PREFIX: Record<PostShare.ShortKind, string> = { note: "", til: "TIL " };
+
+/**
+ * A note's or TIL's Markdown as the plain text X receives: every link becomes its bare URL,
+ * which X weighs 23 whatever its text, a root-relative one on the site's origin, and the rest
+ * reads as prose. A source that does not parse is posted as written.
+ *
+ * @param markdown The stored content.
+ */
+export function shortContent(markdown: string): string {
+	let parsed = Markdown.parse(markdown);
+	if (isFailure(parsed)) return markdown.trim();
+	let walked = Markdown.walk(parsed.data.document, {
+		link: (node) => ({ type: "text", value: absolute(node.href), position: node.position }),
+	});
+	if (isFailure(walked)) return markdown.trim();
+	return toPlainText(walked.data, { code: true });
+}
+
+/** A link's address as posted: root-relative ones resolved against the site's origin. */
+function absolute(href: string): string {
+	return href.startsWith("/") && !href.startsWith("//")
+		? new URL(href, PROFILE.canonical.origin).href
+		: href;
+}
+
+/** A short post's share text with `content` already made plain. */
+function shortFrame(kind: PostShare.ShortKind, content: string, permalink: string): string {
+	return `${SHORT_PREFIX[kind]}${content} ${permalink}`;
+}
+
+/**
+ * How much a note's or TIL's content may weigh: 280 minus the permalink's 23, the space before
+ * it, and a TIL's "TIL ", which leaves 256 for a note and 252 for a TIL.
+ */
+export function shortBudget(kind: PostShare.ShortKind): number {
+	return X_LIMIT - xLength(shortFrame(kind, "", ANY_URL));
+}
+
+/**
+ * The save-time check on a note's or TIL's content: the plain text X would receive fits beside
+ * the permalink, or fails naming how much to cut.
+ *
+ * @returns The weight the content leaves unused, which the form shows.
+ */
+export function checkShort(
+	post: Pick<PostShare.Short, "kind" | "content">,
+): Result<number, ShareTextOverflow> {
+	let left = shortBudget(post.kind) - xLength(shortContent(post.content));
+	return left < 0 ? failure(new ShareTextOverflow("content", -left)) : success(left);
+}
+
+/**
+ * The text the author shares a note or TIL with: `{content} {permalink}`, "TIL " opening a
+ * TIL's, its links as bare URLs. The CMS refuses content that would not fit, so a saved post's
+ * text fits X.
+ */
+export function shortShareText(post: PostShare.Short): string {
+	return shortFrame(post.kind, shortContent(post.content), post.permalink);
+}
+
+/** The author's "Post on X" link for a note or TIL, opening X's composer with its share text. */
+export function shortIntent(post: PostShare.Short): string {
+	return shareIntent(shortShareText(post));
 }

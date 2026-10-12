@@ -12,12 +12,12 @@ This document defines app-specific rules for `apps/blog`.
 - MUST read anything that varies by post kind — stored type, `kind:` names, topic and permalink, index emoji and labels, ActivityPub object type — from the registry in `app/models/kinds.ts`, never from a list of kinds of its own; a new kind is one registry entry plus the code that genuinely treats it differently.
 - MUST serve a kind's listing as its topic through the shared topic controller, never a controller or view of its own: the kind's topic row is seeded by migration (query `kind:<name>` in the form `PostSearch.canonical` writes, built-in through the registry's `topic` slug), its page is `<topic>: get("/<topic>")` in `routes/web.ts` mapped with `router.map(routes.<topic>, kindTopic("<topic>"))`, and its feeds answer at `/<topic>.rss`, `.atom` and `.json` through the `topic` routes in `routes/rss.ts`, `atom.ts` and `json-feed.ts` with no route of their own. A kind whose rows need their own look adds a case to `TopicPost` in `app/services/topics.ts` and to `TopicViewModel`; otherwise it lists as an activity row.
 - MUST store a topic's query only through `ctx.models.topics`, which canonicalizes it, and look a topic up by query with `findByQuery`/`findForTags`, never by comparing raw query text.
-- MUST write a post through its type's model (`ctx.models.articles`, `tutorials`, `likes`, `glossary`), whose callbacks keep the post's search document current; a delete is `tombstone(id)`, which every read then skips through the base model's default scope.
+- MUST write a post through its type's model (`ctx.models.articles`, `tutorials`, `notes`, `tils`, `likes`, `glossary`, `releases`), whose callbacks keep the post's search document current; a delete is `tombstone(id)`, which every read then skips through the base model's default scope.
 - MUST treat post publish state as:
   - `published_at === null` => published
   - `published_at` in the past => published
   - `published_at` in the future => preview
-- MUST only support `articles` and `tutorials` in `app/http/controllers/post.tsx`; unsupported `postType` must return 404.
+- MUST serve in `app/http/controllers/post.tsx` only the kinds whose registry entry has `permalink: "page"` (articles, tutorials, notes, TILs and releases); any other `postType` must return 404.
 - MUST keep DB-facing fields in `snake_case` (`author_id`, `published_at`, `created_at`, etc.).
 - MUST style every component and view with `@sdxc/u` utility mixins in a `mix` array, not `css({ ... })` objects; `u.raw({ ... })` is the only escape hatch, for properties the package has no utility for.
 - MUST express every length through the shared scales: spacing as a scale multiple (`u.p(4)`, `u.gap(2)`), radius as a named token (`u.rounded("lg")`), and font size as a named step (`u.text("sm")`). Off-scale one-off values (`0.45rem`, `0.7rem`, `1.05rem`, `borderRadius: "clamp(...)"`) are not acceptable, even to preserve an existing look.
@@ -41,6 +41,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST serve every ActivityPub URL through `ctx.activityPub` (the `Federation` that `createFederation` in `app/services/activitypub.ts` builds and the `activityPub` middleware publishes): `/activitypub/*` answers `ctx.activityPub.fetch(ctx.request)`, and a page that also has an ActivityStreams form answers `ctx.activityPub.respond(...)` before any `ctx.cache(...)` declaration.
 - MUST keep every negotiated variant of a URL other than its HTML out of the edge cache (`NEGOTIATED_ACTIVITY` for ActivityStreams, no `ctx.cache` for Markdown picked from `Accept`): Workers Cache keys an entry by URL and serves a hit without running the Worker, so a stored variant reaches every client of that URL.
 - MUST enqueue `jobs.activityPub.publish` with `changedAt` wherever `jobs.webmentions.send` is enqueued for a post, so followers see every create, edit and delete.
+- MUST check a note's or TIL's content with `checkShort()` from `app/services/share.ts` before saving it, re-rendering the form with 422 when it fails: the text shared on X is the content made plain by `shortContent()`, every link a bare URL weighing 23, plus the permalink, and a saved post's text must fit X. A note's slug comes from `notes.nextSlug()` on create and never changes, since followers hold its permalink.
 - MUST NOT change `ACTOR_ID`, `INBOX_ID` or the other ids in `config/activitypub.ts`, nor the post permalinks they federate under: followers' servers cache them, and a change orphans every follower.
 
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
@@ -126,7 +127,7 @@ This document defines app-specific rules for `apps/blog`.
   - `database/schema/index.ts`
   - `app/models/index.ts` (the registry `ctx.models` binds)
   - `app/models/posts.ts` (the base model every post type extends)
-  - `app/models/articles.ts`, `app/models/tutorials.ts`, `app/models/likes.ts`, `app/models/glossary.ts`
+  - `app/models/articles.ts`, `app/models/tutorials.ts`, `app/models/likes.ts`, `app/models/glossary.ts`, `app/models/releases.ts`
   - `app/models/post-values.ts` (publish state, ordering, bookmark URLs, tutorial tags)
   - `app/models/kinds.ts` (the post kind registry)
   - `app/models/topics.ts` (saved searches; a kind's topic is built in)

@@ -23,7 +23,15 @@ import {
 
 describe("the post kind registry", () => {
 	test("lists the kinds in the order search tabs show them", () => {
-		expect(KINDS).toEqual(["article", "tutorial", "glossary", "bookmark", "release"]);
+		expect(KINDS).toEqual([
+			"article",
+			"tutorial",
+			"glossary",
+			"bookmark",
+			"release",
+			"note",
+			"til",
+		]);
 	});
 
 	test.each([
@@ -48,8 +56,8 @@ describe("the post kind registry", () => {
 	});
 
 	test("serves the kinds with permalinks on the public post page", () => {
-		expect(PUBLIC_TYPE_PATHS).toEqual(["articles", "tutorials", "releases"]);
-		expect(PUBLIC_POST_TYPES).toEqual(["article", "tutorial", "release"]);
+		expect(PUBLIC_TYPE_PATHS).toEqual(["articles", "tutorials", "releases", "notes", "til"]);
+		expect(PUBLIC_POST_TYPES).toEqual(["article", "tutorial", "release", "note", "til"]);
 		expect(isPublicTypePath("tutorials")).toBe(true);
 		expect(isPublicTypePath("glossary")).toBe(false);
 		expect(isPublicTypePath(undefined)).toBe(false);
@@ -64,6 +72,8 @@ describe("the post kind registry", () => {
 
 	test("federates a weekly releases post as a Note", () => {
 		expect(objectTypeAt("releases")).toBe("Note");
+		expect(objectTypeAt("notes")).toBe("Note");
+		expect(objectTypeAt("til")).toBe("Note");
 	});
 
 	test("gives every kind a distinct topic and emoji", () => {

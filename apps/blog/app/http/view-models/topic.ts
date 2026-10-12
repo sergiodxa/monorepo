@@ -20,9 +20,17 @@ import type { TopicPost } from "~/app/services/topics";
 import type { SelectTopic } from "~/database/schema";
 
 import { BookmarksViewModel } from "~/app/http/view-models/bookmarks";
+import { FeedViewModel } from "~/app/http/view-models/feed";
 import { GlossaryViewModel } from "~/app/http/view-models/glossary";
 import { SearchViewModel } from "~/app/http/view-models/search";
-import { bookmarkEntry, glossaryEntry, iso, pageEntry } from "~/app/http/view-models/syndication";
+import {
+	bookmarkEntry,
+	glossaryEntry,
+	iso,
+	noteEntry,
+	pageEntry,
+	tilEntry,
+} from "~/app/http/view-models/syndication";
 import { POST_KINDS } from "~/app/models/kinds";
 import { isBuiltInTopic } from "~/app/models/topics";
 import { PROFILE } from "~/config/profile";
@@ -33,7 +41,8 @@ export namespace TopicViewModel {
 	/**
 	 * One post on a topic page, drawn as its kind's own listing draws it: an article or a
 	 * tutorial as a linked title and date, a bookmark with its summary and archive link, a
-	 * glossary entry with its definition, and any other kind as an activity row.
+	 * glossary entry with its definition, a note or TIL as an activity row reading its content,
+	 * and any other kind as an activity row.
 	 */
 	export type Item =
 		| { type: "page"; key: string; href: string; label: string; date: string; preview: boolean }
@@ -48,6 +57,8 @@ export namespace TopicViewModel {
 				label: string;
 				description: string | null;
 				date: string | null;
+				/** A note's or TIL's content, read in the row with the date as its link. */
+				inline?: FeedViewModel.Inline;
 		  };
 
 	/** A topic's three feeds. */
@@ -207,6 +218,19 @@ export class TopicViewModel {
 				return { type: "bookmark", key: hit.id, bookmark: BookmarksViewModel.item(post.post) };
 			case "glossary":
 				return { type: "entry", key: hit.id, entry: GlossaryViewModel.entry(post.post) };
+			case "note":
+			case "til":
+				return {
+					type: "activity",
+					key: hit.id,
+					kind: post.kind,
+					kindLabel: POST_KINDS[post.kind].label,
+					href: hit.url,
+					label: hit.title,
+					description: null,
+					date: hit.publishedAt,
+					inline: FeedViewModel.inline(post.kind, post.post.meta),
+				};
 			case "other":
 				return {
 					type: "activity",
@@ -265,6 +289,10 @@ function feedEntry(post: TopicPost, base: URL): Syndication.Entry {
 			return bookmarkEntry(post.post);
 		case "glossary":
 			return glossaryEntry(post.post, base);
+		case "note":
+			return noteEntry(post.post, base);
+		case "til":
+			return tilEntry(post.post, base);
 		case "other": {
 			let url = new URL(post.hit.url, base).toString();
 			return {

@@ -1,5 +1,5 @@
 /**
- * HTTP action for public article and tutorial post pages. Route params are validated
+ * HTTP action for public post pages, one per kind with a page. Route params are validated
  * before any lookup, the response format (HTML, Markdown, EPUB or ActivityStreams)
  * is negotiated from the URL extension and the `Accept` header, unpublished posts stay
  * admin-only behind a 403, and deleted posts answer 410. HTML pages advertise Webmention.
@@ -52,7 +52,7 @@ type ValidatePostRequestParamsResult =
 let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md", "epub"]);
 
 /**
- * Handles public post requests for articles and tutorials, rejecting unknown collections
+ * Handles public post requests for every kind with a page, rejecting unknown collections
  * and extensions before the lookup runs.
  */
 export default createAction(
@@ -156,7 +156,7 @@ export default createAction(
 			let page = PostViewModel.page(post, ctx.request.url, undefined);
 			let built = postEpub({
 				title: page.post.title,
-				excerpt: post.post.meta.excerpt,
+				excerpt: "excerpt" in post.post.meta ? post.post.meta.excerpt : undefined,
 				tags: page.post.tags,
 				document: page.post.document,
 				url: page.post.url,

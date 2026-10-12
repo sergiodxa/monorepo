@@ -1,6 +1,6 @@
 /**
- * Route definitions for the blog CMS: the dashboard endpoint plus RESTful
- * resource routes for articles, tutorials, bookmarks, glossary, releases, redirects, and the
+ * Route definitions for the blog CMS: the dashboard endpoint plus RESTful resource routes
+ * for articles, tutorials, notes, TILs, bookmarks, glossary, releases, redirects, and the
  * Webmention moderation queue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -18,6 +18,8 @@ export default route({
 	purgeCache: post("/cache/purge"),
 	articles: resources("/articles", { exclude: ["show"] }),
 	tutorials: resources("/tutorials", { exclude: ["show"] }),
+	notes: resources("/notes", { exclude: ["show"] }),
+	tils: resources("/til", { exclude: ["show"] }),
 	bookmarks: resources("/bookmarks", { exclude: ["show"] }),
 	glossary: resources("/glossary", { exclude: ["show"] }),
 	/** The weekly job writes every releases post, so the CMS edits and deletes them only. */

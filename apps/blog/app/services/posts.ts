@@ -1,7 +1,7 @@
 /**
- * Reads that span post types: the public payload of `/articles/:slug` and `/tutorials/:slug`,
- * the tombstone a deleted permalink answers with, what sending a post's Webmentions needs, and
- * which post a Webmention target names. Each reads through the type's own model.
+ * Reads that span post types: the public payload of a post page, the tombstone a deleted
+ * permalink answers with, what sending a post's Webmentions needs, and which post a
+ * Webmention target names. Each reads through the type's own model.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,13 +9,14 @@
 
 import type { BlogModels } from "~/app/models";
 import type { PublicTypePath } from "~/app/models/kinds";
+import type { PostType } from "~/app/models/post-values";
 import type { RelatedTutorial } from "~/app/models/tutorials";
 
-import { isPublicTypePath } from "~/app/models/kinds";
+import { isPublicTypePath, publicTypePathOf } from "~/app/models/kinds";
 import { isPublishedAt, tutorialTags } from "~/app/models/post-values";
 
-/** A post permalink: `/articles/:slug` or `/tutorials/:slug`, without an extension. */
-const MENTIONABLE_PATH = /^\/(articles|tutorials)\/([^/.]+)$/;
+/** A post permalink, `/<topic>/:slug` without an extension; the topic must have post pages. */
+const MENTIONABLE_PATH = /^\/([^/.]+)\/([^/.]+)$/;
 
 /** A public post page's route-like address. */
 export interface PublicPostAddress {
@@ -24,8 +25,8 @@ export interface PublicPostAddress {
 }
 
 /**
- * What a public post page renders. Article and tutorial shapes differ so controllers render
- * route-specific UI straight from the payload.
+ * What a public post page renders. Each kind's shape differs so controllers render
+ * route-specific UI straight from the payload; a note has no title, only content.
  */
 export type PublicPost =
 	| {
@@ -56,6 +57,42 @@ export type PublicPost =
 				updated_at: string;
 			};
 			tags: string[];
+	  }
+	| {
+			postType: "notes";
+			post: {
+				id: string;
+				meta: { slug: string; content: string };
+				published_at: string | null;
+				created_at: string;
+				/** When the post or its content last changed, which an EPUB reports as its `modified`. */
+				updated_at: string;
+			};
+	  }
+	| {
+			postType: "til";
+			post: {
+				id: string;
+				meta: { title: string; slug: string; content: string };
+				published_at: string | null;
+				created_at: string;
+				/** When the post or its content last changed, which an EPUB reports as its `modified`. */
+				updated_at: string;
+			};
+			tags: string[];
+	  }
+	| {
+			postType: "releases";
+			post: {
+				id: string;
+				meta: { title: string; slug: string; content: string };
+				published_at: string | null;
+				created_at: string;
+				/** When the post or its content last changed, which an EPUB reports as its `modified`. */
+				updated_at: string;
+			};
+			/** The package names the share text lists, as the weekly job found them. */
+			packages: string[];
 	  };
 
 /** What sending a post's Webmentions reads: its permalink parts, source and state. */
@@ -72,7 +109,7 @@ export interface MentionSource {
 }
 
 /**
- * Resolves the public post payload for `/articles/:slug` or `/tutorials/:slug`.
+ * Resolves the public post payload for a post page, read through its kind's own model.
  *
  * @returns The payload for the route's type, or `null` when no live post has the slug.
  */
@@ -99,6 +136,60 @@ export async function findPublicPost(
 				created_at: post.created_at,
 				updated_at: post.updated_at,
 			},
+		};
+	}
+
+	if (address.postType === "notes") {
+		let note = await models.notes.findBySlug(address.postSlug);
+		if (!note) return null;
+
+		return {
+			postType: "notes",
+			post: {
+				id: note.id,
+				meta: { slug: note.meta.slug, content: note.meta.content },
+				published_at: note.published_at,
+				created_at: note.created_at,
+				updated_at: note.updated_at,
+			},
+		};
+	}
+
+	if (address.postType === "til") {
+		let til = await models.tils.findBySlug(address.postSlug);
+		if (!til) return null;
+
+		return {
+			postType: "til",
+			post: {
+				id: til.id,
+				meta: { title: til.meta.title, slug: til.meta.slug, content: til.meta.content },
+				published_at: til.published_at,
+				created_at: til.created_at,
+				updated_at: til.updated_at,
+			},
+			tags: tutorialTags(til.meta.tags),
+		};
+	}
+
+	if (address.postType === "releases") {
+		let release = await models.releases.findBySlug(address.postSlug);
+		if (!release) return null;
+
+		return {
+			postType: "releases",
+			post: {
+				id: release.id,
+				meta: {
+					title: release.meta.title,
+					slug: release.meta.slug,
+					content: release.meta.content,
+				},
+				published_at: release.published_at,
+				created_at: release.created_at,
+				updated_at: release.updated_at,
+			},
+			packages: release.meta.packages.map((pkg) => pkg.name),
 		};
 	}
 
@@ -151,11 +242,17 @@ export async function findTombstone(
 	models: BlogModels,
 	address: PublicPostAddress,
 ): Promise<{ deleted_at: string } | null> {
-	let post =
-		address.postType === "articles"
-			? await models.articles.findTombstone(address.postSlug)
-			: await models.tutorials.findTombstone(address.postSlug);
+	let post = await tombstoneAt(models, address);
 	return post?.deleted_at ? { deleted_at: post.deleted_at } : null;
+}
+
+/** The deleted post under a permalink, read through its kind's model. */
+function tombstoneAt(models: BlogModels, address: PublicPostAddress) {
+	if (address.postType === "articles") return models.articles.findTombstone(address.postSlug);
+	if (address.postType === "notes") return models.notes.findTombstone(address.postSlug);
+	if (address.postType === "til") return models.tils.findTombstone(address.postSlug);
+	if (address.postType === "releases") return models.releases.findTombstone(address.postSlug);
+	return models.tutorials.findTombstone(address.postSlug);
 }
 
 /** Whether a public URL belonged to a post that was deleted. */
@@ -167,30 +264,52 @@ export async function isTombstoned(models: BlogModels, address: PublicPostAddres
  * Reads what sending a post's Webmentions needs, deleted posts included, since a delete
  * notifies every target the post had linked.
  *
- * @returns The article or tutorial with its Markdown source, or `null` for any other post.
+ * @returns The post with its Markdown source, or `null` for a kind without post pages.
  */
 export async function findForMentions(
 	models: BlogModels,
 	id: string,
 ): Promise<MentionSource | null> {
-	let post =
-		(await models.articles.unscoped().where({ id }).first()) ??
-		(await models.tutorials.unscoped().where({ id }).first());
-	if (!post) return null;
+	let row = await models.posts.unscoped().where({ id }).first();
+	let postType = row ? publicTypePathOf(row.type) : null;
+	if (!row || postType === null) return null;
+
+	let meta = await permalinkedMeta(models, id, row.type);
+	if (!meta) return null;
 
 	return {
-		id: post.id,
-		postType: post.type === "article" ? "articles" : "tutorials",
-		slug: post.meta.slug || post.id,
-		content: post.meta.content,
-		published_at: post.published_at,
-		deleted_at: post.deleted_at,
-		federated_at: post.federated_at,
+		id: row.id,
+		postType,
+		slug: meta.slug || row.id,
+		content: meta.content,
+		published_at: row.published_at,
+		deleted_at: row.deleted_at,
+		federated_at: row.federated_at,
 	};
 }
 
 /**
- * Resolves a URL on this site to the published article or tutorial it names, which is what the
+ * The slug and Markdown of a post of a kind with a post page, deleted or not, read through
+ * its kind's model; `null` for any other type.
+ */
+async function permalinkedMeta(
+	models: BlogModels,
+	id: string,
+	type: PostType,
+): Promise<{ slug: string; content: string } | null> {
+	if (type === "article")
+		return (await models.articles.unscoped().where({ id }).first())?.meta ?? null;
+	if (type === "tutorial")
+		return (await models.tutorials.unscoped().where({ id }).first())?.meta ?? null;
+	if (type === "note") return (await models.notes.unscoped().where({ id }).first())?.meta ?? null;
+	if (type === "til") return (await models.tils.unscoped().where({ id }).first())?.meta ?? null;
+	if (type === "release")
+		return (await models.releases.unscoped().where({ id }).first())?.meta ?? null;
+	return null;
+}
+
+/**
+ * Resolves a URL on this site to the published post whose page it is, which is what the
  * Webmention endpoint accepts mentions for. Another origin, another path, an extension, a
  * preview or a deleted post all resolve to `null`.
  */

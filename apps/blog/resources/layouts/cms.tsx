@@ -49,6 +49,8 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 	{ href: routes.cms.articles.index.href(), label: "Articles" },
 	{ href: routes.cms.tutorials.index.href(), label: "Tutorials" },
+	{ href: routes.cms.notes.index.href(), label: "Notes" },
+	{ href: routes.cms.tils.index.href(), label: "TILs" },
 	{ href: routes.cms.bookmarks.index.href(), label: "Bookmarks" },
 	{ href: routes.cms.glossary.index.href(), label: "Glossary" },
 	{ href: routes.cms.releases.index.href(), label: "Releases" },

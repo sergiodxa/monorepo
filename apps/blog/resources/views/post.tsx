@@ -1,7 +1,7 @@
 /**
- * View for the blog post detail page, marked up as an `h-entry` (name, byline, date,
- * content) so IndieWeb readers see who wrote it and when, with a link to discuss it on X,
- * then a sponsor call-to-action and, for tutorials, an embedded related-posts frame.
+ * View for the blog post detail page, marked up as an `h-entry` (name, byline, date, content;
+ * a note has no name) so IndieWeb readers see who wrote it and when, with a link to discuss it
+ * on X, then a sponsor call-to-action and, for tutorials, an embedded related-posts frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -212,17 +212,19 @@ export function PostView() {
 										>
 											View as Markdown
 										</Link>
-										<Link
-											href={routes.post.href({
-												postType: model.post.typePath,
-												postSlug: model.post.slug,
-												ext: "epub",
-											})}
-											download={`${model.post.slug}.epub`}
-											mix={[text("sm")]}
-										>
-											Download EPUB
-										</Link>
+										{model.post.titled && (
+											<Link
+												href={routes.post.href({
+													postType: model.post.typePath,
+													postSlug: model.post.slug,
+													ext: "epub",
+												})}
+												download={`${model.post.slug}.epub`}
+												mix={[text("sm")]}
+											>
+												Download EPUB
+											</Link>
+										)}
 										<Link
 											href={discussIntent({
 												title: model.post.title,
@@ -240,12 +242,14 @@ export function PostView() {
 									</div>
 								</div>
 
-								<Heading
-									level={1}
-									mix={[mf("p-name"), m(0), text("4xl"), overflowWrap("break-word")]}
-								>
-									{model.post.title}
-								</Heading>
+								{model.post.titled && (
+									<Heading
+										level={1}
+										mix={[mf("p-name"), m(0), text("4xl"), overflowWrap("break-word")]}
+									>
+										{model.post.title}
+									</Heading>
+								)}
 
 								<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
 									By{" "}

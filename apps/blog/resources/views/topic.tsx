@@ -36,6 +36,7 @@ import type { GlossaryViewModel } from "~/app/http/view-models/glossary";
 import type { TopicViewModel } from "~/app/http/view-models/topic";
 
 import { ActivityRow } from "~/resources/components/activity-row";
+import { InlinePost } from "~/resources/components/inline-post";
 import { ResultsPager } from "~/resources/components/results-pager";
 import { BlogLayout } from "~/resources/layouts/blog";
 
@@ -241,6 +242,8 @@ function TopicRow(handle: Handle<{ item: TopicViewModel.Item }>) {
 						href={item.href}
 						date={item.date}
 						description={item.description ?? undefined}
+						inline={item.inline ? <InlinePost {...item.inline} /> : undefined}
+						linkMix={item.inline ? [mf("u-url")] : undefined}
 						mix={[mf("h-entry")]}
 					>
 						{item.label}

@@ -20,7 +20,7 @@ import { postMeta, posts } from "~/database/schema";
 
 import { isPublishedAt, parseTimestamp, timestampFromPublishedOrCreated } from "./post-values";
 
-/** A published article or tutorial in the order the ActivityPub outbox lists it. */
+/** A published post with a page, in the order the ActivityPub outbox lists it. */
 export interface Federatable {
 	id: string;
 	/** Epoch milliseconds of its publish date, else its creation date. */
@@ -75,7 +75,7 @@ export const Posts = createModel(posts, {
 		},
 
 		/**
-		 * The published articles and tutorials, newest first with the id breaking a tie, which is
+		 * The published posts with pages, newest first with the id breaking a tie, which is
 		 * the order the outbox pages through and the count NodeInfo reports.
 		 */
 		async findFederatable(): Promise<Federatable[]> {

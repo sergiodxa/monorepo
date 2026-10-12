@@ -11,8 +11,10 @@ import type { Articles } from "~/app/models/articles";
 import type { Bookmarks } from "~/app/models/bookmarks";
 import type { Glossary } from "~/app/models/glossary";
 import type { Likes } from "~/app/models/likes";
+import type { Notes } from "~/app/models/notes";
 import type { Posts } from "~/app/models/posts";
 import type { Releases } from "~/app/models/releases";
+import type { Tils } from "~/app/models/tils";
 import type { Topics } from "~/app/models/topics";
 import type { Tutorials } from "~/app/models/tutorials";
 import type { Users } from "~/app/models/users";
@@ -35,8 +37,10 @@ interface BlogModelEntries {
 	tutorials: typeof Tutorials;
 	likes: typeof Likes;
 	glossary: typeof Glossary;
-	releases: typeof Releases;
 	topics: typeof Topics;
+	releases: typeof Releases;
+	notes: typeof Notes;
+	tils: typeof Tils;
 }
 
 declare module "@sdxc/data-model" {

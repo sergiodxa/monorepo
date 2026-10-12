@@ -1,6 +1,7 @@
 /**
  * The blog's one row for a post in a list: an emoji per kind, the title as the link, an
- * optional line of description under it, and the date at the end. The home page's activity,
+ * optional line of description under it, and the date at the end; a short post shows its
+ * content in place of the title, and its date is the link. The home page's activity,
  * the `/search` results and the search dialog all draw their rows with it, so they match.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -36,6 +37,11 @@ export namespace ActivityRow {
 		date: string | null;
 		/** One line under the title, cut with an ellipsis where it overflows. */
 		description?: RemixNode;
+		/**
+		 * Content read in the row itself, shown instead of the linked title, which moves the link
+		 * onto the date: how the index shows a note or a TIL whole.
+		 */
+		inline?: RemixNode;
 		/** Content after the link on the title line, such as a status badge. */
 		badge?: RemixNode;
 		/**
@@ -104,6 +110,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 			dateMix,
 			description,
 			href,
+			inline,
 			kind,
 			kindLabel,
 			linkMix,
@@ -144,17 +151,28 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 					{icon.icon}
 				</span>
 				<div mix={[minIs(0)]}>
-					<p mix={[m(0), text(compact ? "base" : "lg"), fg("neutral.emphasis"), titleMix]}>
-						<Link href={href} mix={linkMix}>
-							{children}
-						</Link>
-						{badge}
-					</p>
+					{inline ?? (
+						<p mix={[m(0), text(compact ? "base" : "lg"), fg("neutral.emphasis"), titleMix]}>
+							<Link href={href} mix={linkMix}>
+								{children}
+							</Link>
+							{badge}
+						</p>
+					)}
 					{description ? (
 						<p mix={[m(0), text("sm"), fg("neutral.muted"), truncate()]}>{description}</p>
 					) : null}
 				</div>
-				{date ? (
+				{date && inline ? (
+					<Link href={href} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
+						<time
+							datetime={isoDate(date)}
+							mix={[fg("neutral.muted"), text("sm"), nowrap(), dateMix]}
+						>
+							{formatDate(date)}
+						</time>
+					</Link>
+				) : date ? (
 					<time
 						datetime={isoDate(date)}
 						mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(compact ? 0.5 : 1), dateMix]}

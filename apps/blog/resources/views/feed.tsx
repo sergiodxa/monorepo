@@ -1,8 +1,8 @@
 /**
  * View for the site home/feed page. Renders the author intro, an RSS link, and
  * a chronological "Activity" timeline of posts as an `h-feed` of `h-entry` rows, each
- * an activity row with an optional preview badge. Exists as the landing page of the
- * public blog.
+ * an activity row with an optional preview badge, notes and TILs read in place. Exists as
+ * the landing page of the public blog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,10 +18,12 @@ import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Badge, Heading, Link } from "@sdxc/ui";
 
+import type { FeedViewModel } from "~/app/http/view-models/feed";
 import type { Kind } from "~/app/models/kinds";
 
 import { ACTOR_ID } from "~/config/activitypub";
 import { ActivityRow } from "~/resources/components/activity-row";
+import { InlinePost } from "~/resources/components/inline-post";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -39,6 +41,8 @@ export namespace FeedView {
 		preview: boolean;
 		/** Which emoji the row leads with; a bookmark's `href` is marked up as `u-bookmark-of`. */
 		kind: Kind;
+		/** A note's or TIL's content, read in the row with the date linking to `href`. */
+		inline?: FeedViewModel.Inline;
 	}
 
 	/**
@@ -89,7 +93,12 @@ export function FeedView() {
 							href={item.href}
 							date={item.date}
 							mix={[mf("h-entry")]}
-							linkMix={[mf(item.kind === "bookmark" ? "u-bookmark-of" : "u-url", "p-name")]}
+							inline={item.inline ? <InlinePost {...item.inline} /> : undefined}
+							linkMix={[
+								item.inline
+									? mf("u-url")
+									: mf(item.kind === "bookmark" ? "u-bookmark-of" : "u-url", "p-name"),
+							]}
 							dateMix={[mf("dt-published")]}
 							badge={
 								item.preview ? (

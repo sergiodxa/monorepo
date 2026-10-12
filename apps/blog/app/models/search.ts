@@ -27,6 +27,7 @@ import { KINDS, kindNamed, kindOfType, POST_KINDS } from "~/app/models/kinds";
 import {
 	bookmarkLabel,
 	normalizeUrl,
+	noteTitle,
 	timestampFromPublishedOrCreated,
 	tutorialTags,
 } from "~/app/models/post-values";
@@ -437,7 +438,7 @@ export class PostSearch {
 			let kind = post && post.deleted_at === null ? kindOfType(post.type) : null;
 			let postMeta = post ? metaByPost.get(post.id) : undefined;
 			if (!post || kind === null || postMeta === undefined || isBlankMeta(postMeta)) return [];
-			let result = this.result(kind, post, postMeta, row.tags);
+			let result = this.result(kind, post, postMeta, row.tags, row.content);
 			return [{ ...result, id: post.id, body: row.content }];
 		});
 	}
@@ -445,19 +446,21 @@ export class PostSearch {
 	/**
 	 * Projects one post into the result shape callers and the MCP tool read: a glossary entry is
 	 * titled by its alias or else its term and summarized by its definition, a bookmark is named
-	 * as `/bookmarks` names it, has no slug and links out, and tags come from the projection.
+	 * as `/bookmarks` names it, has no slug and links out, a note is titled by its searched
+	 * `body` shortened, and tags come from the projection.
 	 */
 	private static result(
 		kind: Kind,
 		post: schema.SelectPost,
 		meta: ReadonlyArray<schema.SelectPostMeta>,
 		tags: string,
+		body: string,
 	): PostSearch.Result {
 		let value = (key: string) => latestValue(meta, key);
 		let slug = value("slug") ?? "";
 		let timestamp = timestampFromPublishedOrCreated(post);
 
-		let title = value("title") ?? "";
+		let title = kind === "note" ? noteTitle(body) : (value("title") ?? "");
 		let excerpt = kind === "tutorial" ? (value("excerpt") ?? "") : value("excerpt");
 		if (kind === "glossary") {
 			title = value("title") ?? value("term") ?? "";
@@ -479,7 +482,7 @@ export class PostSearch {
 			slug,
 			url,
 			excerpt,
-			tags: kind === "tutorial" ? tagsOf(tags) : [],
+			tags: kind === "tutorial" || kind === "til" ? tagsOf(tags) : [],
 			publishedAt: Number.isNaN(timestamp) ? null : new Date(timestamp).toISOString(),
 		};
 	}
@@ -524,6 +527,22 @@ export class PostSearch {
 			let release = await models.releases.find(id);
 			if (!release) return null;
 			return { title: release.meta.title, tags: [], content: release.meta.content };
+		}
+
+		if (type === "note") {
+			let note = await models.notes.find(id);
+			if (!note) return null;
+			return { title: "", tags: [], content: note.meta.content };
+		}
+
+		if (type === "til") {
+			let til = await models.tils.find(id);
+			if (!til) return null;
+			return {
+				title: til.meta.title,
+				tags: tutorialTags(til.meta.tags),
+				content: til.meta.content,
+			};
 		}
 
 		if (type === "glossary") {

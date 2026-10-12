@@ -15,7 +15,7 @@ import toolset from "~/app/mcp/tools";
 /** Reads one published post, or refuses a slug that names a draft or nothing. */
 export default createTool(toolset.getPost, async (ctx) => {
 	let found = await findPublished(ctx.models, ctx.input.type, ctx.input.slug);
-	if (!found) {
+	if (!found || (found.postType !== "articles" && found.postType !== "tutorials")) {
 		let noun = ctx.input.type === "articles" ? "article" : "tutorial";
 		throw new ToolError(
 			`No published ${noun} has the slug "${ctx.input.slug}". Call search_posts or list_posts to find one.`,

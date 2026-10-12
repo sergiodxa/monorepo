@@ -1,11 +1,16 @@
 /**
  * Pure rules over post values: when a post counts as published, how posts order by date, how a
- * bookmarked URL is cleaned and keyed, and how tutorial tags are stored. Kept apart from the
- * models so search and the views read the same rules without loading a model.
+ * bookmarked URL is cleaned and keyed, how tags are stored and what a note is titled. Kept
+ * apart from the models so search and the views read the same rules without loading a model.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { Markdown } from "@sdxc/markdown";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { isFailure } from "@sdxc/result";
+import { excerpt } from "@sdxc/strings";
 
 import type { SelectPost } from "~/database/schema";
 
@@ -156,4 +161,24 @@ export function serializeTags(input: string | readonly string[] | undefined): st
 	if (input === undefined) return null;
 	let tags = distinctTags(typeof input === "string" ? [input] : input);
 	return tags.length === 0 ? null : JSON.stringify(tags);
+}
+
+/** How many characters a note's stand-in title keeps, about one line of a list. */
+const NOTE_TITLE_LENGTH = 80;
+
+/**
+ * A short post's prose without its Markdown, paragraphs apart by a blank line, for a feed
+ * summary. A source that does not parse is returned as written.
+ */
+export function plainText(content: string): string {
+	let parsed = Markdown.parse(content);
+	return isFailure(parsed) ? content : toPlainText(parsed.data.document);
+}
+
+/**
+ * What a note is called where a title is required (a feed entry, a search result, a page's
+ * `<title>`): its prose on one line, cut at a word with "…".
+ */
+export function noteTitle(content: string): string {
+	return excerpt(plainText(content), { length: NOTE_TITLE_LENGTH });
 }

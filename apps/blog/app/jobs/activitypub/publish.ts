@@ -19,12 +19,12 @@ import { findForMentions, findPublicPost } from "~/app/services/posts";
 /**
  * A post followers never received is a `Create`, one they did an `Update` named by
  * `changedAt`, and a deleted one they received a `Delete`. A preview, a post deleted
- * before it federated, and anything but an article or tutorial send nothing. The post is
+ * before it federated, and a kind without post pages send nothing. The post is
  * stamped federated only once its fan-out is queued, so a failed publish retries a `Create`.
  */
 export default createJobHandler(jobs.activityPub.publish, async (ctx) => {
 	let source = await findForMentions(ctx.models, ctx.input.postId);
-	if (source === null) return ctx.ack("The post is not an article or tutorial");
+	if (source === null) return ctx.ack("The post is of a kind without post pages");
 
 	let federated = source.federated_at !== null;
 	ctx.log.set({ activitypub: { post: source.id, federated } });
