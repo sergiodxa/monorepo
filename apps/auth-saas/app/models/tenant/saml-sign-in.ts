@@ -10,10 +10,10 @@
 
 import type { Database, TableRow } from "remix/data-table";
 
+import { randomToken } from "@sdxc/crypto";
 import { toMs } from "@sdxc/duration";
 import { isFailure } from "@sdxc/result";
 import * as SAML from "@sdxc/saml";
-import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, inList, lt, table } from "remix/data-table";
 
@@ -194,7 +194,7 @@ export async function beginSamlSignIn(
 
 	let urls = samlServiceProviderUrls(parsed.callbackOrigin, parsed.slug);
 	let keys = await openServiceProviderKeys(sealKey, configuration);
-	let relayState = generateUUID();
+	let relayState = randomToken();
 
 	let request = await SAML.createAuthnRequest({
 		binding: "redirect",

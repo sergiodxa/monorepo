@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url, sha256 } from "@sdxc/crypto";
+import { Base64Url, randomToken, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -49,7 +49,7 @@ function serveMetadata(overrides: Record<string, unknown> = {}) {
 
 /** A PKCE verifier and its `S256` challenge, computed for real rather than a placeholder string. */
 async function pkcePair(): Promise<{ verifier: string; challenge: string }> {
-	let verifier = `verifier-${crypto.randomUUID()}`;
+	let verifier = randomToken();
 	let hashed = await sha256(verifier);
 	if (isFailure(hashed)) throw new Error("unreachable");
 	return { verifier, challenge: Base64Url.encode(hashed.data) };

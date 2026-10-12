@@ -13,6 +13,7 @@
 
 import { json } from "@sdxc/http/response";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -130,7 +131,7 @@ export function createSubjectsImportBeginAction(options: ManagementControllerOpt
 			if (!body) return emptySourceFile();
 
 			let tenantId = ctx.managementCaller.tenantId;
-			let sourceKey = `imports/${tenantId}/${crypto.randomUUID()}.ndjson`;
+			let sourceKey = `imports/${tenantId}/${generateUUID()}.ndjson`;
 
 			let total = 0;
 			await writeTransferFile(

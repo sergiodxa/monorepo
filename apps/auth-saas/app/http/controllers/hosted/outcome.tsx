@@ -14,6 +14,8 @@
 
 import type { RequestContext } from "remix/router";
 
+import { generateUUID } from "@sdxc/uuid/v4";
+
 import type { AuthorizationOutcome } from "~/app/models/tenant/authorization";
 import type { ConsentScreen } from "~/app/models/tenant/consent";
 
@@ -114,7 +116,7 @@ export function redirectToReturnTo(ctx: RequestContext, returnTo: string): Respo
  */
 export async function renderErrorPage(ctx: RequestContext, description: string): Promise<Response> {
 	let t = ctx.intl.t;
-	let correlationId = crypto.randomUUID();
+	let correlationId = generateUUID();
 
 	return ctx.render(
 		<HostedDocument assets={ctx.assets} title={t("hostedError.title")} locale={ctx.locale}>

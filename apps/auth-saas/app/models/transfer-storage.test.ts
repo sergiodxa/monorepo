@@ -17,7 +17,10 @@
 import type { Database } from "remix/data-table";
 
 import { createAnalyticsEngine, createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { Hex, sha256 } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { gte } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -152,6 +155,31 @@ describe("mintTransferDownloadTicket / spendTransferDownloadTicket", () => {
 			r2Key: "exports/acme/subjects.ndjson",
 			tenantId,
 		});
+	});
+
+	/** The ticket is the whole authorization for the download, so it is a random token. */
+	test("mints the ticket as a random token", async () => {
+		let ticket = await mintTransferDownloadTicket(db, {
+			r2Key: "exports/acme/subjects.ndjson",
+			tenantId,
+		});
+
+		expect(ticket).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(ticket)).toBe(false);
+	});
+
+	/** Download links handed out before tickets became random tokens carry UUIDs. */
+	test("spends a ticket minted as a UUID", async () => {
+		await mintTransferDownloadTicket(db, { r2Key: "exports/acme/subjects.ndjson", tenantId });
+		let [row] = await db.findMany(transferDownloadTickets);
+		if (!row) throw new Error("unreachable");
+		let legacyTicket = generateUUID();
+		let legacyHash = Hex.encode(unwrap(await sha256(legacyTicket)));
+		await db.update(transferDownloadTickets, { id: row.id }, { ticket_hash: legacyHash });
+
+		let spent = await spendTransferDownloadTicket(db, { ticket: legacyTicket });
+
+		expect(spent).toEqual({ ok: true, r2Key: "exports/acme/subjects.ndjson", tenantId });
 	});
 
 	test("a second spend of the same ticket fails", async () => {

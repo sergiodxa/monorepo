@@ -18,6 +18,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -96,7 +97,7 @@ beforeEach(async () => {
 /** Creates a platform subject and opens a session for it, returning its id and a `Cookie` header value. */
 async function signIn(): Promise<{ subjectId: string; cookie: string }> {
 	let created = await platformTenantDO.createSubject({
-		identifiers: [{ kind: "email", value: `${crypto.randomUUID()}@example.com` }],
+		identifiers: [{ kind: "email", value: `${generateUUID()}@example.com` }],
 	});
 	if (!created.ok) throw new Error("unreachable: test subject creation failed");
 
@@ -126,12 +127,12 @@ async function provisionTenant() {
 		await models.tenants.create({
 			customer_id: customer.id,
 			name: "Acme, Inc.",
-			slug: `acme-${crypto.randomUUID()}`,
-			issuer: `https://acme-${crypto.randomUUID()}.example.com`,
+			slug: `acme-${generateUUID()}`,
+			issuer: `https://acme-${generateUUID()}.example.com`,
 		}),
 	);
 	await ensureProviderCustomer(models, billing, customer, {
-		email: `${crypto.randomUUID()}@example.com`,
+		email: `${generateUUID()}@example.com`,
 	});
 	return tenant;
 }

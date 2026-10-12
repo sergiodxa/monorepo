@@ -8,6 +8,7 @@
  */
 
 import { managementProblems } from "@sdxc/auth/management-client";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 /** The catalog's shape, for naming its builders and their inputs. */
 type Catalog = typeof managementProblems;
@@ -40,5 +41,5 @@ export function managementProblem<Name extends ManagementProblemName>(
 		init?: ResponseInit,
 	) => Response;
 	let given = (input ?? {}) as { instance?: string };
-	return builder({ ...given, instance: given.instance ?? crypto.randomUUID() }, init);
+	return builder({ ...given, instance: given.instance ?? generateUUID() }, init);
 }

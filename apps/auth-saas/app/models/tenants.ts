@@ -11,6 +11,7 @@ import type { KeysetCursors } from "@sdxc/pagination";
 import type { Result } from "@sdxc/result";
 import type { TableRow } from "remix/data-table";
 
+import { Hex, randomBytes } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { failure, isFailure, success } from "@sdxc/result";
@@ -133,7 +134,7 @@ export function generateTenantSlug(name: string): string {
 		.replace(/^-|-$/g, "")
 		.slice(0, 20);
 
-	let random = crypto.randomUUID().slice(0, 4);
+	let random = Hex.encode(randomBytes(2));
 	return `${base}-${random}`;
 }
 

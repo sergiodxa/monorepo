@@ -28,7 +28,7 @@
 
 import type { Database, TableRow } from "remix/data-table";
 
-import { Hex, open, seal, sha256 } from "@sdxc/crypto";
+import { Hex, open, randomToken, seal, sha256 } from "@sdxc/crypto";
 import { normalizeDomain } from "@sdxc/email-address";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
@@ -247,7 +247,7 @@ export async function mintLinkTicket(
 		refreshTokenSealed = sealed.data;
 	}
 
-	let ticket = generateUUID();
+	let ticket = randomToken();
 
 	let hashed = await sha256(ticket);
 	if (isFailure(hashed)) throw new Error("failed to hash the account-link ticket");

@@ -19,9 +19,11 @@
 import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
-import { importKey, randomToken } from "@sdxc/crypto";
+import { Hex, importKey, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { Database, gte } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -261,5 +263,25 @@ describe("mintLinkTicket / spendLinkTicket", () => {
 		let spent = await spendLinkTicket(db, sealKey, { ticket: "not-a-real-ticket" });
 
 		expect(spent).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+
+	/** The ticket alone links an external account to a subject, so it is a random token. */
+	test("mints the ticket as a random token", async () => {
+		let ticket = await mintLinkTicket(db, sealKey, ticketInput);
+
+		expect(ticket).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(ticket)).toBe(false);
+	});
+
+	/** Sign-in pages open before tickets became random tokens hold UUID tickets. */
+	test("spends a ticket minted as a UUID", async () => {
+		await mintLinkTicket(db, sealKey, ticketInput);
+		let legacyTicket = generateUUID();
+		let legacyHash = Hex.encode(unwrap(await sha256(legacyTicket)));
+		await db.updateMany(pendingLinkTickets, { ticket_hash: legacyHash }, { where: gte("id", "") });
+
+		let spent = await spendLinkTicket(db, sealKey, { ticket: legacyTicket });
+
+		expect(spent).toMatchObject({ ok: true, subjectId: "sub_1" });
 	});
 });

@@ -14,6 +14,8 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { Certificate } from "@sdxc/saml";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { ResponseFixture } from "~/app/test/saml-fixtures";
@@ -238,6 +240,41 @@ describe("signing in through an enterprise connection", () => {
 		expect(signedIn.hostname).toBe(HOSTNAME);
 		expect(signedIn.handoffTicket).toBeTruthy();
 		expect(signedIn.subjectId).toBeTruthy();
+	});
+
+	/** The relay state is what binds a response to the transaction it answers, so it is a random token. */
+	test("names the transaction with a random-token relay state", async () => {
+		await configure();
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+		let relayState = relayStateOf(started.redirectUrl);
+
+		expect(relayState).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(relayState)).toBe(false);
+	});
+
+	/** Transactions begun before relay states became random tokens are named by UUIDs. */
+	test("answers a transaction whose relay state is a UUID", async () => {
+		await configure();
+
+		let started = await tenant.beginSamlSignIn({ slug: SLUG, hostname: HOSTNAME });
+		if (!started.ok) throw new Error("begin refused");
+		let legacyRelayState = generateUUID();
+		state.storage.sql.exec(
+			`UPDATE saml_transactions SET id = ? WHERE id = ?`,
+			legacyRelayState,
+			relayStateOf(started.redirectUrl),
+		);
+
+		let signedIn = await tenant.signInWithSamlResponse({
+			slug: SLUG,
+			samlResponse: await respond(started.requestId),
+			relayState: legacyRelayState,
+			hostname: HOSTNAME,
+		});
+
+		expect(signedIn.ok).toBe(true);
 	});
 
 	test("resolves the same subject on a returning sign-in", async () => {

@@ -11,6 +11,7 @@
 import type { KeysetCursors } from "@sdxc/pagination";
 import type { Database, TableRow } from "remix/data-table";
 
+import { randomToken } from "@sdxc/crypto";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
@@ -485,7 +486,7 @@ export async function addIdentifier(
 			return { ok: false, reason: "rate-limited", retryAfterSeconds: envelope.retryAfterSeconds };
 		}
 
-		let ticket = generateUUID();
+		let ticket = randomToken();
 		let ticketExpiresAt = now + TICKET_TTL_MS;
 
 		await db.create(subjectIdentifiers, {
@@ -559,7 +560,7 @@ async function resendOrReturn(
 		return { ok: false, reason: "rate-limited", retryAfterSeconds: envelope.retryAfterSeconds };
 	}
 
-	let ticket = generateUUID();
+	let ticket = randomToken();
 	let ticketExpiresAt = Date.now() + TICKET_TTL_MS;
 
 	await db.update(

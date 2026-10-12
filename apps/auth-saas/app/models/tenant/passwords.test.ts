@@ -11,11 +11,13 @@
 import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
-import { password } from "@sdxc/crypto";
+import { Hex, password, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Log } from "@sdxc/logger";
 import { PWNED_PASSWORDS_RANGE_URL } from "@sdxc/password-policy/breached";
 import { unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -1523,6 +1525,37 @@ describe("beginPasswordReset / completePasswordReset", () => {
 			newPassword: "a-perfectly-fine-password-1",
 		});
 		expect(secondAttempt).toEqual({ ok: false, reason: "invalid-ticket" });
+	});
+
+	/** The ticket alone authorizes a new password, so it is a random token, never a UUID. */
+	test("mints the ticket as a random token", async () => {
+		await createVerifiedSubject("jane@example.com");
+		let begun = await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		expect(begun.ticket).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(begun.ticket)).toBe(false);
+	});
+
+	/** Reset links already delivered carry UUID tickets, and they keep completing. */
+	test("completes a reset with a ticket minted as a UUID", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.beginPasswordReset(db, { identifier: "jane@example.com" });
+
+		let [ticketRow] = await db.findMany(Passwords.passwordResetTickets);
+		if (!ticketRow) throw new Error("unreachable");
+		let legacyTicket = generateUUID();
+		let legacyHash = Hex.encode(unwrap(await sha256(legacyTicket)));
+		await db.update(
+			Passwords.passwordResetTickets,
+			{ id: ticketRow.id },
+			{ ticket_hash: legacyHash },
+		);
+
+		let completed = await Passwords.completePasswordReset(db, {
+			ticket: legacyTicket,
+			newPassword: "a-reset-password-1",
+		});
+		expect(completed).toMatchObject({ ok: true, subjectId });
 	});
 });
 

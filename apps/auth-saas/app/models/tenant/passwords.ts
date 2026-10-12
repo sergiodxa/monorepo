@@ -11,7 +11,7 @@
 import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Database, TableRow } from "remix/data-table";
 
-import { Hex, password, sha256 } from "@sdxc/crypto";
+import { Hex, password, randomToken, sha256 } from "@sdxc/crypto";
 import { currentLog } from "@sdxc/logger";
 import { checkPassword } from "@sdxc/password-policy";
 import { checkPasswordHistory } from "@sdxc/password-policy/history";
@@ -796,7 +796,7 @@ export async function beginPasswordReset(
 	db: Database,
 	input: BeginPasswordResetInput,
 ): Promise<BeginPasswordResetResult> {
-	let ticket = generateUUID();
+	let ticket = randomToken();
 	let kind = identifierKindOf(input.identifier);
 	let folded = foldIdentifier(kind, input.identifier);
 

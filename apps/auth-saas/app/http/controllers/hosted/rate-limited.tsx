@@ -9,6 +9,8 @@
 
 import type { RequestContext } from "remix/router";
 
+import { generateUUID } from "@sdxc/uuid/v4";
+
 import { HostedDocument } from "~/resources/views/hosted/document";
 import { ErrorPage } from "~/resources/views/hosted/error";
 
@@ -24,7 +26,7 @@ import { ErrorPage } from "~/resources/views/hosted/error";
  */
 export async function renderRateLimitedPage(ctx: RequestContext): Promise<Response> {
 	let t = ctx.intl.t;
-	let correlationId = crypto.randomUUID();
+	let correlationId = generateUUID();
 
 	return ctx.render(
 		<HostedDocument assets={ctx.assets} title={t("hostedError.title")} locale={ctx.locale}>

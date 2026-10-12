@@ -11,6 +11,8 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Tenant from "~/app/models/tenant/object";
@@ -263,6 +265,49 @@ describe("addIdentifier / verifyIdentifier lifecycle", () => {
 
 		let result = await tenant.verifyIdentifier({ ticket: added.ticket });
 		expect(result).toMatchObject({ ok: false, reason: "expired-ticket" });
+	});
+
+	/** The ticket alone verifies an address, so both the first mint and a resend are random tokens. */
+	test("mints every ticket as a random token", async () => {
+		let subjectId = await createBareSubject();
+		let input = {
+			subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		} as const;
+
+		let first = await tenant.addIdentifier(input);
+		let resent = await tenant.addIdentifier(input);
+		if (!first.ok || first.kind !== "email") throw new Error("unreachable");
+		if (!resent.ok || resent.kind !== "email") throw new Error("unreachable");
+
+		for (let ticket of [first.ticket, resent.ticket]) {
+			expect(ticket).toMatch(/^[\w-]{43}$/);
+			expect(isUUID(ticket)).toBe(false);
+		}
+	});
+
+	/** Verification links already delivered carry UUID tickets, and they keep verifying. */
+	test("verifies a ticket minted as a UUID", async () => {
+		let subjectId = await createBareSubject();
+		let added = await tenant.addIdentifier({
+			subjectId,
+			kind: "email",
+			value: "jane@example.com",
+			actor: subjectActor,
+		});
+		if (!added.ok || added.kind !== "email") throw new Error("unreachable");
+
+		let legacyTicket = generateUUID();
+		state.storage.sql.exec(
+			`UPDATE subject_identifiers SET verification_ticket = ? WHERE id = ?`,
+			legacyTicket,
+			added.identifierId,
+		);
+
+		let result = await tenant.verifyIdentifier({ ticket: legacyTicket });
+		expect(result).toMatchObject({ ok: true, subjectId, promotedPrimary: true });
 	});
 });
 

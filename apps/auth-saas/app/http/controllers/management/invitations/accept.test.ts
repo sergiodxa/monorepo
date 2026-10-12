@@ -26,6 +26,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -115,7 +116,7 @@ async function mintInvitation(
 		expiresAt?: number;
 	} = {},
 ) {
-	let unique = crypto.randomUUID();
+	let unique = generateUUID();
 	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
 	let tenant = unwrap(
 		await models.tenants.create({

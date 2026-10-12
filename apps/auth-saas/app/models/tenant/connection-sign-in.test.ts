@@ -22,8 +22,11 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { IdToken } from "@sdxc/auth/id-token";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
-import { randomToken } from "@sdxc/crypto";
+import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { JWK } from "@sdxc/jwt";
+import { unwrap } from "@sdxc/result";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -714,6 +717,25 @@ describe("resumeConnectionSignIn", () => {
 
 		let resumed = await tenant.resumeConnectionSignIn({ ticket, hostname: "someone-else.example" });
 		expect(resumed).toMatchObject({ ok: false, reason: "invalid-ticket" });
+	});
+
+	/** The ticket alone resumes a signed-in session, so it is a random token. */
+	test("mints the ticket as a random token", async () => {
+		let ticket = await completeSignIn();
+
+		expect(ticket).toMatch(/^[\w-]{43}$/);
+		expect(isUUID(ticket)).toBe(false);
+	});
+
+	/** Redirects in flight before tickets became random tokens carry UUID tickets. */
+	test("resumes with a ticket minted as a UUID", async () => {
+		await completeSignIn();
+		let legacyTicket = generateUUID();
+		let legacyHash = Hex.encode(unwrap(await sha256(legacyTicket)));
+		state.storage.sql.exec(`UPDATE connection_handoffs SET ticket_hash = ?`, legacyHash);
+
+		let resumed = await tenant.resumeConnectionSignIn({ ticket: legacyTicket, hostname: HOSTNAME });
+		expect(resumed.ok).toBe(true);
 	});
 });
 

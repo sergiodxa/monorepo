@@ -44,7 +44,7 @@ import type { Database, TableRow } from "remix/data-table";
 import { AuthError } from "@sdxc/auth/auth-error";
 import { Issuer } from "@sdxc/auth/issuer";
 import { RelyingParty } from "@sdxc/auth/relying-party";
-import { Hex, open, seal, sha256 } from "@sdxc/crypto";
+import { Hex, open, randomToken, seal, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -395,7 +395,7 @@ export async function mintHandoffTicket(
 		authorizationRequestId: string | null;
 	},
 ): Promise<string> {
-	let ticket = generateUUID();
+	let ticket = randomToken();
 
 	let hashed = await sha256(ticket);
 	if (isFailure(hashed)) throw new Error("failed to hash the connection handoff ticket");

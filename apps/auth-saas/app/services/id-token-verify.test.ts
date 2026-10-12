@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { JWK, JWT } from "@sdxc/jwt";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -111,7 +112,7 @@ function signIdToken(
 		iat: now,
 		nbf: now,
 		exp: now + 300,
-		jti: crypto.randomUUID(),
+		jti: generateUUID(),
 		...overrides,
 	}).sign(algorithm, signingKeys);
 }

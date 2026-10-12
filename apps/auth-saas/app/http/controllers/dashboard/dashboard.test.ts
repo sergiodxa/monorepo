@@ -31,6 +31,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -181,7 +182,7 @@ beforeEach(async () => {
 
 /** Creates a platform subject and opens a session for it, returning its id and a `Cookie` header value. */
 async function signIn(): Promise<{ subjectId: string; cookie: string }> {
-	let unique = crypto.randomUUID();
+	let unique = generateUUID();
 	let created = await platformTenantDO.createSubject({
 		identifiers: [{ kind: "email", value: `${unique}@example.com` }],
 	});
@@ -205,7 +206,7 @@ async function signIn(): Promise<{ subjectId: string; cookie: string }> {
 /** Provisions a tenant owned by a fresh customer, with `subjectId` as its owning member. */
 async function provisionOwnedTenant(subjectId: string, name = "Acme, Inc.") {
 	let customer = unwrap(await models.customers.create({ name }));
-	let unique = crypto.randomUUID();
+	let unique = generateUUID();
 	let tenant = unwrap(
 		await models.tenants.create({
 			customer_id: customer.id,
