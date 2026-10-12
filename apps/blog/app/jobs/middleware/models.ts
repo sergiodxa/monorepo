@@ -7,8 +7,8 @@
  */
 
 import { models as publishModels } from "@sdxc/data-model/jobs";
+import { Database } from "@sdxc/database-middleware";
 
-import { Database } from "~/app/http/middleware/database";
 import { models as registry } from "~/app/models";
 
 /**

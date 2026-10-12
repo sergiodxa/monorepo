@@ -23,7 +23,7 @@ declare module "remix/router" {
 /**
  * Creates the middleware; install it after `database()`, whose `ctx.db` it binds to.
  *
- * @example createRouter({ middleware: [database(createDatabase), modelsMiddleware()] });
+ * @example createRouter({ middleware: [database(createDatabase()), modelsMiddleware()] });
  */
 export default function modelsMiddleware() {
 	return publishModels(models, (ctx) => ({ db: ctx.db }));

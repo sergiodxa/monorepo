@@ -11,12 +11,12 @@ import type { JobEnqueuer, JobMiddleware } from "@sdxc/jobs";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { Models } from "@sdxc/data-model";
+import { Database } from "@sdxc/database-middleware";
 import { env } from "cloudflare:workers";
 
 import type { BlogModels } from "~/app/models";
 
 import { ActivityPub } from "~/app/http/middleware/activitypub";
-import { Database } from "~/app/http/middleware/database";
 import { BLOG_KEYS } from "~/app/initializers/activitypub-keys";
 import { createFederation, federationQueue } from "~/app/services/activitypub";
 

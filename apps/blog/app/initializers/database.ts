@@ -31,7 +31,7 @@ export function openDatabase(binding: D1Database): Database {
  *
  * @returns The isolate's database, built on the first call and reused after it.
  * @example
- * createRouter({ middleware: [database(createDatabase)] });
+ * createRouter({ middleware: [database(createDatabase())] });
  */
 export function createDatabase(): Database {
 	return (instance ??= openDatabase(env.DB));

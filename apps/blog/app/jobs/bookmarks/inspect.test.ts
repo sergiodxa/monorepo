@@ -9,13 +9,13 @@
 
 import type { Database as DataTable } from "remix/data-table";
 
+import { Database } from "@sdxc/database-middleware";
 import { createJobContext, Job } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
 import { isOpen } from "~/app/models/bookmarks";
 import { bookmarkAddress } from "~/app/models/post-values";

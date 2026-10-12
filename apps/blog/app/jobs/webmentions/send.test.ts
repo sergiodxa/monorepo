@@ -9,11 +9,11 @@
 
 import type { Database as DataTable } from "remix/data-table";
 
+import { Database } from "@sdxc/database-middleware";
 import { createJobContext, Job } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";

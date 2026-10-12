@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { JWK, JWT } from "@sdxc/jwt";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
@@ -26,7 +27,6 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import type { AppContext } from "~/app/http/context";
 
 import auth from "~/app/http/middleware/auth";
-import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import models from "~/app/http/middleware/models";
 import { htmlRenderer } from "~/app/http/render";
@@ -158,7 +158,7 @@ function openBrowser(db: Database): Browser {
 				createCookie("blog-test", { secrets: ["test-secret"] }),
 				createMemorySessionStorage(),
 			),
-			database(() => db),
+			database(db),
 			models(),
 			auth,
 			...htmlRenderer(),

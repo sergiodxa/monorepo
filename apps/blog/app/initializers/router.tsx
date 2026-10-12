@@ -15,6 +15,7 @@ import type { Transport } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
@@ -44,7 +45,6 @@ import activityPub from "~/app/http/middleware/activitypub";
 import activityPubRateLimit from "~/app/http/middleware/activitypub-rate-limit";
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
-import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import githubWebhook from "~/app/http/middleware/github-webhook";
 import mcpRateLimit from "~/app/http/middleware/mcp-rate-limit";
@@ -187,7 +187,7 @@ export interface ApplicationOptions {
  * that `workersCache` then stores and replays.
  * `workersCache` sits outside session and auth so its refusal check reads the finished
  * response, downgrading a public declaration once the visitor turns out to be identified.
- * `database(createDatabase)` is global, so `ctx.db` is there for a route the app maps and
+ * `database(createDatabase())` is global, so `ctx.db` is there for a route the app maps and
  * for a handler behind a route-agnostic boundary alike; `jobEnqueuer` publishes `ctx.jobs`
  * after it, so every message a handler enqueues carries the request's trace.
  * @param env Worker environment bindings injected into request context.
@@ -209,7 +209,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 				nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
 			}),
 			asyncContext(),
-			database(createDatabase),
+			database(createDatabase()),
 			models(),
 			jobEnqueuer(jobQueue),
 			workersCache({ cache: () => platformCache }),

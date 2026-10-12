@@ -8,7 +8,8 @@
 import type { JobMiddleware } from "@sdxc/jobs";
 import type { Database as DataTable } from "remix/data-table";
 
-import { Database } from "~/app/http/middleware/database";
+import { Database } from "@sdxc/database-middleware";
+
 import { createDatabase } from "~/app/initializers/database";
 
 /**

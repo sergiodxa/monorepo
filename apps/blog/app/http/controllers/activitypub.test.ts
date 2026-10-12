@@ -12,6 +12,7 @@ import type { MemoryQueue } from "@sdxc/jobs/memory";
 import type { Database as DataTable } from "remix/data-table";
 
 import { Federation, PUBLIC } from "@sdxc/activitypub";
+import { Database, database } from "@sdxc/database-middleware";
 import { sign } from "@sdxc/http-signatures";
 import { createJobContext } from "@sdxc/jobs";
 import * as memory from "@sdxc/jobs/memory";
@@ -28,7 +29,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { AppContext } from "~/app/http/context";
 
 import activityPub, { ActivityPub } from "~/app/http/middleware/activitypub";
-import database, { Database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import jobs from "~/app/jobs";
 import publish from "~/app/jobs/activitypub/publish";
@@ -107,7 +107,7 @@ async function fetchPath(path: string, init?: RequestInit): Promise<Response> {
 	let router = createRouter<AppContext>({
 		middleware: [
 			log(createLogger({ service: "blog", sink: () => undefined })),
-			database(() => db),
+			database(db),
 			models(),
 			jobEnqueuer(jobQueue),
 			activityPub((ctx) => testFederation(db, keys, federationQueue(ctx.jobs))),
