@@ -20,11 +20,11 @@ import { rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
 import { overflowY } from "@sdxc/u/overflow";
-import { is, maxBs, maxIs, p } from "@sdxc/u/size";
+import { is, maxBs, maxIs } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { ComboBox, Description, Item, Label } from "@sdxc/ui";
 import { comboboxFilter } from "@sdxc/ui/mixins";
-import { floatingSurface } from "@sdxc/ui/styles";
+import { floatingSurface, surfaceInset } from "@sdxc/ui/styles";
 import { clientEntry } from "remix/component";
 
 /** The zones a scheduling form offers, each searchable by city, country or offset. */
@@ -104,7 +104,7 @@ const CODE = `let committed: string | null = null;
 			<ComboBox.Button aria-label="Show every time zone" />
 		</ComboBox.Group>
 
-		<div mix={[floatingSurface(), combobox.popover(), p(1), maxBs("13rem"), overflowY("auto")]}>
+		<div mix={[floatingSurface(), surfaceInset(), combobox.popover(), maxBs("13rem"), overflowY("auto")]}>
 			<div mix={[vstack({ gap: 0, align: "stretch" }), combobox.list()]}>
 				{ZONES.map((zone) => (
 					<Item
@@ -166,7 +166,13 @@ export const ComboBoxPreview = clientEntry(
 					</ComboBox.Group>
 
 					<div
-						mix={[floatingSurface(), combobox.popover(), p(1), maxBs("13rem"), overflowY("auto")]}
+						mix={[
+							floatingSurface(),
+							surfaceInset(),
+							combobox.popover(),
+							maxBs("13rem"),
+							overflowY("auto"),
+						]}
 					>
 						<div mix={[vstack({ gap: 0, align: "stretch" }), combobox.list()]}>
 							{ZONES.map((zone) => (

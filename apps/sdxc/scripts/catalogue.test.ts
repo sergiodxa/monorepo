@@ -247,6 +247,24 @@ describe("collectUsage", () => {
 		expect(Array.from(usage.get("--ui-neutral-fg") ?? [])).toEqual(["Badge"]);
 		expect(Array.from(usage.get("--ui-brand-fg-emphasis") ?? [])).toEqual(["Badge"]);
 	});
+
+	test("credits a component with the tokens the style exports it imports read", () => {
+		let source = `import { surfaceInset } from "../styles/floating-surface.js";\n${COMPONENT_MODULE}`;
+		let modules = new Map([
+			[
+				"../styles/floating-surface.js",
+				[
+					`export const SHADOW_RING = "var(--ui-shadow-ring)";`,
+					`const SURFACE_PADDING = "var(--ui-surface-padding, 0.25rem)";`,
+					"export function surfaceInset() { return SURFACE_PADDING; }",
+				].join("\n"),
+			],
+		]);
+		let usage = collectUsage([source], modules);
+
+		expect(Array.from(usage.get("--ui-surface-padding") ?? [])).toEqual(["Badge"]);
+		expect(usage.has("--ui-shadow-ring")).toBe(false);
+	});
 });
 
 describe("collectTheme", () => {
@@ -270,6 +288,20 @@ describe("collectTheme", () => {
 			"surface",
 			"type scale",
 			"chart",
+		]);
+	});
+
+	test("lists a fallback-only variable a component reads, under the band its name implies", () => {
+		let usage = new Map([["--ui-checkbox-size", new Set(["Checkbox"])]]);
+		let theme = collectTheme([STYLESHEET], usage);
+		let sizing = theme.groups.find((group) => group.title === "sizing");
+
+		expect(sizing?.tokens).toEqual([
+			{
+				name: "--ui-checkbox-size",
+				controls: "Side of the Checkbox box, 1.25rem",
+				components: ["Checkbox"],
+			},
 		]);
 	});
 

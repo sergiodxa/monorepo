@@ -173,7 +173,10 @@ function buildUiExports(): UiExportDocument {
 	return document;
 }
 
-/** The theme contract, and which components read each of its variables. */
+/**
+ * The theme contract, and which components read each of its variables, counting the
+ * ones a component reaches through a shared style module it imports.
+ */
 function buildTheme(): ThemeReference {
 	let root = join(PACKAGES, "ui", "src", "components");
 	let stylesheets = [
@@ -188,7 +191,15 @@ function buildTheme(): ThemeReference {
 		return source === null || componentName(source) === null ? [] : [source];
 	});
 
-	return collectTheme(stylesheets, collectUsage(sources));
+	let stylesRoot = join(PACKAGES, "ui", "src", "styles");
+	let modules = new Map<string, string>();
+	for (let file of readdirSync(stylesRoot)) {
+		if (!file.endsWith(".ts") || file.endsWith(".test.ts")) continue;
+		let source = read(join(stylesRoot, file));
+		if (source !== null) modules.set(`../styles/${file.replace(/\.ts$/, ".js")}`, source);
+	}
+
+	return collectTheme(stylesheets, collectUsage(sources, modules));
 }
 
 /** Every component module in the catalogue, tests left out. */

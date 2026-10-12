@@ -78,12 +78,33 @@ const SEGMENT_MEANING: Record<string, string> = {
 	border: "Ordinary border",
 	"border-strong": "Border where the edge carries the emphasis",
 	ring: "Focus ring",
+	"target-size":
+		"Smallest pointer target hitArea() grows a small control to; 2.75rem on a coarse pointer",
+	"shadow-ring": "Ring plus lift an elevated surface draws in place of a solid border",
+	"shadow-ring-hover": "That ring while the pointer is over the surface",
+	"image-outline": "Inset hairline that holds an image's edge against a same-tone background",
+};
+
+/**
+ * Variables no stylesheet declares, which components read with a fallback. Each is
+ * listed only when a component reaches it, and says its default because no scheme
+ * block prints one.
+ */
+const FALLBACK_TOKENS: Record<string, string> = {
+	"--ui-surface-padding":
+		"Padding inside a floating panel, 0.25rem; the panel's radius grows with it so rows stay concentric",
+	"--ui-button-icon-size-sm": "Side of a small icon-only Button, 2rem",
+	"--ui-button-icon-size-md": "Side of a medium icon-only Button, 2.5rem",
+	"--ui-button-icon-size-lg": "Side of a large icon-only Button, 3rem",
+	"--ui-tag-remove-size": "Glyph size of TagGroup.Remove, 1rem",
+	"--ui-checkbox-size": "Side of the Checkbox box, 1.25rem",
 };
 
 /** How each band of the theme table is introduced. */
 const GROUP_INTROS: Record<string, string> = {
-	surface: "The page itself, which a tone sits on rather than replaces.",
+	surface: "The page itself, which a tone sits on rather than replaces, and the edges drawn on it.",
 	spacing: "One step, multiplied by every spacing utility.",
+	sizing: "The sizes small controls and their pointer targets are drawn at.",
 	"type scale": "The named font sizes.",
 	"font stacks": "The three families, resolved to system faces.",
 	"container scale": "The named widths a container query compares against.",
@@ -95,6 +116,7 @@ const GROUP_ORDER = [
 	...TONES,
 	"surface",
 	"spacing",
+	"sizing",
 	"type scale",
 	"font stacks",
 	"container scale",
@@ -299,6 +321,16 @@ export function collectTheme(
 		grouped.set(title, tokens);
 	}
 
+	for (let [name, controls] of Object.entries(FALLBACK_TOKENS)) {
+		let components = usage.get(name);
+		if (!components || light.some((declaration) => declaration.name === name)) continue;
+
+		let title = groupOf(name.slice("--ui-".length));
+		let tokens = grouped.get(title) ?? [];
+		tokens.push({ name, controls, components: Array.from(components).sort() });
+		grouped.set(title, tokens);
+	}
+
 	return { groups: describeGroups(grouped), light, dark };
 }
 
@@ -307,17 +339,42 @@ export function collectTheme(
  * tokens collected, rather than each token searched for across the catalogue, because
  * a hundred sources times a hundred tokens is ten thousand passes over the same text.
  *
+ * A token a shared style module reads counts for a component importing the export
+ * that reaches it.
+ *
  * @param sources - Every component module's text.
+ * @param modules - Shared style modules' text, keyed by the specifier a component imports.
  * @returns Component names keyed by the token each one reads.
  */
-export function collectUsage(sources: string[]): Map<string, Set<string>> {
+export function collectUsage(
+	sources: string[],
+	modules: Map<string, string> = new Map(),
+): Map<string, Set<string>> {
 	let usage = new Map<string, Set<string>>();
 
 	for (let source of sources) {
 		let name = componentName(source);
 		if (name === null) continue;
 
-		for (let token of tokensIn(source)) {
+		let reached = tokensIn(source);
+		for (let match of source.matchAll(/import\s*\{([^}]*)\}\s*from "([^"]+)"/g)) {
+			let imported = modules.get(match[2] as string);
+			if (imported === undefined) continue;
+
+			let names = (match[1] as string)
+				.split(",")
+				.map(
+					(specifier) =>
+						specifier
+							.replace(/^\s*type\s+/, "")
+							.trim()
+							.split(/\s+/)[0] ?? "",
+				)
+				.filter(Boolean);
+			for (let token of tokensIn(reachedThrough(imported, names))) reached.add(token);
+		}
+
+		for (let token of reached) {
 			let users = usage.get(token) ?? new Set<string>();
 			users.add(name);
 			usage.set(token, users);
@@ -325,6 +382,44 @@ export function collectUsage(sources: string[]): Map<string, Set<string>> {
 	}
 
 	return usage;
+}
+
+/**
+ * The code of the named exports of a module and of every module-level declaration
+ * they reference, with comments removed, so a token counts only where code reads it.
+ *
+ * @param source - The module's text.
+ * @param names - The exports an importer names.
+ * @returns The reached declarations' text, concatenated.
+ */
+export function reachedThrough(source: string, names: string[]): string {
+	let code = source.replace(/\/\*[\s\S]*?\*\//g, "");
+	let starts = Array.from(
+		code.matchAll(
+			/^(?:export )?(?:const|let|function|interface|namespace|type) ([A-Za-z_$][\w$]*)/gm,
+		),
+	);
+	let declarations = new Map<string, string>();
+	starts.forEach((match, index) => {
+		declarations.set(match[1] as string, code.slice(match.index, starts[index + 1]?.index));
+	});
+
+	let seen = new Set<string>();
+	let queue = names.filter((name) => declarations.has(name));
+	while (queue.length > 0) {
+		let name = queue.pop() as string;
+		if (seen.has(name)) continue;
+		seen.add(name);
+
+		let body = declarations.get(name) ?? "";
+		for (let other of declarations.keys()) {
+			if (!seen.has(other) && new RegExp(`\\b${other.replace(/\$/g, "\\$")}\\b`).test(body)) {
+				queue.push(other);
+			}
+		}
+	}
+
+	return Array.from(seen, (name) => declarations.get(name)).join("\n");
 }
 
 /** Every token one component's source reaches, whether by name or through a mixin. */
@@ -507,6 +602,7 @@ function groupOf(segment: string): string {
 	if (segment.startsWith("font-")) return "font stacks";
 	if (segment.startsWith("container-")) return "container scale";
 	if (segment === "spacing") return "spacing";
+	if (segment.endsWith("-size") || /-size-[a-z]+$/.test(segment)) return "sizing";
 	return "surface";
 }
 
