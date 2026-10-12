@@ -130,8 +130,8 @@ export class TopicViewModel {
 			summary: description === null ? topic.title : oneLine(toPlainText(description)),
 			path: topicPath(topic),
 			feeds: topicFeeds(topic),
-			subscribeTo: builtIn ? `my ${topic.title.toLowerCase()}` : topic.title,
-			empty: builtIn ? `No ${topic.title.toLowerCase()} yet.` : "No posts yet.",
+			subscribeTo: builtIn ? `my ${inSentence(topic.title)}` : topic.title,
+			empty: builtIn ? `No ${inSentence(topic.title)} yet.` : "No posts yet.",
 			items,
 			entries: items.length > 0 && items.every((item) => item.type === "entry"),
 			pager:
@@ -312,6 +312,14 @@ function parse(markdown: string): Markdown.Document | null {
 	if (markdown.trim() === "") return null;
 	let parsed = Markdown.parse(markdown);
 	return isFailure(parsed) ? null : parsed.data.document;
+}
+
+/**
+ * A title as it reads mid-sentence: each word lowercased, except one led by two capitals, so
+ * "Articles" reads "articles" and an acronym such as "TIL" keeps its case.
+ */
+function inSentence(title: string): string {
+	return title.replace(/\S+/g, (word) => (/^\p{Lu}{2}/u.test(word) ? word : word.toLowerCase()));
 }
 
 /** Text with its whitespace collapsed to single spaces. */

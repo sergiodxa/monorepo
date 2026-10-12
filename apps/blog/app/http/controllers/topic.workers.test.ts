@@ -115,6 +115,11 @@ describe("a kind's topic", () => {
 		expect(page.indexOf(`Newer tagged ${RUN}`)).toBeLessThan(page.indexOf(`Older tagged ${RUN}`));
 	});
 
+	test("keeps an acronym title's case in its subscribe line", async () => {
+		let page = await html("/til");
+		expect(page).toContain("Subscribe to my TIL using");
+	});
+
 	test("the glossary lists every entry by term, each at its anchor", async () => {
 		let page = await html("/glossary");
 		expect(page).toContain(`id="aardvark-${RUN}"`);
