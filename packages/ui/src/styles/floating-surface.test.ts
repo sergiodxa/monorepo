@@ -51,7 +51,8 @@ describe("surfaceInset", () => {
 	test("pads by the surface padding token and rounds concentric with md rows", () => {
 		expect(styles(surfaceInset())).toEqual({
 			padding: "var(--ui-surface-padding, 0.25rem)",
-			borderRadius: "calc(var(--ui-radius-md, 0.375rem) + var(--ui-surface-padding, 0.25rem))",
+			borderRadius:
+				"calc(var(--ui-radius-md, 0.375rem) + var(--ui-surface-padding, 0.25rem) + 1px)",
 		});
 	});
 
@@ -60,7 +61,7 @@ describe("surfaceInset", () => {
 
 		expect(styles(surfaceInset({ scale: 2 }))).toEqual({
 			padding,
-			borderRadius: `calc(var(--ui-radius-md, 0.375rem) + ${padding})`,
+			borderRadius: `calc(var(--ui-radius-md, 0.375rem) + ${padding} + 1px)`,
 		});
 	});
 });
@@ -68,7 +69,7 @@ describe("surfaceInset", () => {
 describe("concentricRadius", () => {
 	test("adds the padding to the rows' radius", () => {
 		expect(concentricRadius(surfacePadding(1), "var(--ui-radius-sm, 0.25rem)")).toBe(
-			"calc(var(--ui-radius-sm, 0.25rem) + var(--ui-surface-padding, 0.25rem))",
+			"calc(var(--ui-radius-sm, 0.25rem) + var(--ui-surface-padding, 0.25rem) + 1px)",
 		);
 	});
 });

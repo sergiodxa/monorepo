@@ -31,6 +31,12 @@ export const SURFACE_PADDING = "var(--ui-surface-padding, 0.25rem)";
 const ROW_RADIUS = "var(--ui-radius-md, 0.375rem)";
 
 /**
+ * The edge every floating surface draws, in pixels; it sits between the
+ * surface's outer curve and its rows, so the concentric radius counts it.
+ */
+const SURFACE_BORDER_WIDTH = 1;
+
+/**
  * Composes the shared floating-surface edge, tint, and elevation as a mixin.
  * The edge is a ring shadow in the composite `box-shadow`'s ring slot over a
  * transparent 1px border, which forced-colors mode still paints as a line.
@@ -50,7 +56,7 @@ const ROW_RADIUS = "var(--ui-radius-md, 0.375rem)";
 export function floatingSurface<Node extends Element = Element>(): UtilityMixin<Node> {
 	return combine<Node>([
 		rounded<Node>("lg"),
-		border<Node>({ color: "transparent", width: 1 }),
+		border<Node>({ color: "transparent", width: SURFACE_BORDER_WIDTH }),
 		bg<Node>("neutral.tint"),
 		shadow<Node>("lg"),
 		vars<Node>({ "ui-box-shadow-ring": SHADOW_RING }),
@@ -69,8 +75,8 @@ export namespace SurfaceInset {
 
 /**
  * Pads a surface around its rounded rows and rounds the surface concentric
- * with them: its radius is the rows' `--ui-radius-md` plus that padding, so
- * the gap between the two curves stays even whichever tokens an app sets.
+ * with them: its radius is the rows' `--ui-radius-md` plus that padding and
+ * the surface's edge, so the gap between the curves stays even under any tokens.
  *
  * @param options How many `--ui-surface-padding` steps the surface pads by.
  * @returns A mixin ready for a host element's `mix` prop, after {@link floatingSurface}.
@@ -101,7 +107,7 @@ export function surfacePadding(scale: number): string {
 
 /**
  * The radius a surface takes to stay concentric with rows set `padding` in
- * from its edge: the rows' own radius plus that gap.
+ * from its 1px edge: the rows' own radius plus the padding and that edge.
  *
  * @param padding The gap between the surface edge and its rows.
  * @param rowRadius The radius the rows round their corners with. Defaults to `--ui-radius-md`.
@@ -110,5 +116,5 @@ export function surfacePadding(scale: number): string {
  * @example concentricRadius(surfacePadding(1), "var(--ui-radius-sm, 0.25rem)")
  */
 export function concentricRadius(padding: string, rowRadius: string = ROW_RADIUS): string {
-	return `calc(${rowRadius} + ${padding})`;
+	return `calc(${rowRadius} + ${padding} + ${SURFACE_BORDER_WIDTH}px)`;
 }

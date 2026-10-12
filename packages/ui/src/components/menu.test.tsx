@@ -22,7 +22,7 @@ describe("Menu", () => {
 
 		expect(html).toContain("padding: var(--ui-surface-padding, 0.25rem)");
 		expect(html).toContain(
-			"border-radius: calc(var(--ui-radius-md, 0.375rem) + var(--ui-surface-padding, 0.25rem))",
+			"border-radius: calc(var(--ui-radius-md, 0.375rem) + var(--ui-surface-padding, 0.25rem) + 1px)",
 		);
 	});
 });
