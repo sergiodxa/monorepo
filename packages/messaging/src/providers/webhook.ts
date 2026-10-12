@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { sign as signStandard } from "@sdxc/webhooks";
 
 import type { Answer } from "../deliver.js";
@@ -195,7 +196,7 @@ export class Webhook implements Destination {
 		if (isFailure(secret)) return secret;
 
 		let delivery: WebhookDelivery = {
-			id: options.id ?? `msg_${crypto.randomUUID()}`,
+			id: options.id ?? `msg_${generateUUID()}`,
 			timestamp: new Date(),
 		};
 		let body = JSON.stringify(this.render(message, delivery));
