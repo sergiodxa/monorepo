@@ -1,55 +1,45 @@
 # @sdxc/jobs
 
-Background jobs declared in one map, run by one dispatcher, over a queue backend of your
-choosing.
+Declared background jobs dispatched over a pluggable queue backend.
+
+A job map declares every job by name: the payload it carries, the cron it runs on and any `meta`
+its callers read. A dispatcher maps a lazily loaded handler onto each one and runs it inside a
+middleware chain, a timeout and one log record per run. A cron trigger only enqueues, so a
+scheduled job gets the same middleware, retries and dead-letter handling as any other.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/jobs
 ```
 
-Two adapters ship: `@sdxc/jobs/cloudflare` for Cloudflare Queues, and `@sdxc/jobs/memory`
-for tests and for anything running without a platform behind it. Writing a third means
-implementing `JobQueue` from `@sdxc/jobs/queue` and running `@sdxc/jobs/conformance`
-against it.
+Payload schemas are any [Standard Schema](https://standardschema.dev), such as `remix/data-schema`
+from [`remix`](https://www.npmjs.com/package/remix). The optional peers are
+`@cloudflare/workers-types` for `./cloudflare`, `remix` for the context keys and `./router`, and
+`vitest` for `./conformance`.
 
-`@cloudflare/workers-types`, `remix` and `vitest` are optional peers, needed only by the
-Cloudflare adapter, the context's typed key store and the router middleware, and the
-conformance suite respectively.
-
-## Overview
-
-A job is declared, not implemented, in the map: its name, the payload it carries, the
-cron it runs on, and whatever `meta` its own callers read off it. The map is declaration and nothing
-else — no handler, no queue — so importing it costs its schemas. The handler lives in
-its own module and is loaded only when a message for it arrives.
-
-Every job is enqueuable. A job that declares a `cron` is additionally schedulable, and
-the two share one path: a cron delivery enqueues a message and returns, so a scheduled
-job gets the same middleware, timeout, logging, retries, and dead-letter queue as any
-other. Nothing runs inside the `scheduled` handler.
-
-The shape is the one an HTTP router has: a map of addressable definitions, a runtime
-that maps handlers onto them, and middleware that publishes values into a typed context.
-Context keys come from
-[`remix/router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router),
-so one key serves an HTTP middleware and a job middleware alike.
+| Entry point     | Exports                                                                   |
+| --------------- | ------------------------------------------------------------------------- |
+| `.`             | `jobs`, `job`, `createJobDispatcher`, `createJobHandler`, `JobContext`, … |
+| `./cloudflare`  | `queue` and `worker` for Cloudflare Queues                                |
+| `./memory`      | An in-memory `queue` for tests and platform-free runs                     |
+| `./router`      | `jobEnqueuer()`, the `remix/router` middleware publishing `ctx.jobs`      |
+| `./queue`       | The `JobQueue` interface an adapter implements                            |
+| `./errors`      | Each ending class on its own, for type positions                          |
+| `./uptime`      | `createUptimeReporter()`, a cron-monitor ping                             |
+| `./conformance` | The Vitest suite every queue adapter passes                               |
 
 ## Usage
 
-### Declaring the map
-
-The key is the job's name, and the name is what the message is addressed to — a wire
-contract, since messages enqueued by one deploy are consumed by the next.
+### Declare the jobs
 
 ```typescript
 import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
-	clean: job({ cron: "0 0 * * *", meta: { monitorId: "8f1c…" } }),
-	checkHttp: job({ input: s.object({ monitorId: s.string() }) }),
+	cleanup: job({ cron: "0 0 * * *" }),
+	sendReceipt: job({ input: s.object({ orderId: s.string() }) }),
 	digests: {
 		daily: job({ cron: "0 8 * * *" }),
 		weekly: job({ cron: "0 9 * * 1" }),
@@ -57,619 +47,254 @@ export default jobs({
 });
 ```
 
-Nested keys are dot-joined, so `digests.daily` is that job's name.
+A job's name is its key, dot-joined when nested (`digests.daily`), and messages are addressed by
+it, so renaming a key strands the messages already in flight. The map holds no handlers, so
+importing it costs only its schemas.
 
-### Writing a handler
+### Write a handler
 
 ```typescript
 import { createJobHandler } from "@sdxc/jobs";
 
-import jobs from "~/app/jobs";
+import jobs from "./jobs.js";
 
-export default createJobHandler(jobs.checkHttp, async (ctx) => {
-	let monitor = await ctx.log.time("db", () => ctx.database.find(ctx.input.monitorId));
-	ctx.log.set({ monitor: { id: monitor.id, region: monitor.region } });
-	ctx.log.note("check.started");
+export default createJobHandler(jobs.sendReceipt, async (ctx) => {
+	let order = await ctx.log.time("db", () => findOrder(ctx.input.orderId));
+	ctx.log.set({ order: { id: order.id, total: order.total } });
+	await sendReceipt(order, { signal: ctx.signal });
 });
 ```
 
-`ctx.log` is the run's record, emitted once when the run ends: `set()` a field worth
-querying by, `note()` what is worth reading once a query has found the record, `time()`
-anything with a duration.
+`ctx.input` is typed by the job's schema. `ctx.log` is the run's record, emitted once when it
+ends: `set()` queryable fields, `note()` breadcrumbs, `time()` durations.
 
-### Wiring the worker
+### Map handlers onto a dispatcher
 
 ```typescript
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
+import { createLogger } from "@sdxc/logger";
 import { env } from "cloudflare:workers";
 
-import { logger } from "~/bootstrap/logger";
-import jobs from "~/app/jobs";
+import jobs from "./jobs.js";
 
 export const dispatcher = createJobDispatcher({
-	logger,
+	logger: createLogger({ service: "worker" }),
 	queue: cloudflare.queue(() => env.QUEUE),
-	middleware: [database()],
 	timeout: "5 minutes",
-
-	/**
-	 * Runs once the ending is decided and before the delivery is settled, so a report that
-	 * has to reach a service is finished by then.
-	 */
-	async onEnd(ctx, status) {
-		if (status.type !== "done") return;
-		let watched = ctx.of(jobs.clean);
-		if (watched !== null) await uptime(watched.meta.monitorId);
-	},
 });
 
-dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
-dispatcher.map(jobs.checkHttp, () => import("~/app/jobs/check-http"));
+dispatcher.map(jobs.cleanup, () => import("./jobs/cleanup.js"));
+dispatcher.map(jobs.sendReceipt, () => import("./jobs/send-receipt.js"));
+
+export default { ...cloudflare.worker(dispatcher) } satisfies ExportedHandler<Env>;
 ```
 
-```typescript
-/** Both job handlers, bound to the dispatcher they delegate to. */
-const handlers = cloudflare.worker(dispatcher, {
-	deadLetterQueue: "ping-dlq",
-	deadLetter: () => env.DLQ,
-});
+A handler module loads once per isolate, only after a message for it has arrived and parsed.
+`worker()` turns each cron trigger into `dispatcher.tick()` and each queue batch into
+`dispatcher.deliverBatch()`. Spell every `cron` exactly as its trigger in the Worker's config.
 
-export default {
-	async scheduled(controller) {
-		await handlers.scheduled(controller);
-	},
-
-	async queue(batch) {
-		await handlers.queue(batch);
-	},
-} satisfies ExportedHandler<Cloudflare.Env>;
-```
-
-### Enqueuing a job
+### Enqueue a job
 
 ```typescript
-await dispatcher.enqueue(jobs.checkHttp, { monitorId: monitor.id });
+await dispatcher.enqueue(jobs.sendReceipt, { orderId: order.id });
+await dispatcher.enqueue(jobs.cleanup);
 await dispatcher.enqueueMany(
-	jobs.checkHttp,
-	monitors.map((m) => ({ monitorId: m.id })),
+	jobs.sendReceipt,
+	orders.map((order) => ({ orderId: order.id })),
 );
 ```
 
-A route handler enqueues through `ctx.jobs`, which the router middleware at
-`@sdxc/jobs/router` publishes over the same queue the dispatcher delivers from. Only the
-queue enters the request path's module graph; the dispatcher, its middleware, and every
-handler behind them stay out:
+Each call takes exactly what the job's schema accepts, and no argument for a job without one. A
+route handler enqueues through `ctx.jobs` from `./router`, which brings only the queue into the
+request path:
 
 ```typescript
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { jobEnqueuer } from "@sdxc/jobs/router";
+import { createRouter } from "remix/router";
 
 let router = createRouter({
 	middleware: [jobEnqueuer(cloudflare.queue(() => env.QUEUE))],
 });
 
-router.post(routes.monitors.check, async (ctx) => {
-	await ctx.jobs.enqueue(jobs.checkHttp, { monitorId: ctx.params.id });
+router.post(routes.orders.receipt, async (ctx) => {
+	await ctx.jobs.enqueue(jobs.sendReceipt, { orderId: ctx.params.id });
 	return new Response(null, { status: 202 });
 });
 ```
 
-A call site outside a router builds the body instead and sends it through whatever the app
-already writes with:
+### End a run
 
 ```typescript
-await sendQueueBatch([messageBody(jobs.checkHttp, { monitorId: monitor.id })]);
+export default createJobHandler(jobs.sendReceipt, async (ctx) => {
+	let order = await findOrder(ctx.input.orderId);
+	if (order === null) return ctx.exit("Order no longer exists");
+
+	let response = await fetch(mailerUrl, { method: "POST", signal: ctx.signal });
+	if (response.status === 429) return ctx.retry({ delay: "5 minutes", reason: "Rate limited" });
+});
 ```
 
-### What gets logged
-
-Every invocation the dispatcher serves emits one record through the `logger` it was
-given, so a cron trigger, a queue batch, and each job in the batch are each one query
-away. Fields are flat scalars under dotted keys; the kind says which they are.
-
-| Kind    | Opened by                     | Fields                                                                                                                                                                   |
-| ------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `cron`  | `dispatcher.tick()`           | `cron.expression`, `cron.scheduled_at`, `jobs.enqueued`                                                                                                                  |
-| `queue` | `dispatcher.deliverBatch()`   | `queue.name`, `queue.batch_size`, `job.count`, and one of `jobs.done`, `jobs.retried`, `jobs.refused`, `jobs.failed`, `jobs.timed_out`, `jobs.dead_lettered` per message |
-| `job`   | Each message, under the batch | `job.name`, `job.id`, `job.attempts`, `job.batch_size`, `job.cron` when declared, `job.ending`, and whatever the handler `set()`                                         |
-
-A job log's `outcome` follows its ending: `ok` for `done`, `degraded` for `retry` (with
-`job.delay_s` when a backoff was asked for), `error` for `refuse`, `timeout`, and
-`failed`, each carrying the failure under `error.*`. A message the dispatcher refuses
-before dispatch and a message delivered on the dead-letter queue get a `job` log too,
-ending `refused` (with `job.refusal`) or `dead_letter` (with `job.dead_letter`) and
-keeping the body as `job.body`, so "every job that did not end well today" is one query
-over `kind: "job"` and `outcome`. The batch log degrades when any of its jobs did.
-
-```jsonc
-{
-	"service": "uptime",
-	"kind": "job",
-	"job.name": "checkHttp",
-	"job.id": "…",
-	"job.attempts": 2,
-	"job.batch_size": 80,
-	"job.ending": "retry",
-	"job.delay_s": 300,
-	"monitor.id": "mon_…",
-	"db.count": 1,
-	"db.duration_ms": 12.4,
-	"outcome": "degraded",
-	"duration_ms": 412,
-	"notes": [{ "at": 410.2, "level": "warn", "name": "job.retry", "reason": "Rate limited" }],
-}
-```
-
-A dispatcher built without a `logger` emits the same records, carrying no `service`,
-which is how one under test runs unchanged.
-
-### Traces
-
-Every record also carries the [W3C Trace Context](https://www.w3.org/TR/trace-context/) it
-ran under, as `trace_id`, `span_id`, `trace_flags`, and `parent_span_id` when it has a
-parent. A message enqueued inside a traced invocation — a request, another job — carries
-that invocation's trace in its envelope, and the job that runs it continues the trace with
-a span of its own, so a request and the jobs it caused share a `trace_id`. A cron tick and
-a queue batch have no caller, so each starts a root trace; every message one tick enqueues
-carries the tick's. An envelope with no trace, or with an invalid one, runs under a new
-root, so messages enqueued by an earlier deploy dispatch unchanged.
+Returning acks the message. `ctx.ack()`, `ctx.retry()`, `ctx.exit()` and `ctx.timeout()` throw,
+so they end the run from anywhere in the call stack; write `return ctx.retry(…)` so TypeScript
+reads the lines below as unreachable. Reach for `exit()` when a redelivery would reach the same
+result, such as bad input.
 
 ## API
 
 ### `jobs(tree: JobTree): JobMap`
 
-Builds the app's job map, naming every leaf after the key it is filed under.
-
-**Parameters:**
-
-- `tree`: The declared jobs, keyed by the name each is known by on the wire. Groups may
-  nest, and a nested job's name is its dot-joined path
-
-**Returns:**
-
-- The same shape, with every leaf a `JobDefinition` that knows its name, schedule,
-  schema, and `meta`
-
-**Example:**
-
-```typescript
-export default jobs({ clean: job({ cron: "0 0 * * *" }) });
-```
+The job map: the same shape as `tree`, with every leaf a `JobDefinition` carrying its `name`,
+`cron`, `input` schema and `meta`.
 
 ### `job(options?: JobOptions): JobLeaf`
 
-Declares one job for a map. Holds no handler, so importing a map costs its schemas.
+Declares one job. Every option is optional:
 
-**Parameters:**
+- `input`: the schema the payload is parsed against before the handler runs. An object or a bare
+  value both work. Absent means no payload.
+- `cron`: the five-field expression the job is enqueued on. Fewer fields is a type error, and an
+  expression the platform would reject throws `InvalidCronExpression` from
+  [`@sdxc/cron`](https://www.npmjs.com/package/@sdxc/cron) at declaration.
+- `meta`: anything the app reads back through `ctx.of(job)`, typed as written.
 
-- `options.input`: Schema the payload is parsed against before the handler runs. The
-  payload travels under a key of its own, so an object schema and a bare value both
-  serve. Absent means no payload
-- `options.cron`: Cron expression this job is enqueued on, spelled exactly as the
-  matching trigger in `wrangler.jsonc`. Parsed here, so an expression the platform would
-  reject throws at declaration; the type is five space-separated fields, so anything
-  coarser than that is a compile error. Absent means it is only ever enqueued explicitly
-- `options.meta`: Anything this job's own callers read off it, unconstrained and inferred
-  as written. Nothing in the package reads it — a dispatcher-level hook reaches it through
-  `ctx.of(job)`, which gives it back this exact type
+### `createJobHandler(job, handler): JobHandler`
 
-**Returns:**
+Pairs a handler with its job, typing `ctx.input`. The dispatcher refuses a handler mapped onto a
+different job.
 
-- The leaf to file under the name this job is known by
+### `createJobContext(job, init: JobContextInit): JobHandlerContext`
 
-**Throws:**
+A context typed the way the handler receives it, for calling a handler directly in a test. It
+skips the middleware chain, so the test publishes what the chain would with `ctx.set()`.
 
-- `InvalidCronExpression` when `cron` is not an expression the platform would accept,
-  naming the offending field and its position
+### `messageBody(job, input?): JSONValue`
 
-**Example:**
+The body one message carries, `{ job, body?, traceparent?, tracestate? }`, for sending through a
+queue client of your own.
 
 ```typescript
-let checkHttp = job({
-	input: s.object({ monitorId: s.string() }),
-	meta: { monitorId: "8f1c…" } satisfies Monitored,
-});
-
-job({ cron: "0 99 * * *" }); // Throws: out-of-range in the hour field at position 2
-job({ cron: "invalid" }); // Type error: not five fields
-```
-
-### `messageBody(job: JobDefinition, input?): JSONValue`
-
-Builds the body one message carries: the job it names, the payload beside it under
-`body`, and the running invocation's trace as `traceparent` and `tracestate`. For a call
-site that sends through the app's own queue helper rather than through the dispatcher.
-
-```json
-{ "job": "notify", "body": { "monitorId": "…" }, "traceparent": "00-…-…-03" }
-```
-
-A job declaring no payload carries no `body`; outside a traced invocation the message
-carries no trace members, and `tracestate` is written only when upstream sent vendor
-entries. The payload keeps a namespace of its own, so
-a job whose input declares a `job` or a `type` field carries it intact.
-
-**Example:**
-
-```typescript
-await sendQueueBatch([messageBody(jobs.notify, { monitorId: monitor.id })]);
-```
-
-### `createJobHandler(job: JobDefinition, handler: JobHandlerFunction): JobHandler`
-
-Pairs a handler with the job it runs. Passing the job is what types `ctx.input`, and it
-is what the dispatcher checks the handler was mapped to.
-
-**Parameters:**
-
-- `job`: The job this handler runs, from the app's map
-- `handler`: The work, receiving one context
-
-**Returns:**
-
-- The handler, carrying the job it belongs to
-
-**Example:**
-
-```typescript
-export default createJobHandler(jobs.clean, async (ctx) => {
-	let removed = await ctx.log.time("db", () => purge(ctx.database));
-	ctx.log.set({ rows: { removed } });
-});
+await env.QUEUE.send(messageBody(jobs.sendReceipt, { orderId }), { contentType: "json" });
 ```
 
 ### `createJobDispatcher(options?: JobDispatcherOptions): JobDispatcher`
 
-Builds the registry both worker handlers delegate to.
+- `logger`: a `Logger` from [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) whose
+  `service` every record carries.
+- `queue`: the `JobQueue` to enqueue through. Without one the dispatcher still runs deliveries
+  and throws when asked to enqueue.
+- `middleware`: the chain every job runs inside, in order. Write it inline so handlers see what
+  it installs.
+- `timeout`: a duration after which `ctx.signal` aborts. The handler then has five seconds to
+  end the run before the dispatcher records a timeout and retries the message.
+- `onEnd(ctx, status: JobStatus)`: runs once the ending is decided and before the message is
+  settled. A throw is recorded as `job.hook_failed` and running past five seconds as
+  `job.hook_overran`; the ending settles as decided either way. It runs after the middleware
+  chain has unwound.
+- `maxAttempts`: deliveries a message gets before it is dead-lettered, on a queue whose
+  `retries` is `"core"`.
 
-**Parameters:**
+| Member                              | Does                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------ |
+| `map(job, load)`                    | Registers a loader `() => import(…)` or the handler; throws on a repeat  |
+| `enqueue(job, input?)`              | Sends one message, raising the queue's `JobQueueError`                   |
+| `enqueueMany(job, inputs)`          | Sends one message per input in one write; an empty list sends nothing    |
+| `deliver(delivery, batchSize?)`     | Runs one `JobDelivery` and answers the `Settlement` to apply             |
+| `deliverBatch(deliveries, options)` | Runs a batch in one `queue` record, calling `options.apply` as each ends |
+| `tick({ now, only? })`              | Enqueues every due job in one write, running none                        |
+| `mapped`                            | Every job with a handler                                                 |
+| `crons`                             | The distinct expressions the mapped jobs declare                         |
 
-- `options.logger`: The worker's logging configuration, from `createLogger()`. Every
-  cron, queue, and job log this dispatcher opens carries it; without one they carry no
-  service
-- `options.queue`: The backend this dispatcher enqueues through, from
-  `@sdxc/jobs/cloudflare`, `@sdxc/jobs/memory`, or an adapter of your own. A dispatcher
-  without one still runs what a backend delivers, and throws when asked to enqueue
-- `options.middleware`: Chain every job runs inside, in the order declared
-- `options.timeout`: How long a job gets before `ctx.signal` aborts and the dispatcher
-  stops waiting
-- `options.onEnd`: `(ctx, status) => void | Promise<void>` — runs once a delivery's ending
-  is decided and before it is settled, which is what makes it the place for work that has
-  to reach a service before the message is acked. Its failure is never the job's: anything
-  it throws is recorded as `job.hook_failed`, and running past the settle grace is recorded
-  as `job.hook_overran`, with the ending settling as decided either way
-- `options.maxAttempts`: the attempts a message gets before it is dead-lettered, for a
-  queue whose `retries` are this package's to count. Ignored by a backend counting its own
-
-**Returns:**
-
-- A dispatcher with `map`, `enqueue`, `enqueueMany`, `deliver`, `deliverBatch`, `tick`,
-  `mapped`, and `crons`
-
-**Example:**
-
-```typescript
-export const dispatcher = createJobDispatcher({ logger, middleware: [database()] });
-```
-
-#### `dispatcher.map(job: JobDefinition, load): void`
-
-Registers where a job's handler comes from. Throws when that name is already mapped.
-
-**Parameters:**
-
-- `job`: The job, from the app's map
-- `load`: A loader returning the handler's module, or the handler itself. A loader is
-  awaited once per isolate, and only after a message has matched and parsed
-
-**Example:**
-
-```typescript
-dispatcher.map(jobs.clean, () => import("~/app/jobs/clean"));
-```
-
-#### `dispatcher.enqueue(job: JobDefinition, input?): Promise<void>`
-
-Enqueues one message for a job. Takes exactly what the job's schema accepts, and no
-argument at all for a job that declares none. Loads no handler.
-
-**Example:**
-
-```typescript
-await dispatcher.enqueue(jobs.verifyDomain, { teamDomainId: domain.id });
-await dispatcher.enqueue(jobs.clean);
-```
-
-#### `dispatcher.enqueueMany(job: JobDefinition, inputs): Promise<void>`
-
-Enqueues one message per input in a single write. Enqueuing nothing writes nothing.
-
-**Example:**
-
-```typescript
-await dispatcher.enqueueMany(
-	jobs.notify,
-	changes.map((change) => ({ id: change.id })),
-);
-```
-
-#### `dispatcher.deliver(delivery: JobDelivery, batchSize?): Promise<Settlement>`
-
-Runs the job one delivery names and answers with what it ended as, for the caller's
-backend to apply. Names no platform, so a test drives it with a plain object.
-
-**Example:**
-
-```typescript
-let settlement = await dispatcher.deliver({ id: "m1", attempts: 1, body: { job: "clean" } });
-```
-
-#### `dispatcher.deliverBatch(deliveries: JobDelivery[], options): Promise<void>`
-
-Runs every delivery that arrived together, inside one `queue` log, settling each through
-`options.apply` as that one finishes rather than when the last one does. With
-`deadLettered`, every delivery is recorded and acked instead of dispatched — which queue
-a batch arrived on is the backend's to know, so the backend is the one that says so.
-
-**Example:**
-
-```typescript
-await dispatcher.deliverBatch(deliveries, {
-	queue: "ping",
-	deadLettered: batch.queue === "ping-dlq",
-	apply: (delivery, settlement) => settle(delivery, settlement),
-});
-```
-
-#### `dispatcher.tick(options: { now: Date; only?: CronExpression }): Promise<void>`
-
-Enqueues every mapped job that is due, in one write, inside one `cron` log that records
-how many. Runs none of them, and loads no handler.
-
-With `only`, a job is due when it declares that exact expression — the platform has
-already decided which minute this is, so no schedule is evaluated. Without it, a job is
-due when its schedule fires in `now`'s minute, which is what drives a backend that has no
-triggers behind it.
-
-**Example:**
-
-```typescript
-async scheduled(controller) {
-	await dispatcher.tick({ now: new Date(controller.scheduledTime), only: controller.cron });
-}
-```
-
-#### `dispatcher.mapped: JobDefinition[]`
-
-Every job a handler was mapped onto, for asserting that a map has no leaf nobody runs.
-
-**Example:**
-
-```typescript
-let names = new Set(dispatcher.mapped.map((job) => job.name));
-expect([...names]).toEqual(expect.arrayContaining(["clean", "checkHttp"]));
-```
-
-#### `dispatcher.crons: string[]`
-
-The distinct schedules the mapped jobs declare, for asserting that the code and
-`wrangler.jsonc` agree.
-
-**Example:**
-
-```typescript
-expect([...dispatcher.crons].sort()).toEqual([...config.triggers.crons].sort());
-```
-
-### `jobEnqueuer(queue: JobQueue): Middleware`
-
-The `remix/router` middleware at `@sdxc/jobs/router`, publishing a `JobEnqueuer` as
-`ctx.jobs` and under the exported `Jobs` context key. Importing it is what types
-`ctx.jobs` on every `RequestContext`.
-
-`ctx.jobs.enqueue(job, input?)` and `ctx.jobs.enqueueMany(job, inputs)` take exactly what
-`dispatcher.enqueue` and `dispatcher.enqueueMany` take, and raise the backend's failure as
-the `JobQueueError` it answered with, so a request that could not enqueue fails instead of
-reporting work that never runs. One enqueuer serves every request, and each message carries
-the current trace, so a router running `trace()` from `@sdxc/trace-context/middleware`
-first links every job run to the request that enqueued it.
-
-**Parameters:**
-
-- `queue`: The backend to write through, the same one the app's dispatcher delivers from
-
-**Example:**
-
-```typescript
-import { jobEnqueuer } from "@sdxc/jobs/router";
-
-createRouter({ middleware: [log(logger), trace(), jobEnqueuer(queue)] });
-```
+`tick` with `only` enqueues the jobs declaring that exact expression; without it, the jobs whose
+schedule fires in `now`'s UTC minute. `deliverBatch` with `deadLettered: true` records and acks
+every delivery instead of running it. A message naming no mapped job or failing its schema is
+refused and dead-lettered without loading a handler.
 
 ### `JobContext`
 
-The context every middleware and handler shares for one delivery.
+What every middleware and handler receives for one delivery. `new JobContext(job, init)` builds
+the untyped one the dispatcher uses.
 
-#### `new JobContext(job: JobDefinition, init: JobContextInit)`
+| Member                                 | Is                                                                   |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `input`, `name`, `cron`                | The parsed payload and the job's declaration                         |
+| `id`, `attempts`, `batchSize`          | The message id, its delivery count from one, and the batch size      |
+| `log`                                  | The run's `Log`, emitted once when it ends                           |
+| `signal`                               | Aborts when the timeout expires                                      |
+| `trace`                                | The W3C trace this run belongs to; jobs it enqueues name it parent   |
+| `of(job)`                              | `{ input, meta }` typed by that job, or `null` for another job's run |
+| `ack(reason?)`                         | Acks; the run is done                                                |
+| `retry({ delay?, reason?, cause? })`   | Retries, held for `delay`                                            |
+| `exit(reason?, { cause? })`            | Acks, and records the run as failed                                  |
+| `timeout(reason?)`                     | Retries, and records the run as timed out                            |
+| `set(key, value, { property? })`       | Publishes a value under a `remix/router` context key                 |
+| `get(key)`, `require(key)`, `has(key)` | Reads one back; `require` throws when nothing published it           |
 
-Builds a context. The dispatcher does this per delivery; a test does it to call a
-handler directly.
-
-**Parameters:**
-
-- `job`: The job being run, which supplies `name` and `cron`, and types what `ctx.of()`
-  answers
-- `init.id`: The queue message's id
-- `init.attempts`: Which delivery of this message this is, counting from one
-- `init.input`: The payload, already parsed against the job's schema
-- `init.batchSize`: How many messages share this invocation. Defaults to one
-- `init.log`: Where this job's fields go, a `Log` from `@sdxc/logger`. One is created
-  when omitted, under the current log when there is one
-- `init.signal`: Aborts when the job's timeout expires. Never aborts when omitted
-- `init.trace`: The trace this run belongs to. Defaults to the running invocation's, or a
-  new root outside one
-
-**Example:**
-
-```typescript
-let ctx = new JobContext(jobs.clean, { id: "message-1", attempts: 1 });
-```
-
-#### Properties
-
-- `ctx.input`: The payload, typed by the job's schema
-- `ctx.name`, `ctx.cron`: The job's own declaration
-- `ctx.of(job)`: This delivery's view of one job — its parsed `input` and declared `meta`,
-  both with that job's own types — or `null` for a delivery of another job. The name is
-  checked, so it narrows rather than asserts
-- `ctx.id`, `ctx.attempts`: The delivery's identifier and delivery count
-- `ctx.batchSize`: How many messages share this invocation
-- `ctx.log`: The run's record — `set()` fields, `note()` breadcrumbs, `time()` durations —
-  emitted once when the run ends
-- `ctx.signal`: Aborts when the timeout expires
-- `ctx.trace`: The trace this run belongs to — `traceId`, this run's `spanId`, the
-  enqueuing invocation's `parentSpanId` — bound for the whole run, so every job it
-  enqueues names this run as its parent
-
-#### `ctx.ack(reason?: string): never`
-
-Finishes here: the delivery is acked and the run reported as completed. What returning
-does, from anywhere in the call stack. Throws `Ack`.
-
-#### `ctx.retry(options?: RetryOptions): never`
-
-Gives up on this delivery and asks for another. Throws `Retry`.
-
-**Parameters:**
-
-- `options.delay`: How long the platform holds the message, as a duration. On Cloudflare
-  Queues a delay past 12 hours holds it for 12 hours, the longest the platform allows
-- `options.cause`: What led here
-
-**Example:**
-
-```typescript
-if (response.status === 429) ctx.retry({ delay: "5 minutes" });
-```
-
-#### `ctx.exit(reason?: string, options?: ErrorOptions): never`
-
-Gives up for good: the delivery is acked, because a redelivery reaches the same result,
-and the run is reported as a failure. Throws `NonRetriable`.
-
-**Example:**
-
-```typescript
-if (team === null) ctx.exit("Team no longer exists");
-```
-
-#### `ctx.timeout(reason?: string): never`
-
-Gives up because time ran out: the delivery is retried, and the run is reported as one
-that never finished. Throws `Timeout`.
-
-#### `ctx.get(key: ContextKey): value | undefined`
-
-Reads a value some middleware published, falling back to the key's default.
-
-#### `ctx.require(key: ContextKey): value`
-
-The same, refusing to continue when nothing published one. This is how one middleware
-reads what an earlier middleware put on the context: inside a chain the context is the
-bare one, so an installed property like `ctx.database` is not visible there — only the
-key is.
-
-**Example:**
-
-```typescript
-let database = ctx.require(Database);
-```
-
-#### `ctx.has(key: ContextKey): boolean`
-
-Whether a value has been published for a key.
-
-#### `ctx.set(key: ContextKey, value, options?: { property: string }): void`
-
-Publishes a value, optionally installing it as a direct property so handlers read
-`ctx.database` rather than `ctx.get(Database)`.
-
-**Example:**
-
-```typescript
-ctx.set(Database, connect(), { property: "database" });
-```
+`JobContextInit` takes `id`, `attempts`, and optionally `input`, `batchSize`, `log`, `signal`
+and `trace`. Inside a middleware only keys are visible, so read an earlier middleware's value
+with `ctx.require(Key)`.
 
 ### Endings
 
-Each verb throws its own class. `Job` groups them for `instanceof`, and
-`@sdxc/jobs/errors` exports each one individually, which is what a type position
-needs.
+The four verbs throw subclasses of `Ending`, grouped as `Job` (`Job.Ack`, `Job.Retry`,
+`Job.NonRetriable`, `Job.Timeout`, `Job.Ending`) and exported one by one from `./errors`.
+`Retry` carries the `delay` it asked for.
 
-| Ending             | Thrown by       | What the dispatcher does                           | `job.ending` | Outcome    |
-| ------------------ | --------------- | -------------------------------------------------- | ------------ | ---------- |
-| `Job.Ack`          | `ctx.ack()`     | Ack the delivery                                   | `done`       | `ok`       |
-| `Job.Retry`        | `ctx.retry()`   | Retry, holding for `delay`; note `job.retry`       | `retry`      | `degraded` |
-| `Job.NonRetriable` | `ctx.exit()`    | Ack; `fail()` the log with the error and its cause | `refuse`     | `error`    |
-| `Job.Timeout`      | `ctx.timeout()` | Retry; `fail()` the log                            | `timeout`    | `error`    |
+| Ending             | Message                 | `job.ending` | `outcome`  |
+| ------------------ | ----------------------- | ------------ | ---------- |
+| return, `Job.Ack`  | Acked                   | `done`       | `ok`       |
+| `Job.Retry`        | Retried after `delay`   | `retry`      | `degraded` |
+| `Job.NonRetriable` | Acked                   | `refuse`     | `error`    |
+| `Job.Timeout`      | Retried                 | `timeout`    | `error`    |
+| anything else      | Rethrown to the runtime | `failed`     | `error`    |
 
-Returning normally ends `done` like `Job.Ack`; anything else thrown ends `failed` with
-outcome `error` and is rethrown so the platform retries the invocation. An ending decided
-once the timeout has aborted the signal is recorded as `timeout` whatever it was:
-`ctx.ack()` still acks the delivery, and returning normally lets the message come back.
+Once the timeout has aborted the signal, any ending is recorded as `timeout`; `ctx.ack()` still
+acks the message.
 
-**Example:**
+### Records
 
-```typescript
-import { Job } from "@sdxc/jobs";
-import type { Retry } from "@sdxc/jobs/errors";
+Each invocation emits one record through the dispatcher's logger, with flat dotted fields and
+the [W3C Trace Context](https://www.w3.org/TR/trace-context/) it ran under (`trace_id`,
+`span_id`, `parent_span_id`).
 
-function holdFor(error: Retry) {
-	return error.delay;
-}
+| `kind`  | Fields                                                                                                                            |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `cron`  | `cron.expression`, `cron.scheduled_at`, `jobs.enqueued`                                                                           |
+| `queue` | `queue.name`, `queue.batch_size`, and a `jobs.done`/`retried`/`refused`/`failed`/`timed_out` count                                |
+| `job`   | `job.name`, `job.id`, `job.attempts`, `job.batch_size`, `job.cron`, `job.ending`, `job.delay_s`, and whatever the handler `set()` |
 
-try {
-	await charge(invoice);
-} catch (error) {
-	if (error instanceof Job.Ending) throw error; // Never swallow an ending.
-	ctx.retry({ reason: "Charge failed", delay: "1 minute", cause: error });
-}
-```
+A refused message ends `refused` with `job.refusal` (`unknown-job` or `invalid-input`), and one
+read off the dead-letter queue ends `dead_letter`; both keep the body as `job.body`. A message
+enqueued during a request or another job continues that trace, so the two share a `trace_id`.
 
-`Job.Ending` is the base all four share, so a broad `catch` re-throws whichever one the
-handler chose without naming each.
+### `jobEnqueuer(queue: JobQueue): Middleware` from `./router`
 
-### Types
+Publishes `ctx.jobs` (a `JobEnqueuer` with `enqueue` and `enqueueMany`) and the `Jobs` context
+key. Importing it types `ctx.jobs` on every `RequestContext`, and a failed write throws the
+queue's `JobQueueError`.
 
-#### `JobMiddleware<Effect>`
+### `queue(binding)` and `worker(dispatcher, options?)` from `./cloudflare`
 
-```typescript
-type JobMiddleware<Effect extends ContextEffect = EmptyContextEffect> = (
-	ctx: JobContext,
-	next: () => Promise<void>,
-) => void | Promise<void>;
-```
+`queue(() => env.QUEUE)` writes through a Cloudflare Queue binding, splitting large
+`enqueueMany` calls into batches the platform accepts; the platform counts retries.
+`worker(dispatcher, options)` answers `{ queue, scheduled }` handlers. `options.deadLetterQueue`
+names the dead-letter queue this Worker also consumes, whose batches are recorded and acked, and
+`options.deadLetter: () => env.DLQ` is where a refused message is written. A retry delay past 12
+hours is held for 12 hours, and `send` fails a `JobMessage.delay` past 12 hours with `unsupported_delay`.
 
-The `Effect` names what the middleware publishes — `{ key, value, property }` — which is
-what makes an installed property visible to handlers.
+### `queue(options?)` from `./memory`
 
-#### `JobTypes`
+A `MemoryQueue` holding serialized messages in an array, with its own attempt count
+(`retries: "core"`) and dead-letter list. `options.now` supplies the clock. `drain(deliver)`
+runs and settles everything claimable, `messages` and `deadLettered` read what it holds, and
+`reset()` empties both.
 
-Augmented by an app to name the context its handlers receive.
+### `JobQueue` from `./queue`
 
-```typescript
-declare module "@sdxc/jobs" {
-	interface JobTypes {
-		context: JobDispatcherContext<typeof dispatcher>;
-	}
-}
-```
-
-#### `JobQueue`
-
-The backend a dispatcher enqueues through and is delivered from, at
-`@sdxc/jobs/queue`. Every call answers with a `Result`, so no backend call throws.
+The backend interface. Every call answers a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) failing with a `JobQueueError`
+whose `code` is `unavailable`, `invalid_message` or `unsupported_delay`.
 
 ```typescript
 interface JobQueue {
@@ -680,219 +305,329 @@ interface JobQueue {
 }
 ```
 
-`claim` and `settle` are present together on a backend that is pulled, and absent on one
-that pushes deliveries into the dispatcher itself. `retries` says who counts attempts:
-`"backend"` leaves the ceiling where the platform already states it, `"core"` hands it to
-the dispatcher's `maxAttempts`.
+A pushed backend implements `send`; a pulled one adds `claim` and `settle` together. `retries`
+says whether the backend or the dispatcher's `maxAttempts` decides when to dead-letter.
+`invalidMessage(body)` wraps a refused body for a backend that writes to its dead-letter queue,
+and `readDeadLetter(body)` answers `{ reason, body }` for a dead-lettered one.
 
-`worker(dispatcher, options)` takes the two things only a backend can answer for: the
-`deadLetterQueue` it also consumes, whose batches it has the dispatcher record and ack
-rather than dispatch, and the `deadLetter` binding a refused body is written to. That
-write is what gets a message no redelivery can fix onto that queue, since this platform
-reaches a dead-letter queue only by exhausting retries. A worker given neither dispatches
-every batch it receives and acks a refused body where it stands.
+### `createUptimeReporter({ token, url? })` from `./uptime`
 
-Two adapters ship. `@sdxc/jobs/cloudflare` exports `queue` and `worker`;
-`@sdxc/jobs/memory` exports `queue`. The Cloudflare queue splits one `enqueueMany` into as
-many `sendBatch` writes as the platform's limits need: each holds at most 100 messages and
-stays under 256 KB across their bodies, so callers enqueue any number of messages of any
-size up to the 128 KB a single message may carry. Both are reached through a namespace import, since
-`queue` collides with the first local variable holding one.
+A ping `(monitorId) => Promise<Result<void, UptimeError>>` for a cron monitor, meant for
+`onEnd`. `UptimeError.code` is `refused`, `unreachable`, or `unconfigured` when `token()`
+answers `undefined`.
 
-A memory queue adds what a test drives it with: `drain(deliver)` runs everything
-claimable and answers with what each delivery ended as, `messages` and `deadLettered`
-read back what it still holds, and `reset()` empties both.
+### `conformance(options)` from `./conformance`
 
-```typescript
-import * as cloudflare from "@sdxc/jobs/cloudflare";
+Registers the Vitest suite a `JobQueue` adapter passes. `options` takes `name`, `create`,
+`messages(queue)`, and optionally `advance(ms)` to run the delay tests and `unsupportedDelay` to
+run the ceiling tests.
 
-export const dispatcher = createJobDispatcher({
-	queue: cloudflare.queue(() => env.QUEUE),
-});
-```
+### Types
 
-```typescript
-// bootstrap/worker.ts
-const handlers = cloudflare.worker(dispatcher);
-
-export default {
-	scheduled: handlers.scheduled,
-	queue: handlers.queue,
-};
-```
-
-### `createUptimeReporter(options)`
-
-The cron-monitor ping, at `@sdxc/jobs/uptime`. Wired to nothing: a dispatcher's `onEnd`
-calls it, so a service having a bad minute cannot become a reason to redeliver work that
-already succeeded. Bound to a token once, so a call site holds a monitor id and nothing
-else.
-
-```typescript
-import { createUptimeReporter } from "@sdxc/jobs/uptime";
-
-const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
-```
-
-It answers with a `Result` rather than throwing, which is what makes discarding the
-outcome an act rather than an oversight. `UptimeError.code` is one of `refused` (the
-service answered and said no), `unreachable` (no answer at all), or `unconfigured` (no
-token resolved, so nothing was sent).
-
-Either call works. Awaited, the ping finishes inside the settlement barrier and a failure
-reaches that run's own record; handed to `waitUntil` from `cloudflare:workers`, the
-delivery settles at once and the outcome lands nowhere, since the record is written before
-the promise resolves. Await it unless a batch is large enough for the round trips to
-matter.
+`JobDefinition`, `JobMap`, `JobTree`, `JobLeaf` and `JobOptions` describe a map, and
+`AnyJobDefinition` any job in it. `JobInput<typeof job>` and `JobArgs<typeof job>` name what
+enqueuing a job takes, for a helper of your own. `JobHandler`, `JobHandlerFunction` and
+`JobHandlerContext<Schema>` describe handlers. `JobMiddleware<Effect>` is a middleware whose
+`Effect` (`{ key, value, property }`) names what it installs. `JobTypes` is augmented with
+`context: JobDispatcherContext<typeof dispatcher>` to type handlers with what the chain installs.
+`JobStatus` is what `onEnd` receives; `JobDelivery`, `JobMessage` and `Settlement` are what a
+backend translates.
 
 ## Pattern: Middleware That Provides A Database
 
-Middleware publishes what handlers read, so a handler names no container and a test
-provides its own.
+A middleware publishes a value under a context key and installs it as a property; augmenting
+`JobTypes` types that property on every handler.
 
 ```typescript
-import type { JobMiddleware } from "@sdxc/jobs";
+import type { JobDispatcherContext, JobMiddleware } from "@sdxc/jobs";
 
+import { createJobDispatcher, createJobHandler } from "@sdxc/jobs";
 import { createContextKey } from "remix/router";
+
+import jobs from "./jobs.js";
 
 export const Database = createContextKey<Database>();
 
-export function database(): JobMiddleware<{
+function database(): JobMiddleware<{
 	key: typeof Database;
 	value: Database;
 	property: "database";
 }> {
 	return async (ctx, next) => {
-		ctx.set(Database, connect(), { property: "database" });
-		await next();
+		let db = await connect();
+		ctx.set(Database, db, { property: "database" });
+		try {
+			await next();
+		} finally {
+			await db.close();
+		}
 	};
 }
-```
 
-## Pattern: One Body Of Work, Several Schedules
+export const dispatcher = createJobDispatcher({ middleware: [database()] });
 
-Two leaves that differ only by schedule share their work through a plain function, and
-each gets its own thin handler module. A handler is paired with exactly one job — the
-dispatcher refuses a handler mapped to a different one — so the sharing happens below
-`createJobHandler`, not around it.
-
-```typescript
-// app/jobs/send-team-digests.ts
-export async function sendTeamDigests(ctx: JobHandlerContext<undefined>, period: "day" | "week") {
-	await mailDigests(ctx.database, period);
+declare module "@sdxc/jobs" {
+	interface JobTypes {
+		context: JobDispatcherContext<typeof dispatcher>;
+	}
 }
 
-// app/jobs/send-team-daily-digests.ts
-export default createJobHandler(jobs.sendTeamDailyDigests, (ctx) => sendTeamDigests(ctx, "day"));
-
-// app/jobs/send-team-weekly-digests.ts
-export default createJobHandler(jobs.sendTeamWeeklyDigests, (ctx) => sendTeamDigests(ctx, "week"));
+export default createJobHandler(jobs.cleanup, async (ctx) => {
+	let removed = await ctx.database.deleteExpiredSessions();
+	ctx.log.set({ sessions: { removed } });
+});
 ```
 
-Each leaf keeps its own `meta` and its own loader, so one schedule failing is one
-monitor alerting.
+A later middleware reads it with `ctx.require(Database)`.
 
-## Pattern: Cooperative Cancellation
+## Pattern: Scheduled Jobs Watched By A Cron Monitor
 
-A timeout aborts `ctx.signal` and stops the dispatcher waiting; it cannot stop a
-handler. A loop that checks between iterations gives up cleanly, and a handler whose
-work is already durable acks instead so a redelivery does not repeat it.
+Two schedules share their work through a plain function, each keeps its own handler, and each
+declares the monitor that watches it in `meta`. `onEnd` pings only for a `done` run, so a
+monitor alerting means the job really stopped completing.
 
 ```typescript
-export default createJobHandler(jobs.sendDigests, async (ctx) => {
-	for (let team of await teamsDue(ctx.database)) {
-		if (ctx.signal.aborted) ctx.ack(); // The mail already sent must not be sent twice.
-		await sendDigest(team, { signal: ctx.signal });
+import type { JobHandlerContext } from "@sdxc/jobs";
+
+import { createJobDispatcher, createJobHandler, job, jobs } from "@sdxc/jobs";
+import { createUptimeReporter } from "@sdxc/jobs/uptime";
+import { env } from "cloudflare:workers";
+
+interface Monitored {
+	monitorId: string;
+}
+
+export const JOBS = jobs({
+	dailyDigest: job({ cron: "0 8 * * *", meta: { monitorId: "mon_daily" } satisfies Monitored }),
+	weeklyDigest: job({ cron: "0 9 * * 1", meta: { monitorId: "mon_weekly" } satisfies Monitored }),
+});
+
+async function sendDigests(ctx: JobHandlerContext<undefined>, period: "day" | "week") {
+	ctx.log.set({ digest: { period } });
+	await mailDigests(period);
+}
+
+export const daily = createJobHandler(JOBS.dailyDigest, (ctx) => sendDigests(ctx, "day"));
+export const weekly = createJobHandler(JOBS.weeklyDigest, (ctx) => sendDigests(ctx, "week"));
+
+let uptime = createUptimeReporter({ token: () => env.UPTIME_TOKEN });
+
+export const dispatcher = createJobDispatcher({
+	async onEnd(ctx, status) {
+		if (status.type !== "done") return;
+		for (let watched of [JOBS.dailyDigest, JOBS.weeklyDigest]) {
+			let run = ctx.of(watched);
+			if (run !== null) await uptime(run.meta.monitorId);
+		}
+	},
+});
+
+dispatcher.map(JOBS.dailyDigest, daily);
+dispatcher.map(JOBS.weeklyDigest, weekly);
+```
+
+An awaited ping finishes before the message is acked. Its `Result` is discarded here on purpose:
+a failed ping never redelivers work that succeeded.
+
+## Pattern: Retries, Timeouts And Cancellation
+
+A timeout aborts `ctx.signal` but cannot stop a handler, so pass the signal to every `fetch` and
+check it between steps. A broad `catch` rethrows any `Ending` so the handler's own decision
+survives.
+
+```typescript
+import { createJobHandler, Job } from "@sdxc/jobs";
+
+import jobs from "./jobs.js";
+
+export default createJobHandler(jobs.syncInvoices, async (ctx) => {
+	for (let invoice of await pendingInvoices()) {
+		if (ctx.signal.aborted) return ctx.ack(); // what already synced stays synced
+
+		try {
+			let response = await fetch(invoice.url, { signal: ctx.signal });
+			if (response.status === 429) {
+				return ctx.retry({ delay: "1 minute", reason: "Rate limited" });
+			}
+			if (response.status === 404) return ctx.exit(`Invoice ${invoice.id} is gone`);
+			await markSynced(invoice, await response.json());
+		} catch (error) {
+			if (error instanceof Job.Ending) throw error;
+			return ctx.retry({ reason: "Sync failed", delay: "1 minute", cause: error });
+		}
 	}
 });
 ```
 
-## Pattern: A Job That Enqueues Other Jobs
+Acking under an aborted signal settles the message but records a timeout, so `onEnd` sees
+`timeout` rather than `done`.
 
-A sweep that fans work out is an ordinary cron job whose handler enqueues, which keeps
-the fan-out on the queue instead of inside the cron trigger's budget.
+## Pattern: A Job That Fans Out Work
+
+A cron job whose handler enqueues keeps the fan-out on the queue, where each check gets its own
+run, retries and record.
 
 ```typescript
-export default createJobHandler(jobs.enqueueDueChecks, async (ctx) => {
-	let due = await claimDue(ctx.database, Date.now());
+import { createJobHandler } from "@sdxc/jobs";
+
+import { dispatcher } from "./dispatcher.js";
+import jobs from "./jobs.js";
+
+export default createJobHandler(jobs.scheduleChecks, async (ctx) => {
+	let due = await sitesDueForCheck(new Date());
 	await dispatcher.enqueueMany(
-		jobs.checkHttp,
-		due.map((m) => ({ monitorId: m.id })),
+		jobs.checkSite,
+		due.map((site) => ({ siteId: site.id })),
 	);
 	ctx.log.set({ checks: { enqueued: due.length } });
 });
 ```
 
+Every message carries this run's trace, so each `checkSite` record names it as parent.
+
 ## Pattern: Testing A Handler
 
-A handler is a function over a context, so a test builds the context and calls it. No
-queue, no worker, no container.
+A handler is a function over a context. Build one with `createJobContext`, publish what the
+middleware would, and assert on the ending it throws or the record it writes.
 
 ```typescript
 import { createJobContext, Job } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
+import { expect, test } from "vitest";
 
-import handler from "~/app/jobs/clean";
-import { Database } from "~/app/jobs/middleware/database";
+import handler from "./jobs/send-receipt.js";
+import jobs from "./jobs.js";
+import { Database } from "./middleware.js";
 
-test("deletes rows past the retention window", async () => {
-	let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1 });
+test("asks for a retry while the mailer rate limits", async () => {
+	let ctx = createJobContext(jobs.sendReceipt, { id: "m1", attempts: 1, input: { orderId: "o1" } });
 	ctx.set(Database, await testDatabase(), { property: "database" });
-
-	await handler(ctx);
-});
-
-test("asks for a retry while the API is rate limiting", async () => {
-	let ctx = createJobContext(jobs.checkHttp, { id: "message-1", attempts: 1, input });
 
 	await expect(handler(ctx)).rejects.toBeInstanceOf(Job.Retry);
 });
 
-test("records the monitor it checked", async () => {
+test("records the order it sent", async () => {
 	let records: Record<string, unknown>[] = [];
 	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
-	let ctx = createJobContext(jobs.checkHttp, { id: "message-1", attempts: 1, input, log });
+	let ctx = createJobContext(jobs.sendReceipt, {
+		id: "m1",
+		attempts: 1,
+		input: { orderId: "o1" },
+		log,
+	});
+	ctx.set(Database, await testDatabase(), { property: "database" });
 
 	await log.run(() => handler(ctx));
 
-	expect(records[0]).toMatchObject({ "monitor.id": input.monitorId });
+	expect(records[0]).toMatchObject({ "order.id": "o1" });
 });
 ```
 
-`createJobContext` types the context the way the handler receives it — including whatever
-the app declared its middleware installs. Building one skips that chain, so the test
-populates what the chain would have; `new JobContext(...)` is the untyped equivalent the
-dispatcher itself uses. Handing it a `Log` through `init.log` is how a test reads back
-what the handler recorded.
+## Pattern: Running Jobs Without A Platform
 
-## Related Packages
+The memory queue runs the whole loop in one process: `tick()` without `only` evaluates each
+schedule against `now`, and `drain()` delivers and settles what is queued, counting attempts
+against `maxAttempts`. Asserting `dispatcher.crons` against the Worker's configured triggers
+catches a schedule that would never fire.
 
-- [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) - The `Log` a run records into and the `createLogger()` configuration the dispatcher's logs carry
-- [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) - The duration strings a retry delay and a timeout take
-- [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) - Standard Schema validation, used to parse a payload
-- [`@sdxc/cron`](https://www.npmjs.com/package/@sdxc/cron) - Parses the cron a job declares, and rejects one the platform would not accept
-- [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) - The `Result` every queue call and every ping answers with
-- [`@sdxc/cloudflare-mocks`](https://www.npmjs.com/package/@sdxc/cloudflare-mocks) - Queue binding that drives a consumer in tests
+```typescript
+import { createJobDispatcher } from "@sdxc/jobs";
+import * as memory from "@sdxc/jobs/memory";
+import { expect, test } from "vitest";
 
-## Tips
+import jobs from "./jobs.js";
 
-1. **Spell a cron exactly as its trigger** - A valid expression still fires nothing if
-   `wrangler.jsonc` does not name it, and `job()` cannot know that. Assert
-   `dispatcher.crons` against the config in a test.
-2. **Treat a map key as a wire contract** - Renaming one renames a message's address, and
-   messages enqueued by the previous deploy are still in flight.
-3. **Map a loader, not a handler** - `() => import(…)` is what keeps job code out of the
-   request path's module graph. For the same reason, enqueue from a controller through
-   `ctx.jobs` rather than by importing the dispatcher.
-4. **Never swallow an ending** - A `catch` around a `ctx.*` call catches the thrown
-   ending too. Re-throw it with `if (error instanceof Job.Ending) throw error;`.
-5. **Write `return ctx.retry(…)`** - The verbs return `never`, but TypeScript only
-   narrows on a never-returning call through a `const` name, and `ctx` is a parameter —
-   so returning is what tells the compiler the lines below are unreachable.
-6. **Reach for `ctx.exit()` for bad input** - Invalid data will not become valid on a
-   redelivery, so acking and recording beats spending the retries.
-7. **Pass `ctx.signal` to every fetch** - It is what makes a timeout cancel work rather
-   than merely stop waiting for it.
-8. **Let a monitor mean what it says** - Ping from `onEnd` only for a `done` status, so
-   a run that timed out pings nothing and a monitor alerting is evidence the job really
-   stopped completing.
+test("the midnight tick runs cleanup once", async () => {
+	let queue = memory.queue();
+	let dispatcher = createJobDispatcher({ queue, maxAttempts: 3 });
+	dispatcher.map(jobs.cleanup, () => import("./jobs/cleanup.js"));
+
+	await dispatcher.tick({ now: new Date("2026-01-01T00:00:00Z") });
+	expect(queue.messages).toMatchObject([{ job: "cleanup" }]);
+
+	let settlements = await queue.drain((delivery) => dispatcher.deliver(delivery));
+	expect(settlements).toEqual([{ type: "ack" }]);
+	expect(dispatcher.crons).toEqual(["0 0 * * *"]);
+});
+```
+
+## Pattern: Writing A Queue Adapter
+
+An adapter implements `JobQueue` and passes the conformance suite, which is what makes it a
+substitute for the shipped ones.
+
+```typescript
+import type { JobMessage, JobQueue } from "@sdxc/jobs/queue";
+
+import { conformance } from "@sdxc/jobs/conformance";
+import { JobQueueError } from "@sdxc/jobs/queue";
+import { failure, success } from "@sdxc/result";
+
+interface Topic {
+	publish(bodies: unknown[]): Promise<void>;
+	readonly published: unknown[];
+}
+
+export function topicQueue(topic: Topic): JobQueue {
+	return {
+		retries: "backend",
+		async send(messages: JobMessage[]) {
+			try {
+				await topic.publish(
+					messages.map(({ job, body }) => (body === undefined ? { job } : { job, body })),
+				);
+				return success(undefined);
+			} catch (error) {
+				return failure(
+					new JobQueueError("The topic refused the write", { code: "unavailable", cause: error }),
+				);
+			}
+		},
+	};
+}
+
+let topic = createTestTopic();
+
+conformance({
+	name: "topicQueue",
+	create() {
+		topic = createTestTopic();
+		return topicQueue(topic);
+	},
+	messages: () => topic.published,
+});
+```
+
+A backend whose platform delivers by push calls `dispatcher.deliverBatch()` from its consumer and
+applies each `Settlement`; one that is polled adds `claim` and `settle`, and `advance` lets the
+suite check delays.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/jobs": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
