@@ -20,8 +20,10 @@ import { satisfies } from "@sdxc/semver";
 import { and, inList, rawSql, sql } from "remix/data-table";
 
 import type { BlogModels } from "~/app/models";
+import type { Kind } from "~/app/models/kinds";
 import type { PostType } from "~/app/models/post-values";
 
+import { KINDS, kindNamed, kindOfType, POST_KINDS } from "~/app/models/kinds";
 import {
 	bookmarkLabel,
 	normalizeUrl,
@@ -35,9 +37,6 @@ import * as schema from "~/database/schema";
  * {@link PostSearch}.
  */
 export namespace PostSearch {
-	/** The content types a search can reach. */
-	export type Kind = "article" | "tutorial" | "glossary" | "bookmark";
-
 	/** Narrowing a search accepts beyond its text. */
 	export interface Filters {
 		/** Restricts the search to one type. */
@@ -94,24 +93,6 @@ export namespace PostSearch {
 	}
 }
 
-/** Every kind a search reaches. */
-const KINDS: ReadonlyArray<PostSearch.Kind> = ["article", "tutorial", "glossary", "bookmark"];
-
-/** The `posts.type` each kind is stored as; a bookmark is a `like`. */
-const KIND_TYPES: Record<PostSearch.Kind, PostType> = {
-	article: "article",
-	tutorial: "tutorial",
-	glossary: "glossary",
-	bookmark: "like",
-};
-
-/** Where each kind's pages live, used to build a result's public URL; a bookmark links out. */
-const KIND_PATHS: Record<Exclude<PostSearch.Kind, "bookmark">, string> = {
-	article: "/articles",
-	tutorial: "/tutorials",
-	glossary: "/glossary",
-};
-
 /** The `post_meta` keys a result is read from. */
 const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition", "url", "description"];
 
@@ -147,20 +128,6 @@ const FILTER_NAMES: Record<string, "tag" | "kind" | "lang"> = {
 	language: "lang",
 };
 
-/** The singular and plural spellings `kind:` accepts. */
-const KIND_NAMES: Record<string, PostSearch.Kind> = {
-	article: "article",
-	articles: "article",
-	tutorial: "tutorial",
-	tutorials: "tutorial",
-	glossary: "glossary",
-	glossaries: "glossary",
-	bookmark: "bookmark",
-	bookmarks: "bookmark",
-	like: "bookmark",
-	likes: "bookmark",
-};
-
 /** Language names `lang:` accepts beside a language tag, read as that tag. */
 const LANGUAGE_NAMES: Record<string, string> = {
 	english: "en",
@@ -179,11 +146,6 @@ const DEFAULT_LANGUAGE = "en";
  * `locale`, or the site's language for a post that stores none.
  */
 const POST_LANGUAGE = `lower(replace(coalesce((select "post_meta"."value" from "post_meta" where "post_meta"."post_id" = "post_search"."post_id" and "post_meta"."key" = 'locale' order by "post_meta"."updated_at" desc, "post_meta"."created_at" desc limit 1), '${DEFAULT_LANGUAGE}'), '_', '-'))`;
-
-/** The kind a stored `posts.type` is searched as, or `null` for a type search skips. */
-function kindOf(type: string): PostSearch.Kind | null {
-	return KINDS.find((kind) => KIND_TYPES[kind] === type) ?? null;
-}
 
 /**
  * A bookmark's address as it is searched and shown: without its scheme, so its host and path
@@ -286,12 +248,12 @@ export class PostSearch {
 	 * @param db Database connection holding `post_search` and the posts it projects.
 	 * @param query The parsed query, as {@link PostSearch.page} takes it.
 	 */
-	static async counts(db: Database, query: ParsedQuery): Promise<Record<PostSearch.Kind, number>> {
+	static async counts(db: Database, query: ParsedQuery): Promise<Record<Kind, number>> {
 		let totals = await Promise.all(
 			KINDS.map(async (kind) => (await this.matching(db, query, { kind })).count()),
 		);
 		return Object.fromEntries(KINDS.map((kind, index) => [kind, totals[index]])) as Record<
-			PostSearch.Kind,
+			Kind,
 			number
 		>;
 	}
@@ -367,7 +329,7 @@ export class PostSearch {
 		query: ParsedQuery,
 		filters: PostSearch.Filters,
 	): Promise<Array<SqlStatement>> {
-		let kinds = new Set<PostSearch.Kind>(filters.kind === undefined ? KINDS : [filters.kind]);
+		let kinds = new Set<Kind>(filters.kind === undefined ? KINDS : [filters.kind]);
 		let conditions: Array<SqlStatement> = [];
 
 		if (filters.tag !== undefined)
@@ -387,9 +349,9 @@ export class PostSearch {
 	}
 
 	/** The source-table condition a projected row must meet to be returned. */
-	private static published(kinds: ReadonlyArray<PostSearch.Kind>, now: number): SqlStatement {
+	private static published(kinds: ReadonlyArray<Kind>, now: number): SqlStatement {
 		if (kinds.length === 0) return rawSql("0 = 1");
-		let types = kinds.map((kind) => KIND_TYPES[kind]);
+		let types = kinds.map((kind) => POST_KINDS[kind].type);
 		let placeholders = types.map(() => "?").join(", ");
 		return rawSql(
 			`exists (select 1 from "posts" where "posts"."id" = "post_search"."post_id" and "posts"."deleted_at" is null and "posts"."type" in (${placeholders}) and ("posts"."published_at" is null or (${PUBLISHED_MS}) <= ?))`,
@@ -426,7 +388,7 @@ export class PostSearch {
 
 		return rows.flatMap((row) => {
 			let post = postsById.get(row.post_id);
-			let kind = post && post.deleted_at === null ? kindOf(post.type) : null;
+			let kind = post && post.deleted_at === null ? kindOfType(post.type) : null;
 			let postMeta = post ? metaByPost.get(post.id) : undefined;
 			if (!post || kind === null || postMeta === undefined || isBlankMeta(postMeta)) return [];
 			let result = this.result(kind, post, postMeta, row.tags);
@@ -440,7 +402,7 @@ export class PostSearch {
 	 * as `/bookmarks` names it, has no slug and links out, and tags come from the projection.
 	 */
 	private static result(
-		kind: PostSearch.Kind,
+		kind: Kind,
 		post: schema.SelectPost,
 		meta: ReadonlyArray<schema.SelectPostMeta>,
 		tags: string,
@@ -456,7 +418,7 @@ export class PostSearch {
 			excerpt = value("definition") ?? "";
 		}
 
-		let url = kind === "bookmark" ? "" : `${KIND_PATHS[kind]}/${slug}`;
+		let url = kind === "bookmark" ? "" : `/${POST_KINDS[kind].topic}/${slug}`;
 		if (kind === "bookmark") {
 			let bookmark = { title, url: value("url") ?? "" };
 			let description = value("description")?.trim() ?? "";
@@ -639,11 +601,11 @@ function inLanguage(values: ReadonlyArray<string>, exclude: boolean): SqlStateme
  * Narrows the kinds a search reaches by one `kind:` filter: a positive one keeps the kinds it
  * names, an exclusion drops them. A name that is no kind reaches nothing.
  */
-function narrowKinds(kinds: Set<PostSearch.Kind>, filter: SearchFilter): Set<PostSearch.Kind> {
+function narrowKinds(kinds: Set<Kind>, filter: SearchFilter): Set<Kind> {
 	let named = new Set(
 		filter.values.flatMap((value) => {
-			let kind = KIND_NAMES[value.trim().toLowerCase()];
-			return kind === undefined ? [] : [kind];
+			let kind = kindNamed(value);
+			return kind === null ? [] : [kind];
 		}),
 	);
 	return new Set([...kinds].filter((kind) => named.has(kind) !== filter.exclude));

@@ -17,9 +17,10 @@ import { decodeCursor, encodeCursor, InvalidCursorError } from "@sdxc/pagination
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { BlogModels } from "~/app/models";
-import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicTypePath } from "~/app/models/kinds";
 import type { PublicPost } from "~/app/services/posts";
 
+import { isPublicTypePath, objectTypeAt } from "~/app/models/kinds";
 import { isPublishedAt, timestampFromPublishedOrCreated } from "~/app/models/post-values";
 import { findForMentions, findPublicPost } from "~/app/services/posts";
 import { permalink } from "~/app/services/webmention";
@@ -77,7 +78,7 @@ export function article(
 	let summary = post.post.meta.excerpt?.trim() || null;
 	let object: ActivityPub.Object = {
 		id,
-		type: "Article",
+		type: objectTypeAt(post.postType),
 		attributedTo: [ACTOR_ID],
 		to: [PUBLIC],
 		cc: [FOLLOWERS_ID],
@@ -113,7 +114,7 @@ export function article(
 export function tombstone(post: FederatedPosts.Deleted): ActivityPub.Tombstone {
 	return tombstoneOf({
 		id: permalink(post).href,
-		formerType: "Article",
+		formerType: objectTypeAt(post.postType),
 		deleted: post.deleted_at === null ? null : dateOf(Date.parse(post.deleted_at)),
 	});
 }
@@ -315,7 +316,7 @@ function postLocation(id: string): { postType: PublicTypePath; postSlug: string 
 	let match = POST_PATH.exec(url.pathname);
 	let postType = match?.[1];
 	let slug = match?.[2];
-	if ((postType !== "articles" && postType !== "tutorials") || slug === undefined) return null;
+	if (!isPublicTypePath(postType) || slug === undefined) return null;
 
 	try {
 		return { postType, postSlug: decodeURIComponent(slug) };

@@ -9,6 +9,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a cold isolate imports the controllers it serves rather than the whole route table. A new route added with a static import silently puts its module back on every cold start.
 - MUST pass a CMS route's guards as `lazy()`'s second argument (`CMS_GUARDS` / `CMS_WRITE_GUARDS`), never as a `middleware` field wrapping the loader: a stand-in is an object, not a function, so it cannot be an action object's `handler`.
 - MUST read and write data through `ctx.models` (the `@sdxc/data-model` models in `app/models/`, published by the `models()` middleware in requests and jobs), never ad-hoc DB queries in controllers. Logic that spans post types lives in `app/services/posts.ts` and takes `ctx.models`; a pure rule over post values lives in `app/models/post-values.ts`, which no model imports back.
+- MUST read anything that varies by post kind — stored type, `kind:` names, topic and permalink, index emoji and labels, ActivityPub object type — from the registry in `app/models/kinds.ts`, never from a list of kinds of its own; a new kind is one registry entry plus the code that genuinely treats it differently.
 - MUST write a post through its type's model (`ctx.models.articles`, `tutorials`, `likes`, `glossary`), whose callbacks keep the post's search document current; a delete is `tombstone(id)`, which every read then skips through the base model's default scope.
 - MUST treat post publish state as:
   - `published_at === null` => published
@@ -126,6 +127,7 @@ This document defines app-specific rules for `apps/blog`.
   - `app/models/posts.ts` (the base model every post type extends)
   - `app/models/articles.ts`, `app/models/tutorials.ts`, `app/models/likes.ts`, `app/models/glossary.ts`
   - `app/models/post-values.ts` (publish state, ordering, bookmark URLs, tutorial tags)
+  - `app/models/kinds.ts` (the post kind registry)
   - `app/services/posts.ts` (reads across post types)
   - `app/models/feed.ts`, `app/models/search.ts`, `app/models/follower.ts`, `app/models/redirect.ts` (stores outside the data-model registry)
 - Federation

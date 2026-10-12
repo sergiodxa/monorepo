@@ -16,8 +16,10 @@ import { toPlainText } from "@sdxc/markdown/plain";
 import { isFailure } from "@sdxc/result";
 import { excerpt, highlight } from "@sdxc/search/query";
 
+import type { Kind } from "~/app/models/kinds";
 import type { PostSearch } from "~/app/models/search";
 
+import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import routes from "~/routes/web";
 
 /**
@@ -29,7 +31,7 @@ export namespace SearchViewModel {
 	export interface Item {
 		/** App-relative link to the post; a glossary entry links to its anchor on `/glossary`. */
 		href: string;
-		kind: PostSearch.Kind;
+		kind: Kind;
 		/** Human label for the result's content type, which names its icon. */
 		kindLabel: string;
 		title: Array<HighlightSegment>;
@@ -79,7 +81,7 @@ export namespace SearchViewModel {
 	 * script follows.
 	 */
 	export interface Tab {
-		kind: PostSearch.Kind | null;
+		kind: Kind | null;
 		label: string;
 		count: number;
 		href: string;
@@ -101,27 +103,11 @@ export namespace SearchViewModel {
 				/** The `/search` page for the same text and tab, where every match is paged. */
 				seeAll: string;
 				/** The tab the items belong to, `null` for every kind. */
-				kind: PostSearch.Kind | null;
+				kind: Kind | null;
 				/** "All" then each kind with matches; empty while one kind holds every match. */
 				tabs: Array<Tab>;
 		  };
 }
-
-/** Labels for each kind a result can be. */
-const KIND_LABELS: Record<PostSearch.Kind, string> = {
-	article: "Article",
-	tutorial: "Tutorial",
-	glossary: "Glossary",
-	bookmark: "Bookmark",
-};
-
-/** Each kind's tab label, in the order the tabs list them. */
-const TAB_LABELS: Record<PostSearch.Kind, string> = {
-	article: "Articles",
-	tutorial: "Tutorials",
-	glossary: "Glossary",
-	bookmark: "Bookmarks",
-};
 
 /** Words of excerpt each result shows around its first match. */
 const EXCERPT_WORDS = 28;
@@ -184,16 +170,14 @@ export class SearchViewModel {
 		query: string;
 		parsed: ParsedQuery;
 		page: Page<PostSearch.Hit>;
-		kind: PostSearch.Kind | null;
-		counts: Record<PostSearch.Kind, number>;
+		kind: Kind | null;
+		counts: Record<Kind, number>;
 	}): SearchViewModel.Suggestions {
-		let kinds = (Object.keys(TAB_LABELS) as Array<PostSearch.Kind>).filter(
-			(kind) => input.counts[kind] > 0,
-		);
+		let kinds = KINDS.filter((kind) => input.counts[kind] > 0);
 		let all = kinds.reduce((sum, kind) => sum + input.counts[kind], 0);
-		let tab = (kind: PostSearch.Kind | null): SearchViewModel.Tab => ({
+		let tab = (kind: Kind | null): SearchViewModel.Tab => ({
 			kind,
-			label: kind === null ? "All" : TAB_LABELS[kind],
+			label: kind === null ? "All" : POST_KINDS[kind].plural,
 			count: kind === null ? all : input.counts[kind],
 			href: searchHref(input.query, kind),
 			current: kind === input.kind,
@@ -218,7 +202,7 @@ export class SearchViewModel {
 					? `${routes.glossary.href()}#${encodeURIComponent(hit.slug)}`
 					: hit.url,
 			kind: hit.kind,
-			kindLabel: KIND_LABELS[hit.kind],
+			kindLabel: POST_KINDS[hit.kind].label,
 			title: highlight(hit.title, parsed, { field: "title" }),
 			excerpt: this.excerpt(hit, parsed),
 			publishedAt: hit.publishedAt,
@@ -270,7 +254,7 @@ export class SearchViewModel {
  * The `/search` page for `query`, narrowed to `kind` with the search syntax's own `kind:`
  * filter, so the page needs no parameter beyond `q`.
  */
-function searchHref(query: string, kind: PostSearch.Kind | null): string {
+function searchHref(query: string, kind: Kind | null): string {
 	let q = kind === null ? query : `${query.trim()} kind:${kind}`;
 	return `${routes.search.href()}?${new URLSearchParams({ q })}`;
 }

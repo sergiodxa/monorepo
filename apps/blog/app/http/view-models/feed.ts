@@ -9,6 +9,7 @@
  */
 
 import type { Feed } from "~/app/models/feed";
+import type { Kind } from "~/app/models/kinds";
 
 import { normalizeUrl } from "~/app/models/post-values";
 import routes from "~/routes/web";
@@ -33,7 +34,7 @@ export namespace FeedViewModel {
 		 * What the activity is, which picks the row's emoji. A `bookmark`'s `href` is someone
 		 * else's page the author saved, marked up as the entry's `bookmark-of`.
 		 */
-		kind: "article" | "tutorial" | "bookmark" | "glossary";
+		kind: Kind;
 	}
 
 	/**

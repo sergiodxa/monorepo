@@ -18,6 +18,8 @@ import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Badge, Heading, Link } from "@sdxc/ui";
 
+import type { Kind } from "~/app/models/kinds";
+
 import { ACTOR_ID } from "~/config/activitypub";
 import { ActivityRow } from "~/resources/components/activity-row";
 import { BlogLayout } from "~/resources/layouts/blog";
@@ -36,7 +38,7 @@ export namespace FeedView {
 		date: string;
 		preview: boolean;
 		/** Which emoji the row leads with; a bookmark's `href` is marked up as `u-bookmark-of`. */
-		kind: ActivityRow.Kind;
+		kind: Kind;
 	}
 
 	/**

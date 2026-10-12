@@ -8,10 +8,12 @@
 
 import { enum_, object, optional } from "remix/data-schema";
 
+import { KINDS } from "~/app/models/kinds";
+
 /**
  * `kind` names the tab the dialog lists; absent, the dialog lists every kind. Any other
  * value fails the whole query, which the frame answers as the "All" tab.
  */
 export const SearchFrameQuerySchema = object({
-	kind: optional(enum_(["article", "tutorial", "glossary", "bookmark"])),
+	kind: optional(enum_(KINDS)),
 });

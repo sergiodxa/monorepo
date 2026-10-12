@@ -19,12 +19,10 @@ import {
 	WebmentionQueueSchema,
 } from "~/app/http/validators/cms/webmention";
 import { TAGS } from "~/app/initializers/cache";
+import { publicTypePathOf } from "~/app/models/kinds";
 import { hostOf } from "~/app/models/webmentions";
 import { CMSWebmentionsView } from "~/resources/views/cms/webmentions";
 import routes from "~/routes/web";
-
-/** The public collection path each mentionable post type is served under. */
-const TYPE_PATHS = { article: "articles", tutorial: "tutorials" } as const;
 
 /**
  * The cache tag of the page a mention renders on, or `null` for a post that is gone
@@ -38,8 +36,9 @@ async function postTag(
 	postId: string,
 ): Promise<ReturnType<typeof TAGS.post> | null> {
 	let post = (await models.articles.find(postId)) ?? (await models.tutorials.find(postId));
-	if (!post) return null;
-	return post.meta.slug ? TAGS.post(TYPE_PATHS[post.type], post.meta.slug) : null;
+	let path = post ? publicTypePathOf(post.type) : null;
+	if (!post || path === null) return null;
+	return post.meta.slug ? TAGS.post(path, post.meta.slug) : null;
 }
 
 /**

@@ -8,6 +8,7 @@
  */
 
 import type { BlogModels } from "~/app/models";
+import type { Kind } from "~/app/models/kinds";
 
 import {
 	bookmarkLabel,
@@ -26,7 +27,7 @@ export namespace Feed {
 	 * external bookmarks.
 	 */
 	export interface ActivityItem {
-		kind: "article" | "tutorial" | "bookmark" | "glossary";
+		kind: Kind;
 		/** A bookmark without a title is named by its address, as `/bookmarks` names it. */
 		title: string;
 		slug?: string;

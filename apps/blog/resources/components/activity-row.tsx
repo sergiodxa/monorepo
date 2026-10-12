@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ColorValue } from "@sdxc/u";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { formatParts, parseDate } from "@sdxc/dates";
@@ -19,14 +18,16 @@ import { spacing } from "@sdxc/u/tokens";
 import { nowrap, text, truncate } from "@sdxc/u/typography";
 import { Link } from "@sdxc/ui";
 
+import type { Kind } from "~/app/models/kinds";
+
+import { POST_KINDS } from "~/app/models/kinds";
+
 /**
  * Prop types for {@link ActivityRow}.
  */
 export namespace ActivityRow {
-	/** What a row lists, which picks its emoji and the emoji's tint. */
-	export type Kind = "article" | "tutorial" | "bookmark" | "glossary";
-
 	export interface Props {
+		/** What the row lists, which picks its emoji and the emoji's tint. */
 		kind: Kind;
 		href: string;
 		/** The link's content: plain text, or a title with its matches marked. */
@@ -60,14 +61,6 @@ export namespace ActivityRow {
 		dateMix?: TagProps<"time">["mix"];
 	}
 }
-
-/** The emoji each kind of row leads with, and the tone it is tinted with. */
-const KIND_ICONS: Record<ActivityRow.Kind, { icon: string; tint: ColorValue }> = {
-	article: { icon: "📝", tint: "brand.emphasis" },
-	tutorial: { icon: "🛠️", tint: "brand" },
-	bookmark: { icon: "🔖", tint: "neutral.emphasis" },
-	glossary: { icon: "📘", tint: "neutral" },
-};
 
 /**
  * Formats a row's date on the UTC calendar, so the day shown is the same wherever the page
@@ -119,7 +112,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 		} = handle.props;
 		let { id, role, "aria-selected": selected } = handle.props;
 		let compact = handle.props.size === "sm";
-		let icon = KIND_ICONS[kind];
+		let icon = POST_KINDS[kind];
 
 		return (
 			<li

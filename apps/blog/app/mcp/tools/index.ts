@@ -13,6 +13,8 @@ import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { tool, tools } from "@sdxc/mcp";
 
+import { KINDS } from "~/app/models/kinds";
+
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 
 /**
@@ -32,9 +34,7 @@ export default tools({
 					'Lucene-style query: all words must match; "exact phrase", -word or NOT word to exclude, a OR b, title:word, tag:"react router", kind:tutorial or kind:bookmark, lang:es, order:desc or order:asc to sort by publish date.',
 			}),
 			kind: s.optional(
-				s
-					.enum_(["article", "tutorial", "glossary", "bookmark"])
-					.meta({ description: "Restrict the search to one kind of post." }),
+				s.enum_(KINDS).meta({ description: "Restrict the search to one kind of post." }),
 			),
 			tag: s.optional(
 				s.string().pipe(checks.maxLength(100)).meta({

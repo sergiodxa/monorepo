@@ -13,8 +13,10 @@ import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { isSuccess, succeeded } from "@sdxc/result";
 
+import type { PublicTypePath } from "~/app/models/kinds";
 import type { Webmention } from "~/app/models/webmentions";
 
+import { POST_KINDS } from "~/app/models/kinds";
 import { timestampFromPublishedOrCreated } from "~/app/models/post-values";
 import { hostOf } from "~/app/models/webmentions";
 import { permalink } from "~/app/services/webmention";
@@ -47,7 +49,7 @@ export namespace PostViewModel {
 			/** The body as a parsed document; `null` when the post carries no source. */
 			document: Markdown.Document | null;
 			slug: string;
-			typePath: "articles" | "tutorials";
+			typePath: PublicTypePath;
 			/** Small label shown above the title to identify post kind. */
 			eyebrow: string;
 			/** Raw DB publish timestamp where `null` means already published. */
@@ -205,7 +207,7 @@ export class PostViewModel {
 					document,
 					slug,
 					typePath: loadedPost.postType,
-					eyebrow: "Article",
+					eyebrow: POST_KINDS.article.label,
 					publishedAt: post.published_at,
 					...this.publication(post, postUrl),
 					format,
@@ -244,7 +246,7 @@ export class PostViewModel {
 				document,
 				slug,
 				typePath: loadedPost.postType,
-				eyebrow: "Tutorial",
+				eyebrow: POST_KINDS.tutorial.label,
 				publishedAt: post.published_at,
 				...this.publication(post, postUrl),
 				format,

@@ -8,9 +8,10 @@
  */
 
 import type { BlogModels } from "~/app/models";
-import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicTypePath } from "~/app/models/kinds";
 import type { RelatedTutorial } from "~/app/models/tutorials";
 
+import { isPublicTypePath } from "~/app/models/kinds";
 import { isPublishedAt, tutorialTags } from "~/app/models/post-values";
 
 /** A post permalink: `/articles/:slug` or `/tutorials/:slug`, without an extension. */
@@ -203,7 +204,7 @@ export async function findMentionable(
 	let match = MENTIONABLE_PATH.exec(target.pathname);
 	let postType = match?.[1];
 	let postSlug = match?.[2];
-	if (postType !== "articles" && postType !== "tutorials") return null;
+	if (!isPublicTypePath(postType)) return null;
 	if (postSlug === undefined) return null;
 
 	let found = await findPublicPost(models, { postType, postSlug: decodeURIComponent(postSlug) });

@@ -14,15 +14,11 @@ import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { inList, isNull, notNull } from "remix/data-table";
 
+import { PUBLIC_POST_TYPES } from "~/app/models/kinds";
 import { PostSearch } from "~/app/models/search";
 import { postMeta, posts } from "~/database/schema";
 
-import {
-	isPublishedAt,
-	parseTimestamp,
-	PUBLIC_TYPES,
-	timestampFromPublishedOrCreated,
-} from "./post-values";
+import { isPublishedAt, parseTimestamp, timestampFromPublishedOrCreated } from "./post-values";
 
 /** A published article or tutorial in the order the ActivityPub outbox lists it. */
 export interface Federatable {
@@ -46,7 +42,7 @@ export const Posts = createModel(posts, {
 
 	scopes: {
 		/** The types with public permalinks, which send Webmentions and federate. */
-		permalinked: (query) => query.where(inList("type", Object.values(PUBLIC_TYPES))),
+		permalinked: (query) => query.where(inList("type", PUBLIC_POST_TYPES)),
 		newest: (query) => query.orderBy("created_at", "desc"),
 	},
 

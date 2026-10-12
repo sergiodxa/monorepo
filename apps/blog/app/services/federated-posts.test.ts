@@ -14,7 +14,7 @@ import { localObjectsConformance } from "@sdxc/activitypub/testing";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicTypePath } from "~/app/models/kinds";
 
 import { serializeTags } from "~/app/models/post-values";
 import { findPublicPost } from "~/app/services/posts";

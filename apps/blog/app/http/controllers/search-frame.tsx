@@ -11,6 +11,8 @@ import { isFailure, succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
+import type { Kind } from "~/app/models/kinds";
+
 import { SearchFrameQuerySchema } from "~/app/http/validators/search";
 import { SearchViewModel } from "~/app/http/view-models/search";
 import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
@@ -71,10 +73,7 @@ export default createAction(routes.searchFrame, async (ctx) => {
  * The tab `?kind=` asks for, or `null` for "All" when it names no kind or one with nothing
  * matching, so a tab that empties as the reader types falls back to every match.
  */
-async function requestedKind(
-	url: URL,
-	counts: Record<PostSearch.Kind, number>,
-): Promise<PostSearch.Kind | null> {
+async function requestedKind(url: URL, counts: Record<Kind, number>): Promise<Kind | null> {
 	let query = await validate(url.searchParams, SearchFrameQuerySchema);
 	if (isFailure(query) || query.data.kind === undefined) return null;
 	return counts[query.data.kind] > 0 ? query.data.kind : null;

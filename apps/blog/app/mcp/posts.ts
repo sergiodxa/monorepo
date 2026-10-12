@@ -9,7 +9,7 @@
  */
 
 import type { BlogModels } from "~/app/models";
-import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicTypePath } from "~/app/models/kinds";
 import type { PublicPost } from "~/app/services/posts";
 
 import { isPublishedAt, timestampFromPublishedOrCreated } from "~/app/models/post-values";

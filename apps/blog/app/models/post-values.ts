@@ -12,12 +12,6 @@ import type { SelectPost } from "~/database/schema";
 /** The discriminator values `posts.type` holds. */
 export type PostType = SelectPost["type"];
 
-/** The public collections a post page answers under. */
-export type PublicTypePath = "articles" | "tutorials";
-
-/** The stored `posts.type` behind each public collection path. */
-export const PUBLIC_TYPES = { articles: "article", tutorials: "tutorial" } as const;
-
 /**
  * Normalizes the timestamps a post may carry to epoch milliseconds: ISO strings, SQL datetime
  * strings, and second- or millisecond-based numbers and digit strings.

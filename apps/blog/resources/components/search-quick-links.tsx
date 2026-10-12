@@ -18,6 +18,7 @@ import { m, p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { text, textDecoration } from "@sdxc/u/typography";
 
+import { POST_KINDS } from "~/app/models/kinds";
 import { SEARCH_QUICK_LINKS_ID, searchQuickLinkId } from "~/resources/components/search-box";
 import { searchSurface, searchSurfaceMotion } from "~/resources/components/search-surface";
 import { SEARCH_DIALOG_INPUT_ID } from "~/resources/views/search-frame";
@@ -33,10 +34,22 @@ interface QuickLink {
 /** Every destination, in the order the dialog lists them. */
 const QUICK_LINKS: ReadonlyArray<QuickLink> = [
 	{ href: routes.feed.href(), label: "Home", icon: "🏠" },
-	{ href: routes.articles.href(), label: "Articles", icon: "📝" },
-	{ href: routes.tutorials.href(), label: "Tutorials", icon: "🛠️" },
-	{ href: routes.bookmarks.href(), label: "Bookmarks", icon: "🔖" },
-	{ href: routes.glossary.href(), label: "Glossary", icon: "📘" },
+	{ href: routes.articles.href(), label: POST_KINDS.article.plural, icon: POST_KINDS.article.icon },
+	{
+		href: routes.tutorials.href(),
+		label: POST_KINDS.tutorial.plural,
+		icon: POST_KINDS.tutorial.icon,
+	},
+	{
+		href: routes.bookmarks.href(),
+		label: POST_KINDS.bookmark.plural,
+		icon: POST_KINDS.bookmark.icon,
+	},
+	{
+		href: routes.glossary.href(),
+		label: POST_KINDS.glossary.plural,
+		icon: POST_KINDS.glossary.icon,
+	},
 	{ href: routes.sponsors.href(), label: "Sponsor", icon: "💖" },
 ];
 

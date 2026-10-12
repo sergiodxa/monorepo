@@ -196,7 +196,8 @@ navigation's), so it works before any script loads.
 
 Server components shared across pages sit beside them: `ActivityRow` draws a post as a row
 (emoji per kind, title link, optional description, date) on the home page, `/search` and the
-search dialog alike.
+search dialog alike. Each kind's emoji, labels, `kind:` names, topic and ActivityPub type come
+from the kind registry in `app/models/kinds.ts`.
 
 A page's `<Frame>` is rendered by the server through the app's own router, so frame content is
 in the HTML a reader first receives. See

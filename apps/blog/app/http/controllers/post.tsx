@@ -19,12 +19,13 @@ import { enum_, optional, parse } from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { BlogModels } from "~/app/models";
-import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicTypePath } from "~/app/models/kinds";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
+import { isPublicTypePath, kindAt, POST_KINDS } from "~/app/models/kinds";
 import { isPublishedAt } from "~/app/models/post-values";
 import { article, tombstone } from "~/app/services/federated-posts";
 import { postEpub } from "~/app/services/post-epub";
@@ -47,7 +48,6 @@ type ValidatePostRequestParamsResult =
 	| { kind: "unsupported-content-type"; contentType: string }
 	| { kind: "unsupported-post-type" };
 
-let SUPPORTED_POST_TYPES = new Set<string>(["articles", "tutorials"]);
 let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md", "epub"]);
 
 /**
@@ -119,33 +119,21 @@ export default createAction(
 			});
 		}
 
+		let kind = POST_KINDS[kindAt(validation.params.postType)];
+		let noun = kind.label.toLowerCase();
+
 		if (!post) {
 			if (prefersMarkdown) {
-				if (validation.params.postType === "articles") {
-					return markdown(
-						404,
-						"# Article Not Found\n\nThis article does not exist or is no longer available.\n\n",
-					);
-				}
-
 				return markdown(
 					404,
-					"# Tutorial Not Found\n\nThis tutorial does not exist or is no longer available.\n\n",
+					`# ${kind.label} Not Found\n\nThis ${noun} does not exist or is no longer available.\n\n`,
 				);
 			}
 
-			if (validation.params.postType === "articles") {
-				return renderNotFoundPage(ctx.render, {
-					title: "Article Not Found",
-					description: "This article does not exist or is no longer available.",
-					emoji: "📝",
-				});
-			}
-
 			return renderNotFoundPage(ctx.render, {
-				title: "Tutorial Not Found",
-				description: "This tutorial does not exist or is no longer available.",
-				emoji: "🛠️",
+				title: `${kind.label} Not Found`,
+				description: `This ${noun} does not exist or is no longer available.`,
+				emoji: kind.icon,
 			});
 		}
 
@@ -153,24 +141,12 @@ export default createAction(
 
 		if (!isPublished && !isAdmin()) {
 			if (prefersMarkdown) {
-				if (validation.params.postType === "articles") {
-					return markdown(403, "# Forbidden\n\nThis article is not published yet.\n\n");
-				}
-
-				return markdown(403, "# Forbidden\n\nThis tutorial is not published yet.\n\n");
-			}
-
-			if (validation.params.postType === "articles") {
-				return renderForbiddenPage(ctx.render, {
-					title: "Article Not Published",
-					description: "This article is not available yet.",
-					emoji: "🔒",
-				});
+				return markdown(403, `# Forbidden\n\nThis ${noun} is not published yet.\n\n`);
 			}
 
 			return renderForbiddenPage(ctx.render, {
-				title: "Tutorial Not Published",
-				description: "This tutorial is not available yet.",
+				title: `${kind.label} Not Published`,
+				description: `This ${noun} is not available yet.`,
 				emoji: "🔒",
 			});
 		}
@@ -291,12 +267,12 @@ function validatePostRequestParams(params: {
 	if (contentType && !SUPPORTED_CONTENT_TYPES.has(contentType)) {
 		return { kind: "unsupported-content-type", contentType };
 	}
-	if (!SUPPORTED_POST_TYPES.has(postType)) return { kind: "unsupported-post-type" };
+	if (!isPublicTypePath(postType)) return { kind: "unsupported-post-type" };
 
 	return {
 		kind: "valid",
 		params: {
-			postType: postType as PostType,
+			postType,
 			postSlug,
 			contentType: parse(optional(enum_(["html", "md", "epub"])), contentType),
 		},
