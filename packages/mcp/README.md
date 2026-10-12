@@ -1,40 +1,37 @@
 # @sdxc/mcp
 
-Model Context Protocol servers as `remix/router` actions, served over stateless Streamable HTTP.
+Model Context Protocol servers as `remix/router` actions over Streamable HTTP.
 
-Revision `2026-07-28` of the [Model Context Protocol](https://modelcontextprotocol.io) made
-MCP stateless: no handshake, no session id, no held-open stream. What is left is a function
-from a request to a response, which is an ordinary route — so a tool's name and input schema
-are its route, a handler and its middleware are its controller, and `fetch` takes the
-`RequestContext` an application already has.
+Revision `2026-07-28` of the [Model Context Protocol](https://modelcontextprotocol.io) is
+stateless: every request carries everything it needs and gets one complete response. That makes an
+MCP server an ordinary route. Tools and resources are declared like a route table, their handlers
+receive the request's own `RequestContext`, and the application's middleware runs in front of
+them.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/mcp
 ```
 
-Handlers receive the `RequestContext` from [`remix`](https://www.npmjs.com/package/remix), tool
-schemas are [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schemas,
-argument validation reports through
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and log enrichment goes through
-[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger). All four install alongside this
-package.
+Handlers receive the `RequestContext` from [`remix`](https://www.npmjs.com/package/remix), and tool
+schemas are [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schemas. The
+package also depends on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and
+[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger).
 
 ## Usage
 
-### Declare A Tool
+### Declare a tool
 
-A tool declaration is the route table: the name a client calls, the prompt a model chooses it
-by, and the schema its arguments satisfy. That one `@sdxc/json-schema` schema is published in
-`tools/list` as [JSON Schema](https://json-schema.org), parses every call, and types the handler.
+A tool's name is what a client calls, its description is what a model chooses it by, and its
+input schema is published in `tools/list`, parses every call, and types the handler.
 
 ```typescript
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { tool, tools } from "@sdxc/mcp";
 
-export default tools({
+export let toolset = tools({
 	searchDocuments: tool("search_documents", {
 		description: "Searches published documents by title, excerpt and tags.",
 		input: s.object({
@@ -46,8 +43,7 @@ export default tools({
 });
 ```
 
-`tools/list` publishes the schema's input side, with `$schema` left out since 2020-12 is MCP's
-default dialect, and named schemas written inline so a model reads one self-contained object:
+`tools/list` publishes the input side as a self-contained JSON Schema object:
 
 ```json
 {
@@ -60,12 +56,17 @@ default dialect, and named schemas written inline so a model reads one self-cont
 }
 ```
 
-### Handle It
+Arguments are parsed the way a model sends them: undeclared properties are dropped, `null` counts
+as absent unless the property is `s.nullable`, defaults are filled in, transforms run, and every
+failed constraint is reported in one answer. Values are taken as sent, so `"20"` fails
+`s.integer()`; use an `@sdxc/json-schema/coerce` schema to accept both.
+
+### Handle it and serve requests
 
 ```typescript
 import { createHandler, ToolError } from "@sdxc/mcp";
 
-import toolset from "./tools.js";
+import { toolset } from "./tools.js";
 
 let mcp = createHandler({
 	name: "documents",
@@ -74,9 +75,7 @@ let mcp = createHandler({
 });
 
 mcp.tools.map(toolset.searchDocuments, async (ctx) => {
-	// ctx.input is what the schema's parse yields: query is string, and limit is number
-	// with the default already applied.
-	let documents = await search(ctx.input.query, ctx.input.limit);
+	let documents = await search(ctx.input.query, ctx.input.limit); // limit: number, defaulted
 	if (documents.length === 0) throw new ToolError("Nothing matched. Try a broader query.");
 	return documents;
 });
@@ -84,42 +83,14 @@ mcp.tools.map(toolset.searchDocuments, async (ctx) => {
 export default { fetch: mcp.fetch };
 ```
 
-A returned string becomes the answer verbatim, and any other value is serialized as JSON. A
-`ToolError` message reaches the model as a result it can act on, so it reads as guidance: what
-was wrong, and what would work instead.
+A returned string is the answer verbatim and any other value is serialized as JSON. A `ToolError`
+message reaches the model as a result it can act on, so write it as guidance. Any other exception
+reaches the model as a generic failure and goes to `onError` in full.
 
-### Group Tools Under One Controller
+### Expose a resource
 
-Grouping is what lets one `map()` call cover several tools under a shared middleware chain. A
-tool's address stays the name it was declared with, wherever it sits in the tree.
-
-```typescript
-import * as s from "@sdxc/json-schema";
-import { tool, tools } from "@sdxc/mcp";
-
-let toolset = tools({
-	documents: tools({
-		list: tool("list_documents", { description: "…", input: s.object({}) }),
-		get: tool("get_document", { description: "…", input: s.object({ slug: s.string() }) }),
-	}),
-});
-
-mcp.tools.map(toolset.documents, {
-	middleware: [requireScope("documents:read")],
-	actions: {
-		list: (ctx) => listDocuments(ctx.get(Database)),
-		get: (ctx) => findDocument(ctx.get(Database), ctx.input.slug), // ctx.input.slug: string
-	},
-});
-```
-
-A controller answers **every** tool in the group it names, so adding a tool to the declaration
-is a type error until it is handled. A nested group needs its own `map()` call.
-
-### Declare A Resource
-
-A resource is addressed by URI, and a URI is a URL — so the pattern is a
-`remix/route-pattern`, the same syntax an application declares routes with.
+A resource is addressed by URI, declared with a `remix/route-pattern`. A tool is chosen by the
+model; a resource is picked by the person or attached by their client.
 
 ```typescript
 import { resource, resources } from "@sdxc/mcp";
@@ -127,88 +98,434 @@ import { resource, resources } from "@sdxc/mcp";
 let resourceset = resources({
 	article: resource("https://example.com/articles/:slug.md", {
 		name: "Article",
-		title: "Published article",
 		description: "A published article, as Markdown.",
 		mimeType: "text/markdown",
 	}),
 });
 
 mcp.resources.map(resourceset.article, {
-	// Optional. Enumerates instances for resources/list.
-	list: async (ctx) => {
-		let articles = await listArticles(ctx.get(Database));
+	async list() {
+		let articles = await listArticles();
 		return articles.map((article) => ({
-			uri: resourceset.article.href({ slug: article.slug }), // typed, never concatenated
+			uri: resourceset.article.href({ slug: article.slug }),
 			name: article.title,
 		}));
 	},
-
-	// Required. null reports the resource as missing.
-	read: async (ctx) => {
-		let article = await findArticle(ctx.get(Database), ctx.variables.slug);
-		return article?.content ?? null;
+	async read(ctx) {
+		let article = await findArticle(ctx.variables.slug); // slug: string
+		return article?.content ?? null; // null reports the resource as missing
 	},
 });
 ```
 
-Tools and resources differ by who reaches for them: a tool is chosen by the _model_, a resource
-is picked by the _person_ or attached by their client, and `resources/list` is what puts a
-corpus in the client's picker. Captures arrive as `ctx.variables`, leaving
-`RequestContext.params` to the route's own params.
+`list` is optional: without it a resource with variables appears only in
+`resources/templates/list`, the right shape for a corpus too large to enumerate. The template
+published there (`https://example.com/articles/{slug}.md`) is derived from the pattern.
 
-### Import Handlers On First Use
+## API
 
-Wrap a handler's module in `lazy()` and a Worker starts without the code behind each tool or
-resource. The module default-exports what `createTool`, `createToolController` or
-`createResource` returns, so the declaration stays typed.
+### `createHandler(options: HandlerOptions): McpHandler`
+
+Builds the handler for one server. Tools and resources list in the order they were mapped.
+
+- `name`, `version`: The server's identity, sent with every result. `title?` adds a display name.
+- `instructions?`: Guidance for the server as a whole, sent with `server/discover` for a client to
+  put in the model's system prompt.
+- `toolMiddleware?`: `ToolMiddleware` wrapping every tool call, outside any group or action
+  middleware.
+- `listTtlMs?`: How long a client may cache a list result. Defaults to `60000`.
+- `cacheScope?`: `"public"` or `"private"`. Defaults to `"private"` once any mapped tool or
+  resource declares `available` or is mapped through `lazy()`, and `"public"` otherwise.
+- `allowedOrigins?`: An origin list or a predicate, checked when a request carries `Origin`.
+  Omitted, any origin is allowed; set it for a server bound to localhost.
+- `onError?(error, { method, tool?, uri? })`: Receives every unexpected exception, including a
+  failed `lazy()` import.
+
+### `mcp.tools.map(tool: Tool, action: ActionOrHandler | Lazy<ActionOrHandler>): void`
+
+Registers one tool with its handler, or an action `{ handler, middleware?, available? }`. Only a
+mapped tool exists; mapping one twice throws.
+
+### `mcp.tools.map(group: ToolGroup, controller: Controller | Lazy<Controller>): void`
+
+Registers every tool in a group with `{ middleware?, actions }`, one action per tool, so a tool
+added to the group is a type error until it is handled. A nested group needs its own `map()`.
+
+### `mcp.resources.map(resource: Resource, action: ResourceAction | Lazy<ResourceAction>): void`
+
+Registers a resource with `read`, and optionally `list` and `available`. A URI matching several
+resources resolves to the most specific pattern; mapping one twice throws.
+
+### `mcp.fetch(input: Request | RequestContext): Promise<Response>`
+
+Answers one MCP request. A `RequestContext` carries what the surrounding middleware provided; a
+bare `Request` gets a fresh context.
+
+### `tool(name: string, definition: ToolDefinition): Tool`
+
+Declares a tool. `name` is 1–128 characters of letters, digits, `_`, `-` and `.`. `definition`
+holds `description`, `input`, and optionally `title`, `output` and `annotations`
+(`readOnlyHint`, `destructiveHint`, `idempotentHint`, `openWorldHint`, `title`). `input` and
+`output` must describe a JSON Schema object, so a root `s.union`, `s.variant` or `s.nullable`
+throws at declaration, as does an invalid name.
+
+### `tools(group: ToolGroup): ToolGroup`
+
+Groups tools and nested groups, returning the tree unchanged. A tool keeps its declared name
+wherever it sits; two tools sharing a name throw.
+
+### `walk(group: ToolGroup): Generator<Tool>`
+
+Yields every tool in a tree, depth first in declaration order.
+
+### `createTool(tool, action)` and `createToolController(group, controller)`
+
+Return their second argument, typed against the declaration, so an implementation in its own file
+keeps `ctx.input` typed from the schema.
+
+### `resource(pattern: string, declaration: ResourceDeclaration): Resource`
+
+Declares a resource. `declaration` holds `name`, and optionally `title`, `description` and
+`mimeType`. The pattern may use static text, `:name` (published as `{name}`) and `*name`
+(published as `{+name}`, which spans `/`). Optionals, search constraints, unnamed wildcards,
+braces and repeated names have no [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) form
+and throw. A custom scheme such as `notes://` works the same as `https://`.
+
+### `resource.href(variables): string`
+
+Builds the resource's URI from its variables, typed by the pattern.
+
+### `resources(group: ResourceGroup): ResourceGroup`
+
+Groups resources, returning the tree unchanged. Two resources sharing a name or a pattern throw.
+
+### `walkResources(group: ResourceGroup): Generator<Resource>`
+
+Yields every resource in a tree, depth first in declaration order.
+
+### `createResource(resource, action)`
+
+Returns `action`, typed against the declaration, so `ctx.variables` stays typed in its own file.
+
+### `lazy(load: () => Promise<{ default: Target }>): Lazy<Target>`
+
+Wraps a dynamic import wherever `map()` takes an implementation. The module loads on the first
+request that needs it, once per isolate; a failed import is retried by the next request.
+
+### `validateArguments(tool: Tool, value: unknown): Result<Input, InvalidArgumentsError>`
+
+Parses an `arguments` object with a tool's input schema, with the rules described under
+[Declare a tool](#declare-a-tool). The handler runs it before middleware; call it to apply the
+same rules elsewhere.
+
+### `contextFor(input: Request | RequestContext): RequestContext`
+
+Returns a `RequestContext` unchanged, or builds one around a bare `Request`.
+
+### Errors
+
+- `ToolError`: Thrown by a handler or middleware; its message reaches the model as a result with
+  `isError`.
+- `ForbiddenError`: Thrown by middleware to refuse a call, reported as JSON-RPC `-32602`.
+- `InvalidArgumentsError`: Arguments failed the schema. `issues` holds one `path: message` entry
+  per failed constraint (`page.size: Expected integer`, `query: Required`).
+
+How each failure reaches the client:
+
+| Situation                                 | Answer                                  | HTTP |
+| ----------------------------------------- | --------------------------------------- | ---- |
+| `ToolError`                               | Result with `isError`, message intact   | 200  |
+| Any other exception in a tool             | Result with `isError`, generic message  | 200  |
+| Unknown or unavailable tool or resource   | `-32602`                                | 200  |
+| Invalid arguments, or `ForbiddenError`    | `-32602`, with `issues` for arguments   | 200  |
+| Read returns `null`                       | `-32602`, with the URI                  | 200  |
+| Exception in a resource read              | `-32603`                                | 200  |
+| Unknown method                            | `-32601`                                | 404  |
+| Header disagrees with body, or is missing | `-32020`                                | 400  |
+| Unsupported protocol version              | `-32022`, with the supported versions   | 400  |
+| Missing `_meta` protocol fields           | `-32602`                                | 400  |
+| Not `POST` / origin refused / not JSON    | `405` / `403` / `415`, no JSON-RPC body | —    |
+
+A notification (a message without `id`) is answered with `202`, and a batched request is refused.
+
+### Protocol constants
+
+- `SUPPORTED_PROTOCOL_VERSIONS`: The revisions this package implements, `["2026-07-28"]`.
+- `LATEST_PROTOCOL_VERSION`: The newest of them.
+- `MetaKey`: The reserved `_meta` keys `ProtocolVersion`, `ClientInfo`, `ClientCapabilities` and
+  `ServerInfo`.
+- `ErrorCode`: The JSON-RPC codes the server answers with, `ParseError` through
+  `UnsupportedProtocolVersion`.
+
+### Context keys
+
+`ToolInput`, `CurrentTool`, `ResourceUri`, `ResourceVariables` and `CurrentResource` hold what
+handlers read as `ctx.input`, `ctx.tool`, `ctx.uri`, `ctx.variables` and `ctx.resource`; read them
+with `ctx.get()` from code typed with a plain `RequestContext`.
+
+### Types
+
+- `ToolContext<Input>`, `ResourceContext<Variables>`: The request's context plus what a tool or
+  resource handler reads. `AnyRequestContext` is a context over any middleware chain, and
+  `ResourceVariableValues` is what a pattern captured.
+- `HandlerOptions`, `McpHandler`, `CacheScope`: What `createHandler` takes and returns.
+- `Tool`, `ToolGroup`, `ToolDefinition`, `ToolDescriptor`, `ToolAnnotations`, `ToolSchema`,
+  `Action`, `ActionOrHandler`, `Controller`, `ToolHandler`, `ToolMiddleware`, `CallToolResult`,
+  `TextContent`: The tool side. `InputOf<typeof tool>` is a tool's parsed input.
+- `Resource`, `ResourceGroup`, `ResourceDeclaration`, `ResourceDescriptor`, `ResourceAction`,
+  `ResourceListing`, `ResourceContents`, `ReadResult`: The resource side. `Routable<Pattern>` is the
+  `https` form a custom-scheme pattern is matched under.
+- `Lazy<Target>`: What `lazy()` returns.
+- `Implementation`, `ClientCapabilities`: A self-reported name and version, and what a client
+  declares it can do.
+
+## Pattern: Mounting On A Router With Its Middleware
+
+Mounted on a route, the router's middleware authenticates every MCP method, `tools/list`
+included, and whatever it provides reaches handlers through `ctx.get()`. With
+[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger)'s `log()` in the chain, the request's
+record gains `mcp.method`, `mcp.protocol_version`, `mcp.tool` with `mcp.is_error`, or
+`mcp.resource` (the pattern, never the URI).
 
 ```typescript
-import { lazy } from "@sdxc/mcp";
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware";
+import { createHandler } from "@sdxc/mcp";
+import { createRouter } from "remix/router";
+import { route } from "remix/routes";
+
+import { requireApiKey } from "./auth.js";
+import { Database, database } from "./database.js";
+import { toolset } from "./tools.js";
+
+let mcp = createHandler({ name: "documents", version: "1.0.0" });
+
+mcp.tools.map(toolset.searchDocuments, (ctx) =>
+	ctx.get(Database).search(ctx.input.query, ctx.input.limit),
+);
+
+let routes = route({ mcp: "/mcp" });
+let router = createRouter({
+	middleware: [log(createLogger({ service: "documents" })), database()],
+});
+
+router.map(routes.mcp, {
+	middleware: [requireApiKey()],
+	handler: (ctx) => mcp.fetch(ctx),
+});
+```
+
+A host without a router builds the context itself, such as a Durable Object providing its own
+storage:
+
+```typescript
+import { DurableObject } from "cloudflare:workers";
+import { RequestContext } from "remix/router";
+
+export class DocumentsServer extends DurableObject {
+	fetch(request: Request) {
+		let ctx = new RequestContext(request);
+		ctx.set(Database, this.database);
+		return mcp.fetch(ctx);
+	}
+}
+```
+
+## Pattern: Grouping Tools Under One Controller
+
+Nest tools in a group to map them together under shared middleware. A tool's address stays its
+declared name.
+
+```typescript
+import * as s from "@sdxc/json-schema";
+import { createHandler, tool, tools } from "@sdxc/mcp";
+
+import { requireScope } from "./auth.js";
+
+let toolset = tools({
+	documents: tools({
+		list: tool("list_documents", { description: "Lists every document.", input: s.object({}) }),
+		get: tool("get_document", {
+			description: "Reads one document in full.",
+			input: s.object({ slug: s.string() }),
+		}),
+	}),
+});
+
+let mcp = createHandler({ name: "documents", version: "1.0.0" });
+
+mcp.tools.map(toolset.documents, {
+	middleware: [requireScope("documents:read")],
+	actions: {
+		list: () => listDocuments(),
+		get: (ctx) => findDocument(ctx.input.slug), // slug: string
+	},
+});
+```
+
+## Pattern: One File Per Handler, Imported On First Use
+
+`createTool`, `createToolController` and `createResource` keep a handler typed in its own module,
+and `lazy()` defers that module until a request needs it, so a Worker starts without the code for
+every tool.
+
+```typescript
+// tools/search-documents.ts
+import { createTool } from "@sdxc/mcp";
+
+import { toolset } from "../tools.js";
+
+export default createTool(toolset.searchDocuments, (ctx) => search(ctx.input.query));
+```
+
+```typescript
+// resources/article.ts
+import { createResource } from "@sdxc/mcp";
+
+import { resourceset } from "../resources.js";
+
+export default createResource(resourceset.article, {
+	read: (ctx) => findArticleContent(ctx.variables.slug),
+});
+```
+
+```typescript
+// server.ts
+import { createHandler, lazy } from "@sdxc/mcp";
+
+import { resourceset } from "./resources.js";
+import { toolset } from "./tools.js";
+
+let mcp = createHandler({ name: "documents", version: "1.0.0", cacheScope: "public" });
 
 mcp.tools.map(
-	toolset.searchPosts,
-	lazy(() => import("./tools/search-posts")),
+	toolset.searchDocuments,
+	lazy(() => import("./tools/search-documents.js")),
 );
 mcp.tools.map(
 	toolset.documents,
-	lazy(() => import("./tools/documents")),
+	lazy(() => import("./tools/documents.js")),
 );
 mcp.resources.map(
 	resourceset.article,
-	lazy(() => import("./resources/article")),
+	lazy(() => import("./resources/article.js")),
 );
 ```
 
-A module imports once per isolate, and requests arriving together share that import. A group's
-controller is one module, so its tools share one load. A failed import answers that request as
-an unexpected failure, reaches `onError`, and is retried by the next request.
+`tools/call` and `resources/read` import only the module they reach. Lists import every module,
+since `available` and `list` live there. A lazy handler makes lists `"private"` by default; set
+`cacheScope: "public"` when no handler declares `available`.
 
-A request imports only what its answer depends on. `tools/call` and `resources/read` import the
-one handler they reach; an unknown tool or URI imports nothing. Because `available` and `list`
-live in the module, `tools/list`, `resources/list` and `resources/templates/list` import every
-module they must ask. A list that includes a lazy handler is `"private"` by default, since its
-visibility is unknown until it loads; set `cacheScope` to override.
+## Pattern: Hiding A Tool From A Caller
 
-## Resource URIs
+A tool whose `available` returns `false` is absent from `tools/list` and answered as unknown by
+`tools/call`, so a read-only credential never learns a write tool exists. Middleware enforces the
+same rule on the call itself, for a client working from a stale list.
 
-The RFC 6570 template MCP publishes is derived from the pattern, so there is no second
-declaration to keep in step: `:name` becomes `{name}`, and `*name` becomes `{+name}`, whose
-reserved expansion is what allows the `/` a wildcard matches.
+```typescript
+import type { ToolMiddleware } from "@sdxc/mcp";
 
-`resource()` converts the pattern at declaration and throws when it cannot. Optionals
-(`(.:ext)`), search constraints (`?draft=1`), unnamed wildcards (`*`), braces and repeated
-capture names have no [RFC 6570](https://datatracker.ietf.org/doc/html/rfc6570) equivalent.
-Refusing early beats publishing a template a client would expand into a URI this server never
-matches; a resource needing an optional segment is two resources.
+import { ForbiddenError } from "@sdxc/mcp";
 
-A scheme of the server's own — `notes://`, `db://` — declares and matches the same way,
-and is what addresses content a client cannot fetch for itself, where a URI is an identity
-rather than a fetchable address. Prefer `https://` only when the client can fetch the
-resource; otherwise every read goes through `resources/read` anyway. Such a scheme travels
-as the host of an `https` address while a URI is matched, so a server declaring both
-`notes://` and `https://notes/` would address one declaration twice.
+import { ApiKey } from "./auth.js";
 
-Which list a declaration lands in follows from the declaration itself:
+function requireScope(scope: string): ToolMiddleware {
+	return (ctx, next) => {
+		if (!ctx.get(ApiKey).scopes.includes(scope)) throw new ForbiddenError(`Requires ${scope}`);
+		return next();
+	};
+}
+
+mcp.tools.map(toolset.documents.create, {
+	available: (ctx) => ctx.get(ApiKey).scopes.includes("documents:write"),
+	middleware: [requireScope("documents:write")],
+	handler: (ctx) => createDocument(ctx.input),
+});
+```
+
+`ResourceAction` takes the same `available`: a hidden resource leaves every list and reads as not
+found. Declaring `available` anywhere makes lists `"private"` by default.
+
+## Pattern: Metering And Guarding Calls With Tool Middleware
+
+Tool middleware receives the call's `CallToolResult` from `next()`, so it can record an outcome.
+It runs after arguments are validated, in three layers: `toolMiddleware` on the handler, a
+controller's `middleware`, then an action's. Type `ctx.input` with `InputOf` only where the
+middleware reads it.
+
+```typescript
+import type { InputOf, ToolMiddleware } from "@sdxc/mcp";
+
+import { createHandler, ToolError } from "@sdxc/mcp";
+
+import { ApiKey } from "./auth.js";
+import { toolset } from "./tools.js";
+
+let meterUsage: ToolMiddleware = async (ctx, next) => {
+	let result = await next();
+	if (!result.isError) await recordUsage(ctx.get(ApiKey).teamId, ctx.tool.name);
+	return result;
+};
+
+function requireOwnDocument(): ToolMiddleware<InputOf<typeof toolset.documents.get>> {
+	return async (ctx, next) => {
+		let document = await findDocument(ctx.input.slug);
+		if (document?.teamId !== ctx.get(ApiKey).teamId) throw new ToolError("No such document.");
+		return next();
+	};
+}
+
+let mcp = createHandler({ name: "documents", version: "1.0.0", toolMiddleware: [meterUsage] });
+
+mcp.tools.map(toolset.documents.get, {
+	middleware: [requireOwnDocument()],
+	handler: (ctx) => findDocument(ctx.input.slug),
+});
+```
+
+## Pattern: Structured Results And Unexpected Failures
+
+Declaring `output` publishes an `outputSchema`, and the handler's return value is then sent as
+`structuredContent` as well as JSON text. `onError` receives what the model never sees.
+
+```typescript
+import * as s from "@sdxc/json-schema";
+import { createHandler, tool, ToolError } from "@sdxc/mcp";
+
+let getWeather = tool("get_weather", {
+	description: "Current conditions for a city.",
+	input: s.object({ city: s.string() }),
+	output: s.object({ celsius: s.number(), summary: s.string() }),
+	annotations: { readOnlyHint: true, openWorldHint: true },
+});
+
+let mcp = createHandler({
+	name: "weather",
+	version: "1.0.0",
+	onError(error, { method, tool }) {
+		reportException(error, { method, tool });
+	},
+});
+
+mcp.tools.map(getWeather, async (ctx) => {
+	let response = await fetch(
+		`https://weather.example.com/v1/${encodeURIComponent(ctx.input.city)}`,
+	);
+	if (response.status === 404)
+		throw new ToolError(`Unknown city ${ctx.input.city}. Try a nearby one.`);
+	if (!response.ok) throw new Error(`Weather upstream answered ${response.status}`);
+	let body = await response.json();
+	return { celsius: body.temp_c, summary: body.condition };
+});
+```
+
+The 404 reaches the model as guidance it can act on; the upstream failure reaches `onError`, while
+the model reads only that `get_weather` failed.
+
+## Pattern: Resources Under A Scheme Of Your Own
+
+A custom scheme addresses content a client cannot fetch itself. Which list a resource appears in
+follows from its declaration:
 
 | Declaration                    | `resources/list`         | `resources/templates/list` |
 | ------------------------------ | ------------------------ | -------------------------- |
@@ -216,367 +533,41 @@ Which list a declaration lands in follows from the declaration itself:
 | Captures variables, no `list`  | —                        | yes                        |
 | Captures nothing               | itself                   | —                          |
 
-A read has no `isError` channel: MCP gives it only JSON-RPC errors, so returning `null` is
-`-32602` carrying the URI, and any exception is `-32603` plus `onError`. `null` rather than an
-empty array, which the specification reserves for a resource that exists with nothing to show.
-
-## Argument Handling
-
-Arguments are parsed with the tool's own schema, following `remix/data-schema` semantics, and
-the handler receives what the parse yields. Arguments are filled in by a language model, so the
-parse is shaped around what a model actually sends:
-
-- An **undeclared property is dropped**, not refused, as `s.object` strips unknown keys by
-  default. A model that invents an argument has still asked for something the tool can do.
-- **`null` counts as absent** for a property whose schema has no `null` in it. Models spell an
-  omitted optional as `null` constantly, and treating it as a type error refuses a call that
-  was perfectly clear. A property declared with `s.nullable` receives the `null`.
-- A **`s.defaulted` value is substituted**, and the parsed type marks that property present —
-  so a handler reads `ctx.input.limit` rather than `ctx.input.limit ?? 20`, which would restate
-  the default the schema already declares.
-- **Every constraint is checked** before answering, so a caller that got two arguments wrong
-  learns about both in one round trip. A missing required argument reads `Required`.
-- Values are taken as sent: `"20"` is not `20` under `s.integer()`. A model that sent a string
-  for a number misread the schema, and quietly accepting it hides that from the next call. An
-  `@sdxc/json-schema/coerce` schema accepts both, and publishes that it does.
-- **Transforms run**, so `ctx.input` holds the schema's output: a `.transform()` that decodes
-  an id hands the handler the decoded value.
-
-Validation runs before tool middleware, which is what lets middleware read `ctx.input` as a
-typed value.
-
-A schema's JSON Schema must be `type: "object"` at its root, as MCP requires, so `tool()` throws
-at declaration for a root `s.union`, `s.variant` or `s.nullable`. Inside the object, anything
-`@sdxc/json-schema` describes is allowed; keeping arguments to scalars, enums and arrays is what
-makes a schema easiest for a model to satisfy, and four clearly named tools beat one tool with a
-union argument.
-
-## Where Each Kind Of Failure Is Reported
-
-MCP reports two categories in two places, and putting one in the other is the mistake worth
-avoiding: a JSON-RPC error never reaches the model, so a failure it could act on disappears,
-while a tool result the model reads is the wrong home for a stack trace.
-
-| Situation                            | Reported as                             | HTTP | The model sees        |
-| ------------------------------------ | --------------------------------------- | ---- | --------------------- |
-| Unknown RPC method                   | `-32601`                                | 404  | Nothing               |
-| Unknown tool, or one `available` hid | `-32602`                                | 200  | Nothing               |
-| Arguments fail the schema            | `-32602`, with every failed constraint  | 200  | Nothing               |
-| `ForbiddenError` from middleware     | `-32602`                                | 200  | Nothing               |
-| `ToolError` from a handler           | Result with `isError`, message intact   | 200  | The message, verbatim |
-| Any other exception                  | Result with `isError`, message replaced | 200  | That the tool failed  |
-| Header disagrees with body           | `-32020`                                | 400  | Nothing               |
-| Unsupported protocol version         | `-32022`, listing supported             | 400  | Nothing               |
-| Missing `_meta` protocol fields      | `-32602`                                | 400  | Nothing               |
-
-`ToolError`'s message is the one written for a model. Every other exception was written for an
-operator and may carry a query fragment or an upstream URL, so only `onError` receives it.
-
-Below the message layer, a request that is not a `POST` is answered with `405`, a disallowed
-`Origin` with `403`, a body that is not declared `application/json` with `415`, and a
-notification — a message with no `id` — with `202`.
-
-`SUPPORTED_PROTOCOL_VERSIONS` lists what this package speaks: `2026-07-28` only, so a request
-naming any other version is refused with the supported list, which is how a client is told to
-retry rather than to fall back. Batched requests are refused, since this revision removed them.
-The surface is tools and resources, and `capabilities` advertises only what is actually mapped.
-
-## API
-
-### `createHandler(options: HandlerOptions): McpHandler`
-
-Builds the handler for one server. Tools and resources register in insertion order, so every
-list stays deterministic for whatever cache a client keeps of it.
-
-- `name`: Stable identifier for this server.
-- `title?`: Human-readable name for a client that renders one.
-- `version`: This server's own version, independent of the protocol revision.
-- `instructions?`: How to use the server as a whole, delivered with `server/discover` for a
-  client to put in the model's system prompt.
-- `toolMiddleware?`: Middleware wrapping every tool call, before any group or action
-  middleware.
-- `listTtlMs?`: How long a client may cache a list result. Defaults to `60000`.
-- `cacheScope?`: `"public"` or `"private"`. Defaults to `"private"` once any tool or resource
-  declares `available`, since such a list varies by credential.
-- `allowedOrigins?`: A list of origins or a predicate, checked when a request carries `Origin`.
-  Omitting it allows any origin.
-- `onError?`: Receives an exception a handler did not expect, along with the method, tool and
-  URI, while the caller receives only a generic failure.
-
-### `mcp.tools.map(tool: Tool, action: ActionOrHandler): void`
-
-Binds a handler to one tool, or an action object carrying that tool's own `middleware` and
-`available`. Mapping is what registers a tool: only a mapped tool exists, the same way only a
-mapped route is served. Mapping the same tool twice throws.
-
-### `mcp.tools.map(group: ToolGroup, controller: Controller): void`
-
-Binds one action per tool in a group, under the controller's shared `middleware`. A nested
-group typed as an action is a type error, and throws at map time.
-
-### `mcp.resources.map(resource: Resource, action: ResourceAction): void`
-
-Binds `read`, and optionally `list` and `available`, to one resource. Every pattern joins one
-matcher, so a URI matching more than one resource resolves to the most specific match.
-
-### `lazy(load: () => Promise<{ default: Target }>): Lazy<Target>`
-
-Wraps a dynamic import so `mcp.tools.map` and `mcp.resources.map` accept it wherever they take
-an implementation. The import runs on the first request that needs the module, once per isolate.
-
-### `mcp.fetch(input: Request | RequestContext): Promise<Response>`
-
-Answers one MCP request. Pass the `RequestContext` when there is one, so handlers read what the
-surrounding middleware provided; pass a bare `Request` and one is built.
-
-### `tool(name: string, definition: ToolDefinition): Tool`
-
-Declares one tool. `name` is limited to the 1–128 characters MCP allows — letters, digits, `_`,
-`-` and `.` — and anything else throws at declaration rather than failing a call later.
-`definition` carries `description`, `input`, and optionally `title`, `output` and
-`annotations`. `input` and `output` are `@sdxc/json-schema` schemas whose parse yields an
-object; `tools/list` publishes the input side of `input` and the output side of `output`, and a
-schema whose JSON Schema is missing or is not an object throws at declaration.
-
-### `tools(group: ToolGroup): ToolGroup`
-
-Groups declared tools and nested groups, returning the tree unchanged. Two tools sharing a name
-throw, since one of them would be permanently unreachable.
-
-### `walk(group: ToolGroup): Generator<Tool>`
-
-Yields every tool in a declaration tree, depth first in declaration order.
-
-### `createTool(tool: Tool, action: ActionOrHandler): ActionOrHandler`
-
-Types one tool's implementation against its declaration so it can live in its own file. A type
-anchor at runtime: it returns what it was given, and `ctx.input` stays typed from the schema.
-
-### `createToolController(group: ToolGroup, controller: Controller): Controller`
-
-The same for a whole group, requiring one action per tool the group declares.
-
-### `resource(pattern: string, declaration: ResourceDeclaration): Resource`
-
-Declares one resource from a `remix/route-pattern` source. `declaration` carries `name`, and
-optionally `title`, `description` and `mimeType`. A pattern RFC 6570 cannot express throws; see
-[Resource URIs](#resource-uris).
-
-### `resource.href(...args): string`
-
-Builds this resource's URI from its variables, typed by the declared pattern, so a listing
-never concatenates one by hand.
-
-### `resources(group: ResourceGroup): ResourceGroup`
-
-Groups declared resources, returning the tree unchanged. Two resources sharing a name or a
-pattern throw.
-
-### `walkResources(group: ResourceGroup): Generator<Resource>`
-
-Yields every resource in a declaration tree, depth first in declaration order.
-
-### `createResource(resource: Resource, action: ResourceAction): ResourceAction`
-
-Types one resource's `list` and `read` against its declaration, so they can live in their own
-file with `ctx.variables` typed from the pattern.
-
-### `validateArguments(tool: Tool, value: unknown): Result<InferOutput<Schema>, InvalidArgumentsError>`
-
-Parses a `tools/call` arguments object with a tool's input schema, following the rules in
-[Argument Handling](#argument-handling). The handler runs this for you; call it directly to
-apply the same rules somewhere else.
-
-### `contextFor(input: Request | RequestContext): RequestContext`
-
-Returns a `RequestContext` unchanged, or builds one around a bare `Request`. This is what lets
-`fetch` accept either.
-
-### Errors
-
-#### `ToolError`
-
-A tool ran and could not do what was asked. Its message reaches the model verbatim, as a result
-carrying `isError`.
-
-#### `ForbiddenError`
-
-A tool call is not permitted for this caller, reported as `-32602`. Reaching it means a call
-got past the `available` predicate meant to hide the tool — the backstop for a client working
-from a stale list.
-
-#### `InvalidArgumentsError`
-
-Arguments did not satisfy a tool's declared schema. Its `issues` array holds one entry per
-failed constraint, each naming the property path it applies to (`page.size: Expected integer`,
-`tags[1]: Expected string`, `(root): Expected object`).
-
-### Protocol Constants
-
-#### `SUPPORTED_PROTOCOL_VERSIONS`
-
-The revisions this package implements, newest first. A refusal carries this list.
-
-#### `LATEST_PROTOCOL_VERSION`
-
-The revision a server announces when it has to name one.
-
-#### `MetaKey`
-
-The `_meta` keys this revision reserves: `ProtocolVersion`, `ClientInfo`, `ClientCapabilities`
-and `ServerInfo`.
-
-#### `ErrorCode`
-
-The JSON-RPC codes this server answers with, from `ParseError` through
-`UnsupportedProtocolVersion`.
-
-### Context Keys
-
-`ToolInput`, `CurrentTool`, `ResourceUri`, `ResourceVariables` and `CurrentResource` are the
-keys the dispatcher publishes `ctx.input`, `ctx.tool`, `ctx.uri`, `ctx.variables` and
-`ctx.resource` through. Read them with `ctx.get()` from code holding only a plain
-`RequestContext`.
-
-### Types
-
-- `ToolContext<Input>` and `ResourceContext<Variables>` — a `RequestContext` plus what a tool or
-  resource handler reads off it. `AnyRequestContext` is the context generic over any middleware
-  chain, and `ResourceVariableValues` is what a pattern captured.
-- `HandlerOptions`, `McpHandler` and `CacheScope` — what `createHandler` takes and returns.
-- `Tool`, `ToolGroup`, `ToolDefinition`, `ToolDescriptor`, `ToolAnnotations`, `Action`,
-  `ActionOrHandler`, `Controller`, `ToolHandler`, `ToolMiddleware`, `CallToolResult`,
-  `TextContent` and `InputOf` — the tool side. `InputOf` is the parsed output of a tool's
-  input schema.
-- `ToolSchema` — what `input` and `output` accept: an `@sdxc/json-schema` schema whose parse
-  yields an object.
-- `Resource`, `ResourceGroup`, `ResourceDeclaration`, `ResourceDescriptor`, `ResourceAction`,
-  `ResourceListing`, `ResourceContents` and `ReadResult` — the resource side.
-- `Implementation` and `ClientCapabilities` — a self-reported name and version, and what a
-  client declares it can do.
-
-## Pattern: Mounting On Any Host
-
-`fetch` takes a `RequestContext` or a bare `Request`, which covers every host. Mounted on a
-route, everything the application's middleware provides reaches tools and resources:
-
 ```typescript
-import { createHandler } from "@sdxc/mcp";
+import { createHandler, resource, resources } from "@sdxc/mcp";
 
-let mcp = createHandler({ name: "documents", version: "1.0.0" });
+let resourceset = resources({
+	index: resource("notes://index", { name: "Index", mimeType: "text/markdown" }),
+	note: resource("notes://:folder/*path", { name: "Note", mimeType: "text/markdown" }),
+	attachment: resource("notes://attachments/:id", { name: "Attachment" }),
+});
 
-router.map(routes.mcp, {
-	middleware: [requireApiKey()], // an ordinary remix middleware
-	handler: (ctx) => mcp.fetch(ctx),
+let mcp = createHandler({ name: "notes", version: "1.0.0" });
+
+mcp.resources.map(resourceset.index, { read: () => renderIndex() });
+
+mcp.resources.map(resourceset.note, {
+	async list() {
+		let notes = await listNotes();
+		return notes.map((note) => ({
+			uri: resourceset.note.href({ folder: note.folder, path: note.path }), // notes://work/a/b.md
+			name: note.title,
+		}));
+	},
+	read: (ctx) => readNote(ctx.variables.folder, ctx.variables.path),
+});
+
+mcp.resources.map(resourceset.attachment, {
+	async read(ctx) {
+		let file = await findAttachment(ctx.variables.id);
+		if (file === null) return null;
+		return [{ mimeType: file.type, blob: file.base64 }];
+	},
 });
 ```
 
-Request middleware is the router's own — authentication, logging, providing a database, none of
-it MCP-specific — and it runs for every method, which is what authentication needs:
-`tools/list` must be authenticated too, since the list a caller sees depends on the credential.
-
-A host with no middleware of its own passes the request straight through, and one with values
-to provide builds the context itself:
-
-```typescript
-import { RequestContext } from "remix/router";
-
-// A Worker, with nothing to provide.
-export default { fetch: mcp.fetch };
-
-// A Durable Object, providing its own values.
-export class DocumentsMcp extends DurableObject {
-	fetch(request: Request) {
-		let ctx = new RequestContext(request);
-		ctx.set(Database, this.db);
-		return mcp.fetch(ctx);
-	}
-}
-```
-
-## Pattern: Hiding A Tool From A Caller
-
-`available` decides whether a tool exists for this caller. One it refuses is absent from
-`tools/list` **and** reported by `tools/call` as an unknown tool, so a read-only credential
-never learns that a write tool is there:
-
-```typescript
-mcp.tools.map(toolset.documents.create, {
-	available: (ctx) => ctx.get(ApiKey).scopes.includes("documents:write"),
-	middleware: [requireScope("documents:write")],
-	handler: (ctx) => createDocument(ctx.get(Database), ctx.input),
-});
-```
-
-The scope appears twice because middleware only runs on a call, while `tools/list` needs an
-answer before any call happens: once to hide the tool, once to enforce it. Declaring any
-`available` also flips the list's `cacheScope` to `private`, since a list that varies by
-credential must not be held by a shared intermediary. Resources take the same predicate, with
-the same effect on their lists and reads.
-
-## Pattern: Metering A Tool Call
-
-Tool middleware is this package's own, because a tool call is not an HTTP request and its
-answer is not a `Response` — a middleware that meters or logs an outcome needs the result:
-
-```typescript
-import type { ToolMiddleware } from "@sdxc/mcp";
-
-export function meterUsage(): ToolMiddleware {
-	return async (ctx, next) => {
-		let result = await next();
-		if (!result.isError) await recordUsage(ctx.get(ApiKey).teamId, ctx.tool.name);
-		return result;
-	};
-}
-```
-
-It attaches at three levels, innermost last: `createHandler({ toolMiddleware })` wraps every
-call, a controller's `middleware` wraps that group's calls, and an action's `middleware` wraps
-one tool's.
-
-`ToolMiddleware`'s input type is erased by default, and because parameters are contravariant a
-middleware written that way is assignable anywhere. Name a tool's input only when the middleware
-reads it:
-
-```typescript
-import type { InputOf, ToolMiddleware } from "@sdxc/mcp";
-
-import { ToolError } from "@sdxc/mcp";
-
-function requireOwnDocument(): ToolMiddleware<InputOf<typeof toolset.documents.get>> {
-	return async (ctx, next) => {
-		let document = await findDocument(ctx.get(Database), ctx.input.slug); // typed
-		if (document?.teamId !== ctx.get(ApiKey).teamId) throw new ToolError("No such document.");
-		return next();
-	};
-}
-```
-
-## Pattern: Enriching The Request Log
-
-The handler writes into the request's own log, so the record a request already emits gains what
-only the handler knows:
-
-| Method                  | Fields                                                               |
-| ----------------------- | -------------------------------------------------------------------- |
-| Every method            | `mcp.method`, `mcp.protocol_version`                                 |
-| `tools/call`            | `mcp.tool`, and `mcp.is_error` once there is a result                |
-| `resources/read`        | `mcp.resource` — the matched pattern                                 |
-| An unexpected exception | `outcome: "error"` with the error's fields, in addition to `onError` |
-
-`mcp.is_error` is `true` for a `ToolError` result, for refused arguments, for a
-`ForbiddenError`, and for an unexpected exception, so one filter finds every call the model did
-not get a clean answer to. Only the last of those fails the log — a `ToolError` is the tool
-answering as designed.
-
-`mcp.resource` records the pattern (`https://example.com/articles/:slug.md`), never the URI: the
-URI carries the slug, and a field with one value per document grows the index forever.
-
-The enrichment goes through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger)'s
-`currentLog()`, so it reaches a bare Worker or a Durable Object that opened a log around its own
-`fetch` just as it reaches a router with `log()` in its chain. A host with no log open is served
-the same, with nothing recorded.
+A read returns a string as text, a `Uint8Array` as a Base64 blob, or a `ResourceContents[]`;
+`null` reports the resource as missing.
 
 ## Versioning
 
