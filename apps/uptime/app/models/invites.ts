@@ -11,7 +11,7 @@ import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { isNull } from "remix/data-table";
 
 import { invites } from "~/database/schema";

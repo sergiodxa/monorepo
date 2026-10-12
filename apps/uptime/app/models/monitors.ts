@@ -15,7 +15,7 @@ import { createModel } from "@sdxc/data-model";
 import { endOfMonth, startOfDay, startOfMonth, toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { inList, notNull } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";

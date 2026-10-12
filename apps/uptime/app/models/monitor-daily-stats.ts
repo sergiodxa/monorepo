@@ -12,7 +12,7 @@ import type { ModelRow } from "@sdxc/data-model";
 import { createModel } from "@sdxc/data-model";
 import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { gte } from "remix/data-table";
 
 import { monitorDailyStats } from "~/database/schema";

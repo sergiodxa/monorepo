@@ -68,7 +68,7 @@ import {
 	Text,
 	TextField,
 } from "@sdxc/ui";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 import { Session } from "remix/session";

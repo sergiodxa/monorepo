@@ -13,7 +13,7 @@ import type { ModelContext, ModelRow } from "@sdxc/data-model";
 import { createModel } from "@sdxc/data-model";
 import { systemRandom } from "@sdxc/random";
 import { isUUID } from "@sdxc/uuid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { inList } from "remix/data-table";
 
 import type { MembershipRole } from "~/app/models/memberships";

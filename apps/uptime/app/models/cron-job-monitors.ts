@@ -12,7 +12,7 @@ import type { ModelRow } from "@sdxc/data-model";
 import { Schedule } from "@sdxc/cron";
 import { createModel } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { inList, notNull } from "remix/data-table";
 
 import { cronJobMonitors } from "~/database/schema";

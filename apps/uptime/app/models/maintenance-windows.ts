@@ -16,7 +16,7 @@ import { calendarDayAt, DAY_MS, weekdayOf } from "@sdxc/dates/zone";
 import { utc } from "@sdxc/icalendar";
 import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import type { MonitorScopeType } from "~/app/services/monitor-scope";
 import type { SelectMaintenanceWindow } from "~/database/schema";

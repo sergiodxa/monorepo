@@ -11,7 +11,7 @@ import type { ModelRow } from "@sdxc/data-model";
 import type { Database } from "remix/data-table";
 
 import { createModel } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { and, eq, getTableName, inList } from "remix/data-table";
 
 import type { DnsRecordState, SelectDnsMonitorRecord } from "~/database/schema";

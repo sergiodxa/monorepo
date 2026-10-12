@@ -12,7 +12,7 @@ import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel, NotFound } from "@sdxc/data-model";
 import { failure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import type { SelectTeam } from "~/database/schema";
 

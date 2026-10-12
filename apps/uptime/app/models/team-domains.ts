@@ -10,7 +10,7 @@
 import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { inList, isNull, notNull } from "remix/data-table";
 
 import jobs from "~/app/jobs";

@@ -15,7 +15,7 @@ import { randomToken } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { startOfDay, toDayKey } from "@sdxc/dates";
 import { failure, success } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { getTableName } from "remix/data-table";
 
 import type { BatchedSweepResult } from "~/app/services/retention";
