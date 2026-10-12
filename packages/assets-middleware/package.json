@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/assets-middleware",
+	"version": "0.0.1",
+	"description": "Router middleware that resolves a document's stylesheets and client entry once per request and publishes them on the request context as ctx.assets",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pitlane/assets": "0.1.0",
+		"remix": "3.0.0"
+	}
+}

@@ -180,34 +180,35 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
 ### HTTP, APIs and Routing
 
-| Package                                                               | Description                                                                                                       |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| [@sdxc/api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                                                       |
-| [@sdxc/bracket-params](packages/bracket-params)                       | Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema             |
-| [@sdxc/catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response                                      |
-| [@sdxc/digest-fields](packages/digest-fields)                         | RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header                                          |
-| [@sdxc/doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      |
-| [@sdxc/get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                                              |
-| [@sdxc/http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                           |
-| [@sdxc/http-signatures](packages/http-signatures)                     | Sign and verify HTTP requests with RFC 9421 message signatures or draft-cavage-12                                 |
-| [@sdxc/idempotency](packages/idempotency)                             | Idempotency-Key requests: replay the first response, refuse conflicting reuse                                     |
-| [@sdxc/ip](packages/ip)                                               | IPv4 and IPv6 addresses and ranges as value objects that classify against the IANA special-purpose registries     |
-| [@sdxc/lazy-route](packages/lazy-route)                               | Maps a route to a module imported on the first request that reaches it                                            |
-| [@sdxc/location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                                         |
-| [@sdxc/mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                                                        |
-| [@sdxc/merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                          |
-| [@sdxc/no-www-middleware](packages/no-www-middleware)                 | Router middleware that permanently redirects a `www.` hostname to the apex domain                                 |
-| [@sdxc/openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                |
-| [@sdxc/pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    |
-| [@sdxc/problem](packages/problem)                                     | RFC 9457 problem details and catalogs of an API's problem types                                                   |
-| [@sdxc/rdap](packages/rdap)                                           | Domain registration data over RDAP: expiry, status, registrar and nameservers from the registry                   |
-| [@sdxc/response](packages/response)                                   | Response builders for JSON APIs and redirects                                                                     |
-| [@sdxc/server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                                           |
-| [@sdxc/structured-fields](packages/structured-fields)                 | Parse and serialize RFC 9651 structured HTTP field values                                                         |
-| [@sdxc/trace-context](packages/trace-context)                         | W3C Trace Context: traceparent and tracestate, one trace per invocation, propagated to jobs and outbound requests |
-| [@sdxc/trailing-slash-middleware](packages/trailing-slash-middleware) | Router middleware that redirects every path to one canonical trailing-slash form                                  |
-| [@sdxc/user-agent](packages/user-agent)                               | Read a User-Agent string into its browser, engine, operating system and device                                    |
-| [@sdxc/webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                                                         |
+| Package                                                               | Description                                                                                                                                        |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [@sdxc/api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                                                                                        |
+| [@sdxc/assets-middleware](packages/assets-middleware)                 | Router middleware that resolves a document's stylesheets and client entry once per request and publishes them on the request context as ctx.assets |
+| [@sdxc/bracket-params](packages/bracket-params)                       | Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema                                              |
+| [@sdxc/catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response                                                                       |
+| [@sdxc/digest-fields](packages/digest-fields)                         | RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header                                                                           |
+| [@sdxc/doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                                                       |
+| [@sdxc/get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                                                                               |
+| [@sdxc/http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                                                            |
+| [@sdxc/http-signatures](packages/http-signatures)                     | Sign and verify HTTP requests with RFC 9421 message signatures or draft-cavage-12                                                                  |
+| [@sdxc/idempotency](packages/idempotency)                             | Idempotency-Key requests: replay the first response, refuse conflicting reuse                                                                      |
+| [@sdxc/ip](packages/ip)                                               | IPv4 and IPv6 addresses and ranges as value objects that classify against the IANA special-purpose registries                                      |
+| [@sdxc/lazy-route](packages/lazy-route)                               | Maps a route to a module imported on the first request that reaches it                                                                             |
+| [@sdxc/location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                                                                          |
+| [@sdxc/mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                                                                                         |
+| [@sdxc/merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                                                           |
+| [@sdxc/no-www-middleware](packages/no-www-middleware)                 | Router middleware that permanently redirects a `www.` hostname to the apex domain                                                                  |
+| [@sdxc/openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                                                 |
+| [@sdxc/pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                                                     |
+| [@sdxc/problem](packages/problem)                                     | RFC 9457 problem details and catalogs of an API's problem types                                                                                    |
+| [@sdxc/rdap](packages/rdap)                                           | Domain registration data over RDAP: expiry, status, registrar and nameservers from the registry                                                    |
+| [@sdxc/response](packages/response)                                   | Response builders for JSON APIs and redirects                                                                                                      |
+| [@sdxc/server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                                                                            |
+| [@sdxc/structured-fields](packages/structured-fields)                 | Parse and serialize RFC 9651 structured HTTP field values                                                                                          |
+| [@sdxc/trace-context](packages/trace-context)                         | W3C Trace Context: traceparent and tracestate, one trace per invocation, propagated to jobs and outbound requests                                  |
+| [@sdxc/trailing-slash-middleware](packages/trailing-slash-middleware) | Router middleware that redirects every path to one canonical trailing-slash form                                                                   |
+| [@sdxc/user-agent](packages/user-agent)                               | Read a User-Agent string into its browser, engine, operating system and device                                                                     |
+| [@sdxc/webhooks](packages/webhooks)                                   | Standard Webhooks signing, verification and replay guards                                                                                          |
 
 ### Jobs, Messaging and Product Infrastructure
 

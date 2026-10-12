@@ -26,6 +26,7 @@
       "name": "@apps/auth-saas",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/backoff": "workspace:*",
         "@sdxc/billing": "workspace:*",
@@ -96,6 +97,7 @@
       "dependencies": {
         "@pitlane/assets": "0.1.0",
         "@sdxc/activitypub": "workspace:*",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/atom": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/backoff": "workspace:*",
@@ -166,6 +168,7 @@
       "name": "@apps/books",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/attribution": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/crypto": "workspace:*",
@@ -200,6 +203,7 @@
       "name": "@apps/demo",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/data-model": "workspace:*",
@@ -251,6 +255,7 @@
       "name": "@apps/r3-auth",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/authz": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/crypto": "workspace:*",
@@ -294,6 +299,7 @@
       "name": "@apps/reader",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/attribution": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/authz": "workspace:*",
@@ -359,6 +365,7 @@
         "@pitlane/assets": "0.1.0",
         "@remix-run/ui": "0.12.1",
         "@sdxc/api-client": "workspace:*",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/cache": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/dates": "workspace:*",
@@ -394,6 +401,7 @@
       "name": "@apps/uptime",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+        "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/attribution": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/backoff": "workspace:*",
@@ -497,6 +505,14 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/trace-context": "workspace:*",
+      },
+    },
+    "packages/assets-middleware": {
+      "name": "@sdxc/assets-middleware",
+      "version": "0.0.1",
+      "dependencies": {
+        "@pitlane/assets": "0.1.0",
+        "remix": "3.0.0",
       },
     },
     "packages/atom": {
@@ -2286,6 +2302,8 @@
     "@sdxc/activitypub": ["@sdxc/activitypub@workspace:packages/activitypub"],
 
     "@sdxc/api-client": ["@sdxc/api-client@workspace:packages/api-client"],
+
+    "@sdxc/assets-middleware": ["@sdxc/assets-middleware@workspace:packages/assets-middleware"],
 
     "@sdxc/atom": ["@sdxc/atom@workspace:packages/atom"],
 

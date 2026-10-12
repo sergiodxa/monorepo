@@ -61,7 +61,6 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
 | handles an HTTP request                                                                                                 | `app/http/controllers/`                                            |
 | is HTTP middleware                                                                                                      | `app/http/middleware/`                                             |
 | validates request input                                                                                                 | `app/http/validators/`                                             |
-| wraps the request's renderer                                                                                            | `app/http/render.tsx`                                              |
 | is a background job                                                                                                     | `app/jobs/`                                                        |
 | is an MCP tool or resource                                                                                              | `app/mcp/`                                                         |
 | is an email template                                                                                                    | `app/emails/`                                                      |
@@ -105,9 +104,12 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
 7. **Each MCP tool and resource handler is its own default-exported file** in `app/mcp/tools/` or
    `app/mcp/resources/`, with the declarations in each folder's `index.ts`, mapped through
    `lazy()` from `@sdxc/mcp` so a call imports only the handler it reaches.
-8. **Pages render through `render({ assets })` from `remix/middleware/render`,** with a
-   `renderWith()` wrapper in `app/http/render.tsx` for what the app adds around every page
-   (document assets, a CSP nonce). Apps do not rebuild rendering from `renderToStream`.
+8. **Pages render through `render({ assets })` from `remix/middleware/render`,** with
+   `assets(...)` from `@sdxc/assets-middleware` before it in the router, so `ctx.assets`
+   carries the document's stylesheets, entry script and CSP nonce. A page passes them to its
+   document explicitly (`<Document assets={ctx.assets}>`); an app whose document needs its own
+   renderer writes it as middleware reading `ctx.assets` (see ADR-131). Apps do not rebuild
+   rendering from `renderToStream`.
 9. **Feature names group files inside a layer once the layer gets crowded,** using the same name
    in every layer (`app/jobs/trials/`, `app/services/trials/`, `resources/views/trials/`), so
    `**/trials/**` finds the whole feature.
@@ -157,8 +159,8 @@ Per app:
 1. Move `bootstrap/app.tsx`, `logger.ts` and `mcp.ts` into `app/initializers/` (`app.tsx` becomes
    `router.tsx`), along with `app/jobs/dispatcher.ts` and every package instance from `app/lib/`.
 2. Place Durable Object classes by role (`app/models/` or `app/services/`), re-exported from `worker.ts`.
-3. Write the global middleware inline in `createRouter`, and move the document wrapper into
-   `app/http/render.tsx` on top of `render({ assets })`.
+3. Write the global middleware inline in `createRouter`, with `assets(...)` before
+   `render({ assets })`, and pass `ctx.assets` to each page's document.
 4. Sort the rest of `app/lib/`, `app/repositories/`, `app/data/` and stray folders by the table.
 5. Move translations to `resources/locales/`, factories to `database/factories/`, test helpers to
    `app/test/`.
