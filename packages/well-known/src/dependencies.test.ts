@@ -1,7 +1,7 @@
 /**
  * Holds the document subpaths to their dependency budget: `@sdxc/result`,
- * `@remix-run/data-schema` and `@standard-schema/spec` only, so a consumer without the
- * `remix` umbrella or `@sdxc/http` can parse through them.
+ * `@sdxc/json-pointer`, `@remix-run/data-schema` and `@standard-schema/spec` only, so a
+ * consumer without the `remix` umbrella or `@sdxc/http` can parse through them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,12 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 /** The packages a document subpath may import. */
-const ALLOWED = new Set(["@sdxc/result", "@remix-run/data-schema", "@standard-schema/spec"]);
+const ALLOWED = new Set([
+	"@sdxc/result",
+	"@sdxc/json-pointer",
+	"@remix-run/data-schema",
+	"@standard-schema/spec",
+]);
 
 /** The modules that may reach the optional peers. */
 const PEER_MODULES = new Set(["response.ts", "middleware.ts"]);

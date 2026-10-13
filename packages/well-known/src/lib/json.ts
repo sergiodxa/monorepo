@@ -9,6 +9,7 @@
 import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { stringify } from "@sdxc/json-pointer";
 import { failure, success } from "@sdxc/result";
 
 import { WellKnownParseError } from "../parse-error.js";
@@ -23,9 +24,7 @@ export type JsonObject = Record<string, unknown>;
  * @param segments - Member names and array indexes, outermost first.
  */
 export function pointer(...segments: Array<string | number>): string {
-	return segments
-		.map((segment) => `/${String(segment).replace(/~/g, "~0").replace(/\//g, "~1")}`)
-		.join("");
+	return stringify(segments);
 }
 
 /**
