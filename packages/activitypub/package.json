@@ -19,6 +19,7 @@
 		"@sdxc/html": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/http-signatures": "workspace:*",
+		"@sdxc/json-pointer": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",

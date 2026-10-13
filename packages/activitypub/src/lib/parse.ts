@@ -9,6 +9,7 @@
 import type { Result } from "@sdxc/result";
 import type { Issue, Schema } from "remix/data-schema";
 
+import { stringify } from "@sdxc/json-pointer";
 import { failure, success } from "@sdxc/result";
 import { createSchema, fail, object, parseSafe } from "remix/data-schema";
 import { lazy } from "remix/data-schema/lazy";
@@ -383,10 +384,12 @@ const COLLECTION_SCHEMA: Schema<unknown, ActivityPub.AnyCollection> = createSche
  * @param path - The issue's path, outermost first.
  */
 function pointerOf(path: Context["path"] | undefined): string {
-	return (path ?? [])
-		.map((segment) => (typeof segment === "object" ? segment.key : segment))
-		.map((segment) => `/${String(segment).replace(/~/g, "~0").replace(/\//g, "~1")}`)
-		.join("");
+	let segments: (string | number)[] = [];
+	for (let segment of path ?? []) {
+		let key = typeof segment === "object" ? segment.key : segment;
+		segments.push(typeof key === "number" ? key : String(key));
+	}
+	return stringify(segments);
 }
 
 /**
