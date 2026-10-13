@@ -22,19 +22,23 @@ export interface ExpiryClassification {
 }
 
 /**
- * Classifies an expiry date against a warning window, counting whole days from now.
+ * Classifies an expiry date against a warning window, counting whole days from `now`.
  *
  * @param expiresAt Expiry as epoch milliseconds, or `null` when unknown.
  * @param warningDays Days before expiry the date counts as `expiring`.
+ * @param now Instant the days-left count is measured from, so callers that already
+ *   hold a frozen clock classify against it rather than the wall clock.
+ * @default Date.now()
  * @example classifyExpiry(Date.now() + 10 * DAY_MS, 30); // { status: "expiring", daysUntilExpiry: 9 }
  */
 export function classifyExpiry(
 	expiresAt: number | null,
 	warningDays: number,
+	now: number = Date.now(),
 ): ExpiryClassification {
 	if (expiresAt === null) return { status: "unknown", daysUntilExpiry: null };
 
-	let daysUntilExpiry = Math.floor((expiresAt - Date.now()) / DAY_MS);
+	let daysUntilExpiry = Math.floor((expiresAt - now) / DAY_MS);
 
 	if (daysUntilExpiry < 0) return { status: "expired", daysUntilExpiry };
 	if (daysUntilExpiry <= warningDays) return { status: "expiring", daysUntilExpiry };

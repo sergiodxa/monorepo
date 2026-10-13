@@ -13,17 +13,17 @@ import { classifyExpiry, shouldRemindOfExpiry } from "./expiry";
 
 describe("classifyExpiry", () => {
 	test("classifies a date against the warning window", () => {
-		let now = Date.now();
-		expect(classifyExpiry(null, 30)).toEqual({ status: "unknown", daysUntilExpiry: null });
-		expect(classifyExpiry(now + 90.5 * DAY_MS, 30)).toEqual({
+		let now = Date.UTC(2026, 9, 8, 12);
+		expect(classifyExpiry(null, 30, now)).toEqual({ status: "unknown", daysUntilExpiry: null });
+		expect(classifyExpiry(now + 90.5 * DAY_MS, 30, now)).toEqual({
 			status: "valid",
 			daysUntilExpiry: 90,
 		});
-		expect(classifyExpiry(now + 10.5 * DAY_MS, 30)).toEqual({
+		expect(classifyExpiry(now + 10.5 * DAY_MS, 30, now)).toEqual({
 			status: "expiring",
 			daysUntilExpiry: 10,
 		});
-		expect(classifyExpiry(now - 2 * DAY_MS, 30).status).toBe("expired");
+		expect(classifyExpiry(now - 2 * DAY_MS, 30, now).status).toBe("expired");
 	});
 });
 

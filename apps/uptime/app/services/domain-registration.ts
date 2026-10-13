@@ -98,7 +98,7 @@ export function registrationOutcome(
 	now: number,
 ): RegistrationPatch {
 	if (isSuccess(lookup)) {
-		let { status } = classifyExpiry(lookup.data.expiresAt, state.registration_warning_days);
+		let { status } = classifyExpiry(lookup.data.expiresAt, state.registration_warning_days, now);
 		return {
 			registration_status: status,
 			registration_expires_at: lookup.data.expiresAt,
@@ -138,7 +138,7 @@ export function registrationOutcome(
  * last success is older than the window, since the app can no longer vouch for the date.
  */
 function statusDuringOutage(state: RegistrationState, now: number): RegistrationStatus {
-	let stored = classifyExpiry(state.registration_expires_at, state.registration_warning_days);
+	let stored = classifyExpiry(state.registration_expires_at, state.registration_warning_days, now);
 	if (stored.status === "expiring" || stored.status === "expired") return stored.status;
 
 	let windowMs = state.registration_warning_days * DAY_MS;
@@ -212,7 +212,7 @@ export async function checkRegistration(
 		patch.registration_expires_at === undefined
 			? monitor.registration_expires_at
 			: patch.registration_expires_at;
-	let { daysUntilExpiry } = classifyExpiry(expiresAt, monitor.registration_warning_days);
+	let { daysUntilExpiry } = classifyExpiry(expiresAt, monitor.registration_warning_days, now);
 	let eppStatuses = isSuccess(lookup) ? lookup.data.status : [];
 
 	let alert = shouldAlertOnRegistration(
