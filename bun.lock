@@ -118,6 +118,7 @@
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/jwt": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
+        "@sdxc/link-header": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",

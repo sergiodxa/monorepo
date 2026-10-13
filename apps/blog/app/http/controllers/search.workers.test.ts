@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parse } from "@sdxc/link-header";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
-import { parseLinkHeader } from "@sdxc/pagination";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
@@ -97,7 +97,7 @@ async function searchPosts(args: Record<string, unknown>): Promise<McpBody> {
 /** The `href` of each `Link` relation, keyed by relation. */
 function linksOf(response: Response): Record<string, URL> {
 	let links: Record<string, URL> = {};
-	for (let link of parseLinkHeader(response.headers.get("Link"))) {
+	for (let link of parse(response.headers.get("Link"))) {
 		for (let rel of link.rels) links[rel] = new URL(link.target, ORIGIN);
 	}
 	return links;
