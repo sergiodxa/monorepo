@@ -10,7 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { parseDocument } from "@sdxc/html/document";
-import { parse } from "@sdxc/link-header";
+import { parse, serializeLink } from "@sdxc/link-header";
 import { release } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -119,7 +119,7 @@ export async function discover(
  */
 export function advertise(endpoint: string | URL): Discover.Advertisement {
 	let href = typeof endpoint === "string" ? endpoint : endpoint.href;
-	return { header: `<${href}>; rel="${REL}"`, link: { rel: REL, href } };
+	return { header: serializeLink(href, REL), link: { rel: REL, href } };
 }
 
 /** The first `Link` value naming the relation, resolved; header names match in any case. */
