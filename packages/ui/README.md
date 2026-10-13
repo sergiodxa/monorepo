@@ -225,6 +225,8 @@ Every export carries JSDoc, so the editor shows each full signature.
   presets.
 - `AspectRatio`, `Resizable`, `ScrollArea`, `Carousel` — a ratio lock, split panes, a scroll region,
   and a scroll-snap slide set.
+- `YouTubeEmbed` — a lazy-loaded 16:9 YouTube player (`videoId`, `start?`, `title`) served from
+  `www.youtube-nocookie.com`, which the page's `frame-src` has to allow.
 - `Text`, `Header`, `Keyboard`, `Typeset` — muted copy, a section label, a `<kbd>`, and typography
   for rendered markup (`docs`, `chat`, `reading`).
 - `ShortcutList` — a `<dl>` pairing actions with key caps.
