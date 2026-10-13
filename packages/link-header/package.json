@@ -1,0 +1,13 @@
+{
+	"name": "@sdxc/link-header",
+	"version": "0.0.1",
+	"description": "Parse and stringify RFC 8288 Link headers",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	}
+}

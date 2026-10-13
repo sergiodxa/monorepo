@@ -1095,6 +1095,10 @@
         "remix": "3.0.0",
       },
     },
+    "packages/link-header": {
+      "name": "@sdxc/link-header",
+      "version": "0.0.1",
+    },
     "packages/location": {
       "name": "@sdxc/location",
       "version": "0.0.1",
@@ -2410,6 +2414,8 @@
     "@sdxc/lazy-frame": ["@sdxc/lazy-frame@workspace:packages/lazy-frame"],
 
     "@sdxc/lazy-route": ["@sdxc/lazy-route@workspace:packages/lazy-route"],
+
+    "@sdxc/link-header": ["@sdxc/link-header@workspace:packages/link-header"],
 
     "@sdxc/location": ["@sdxc/location@workspace:packages/location"],
 
