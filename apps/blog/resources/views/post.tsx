@@ -35,6 +35,7 @@ import type { PostViewModel } from "~/app/http/view-models/post";
 import { discussIntent } from "~/app/services/share";
 import { permalink } from "~/app/services/webmention";
 import { PROFILE } from "~/config/profile";
+import { YouTubeEmbed } from "~/resources/components/youtube-embed";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -288,7 +289,9 @@ export function PostView() {
 						>
 							{model.post.document ? (
 								<Typeset preset="reading">
-									{toRemix(model.post.document, { components: { diagram: DiagramTag } })}
+									{toRemix(model.post.document, {
+										components: { diagram: DiagramTag, youtube: YouTubeEmbed },
+									})}
 								</Typeset>
 							) : (
 								<p mix={[m(0)]}>No content.</p>

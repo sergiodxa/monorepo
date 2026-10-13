@@ -11,6 +11,7 @@ import { formatDate, parseDate } from "@sdxc/dates";
 import { createDiagramVisitor } from "@sdxc/diagram/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
+import { embeds, youtube } from "@sdxc/markdown/plugin/embeds";
 import { isSuccess, succeeded } from "@sdxc/result";
 
 import type { PublicTypePath } from "~/app/models/kinds";
@@ -471,9 +472,9 @@ export class PostViewModel {
 	}
 
 	/**
-	 * Parses a post body into a document whose ```mermaid fences are diagram tags and
-	 * whose other fences carry the tokens they render with. A source the parser stops on
-	 * throws through `succeeded(...)`; a diagram that does not parse stays a code block.
+	 * Parses a post body into a document whose ```mermaid fences are diagram tags, whose
+	 * YouTube URLs on a line of their own are `youtube` tags, and whose other fences carry
+	 * their tokens. A source the parser stops on throws; a broken diagram stays a code block.
 	 *
 	 * @param content Raw markdown text from persisted post metadata.
 	 * @param message Failure message used when the source will not parse.
@@ -487,7 +488,7 @@ export class PostViewModel {
 
 		let highlighted = Markdown.walk(
 			parsed.data.document,
-			Markdown.compose(createDiagramVisitor({ invalid: "keep" }), highlight),
+			Markdown.compose(createDiagramVisitor({ invalid: "keep" }), highlight, embeds([youtube()])),
 		);
 		succeeded(highlighted, message);
 
