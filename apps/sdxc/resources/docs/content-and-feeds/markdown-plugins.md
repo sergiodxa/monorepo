@@ -210,32 +210,31 @@ Every embed tag also carries `url`, the link as written, so a renderer can alway
 plain link, and any annotation the author wrote above the URL. `start` is in seconds, read from
 YouTube's `t` or `start` parameter. Matching reads the URL alone, so the walk makes no request.
 
-Each tag renders through the component registered under its name, the way any other tag does:
+Each tag renders through the component registered under its name, the way any other tag does.
+For YouTube, a small component hands the tag's attributes to
+[`YouTubeEmbed`](/api/ui/youtube-embed);
+[Embed YouTube videos in markdown](/docs/content-and-feeds/youtube-embeds) walks through it:
 
-```tsx {% title="resources/components/youtube.tsx" %}
-import type { Handle } from "remix/component";
+```tsx {% title="resources/components/youtube-tag.tsx" %}
+import type { Handle, RemixNode } from "remix/component";
 
-interface YouTubeProps {
-	[key: string]: unknown;
-	id: string;
-	start?: number;
-	url: string;
-}
+import { YouTubeEmbed } from "@sdxc/ui";
 
-export function YouTube(handle: Handle<YouTubeProps>) {
-	return () => {
-		let src = new URL(
-			`https://www.youtube-nocookie.com/embed/${handle.props.id}`,
-		);
-		if (handle.props.start)
-			src.searchParams.set("start", String(handle.props.start));
-		return <iframe src={src.href} title="YouTube video" loading="lazy" />;
-	};
+export function YouTubeTag(
+	handle: Handle<{ id: string; start?: number; url: string; children: RemixNode }>,
+) {
+	return () => (
+		<YouTubeEmbed
+			videoId={handle.props.id}
+			start={handle.props.start}
+			title="YouTube video player"
+		/>
+	);
 }
 ```
 
 ```tsx
-toRemix(document, { components: { youtube: YouTube, vimeo: Vimeo, gist: Gist } });
+toRemix(document, { components: { youtube: YouTubeTag, vimeo: Vimeo, gist: Gist } });
 ```
 
 An embed has no children, so a provider with no component renders nothing; leave a provider out
