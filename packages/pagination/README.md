@@ -16,7 +16,8 @@ npm add @sdxc/pagination
 Fallible calls answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
 parameter parsing fails with the `ValidationError` from
 [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate), and queries come from
-`remix/data-table` in [`remix`](https://www.npmjs.com/package/remix).
+`remix/data-table` in [`remix`](https://www.npmjs.com/package/remix). `parseLinkHeader` and
+`serializeLinkHeader` are re-exports of [`@sdxc/link-header`](https://www.npmjs.com/package/@sdxc/link-header).
 
 ## Usage
 
@@ -179,14 +180,21 @@ and every other relation is kept, so the call is safe to repeat.
 
 ### `parseLinkHeader(header: string | null): LinkValue[]`
 
-Splits a `Link` header into `{ target, rels, raw }` entries in source order, per
+Re-export of `parse` from [`@sdxc/link-header`](https://www.npmjs.com/package/@sdxc/link-header).
+Splits a `Link` header into `{ target, rels, params, raw }` entries in source order, per
 [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288). A `null` header answers `[]`, and a
 malformed entry is skipped.
 
-### `serializeLinkHeader(links: readonly string[]): string | null`
+### `serializeLinkHeader(links: readonly LinkValue[] | readonly string[]): string | null`
 
-Joins link-value strings, such as the `raw` of parsed entries, into one header value, or `null`
+Re-export of `stringify` from [`@sdxc/link-header`](https://www.npmjs.com/package/@sdxc/link-header).
+Joins link-value strings, or the `raw` of parsed entries, into one header value, or `null`
 for an empty list.
+
+### `serializeLink(target: string, rel: string, params?: Record<string, string>): string`
+
+Re-export of `serializeLink` from [`@sdxc/link-header`](https://www.npmjs.com/package/@sdxc/link-header).
+Renders one link-value with a quoted `rel` and any extra parameters after it.
 
 ### `encodeCursor(direction, columns, values): Result<string, UnencodableCursorValueError>`
 
@@ -220,7 +228,7 @@ Every error extends `PaginationError`.
 `KeysetCursors` holding `next` and `prev`. `PageSeries` is an array of `PageSeriesItem`, either
 `{ type: "page", page, current }` or `{ type: "gap" }`. `OrderByTuple` is
 `[column, OrderDirection]`, where a column may be table-qualified (`"events.created_at"`).
-`LinkValue` is a parsed `Link` entry and `DecodedCursor` a decoded cursor, with `CursorDirection`
+`LinkValue` is a parsed `Link` entry (`target`, `rels`, `params`, `raw`) and `DecodedCursor` a decoded cursor, with `CursorDirection`
 and `CursorValue`. `OffsetQuery` and `KeysetQuery` describe the query methods each strategy
 calls. The options and results above are `PaginationInit`, `PaginationJSON`, `PageSeriesOptions`,
 `OffsetOptions`, `KeysetOptions`, `ParsePageParamsOptions`, `PageParams`, `CreatePagingOptions`,

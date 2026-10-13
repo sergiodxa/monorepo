@@ -10,10 +10,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import {
+	parse as parseLinkHeader,
+	serializeLink,
+	stringify as serializeLinkHeader,
+} from "@sdxc/link-header";
+
 import type { PagingNames } from "./names.js";
 import type { KeysetPage, Page } from "./pagination.js";
 
-import { parseLinkHeader, serializeLink, serializeLinkHeader } from "./link.js";
 import { resolveNames } from "./names.js";
 
 /** Header carrying the total row count, spelled the way client libraries look for it. */

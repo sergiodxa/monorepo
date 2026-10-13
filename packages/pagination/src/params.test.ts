@@ -15,10 +15,11 @@ import { ValidationError } from "@sdxc/validate";
 import { describe, expect, test } from "vitest";
 
 import { paginate } from "./headers.js";
-import { parseLinkHeader } from "./link.js";
 import { DEFAULT_MAX_PER_PAGE, DEFAULT_PAGING_NAMES, DEFAULT_PER_PAGE } from "./names.js";
 import { Pagination } from "./pagination.js";
 import { createPaging, parsePageParams } from "./params.js";
+
+import { parseLinkHeader } from "./index.js";
 
 /** Builds search parameters from a query string fragment, as a request URL would carry. */
 function params(query: string): URLSearchParams {
