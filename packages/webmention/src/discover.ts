@@ -10,8 +10,8 @@
 import type { Result } from "@sdxc/result";
 
 import { parseDocument } from "@sdxc/html/document";
+import { parse } from "@sdxc/link-header";
 import { release } from "@sdxc/outbound";
-import { parseLinkHeader } from "@sdxc/pagination";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Bounds } from "./lib/fetch.js";
@@ -124,7 +124,7 @@ export function advertise(endpoint: string | URL): Discover.Advertisement {
 
 /** The first `Link` value naming the relation, resolved; header names match in any case. */
 function fromHeader(headers: Headers, finalUrl: string): URL | null {
-	for (let link of parseLinkHeader(headers.get("link"))) {
+	for (let link of parse(headers.get("link"))) {
 		if (!link.rels.includes(REL)) continue;
 		let url = resolve(link.target, finalUrl);
 		if (url !== null) return url;

@@ -15,9 +15,9 @@
 	},
 	"dependencies": {
 		"@sdxc/html": "workspace:*",
+		"@sdxc/link-header": "workspace:*",
 		"@sdxc/microformats": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
-		"@sdxc/pagination": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	}
 }
