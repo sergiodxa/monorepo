@@ -6,13 +6,14 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Link } from "@sdxc/link-header";
 import type { Result } from "@sdxc/result";
 
 import { hmac } from "@sdxc/crypto";
+import { parse } from "@sdxc/link-header";
 import { readBytes } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { linkTarget } from "./lib/link-header.js";
 import { absoluteUrl, formRequest, send } from "./lib/send.js";
 
 import type { SignatureAlgorithm } from "./index.js";
@@ -363,14 +364,28 @@ export async function verifyDelivery(
 		return failure(new WebSubSignatureError("The signature does not match the body", "mismatch"));
 	}
 
-	let links = request.headers.get("link");
+	let links = parse(request.headers.get("link"));
 	return success({
 		body,
 		contentType: request.headers.get("content-type"),
 		algorithm,
-		hub: linkTarget(links, "hub", request.url),
-		self: linkTarget(links, "self", request.url),
+		hub: resolveLink(links, "hub", request.url),
+		self: resolveLink(links, "self", request.url),
 	});
+}
+
+/**
+ * The first target a `Link` header names under `rel`, resolved against the address
+ * the header arrived on, so a relative hub or topic is still usable.
+ */
+function resolveLink(links: readonly Link[], rel: string, base: string): string | null {
+	let match = links.find((link) => link.rels.includes(rel));
+	if (match === undefined) return null;
+	try {
+		return new URL(match.target, base).toString();
+	} catch {
+		return null;
+	}
 }
 
 /**

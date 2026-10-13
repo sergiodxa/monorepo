@@ -490,6 +490,18 @@ describe(verifyDelivery, () => {
 		expect(result.self).toBe(TOPIC);
 	});
 
+	test("keeps a comma inside a Link target", async () => {
+		let hub = "https://hub.example.com/a,b";
+		let request = delivery(BODY, {
+			"x-hub-signature": await sign(BODY),
+			link: `<${hub}>; rel="hub", <${TOPIC}>; rel="self"`,
+		});
+
+		let result = unwrap(await verifyDelivery(request, SECRET));
+		expect(result.hub).toBe(hub);
+		expect(result.self).toBe(TOPIC);
+	});
+
 	test("reports null links and content type for a delivery that sends none", async () => {
 		let request = delivery(new TextEncoder().encode(BODY), { "x-hub-signature": await sign(BODY) });
 
