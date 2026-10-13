@@ -476,6 +476,7 @@
         "@sdxc/html": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/http-signatures": "workspace:*",
+        "@sdxc/json-pointer": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -1074,6 +1075,7 @@
       "name": "@sdxc/json-schema",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "remix": "3.0.0",
@@ -1178,6 +1180,7 @@
       "name": "@sdxc/merge-patch",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
@@ -1261,6 +1264,7 @@
       "name": "@sdxc/openapi",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -1320,6 +1324,7 @@
       "name": "@sdxc/problem",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
         "remix": "3.0.0",
@@ -1657,6 +1662,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@remix-run/data-schema": "^1.0.0",
+        "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
