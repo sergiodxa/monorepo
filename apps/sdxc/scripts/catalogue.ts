@@ -385,6 +385,23 @@ export function collectUsage(
 }
 
 /**
+ * Escapes every character that would change a RegExp's meaning, so an identifier
+ * can be interpolated as a literal without becoming an operator.
+ */
+function escapeRegExp(value: string): string {
+	return value.replace(/[\\^$*+?.()|[\]{}]/g, "\\$&");
+}
+
+/**
+ * Whether `body` names `identifier` as a whole token. `$` is an identifier
+ * character in JavaScript, so the edges are checked against that alphabet
+ * rather than `\b`, which would treat `$` as a boundary.
+ */
+function mentionsIdentifier(body: string, identifier: string): boolean {
+	return new RegExp(`(?<![A-Za-z0-9_$])${escapeRegExp(identifier)}(?![A-Za-z0-9_$])`).test(body);
+}
+
+/**
  * The code of the named exports of a module and of every module-level declaration
  * they reference, with comments removed, so a token counts only where code reads it.
  *
@@ -413,7 +430,7 @@ export function reachedThrough(source: string, names: string[]): string {
 
 		let body = declarations.get(name) ?? "";
 		for (let other of declarations.keys()) {
-			if (!seen.has(other) && new RegExp(`\\b${other.replace(/\$/g, "\\$")}\\b`).test(body)) {
+			if (!seen.has(other) && mentionsIdentifier(body, other)) {
 				queue.push(other);
 			}
 		}
