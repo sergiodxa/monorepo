@@ -8,6 +8,7 @@
  */
 import type { StandardJSONSchemaV1, StandardSchemaV1 } from "@standard-schema/spec";
 
+import { stringify } from "@sdxc/json-pointer";
 import * as s from "remix/data-schema";
 
 import type { ProblemIssue, ProblemOptions } from "./types.js";
@@ -22,12 +23,12 @@ import { problem } from "./problem.js";
  * @example toPointer(["users", 0, "a/b"]); // "/users/0/a~1b"
  */
 export function toPointer(path: StandardSchemaV1.Issue["path"]): string {
-	let pointer = "";
+	let segments: (string | number)[] = [];
 	for (let segment of path ?? []) {
 		let key = typeof segment === "object" ? segment.key : segment;
-		pointer += `/${String(key).replaceAll("~", "~0").replaceAll("/", "~1")}`;
+		segments.push(typeof key === "number" ? key : String(key));
 	}
-	return pointer;
+	return stringify(segments);
 }
 
 /**
