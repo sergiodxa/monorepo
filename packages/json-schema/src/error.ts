@@ -5,6 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { stringify } from "@sdxc/json-pointer";
 
 /** A schema, or a schema nested in it, that has no JSON Schema form. */
 export class JSONSchemaConversionError extends Error {
@@ -30,7 +31,5 @@ export class JSONSchemaConversionError extends Error {
  * @example toPointer(["properties", "a/b"]); // "/properties/a~1b"
  */
 export function toPointer(path: readonly (string | number)[]): string {
-	return path
-		.map((segment) => `/${String(segment).replaceAll("~", "~0").replaceAll("/", "~1")}`)
-		.join("");
+	return stringify(path);
 }
