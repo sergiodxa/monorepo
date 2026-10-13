@@ -73,14 +73,12 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 ## Rules
 
 - MUST use Bun to install dependencies and run scripts; tests execute through Vite+ (`vp test`)
-- MUST follow Conventional Commits for commit messages, with the workspace directory name as the scope (`feat(jwt): …`, `fix(uptime): …`)
-- MUST keep every commit inside one package or one app (root and `docs/` files may ride along); a change that spans two workspaces is two commits. Release notes are built from the commits that touch a package, so a cross-workspace commit shows up under every package it touched. Dependency sweeps (`chore(deps): …`) are the accepted exception
+- MUST follow Conventional Commits for commit messages, with the workspace directory name as the scope (`feat(jwt): …`, `fix(uptime): …`) — including every commit on a pull-request branch, because GitHub **rebase-and-merges** PRs onto `main` and the release script publishes those subjects verbatim (ADR-007, ADR-134)
+- MUST keep every commit inside one package or one app (root and `docs/` files may ride along); a change that spans two workspaces is two commits (they may share one PR under rebase-and-merge). Release notes are built from the commits that touch a package, so a cross-workspace commit shows up under every package it touched. Dependency sweeps (`chore(deps): …`) are the accepted exception
 - MUST write the commit title as what changed for a consumer of that workspace, and the body (when present) as the explanation a reader of the release notes needs; both are published verbatim in the daily GitHub Release (ADR-007)
-- MUST title every pull request as a Conventional Commits subject (`type(scope): …` with the workspace directory as scope; root/docs-only work may omit the scope as `ci: …` / `docs: …` / `chore(deps): …`). GitHub squash-merges PRs onto `main`, so the PR title becomes the commit subject the release script publishes — a prose title ships as a `chore:` line and poisons the notes (ADR-134)
-- MUST keep a squash-merged pull request inside one package or one app (root and `docs/` may ride along); a change that spans two workspaces is two PRs, because squash collapses the branch to one commit
-- MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits). Cloud sessions that open a PR still follow the Conventional title and one-workspace rules above
+- MUST commit directly on `main`; never create a branch unless explicitly asked (other sessions commit to `main` concurrently, and an unprompted branch strands their commits). Cloud sessions that open a PR still write Conventional, one-workspace commits on that branch (ADR-134)
 - MUST run `bun check` at the repo root before every commit, and `bun check:fix` to apply formatting and autofixes
-- MUST preserve every individual commit when merging into `main` with a fast-forward merge (`git merge --ff-only`) when merging locally; never create a merge commit. GitHub's squash-merge path is allowed only when the PR title is already a Conventional Commits subject for a single workspace (ADR-134)
+- MUST preserve every individual commit when merging into `main` — rebase-and-merge on GitHub, or a local fast-forward (`git merge --ff-only`); never squash-merge and never create a merge commit (ADR-134)
 - MUST use `@sdxc/result` for error handling instead of throwing exceptions
 - MUST write tests with Vitest, never Jest, Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories — `vp test run <path>` scopes a run without changing directory
