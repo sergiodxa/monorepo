@@ -130,11 +130,17 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
 export default createJobHandler(jobs.confirm, async (ctx) => {
-	let posting = await Job.find(ctx.database, ctx.input.id);
-	if (!posting) return ctx.log.note("posting.missing");
+	let posting = await Job.find(ctx.db, ctx.input.id);
+	if (!posting) {
+		ctx.log.note("posting.missing");
+		return;
+	}
 
 	let sent = await mailer.send(new PublishedEmail(posting));
-	if (isFailure(sent)) return ctx.log.fail(sent.error);
+	if (isFailure(sent)) {
+		ctx.log.fail(sent.error);
+		return;
+	}
 
 	ctx.log.set({ confirmation: { posting: posting.id } });
 });
@@ -243,10 +249,8 @@ export default createAction(routes.rss, async (ctx) => {
 ```typescript {% title="app/services/rate-limit.ts" %}
 import type { Adapter } from "@sdxc/rate-limit";
 
-import { toSeconds } from "@sdxc/duration";
-import { tooManyRequests } from "@sdxc/http/response/json";
 import { currentLog } from "@sdxc/logger";
-import { applyRateLimitHeaders } from "@sdxc/rate-limit";
+import { tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 
 export async function spend(adapter: Adapter, key: string) {
@@ -257,14 +261,9 @@ export async function spend(adapter: Adapter, key: string) {
 	}
 	if (result.data.allowed) return null;
 
-	let response = applyRateLimitHeaders(
-		tooManyRequests({ error: "rate_limited" }),
-		result.data,
-		adapter.window,
-	);
-	let retryAfter = String(toSeconds(adapter.window));
-	response.headers.set("Retry-After", retryAfter);
-	return response;
+	return tooManyRequests(result.data, adapter.window, JSON.stringify({ error: "rate_limited" }), {
+		headers: { "Content-Type": "application/json" },
+	});
 }
 ```
 
