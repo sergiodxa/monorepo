@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 7
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-13
 ---
 
 ActivityPub is the protocol Mastodon, Misskey, GoToSocial, Pixelfed and the rest of the
@@ -333,7 +333,9 @@ path from it: the signature is the stronger claim.
 Someone on Mastodon types `@hello@example.com`. Their server asks
 `https://example.com/.well-known/webfinger?resource=acct:hello@example.com` for a `self` link
 typed `application/activity+json`, then fetches the actor it points at. `actorLink` writes that
-link, and the `wellKnown` middleware from `@sdxc/well-known` answers the path:
+link, and the `wellKnown` middleware from `@sdxc/well-known` answers the path. The `links`
+array on a WebFinger JRD is JSON, not an HTTP `Link` header; RFC 8288 headers are
+[Parse and write Link headers](/docs/http-apis/link-header).
 
 ```typescript {% title="app/http/middleware/webfinger.ts" %}
 import { actorLink } from "@sdxc/activitypub";

@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 4
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-13
 ---
 
 A client is where an API's contract meets code that trusts it. This guide writes one for the
@@ -22,7 +22,7 @@ the bodies, [`@sdxc/problem`](/api/problem) recognizes and parses problem respon
 npm add @sdxc/api-client @sdxc/validate @sdxc/problem @sdxc/result @sdxc/types
 ```
 
-The client also reads `Link` headers with [`@sdxc/pagination`](/api/pagination), keys its
+The client also reads `Link` headers with [`@sdxc/link-header`](/api/link-header), keys its
 creates with [`@sdxc/idempotency`](/api/idempotency), and builds response schemas with
 [`@sdxc/json-schema`](/api/json-schema), the packages the server already uses. Install them
 too when the client lives in its own package.
@@ -132,7 +132,7 @@ import type { Result } from "@sdxc/result";
 import { APIClient } from "@sdxc/api-client";
 import { withIdempotencyKey } from "@sdxc/idempotency/client";
 import * as s from "@sdxc/json-schema";
-import { parseLinkHeader } from "@sdxc/pagination";
+import { parse } from "@sdxc/link-header";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { BooksError } from "~/clients/books-error";
@@ -165,7 +165,7 @@ export class BooksClient extends APIClient {
 		let result = await read(() => this.get(page), BOOK_LIST);
 		if (isFailure(result)) return result;
 
-		let links = parseLinkHeader(result.data.headers.get("Link"));
+		let links = parse(result.data.headers.get("Link"));
 		let next = links.find((link) => link.rels.includes("next"))?.target ?? null;
 		return success({ books: result.data.body.books, next });
 	}
@@ -230,6 +230,8 @@ if (isFailure(result)) {
 
 `issue.pointer` is the JSON Pointer the server wrote with `issuesFrom`, such as `/year`, so a
 form shows each message beside its field without parsing prose.
+[Address JSON with JSON Pointer](/docs/http-apis/json-pointer) is the encoding `issuesFrom`
+uses.
 
 ## Test it with MSW
 
@@ -274,6 +276,8 @@ book fails validation with the `ValidationError` as `cause`, and `onUnhandledReq
 
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — the server side of
   this contract.
+- [Parse and write Link headers](/docs/http-apis/link-header) — `parse`, `raw`, and a merge
+  that keeps foreign relations.
 - [Describe your API with OpenAPI](/docs/http-apis/openapi) — publish the same schemas for
   clients you do not write.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — follow a call from

@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 5
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-13
 ---
 
 [Build a JSON API with problem details](/docs/http-apis/json-apis) pages its book list by
@@ -15,12 +15,13 @@ client walks it, and how the same pages render as HTML with a numbered pager or 
 newer links.
 
 [`@sdxc/pagination`](/api/pagination) does the paging and writes the headers,
+[`@sdxc/link-header`](/api/link-header) reads them,
 [`@sdxc/ui`](/api/ui) draws the pager, [`@sdxc/problem`](/api/problem) and
 [`@sdxc/http`](/api/http) answer the failures, and [`@sdxc/result`](/api/result) carries
 them.
 
 ```bash
-npm add @sdxc/pagination @sdxc/ui @sdxc/problem @sdxc/http @sdxc/result
+npm add @sdxc/pagination @sdxc/link-header @sdxc/ui @sdxc/problem @sdxc/http @sdxc/result
 ```
 
 ## Offset or keyset
@@ -140,11 +141,11 @@ your internal hostname.
 ## Walk the pages from a client
 
 A client should follow `rel="next"` instead of building URLs itself. The server can then
-change strategies, rename a parameter or add a filter without breaking anyone. `parseLinkHeader`
-reads the header, from this API or any other:
+change strategies, rename a parameter or add a filter without breaking anyone. `parse` from
+`@sdxc/link-header` reads the header, from this API or any other:
 
 ```typescript {% title="app/services/walk-pages.ts" %}
-import { parseLinkHeader } from "@sdxc/pagination";
+import { parse } from "@sdxc/link-header";
 
 export async function* walkPages(start: URL, init?: RequestInit) {
 	let next: string | null = start.toString();
@@ -154,7 +155,7 @@ export async function* walkPages(start: URL, init?: RequestInit) {
 		yield response;
 		if (!response.ok) return;
 
-		let links = parseLinkHeader(response.headers.get("Link"));
+		let links = parse(response.headers.get("Link"));
 		next = links.find((link) => link.rels.includes("next"))?.target ?? null;
 	}
 }
@@ -367,5 +368,7 @@ which is how `cursors.next` comes back `null` on the last page without a count.
   `per_page` and `cursor` parameters and the `Link` header.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui):
   the layout and components the HTML lists render into.
+- [Parse and write Link headers](/docs/http-apis/link-header): merge, `raw`, and a header
+  that is not a pager.
 - [`@sdxc/pagination`](/api/pagination): every option, `toJSON()` for an envelope, and the
   cursor functions.

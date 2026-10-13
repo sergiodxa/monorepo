@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-13
 ---
 
 Everything a request carries is a string until something says otherwise: form fields, the
@@ -260,7 +260,8 @@ export default createAction(routes.api.teams.create, async (ctx) => {
 ```
 
 `validationProblem` answers `422` with `Content-Type: application/problem+json`, and
-`issuesFrom` turns each issue's path into a JSON Pointer such as `/billingEmail`. Where an
+`issuesFrom` turns each issue's path into a JSON Pointer such as `/billingEmail`, through
+[`@sdxc/json-pointer`](/api/json-pointer). Where an
 API prefers plain JSON, `badRequest({ errors: body.error.issues })` from
 `@sdxc/http/response/json` is the one-line alternative.
 
@@ -270,6 +271,8 @@ API prefers plain JSON, `badRequest({ errors: body.error.issues })` from
   the components the form above is built from.
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — a catalog of problem
   types instead of one-off documents.
+- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — parse, get and set the
+  pointers `issuesFrom` writes.
 - [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) — what to
   add in front of an action that anyone can reach.
 - [Standard Schema validation](/docs/conventions/standard-schema-validation) — why any

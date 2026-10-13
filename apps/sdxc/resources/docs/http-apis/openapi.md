@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-13
 ---
 
 An API reference written by hand drifts from the code the day after it is published. This
@@ -162,13 +162,16 @@ a failure in `"params"` is the one to answer with `notFound`, as before.
 
 The list handler keeps parsing its query with the `createPaging` binding, because that binding
 also writes the `Link` URLs. The `query` schema on `LIST_BOOKS` documents the same names and
-limits, so keep the two side by side.
+limits, so keep the two side by side. A client reads that header with
+[`@sdxc/link-header`](/api/link-header), as
+[Paginate lists](/docs/http-apis/paginate-lists) shows.
 
 ## Build and serve the document
 
 `createDocument` collects the operations and the catalog. Nothing is assembled until
 `build()`, which returns a `Result` and fails on a duplicate `operationId`, a route OpenAPI
-cannot express, or a schema without a JSON Schema form.
+cannot express, or a schema without a JSON Schema form. A conversion failure names the
+combinator with an RFC 6901 pointer from [`@sdxc/json-pointer`](/api/json-pointer).
 
 ```typescript {% title="app/http/openapi/document.ts" %}
 import { createDocument } from "@sdxc/openapi";
@@ -272,6 +275,10 @@ the suite produced, and `uncovered()` lists the declared status codes no test re
 
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — the API this document
   describes.
+- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — the pointers conversion
+  errors and problem issues share.
+- [Parse and write Link headers](/docs/http-apis/link-header) — the `Link` header `LIST_BOOKS`
+  documents.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — document a
   `PATCH` with both `application/merge-patch+json` and `application/json` bodies.
 - [Write a typed API client](/docs/http-apis/api-clients) — validate responses with the same

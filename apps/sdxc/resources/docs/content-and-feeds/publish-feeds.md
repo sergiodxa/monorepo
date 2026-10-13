@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 2
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-13
 ---
 
 A feed reader asks for a document in whichever format it was built around, so a site that
@@ -301,7 +301,10 @@ sequenceDiagram
 
 A subscriber may look for the hub in the response's `Link` header or in the document, so
 advertise it in both. One helper builds the two for any feed: the `rel="self"` and `rel="hub"`
-links for the document, and the header value that `links` writes:
+links for the document, and the header value that `links` writes through
+[`@sdxc/link-header`](/api/link-header). `Feed.discover` from `@sdxc/feed` reads that header
+the same way, and prefers it over the document, which is how a publisher who cannot edit
+the feed can still name a hub.
 
 ```typescript {% title="app/services/feeds/hub.ts" %}
 import { links } from "@sdxc/websub/publisher";
@@ -433,4 +436,6 @@ string is safe.
 - [Join the IndieWeb](/docs/content-and-feeds/indieweb) — notify the pages your posts link to.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — keep feeds
   cheap to serve without delaying a hub's fetch.
+- [Parse and write Link headers](/docs/http-apis/link-header) — `rel="hub"` and `rel="self"`
+  on their own.
 - [`@sdxc/feed`](/api/feed) — read RSS, Atom and JSON Feed through one normalized shape.

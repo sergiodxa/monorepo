@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 7
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-13
 ---
 
 A few small decisions around the router pay off across every route: which spelling of a URL
@@ -272,7 +272,9 @@ Newer HTTP fields share one grammar, RFC 9651: `Priority`, `Cache-Status`, `Rate
 `Idempotency-Key` are each a List, a Dictionary or an Item of typed values. Splitting them on
 commas by hand works until a quoted string contains one. Every call to `@sdxc/structured-fields`
 names the field's top-level type, because the RFC fixes it in the field's definition rather
-than in the text.
+than in the text. `Link` is a different grammar, RFC 8288:
+[Parse and write Link headers](/docs/http-apis/link-header) covers it with
+[`@sdxc/link-header`](/api/link-header).
 
 When your Worker fetches from an origin behind a CDN, `Cache-Status` says which caches
 answered. Describe a hop once, at module scope, with the `sf` builders, which compose with
@@ -354,5 +356,7 @@ the window resets.
   canonical host and paths a sitemap should list.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — caching
   the responses your own Worker serves.
+- [Parse and write Link headers](/docs/http-apis/link-header) — RFC 8288 `Link`, which is
+  not a structured field.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — another header,
   `Idempotency-Key`, that is a structured field.

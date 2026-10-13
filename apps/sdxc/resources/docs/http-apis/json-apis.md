@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 1
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-13
 ---
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one
@@ -107,7 +107,8 @@ export const BOOK_PARAMS = s.object({
 
 `validate` reads a `Request` according to its `Content-Type` and answers with a `Result`, so
 a refused body is a branch rather than an exception. `issuesFrom` turns the schema's issues
-into `errors` entries whose `pointer` is a JSON Pointer into the body.
+into `errors` entries whose `pointer` is a JSON Pointer into the body, encoded by
+[`@sdxc/json-pointer`](/api/json-pointer) so a member named `a/b` still points at itself.
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
 import { created } from "@sdxc/http/response/json";
@@ -234,7 +235,9 @@ export const index = createAction(routes.api.books.index, async (ctx) => {
 The ordering ends in `id` because two books created in the same millisecond would otherwise
 share a boundary and one of them would be skipped or served twice; `byKeyset` refuses a
 single non-unique sort key for that reason. The response carries `rel="next"` and
-`rel="prev"` links, and a client walks the list by following them.
+`rel="prev"` links, and a client walks the list by following them with
+[`@sdxc/link-header`](/api/link-header), as
+[Paginate lists](/docs/http-apis/paginate-lists) shows.
 
 A numbered pager wants offset paging instead: `Pagination.byOffset` counts the query, and the
 same `paginate` call then writes `first`, `last` and an `X-Total-Count` header.
@@ -304,6 +307,8 @@ export function createWebRouter() {
 
 - [Describe your API with OpenAPI](/docs/http-apis/openapi) — publish these schemas and
   problems as an OpenAPI 3.1 document.
+- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — parse, get and set the
+  pointers `issuesFrom` writes.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — make `create` safe
   to retry and add a partial update.
 - [Write a typed API client](/docs/http-apis/api-clients) — consume this API with the same

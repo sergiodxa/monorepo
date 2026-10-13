@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 3
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-13
 ---
 
 Writes fail in two quiet ways. A `POST` times out and the client cannot tell whether the book
@@ -305,7 +305,9 @@ schema, so create and update share one set of limits. A patch removing `title` f
 
 `Book.update` writes the validated book whole, so a removed `summary` is cleared. To write or
 log only what changed, `diff(writableBook(book), next.data)` answers the smallest patch between
-the two.
+the two. A `diff` that would set a member to a literal `null` fails with that member's
+JSON Pointer on `UnrepresentableChangeError`, encoded by
+[`@sdxc/json-pointer`](/api/json-pointer).
 
 ## Send a patch
 
@@ -347,6 +349,8 @@ in its `problems`.
 
 ## Where to go next
 
+- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — get, set, and the pointer
+  a refused `diff` carries.
 - [Write a typed API client](/docs/http-apis/api-clients) — attach idempotency keys in one
   hook for every create.
 - [Describe your API with OpenAPI](/docs/http-apis/openapi) — document the idempotency

@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 5
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-13
 ---
 
 A crawler learns about your site from four places: the head of each page, the sitemap, the
@@ -236,7 +236,9 @@ line, which states what the content may be used for beyond crawling.
 A researcher who finds a vulnerability looks for `/.well-known/security.txt` before anything
 else. The `wellKnown()` middleware answers `GET` and `HEAD` on the names you give it, with an
 `ETag`, a `Cache-Control` and a `304` when the client's copy is current, and passes every
-other path on to the router.
+other path on to the router. JSON well-known documents, such as OAuth metadata, name a
+refused member with a JSON Pointer from [`@sdxc/json-pointer`](/api/json-pointer); a text
+file such as `security.txt` names a 1-based line instead.
 
 ```typescript {% title="config/security-txt.ts" %}
 import type { SecurityTxt } from "@sdxc/well-known/security-txt";
@@ -279,6 +281,8 @@ that fails 30 days before it passes, makes a person review the contact once a ye
 
 ## Where to go next
 
+- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — the pointers JSON
+  well-known documents report on a refused member.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the other file
   a reader's software looks for.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — the rest of what

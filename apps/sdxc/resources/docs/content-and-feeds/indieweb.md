@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 3
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-13
 ---
 
 The IndieWeb is a set of small protocols that let independent sites talk to each other.
@@ -97,7 +97,8 @@ export default route({
 ```
 
 Advertise the endpoint first, in both places a sender looks. `advertise` from
-`@sdxc/webmention/discover` writes the `Link` header value for a post's response:
+`@sdxc/webmention/discover` writes the RFC 8288 `Link` header value for a post's response,
+through [`@sdxc/link-header`](/api/link-header):
 
 ```typescript {% title="app/http/webmention-headers.ts" %}
 import { advertise } from "@sdxc/webmention/discover";
@@ -359,7 +360,8 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 ```
 
 `send` discovers the target's endpoint (the `Link` header first, then the first `<link>` or
-`<a>` in the page) and POSTs the pair. It answers `{ status: "no-endpoint" }` for a page that
+`<a>` in the page) and POSTs the pair. The header parse is the same `parse` from
+`@sdxc/link-header` that [Parse and write Link headers](/docs/http-apis/link-header) covers. It answers `{ status: "no-endpoint" }` for a page that
 takes no mentions, which is an ordinary outcome, not a failure. A failure is either a
 `WebmentionFetchError`, which says itself whether it is `retryable`, or a
 `WebmentionSendError` carrying the status the endpoint answered. A receiver is someone else's
@@ -501,6 +503,8 @@ editor round-trips it.
   `outboundLinks` reads comes from `toHTML`.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the other half
   of being followed from someone else's site.
+- [Parse and write Link headers](/docs/http-apis/link-header) — read a `rel="webmention"`
+  header yourself.
 - [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) — followers,
   replies and likes from Mastodon and the rest of the fediverse.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
