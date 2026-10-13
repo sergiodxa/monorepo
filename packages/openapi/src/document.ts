@@ -11,6 +11,7 @@ import type { CatalogEntry, CatalogMethods, ProblemCatalog, ProblemEntries } fro
 import type { Result } from "@sdxc/result";
 import type { StandardJSONSchemaV1 } from "@standard-schema/spec";
 
+import { stringify } from "@sdxc/json-pointer";
 import { toJSONSchema } from "@sdxc/json-schema";
 import { PROBLEM_MEDIA_TYPE } from "@sdxc/problem";
 import { failure, success } from "@sdxc/result";
@@ -579,7 +580,7 @@ function pascalCase(name: string): string {
  * @param segment - A key, such as a path template.
  */
 export function escapePointer(segment: string): string {
-	return segment.replaceAll("~", "~0").replaceAll("/", "~1");
+	return stringify([segment]).slice(1);
 }
 
 /** A failed build. */
