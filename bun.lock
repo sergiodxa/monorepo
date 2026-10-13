@@ -1063,6 +1063,13 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/json-pointer": {
+      "name": "@sdxc/json-pointer",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/json-schema": {
       "name": "@sdxc/json-schema",
       "version": "0.0.1",
@@ -2406,6 +2413,8 @@
     "@sdxc/jsdoc": ["@sdxc/jsdoc@workspace:packages/jsdoc"],
 
     "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
+
+    "@sdxc/json-pointer": ["@sdxc/json-pointer@workspace:packages/json-pointer"],
 
     "@sdxc/json-schema": ["@sdxc/json-schema@workspace:packages/json-schema"],
 

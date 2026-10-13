@@ -43,7 +43,15 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "API design",
-		packages: ["openapi", "problem", "json-schema", "pagination", "idempotency", "merge-patch"],
+		packages: [
+			"openapi",
+			"problem",
+			"json-schema",
+			"json-pointer",
+			"pagination",
+			"idempotency",
+			"merge-patch",
+		],
 	},
 	{
 		title: "Identity & security",

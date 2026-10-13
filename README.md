@@ -262,6 +262,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/epub](packages/epub)                   | Build EPUB 3.3 publications from XHTML chapters, checked against what epubcheck rejects             |
 | [@sdxc/icalendar](packages/icalendar)         | Read and write iCalendar documents, with recurrence rules and time zones                            |
 | [@sdxc/jsdoc](packages/jsdoc)                 | Read JSDoc out of source text into a JSON documentation model                                       |
+| [@sdxc/json-pointer](packages/json-pointer)   | Parse, stringify, get and set RFC 6901 JSON Pointers                                                |
 | [@sdxc/json-schema](packages/json-schema)     | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12 |
 | [@sdxc/messageformat](packages/messageformat) | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                         |
 | [@sdxc/qr](packages/qr)                       | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer     |
