@@ -8,6 +8,7 @@
  */
 import type { Result } from "@sdxc/result";
 
+import { serializeLink, stringify } from "@sdxc/link-header";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { absoluteUrl, formRequest, send } from "./lib/send.js";
@@ -43,9 +44,9 @@ export namespace Publisher {
  * @example new Response(feed, { headers: { link: links({ hubs: [hub], self: feedUrl }) } });
  */
 export function links(options: Publisher.LinksOptions): string {
-	let entries = options.hubs.map((hub) => `<${target(hub)}>; rel="hub"`);
-	entries.push(`<${target(options.self)}>; rel="self"`);
-	return entries.join(", ");
+	let entries = options.hubs.map((hub) => serializeLink(target(hub), "hub"));
+	entries.push(serializeLink(target(options.self), "self"));
+	return stringify(entries) ?? "";
 }
 
 /**
