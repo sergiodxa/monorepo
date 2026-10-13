@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/json-pointer": "workspace:*",
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",

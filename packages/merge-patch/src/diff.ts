@@ -8,6 +8,7 @@
  */
 import type { Result } from "@sdxc/result";
 
+import { stringify } from "@sdxc/json-pointer";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { JSONObject, JSONValue } from "./json-value.js";
@@ -49,7 +50,7 @@ export function diff(
 
 /** Extends a JSON Pointer by one member, escaping `~` and `/` per RFC 6901. */
 function childPointer(pointer: string, key: string): string {
-	return `${pointer}/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`;
+	return `${pointer}${stringify([key])}`;
 }
 
 /** The member-wise patch between two objects, recursing wherever both sides hold an object. */
