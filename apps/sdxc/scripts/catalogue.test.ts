@@ -18,6 +18,7 @@ import {
 	componentName,
 	cssProperty,
 	pairExamples,
+	reachedThrough,
 	readBarrel,
 	readComponent,
 	readUtility,
@@ -343,5 +344,21 @@ describe("collectTheme", () => {
 		expect(theme.dark).toHaveLength(2);
 		expect(theme.dark.every((declaration) => names.has(declaration.name))).toBe(true);
 		expect(theme.dark[0]?.value).toBe("var(--ui-color-brand-500)");
+	});
+});
+
+describe("reachedThrough", () => {
+	test("pulls in a helper an export names, including one whose name holds a $", () => {
+		let source = [
+			"const $gap = 4;",
+			"export function pad() { return $gap; }",
+			"const unused = 1;",
+		].join("\n");
+
+		let reached = reachedThrough(source, ["pad"]);
+
+		expect(reached).toContain("$gap");
+		expect(reached).toContain("pad");
+		expect(reached).not.toContain("unused");
 	});
 });

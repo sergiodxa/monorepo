@@ -236,6 +236,22 @@ describe("slide", () => {
 		);
 	});
 
+	test("halves a leading-dot length the same way as a zero-prefixed one", () => {
+		expect(entryTranslate(slide({ from: "top", distance: ".5rem" }))).toBe("0 -.5rem");
+		expect(styles(slide({ from: "top", distance: ".5rem" })).translate).toBe("0 -0.25rem");
+	});
+
+	test("rejects a non-length of thousands of digits in linear time", () => {
+		let distance = `${"0".repeat(50_000)}!`;
+
+		let started = performance.now();
+		let mixin = slide({ from: "right", distance });
+
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(entryTranslate(mixin)).toBe(`${distance} 0`);
+		expect(styles(mixin).translate).toBe(`calc(${distance} / 2) 0`);
+	});
+
 	test("defaults to a transparent exit state alongside the offset", () => {
 		let style = styles(slide({ from: "bottom" }));
 

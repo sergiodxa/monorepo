@@ -310,8 +310,12 @@ const DEFAULT_SLIDE_OPACITY = 0;
 
 const DEFAULT_SLIDE_DISTANCE = "0.5rem";
 
-/** Matches a plain signed length (`0.5rem`, `12px`, `50%`) whose number can be halved directly. */
-const PLAIN_LENGTH = /^(\d*\.?\d+)([a-z%]*)$/i;
+/**
+ * Matches a plain length (`0.5rem`, `12px`, `.5em`, `50%`) whose number can be
+ * halved directly. The three numeric alternatives are mutually exclusive so a
+ * long run of digits still costs linear time when the string is not a length.
+ */
+const PLAIN_LENGTH = /^(\d+\.\d+|\d+|\.\d+)([a-z%]*)$/i;
 
 /** Negates a length, keeping a plain length readable (`-0.5rem`) and wrapping anything else in `calc()`. */
 function negate(distance: string): string {
