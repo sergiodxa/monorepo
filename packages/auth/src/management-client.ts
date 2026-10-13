@@ -7,15 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { LinkValue } from "@sdxc/pagination";
+import type { Link } from "@sdxc/link-header";
 import type { ProblemIssue } from "@sdxc/problem";
 import type { Result } from "@sdxc/result";
 
 import * as s from "@remix-run/data-schema";
 import { url } from "@remix-run/data-schema/checks";
 import { formatIdempotencyKey } from "@sdxc/idempotency";
+import { parse } from "@sdxc/link-header";
 import { MEDIA_TYPE as MERGE_PATCH_MEDIA_TYPE } from "@sdxc/merge-patch";
-import { parseLinkHeader } from "@sdxc/pagination";
 import { isProblem, ISSUES_SCHEMA } from "@sdxc/problem";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
@@ -223,7 +223,7 @@ function tenantPath(tenantId: string, ...segments: (string | number)[]): string 
 
 /**
  * Reads the continuation targets a keyset list answers with off its `Link` header,
- * leaving the RFC 8288 parsing itself to `@sdxc/pagination`.
+ * leaving the RFC 8288 parsing itself to `@sdxc/link-header`.
  *
  * @param header - The response's own `Link` header value.
  */
@@ -231,7 +231,7 @@ function cursorsFromLinkHeader(header: string | null): {
 	next: string | null;
 	prev: string | null;
 } {
-	let links: LinkValue[] = parseLinkHeader(header);
+	let links: Link[] = parse(header);
 
 	return {
 		next: links.find((link) => link.rels.includes("next"))?.target ?? null,
