@@ -99,6 +99,21 @@ describe("choosing a hub", () => {
 		});
 	});
 
+	test("keeps a comma inside a target and reads type", () => {
+		let links = fromLinkHeader(
+			new Response(null, {
+				headers: {
+					link: `</a,b.xml>; rel="alternate"; type="application/rss+xml"`,
+				},
+			}),
+			URL_,
+		);
+
+		expect(links).toEqual([
+			{ rel: "alternate", href: "https://example.com/a,b.xml", type: "application/rss+xml" },
+		]);
+	});
+
 	test("reads several relations off one header, in the order they were written", () => {
 		let links = fromLinkHeader(
 			new Response(null, {

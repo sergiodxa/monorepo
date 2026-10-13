@@ -849,6 +849,7 @@
       "dependencies": {
         "@sdxc/atom": "workspace:*",
         "@sdxc/json-feed": "workspace:*",
+        "@sdxc/link-header": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/rss": "workspace:*",

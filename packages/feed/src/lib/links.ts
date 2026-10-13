@@ -11,6 +11,8 @@ import type { Atom } from "@sdxc/atom";
 import type { JSONFeed } from "@sdxc/json-feed";
 import type { RSS } from "@sdxc/rss";
 
+import { parse } from "@sdxc/link-header";
+
 import type { Feed } from "../index.js";
 
 import { toLinks } from "./select-link.js";
@@ -27,12 +29,6 @@ const SELF_REL = "self";
 
 /** The only scheme a hub may be reached over, since a subscription carries a secret. */
 const SECURE_PROTOCOL = "https:";
-
-/** One `<…>; rel=…; type=…` entry of a `Link` header, before its parameters are read. */
-const HEADER_ENTRY = /<([^>]*)>([^,]*)/g;
-
-/** One `; name=value` parameter of a header entry, quoted or bare. */
-const HEADER_PARAMETER = /;\s*([^=;\s]+)\s*=\s*(?:"([^"]*)"|([^;,\s]+))/g;
 
 /**
  * Reads an Atom feed element's relations, applying the `alternate` default the
@@ -79,7 +75,8 @@ export function fromJSONFeedLinks(feed: JSONFeed.Feed, url?: string): Feed.Link[
  *
  * A header relation is what a publisher on a hosted platform can set when they
  * cannot edit the document, which is why it is read at all and why it outranks the
- * document wherever the two disagree.
+ * document wherever the two disagree. An entry naming several relations becomes
+ * one link per relation; `type` is copied onto each.
  *
  * @param response - The response whose headers carry the relations
  * @param url - The address the response came from, which relative targets resolve against
@@ -90,15 +87,12 @@ export function fromLinkHeader(response: Response, url?: string): Feed.Link[] {
 
 	let declared: { rel: string; href: string; type?: string }[] = [];
 
-	for (let [, target, parameters] of header.matchAll(HEADER_ENTRY)) {
-		let read = readParameters(parameters ?? "");
-		if (read.rel === undefined) continue;
+	for (let link of parse(header)) {
+		if (link.rels.length === 0) continue;
 
-		/** One entry may name several relations, each of which stands on its own. */
-		for (let rel of read.rel.split(/\s+/)) {
-			if (rel === "") continue;
-			let entry: { rel: string; href: string; type?: string } = { rel, href: target ?? "" };
-			if (read.type !== undefined) entry.type = read.type;
+		for (let rel of link.rels) {
+			let entry: { rel: string; href: string; type?: string } = { rel, href: link.target };
+			if (link.params.type !== undefined) entry.type = link.params.type;
 			declared.push(entry);
 		}
 	}
@@ -178,22 +172,6 @@ function isSecure(href: string): boolean {
 	} catch {
 		return false;
 	}
-}
-
-/** Reads the parameters of one header entry, keeping the first of each name. */
-function readParameters(source: string): { rel?: string; type?: string } {
-	let parameters: { rel?: string; type?: string } = {};
-
-	for (let [, name, quoted, bare] of source.matchAll(HEADER_PARAMETER)) {
-		let value = quoted ?? bare;
-		if (value === undefined || name === undefined) continue;
-
-		let key = name.toLowerCase();
-		if (key === "rel" && parameters.rel === undefined) parameters.rel = value.toLowerCase();
-		if (key === "type" && parameters.type === undefined) parameters.type = value;
-	}
-
-	return parameters;
 }
 
 /**
