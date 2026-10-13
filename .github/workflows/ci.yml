@@ -16,6 +16,9 @@ on:
     paths-ignore:
       - "docs/**"
       - "*.md"
+  # Merge queue temporary branches always need a check conclusion; path filters would
+  # skip the run and the queue would time out waiting for CI that never started.
+  merge_group:
   push:
     branches:
       - main
