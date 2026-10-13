@@ -10,6 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parse } from "@sdxc/link-header";
+
 /**
  * Reads one relation's target out of a `Link` header.
  *
@@ -24,14 +26,10 @@
  * let next = parseLink(response.headers.get("Link"));
  */
 export function parseLink(header: string | null, rel = "next"): string | null {
-	if (header === null) return null;
-
-	for (let value of header.split(",")) {
-		let match = value.match(/^\s*<([^>]*)>\s*;\s*rel="?([^";]+)"?/);
-		if (match?.[1] !== undefined && match[2] === rel) {
-			let url = new URL(match[1]);
-			return `${url.pathname}${url.search}`;
-		}
+	for (let link of parse(header)) {
+		if (!link.rels.includes(rel)) continue;
+		let url = new URL(link.target);
+		return `${url.pathname}${url.search}`;
 	}
 
 	return null;

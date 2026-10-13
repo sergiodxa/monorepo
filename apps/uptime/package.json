@@ -44,6 +44,7 @@
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
+		"@sdxc/link-header": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",
