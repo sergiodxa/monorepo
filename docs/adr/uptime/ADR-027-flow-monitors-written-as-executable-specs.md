@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — 2026-08-11; phase one (HTTP-only flows) implemented 2026-08-31; browser plugin (`@sdxc/spec/browser-run`) landed 2026-10-14, with engine column and browser-second metering still pending. Adds a sixth monitor type whose configuration is a `.spec` file
+**Accepted** — 2026-08-11; phase one (HTTP-only flows) implemented 2026-08-31; browser plugin (`@sdxc/spec/browser-run`) landed 2026-10-14; Polar `flow_run` meter and `browserSecond` cost ledger landed 2026-10-14 (engine column still pending). Adds a sixth monitor type whose configuration is a `.spec` file
 written by the customer, executed server-side against a hosted browser.
 
 **Being built in two phases, and the first one is HTTP-only.** A flow whose steps are requests
@@ -575,10 +575,10 @@ done**; they are the difference between this app embedding `@pkg/spec` and vendo
    binding as an argument so the package stays free of a Cloudflare dependency at import time;
    uptime is the host that decides to pass `env.BROWSER`.
 
-Still open from the browser phase: the `engine` column (`kitesurf` / `chromium`),
-`browserSecond` on the rate card, and a separate Polar flow-run meter ([§7](#7-cost)).
-Until those land, a browser-using flow is metered like an HTTP-only one — one ping per
-budgeted tool call.
+Still open from the browser phase: the `engine` column (`kitesurf` / `chromium`).
+Metering from [§7](#7-cost) is live: browser runs ingest one `flow_run` event on Polar
+(at `PRICE_PER_FLOW_RUN_USD`, `INCLUDED_FLOW_RUNS = 0`) and record `browserSecond` on the
+cost ledger; HTTP-only flows stay on the ping meter ([§7b](#7b-an-http-only-flow-is-metered-in-pings-not-browser-seconds)).
 
 ### 10. Honest limits, stated in the docs
 

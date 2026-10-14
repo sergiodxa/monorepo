@@ -38,6 +38,21 @@ export const PINGS_PER_BLOCK = 10_000;
 export const PRICE_PER_BLOCK_USD = 1;
 
 /**
+ * Browser flow runs included in the subscription before metered usage starts.
+ * Zero on purpose (ADR-027 §7): the $5 base already funds 100,000 pings, and folding
+ * even a small browser-run allowance into it would spend that margin on a feature most
+ * subscribers never enable.
+ */
+export const INCLUDED_FLOW_RUNS = 0;
+
+/**
+ * What one browser flow run costs the customer, in USD. A quarter of a cent —
+ * $2.50 per 1,000 — so every interval on the discrete list is exact on an invoice
+ * rather than rounded up by a block size (ADR-027 §7).
+ */
+export const PRICE_PER_FLOW_RUN_USD = 0.0025;
+
+/**
  * Days a billing month is estimated as, when projecting a monitor's check
  * frequency into a monthly ping count. Fixed at the shortest calendar month, so
  * every estimate a visitor sees is a floor they won't be surprised above.

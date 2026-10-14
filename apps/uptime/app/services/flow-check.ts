@@ -75,8 +75,16 @@ export interface FlowCheckResult {
 	testsTotal: number;
 	testsPassed: number;
 	testsFailed: number;
-	/** HTTP requests the run performed. The billable quantity — see `flow_monitor_results`. */
+	/**
+	 * Budgeted tool calls the run performed. For HTTP-only flows this is the ping count;
+	 * for browser flows the Polar bill is one flow-run event instead (ADR-027 §7).
+	 */
 	requestsMade: number;
+	/**
+	 * Whether the source reached for the `browser` namespace. Billing uses this to choose
+	 * the flow-run meter over the ping meter when a session actually started.
+	 */
+	usedBrowser: boolean;
 	/** The first failing test's title, when a test failed. */
 	failedTest: string | null;
 	/** The 1-based line of the source that failure happened on, when it is known. */
@@ -139,6 +147,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	if (needsBrowser && (browser === null || browser === undefined)) {
 		return errorResult(
 			"This flow uses the browser namespace, but Browser Run is not configured on this Worker.",
+			{ usedBrowser: true },
 		);
 	}
 
@@ -187,7 +196,11 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	let durationMs = Date.now() - startedAt;
 
 	if (isFailure(outcome)) {
-		return { ...errorResult(outcome.error.message), requestsMade: budget.spent(), durationMs };
+		return {
+			...errorResult(outcome.error.message, { usedBrowser: needsBrowser }),
+			requestsMade: budget.spent(),
+			durationMs,
+		};
 	}
 
 	let suite = outcome.data;
@@ -199,6 +212,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 		testsPassed: suite.passed,
 		testsFailed: suite.failed,
 		requestsMade: budget.spent(),
+		usedBrowser: needsBrowser,
 		failedTest: failed?.title ?? null,
 		failedAtLine: failed === undefined ? null : lineOf(input.source, failed),
 		failureDetail: failed === undefined ? null : detailOf(failed),
@@ -531,13 +545,14 @@ function refusedForSize(error: SpecError): boolean {
 }
 
 /** A result for a run that could not be performed, with the counters all zero. */
-function errorResult(message: string): FlowCheckResult {
+function errorResult(message: string, options: { usedBrowser?: boolean } = {}): FlowCheckResult {
 	return {
 		status: "error",
 		testsTotal: 0,
 		testsPassed: 0,
 		testsFailed: 0,
 		requestsMade: 0,
+		usedBrowser: options.usedBrowser ?? false,
 		failedTest: null,
 		failedAtLine: null,
 		failureDetail: null,

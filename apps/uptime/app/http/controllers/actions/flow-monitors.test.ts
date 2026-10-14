@@ -2,8 +2,8 @@
  * Tests for the flow monitor create/update/delete/run actions.
  *
  * A flow may only be pointed at a verified domain, refused before storage and asserted by the
- * absence of a row. A run bills one meter event per request actually made, keyed on the result
- * row via `cloudflare:workers`' deferred `waitUntil`.
+ * absence of a row. An HTTP-only run bills one ping per request; a browser run bills one
+ * flow-run event — both keyed on the result row via `cloudflare:workers`' deferred `waitUntil`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,7 +56,11 @@ let deferred: Promise<unknown>[] = [];
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 vi.doMock("cloudflare:workers", () => ({
-	env: createEnv<Env>({ PING_RESULTS: pingResults }),
+	/**
+	 * `BROWSER` is bound as null so a browser flow's missing-binding path is the
+	 * configuration error `runFlowCheck` returns, not a strict-env throw.
+	 */
+	env: createEnv<Env>({ PING_RESULTS: pingResults, BROWSER: null as unknown as Env["BROWSER"] }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -461,6 +465,44 @@ describe("checkFlowMonitor", () => {
 			events.map((event) => event.externalId ?? "").sort((a, b) => a.localeCompare(b)),
 		).toEqual([`ping:${stored!.id}:0`, `ping:${stored!.id}:1`, `ping:${stored!.id}:2`]);
 		expect(pingResults.dataPoints).toHaveLength(1);
+	});
+
+	test("a browser flow without Browser Run configured is an error and bills nothing", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			flowMonitors,
+			{
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Login",
+				source: [
+					"use browser",
+					'test "the login page greets" {',
+					"\twhen {",
+					`\t\tbrowser.open "${ORIGIN}/login"`,
+					"\t}",
+					"}",
+				].join("\n"),
+				interval_seconds: 3600,
+				is_enabled: true,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			routes.actions.monitor.flow.check,
+			checkFlowMonitor as RequestHandler<any>,
+			"POST",
+			{ monitor_id: monitor.id },
+			{ accept: "application/json" },
+		);
+
+		let body = (await response.json()) as Record<string, unknown>;
+		expect(body.status).toBe("error");
+		expect(await ingestedEvents()).toHaveLength(0);
 	});
 
 	test("a source no verified domain covers is recorded as an error and bills nothing", async () => {

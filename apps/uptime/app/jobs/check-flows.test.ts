@@ -25,6 +25,7 @@ import type { InsertFlowMonitor } from "~/database/schema";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { installFlags } from "~/app/test/flags";
+import { teams } from "~/database/schema";
 
 /** A run whose every test passed, which is the neutral result each case narrows from. */
 function passing(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
@@ -34,6 +35,7 @@ function passing(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
 		testsPassed: 4,
 		testsFailed: 0,
 		requestsMade: 3,
+		usedBrowser: false,
 		failedTest: null,
 		failedAtLine: null,
 		failureDetail: null,
@@ -225,6 +227,39 @@ describe("checkFlows", () => {
 		await runJob(db);
 
 		expect(enqueued()).toEqual([]);
+	});
+
+	test("bills one flow-run event for a browser run, not one ping per tool call", async () => {
+		let { db } = createTestDatabase();
+		await db.create(
+			teams,
+			{ id: "team-1", owner_id: "owner-1", name: "Acme", slug: "acme", logo: null },
+			{ touch: true },
+		);
+		let monitor = await seedMonitor(db, {
+			source: 'use browser\ntest "x" { when { browser.open "https://a.test/" } }',
+		});
+		runFlowCheckMock.mockImplementation(async () =>
+			passing({ usedBrowser: true, requestsMade: 4, durationMs: 15_000 }),
+		);
+
+		await runJob(db);
+
+		expect(ingestMock).toHaveBeenCalled();
+		let events = ingestMock.mock.calls.flatMap((call) => call[0] ?? []);
+		expect(events).toEqual([
+			expect.objectContaining({
+				name: "flow_run",
+				externalId: expect.stringMatching(/^flow_run:/),
+				customer: { externalId: "owner-1" },
+				metadata: expect.objectContaining({
+					teamId: "team-1",
+					monitorId: monitor.id,
+					durationSeconds: 15,
+				}),
+			}),
+		]);
+		expect(events.every((event) => event.name !== "ping")).toBe(true);
 	});
 
 	test("alerts every time an assertion is still failing, leaving cooldown to space the repeats", async () => {

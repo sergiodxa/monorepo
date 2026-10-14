@@ -35,6 +35,7 @@ function outcome(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
 		testsPassed: 2,
 		testsFailed: 0,
 		requestsMade: 3,
+		usedBrowser: false,
 		failedTest: null,
 		failedAtLine: null,
 		failureDetail: null,

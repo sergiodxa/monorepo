@@ -62,6 +62,7 @@ const COST_FIELDS: Record<CostResource, string> = {
 	doRowRead: "do_rows_read",
 	doRowWritten: "do_rows_written",
 	workerLogEvent: "log_events",
+	browserSecond: "browser_seconds",
 };
 
 /**

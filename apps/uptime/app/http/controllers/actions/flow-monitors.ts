@@ -17,16 +17,14 @@ import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { BillablePing } from "~/app/services/ping-meter";
-
 import {
 	CreateFlowMonitorSchema,
 	FlowMonitorIdSchema,
 	UpdateFlowMonitorSchema,
 } from "~/app/http/validators/flow-monitor";
 import { writePingResult } from "~/app/services/analytics";
+import { planFlowBilling, settleFlowBilling } from "~/app/services/flow-billing";
 import { inspectFlowSource, runFlowCheck } from "~/app/services/flow-check";
-import { ingestPings } from "~/app/services/ping-meter";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-flow-monitor */
@@ -203,22 +201,18 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	});
 
 	/**
-	 * One event per request made, keyed exactly as the sweep keys them, so a manual run and a
-	 * scheduled one can never collide or double-bill. The call is deferred past the response
-	 * because the visitor already has the result, and ingestion is best-effort, logging failures.
+	 * HTTP-only flows bill one ping per request; browser flows bill one flow-run event and
+	 * record browser-seconds on the cost ledger (ADR-027 §7). Deferred past the response
+	 * because the visitor already has the result, and ingestion is best-effort.
 	 */
-	if (checkResult.requestsMade > 0) {
-		let pings: BillablePing[] = [];
-		for (let index = 0; index < checkResult.requestsMade; index++) {
-			pings.push({
-				externalId: `ping:${resultId}:${index}`,
-				ownerId: ctx.team.owner_id,
-				teamId: ctx.team.id,
-				monitorId: monitor.id,
-				type: "flow",
-			});
-		}
-		waitUntil(ingestPings(ctx.billing, pings));
+	let billingPlan = planFlowBilling(checkResult, {
+		resultId,
+		ownerId: ctx.team.owner_id,
+		teamId: ctx.team.id,
+		monitorId: monitor.id,
+	});
+	if (billingPlan.pings.length > 0 || billingPlan.flowRuns.length > 0) {
+		waitUntil(settleFlowBilling(ctx.billing, billingPlan));
 	}
 
 	/**
