@@ -132,7 +132,10 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	if (isFailure(grants)) return errorResult(grants.error.message);
 
 	let needsBrowser = sourceUsesBrowser(input.source);
-	let browser = input.browser === undefined ? env.BROWSER : input.browser;
+	let browser = input.browser;
+	if (needsBrowser && browser === undefined) {
+		browser = env.BROWSER;
+	}
 	if (needsBrowser && (browser === null || browser === undefined)) {
 		return errorResult(
 			"This flow uses the browser namespace, but Browser Run is not configured on this Worker.",
