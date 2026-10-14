@@ -16,7 +16,7 @@ import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { block, container } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
+import { overflow, overflowBlock, overflowInline } from "@sdxc/u/overflow";
 import { at } from "@sdxc/u/responsive";
 import { is, maxIs, pb, pi, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -334,6 +334,11 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						pi("0.3em"),
 						pb("0.15em"),
 					]),
+					/**
+					 * Long lines scroll on the inline axis. Inline `contain` keeps
+					 * a horizontal fling inside the block so the page stays put on
+					 * that axis, while a vertical wheel still chains to the document.
+					 */
 					when("& :where(pre)", [
 						rounded("md"),
 						border({ color: "neutral.border", width: 1 }),
@@ -341,7 +346,12 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						fg("neutral.emphasis"),
 						pi("1em"),
 						pb("0.875em"),
-						overflow("auto"),
+						overflowInline("auto"),
+						overflowBlock("hidden"),
+						raw({
+							overscrollBehaviorInline: "contain",
+							overscrollBehaviorX: "contain",
+						}),
 					]),
 					/**
 					 * A fenced block's `code` is an inline box, so the chip padding above would
