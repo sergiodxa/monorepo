@@ -334,11 +334,6 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						pi("0.3em"),
 						pb("0.15em"),
 					]),
-					/**
-					 * Long lines scroll on the inline axis. Inline `contain` keeps
-					 * a horizontal fling inside the block so the page stays put on
-					 * that axis, while a vertical wheel still chains to the document.
-					 */
 					when("& :where(pre)", [
 						rounded("md"),
 						border({ color: "neutral.border", width: 1 }),
