@@ -19,6 +19,7 @@ import path from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import * as JSONL from "@sdxc/jsonl";
 import { createRandom } from "@sdxc/random";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
@@ -230,9 +231,9 @@ export async function connectStdioPlugin(
  * @param plugin - The local plugin implementation to expose over the wire.
  */
 export async function servePlugin(plugin: Plugin): Promise<undefined> {
-	for await (let line of readLines(process.stdin)) {
-		if (line.trim() === "") continue;
-		let request = parseWireRequest(line);
+	for await (let entry of JSONL.read(process.stdin)) {
+		if (isFailure(entry)) continue;
+		let request = parseWireRequest(entry.data.value);
 		if (request === null) continue;
 		if (request.method === "describe") {
 			writeReply({ id: request.id, result: plugin.describe() });
@@ -317,13 +318,15 @@ function openConnection(child: PluginProcess): WireConnection {
 
 	async function pumpReplies(): Promise<undefined> {
 		try {
-			for await (let line of readLines(child.stdout)) {
-				if (line.trim() === "") continue;
-				let reply = parseWireReply(line);
+			for await (let entry of JSONL.read(child.stdout)) {
+				let reply = isFailure(entry) ? null : parseWireReply(entry.data.value);
 				if (reply === null) {
+					let reason = isFailure(entry)
+						? entry.error.message
+						: truncate(JSON.stringify(entry.data.value) ?? "");
 					close(
 						new ToolError(
-							`The plugin broke the wire protocol with a malformed reply line: ${truncate(line)}`,
+							`The plugin broke the wire protocol with a malformed reply line: ${reason}`,
 						),
 					);
 					child.kill();
@@ -481,38 +484,8 @@ function writeReply(reply: WireReply): undefined {
 	return undefined;
 }
 
-/**
- * Split a byte stream into newline-delimited lines.
- *
- * @yields One line at a time, without its terminating newline.
- */
-async function* readLines(
-	stream: AsyncIterable<Uint8Array>,
-): AsyncGenerator<string, undefined, undefined> {
-	let decoder = new TextDecoder();
-	let buffer = "";
-	for await (let chunk of stream) {
-		buffer += decoder.decode(chunk, { stream: true });
-		let index = buffer.indexOf("\n");
-		while (index !== -1) {
-			yield buffer.slice(0, index);
-			buffer = buffer.slice(index + 1);
-			index = buffer.indexOf("\n");
-		}
-	}
-	buffer += decoder.decode();
-	if (buffer.length > 0) yield buffer;
-	return undefined;
-}
-
-/** Parse one plugin→host reply line; null means the line broke the protocol. */
-function parseWireReply(line: string): WireReply | null {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(line);
-	} catch {
-		return null;
-	}
+/** Read one parsed plugin→host reply line; null means the line broke the protocol. */
+function parseWireReply(parsed: unknown): WireReply | null {
 	if (typeof parsed !== "object" || parsed === null) return null;
 	let record = parsed as { id?: unknown; result?: unknown; error?: unknown };
 	if (typeof record.id !== "number") return null;
@@ -535,14 +508,8 @@ function parseWireReply(line: string): WireReply | null {
 	return { id: record.id, result: record.result ?? null };
 }
 
-/** Parse one host→plugin request line; null means it broke the protocol. */
-function parseWireRequest(line: string): WireRequest | null {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(line);
-	} catch {
-		return null;
-	}
+/** Read one parsed host→plugin request line; null means it broke the protocol. */
+function parseWireRequest(parsed: unknown): WireRequest | null {
 	if (typeof parsed !== "object" || parsed === null) return null;
 	let record = parsed as {
 		id?: unknown;

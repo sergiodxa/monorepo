@@ -165,4 +165,4 @@ number is the part that most needs to be the same everywhere.
 - [x] `@sdxc/jsonl` with `parse`, `stringify`, `lines`, `read`, `encode` and `encodeLines`
 - [ ] `sdxc` lock file on `@sdxc/jsonl`
 - [ ] `auth-saas` transfer files and import body on `lines` and `encode`
-- [ ] `@sdxc/spec` stdio transport on `lines` and `read`
+- [x] `@sdxc/spec` stdio transport on `lines` and `read`
