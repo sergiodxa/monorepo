@@ -1,7 +1,8 @@
 /**
  * Contained scroll-snap carousel for the `/browser-flows` examples section. The
  * viewport owns horizontal overflow so long monospace lines never widen the page;
- * `carouselControls()` hydrates Previous/Next into working invokers.
+ * each slide fills the viewport so Previous/Next (which page by `clientWidth`)
+ * land on the next snap, and `carouselControls()` hydrates those invokers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,8 +56,8 @@ export const BrowserFlowExamplesCarousel = clientEntry(
 					aria-label={label}
 					mix={[is("full"), minIs(0)]}
 					style={{
-						"--ui-carousel-slide-size": "min(100%, 28rem)",
-						"--ui-carousel-gap": "1.5rem",
+						"--ui-carousel-slide-size": "100%",
+						"--ui-carousel-gap": "0px",
 						"--ui-carousel-padding": "0px",
 					}}
 				>
