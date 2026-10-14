@@ -7,8 +7,9 @@
 ## Background
 
 JSON Lines (also published as NDJSON) is one JSON value per line. The repo reads it in three
-places, each with its own copy of the same line splitter, and the `sdxc` CLI (ADR-136) adds a
-fourth reader and a writer for its lock file (`.config/sdxc.lock.jsonl` by default).
+places, each with its own copy of the same line splitter, and the `sdxc` CLI adds a fourth reader
+and a writer for its lock file (`.config/sdxc.lock.jsonl` by default, ADR-141) and its release
+changelog (ADR-144).
 
 ## Context
 
@@ -24,6 +25,8 @@ fourth reader and a writer for its lock file (`.config/sdxc.lock.jsonl` by defau
 ### How the copies differ
 
 - `auth-saas` skips blank lines; `@sdxc/spec` yields them.
+- `readTransferFileLines`'s `startLine` resumes a run from its stored `cursor`, and counts only
+  non-blank lines toward it: the cursor is a number of rows, not of lines.
 - `readRequestBodyLines` documents that it decodes and buffers "exactly the way"
   `readTransferFileLines` does, so the two are kept identical by hand.
 - None caps a line's length: input with no newline is buffered whole, in a Worker's memory for the
@@ -43,7 +46,7 @@ import * as JSONL from "@sdxc/jsonl";
 let entries = JSONL.parse(text); // Result<unknown[], JSONLParseError>
 let output = JSONL.stringify(values); // one line per value, each "\n"-terminated
 
-for await (let line of JSONL.lines(body, { maxLineLength: 1_048_576 })) {
+for await (let line of JSONL.lines(body, { maxLineBytes: 1_048_576 })) {
 	if (isFailure(line)) return line; // the limit, with the line number
 	line.data.text; // raw line, `line.data.number` its 1-based number
 }
@@ -67,8 +70,12 @@ let stream = JSONL.encode(rows); // ReadableStream<Uint8Array> from an (async) i
 ### Readers
 
 - **`lines(source, options)`** reads a `ReadableStream<Uint8Array>` or `AsyncIterable<Uint8Array>`
-  and yields `Result<Line, JSONLError>`. `maxLineLength` bounds the buffer: a line that exceeds it
-  yields one failure and reading stops. `skip` drops the first N lines, for resuming.
+  and yields `Result<Line, JSONLError>`. `maxLineBytes` bounds the buffer in encoded UTF-8 bytes,
+  the unit memory is spent in, before decoding: a line that exceeds it yields one failure and
+  reading stops.
+- **`skip`** drops the first N non-blank lines, so it takes a count of values a previous run
+  consumed (`auth-saas`'s `cursor`) and resumes at the same row whatever blank lines the input
+  holds. Line numbers on the lines that follow still count every line.
 - **`read(source, options)`** is `lines` plus `JSON.parse` and an optional Standard Schema per
   line; a line that fails yields a failure carrying its number and reading continues, so the
   caller decides whether one bad row ends the run.
@@ -90,7 +97,9 @@ Workers included. The media-type constants stay in `@sdxc/http`.
 
 - The `sdxc` CLI reads and writes its lock file with `parse` and `stringify`.
 - `auth-saas` replaces `readRequestBodyLines` and `readTransferFileLines` with `lines`, gaining a
-  line-length cap on the uploaded body, and `writeTransferFile`'s joining with `encode`.
+  line-length cap on the uploaded body, and `writeTransferFile`'s joining with `encode`. Its
+  `startLine` becomes `skip`, which counts the same rows, so a run stored mid-transfer resumes at
+  the same row after the migration.
 - `@sdxc/spec` replaces `readLines` with `lines`, and its per-line `JSON.parse` with `read`.
 
 Each migration is its own commit in its own workspace.
@@ -108,6 +117,10 @@ Each migration is its own commit in its own workspace.
 - **Another package to publish**, and three call sites to migrate.
 - **`@sdxc/spec` changes behavior on blank lines.** Today a blank line from a plugin fails
   `JSON.parse` and is treated as a broken reply; afterwards it is skipped.
+- **`auth-saas` writes different bytes for `\r\n` input.** An uploaded body with Windows line
+  endings is stored in R2 without the `\r`. Each row parses to the same value; a transfer file
+  written before the migration and read after it still resumes correctly, since `skip` and the
+  removed `\r` affect neither the row count nor the parsed values.
 
 ### Neutral
 
@@ -133,7 +146,8 @@ number is the part that most needs to be the same everywhere.
 ## References
 
 - [JSON Lines](https://jsonlines.org)
-- [ADR-136: `sdxc` Umbrella Package and CLI](./ADR-136-sdxc-umbrella-package-and-cli.md)
+- [ADR-141: `sdxc ui` Component Vendoring](./ADR-141-sdxc-ui-component-vendoring.md)
+- [ADR-144: `sdxc upgrade`](./ADR-144-sdxc-upgrade.md)
 
 ## Current Progress
 
