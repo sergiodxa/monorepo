@@ -4,6 +4,9 @@
 	"main": "./bootstrap/worker.ts",
 	"compatibility_date": "2026-09-02",
 	"compatibility_flags": ["nodejs_compat"],
+	// Browser Run drives flow monitors that use the `browser` namespace (ADR-027).
+	// `remote: true` because Quick Actions / CDP are not available in local workerd.
+	"browser": { "binding": "BROWSER", "remote": true },
 	"workers_dev": true,
 	"dev": { "port": 3000 },
 	"placement": { "mode": "smart" },

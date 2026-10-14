@@ -18,12 +18,12 @@ The source is written in an executable-spec language: `test` blocks that arrange
 
 These limits are stated first because a flow monitor is only as useful as your understanding of what it covers. None of them are oversights — they are the shape of the feature.
 
-- **There is no browser.** Nothing clicks, fills in a form field, runs JavaScript or lays a page out. A flow drives HTTP requests; [`html`](#html) reads the markup a request answered with, so a flow can assert on the page your server rendered — the heading it carries, the button it offers — but not on what that page becomes once a browser has run it.
+- **There is a real browser when you ask for one.** A flow that only uses [`http`](#http) stays a sequence of requests. A flow that `use`s [`browser`](#browser) opens a Browser Run session, drives the page the way a person would (click, fill, press), and asserts on what the live document exposes — headings, buttons, the URL after a redirect. Use `http` for APIs; use `browser` when the question is whether a real visitor can still complete the flow in the app.
 - **A flow can bring new data on every run.** [`sample`](#sample) gives it a fresh name, address or identifier per check, which is what a sign-up flow needs. A flow that signs _in_ still needs a fixed account you keep for the purpose, since the credential has to exist before the run.
 - **There is no branching and no arithmetic.** No conditionals, no loops, no sums. [`str.format`](#str) fills a template's holes, which is the whole of composition; a flow is otherwise a straight line of requests and assertions.
 - **`expect` is equality and truthiness only.** There is no regular expression, no comparison and no numeric range. The [`html`](#html) readers take a `containing` clause of their own, which is where substring matching lives.
 - **The only retry vocabulary is `eventually`, and it cannot retry a request.** See [Waiting for something to become true](#waiting-for-something-to-become-true).
-- **There is no file access, no shell and no database access.** The seven namespaces below are the whole vocabulary.
+- **There is no file access, no shell and no database access.** The eight namespaces below are the whole vocabulary.
 - **The fastest interval is 15 minutes.** A flow makes several requests and costs accordingly. If you need to know within a minute that something broke, put an HTTP monitor on the endpoint the flow depends on — that is what 1-minute resolution is for — and let the flow cover the sequence.
 
 ## Verified Domains
@@ -139,7 +139,34 @@ let code = url.query at.url "code"
 
 ## Tools
 
-Seven namespaces are available. There is nothing else.
+Eight namespaces are available. There is nothing else.
+
+### browser
+
+`browser.open`, `browser.navigate`, `browser.reload`, `browser.click`, `browser.fill`, `browser.type`, `browser.check`, `browser.uncheck`, `browser.press`, `browser.click_selector`, plus observables `browser.heading`, `browser.button`, `browser.link`, `browser.text`, `browser.checkbox`, `browser.element`, `browser.url`, `browser.path` and `browser.title`.
+
+A `browser` flow opens one Browser Run session for the run and drives a real page. Elements are addressed by accessibility role and accessible name — the same vocabulary [`html`](#html) uses over markup — so a sign-in check reads the way a person would:
+
+```
+use browser
+
+test "signing in lands on the dashboard" {
+	when {
+		browser.open "https://app.example.com/login"
+		browser.fill textbox "Email" with "uptime-monitor@example.com"
+		browser.fill textbox "Password" with "the monitor account's password"
+		browser.click button "Sign in"
+	}
+	then {
+		eventually within 5s {
+			expect browser.path "/dashboard"
+		}
+		expect browser.heading "Dashboard"
+	}
+}
+```
+
+Every URL `browser.open` / `browser.navigate` names is still checked against your verified domains before the session navigates. The session itself is also guardrailed to those domains.
 
 ### http
 
