@@ -80,7 +80,7 @@ Three newer conventions come up next to `robots.txt`:
 | Content Signals (`Content-Signal:` line) | A record inside `robots.txt`: `search=yes, ai-input=yes, ai-train=no` | parsed and written by this package, as a typed group record    |
 | IETF AI Preferences (`aipref`)           | A vocabulary with a `robots.txt` attachment, still a draft            | tracked; the generic record list carries it until it is an RFC |
 | `ai.txt`                                 | A separate file with its own format                                   | out of scope                                                   |
-| `llms.txt`                               | A Markdown site map for models, not an exclusion mechanism            | stays in `apps/sdxc-site` (`app/services/llms.ts`)                  |
+| `llms.txt`                               | A Markdown site map for models, not an exclusion mechanism            | stays in `apps/sdxc-site` (`app/services/llms.ts`)             |
 
 ## Decision
 
