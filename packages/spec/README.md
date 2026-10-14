@@ -490,12 +490,20 @@ Every built-in plugin, or the named subset.
 
 `createFsPlugin`, `createCliPlugin`, `createHttpPlugin`, `createBrowserPlugin`, `createHtmlPlugin`,
 `createDbPlugin`, `createEnvPlugin`, `createUrlPlugin`, `createJwtPlugin`, `createSamplePlugin`,
-`createStrPlugin` and `createSpecPlugin` each build one namespace and take no arguments, except:
+`createStrPlugin` and `createSpecPlugin` each build one namespace and take no arguments, except
+`createBrowserRunPlugin` (from `@sdxc/spec/browser-run`), which takes a Browser Run binding:
 
 #### `createHttpPlugin(options?: HttpPluginOptions): Plugin`
 
 `maxResponseBytes` caps each response body, refusing it with a `ResponseTooLargeError` as soon as
 the declared length or the streamed bytes pass the cap. Omitted, bodies are read whole.
+
+#### `createBrowserRunPlugin(options: BrowserRunPluginOptions): Plugin` (`@sdxc/spec/browser-run`)
+
+The same `browser` tool surface as `createBrowserPlugin`, backed by a Cloudflare Browser Run
+CDP session instead of the local `agent-browser` CLI. Pass the Worker’s `BROWSER` binding (and
+optional `allowedDomains` guardrails). The Workers entry (`@sdxc/spec/workers`) does not export
+this factory — which remote browser drives the tools is the host’s decision.
 
 #### `connectStdioPlugin(command: string[], namespace: string): Promise<Result<Plugin, SpecError>>`
 
