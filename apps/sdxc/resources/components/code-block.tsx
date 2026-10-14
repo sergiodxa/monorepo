@@ -14,7 +14,7 @@ import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { hstack, inlineFlex, shrink } from "@sdxc/u/layout";
-import { overflowX, overscrollBehavior } from "@sdxc/u/overflow";
+import { overflowX } from "@sdxc/u/overflow";
 import { m, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
 import { Separator } from "@sdxc/ui";
@@ -67,7 +67,14 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 					/* Beside the copy button the code takes the rest of the row and scrolls within it. */
 					raw({ flex: "1 1 auto", minInlineSize: 0 }),
 					overflowX("auto"),
-					overscrollBehavior("contain"),
+					/*
+					 * Inline-axis contain only: a long line that hits its end stays
+					 * inside the block, and a vertical wheel still chains to the page.
+					 */
+					raw({
+						overscrollBehaviorInline: "contain",
+						overscrollBehaviorX: "contain",
+					}),
 					font("mono"),
 					text("sm"),
 				]}
