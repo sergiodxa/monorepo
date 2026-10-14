@@ -118,7 +118,8 @@ describe("GET /api/:name", () => {
 		expect(body).toContain('id="ui-explore-components"');
 		expect(body).toContain("A compact pill");
 		expect(body).toContain("rtlAwareGradientDirection");
-		expect(body).toContain('src="/frames/previews/button"');
+		/* Frames publish their src in the document's frame registry, not as an HTML attribute. */
+		expect(body).toContain('"/frames/previews/button"');
 	});
 });
 
