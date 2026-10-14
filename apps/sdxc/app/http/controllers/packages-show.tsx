@@ -182,18 +182,11 @@ export default createAction(routes.api.show, async (ctx) => {
 });
 
 /**
- * Components for the `@sdxc/ui` explorer: theming first, then every component with the
- * short line its tile shows under the name.
+ * Components for the `@sdxc/ui` explorer gallery. Theming stays on the hero CTA and in
+ * the sidebar rather than as a tile — it is a contract page, not a pattern with a face.
  */
 async function listUiComponents() {
-	return [
-		{
-			title: "Theming",
-			href: routes.api.component.href({ component: "theming" }),
-			description: "Every --ui-* variable the catalogue reads, and what redefining one moves.",
-		},
-		...(await listComponentEntries()),
-	];
+	return await listComponentEntries();
 }
 
 /**

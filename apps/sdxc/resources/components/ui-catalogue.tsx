@@ -22,7 +22,7 @@ import UiExploreDialog from "~/resources/components/ui-explore-dialog";
 
 namespace UiCatalogue {
 	export interface Props {
-		/** Components and Theming, drawn as explorer tiles. */
+		/** Components drawn as explorer tiles. */
 		components: NavEntry[];
 		/** Mixins, behaviors, animations and styles as dense name grids. */
 		exports: NavGroup[];
@@ -51,8 +51,8 @@ export default function UiCatalogue(handle: Handle<UiCatalogue.Props>) {
 							Components
 						</h2>
 						<p mix={[m(0), text("sm"), fg("neutral")]}>
-							Every pattern in the catalogue, with a live preview of each. Open the explorer for a
-							focused view, or jump straight into a reference.
+							Every pattern in the catalogue. Open the explorer for a focused view, or jump straight
+							into a reference.
 						</p>
 					</div>
 
