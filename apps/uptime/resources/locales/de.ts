@@ -102,7 +102,7 @@ export default {
 				payForUsage: {
 					title: "Zahlen für tatsächliche Nutzung",
 					description:
-						"{$price} pro Monat enthalten {$included} Prüfungen. Darüber hinaus zahlen Sie für die Prüfungen, die Sie tatsächlich ausführen, und für nichts anderes.",
+						"{$price} pro Monat enthalten {$included} Prüfungen. Darüber hinaus zahlen Sie für die Prüfungen, die Sie tatsächlich ausführen. Browser-Flows werden separat mit {$flowRunPrice} pro 1.000 Läufen gemessen.",
 				},
 			},
 		},
@@ -304,9 +304,15 @@ export default {
 					},
 
 					third: {
+						title: "Browser-Flows",
+						description:
+							"{$flowRunPrice} pro 1.000 Browser-Läufe auf einem separaten Zähler — keiner im Abonnement enthalten",
+					},
+
+					fourth: {
 						title: "Keine versteckten Gebühren",
 						description:
-							"Keine zusätzlichen Kosten für Funktionen oder Integrationen. Zahlen Sie für die Pings, die Sie nutzen.",
+							"Keine Sitz- oder Funktionsaufschläge. Zahlen Sie für die Pings und Browser-Läufe, die Sie nutzen.",
 					},
 				},
 			},
@@ -314,7 +320,7 @@ export default {
 			calculator: {
 				title: "Preisrechner",
 				description:
-					"Berechnen Sie Ihre monatlichen Kosten basierend auf Ihren Überwachungsanforderungen",
+					"Schätzen Sie die monatlichen Ping-Kosten anhand der Monitor-Frequenz. Browser-Flow-Läufe werden separat mit {$flowRunPrice} pro 1.000 abgerechnet.",
 
 				add: "Monitor hinzufügen",
 
@@ -427,7 +433,7 @@ export default {
 
 				seventeenth: {
 					q: "Was passiert, wenn ich die Limits meines Plans überschreite?",
-					a: "Nutzung über die {$included} in Ihrem Abonnement enthaltenen Pings hinaus wird in ganzen Blöcken von {$blockSize} zu je {$blockPrice} abgerechnet — ein einzelner Ping darüber beginnt einen neuen Block.",
+					a: "Nutzung über die {$included} in Ihrem Abonnement enthaltenen Pings hinaus wird in ganzen Blöcken von {$blockSize} zu je {$blockPrice} abgerechnet — ein einzelner Ping darüber beginnt einen neuen Block. Browser-Flow-Läufe werden ab dem ersten separat mit {$flowRunPrice} pro 1.000 gemessen — keiner ist im Abonnement enthalten.",
 				},
 
 				eighteenth: {
@@ -443,6 +449,11 @@ export default {
 				twentieth: {
 					q: "Kann ich einen Login- oder Checkout-Flow überwachen?",
 					a: "Ja. Ein Flow-Monitor führt mehrere Schritte in Reihe aus, mit Zusicherungen dazwischen. Ein HTTP-Flow kann sich anmelden, das Token lesen und den Endpunkt aufrufen, den dieses Token autorisiert. Ein Browser-Flow öffnet eine echte Browser-Run-Sitzung, füllt aus und klickt wie ein Besucher, und prüft, was die Live-Seite nach dem Ausführen von JavaScript exponiert. Beide laufen nur gegen Domains, die Ihr Team verifiziert hat.",
+				},
+
+				twentyFirst: {
+					q: "Wie werden Browser-Flows abgerechnet?",
+					a: "Jeder Browser-Lauf berechnet ein Ereignis auf einem separaten Flow-Run-Zähler zu {$flowRunPrice} pro 1.000 Läufen — nichts wird vom Ping-Kontingent abgezogen. HTTP-only-Flows berechnen weiterhin einen Ping pro Anfrage aus den {$included}, die in Ihrem Abonnement enthalten sind.",
 				},
 			},
 		},
@@ -5118,7 +5129,7 @@ export default {
 					interval: {
 						label: "Ausführen alle",
 						description:
-							"Wie oft dieser Flow läuft. Jeder Lauf berechnet eine Prüfung pro Anfrage, ein kürzeres Intervall kostet also mehr.",
+							"Wie oft dieser Flow läuft. Ein HTTP-Flow berechnet eine Prüfung pro Anfrage; ein Browser-Flow berechnet einen Lauf auf dem Flow-Run-Zähler. Ein kürzeres Intervall kostet in beiden Fällen mehr.",
 						options: {
 							"900": "15 Minuten",
 							"1800": "30 Minuten",
@@ -5175,7 +5186,7 @@ export default {
 					interval: {
 						label: "Ausführen alle",
 						description:
-							"Wie oft dieser Flow läuft. Jeder Lauf berechnet eine Prüfung pro Anfrage, ein kürzeres Intervall kostet also mehr.",
+							"Wie oft dieser Flow läuft. Ein HTTP-Flow berechnet eine Prüfung pro Anfrage; ein Browser-Flow berechnet einen Lauf auf dem Flow-Run-Zähler. Ein kürzeres Intervall kostet in beiden Fällen mehr.",
 						options: {
 							"900": "15 Minuten",
 							"1800": "30 Minuten",

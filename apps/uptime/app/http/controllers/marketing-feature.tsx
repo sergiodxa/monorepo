@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { redirect } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -33,9 +34,15 @@ import routes from "~/routes/web";
  * GET /features/:slug — a feature marketing page. The schema `name` strips
  * the meta title's "| Uptime …" suffix: a schema name just names the
  * capability, where the page `<title>` also has to place it in the site.
+ * `browser-flows` permanently redirects to the dedicated `/browser-flows` landing.
  */
 export default createAction(routes.marketing.feature, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
+
+	if (slug === "browser-flows") {
+		return redirect(routes.browserFlows.href(), { status: redirect.Status.Permanent });
+	}
+
 	let isSignedIn = getViewer() !== null;
 	let chrome = buildMarketingChrome(ctx.intl.t);
 

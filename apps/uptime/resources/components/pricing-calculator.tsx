@@ -49,6 +49,7 @@ import {
 	monthlyPings,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
+	PRICE_PER_FLOW_RUN_USD,
 } from "~/config/pricing";
 
 /** Slider bounds, in minutes: as often as every minute, as rarely as hourly. */
@@ -162,6 +163,7 @@ export const PricingCalculator = clientEntry(
 				included: count.format(INCLUDED_PINGS),
 				blockPrice: money.format(PRICE_PER_BLOCK_USD),
 				blockSize: count.format(PINGS_PER_BLOCK),
+				flowRunPrice: money.format(PRICE_PER_FLOW_RUN_USD * 1000),
 			};
 
 			return (
@@ -184,7 +186,7 @@ export const PricingCalculator = clientEntry(
 										{t("landing.pricing.calculator.title")}
 									</Card.Title>
 									<Card.Description mix={[fontSize("base"), opacity(100), fg("neutral")]}>
-										{t("landing.pricing.calculator.description")}
+										{t("landing.pricing.calculator.description", pricingCopyValues)}
 									</Card.Description>
 								</div>
 
@@ -390,7 +392,7 @@ export const PricingCalculator = clientEntry(
 											counterReset("pricing-step"),
 										]}
 									>
-										{(["first", "second", "third"] as const).map((step) => (
+										{(["first", "second", "third", "fourth"] as const).map((step) => (
 											<li
 												key={step}
 												mix={[

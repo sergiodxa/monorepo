@@ -774,9 +774,8 @@ export const features: Record<string, MarketingContent.Page> = {
 				icon: "file-code",
 			},
 			{
-				title: "No new unit to price",
-				description:
-					"A run bills one check per HTTP request it made, drawn from the same allowance every other monitor type uses.",
+				title: "HTTP runs share the ping meter",
+				description: `An HTTP flow bills one check per request from the shared allowance. A browser flow bills separately at ${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs — none included in the subscription.`,
 				icon: "dollar-sign",
 			},
 			{
@@ -834,109 +833,6 @@ export const features: Record<string, MarketingContent.Page> = {
 				question: "How long does a run get?",
 				answer:
 					"Thirty seconds and 20 requests, whichever comes first. That covers a sign-in, a read-back, and the calls the token authorises — or a short click-through in a browser session.",
-			},
-		],
-	},
-
-	"browser-flows": {
-		slug: "browser-flows",
-		metaTitle: "Browser Flow Monitoring | Uptime",
-		metaDescription:
-			"Test your app in a real browser on a schedule — click, fill, and assert on what visitors see after JavaScript runs. Catch login and checkout breaks HTTP checks miss.",
-		badge: "Browser Flows",
-		title: "Test your app in",
-		highlight: "a real browser",
-		description:
-			"A browser flow opens a live Browser Run session, drives the page the way a person would — open, fill, click, press — and asserts on what the document exposes after scripts have run. A homepage returning 200 still leaves a broken login form invisible to an HTTP check; a browser flow catches the failure your visitors would hit.",
-		highlights: [
-			"Real Browser Run sessions",
-			"Click, fill, assert on the live page",
-			`${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs`,
-		],
-		trustIndicators: [
-			{ icon: "app-window", value: "Real", label: "Browser session" },
-			{ icon: "mouse-pointer-click", value: "A11y", label: "Role + name addressing" },
-			{ icon: "timer", value: "30s", label: "Run time limit" },
-			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
-		],
-		features: [
-			{
-				title: "Drive the page like a visitor",
-				description:
-					"`browser.open`, `fill`, `click`, and `press` against accessibility roles and names — the same vocabulary a person uses when they look for the Email field and the Sign in button.",
-				icon: "mouse-pointer-click",
-			},
-			{
-				title: "Assert on what actually rendered",
-				description:
-					"Headings, buttons, links, the path after a redirect, the document title — observables read the live document, so a client-rendered failure surfaces as a failed expectation.",
-				icon: "eye",
-			},
-			{
-				title: "Same alerts, same cooldowns",
-				description:
-					"Browser flow failures go through the channels, cooldowns, and maintenance windows you already configured for every other monitor.",
-				icon: "bell-ring",
-			},
-			{
-				title: "Priced per run, not per click",
-				description: `One browser run bills ${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs on a separate meter — nothing folded into the ping allowance — so an hourly login check stays a few cents a month.`,
-				icon: "dollar-sign",
-			},
-			{
-				title: "Verified domains only",
-				description:
-					"Every URL the session opens or navigates to is checked against domains your team has verified, and the session itself is guardrailed to those hosts.",
-				icon: "badge-check",
-			},
-			{
-				title: "A failing line, not a status code",
-				description:
-					"The assertion that broke, its line number, and expected against observed — rendered on your own spec with that line marked.",
-				icon: "file-code",
-			},
-		],
-		steps: [
-			{
-				title: "Verify the domain",
-				description:
-					"Prove the team controls the host the browser will drive. A session won't navigate outside verified domains.",
-			},
-			{
-				title: "Write the click-through",
-				description:
-					'`use browser`, open the page, fill the fields by role and name, click the button, and assert on the heading or path that means "it worked".',
-			},
-			{
-				title: "Get alerted on the failing step",
-				description:
-					"A broken sign-in or checkout alerts through your existing channels, naming the expectation that failed.",
-			},
-		],
-		faqs: [
-			{
-				question: "When should I use a browser flow instead of HTTP?",
-				answer:
-					"When the failure only appears once JavaScript has run and the page is laid out — a client-rendered login, a checkout that depends on hydration, a dashboard that never paints. An API path that answers with JSON stays on an HTTP flow.",
-			},
-			{
-				question: "How is a browser run billed?",
-				answer: `One event per run on a separate flow-run meter at ${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs — none included in the subscription — plus the measured session seconds on the cost ledger. HTTP-only flows still bill one ping per request from the shared allowance.`,
-			},
-			{
-				question: "How often can a browser flow run?",
-				answer:
-					"Every 15 minutes at the fastest, then 30 minutes, hourly, every 3, 6 or 12 hours, or daily; hourly is the default. Pair it with a 1-minute HTTP monitor on the endpoint the page depends on when you need faster detection.",
-			},
-			{
-				question: "Do I need Playwright or a test suite?",
-				answer:
-					"No. The flow is a short executable spec in the dashboard — open, fill, click, expect — not a repo of Playwright scripts to maintain. Teams that already own a Playwright suite and want monitors-as-code may still prefer a tool built around that model.",
-			},
-			{
-				question: "What can't a browser flow express?",
-				answer:
-					"Branching, computation, and generated data. A signup that needs a fresh address every run wants a fixed fixture account, the same constraint every other flow has.",
 			},
 		],
 	},

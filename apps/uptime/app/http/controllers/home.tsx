@@ -89,6 +89,7 @@ import {
 	INCLUDED_PINGS,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
+	PRICE_PER_FLOW_RUN_USD,
 } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
@@ -97,6 +98,7 @@ import MarketingFeatureRow from "~/resources/components/marketing/feature-row";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import PricingCalculator from "~/resources/components/pricing-calculator";
+import { BROWSER_FLOW_EXAMPLES } from "~/resources/content/browser-flows";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -106,66 +108,6 @@ const SCREENSHOT_LIGHT = "/screenshot-light.webp";
 
 /** Dark-mode hero screenshot, selected by the `<source>` media condition. */
 const SCREENSHOT_DARK = "/screenshot-dark.webp";
-
-/**
- * Spec sources shown on the homepage browser-examples section. The language of the
- * DSL is English by design, so these stay module constants rather than locale strings.
- */
-const BROWSER_FLOW_EXAMPLES = [
-	{
-		key: "signIn",
-		source: `use browser
-
-test "signing in lands on the dashboard" {
-	when {
-		browser.open "https://app.example.com/login"
-		browser.fill textbox "Email" with "uptime-monitor@example.com"
-		browser.fill textbox "Password" with "the monitor account's password"
-		browser.click button "Sign in"
-	}
-	then {
-		eventually within 5s {
-			expect browser.path "/dashboard"
-		}
-		expect browser.heading "Dashboard"
-	}
-}`,
-	},
-	{
-		key: "checkout",
-		source: `use browser
-
-test "checkout reaches confirmation" {
-	when {
-		browser.open "https://shop.example.com/cart"
-		browser.click button "Checkout"
-		browser.fill textbox "Card number" with "4242424242424242"
-		browser.click button "Pay now"
-	}
-	then {
-		eventually within 10s {
-			expect browser.heading "Order confirmed"
-		}
-	}
-}`,
-	},
-	{
-		key: "spa",
-		source: `use browser
-
-test "the settings page paints" {
-	when {
-		browser.open "https://app.example.com/settings"
-	}
-	then {
-		eventually within 5s {
-			expect browser.heading "Settings"
-		}
-		expect browser.button "Save changes"
-	}
-}`,
-	},
-] as const;
 
 /**
  * Vertical section padding shared by every full-width section: 64px, growing to
@@ -277,49 +219,49 @@ export default createAction(routes.home, async (ctx) => {
 		{
 			title: t("landing.features.list.first.title"),
 			description: t("landing.features.list.first.description"),
-			slug: "monitors",
+			href: routes.marketing.feature.href({ slug: "monitors" }),
 			icon: <ActivityIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.second.title"),
 			description: t("landing.features.list.second.description"),
-			slug: "alerts",
+			href: routes.marketing.feature.href({ slug: "alerts" }),
 			icon: <BellIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.fourth.title"),
 			description: t("landing.features.list.fourth.description"),
-			slug: "status-pages",
+			href: routes.marketing.feature.href({ slug: "status-pages" }),
 			icon: <GlobeIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.fifth.title"),
 			description: t("landing.features.list.fifth.description"),
-			slug: "ssl",
+			href: routes.marketing.feature.href({ slug: "ssl" }),
 			icon: <LockIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.sixth.title"),
 			description: t("landing.features.list.sixth.description"),
-			slug: "dns",
+			href: routes.marketing.feature.href({ slug: "dns" }),
 			icon: <LinkIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.seventh.title"),
 			description: t("landing.features.list.seventh.description"),
-			slug: "integrations",
+			href: routes.marketing.feature.href({ slug: "integrations" }),
 			icon: <MessageSquareIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.eighth.title"),
 			description: t("landing.features.list.eighth.description"),
-			slug: "flows",
+			href: routes.marketing.feature.href({ slug: "flows" }),
 			icon: <WorkflowIcon size={24} strokeWidth={1.5} />,
 		},
 		{
 			title: t("landing.features.list.ninth.title"),
 			description: t("landing.features.list.ninth.description"),
-			slug: "browser-flows",
+			href: routes.browserFlows.href(),
 			icon: <AppWindowIcon size={24} strokeWidth={1.5} />,
 		},
 	];
@@ -385,6 +327,7 @@ export default createAction(routes.home, async (ctx) => {
 		included: formatCount(ctx.locale, INCLUDED_PINGS),
 		blockPrice: formatMoney(ctx.locale, PRICE_PER_BLOCK_USD),
 		blockSize: formatCount(ctx.locale, PINGS_PER_BLOCK),
+		flowRunPrice: formatMoney(ctx.locale, PRICE_PER_FLOW_RUN_USD * 1000),
 	};
 
 	/**
@@ -427,6 +370,7 @@ export default createAction(routes.home, async (ctx) => {
 		"eighteenth",
 		"nineteenth",
 		"twentieth",
+		"twentyFirst",
 	].map((key) => ({
 		question: t(`landing.faq.list.${key}.q`),
 		answer: t(`landing.faq.list.${key}.a`, pricingCopyValues),
@@ -715,8 +659,8 @@ export default createAction(routes.home, async (ctx) => {
 						<div mix={[grid(), gap(8), ...responsiveGrid()]}>
 							{FEATURE_LINKS.map((feature) => (
 								<MarketingCard
-									key={feature.slug}
-									href={routes.marketing.feature.href({ slug: feature.slug })}
+									key={feature.href}
+									href={feature.href}
 									icon={feature.icon}
 									title={feature.title}
 									description={feature.description}
@@ -778,7 +722,7 @@ export default createAction(routes.home, async (ctx) => {
 
 						<div mix={[mbs(8), flex(), justify("center")]}>
 							<a
-								href={routes.marketing.feature.href({ slug: "browser-flows" })}
+								href={routes.browserFlows.href()}
 								mix={[
 									inlineFlex(),
 									items("center"),

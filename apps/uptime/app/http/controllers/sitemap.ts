@@ -26,6 +26,7 @@ interface StaticPage {
 
 const STATIC_PAGES: StaticPage[] = [
 	{ path: routes.home.href(), priority: 1, frequency: "weekly" },
+	{ path: routes.browserFlows.href(), priority: 0.9, frequency: "monthly" },
 	...Object.keys(features).map((slug) => ({
 		path: routes.marketing.feature.href({ slug }),
 		priority: 0.8,

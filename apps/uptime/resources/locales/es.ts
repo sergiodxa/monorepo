@@ -102,7 +102,7 @@ export default {
 				payForUsage: {
 					title: "Pague por el uso real",
 					description:
-						"{$price} al mes incluye {$included} comprobaciones. A partir de ahí paga las comprobaciones que realmente ejecuta, y nada más.",
+						"{$price} al mes incluye {$included} comprobaciones. A partir de ahí paga las comprobaciones que realmente ejecuta. Los flujos en navegador se miden aparte a {$flowRunPrice} por cada 1.000 ejecuciones.",
 				},
 			},
 		},
@@ -303,16 +303,23 @@ export default {
 					},
 
 					third: {
+						title: "Flujos en navegador",
+						description:
+							"{$flowRunPrice} por cada 1.000 ejecuciones en navegador en un medidor aparte — ninguna incluida en la suscripción",
+					},
+
+					fourth: {
 						title: "Sin tarifas ocultas",
 						description:
-							"Sin cargos adicionales por funciones o integraciones. Pague por los pings que use.",
+							"Sin cargos por asientos ni funciones. Pague por los pings y las ejecuciones en navegador que use.",
 					},
 				},
 			},
 
 			calculator: {
 				title: "Calculadora de precios",
-				description: "Calcule su costo mensual según sus necesidades de monitoreo",
+				description:
+					"Estime el costo mensual de pings según la frecuencia. Las ejecuciones de flujos en navegador se facturan aparte a {$flowRunPrice} por cada 1.000.",
 
 				add: "Agregar Monitor",
 
@@ -424,7 +431,7 @@ export default {
 
 				seventeenth: {
 					q: "¿Qué sucede si excedo los límites de mi plan?",
-					a: "El uso por encima de los {$included} pings incluidos en tu suscripción se factura en bloques completos de {$blockSize} a {$blockPrice} cada uno: un solo ping de más inicia un bloque nuevo.",
+					a: "El uso por encima de los {$included} pings incluidos en tu suscripción se factura en bloques completos de {$blockSize} a {$blockPrice} cada uno: un solo ping de más inicia un bloque nuevo. Las ejecuciones de flujos en navegador se miden aparte desde la primera a {$flowRunPrice} por cada 1.000 — ninguna está incluida en la suscripción.",
 				},
 
 				eighteenth: {
@@ -440,6 +447,11 @@ export default {
 				twentieth: {
 					q: "¿Puedo monitorear un flujo de inicio de sesión o de compra?",
 					a: "Sí. Un monitor de flujo ejecuta varios pasos en orden con aserciones entre ellos. Un flujo HTTP puede iniciar sesión, leer el token y llamar al endpoint que ese token autoriza. Un flujo en navegador abre una sesión Browser Run real, completa campos y hace clic como un visitante, y comprueba lo que la página en vivo expone después de que JavaScript se ejecute. Ambos solo se ejecutan contra dominios que su equipo haya verificado.",
+				},
+
+				twentyFirst: {
+					q: "¿Cómo se facturan los flujos en navegador?",
+					a: "Cada ejecución en navegador factura un evento en un medidor de ejecuciones aparte a {$flowRunPrice} por cada 1.000 — nada se descuenta del cupo de pings. Los flujos solo HTTP siguen facturando un ping por solicitud de los {$included} incluidos en su suscripción.",
 				},
 			},
 		},
@@ -5092,7 +5104,7 @@ export default {
 					interval: {
 						label: "Ejecutar cada",
 						description:
-							"Con qué frecuencia se ejecuta este flujo. Cada ejecución factura una verificación por cada solicitud que realiza, así que un intervalo más corto cuesta más.",
+							"Con qué frecuencia se ejecuta este flujo. Un flujo HTTP factura una verificación por solicitud; un flujo en navegador factura una ejecución en el medidor de ejecuciones. Un intervalo más corto cuesta más en ambos casos.",
 						options: {
 							"900": "15 minutos",
 							"1800": "30 minutos",
@@ -5149,7 +5161,7 @@ export default {
 					interval: {
 						label: "Ejecutar cada",
 						description:
-							"Con qué frecuencia se ejecuta este flujo. Cada ejecución factura una verificación por cada solicitud que realiza, así que un intervalo más corto cuesta más.",
+							"Con qué frecuencia se ejecuta este flujo. Un flujo HTTP factura una verificación por solicitud; un flujo en navegador factura una ejecución en el medidor de ejecuciones. Un intervalo más corto cuesta más en ambos casos.",
 						options: {
 							"900": "15 minutos",
 							"1800": "30 minutos",
