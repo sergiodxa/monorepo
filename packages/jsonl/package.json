@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/jsonl",
+	"version": "0.0.1",
+	"description": "JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
+	}
+}

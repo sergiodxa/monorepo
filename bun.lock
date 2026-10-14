@@ -1091,6 +1091,14 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/jsonl": {
+      "name": "@sdxc/jsonl",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+    },
     "packages/jwt": {
       "name": "@sdxc/jwt",
       "version": "0.0.1",
@@ -2438,6 +2446,8 @@
     "@sdxc/json-schema": ["@sdxc/json-schema@workspace:packages/json-schema"],
 
     "@sdxc/jsonc": ["@sdxc/jsonc@workspace:packages/jsonc"],
+
+    "@sdxc/jsonl": ["@sdxc/jsonl@workspace:packages/jsonl"],
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 

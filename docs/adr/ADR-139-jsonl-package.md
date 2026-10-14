@@ -43,8 +43,8 @@ Add `@sdxc/jsonl`, imported as a namespace like `@sdxc/yaml`:
 ```ts
 import * as JSONL from "@sdxc/jsonl";
 
-let entries = JSONL.parse(text); // Result<unknown[], JSONLParseError>
-let output = JSONL.stringify(values); // one line per value, each "\n"-terminated
+let entries = JSONL.parse(text); // Result<unknown[], JSONLError>
+let output = JSONL.stringify(values); // Result<string, JSONLError>, each line "\n"-terminated
 
 for await (let line of JSONL.lines(body, { maxLineBytes: 1_048_576 })) {
 	if (isFailure(line)) return line; // the limit, with the line number
@@ -57,7 +57,13 @@ for await (let entry of JSONL.read(body, { schema: Subject })) {
 }
 
 let stream = JSONL.encode(rows); // ReadableStream<Uint8Array> from an (async) iterable
+let copy = JSONL.encodeLines(texts); // already-serialized lines, written byte for byte
 ```
+
+Every reader and writer fails with one `JSONLError`, whose `code` names the step that failed
+(`line-too-long`, `invalid-json`, `invalid-value`, `unserializable`), with `line` the 1-based line
+number and `issues` the schema's issues for `invalid-value`. A caller handling a stream of results
+branches on `code` instead of on several classes.
 
 ### Line rules, shared by every reader
 
@@ -85,10 +91,15 @@ let stream = JSONL.encode(rows); // ReadableStream<Uint8Array> from an (async) i
 
 - **`stringify(values)`** writes each value with `JSON.stringify` and a `\n`, and a final newline.
 - **`encode(values)`** does the same lazily into a byte stream, for a response body or an R2 put.
+- **`encodeLines(lines)`** streams lines that are already JSON verbatim, one per `\n`. A consumer
+  copying rows between files (`auth-saas` moves raw lines from an upload into transfer files)
+  keeps their exact bytes; a parse and re-stringify would rewrite their whitespace and number
+  formatting, and cost a full parse per row.
 
 A value whose `JSON.stringify` would contain a raw newline cannot occur, since JSON escapes
-newlines in strings; a value that serializes to `undefined` (a function, a bare `undefined`) is a
-failure.
+newlines in strings; a value that serializes to `undefined` (a function, a bare `undefined`) or
+throws (a cycle, a `BigInt`) is an `unserializable` failure, and so is a line given to
+`encodeLines` that holds a `\n` or `\r`. The streaming writers error the stream with it.
 
 The package depends on `@sdxc/result` alone and runs wherever Web Streams and `TextDecoder` do,
 Workers included. The media-type constants stay in `@sdxc/http`.
@@ -97,7 +108,7 @@ Workers included. The media-type constants stay in `@sdxc/http`.
 
 - The `sdxc` CLI reads and writes its lock file with `parse` and `stringify`.
 - `auth-saas` replaces `readRequestBodyLines` and `readTransferFileLines` with `lines`, gaining a
-  line-length cap on the uploaded body, and `writeTransferFile`'s joining with `encode`. Its
+  line-length cap on the uploaded body, and `writeTransferFile`'s joining with `encodeLines`. Its
   `startLine` becomes `skip`, which counts the same rows, so a run stored mid-transfer resumes at
   the same row after the migration.
 - `@sdxc/spec` replaces `readLines` with `lines`, and its per-line `JSON.parse` with `read`.
@@ -151,7 +162,7 @@ number is the part that most needs to be the same everywhere.
 
 ## Current Progress
 
-- [ ] `@sdxc/jsonl` with `parse`, `stringify`, `lines`, `read` and `encode`
+- [x] `@sdxc/jsonl` with `parse`, `stringify`, `lines`, `read`, `encode` and `encodeLines`
 - [ ] `sdxc` lock file on `@sdxc/jsonl`
 - [ ] `auth-saas` transfer files and import body on `lines` and `encode`
 - [ ] `@sdxc/spec` stdio transport on `lines` and `read`

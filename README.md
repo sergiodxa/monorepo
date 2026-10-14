@@ -265,6 +265,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/json-pointer](packages/json-pointer)   | Parse, stringify, get and set RFC 6901 JSON Pointers                                                |
 | [@sdxc/json-schema](packages/json-schema)     | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12 |
 | [@sdxc/jsonc](packages/jsonc)                 | JSON with comments and trailing commas, parsed with errors that point at the line and column        |
+| [@sdxc/jsonl](packages/jsonl)                 | JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure    |
 | [@sdxc/messageformat](packages/messageformat) | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                         |
 | [@sdxc/qr](packages/qr)                       | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer     |
 | [@sdxc/semver](packages/semver)               | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons                        |
