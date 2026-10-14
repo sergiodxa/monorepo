@@ -102,7 +102,7 @@ export default {
 				payForUsage: {
 					title: "Paghi per l'utilizzo effettivo",
 					description:
-						"{$price} al mese includono {$included} controlli. Oltre quella soglia paga i controlli che esegue davvero, e nient'altro.",
+						"{$price} al mese includono {$included} controlli. Oltre quella soglia paga i controlli che esegue davvero. I flussi browser sono misurati a parte a {$flowRunPrice} ogni 1.000 esecuzioni.",
 				},
 			},
 		},
@@ -300,16 +300,23 @@ export default {
 					},
 
 					third: {
+						title: "Flussi browser",
+						description:
+							"{$flowRunPrice} ogni 1.000 esecuzioni browser su un contatore separato — nessuna inclusa nell'abbonamento",
+					},
+
+					fourth: {
 						title: "Nessun costo nascosto",
 						description:
-							"Nessun costo aggiuntivo per funzionalità o integrazioni. Paghi per i ping che utilizza.",
+							"Nessun costo aggiuntivo per posti o funzionalità. Paghi per i ping e le esecuzioni browser che utilizza.",
 					},
 				},
 			},
 
 			calculator: {
 				title: "Calcolatore Prezzi",
-				description: "Calcola il costo mensile in base alle sue esigenze di monitoraggio",
+				description:
+					"Stimi il costo mensile dei ping in base alla frequenza. Le esecuzioni di flussi browser sono fatturate a parte a {$flowRunPrice} ogni 1.000.",
 
 				add: "Aggiungi Monitor",
 
@@ -421,7 +428,7 @@ export default {
 
 				seventeenth: {
 					q: "Cosa succede se supero i limiti del mio piano?",
-					a: "L'utilizzo oltre i {$included} ping inclusi nel suo abbonamento viene fatturato a blocchi interi di {$blockSize} a {$blockPrice} ciascuno: un solo ping in più avvia un nuovo blocco.",
+					a: "L'utilizzo oltre i {$included} ping inclusi nel suo abbonamento viene fatturato a blocchi interi di {$blockSize} a {$blockPrice} ciascuno: un solo ping in più avvia un nuovo blocco. Le esecuzioni di flussi browser sono misurate a parte dalla prima a {$flowRunPrice} ogni 1.000 — nessuna è inclusa nell'abbonamento.",
 				},
 
 				eighteenth: {
@@ -437,6 +444,11 @@ export default {
 				twentieth: {
 					q: "Posso monitorare un flusso di accesso o di acquisto?",
 					a: "Sì. Un monitor di flusso esegue più passaggi in ordine con asserzioni tra uno e l'altro. Un flusso HTTP può accedere, rileggere il token e chiamare l'endpoint che quel token autorizza. Un flusso browser apre una vera sessione Browser Run, compila e clicca come un visitatore e verifica ciò che la pagina live espone dopo l'esecuzione di JavaScript. Entrambi vengono eseguiti solo verso domini che il suo team ha verificato.",
+				},
+
+				twentyFirst: {
+					q: "Come vengono fatturati i flussi browser?",
+					a: "Ogni esecuzione browser addebita un evento su un contatore di esecuzioni separato a {$flowRunPrice} ogni 1.000 — nulla viene detratto dalla quota di ping. I flussi solo HTTP addebitano ancora un ping per richiesta tra i {$included} inclusi nel suo abbonamento.",
 				},
 			},
 		},
@@ -5094,7 +5106,7 @@ export default {
 					interval: {
 						label: "Esegui ogni",
 						description:
-							"Con quale frequenza viene eseguito questo flusso. Ogni esecuzione addebita un controllo per richiesta, quindi un intervallo più breve costa di più.",
+							"Con quale frequenza viene eseguito questo flusso. Un flusso HTTP addebita un controllo per richiesta; un flusso browser addebita un'esecuzione sul contatore delle esecuzioni. Un intervallo più breve costa di più in entrambi i casi.",
 						options: {
 							"900": "15 minuti",
 							"1800": "30 minuti",
@@ -5150,7 +5162,7 @@ export default {
 					interval: {
 						label: "Esegui ogni",
 						description:
-							"Con quale frequenza viene eseguito questo flusso. Ogni esecuzione addebita un controllo per richiesta, quindi un intervallo più breve costa di più.",
+							"Con quale frequenza viene eseguito questo flusso. Un flusso HTTP addebita un controllo per richiesta; un flusso browser addebita un'esecuzione sul contatore delle esecuzioni. Un intervallo più breve costa di più in entrambi i casi.",
 						options: {
 							"900": "15 minuti",
 							"1800": "30 minuti",

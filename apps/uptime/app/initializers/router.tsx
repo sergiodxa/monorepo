@@ -365,6 +365,10 @@ export function createWebRouter(options: WebRouterOptions) {
 		lazy(() => import("~/app/http/controllers/marketing-comparison")),
 	);
 	router.map(
+		routes.browserFlows,
+		lazy(() => import("~/app/http/controllers/browser-flows")),
+	);
+	router.map(
 		routes.trust,
 		lazy(() => import("~/app/http/controllers/trust")),
 	);

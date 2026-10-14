@@ -51,6 +51,7 @@ describe("GET /sitemap.xml", () => {
 			throw new Error("expected at least one feature, audience, and comparison page");
 		}
 
+		expect(body).toContain(`<loc>https://uptime.test${routes.browserFlows.href()}</loc>`);
 		expect(body).toContain(
 			`<loc>https://uptime.test${routes.marketing.feature.href({ slug: featureSlug })}</loc>`,
 		);

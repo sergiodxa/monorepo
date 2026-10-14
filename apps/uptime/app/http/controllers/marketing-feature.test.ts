@@ -99,4 +99,11 @@ describe("GET /features/:slug", () => {
 		let body = await response.text();
 		expect(body).toContain("Page Not Found");
 	});
+
+	test("permanently redirects browser-flows to the dedicated landing", async () => {
+		let response = await getFeature("browser-flows");
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get("location")).toBe(routes.browserFlows.href());
+	});
 });

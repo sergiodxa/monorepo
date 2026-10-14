@@ -102,7 +102,7 @@ export default {
 				payForUsage: {
 					title: "Pay for actual usage",
 					description:
-						"{$price} a month includes {$included} checks. Past that you pay for the checks you actually run, and nothing else.",
+						"{$price} a month includes {$included} checks. Past that you pay for the checks you actually run. Browser flows meter separately at {$flowRunPrice} per 1,000 runs.",
 				},
 			},
 		},
@@ -351,16 +351,22 @@ export default {
 					},
 
 					third: {
-						title: "No hidden fees",
+						title: "Browser flows",
 						description:
-							"No extra charges for features or integrations. Pay for the pings you use.",
+							"{$flowRunPrice} per 1,000 browser runs on a separate meter — none included in the subscription",
+					},
+
+					fourth: {
+						title: "No hidden fees",
+						description: "No seat or feature add-ons. Pay for the pings and browser runs you use.",
 					},
 				},
 			},
 
 			calculator: {
 				title: "Pricing Calculator",
-				description: "Calculate your monthly cost based on your monitoring needs",
+				description:
+					"Estimate monthly ping cost from monitor frequency. Browser flow runs bill separately at {$flowRunPrice} per 1,000.",
 
 				add: "Add Monitor",
 
@@ -472,7 +478,7 @@ export default {
 
 				seventeenth: {
 					q: "What happens if I exceed my plan’s limits?",
-					a: "Usage above the {$included} pings included in your subscription is billed in whole blocks of {$blockSize} at {$blockPrice} each — a single ping over starts a new block.",
+					a: "Usage above the {$included} pings included in your subscription is billed in whole blocks of {$blockSize} at {$blockPrice} each — a single ping over starts a new block. Browser flow runs are metered separately from the first one at {$flowRunPrice} per 1,000 — none are included in the subscription.",
 				},
 
 				eighteenth: {
@@ -488,6 +494,11 @@ export default {
 				twentieth: {
 					q: "Can I monitor a login or a checkout flow?",
 					a: "Yes. A flow monitor runs several steps in order with assertions between them. An HTTP flow can sign in, read the token back, and call the endpoint that token authorises. A browser flow opens a real Browser Run session, fills and clicks the way a visitor would, and asserts on what the live page exposes after JavaScript runs. Both run only against domains your team has verified.",
+				},
+
+				twentyFirst: {
+					q: "How are browser flows billed?",
+					a: "Each browser run bills one event on a separate flow-run meter at {$flowRunPrice} per 1,000 runs — nothing folded into the ping allowance. HTTP-only flows still bill one ping per request from the shared {$included} included in your subscription.",
 				},
 			},
 		},
@@ -5100,7 +5111,7 @@ export default {
 					interval: {
 						label: "Run every",
 						description:
-							"How often this flow runs. Each run bills one check per request it makes, so a shorter interval costs more.",
+							"How often this flow runs. An HTTP flow bills one check per request; a browser flow bills one run on the flow-run meter. A shorter interval costs more either way.",
 						options: {
 							"900": "15 minutes",
 							"1800": "30 minutes",
@@ -5156,7 +5167,7 @@ export default {
 					interval: {
 						label: "Run every",
 						description:
-							"How often this flow runs. Each run bills one check per request it makes, so a shorter interval costs more.",
+							"How often this flow runs. An HTTP flow bills one check per request; a browser flow bills one run on the flow-run meter. A shorter interval costs more either way.",
 						options: {
 							"900": "15 minutes",
 							"1800": "30 minutes",

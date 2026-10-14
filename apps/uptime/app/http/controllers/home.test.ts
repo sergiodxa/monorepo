@@ -178,7 +178,7 @@ describe("GET /", () => {
 		expect(body).toContain("Min Check Interval");
 
 		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);
-		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "browser-flows" })}"`);
+		expect(body).toContain(`href="${routes.browserFlows.href()}"`);
 		expect(body).toContain("Learn more");
 
 		expect(body).toContain("Test in a real browser");
@@ -294,10 +294,11 @@ describe("GET /", () => {
 		let response = await getHome(null);
 		let body = await response.text();
 
-		expect(body.match(/<details/g)).toHaveLength(20);
+		expect(body.match(/<details/g)).toHaveLength(21);
 		expect(body).toContain("How does Uptime monitor my services?");
 		expect(body).toContain("From which regions can I monitor my services?");
 		expect(body).toContain("Can I monitor a login or a checkout flow?");
+		expect(body).toContain("How are browser flows billed?");
 	});
 
 	/**

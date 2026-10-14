@@ -82,6 +82,13 @@ export default route({
 	},
 
 	/**
+	 * Dedicated selling page for real-browser click-through monitoring. Lives outside
+	 * `marketing.feature` so the hero can lead with a live spec rather than the shared
+	 * feature-grid template.
+	 */
+	browserFlows: get("/browser-flows"),
+
+	/**
 	 * Its own top-level leaf: this is what a prospective customer reads to decide
 	 * whether to trust the rest of the site, so it sits in the footer next to the
 	 * legal pages, apart from the `marketing.*` pages that sell.

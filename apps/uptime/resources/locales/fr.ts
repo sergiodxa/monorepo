@@ -103,7 +103,7 @@ export default {
 				payForUsage: {
 					title: "Payez votre usage réel",
 					description:
-						"{$price} par mois comprend {$included} vérifications. Au-delà, vous payez les vérifications que vous effectuez réellement, et rien d'autre.",
+						"{$price} par mois comprend {$included} vérifications. Au-delà, vous payez les vérifications que vous effectuez réellement. Les flux navigateur sont mesurés séparément à {$flowRunPrice} pour 1 000 exécutions.",
 				},
 			},
 		},
@@ -303,16 +303,23 @@ export default {
 					},
 
 					third: {
+						title: "Flux navigateur",
+						description:
+							"{$flowRunPrice} pour 1 000 exécutions navigateur sur un compteur séparé — aucune incluse dans l'abonnement",
+					},
+
+					fourth: {
 						title: "Pas de frais cachés",
 						description:
-							"Pas de frais supplémentaires pour les fonctionnalités ou intégrations. Payez pour les pings que vous utilisez.",
+							"Pas de frais de siège ni de fonctionnalités. Payez pour les pings et les exécutions navigateur que vous utilisez.",
 					},
 				},
 			},
 
 			calculator: {
 				title: "Calculateur de tarifs",
-				description: "Calculez votre coût mensuel en fonction de vos besoins de surveillance",
+				description:
+					"Estimez le coût mensuel des pings selon la fréquence. Les exécutions de flux navigateur sont facturées séparément à {$flowRunPrice} pour 1 000.",
 
 				add: "Ajouter un moniteur",
 
@@ -425,7 +432,7 @@ export default {
 
 				seventeenth: {
 					q: "Que se passe-t-il si je dépasse les limites de mon forfait ?",
-					a: "L'utilisation au-delà des {$included} pings inclus dans votre abonnement est facturée par tranches entières de {$blockSize} à {$blockPrice} chacune : un seul ping supplémentaire entame une nouvelle tranche.",
+					a: "L'utilisation au-delà des {$included} pings inclus dans votre abonnement est facturée par tranches entières de {$blockSize} à {$blockPrice} chacune : un seul ping supplémentaire entame une nouvelle tranche. Les exécutions de flux navigateur sont mesurées séparément dès la première à {$flowRunPrice} pour 1 000 — aucune n'est incluse dans l'abonnement.",
 				},
 
 				eighteenth: {
@@ -441,6 +448,11 @@ export default {
 				twentieth: {
 					q: "Puis-je surveiller un flux de connexion ou de paiement ?",
 					a: "Oui. Un moniteur de flux exécute plusieurs étapes dans l'ordre, avec des assertions entre elles. Un flux HTTP peut se connecter, relire le jeton et appeler le point de terminaison que ce jeton autorise. Un flux navigateur ouvre une vraie session Browser Run, remplit et clique comme un visiteur, et vérifie ce que la page en direct expose après l'exécution de JavaScript. Les deux ne s'exécutent que vers des domaines que votre équipe a vérifiés.",
+				},
+
+				twentyFirst: {
+					q: "Comment les flux navigateur sont-ils facturés ?",
+					a: "Chaque exécution navigateur facture un événement sur un compteur d'exécutions séparé à {$flowRunPrice} pour 1 000 — rien n'est déduit du quota de pings. Les flux HTTP uniquement facturent encore un ping par requête parmi les {$included} inclus dans votre abonnement.",
 				},
 			},
 		},
@@ -5115,7 +5127,7 @@ export default {
 					interval: {
 						label: "Exécuter toutes les",
 						description:
-							"À quelle fréquence ce flux s'exécute. Chaque exécution facture une vérification par requête effectuée, un intervalle plus court coûte donc plus cher.",
+							"À quelle fréquence ce flux s'exécute. Un flux HTTP facture une vérification par requête ; un flux navigateur facture une exécution sur le compteur d'exécutions. Un intervalle plus court coûte plus cher dans les deux cas.",
 						options: {
 							"900": "15 minutes",
 							"1800": "30 minutes",
@@ -5171,7 +5183,7 @@ export default {
 					interval: {
 						label: "Exécuter toutes les",
 						description:
-							"À quelle fréquence ce flux s'exécute. Chaque exécution facture une vérification par requête effectuée, un intervalle plus court coûte donc plus cher.",
+							"À quelle fréquence ce flux s'exécute. Un flux HTTP facture une vérification par requête ; un flux navigateur facture une exécution sur le compteur d'exécutions. Un intervalle plus court coûte plus cher dans les deux cas.",
 						options: {
 							"900": "15 minutes",
 							"1800": "30 minutes",
