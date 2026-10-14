@@ -67,10 +67,6 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 					/* Beside the copy button the code takes the rest of the row and scrolls within it. */
 					raw({ flex: "1 1 auto", minInlineSize: 0 }),
 					overflowX("auto"),
-					/*
-					 * Inline-axis contain only: a long line that hits its end stays
-					 * inside the block, and a vertical wheel still chains to the page.
-					 */
 					raw({
 						overscrollBehaviorInline: "contain",
 						overscrollBehaviorX: "contain",
