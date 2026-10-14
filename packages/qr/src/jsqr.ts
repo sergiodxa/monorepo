@@ -1,12 +1,12 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 /**
- * Loads jsQR with the version-23 alignment centre corrected (74 → 78). Stock jsQR 1.4.0
- * cannot decode any version-23 symbol (cozmo/jsQR#251); the round-trip suite needs a reader
- * that matches ISO/IEC 18004 Annex E so a correct encoder is not blamed for the table typo.
+ * jsQR with version 23's alignment centres taken from ISO/IEC 18004 Annex E
+ * Table E.1 (`78` in place of stock jsQR 1.4.0's `74`, cozmo/jsQR#251). The
+ * round-trip suite loads this so every Model 2 version reaches ECC decoding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
@@ -19,8 +19,8 @@ const BROKEN_V23_ALIGNMENT = "alignmentPatternCenters: [6, 30, 54, 74, 102]";
 const FIXED_V23_ALIGNMENT = "alignmentPatternCenters: [6, 30, 54, 78, 102]";
 
 /**
- * jsQR with version 23's alignment pattern centres taken from the standard, so every
- * Model 2 version reaches the decoder's ECC stage instead of failing during sampling.
+ * jsQR whose version-23 alignment table matches the standard, so a correct
+ * encoder's version-23 symbols decode in the round-trip suite.
  */
 function loadPatchedJsQR(): typeof jsQRType {
 	let require = createRequire(import.meta.url);
