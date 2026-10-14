@@ -259,16 +259,20 @@ async function stopTool(
 
 /**
  * Signal a started program's process group with SIGTERM, escalating to SIGKILL
- * once {@link STOP_GRACE_MS} passes. A program that already exited reports the
- * code it exited with.
+ * once {@link STOP_GRACE_MS} passes. When the group leader exits first (a shell
+ * that spawned the real server), SIGKILL the group again so children that were
+ * still dying on SIGTERM cannot outlive `stop`.
  */
 async function stop(program: Started): Promise<number> {
 	if (program.exitCode !== undefined) return program.exitCode;
 	signalGroup(program.child, "SIGTERM");
 	let timer = setTimeout(() => signalGroup(program.child, "SIGKILL"), STOP_GRACE_MS);
-	let exitCode = await program.exited;
-	clearTimeout(timer);
-	return exitCode;
+	try {
+		return await program.exited;
+	} finally {
+		clearTimeout(timer);
+		signalGroup(program.child, "SIGKILL");
+	}
 }
 
 /** Signal every process in a started program's group, tolerating one already gone. */

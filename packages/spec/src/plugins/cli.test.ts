@@ -250,8 +250,10 @@ describe("start, output and stop", () => {
 			),
 		);
 		let grandchild = Number((await waitForOutput(started, handle, "\n")).trim());
+		expect(grandchild).toBeGreaterThan(0);
+		expect(isAlive(grandchild)).toBe(true);
 		expectSuccess(await started.call("stop", [value(handle)], context));
-		expect(isAlive(grandchild)).toBe(false);
+		await expectDead(grandchild);
 	});
 
 	test("disposing the plugin stops every program still running", async () => {
@@ -291,6 +293,19 @@ function isAlive(pid: number): boolean {
 	} catch {
 		return false;
 	}
+}
+
+/**
+ * Wait until `pid` is gone. `kill(pid, 0)` can still succeed for a moment after
+ * the group has been signaled, so a single check right after `stop` flakes.
+ */
+async function expectDead(pid: number): Promise<void> {
+	let deadline = Date.now() + 500;
+	while (Date.now() < deadline) {
+		if (!isAlive(pid)) return;
+		await new Promise((settle) => setTimeout(settle, 10));
+	}
+	throw new Error(`process ${pid} was still alive after stop`);
 }
 
 interface StubGrants {
