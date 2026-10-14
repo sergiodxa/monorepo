@@ -1084,6 +1084,13 @@
         "remix": "3.0.0",
       },
     },
+    "packages/jsonc": {
+      "name": "@sdxc/jsonc",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/jwt": {
       "name": "@sdxc/jwt",
       "version": "0.0.1",
@@ -2428,6 +2435,8 @@
     "@sdxc/json-pointer": ["@sdxc/json-pointer@workspace:packages/json-pointer"],
 
     "@sdxc/json-schema": ["@sdxc/json-schema@workspace:packages/json-schema"],
+
+    "@sdxc/jsonc": ["@sdxc/jsonc@workspace:packages/jsonc"],
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 

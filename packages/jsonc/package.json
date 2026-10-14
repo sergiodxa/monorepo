@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/jsonc",
+	"version": "0.0.1",
+	"description": "JSON with comments and trailing commas, parsed with errors that point at the line and column",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}
