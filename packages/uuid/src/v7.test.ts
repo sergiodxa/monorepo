@@ -78,12 +78,15 @@ describe("generateUUID", () => {
 		expect(counterOf(generateUUID())).toBeLessThanOrEqual(0x7ff);
 	});
 
-	test("advances the timestamp once the counter is exhausted", async () => {
+	test("advances the timestamp by one millisecond when the counter is exhausted", async () => {
 		let generateUUID = await load();
-		let ids = Array.from({ length: 5000 }, () => generateUUID());
+		let firstTs = timestampOf(generateUUID());
+		let advancedTs = firstTs;
+		for (let index = 0; index < 5000 && advancedTs === firstTs; index++) {
+			advancedTs = timestampOf(generateUUID());
+		}
 
-		expect([...ids].sort()).toEqual(ids);
-		expect(timestampOf(ids.at(-1)!)).toBe(1_000_000_000_001);
+		expect(advancedTs).toBe(firstTs + 1);
 	});
 
 	test("keeps sorting after the clock moves backwards", async () => {
