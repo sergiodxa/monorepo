@@ -1,8 +1,7 @@
 /**
- * Tests the blog's cache vocabulary against the middleware that consumes it:
- * that a post declaration survives to the response headers for a reader, and
- * that the same declaration is refused once the visitor carries a session, which
- * is what keeps an admin's preview of an unpublished post off the edge.
+ * Tests the blog's cache vocabulary against the middleware that consumes it: a post
+ * declaration survives to a reader's response, is refused once the visitor carries a
+ * session, and a page that declares nothing, like a CMS form, never reaches the edge.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,5 +48,19 @@ describe("the post cache declaration", () => {
 
 		expect(response.headers.get("Cache-Control")).toBe(NON_CACHEABLE_POLICY);
 		expect(response.headers.get("Cache-Tag")).toBeNull();
+	});
+});
+
+describe("a page that declares nothing", () => {
+	test("is kept out of the edge, so a CMS form shows what was just saved", async () => {
+		let cache = createRecordingCache();
+		let router = createRouter({ middleware: [workersCache({ cache: () => cache })] });
+		router.get("/cms/articles/:id/edit", () => new Response("form"));
+
+		let response = await router.fetch(
+			new Request("https://blog.test/cms/articles/1/edit", { headers: { Cookie: "session=abc" } }),
+		);
+
+		expect(response.headers.get("Cache-Control")).toBe(NON_CACHEABLE_POLICY);
 	});
 });
