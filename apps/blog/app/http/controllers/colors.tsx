@@ -9,15 +9,18 @@
 
 import { createAction } from "remix/router";
 
+import { STATIC_PAGE } from "~/app/initializers/cache";
 import { ColorsView } from "~/resources/views/colors";
 import routes from "~/routes/web";
 
 /**
- * Serves the design-token reference page used to audit and preview semantic colors.
+ * Serves the design-token reference page used to audit and preview semantic colors. The
+ * tokens ship with the code, so the edge keeps the page until the next deploy.
  * @returns HTML response for the public `/colors` catalog.
  */
 export default createAction(routes.colors, async (ctx) => {
 	let model: ColorsView.Model = {};
 
+	ctx.cache(STATIC_PAGE);
 	return ctx.render(ColorsView, model);
 });

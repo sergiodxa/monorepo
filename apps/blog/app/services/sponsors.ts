@@ -9,10 +9,18 @@
 
 import type { Cache } from "@sdxc/cache";
 import type { Result } from "@sdxc/result";
+import type { CacheInterface } from "@sdxc/workers-cache";
 import type { InferOutput } from "remix/data-schema";
 
-import { failure, isSuccess, success } from "@sdxc/result";
+import { currentLog } from "@sdxc/logger";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
+import { purge } from "@sdxc/workers-cache";
 import * as s from "remix/data-schema";
+
+import { TAGS } from "~/app/initializers/cache";
+
+/** Recorded when a stored roster could not clear the edge's copy of `/sponsors`. */
+const PURGE_FAILED_EVENT = "sponsors.purge_failed";
 
 /** The GitHub account the sponsorships belong to. */
 export const SPONSORED_LOGIN = "sergiodxa";
@@ -216,23 +224,31 @@ export async function readStoredSponsors(cache: Cache): Promise<SponsorRoster> {
 }
 
 /**
- * Reads GitHub and stores what it says, which is what the refresh job calls. The roster
- * is asked for rather than read through the cache, because the point of a refresh is to
- * replace an entry that is still perfectly readable.
+ * Reads GitHub, stores what it says and purges the edge's copy of `/sponsors`, which is
+ * what the refresh job calls. The roster is asked for rather than read through the cache,
+ * because the point of a refresh is to replace an entry that is still perfectly readable.
  *
  * @param cache Where the roster is kept.
  * @param token The credential the query is made with.
+ * @param edge The edge cache `/sponsors` is stored in. A failed purge is logged and the
+ * refresh still succeeds, since the page's own lifetime then bounds how long it stays stale.
  * @returns The roster now stored, or why it was not; a failure leaves the stored one standing.
  */
 export async function refreshSponsors(
 	cache: Cache,
 	token: string,
+	edge: CacheInterface,
 ): Promise<Result<SponsorRoster, Error>> {
 	let roster = await fetchSponsorRoster(token);
 	if (!isSuccess(roster)) return roster;
 
 	let written = await cache.write(SPONSORS_CACHE_KEY, roster.data, { ttl: SPONSORS_TTL });
 	if (!isSuccess(written)) return failure(written.error);
+
+	let purged = await purge(edge, { tags: [TAGS.sponsors()] });
+	if (isFailure(purged)) {
+		currentLog()?.warn(PURGE_FAILED_EVENT, { error: purged.error.message });
+	}
 
 	return roster;
 }

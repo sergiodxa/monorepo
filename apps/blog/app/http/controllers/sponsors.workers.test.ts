@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SponsorRoster } from "~/app/services/sponsors";
 
+import { PUBLIC_PAGE } from "~/app/initializers/cache";
 import { createWebRouter } from "~/app/initializers/router";
 import { SPONSORS_CACHE_KEY } from "~/app/services/sponsors";
 
@@ -85,6 +86,13 @@ describe("GET /sponsors", () => {
 		expect(current).toContain('href="https://github.com/alan"');
 		expect(past).toContain('aria-label="grace the sponsor"');
 		expect(past).toContain("https://avatars.example.test/grace");
+	});
+
+	test("is cached at the edge under the tag a roster refresh purges", async () => {
+		let response = await request("/sponsors");
+
+		expect(response.headers.get("cache-control")).toBe(PUBLIC_PAGE);
+		expect(response.headers.get("cache-tag")).toBe("sponsors");
 	});
 
 	test("leaves out the past list while every sponsor is current", async () => {

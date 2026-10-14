@@ -20,6 +20,7 @@ import { createTags } from "@sdxc/workers-cache";
 export const TAGS = createTags({
 	post: (postType: string, postSlug: string) => `post:${postType}:${postSlug}`,
 	postList: () => "posts",
+	sponsors: () => "sponsors",
 });
 
 /**
@@ -32,6 +33,12 @@ export const TAGS = createTags({
  * safe once the purge path has been watched working.
  */
 export const PUBLIC_PAGE = "public, max-age=0, s-maxage=60, must-revalidate";
+
+/**
+ * Lifetime for a page built from code alone, which only a deploy changes. Each deploy starts
+ * on an empty edge cache, so the edge keeps it a day with no tag for any write to purge.
+ */
+export const STATIC_PAGE = "public, max-age=0, s-maxage=86400, must-revalidate";
 
 /**
  * Lifetime for the ActivityStreams representation of a URL that also serves HTML, such as

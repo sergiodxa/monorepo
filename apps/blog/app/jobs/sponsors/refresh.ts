@@ -9,7 +9,7 @@
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
-import { env } from "cloudflare:workers";
+import { cache as platformCache, env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
 import { refreshSponsors } from "~/app/services/sponsors";
@@ -22,7 +22,7 @@ export default createJobHandler(jobs.sponsors.refresh, async (ctx) => {
 	let token = env.GITHUB_TOKEN;
 	if (!token) return void ctx.log.set({ sponsors: { skipped: "missing_token" } });
 
-	let roster = await refreshSponsors(new WorkerKVCache(env.CACHE), token);
+	let roster = await refreshSponsors(new WorkerKVCache(env.CACHE), token, platformCache);
 	if (isFailure(roster)) return void ctx.log.fail(roster.error);
 
 	ctx.log.set({ sponsors: { current: roster.data.current.length, past: roster.data.past.length } });

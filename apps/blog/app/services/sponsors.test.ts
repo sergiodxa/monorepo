@@ -9,6 +9,7 @@
 
 import { MemoryCache } from "@sdxc/cache/memory";
 import { isFailure, isSuccess } from "@sdxc/result";
+import { createRecordingCache } from "@sdxc/workers-cache";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -160,21 +161,41 @@ describe("refreshSponsors", () => {
 		);
 
 		let cache = new MemoryCache();
-		await refreshSponsors(cache, TOKEN);
+		await refreshSponsors(cache, TOKEN, createRecordingCache());
 
 		expect(logins(await readStoredSponsors(cache))).toEqual({ current: ["ada"], past: ["alan"] });
 	});
 
-	test("leaves the stored roster alone when GitHub cannot be read", async () => {
+	test("purges the edge's copy of /sponsors once the roster is stored", async () => {
+		server.use(http.post(GRAPHQL_URL, () => HttpResponse.json(payload([node("ada")]))));
+		let edge = createRecordingCache();
+
+		await refreshSponsors(new MemoryCache(), TOKEN, edge);
+
+		expect(edge.purgedTags).toEqual(["sponsors"]);
+	});
+
+	test("still reports the stored roster when the edge purge fails", async () => {
+		server.use(http.post(GRAPHQL_URL, () => HttpResponse.json(payload([node("ada")]))));
+		let edge = createRecordingCache({ failWith: new Error("edge unavailable") });
+
+		let roster = await refreshSponsors(new MemoryCache(), TOKEN, edge);
+
+		expect(isSuccess(roster)).toBe(true);
+	});
+
+	test("leaves the stored roster and the edge alone when GitHub cannot be read", async () => {
 		server.use(http.post(GRAPHQL_URL, () => HttpResponse.error()));
 
 		let cache = new MemoryCache();
+		let edge = createRecordingCache();
 		await cache.write(SPONSORS_CACHE_KEY, { current: [node("ada").sponsorEntity], past: [] });
 
-		let roster = await refreshSponsors(cache, TOKEN);
+		let roster = await refreshSponsors(cache, TOKEN, edge);
 
 		expect(isFailure(roster)).toBe(true);
 		expect(logins(await readStoredSponsors(cache)).current).toEqual(["ada"]);
+		expect(edge.purges).toEqual([]);
 	});
 });
 
