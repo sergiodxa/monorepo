@@ -20,7 +20,14 @@ import * as Queues from "@sdxc/cloudflare-pricing/queues";
 import * as Workers from "@sdxc/cloudflare-pricing/workers";
 
 /** The rate card this module currently states. Carried on every measurement it prices. */
-export const RATE_CARD_VERSION = "2026-09-28";
+export const RATE_CARD_VERSION = "2026-10-14";
+
+/**
+ * Cents per Browser Run wall-clock second at Workers Paid overage ($0.09/hour ÷ 3600).
+ * Appended rather than imported from `@sdxc/cloudflare-pricing` because that package has no
+ * Browser Run meter yet; the figure is ADR-027 §7's published rate.
+ */
+const BROWSER_SECOND_CENTS = 2.5e-3;
 
 /**
  * The rate card, at Workers Paid overage rates. **Key order is the Analytics Engine `double`
@@ -50,6 +57,8 @@ export const COST_RATE_CARD = defineRateCard({
 	doRowWritten: centsPerUnit(DurableObjects.SQLITE_ROWS_WRITTEN),
 	/** Workers Logs events: the worker enables `observability`, and every invocation writes one. */
 	workerLogEvent: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
+	/** Browser Run session time a browser flow opened (ADR-027 §7). */
+	browserSecond: BROWSER_SECOND_CENTS,
 });
 
 /** Cents per unit of every resource the ledger counts. */

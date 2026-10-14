@@ -634,7 +634,9 @@ A flow alerts when it goes **down**, and again when it **recovers**. It uses the
 
 ## Billing
 
-A flow run is metered as **one ping per HTTP request it made**, drawn from the same monthly ping allowance as every other check — because that is what a flow is: several pings with assertions between them. A five-request flow on an hourly interval spends 3,360 pings a month.
+An HTTP-only flow run is metered as **one ping per HTTP request it made**, drawn from the same monthly ping allowance as every other check — because that is what a flow is: several pings with assertions between them. A five-request flow on an hourly interval spends 3,360 pings a month.
+
+A browser flow run is a different unit: **one flow-run charge per run** ($0.0025, nothing included in the subscription), because a Browser Run session costs two to three orders of magnitude more than an HTTP ping. The run is also recorded on the cost ledger as browser-seconds so we can see what each customer costs us.
 
 A run refused before it starts — an unverified host, a source that will not parse — makes no requests and costs nothing, while still recording a visible result so you can see it happened.
 

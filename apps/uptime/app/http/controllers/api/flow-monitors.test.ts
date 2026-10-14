@@ -717,6 +717,7 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 			testsPassed: 1,
 			testsFailed: 0,
 			requestsMade: 1,
+			usedBrowser: false,
 			failedTest: null,
 			failedAtLine: null,
 			failureDetail: null,

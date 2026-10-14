@@ -301,6 +301,7 @@ describe("notify", () => {
 			testsPassed: 2,
 			testsFailed: 1,
 			requestsMade: 3,
+			usedBrowser: false,
 			failedTest: "checkout accepts the coupon",
 			failedAtLine: 27,
 			failureDetail: "expected status 200, got 500",

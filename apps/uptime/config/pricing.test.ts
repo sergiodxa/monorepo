@@ -16,12 +16,14 @@ import {
 	BASE_PRICE_USD,
 	formatPings,
 	formatUsd,
+	INCLUDED_FLOW_RUNS,
 	INCLUDED_PINGS,
 	monthlyCost,
 	monthlyCostForUsage,
 	monthlyPings,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
+	PRICE_PER_FLOW_RUN_USD,
 } from "~/config/pricing";
 
 describe("the pricing model", () => {
@@ -30,6 +32,11 @@ describe("the pricing model", () => {
 		expect(INCLUDED_PINGS).toBe(100_000);
 		expect(PRICE_PER_BLOCK_USD).toBe(1);
 		expect(PINGS_PER_BLOCK).toBe(10_000);
+	});
+
+	test("meters browser flow runs from the first one at a quarter-cent each", () => {
+		expect(INCLUDED_FLOW_RUNS).toBe(0);
+		expect(PRICE_PER_FLOW_RUN_USD).toBe(0.0025);
 	});
 });
 

@@ -19,7 +19,7 @@ There is no host field, no URL field, no region, and no header or body column. E
 2. On save, the source is parsed and every host it names is resolved against the team's verified domains. A source that will not parse, that names no host at all, or that names a host no verified domain covers is refused at the form, with the reason.
 3. Each scheduled check runs every test in the source, under one time cap and one request cap.
 4. The monitor is `up` when every test passes and `down` when any test fails. The first failure is the incident detail: which test, which line, what was expected against what was observed.
-5. The run's HTTP requests are metered, one ping each, and the run is written as one result row.
+5. The run is metered — one ping per HTTP request for HTTP-only flows, or one `flow_run` event plus browser-second cost for browser flows — and written as one result row.
 
 ## What a Spec Can Say
 
@@ -85,7 +85,8 @@ Exactly eight namespaces are registered: `http`, `url`, `jwt`, `sample`, `html`,
 - A run reads at most `1,048,576` bytes of any one response body. Parsing markup costs about 25 times the source, against a `128` MB isolate, so a single unbounded response would exhaust the memory the run and every monitor sharing the isolate need.
 - A source may be `20,000` characters.
 - Flow monitors are enabled by default.
-- A run bills one ping per HTTP request it made, into the same allowance every other check spends from. The meter is keyed by the result row plus the request's ordinal: the row makes a redelivered sweep free, and the ordinal stops one run's several requests deduplicating into one.
+- An HTTP-only run bills one ping per HTTP request it made, into the same allowance every other check spends from. The meter is keyed by the result row plus the request's ordinal: the row makes a redelivered sweep free, and the ordinal stops one run's several requests deduplicating into one.
+- A browser run bills one `flow_run` event on a separate Polar meter (nothing included in the subscription; $0.0025 per run) and records measured session seconds as `browserSecond` on the cost ledger so Cost Insights sees what that customer cost (ADR-027 §7).
 - Run history is retained `90` days, against `7` for HTTP check results — a flow at the 15-minute floor writes at most a few thousand rows a month.
 
 ## Important Behavior Notes

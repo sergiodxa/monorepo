@@ -50,6 +50,7 @@ describe("COST_RESOURCES", () => {
 			"doRowWritten",
 			"workerLogEvent",
 		]);
+		expect(COST_RESOURCES[18]).toBe("browserSecond");
 	});
 
 	test("fits inside the twenty doubles a data point carries, with the total alongside", () => {

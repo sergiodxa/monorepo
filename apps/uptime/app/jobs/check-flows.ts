@@ -13,8 +13,9 @@ import { createJobHandler } from "@sdxc/jobs";
 
 import type { UptimeModels } from "~/app/models";
 import type { ClaimedFlowMonitor } from "~/app/models/flow-monitors";
+import type { FlowBillingPlan } from "~/app/services/flow-billing";
+import type { FlowCheckResult } from "~/app/services/flow-check";
 import type { NotifyMessage } from "~/app/services/notify-queue";
-import type { BillablePing } from "~/app/services/ping-meter";
 import type { FlowStatus } from "~/database/schema";
 
 import { polar } from "~/app/initializers/billing";
@@ -24,16 +25,16 @@ import { shouldNotifyFlowResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
+import { planFlowBilling, settleFlowBilling } from "~/app/services/flow-billing";
 import { runFlowCheck } from "~/app/services/flow-check";
 import { enqueueNotifications } from "~/app/services/notify-queue";
-import { ingestPings } from "~/app/services/ping-meter";
 
 /** What one completed run produced, beyond the row it wrote. */
 interface CheckedMonitor {
-	/** The result row's id, which the ping meter's idempotency key is derived from. */
+	/** The result row's id, which the meter's idempotency key is derived from. */
 	resultId: string;
-	/** HTTP requests the run made, and therefore how many pings it bills. */
-	requestsMade: number;
+	/** The check outcome, which decides ping vs flow-run billing. */
+	result: FlowCheckResult;
 	/** The alert this run's outcome warrants, or `null` when it warrants none. */
 	notification: NotifyMessage | null;
 }
@@ -59,7 +60,7 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	]);
 
 	let notifications: NotifyMessage[] = [];
-	let pings: BillablePing[] = [];
+	let billingPlan: FlowBillingPlan = { pings: [], flowRuns: [], browserSeconds: 0 };
 	let successCount = 0;
 	let errorCount = 0;
 
@@ -83,9 +84,6 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 		successCount++;
 		if (outcome.value.notification !== null) notifications.push(outcome.value.notification);
 
-		/** A run that sent nothing bills nothing, so there is no event to derive. */
-		if (outcome.value.requestsMade === 0) continue;
-
 		let ownerId = ownerIds.get(outcome.item.team_id);
 		/**
 		 * A monitor whose team names no owner cannot be billed — there is no Polar
@@ -100,25 +98,20 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 			continue;
 		}
 
-		for (let index = 0; index < outcome.value.requestsMade; index++) {
-			pings.push({
-				/**
-				 * The result row's id plus the request's ordinal. Both halves are needed: the row
-				 * id is what makes a redelivered sweep free rather than double-billed, and the
-				 * ordinal is what keeps one run's several requests from deduplicating into one.
-				 */
-				externalId: `ping:${outcome.value.resultId}:${index}`,
-				ownerId,
-				teamId: outcome.item.team_id,
-				monitorId: outcome.item.id,
-				type: "flow",
-			});
-		}
+		let planned = planFlowBilling(outcome.value.result, {
+			resultId: outcome.value.resultId,
+			ownerId,
+			teamId: outcome.item.team_id,
+			monitorId: outcome.item.id,
+		});
+		billingPlan.pings.push(...planned.pings);
+		billingPlan.flowRuns.push(...planned.flowRuns);
+		billingPlan.browserSeconds += planned.browserSeconds;
 	}
 
 	await enqueueNotifications(notifications);
-	/** Every ping in one call, so a sweep of twenty flows costs one subrequest. */
-	await ingestPings(polar, pings);
+	/** One ingest per meter for the whole sweep, so twenty flows stay two subrequests. */
+	await settleFlowBilling(polar, billingPlan);
 
 	ctx.log.set({
 		checks: {
@@ -126,7 +119,9 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 			succeeded: successCount,
 			failed: errorCount,
 			notified: notifications.length,
-			ingested: pings.length,
+			ingested: billingPlan.pings.length + billingPlan.flowRuns.length,
+			flowRuns: billingPlan.flowRuns.length,
+			pings: billingPlan.pings.length,
 		},
 	});
 });
@@ -160,8 +155,9 @@ async function check(
 		responseTimeMs: result.durationMs ?? 0,
 	});
 
-	if (!shouldNotifyFlowResult(previousStatus, result.status))
-		return { resultId, requestsMade: result.requestsMade, notification: null };
+	if (!shouldNotifyFlowResult(previousStatus, result.status)) {
+		return { resultId, result, notification: null };
+	}
 
 	/**
 	 * Ids and statuses only, per the queue's contract: the consumer rebuilds the failing
@@ -170,7 +166,7 @@ async function check(
 	 */
 	return {
 		resultId,
-		requestsMade: result.requestsMade,
+		result,
 		notification: {
 			monitorType: "flow",
 			monitorId: monitor.id,
