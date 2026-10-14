@@ -13,6 +13,7 @@
 		"format:fix": "vp fmt",
 		"lint": "vp lint",
 		"lint:fix": "vp lint --fix",
+		"prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath scripts/git-hooks && git config commit.cleanup scissors || true",
 		"release": "bun scripts/release/main.ts",
 		"release:bootstrap": "bun scripts/release/bootstrap.ts",
 		"test": "vp test run",

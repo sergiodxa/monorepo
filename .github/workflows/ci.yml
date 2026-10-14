@@ -85,6 +85,36 @@ jobs:
       - name: Run Check
         run: bun run check
 
+  # A local commit-msg hook is skipped by `--no-verify` and by clones that never ran
+  # `bun install`, so every commit a push or pull request adds is checked again here for the
+  # release-note body ADR-140 requires. A pull request is checked from its head, not from the
+  # merge commit GitHub checks out, and a new branch with no `before` falls back to `main`.
+  commits:
+    name: Commit bodies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - *setup-bun
+      - *setup-node
+      - *setup-socket-firewall
+      - *install-dependencies
+
+      - name: Check commit bodies
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            BASE=origin/main
+          fi
+          bun scripts/release/check-commits.ts "$BASE..$HEAD"
+
   workspaces:
     name: List test workspaces
     runs-on: ubuntu-latest

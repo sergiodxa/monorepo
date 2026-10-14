@@ -1,0 +1,2 @@
+#!/bin/sh
+exec bun "$(git rev-parse --show-toplevel)/scripts/release/check-commits.ts" --message-file "$1"

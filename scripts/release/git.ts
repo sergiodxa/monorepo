@@ -64,6 +64,29 @@ export async function commitLog(range: string | null): Promise<Result<string, Co
 	return git(["log", ...(range === null ? [] : [range]), "--reverse", LOG_FORMAT, "--name-only"]);
 }
 
+/**
+ * Raw `git log` output for the non-merge commits in `range` that `boundary` does not reach,
+ * oldest first: what a push or pull request adds, minus the history before a rule took effect.
+ */
+export async function commitLogSince(
+	range: string,
+	boundary: string,
+): Promise<Result<string, CommandError>> {
+	return git(["log", range, `^${boundary}`, "--no-merges", "--reverse", LOG_FORMAT, "--name-only"]);
+}
+
+/** Repo-relative paths one commit touched, for attributing a correction to its packages. */
+export async function commitFiles(sha: string): Promise<Result<string[], CommandError>> {
+	let output = await git(["show", "--no-renames", "--name-only", "--format=", sha]);
+	if (isFailure(output)) return output;
+	return success(
+		output.data
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line !== ""),
+	);
+}
+
 /** Whether `sha` names a commit in this clone, which a `gitHead` from npm may not after a rewrite. */
 export async function hasCommit(sha: string): Promise<boolean> {
 	return isSuccess(await git(["cat-file", "-e", `${sha}^{commit}`]));

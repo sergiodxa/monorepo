@@ -21,9 +21,15 @@ import type { Published, ReleasePlan } from "./plan.js";
 import type { Package } from "./workspace.js";
 
 import { buildPackage, createStagingRoot } from "./build.js";
-import { attributeCommits, parseCommits, touchedPackages } from "./commits.js";
+import {
+	attributeCommits,
+	attributeCorrections,
+	parseCommits,
+	touchedPackages,
+} from "./commits.js";
 import {
 	changedFiles,
+	commitFiles,
 	commitLog,
 	fetchTags,
 	hasCommit,
@@ -105,7 +111,9 @@ async function main(): Promise<Result<void, Error>> {
 
 	let log = previousTag === null ? success("") : await commitLog(`${previousTag}..HEAD`);
 	if (isFailure(log)) return log;
-	let commits = parseCommits(log.data);
+	let parsed = parseCommits(log.data);
+	if (isFailure(parsed)) return parsed;
+	let commits = await attributeCorrections(parsed.data, commitFiles);
 	if (isFailure(commits)) return commits;
 	let commitsByPackage = attributeCommits(commits.data, packages);
 	let planned = planRelease({

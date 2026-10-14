@@ -49,6 +49,7 @@ function commit(overrides: Partial<Commit>): Commit {
 		title: "add something",
 		body: "",
 		files: [],
+		corrects: null,
 		...overrides,
 	};
 }

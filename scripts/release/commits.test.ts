@@ -6,12 +6,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure, unwrap } from "@sdxc/result";
+import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { Commit } from "./commits.js";
 
-import { attributeCommits, parseCommits } from "./commits.js";
+import {
+	attributeCommits,
+	attributeCorrections,
+	isMissingBody,
+	messageBody,
+	parseCommits,
+} from "./commits.js";
 import { packageFromManifest } from "./workspace.js";
 
 /** `%x1e`, the byte the log format starts every record with. */
@@ -28,7 +34,16 @@ function record(sha: string, subject: string, body: string, files: string[]): st
 
 /** A commit whose only interesting property is the files it touched. */
 function commit(sha: string, files: string[]): Commit {
-	return { sha, type: "feat", scope: null, breaking: false, title: sha, body: "", files };
+	return {
+		sha,
+		type: "feat",
+		scope: null,
+		breaking: false,
+		title: sha,
+		body: "",
+		files,
+		corrects: null,
+	};
 }
 
 const JWT = packageFromManifest("jwt", {
@@ -71,6 +86,7 @@ describe("parseCommits", () => {
 				title: "add ES512 signing keys",
 				body: "Adds the P-521 curve.\n\nKeys rotate daily.",
 				files: ["packages/jwt/src/jwk.ts", "packages/jwt/src/jwk.test.ts"],
+				corrects: null,
 			},
 			{
 				sha: "b".repeat(40),
@@ -80,6 +96,7 @@ describe("parseCommits", () => {
 				title: "reject tokens whose `exp` already passed",
 				body: "",
 				files: ["packages/jwt/src/jwt.ts"],
+				corrects: null,
 			},
 			{
 				sha: "c".repeat(40),
@@ -89,6 +106,7 @@ describe("parseCommits", () => {
 				title: "Update README",
 				body: "",
 				files: ["README.md"],
+				corrects: null,
 			},
 			{
 				sha: "d".repeat(40),
@@ -98,6 +116,7 @@ describe("parseCommits", () => {
 				title: "styles into main",
 				body: "",
 				files: [],
+				corrects: null,
 			},
 		]);
 	});
@@ -136,6 +155,85 @@ describe("parseCommits", () => {
 			expect(result.error.message).toContain("Malformed git log record: ");
 			expect(result.error.message).toContain("a".repeat(40));
 		}
+	});
+});
+
+describe("Release-Note-For", () => {
+	test("records the corrected sha and keeps the replacement note as the body", () => {
+		let log = record(
+			"e".repeat(40),
+			"docs(jwt): correct the migration note",
+			"Import `sign` from `@sdxc/jwt/sign`.\n\nRelease-Note-For: 3f2a91c\nCo-authored-by: A <a@example.com>\n",
+			[],
+		);
+
+		let [parsed] = unwrap(parseCommits(log));
+
+		expect(parsed?.corrects).toBe("3f2a91c");
+		expect(parsed?.body).toBe("Import `sign` from `@sdxc/jwt/sign`.");
+	});
+
+	test("attributes an empty correction to the packages of the commit it names", async () => {
+		let correction = { ...commit("2", []), corrects: "1" };
+		let attributed = unwrap(
+			await attributeCorrections([commit("0", []), correction], async (sha) =>
+				success(sha === "1" ? ["packages/jwt/src/jwt.ts"] : []),
+			),
+		);
+
+		expect(
+			attributeCommits(attributed, PACKAGES)
+				.get("@sdxc/jwt")
+				?.map((c) => c.sha),
+		).toEqual(["2"]);
+	});
+
+	test("fails when the named commit cannot be read", async () => {
+		let result = await attributeCorrections([{ ...commit("2", []), corrects: "1" }], async () =>
+			failure(new Error("unknown revision")),
+		);
+
+		expect(isFailure(result)).toBe(true);
+	});
+});
+
+describe("messageBody", () => {
+	test("drops the subject, trailers and everything below git's scissors line", () => {
+		let message = [
+			"fix(jwt): reject expired tokens",
+			"",
+			"Before, an expired token verified.",
+			"# kept: a comment inside a fenced example",
+			"",
+			"Co-authored-by: A <a@example.com>",
+			"# ------------------------ >8 ------------------------",
+			"# Do not modify or remove the line above.",
+			"diff --git a/x b/x",
+		].join("\n");
+
+		expect(messageBody(message)).toBe(
+			"Before, an expired token verified.\n# kept: a comment inside a fenced example",
+		);
+	});
+
+	test("is empty for a subject-only message", () => {
+		expect(messageBody("chore: sweep")).toBe("");
+		expect(messageBody("chore: sweep\n")).toBe("");
+	});
+});
+
+describe("isMissingBody", () => {
+	test("flags an empty body and git's bare revert line", () => {
+		expect(isMissingBody("")).toBe(true);
+		expect(isMissingBody("  \n")).toBe(true);
+		expect(isMissingBody(`This reverts commit ${"a".repeat(40)}.`)).toBe(true);
+	});
+
+	test("accepts any written note, a revert that explains itself included", () => {
+		expect(isMissingBody("Nothing changes for consumers.")).toBe(false);
+		expect(
+			isMissingBody(`This reverts commit ${"a".repeat(40)}.\n\nConsumers get the old parser back.`),
+		).toBe(false);
 	});
 });
 

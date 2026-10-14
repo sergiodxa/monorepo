@@ -129,7 +129,9 @@ Release-Note-For: 3f2a91c
 ## Current Progress
 
 - [x] Rule in `AGENTS.md`
-- [ ] `commit-msg` hook in `scripts/git-hooks/`, with `core.hooksPath` and `commit.cleanup` set
+- [x] `commit-msg` hook in `scripts/git-hooks/`, with `core.hooksPath` and `commit.cleanup` set
       by `prepare`
-- [ ] Body check in `ci.yml` over the commits a push or pull request adds
-- [ ] `Release-Note-For` attribution in the release tooling
+- [x] Body check in `ci.yml` over the commits a push or pull request adds
+      (`scripts/release/check-commits.ts`, skipping everything up to the commit that adopted
+      this ADR)
+- [x] `Release-Note-For` attribution in the release tooling

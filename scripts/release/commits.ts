@@ -9,7 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Package } from "./workspace.js";
 
@@ -35,6 +35,15 @@ const TEST_FILE = /\.(?:workers\.)?test\.tsx?$/;
 /** The root TypeScript config every package extends, so changing it changes every build. */
 const ROOT_TSCONFIG = "tsconfig.json";
 
+/** The trailer naming the commit whose published note this commit's body replaces (ADR-140). */
+const CORRECTION_TRAILER = /^Release-Note-For:\s*(?<sha>[0-9a-f]{7,40})\s*$/im;
+
+/** The body `git revert` writes, which names no effect on a consumer. */
+const REVERT_BODY = /^This reverts commit [0-9a-f]{7,40}\.$/;
+
+/** The line git writes above its editor instructions under `commit.cleanup=scissors`. */
+const SCISSORS_LINE = /^# -{24} >8 -{24}$/m;
+
 export interface Commit {
 	sha: string;
 	type: string;
@@ -43,6 +52,8 @@ export interface Commit {
 	title: string;
 	body: string;
 	files: string[];
+	/** The sha a `Release-Note-For` trailer names; the body is that commit's replacement note. */
+	corrects: string | null;
 }
 
 /**
@@ -60,15 +71,17 @@ export function parseCommits(log: string): Result<Commit[], Error> {
 		if (first === -1 || second === -1 || last <= second) {
 			return failure(new Error(`Malformed git log record: ${record.slice(0, 80)}`));
 		}
+		let rawBody = record.slice(second + 1, last);
 		commits.push({
 			sha: record.slice(0, first).trim(),
 			...parseSubject(record.slice(first + 1, second)),
-			body: stripTrailers(record.slice(second + 1, last)),
+			body: stripTrailers(rawBody),
 			files: record
 				.slice(last + 1)
 				.split("\n")
 				.map((line) => line.trim())
 				.filter((line) => line !== ""),
+			corrects: correctedSha(rawBody),
 		});
 	}
 	return success(commits);
@@ -119,6 +132,53 @@ function parseSubject(subject: string): Pick<Commit, "type" | "scope" | "breakin
 		breaking: groups.breaking === "!",
 		title: (groups.title ?? "").trim(),
 	};
+}
+
+/**
+ * The release note a commit message publishes: the text after the subject line, cut at git's
+ * scissors line and without its trailers. The `commit-msg` hook reads a message before git
+ * cleans it up, so the scissors cut is what keeps the editor instructions out of the body.
+ */
+export function messageBody(message: string): string {
+	let scissors = SCISSORS_LINE.exec(message);
+	let kept = scissors === null ? message : message.slice(0, scissors.index);
+	let newline = kept.indexOf("\n");
+	return newline === -1 ? "" : stripTrailers(kept.slice(newline + 1));
+}
+
+/**
+ * Whether a trailer-free body leaves the release note missing: empty, or exactly the line
+ * `git revert` writes, since neither tells a consumer what changed for them (ADR-140).
+ */
+export function isMissingBody(body: string): boolean {
+	let trimmed = body.trim();
+	return trimmed === "" || REVERT_BODY.test(trimmed);
+}
+
+/**
+ * Corrections attributed to the packages of the commit they correct: each commit with a
+ * `Release-Note-For` trailer gains the files `filesOf` reports for the named sha, so an empty
+ * correction publishes under the same packages as the note it replaces.
+ */
+export async function attributeCorrections(
+	commits: Commit[],
+	filesOf: (sha: string) => Promise<Result<string[], Error>>,
+): Promise<Result<Commit[], Error>> {
+	let attributed: Commit[] = [];
+	for (let commit of commits) {
+		if (commit.corrects === null) {
+			attributed.push(commit);
+			continue;
+		}
+		let files = await filesOf(commit.corrects);
+		if (isFailure(files)) return files;
+		attributed.push({ ...commit, files: [...new Set([...commit.files, ...files.data])] });
+	}
+	return success(attributed);
+}
+
+function correctedSha(body: string): string | null {
+	return CORRECTION_TRAILER.exec(body)?.groups?.sha ?? null;
 }
 
 /** The body without its final paragraph when that paragraph is made only of trailer lines. */
