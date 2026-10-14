@@ -14,7 +14,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PackageManifest } from "../scripts/release/workspace.js";
 
-import { packageFromManifest } from "../scripts/release/workspace.js";
+import { packageFromManifest, packageNameFor } from "../scripts/release/workspace.js";
 
 import type { PackageFacts } from "./public-packages.js";
 
@@ -34,11 +34,11 @@ const README = [
 	"",
 ].join("\n");
 
-/** A complete public package named `@sdxc/<dir>`, with any fact overridden. */
+/** A complete public package named as its directory publishes, with any fact overridden. */
 function facts(dir: string, overrides: Partial<PackageFacts> = {}): PackageFacts {
 	return {
 		dir,
-		name: `@sdxc/${dir}`,
+		name: packageNameFor(dir),
 		isPrivate: false,
 		hasDescription: true,
 		hasReadme: true,
@@ -96,6 +96,22 @@ describe("public packages are ready to publish", () => {
 				"@sdxc/result is public but has no README.md",
 				"@sdxc/result is public but has no description",
 				"@sdxc/spec is public but has no LICENSE.md",
+			]);
+		});
+
+		test("accepts the unscoped umbrella under its bare directory name", () => {
+			expect(publicPackageProblems([facts("sdxc"), facts("result")])).toEqual([]);
+		});
+
+		test("reports a public package whose name its directory does not publish", () => {
+			let problems = publicPackageProblems([
+				facts("sdxc", { name: "@sdxc/sdxc" }),
+				facts("result", { name: "result" }),
+			]);
+
+			expect(problems).toEqual([
+				"@sdxc/sdxc is public but packages/sdxc publishes as sdxc",
+				"result is public but packages/result publishes as @sdxc/result",
 			]);
 		});
 

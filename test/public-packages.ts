@@ -1,14 +1,18 @@
 /**
- * Scanners behind the public-package guard. A package that drops `private: true` has to ship
- * the metadata npm and its consumers expect, may only depend on other public packages, and
- * gets a row in the root README package table. Pure functions over facts read once, so a
+ * Scanners behind the public-package guard. A package that drops `private: true` has to carry
+ * the name its directory publishes under, ship the metadata npm and its consumers expect, may
+ * only depend on other public packages, and gets a row in the root README package table. Pure functions over facts read once, so a
  * failure names the exact package and the exact gap.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { formatPrivateDependency, privateDependencies } from "../scripts/release/workspace.js";
+import {
+	formatPrivateDependency,
+	packageNameFor,
+	privateDependencies,
+} from "../scripts/release/workspace.js";
 
 /** What the guard knows about one `packages/<dir>`, gathered by the caller from disk. */
 export interface PackageFacts {
@@ -25,14 +29,19 @@ export interface PackageFacts {
 const PACKAGE_ROW = /^\|\s*\[[^\]]+\]\(packages\/(?<dir>[^)]+)\)\s*\|/;
 
 /**
- * One line per gap in a public package: a missing `description`, `README.md` or `LICENSE.md`,
- * and every private package it reaches through runtime dependencies with the chain that
- * reaches it. Sorted, so the failure message is stable.
+ * One line per gap in a public package: a name other than the one its directory publishes
+ * under, a missing `description`, `README.md` or `LICENSE.md`, and every private package it
+ * reaches through runtime dependencies with the chain that reaches it. Sorted, so the failure
+ * message is stable.
  */
 export function publicPackageProblems(facts: PackageFacts[]): string[] {
 	let problems: string[] = [];
 	for (let fact of facts) {
 		if (fact.isPrivate) continue;
+		let expected = packageNameFor(fact.dir);
+		if (fact.name !== expected) {
+			problems.push(`${fact.name} is public but packages/${fact.dir} publishes as ${expected}`);
+		}
 		if (!fact.hasDescription) problems.push(`${fact.name} is public but has no description`);
 		if (!fact.hasReadme) problems.push(`${fact.name} is public but has no README.md`);
 		if (!fact.hasLicense) problems.push(`${fact.name} is public but has no LICENSE.md`);

@@ -1,6 +1,6 @@
 /**
  * The workspace as the release tooling sees it: every `packages/*` manifest read into a
- * `Package` carrying the paths it ships and the `@sdxc/*` packages it depends on, plus the
+ * `Package` carrying the paths it ships and the workspace packages it depends on, plus the
  * graph walks a release needs — private reachability, dependent closure, topological order.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -19,6 +19,13 @@ export const REPO_ROOT = resolve(import.meta.dirname, "../..");
 
 /** The npm scope every workspace package publishes under; dependencies in it are internal. */
 export const WORKSPACE_SCOPE = "@sdxc/";
+
+/**
+ * Workspace packages published under their bare directory name instead of the scope. Each is
+ * as internal as a scoped one: its `workspace:` ranges are pinned, and it republishes with
+ * every package it depends on.
+ */
+export const UNSCOPED_PACKAGES: ReadonlySet<string> = new Set(["sdxc"]);
 
 /** The repository on GitHub, for release links. */
 export const REPOSITORY_PAGE = "https://github.com/sergiodxa/monorepo";
@@ -146,8 +153,18 @@ export function packageFromManifest(dir: string, manifest: PackageManifest): Pac
 	};
 }
 
+/** The name `packages/<dir>` publishes under: `@sdxc/<dir>`, or `<dir>` for an unscoped package. */
+export function packageNameFor(dir: string): string {
+	return UNSCOPED_PACKAGES.has(dir) ? dir : `${WORKSPACE_SCOPE}${dir}`;
+}
+
+/** Whether `name` is published from this workspace, scoped or listed in {@link UNSCOPED_PACKAGES}. */
+export function isWorkspacePackageName(name: string): boolean {
+	return name.startsWith(WORKSPACE_SCOPE) || UNSCOPED_PACKAGES.has(name);
+}
+
 /**
- * The internal packages a consumer of `manifest` installs alongside it: every `@sdxc/*` name
+ * The internal packages a consumer of `manifest` installs alongside it: every workspace name
  * under `dependencies` or `peerDependencies`, listed once, dependencies first.
  */
 function workspaceDependencies(manifest: PackageManifest): string[] {
@@ -155,7 +172,7 @@ function workspaceDependencies(manifest: PackageManifest): string[] {
 		...Object.keys(manifest.dependencies ?? {}),
 		...Object.keys(manifest.peerDependencies ?? {}),
 	]);
-	return [...names].filter((name) => name.startsWith(WORKSPACE_SCOPE));
+	return [...names].filter(isWorkspacePackageName);
 }
 
 /**
