@@ -42,4 +42,14 @@ describe(Typeset.name, () => {
 		expect(css).toContain("animation-name: ui-typeset-table-fade");
 		expect(css).toContain("animation-timeline: scroll(self inline)");
 	});
+
+	test("lets a vertical wheel over a code block chain to the page", async () => {
+		let css = await typesetCss();
+
+		expect(css).toContain("overflow-inline: auto");
+		expect(css).toContain("overflow-block: hidden");
+		expect(css).toContain("overscroll-behavior-inline: contain");
+		expect(css).toContain("overscroll-behavior-x: contain");
+		expect(css).not.toMatch(/overscroll-behavior:\s*contain/);
+	});
 });
