@@ -1,7 +1,8 @@
 /**
  * The index a catalogue package answers with in place of its README: hundreds of
- * entries as ruled grids of names under the group each belongs to. A cell holds the name
- * alone — with three hundred entries, a name is what a reader scans for.
+ * entries as ruled grids under the group each belongs to. A cell that carries a
+ * description reads as a card a reader can scan; a name-only cell stays dense for
+ * catalogues whose entries have no line to show.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,12 @@ import { font, text, textTransform, tracking } from "@sdxc/u/typography";
 import type { NavEntry, NavGroup } from "~/app/services/navigation-tree";
 
 import RuledGrid, { RuledCell } from "~/resources/components/ruled-grid";
+
+/** Narrowest cell when every entry is only a name, so many fit on one row. */
+const NAME_ONLY_MIN = "12rem";
+
+/** Narrowest cell when entries carry a description, so the line under the name can breathe. */
+const DESCRIBED_MIN = "16rem";
 
 namespace CatalogueIndex {
 	export interface Props {
@@ -37,35 +44,58 @@ function bands(groups: NavGroup[] | NavEntry[]): NavGroup[] {
 	return [{ title: "", entries: groups as NavEntry[] }];
 }
 
+/** The fragment id a band's heading anchors, so a CTA can land on a group. */
+function sectionId(title: string): string {
+	return title.toLowerCase().replace(/\s+/g, "-");
+}
+
+/** Whether any entry in the band carries a description for the denser card layout. */
+function hasDescriptions(entries: NavEntry[]): boolean {
+	return entries.some((entry) => Boolean(entry.description));
+}
+
 /** Renders one catalogue's whole index, each band as a ruled grid of names. */
 export default function CatalogueIndex(handle: Handle<CatalogueIndex.Props>) {
 	return () => {
 		return (
 			<div mix={[vstack({ gap: 10, align: "stretch" })]}>
-				{bands(handle.props.groups).map((group) => (
-					<section key={group.title} mix={[vstack({ gap: 4, align: "stretch" })]}>
-						{group.title ? (
-							<h2
-								mix={[
-									m(0),
-									font("mono"),
-									text("xs"),
-									textTransform("uppercase"),
-									tracking("widest"),
-									fg("neutral"),
-								]}
-							>
-								{group.title}
-							</h2>
-						) : null}
+				{bands(handle.props.groups).map((group) => {
+					let described = hasDescriptions(group.entries);
 
-						<RuledGrid min="11rem">
-							{group.entries.map((entry) => (
-								<RuledCell key={entry.href} href={entry.href} name={entry.title} />
-							))}
-						</RuledGrid>
-					</section>
-				))}
+					return (
+						<section
+							key={group.title || "entries"}
+							id={group.title ? sectionId(group.title) : undefined}
+							mix={[vstack({ gap: 4, align: "stretch" })]}
+						>
+							{group.title ? (
+								<h2
+									mix={[
+										m(0),
+										font("mono"),
+										text("xs"),
+										textTransform("uppercase"),
+										tracking("widest"),
+										fg("neutral"),
+									]}
+								>
+									{group.title}
+								</h2>
+							) : null}
+
+							<RuledGrid min={described ? DESCRIBED_MIN : NAME_ONLY_MIN}>
+								{group.entries.map((entry) => (
+									<RuledCell
+										key={entry.href}
+										href={entry.href}
+										name={entry.title}
+										description={entry.description}
+									/>
+								))}
+							</RuledGrid>
+						</section>
+					);
+				})}
 			</div>
 		);
 	};

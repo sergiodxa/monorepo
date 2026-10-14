@@ -12,6 +12,11 @@
 export interface NavEntry {
 	title: string;
 	href: string;
+	/**
+	 * A short line under the title on a catalogue index. The sidebar ignores it; only a
+	 * grid that draws descriptions reads it.
+	 */
+	description?: string;
 }
 
 /** A titled run of entries, in the order they are meant to be read. */

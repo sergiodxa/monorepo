@@ -85,6 +85,22 @@ export async function listComponents(): Promise<ComponentEntry[]> {
 }
 
 /**
+ * Every component with the opening line a catalogue listing shows under its name.
+ * One document read fills the list, so the overview page does not look each reference up
+ * on its own.
+ */
+export async function listComponentListings(): Promise<
+	Array<ComponentEntry & { summary: string }>
+> {
+	let document = await readDocument();
+
+	return document.entries.map((entry) => ({
+		...entry,
+		summary: document.references[entry.slug]?.summary ?? "",
+	}));
+}
+
+/**
  * One component's reference.
  *
  * @param slug - The module's file name, as the URL carries it.

@@ -10,10 +10,11 @@
 
 import type { NavEntry, NavGroup, NavTree } from "~/app/services/navigation-tree";
 
-import { listComponents } from "~/app/services/components";
+import { listComponentListings } from "~/app/services/components";
 import { listGuides } from "~/app/services/docs";
+import { toHeadline } from "~/app/services/headline";
 import { listPackageGroups } from "~/app/services/packages";
-import { listUiExports } from "~/app/services/ui-exports";
+import { listUiExportListings } from "~/app/services/ui-exports";
 import { UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
 import { listUtilityFamilies } from "~/app/services/utilities";
 import routes from "~/routes/web";
@@ -144,14 +145,16 @@ export async function listUtilityGroups(): Promise<NavGroup[]> {
 
 /**
  * Every component as one list. The names are already alphabetical and share a flat
- * namespace, so a reader scans them the way they would scan an index.
+ * namespace, so a reader scans them the way they would scan an index. Each entry carries
+ * the opening clause of its summary for the catalogue grid; the sidebar ignores it.
  */
 export async function listComponentEntries(): Promise<NavEntry[]> {
-	let components = await listComponents();
+	let components = await listComponentListings();
 
 	return components.map((entry) => ({
 		title: entry.name,
 		href: routes.api.component.href({ component: entry.slug }),
+		description: entry.summary ? toHeadline(entry.summary) : undefined,
 	}));
 }
 
@@ -160,9 +163,10 @@ export async function listUiExportGroups(): Promise<NavGroup[]> {
 	return await Promise.all(
 		UI_SUBPATHS.map(async (subpath) => ({
 			title: UI_SUBPATH_TITLES[subpath],
-			entries: (await listUiExports(subpath)).map((entry) => ({
+			entries: (await listUiExportListings(subpath)).map((entry) => ({
 				title: entry.name,
 				href: routes.api.uiExport.href({ subpath, slug: entry.slug }),
+				description: entry.summary ? toHeadline(entry.summary) : undefined,
 			})),
 		})),
 	);

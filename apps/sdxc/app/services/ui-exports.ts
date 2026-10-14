@@ -82,6 +82,21 @@ export async function listUiExports(subpath: UiSubpath): Promise<UiExportEntry[]
 }
 
 /**
+ * Every page of one subpath with the opening line a catalogue listing shows under its
+ * name. One document read fills the list for that subpath.
+ */
+export async function listUiExportListings(
+	subpath: UiSubpath,
+): Promise<Array<UiExportEntry & { summary: string }>> {
+	let document = await readDocument();
+
+	return document.entries[subpath].map((entry) => ({
+		...entry,
+		summary: document.references[`${subpath}/${entry.slug}`]?.summary ?? "",
+	}));
+}
+
+/**
  * One page's reference.
  *
  * @param subpath - The subpath the URL names.
