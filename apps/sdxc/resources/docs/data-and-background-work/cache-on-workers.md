@@ -209,8 +209,10 @@ export default createAction(routes.releases, async (ctx) => {
 `Cache-Tag` after the handler returns, once it can inspect the finished response. A response
 carrying `Set-Cookie`, or a `public` policy on a request that carried a session, is downgraded to
 `private, no-store` and logged as a warning (and throws in development), so a signed-in page
-cannot end up in a shared cache. A route that never calls `ctx.cache()` is left exactly as it
-was, so no page inherits a lifetime it did not choose.
+cannot end up in a shared cache. A route that never calls `ctx.cache()` gets `private, no-store`,
+unless it set its own `Cache-Control` or `Expires`. Workers Cache stores a `200` with no
+freshness headers for two hours under a key that ignores cookies, so leaving it bare would hand
+one visitor's page to the next.
 
 ## Purge when the content changes
 
