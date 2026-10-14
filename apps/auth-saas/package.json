@@ -39,6 +39,7 @@
 		"@sdxc/idempotency": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/jsonl": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/logger": "workspace:*",

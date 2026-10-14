@@ -158,7 +158,7 @@ export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 			if (durationMs > BACKPRESSURE_THRESHOLD_MS) await sleep(BACKPRESSURE_DELAY_MS);
 		}
 
-		let iterator = readTransferFileLines(env.R2, run.source_key, { startLine: cursor })[
+		let iterator = readTransferFileLines(env.R2, run.source_key, { skip: cursor })[
 			Symbol.asyncIterator
 		]();
 

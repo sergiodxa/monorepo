@@ -12,7 +12,8 @@
  */
 
 import { json } from "@sdxc/http/response";
-import { unwrap } from "@sdxc/result";
+import * as JSONL from "@sdxc/jsonl";
+import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { createAction } from "remix/router";
 
@@ -53,52 +54,38 @@ function emptySourceFile(): Response {
 	});
 }
 
+/** The longest row an uploaded source file may carry, bounding what one line buffers in the Worker. */
+const MAX_IMPORT_LINE_BYTES = 1_048_576;
+
+/** A `problem+json` refusal naming the source file's row that exceeds {@link MAX_IMPORT_LINE_BYTES}. */
+function lineTooLong(error: JSONL.JSONLError): Response {
+	return managementProblem("validationFailed", {
+		detail: `Line ${error.line} of the uploaded file is longer than ${MAX_IMPORT_LINE_BYTES} bytes.`,
+		extensions: { errors: undefined },
+	});
+}
+
 /**
- * Reads an NDJSON request body one line at a time, decoding and buffering
- * exactly the way {@link readTransferFileLines} reads a finished object back,
- * so a source file this route writes reads back identically either way.
- * Calls `onLine` once per non-empty row as it is yielded, so a caller
- * streaming these lines straight into R2 counts them in the same pass rather
- * than reading the file twice.
+ * The rows of an NDJSON request body, each yielded as its raw text so the
+ * stored source file keeps the uploaded bytes of every row. Calls `onLine`
+ * once per row, so a caller streaming them into R2 counts them in the same
+ * pass, and ends at a row over {@link MAX_IMPORT_LINE_BYTES}, handing its
+ * failure to `onError`.
  *
- * @yields Each non-empty NDJSON line of the body, in order.
+ * @yields Each non-blank NDJSON line of the body, in order.
  */
 async function* readRequestBodyLines(
 	body: ReadableStream<Uint8Array>,
 	onLine: () => void,
+	onError: (error: JSONL.JSONLError) => void,
 ): AsyncGenerator<string> {
-	let buffer = "";
-	let decoder = new TextDecoder();
-	let reader = body.getReader();
-
-	try {
-		while (true) {
-			let { done, value } = await reader.read();
-			if (value) buffer += decoder.decode(value, { stream: true });
-
-			let newlineIndex = buffer.indexOf("\n");
-			while (newlineIndex !== -1) {
-				let line = buffer.slice(0, newlineIndex);
-				buffer = buffer.slice(newlineIndex + 1);
-
-				if (line.length > 0) {
-					onLine();
-					yield line;
-				}
-
-				newlineIndex = buffer.indexOf("\n");
-			}
-
-			if (done) break;
+	for await (let line of JSONL.lines(body, { maxLineBytes: MAX_IMPORT_LINE_BYTES })) {
+		if (isFailure(line)) {
+			onError(line.error);
+			return;
 		}
-
-		buffer += decoder.decode();
-		if (buffer.length > 0) {
-			onLine();
-			yield buffer;
-		}
-	} finally {
-		reader.releaseLock();
+		onLine();
+		yield line.data.text;
 	}
 }
 
@@ -134,11 +121,23 @@ export function createSubjectsImportBeginAction(options: ManagementControllerOpt
 			let sourceKey = `imports/${tenantId}/${generateUUID()}.ndjson`;
 
 			let total = 0;
+			let tooLong: JSONL.JSONLError | undefined;
 			await writeTransferFile(
 				options.r2,
 				sourceKey,
-				readRequestBodyLines(body, () => total++),
+				readRequestBodyLines(
+					body,
+					() => total++,
+					(error) => {
+						tooLong = error;
+					},
+				),
 			);
+
+			if (tooLong) {
+				await options.r2.delete(sourceKey);
+				return lineTooLong(tooLong);
+			}
 
 			if (total === 0) {
 				await options.r2.delete(sourceKey);

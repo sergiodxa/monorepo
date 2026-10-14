@@ -20,7 +20,8 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import * as JSONL from "@sdxc/jsonl";
+import { isFailure, unwrap } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID as generateUUIDv7 } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
@@ -57,35 +58,9 @@ export const transferDownloadTickets = table({
 export type TransferDownloadTicketRow = TableRow<typeof transferDownloadTickets>;
 
 /**
- * Adapts an `AsyncIterable<string>` of NDJSON lines into the `ReadableStream`
- * `R2Bucket.put` writes from, so a caller that produces rows one at a time
- * never has to buffer the whole file in memory to hand it to R2.
- */
-function toLineStream(lines: AsyncIterable<string>): ReadableStream<Uint8Array> {
-	let encoder = new TextEncoder();
-	let iterator = lines[Symbol.asyncIterator]();
-
-	return new ReadableStream<Uint8Array>({
-		async pull(controller) {
-			let next = await iterator.next();
-
-			if (next.done) {
-				controller.close();
-				return;
-			}
-
-			controller.enqueue(encoder.encode(`${next.value}\n`));
-		},
-
-		async cancel(reason) {
-			await iterator.return?.(reason);
-		},
-	});
-}
-
-/**
  * Writes NDJSON to R2, one line per element of `lines`, each newline-terminated
- * as it is written rather than joined in memory first. A caller already
+ * as it is written rather than joined in memory first, and each copied byte for
+ * byte so a row moved between files keeps its exact text. A caller already
  * holding a `ReadableStream` of properly newline-delimited bytes may pass that
  * directly instead.
  *
@@ -100,7 +75,7 @@ export async function writeTransferFile(
 	key: string,
 	lines: AsyncIterable<string> | ReadableStream,
 ): Promise<void> {
-	let stream = lines instanceof ReadableStream ? lines : toLineStream(lines);
+	let stream = lines instanceof ReadableStream ? lines : JSONL.encodeLines(lines);
 	await bucket.put(key, stream);
 	recordCost({ r2ClassAOperations: 1 });
 }
@@ -109,22 +84,18 @@ export async function writeTransferFile(
 export interface ReadTransferFileLinesOptions {
 	/**
 	 * How many rows to skip before the first one yielded, matching a run's
-	 * own `cursor`. Skipped by reading and discarding from the start of the
-	 * object rather than by a ranged read: a batching job reads 200 rows at a
-	 * tick, and tracking the byte offset each row starts at would mean the
-	 * writer recording an index alongside the file it writes, for a cost that
-	 * only shows up once a resuming file is very large. Left as the simpler
-	 * of the two for now — a known inefficiency on a large file near the end
-	 * of its run, where most of a tick's work is bytes read only to be
-	 * thrown away.
+	 * own `cursor`. It counts rows, so blank lines never shift where a run
+	 * resumes. Skipped rows are read and discarded from the start of the
+	 * object, a cost that grows with the cursor on a very large file.
 	 */
-	startLine?: number;
+	skip?: number;
 }
 
 /**
  * Reads an NDJSON object back one line at a time, the reverse of
  * {@link writeTransferFile}, optionally skipping past rows a previous tick
- * already consumed.
+ * already consumed. Each line comes without its `\n` or a `\r` before it, and
+ * blank lines are dropped.
  *
  * @param bucket - The R2 bucket the object lives in.
  * @param key - The object key to read.
@@ -132,7 +103,7 @@ export interface ReadTransferFileLinesOptions {
  * @yields Each of the object's NDJSON lines, in order.
  * @throws When no object exists at `key`.
  * @example
- * for await (let line of readTransferFileLines(env.R2, sourceKey, { startLine: cursor })) {
+ * for await (let line of readTransferFileLines(env.R2, sourceKey, { skip: cursor })) {
  *   let row = JSON.parse(line);
  * }
  */
@@ -145,37 +116,8 @@ export async function* readTransferFileLines(
 	recordCost({ r2ClassBOperations: 1 });
 	if (!object) throw new Error(`transfer file not found: ${key}`);
 
-	let toSkip = options?.startLine ?? 0;
-	let skipped = 0;
-	let buffer = "";
-	let decoder = new TextDecoder();
-	let reader = object.body.getReader();
-
-	try {
-		while (true) {
-			let { done, value } = await reader.read();
-			if (value) buffer += decoder.decode(value, { stream: true });
-
-			let newlineIndex = buffer.indexOf("\n");
-			while (newlineIndex !== -1) {
-				let line = buffer.slice(0, newlineIndex);
-				buffer = buffer.slice(newlineIndex + 1);
-
-				if (line.length > 0) {
-					if (skipped < toSkip) skipped += 1;
-					else yield line;
-				}
-
-				newlineIndex = buffer.indexOf("\n");
-			}
-
-			if (done) break;
-		}
-
-		buffer += decoder.decode();
-		if (buffer.length > 0 && skipped >= toSkip) yield buffer;
-	} finally {
-		reader.releaseLock();
+	for await (let line of JSONL.lines(object.body, { skip: options?.skip ?? 0 })) {
+		yield unwrap(line).text;
 	}
 }
 

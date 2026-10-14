@@ -105,6 +105,43 @@ describe("POST /tenants/:tenantId/subjects/import", () => {
 		expect(payload.total).toBe(3);
 	});
 
+	test("counts a CRLF body's rows, skipping blank lines", async () => {
+		let harness = await buildSubjectsHarness({ r2: bucket });
+		let token = await harness.signToken();
+
+		let response = await harness.router.fetch(
+			new Request(`${ISSUER}/tenants/${harness.tenantId}/subjects/import?mode=apply`, {
+				method: "POST",
+				headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/x-ndjson" },
+				body: '{"externalId":"ext_1"}\r\n\r\n{"externalId":"ext_2"}\r\n',
+			}),
+		);
+
+		expect(response.status).toBe(201);
+		let payload = (await response.json()) as { total: number };
+		expect(payload.total).toBe(2);
+	});
+
+	test("refuses a body with a line over 1 MiB, naming the line and storing nothing", async () => {
+		let harness = await buildSubjectsHarness({ r2: bucket });
+		let token = await harness.signToken();
+
+		let longRow = JSON.stringify({ externalId: "x".repeat(1_048_576) });
+		let response = await harness.router.fetch(
+			new Request(`${ISSUER}/tenants/${harness.tenantId}/subjects/import?mode=apply`, {
+				method: "POST",
+				headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/x-ndjson" },
+				body: `${ndjsonBody([{ externalId: "ext_1" }])}\n${longRow}\n`,
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+		let problem = (await response.json()) as { detail: string };
+		expect(problem.detail).toContain("Line 3");
+		expect((await bucket.list()).objects).toEqual([]);
+	});
+
 	test("refuses an empty body", async () => {
 		let harness = await buildSubjectsHarness({ r2: bucket });
 		let token = await harness.signToken();

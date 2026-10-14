@@ -4,7 +4,7 @@
  *
  * `writeTransferFile`/`readTransferFileLines` are proven against an in-memory
  * R2 bucket: several NDJSON lines written come back in order, and a
- * `startLine` skips the rows a previous tick already consumed, and each put
+ * `skip` skips the rows a previous tick already consumed, and each put
  * and get is metered as an R2 operation on the open cost ledger.
  * `mintTransferDownloadTicket`/`spendTransferDownloadTicket` are proven round
  * trip: a mint then a spend succeeds once, a second spend of the same ticket
@@ -83,17 +83,38 @@ describe("writeTransferFile / readTransferFileLines", () => {
 		expect(quantities[COST_RESOURCES.indexOf("r2ClassBOperations")]).toBe(1);
 	});
 
-	test("skips the rows named by startLine", async () => {
+	test("skips the rows named by skip", async () => {
 		let bucket = createR2Bucket();
 		let rows = ['{"id":1}', '{"id":2}', '{"id":3}', '{"id":4}'];
 
 		await writeTransferFile(bucket, "imports/acme/directory.ndjson", asyncLines(rows));
 
 		let read = await collect(
-			readTransferFileLines(bucket, "imports/acme/directory.ndjson", { startLine: 2 }),
+			readTransferFileLines(bucket, "imports/acme/directory.ndjson", { skip: 2 }),
 		);
 
 		expect(read).toEqual(['{"id":3}', '{"id":4}']);
+	});
+
+	test("drops CRLF line endings and blank lines, counting only rows toward skip", async () => {
+		let bucket = createR2Bucket();
+		await bucket.put("imports/acme/crlf.ndjson", '{"id":1}\r\n\r\n\n{"id":2}\r\n  \n{"id":3}');
+
+		let all = await collect(readTransferFileLines(bucket, "imports/acme/crlf.ndjson"));
+		let resumed = await collect(
+			readTransferFileLines(bucket, "imports/acme/crlf.ndjson", { skip: 1 }),
+		);
+
+		expect(all).toEqual(['{"id":1}', '{"id":2}', '{"id":3}']);
+		expect(resumed).toEqual(['{"id":2}', '{"id":3}']);
+	});
+
+	test("writing a line that holds a line break fails rather than splitting the row", async () => {
+		let bucket = createR2Bucket();
+
+		await expect(
+			writeTransferFile(bucket, "exports/acme/broken.ndjson", asyncLines(['{"id":1}\n{"id":2}'])),
+		).rejects.toThrow(/line break/);
 	});
 
 	test("also accepts a pre-built ReadableStream", async () => {
