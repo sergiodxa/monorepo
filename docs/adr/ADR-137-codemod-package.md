@@ -6,11 +6,11 @@
 
 ## Background
 
-The `sdxc` CLI (ADR-136) edits import declarations in a consumer's project: `sdxc ui add` points
+The `sdxc` CLI edits import declarations in a consumer's project: `sdxc ui add` (ADR-141) points
 every import of a component at the app's copy, splitting `import { Button, Dialog } from "sdxc/ui"`
 when only Button was copied; `remove` reverses it; `update` re-applies it to a fresh copy. The
 release build rewrites the specifiers of every `@sdxc/ui` component as it writes the component
-registry. `sdxc make` declares what it generates in `app/jobs/index.ts`, a route contract or the
+registry. `sdxc make` (ADR-143) declares what it generates in `app/jobs/index.ts`, a route contract or the
 MCP declaration modules, and maps it in the matching initializer.
 
 The repo already finds module specifiers in three places, each with its own regular expressions:
@@ -45,9 +45,17 @@ correctly is the hard part:
 | Template literal nesting           | `` `a ${ `b ${c}` } d` ``                   |
 | JSX or comparison                  | `<p>Don't</p>` against `a < b`              |
 | JSX or generic arrow in `.tsx`     | `<T,>(x: T) => x`                           |
+| Type arguments or comparison       | `f<T>(x)` against `a < b > c`               |
+| Arrow body or object literal       | `() => {}` then `/re/` against `({}) / 2`   |
 
 `es-module-lexer` resolves the first three for JavaScript in about 1,500 lines of C; it has no
 TypeScript or JSX support.
+
+### Who runs the edits
+
+Every caller runs on Node or Bun: the CLI on a developer's machine, the release build, and the
+repo's own tests. A consumer installs `@sdxc/codemod` once, through `sdxc`, which every project
+built on the packages depends on, so its install size lands in every one of those projects.
 
 ### Checking a hand-written scanner
 
@@ -76,7 +84,12 @@ style.
     each open bracket belongs to.
   - A template literal's `${` pushes onto the same stack and its `}` returns to the template.
   - In `.jsx` and `.tsx`, a `<` in a position that admits an expression begins JSX, except a
-    generic arrow head (`<T,>` or `<T extends …>`). Inside JSX, text runs to `{` or `<`,
+    generic arrow head (`<T,>` or `<T extends …>`). A `<` after an identifier, `)` or `]` is an
+    operator or opens type arguments; type arguments are skipped as a balanced `<…>` group when
+    the group is followed by `(` or a template literal, and read as comparisons otherwise.
+  - A `}` that closes an arrow function's block body or a statement block ends a statement, so a
+    `/` after it begins a regular expression; a `}` that closes an object literal ends an
+    expression. The bracket stack records which one each `{` opened, from the token before it. Inside JSX, text runs to `{` or `<`,
     attribute strings have no escapes, and `{…}` returns to code. In `.ts`, `.mts` and `.cts`, `<`
     never begins JSX.
 - **Structure.** Over the tokens: bracket matching, top-level import and export declarations with
@@ -161,8 +174,14 @@ found or could not be scanned, which the CLI turns into the printed fallback ins
 - **Ambiguity fixtures.** A fixture file per row of the ambiguity table, plus the import forms the
   repo does not use yet, runs through the same comparison, since the repo's own code exercises
   few of them.
-- **Edits re-scan.** Every edit test scans its output again and parses it with `oxc-parser`, so an
-  edit that produces invalid code fails.
+- **Exact-output fixtures for every edit.** Each of `rewriteSpecifiers`, `moveImports`,
+  `addProperty` and `insertAfterLast` has input and expected-output fixtures compared byte for
+  byte, covering the shapes the CLI meets: nested `route()` groups, a missing nesting level,
+  trailing commas present and absent, tabs and spaces, `router.map` inside a factory and at
+  module level, aliases and `type` modifiers on moved names. An edit that lands in the wrong
+  object or the wrong block fails here even when the result still parses.
+- **Edits re-scan.** Every edit test also scans its output again and parses it with
+  `oxc-parser`, so an edit that produces invalid code fails.
 
 ## Consequences
 
@@ -171,8 +190,8 @@ found or could not be scanned, which the CLI turns into the printed fallback ins
 - **Edits that understand the syntax.** JSX text, strings, template literals and comments are
   never mistaken for imports.
 - **Formatting survives.** Only the replaced ranges change.
-- **No native dependency.** The package installs as plain JavaScript and runs on Node, Bun,
-  Deno and Workers.
+- **No native dependency.** The package installs as plain JavaScript, small enough to ride in
+  every `sdxc` install, and runs on any JavaScript runtime.
 - **One specifier finder for the repo.** `scripts/release/build.ts`, `test/import-extensions.ts`
   and the `@sdxc/well-known` dependency test can move to `findModuleReferences` and drop their
   patterns.
@@ -194,9 +213,10 @@ found or could not be scanned, which the CLI turns into the printed fallback ins
 
 A complete, specification-accurate parser written in Rust, already installed through Vite+.
 
-**Rejected because**: it installs a platform binary (or a WebAssembly build) for every consumer
-of `@sdxc/codemod` and `sdxc`, does not run in a Worker, and parses far more than the edits read.
-It stays as the test oracle.
+**Rejected because**: every project that installs `sdxc` would install it too, a platform-specific
+native binary or a multi-megabyte WebAssembly build, for edits that read import declarations and
+a few object literals; the full syntax tree it builds is far more than those edits use. It stays
+as the test oracle.
 
 ### 2. Regular expressions over source text
 
@@ -222,6 +242,8 @@ both bring a Babel parser stack for a task that needs specifier ranges.
 ## References
 
 - [ADR-136: `sdxc` Umbrella Package and CLI](./ADR-136-sdxc-umbrella-package-and-cli.md)
+- [ADR-141: `sdxc ui` Component Vendoring](./ADR-141-sdxc-ui-component-vendoring.md)
+- [ADR-143: `sdxc make` Generators](./ADR-143-sdxc-make-generators.md)
 - [`oxc-parser` on npm](https://www.npmjs.com/package/oxc-parser)
 - [`es-module-lexer` on GitHub](https://github.com/guybedford/es-module-lexer)
 
@@ -230,4 +252,5 @@ both bring a Babel parser stack for a task that needs specifier ranges.
 - [ ] Tokenizer and structure, with the oracle test and the ambiguity fixtures
 - [ ] `findModuleReferences`, `rewriteSpecifiers`, `moveImports`
 - [ ] `addProperty`, `insertAfterLast`
+- [ ] Exact-output fixtures for every edit
 - [ ] Release build and repo tests moved to `findModuleReferences`
