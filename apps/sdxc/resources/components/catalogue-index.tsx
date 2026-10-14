@@ -1,7 +1,7 @@
 /**
  * The index a catalogue package answers with in place of its README: hundreds of
- * entries as ruled grids of names under the group each belongs to. A cell holds the name
- * alone — with three hundred entries, a name is what a reader scans for.
+ * entries as ruled grids under the group each belongs to. A cell holds the name alone —
+ * with three hundred entries, a name is what a reader scans for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +17,9 @@ import { font, text, textTransform, tracking } from "@sdxc/u/typography";
 import type { NavEntry, NavGroup } from "~/app/services/navigation-tree";
 
 import RuledGrid, { RuledCell } from "~/resources/components/ruled-grid";
+
+/** Narrowest a name-only cell may get before the grid drops a column. */
+const NAME_MIN = "12rem";
 
 namespace CatalogueIndex {
 	export interface Props {
@@ -37,13 +40,22 @@ function bands(groups: NavGroup[] | NavEntry[]): NavGroup[] {
 	return [{ title: "", entries: groups as NavEntry[] }];
 }
 
+/** The fragment id a band's heading anchors, so a CTA can land on a group. */
+function sectionId(title: string): string {
+	return title.toLowerCase().replace(/\s+/g, "-");
+}
+
 /** Renders one catalogue's whole index, each band as a ruled grid of names. */
 export default function CatalogueIndex(handle: Handle<CatalogueIndex.Props>) {
 	return () => {
 		return (
 			<div mix={[vstack({ gap: 10, align: "stretch" })]}>
 				{bands(handle.props.groups).map((group) => (
-					<section key={group.title} mix={[vstack({ gap: 4, align: "stretch" })]}>
+					<section
+						key={group.title || "entries"}
+						id={group.title ? sectionId(group.title) : undefined}
+						mix={[vstack({ gap: 4, align: "stretch" })]}
+					>
 						{group.title ? (
 							<h2
 								mix={[
@@ -59,7 +71,7 @@ export default function CatalogueIndex(handle: Handle<CatalogueIndex.Props>) {
 							</h2>
 						) : null}
 
-						<RuledGrid min="11rem">
+						<RuledGrid min={NAME_MIN}>
 							{group.entries.map((entry) => (
 								<RuledCell key={entry.href} href={entry.href} name={entry.title} />
 							))}

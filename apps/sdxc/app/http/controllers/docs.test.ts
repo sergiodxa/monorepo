@@ -111,6 +111,15 @@ describe("GET /api/:name", () => {
 		expect(body).toContain('href="/api/ui/behaviors/toaster"');
 		expect(body).toContain('href="/api/ui/animations/fade"');
 		expect(body).toContain('href="/api/ui/styles/panel-chrome"');
+		expect(body).toContain('href="#components"');
+		expect(body).toContain('id="components"');
+		expect(body).toContain('id="styles"');
+		expect(body).toContain("Explore components");
+		expect(body).toContain('id="ui-explore-components"');
+		expect(body).toContain("A compact pill");
+		expect(body).toContain("rtlAwareGradientDirection");
+		/* Frames publish their src in the document's frame registry, not as an HTML attribute. */
+		expect(body).toContain('"/frames/previews/button"');
 	});
 });
 
