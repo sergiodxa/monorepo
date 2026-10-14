@@ -10,12 +10,12 @@ import type { Random } from "@sdxc/random";
 
 import { createRandom, systemSeed } from "@sdxc/random";
 import { unwrap } from "@sdxc/result";
-import jsQR from "jsqr";
 import { describe, expect, test } from "vitest";
 
 import type { QrLevel } from "./encode.js";
 
 import { QR } from "./encode.js";
+import jsQR from "./jsqr.js";
 
 const SEED = Number(process.env.FUZZ_SEED) || systemSeed();
 
@@ -83,6 +83,17 @@ test("reads back every forced mask", () => {
 		expect(symbol.mask).toBe(mask);
 		expect(decode(symbol)?.data).toBe("https://example.com/abc");
 	}
+});
+
+test("reads back version 23 at level L", () => {
+	let symbol = unwrap(
+		QR.encode("HI", { level: "L", boostLevel: false, minVersion: 23, maxVersion: 23 }),
+	);
+	expect(symbol.version).toBe(23);
+	expect(symbol.level).toBe("L");
+	let read = decode(symbol);
+	expect(read?.data).toBe("HI");
+	expect(read?.version).toBe(23);
 });
 
 describe(`round trip through jsQR (FUZZ_SEED=${SEED})`, () => {
