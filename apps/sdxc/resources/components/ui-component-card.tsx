@@ -71,16 +71,15 @@ export default function UiComponentCard(handle: Handle<UiComponentCard.Props>) {
 						<span
 							mix={[
 								font("mono"),
-								text("3xl"),
+								text("5xl"),
 								weight("medium"),
 								tracking("tight"),
+								leading(1),
 								fg("neutral.emphasis"),
-								raw({ opacity: 0.18 }),
-								overflowWrap("anywhere"),
-								lineClamp(2),
+								raw({ opacity: 0.22 }),
 							]}
 						>
-							{name}
+							{name.slice(0, 1)}
 						</span>
 					</div>
 
