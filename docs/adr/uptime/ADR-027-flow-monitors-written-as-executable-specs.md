@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — 2026-08-11; phase one (HTTP-only flows) implemented 2026-08-31, the browser phase pending. Adds a sixth monitor type whose configuration is a `.spec` file
+**Accepted** — 2026-08-11; phase one (HTTP-only flows) implemented 2026-08-31; browser plugin (`@sdxc/spec/browser-run`) landed 2026-10-14, with engine column and browser-second metering still pending. Adds a sixth monitor type whose configuration is a `.spec` file
 written by the customer, executed server-side against a hosted browser.
 
 **Being built in two phases, and the first one is HTTP-only.** A flow whose steps are requests
@@ -567,14 +567,18 @@ done**; they are the difference between this app embedding `@pkg/spec` and vendo
    it, whereas a namespace left unregistered fails as an unknown name. That is the correct
    shape for `fs`, `cli` and `db` here, where no grant could ever lift them.
 
-4. **A browser plugin backed by Browser Run** — _outstanding_. Alongside the `agent-browser`
-   one rather than replacing it: the CLI's local-browser story is still the right one for a
-   developer running specs on their machine. Same tool descriptors, different backend. It
-   lives outside `@pkg/spec` on purpose — which remote browser service drives the tools is the
-   host's decision, not the language's, and the package stays free of that dependency.
+4. **A browser plugin backed by Browser Run** — ✅ landed as `@sdxc/spec/browser-run`
+   (`createBrowserRunPlugin`), wired into uptime’s `runFlowCheck` when a source uses the
+   `browser` namespace. Alongside the `agent-browser` one rather than replacing it: the CLI's
+   local-browser story is still the right one for a developer running specs on their machine.
+   Same tool surface, CDP backend over the Worker’s `BROWSER` binding. The factory takes the
+   binding as an argument so the package stays free of a Cloudflare dependency at import time;
+   uptime is the host that decides to pass `env.BROWSER`.
 
-Item 4 is the only one with real surface area left, and [§5](#5-two-phases-stateless-first)
-is its plan.
+Still open from the browser phase: the `engine` column (`kitesurf` / `chromium`),
+`browserSecond` on the rate card, and a separate Polar flow-run meter ([§7](#7-cost)).
+Until those land, a browser-using flow is metered like an HTTP-only one — one ping per
+budgeted tool call.
 
 ### 10. Honest limits, stated in the docs
 

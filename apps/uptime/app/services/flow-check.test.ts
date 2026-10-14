@@ -16,7 +16,12 @@ import { HttpResponse, delay, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { resolveAllowedHosts, runFlowCheck, specHosts } from "~/app/services/flow-check";
+import {
+	resolveAllowedHosts,
+	runFlowCheck,
+	sourceUsesBrowser,
+	specHosts,
+} from "~/app/services/flow-check";
 import { FLOW_RUN_MAX_RESPONSE_BYTES } from "~/config/pricing";
 
 const DOMAIN = "example.test";
@@ -661,5 +666,44 @@ describe("resolveAllowedHosts", () => {
 
 	test("no verified domains refuses everything", () => {
 		expect(resolveAllowedHosts(["app.example.test"], []).refused).toEqual(["app.example.test"]);
+	});
+});
+
+describe(sourceUsesBrowser.name, () => {
+	test("a use browser declaration needs a Browser Run binding", () => {
+		expect(sourceUsesBrowser('use browser\ntest "x" { when { open "https://a.test/" } }')).toBe(
+			true,
+		);
+	});
+
+	test("a qualified browser call needs a Browser Run binding", () => {
+		expect(sourceUsesBrowser('test "x" { when { browser.open "https://a.test/" } }')).toBe(true);
+	});
+
+	test("an HTTP-only flow does not", () => {
+		expect(sourceUsesBrowser(signInFlow())).toBe(false);
+	});
+});
+
+describe("browser-backed flows", () => {
+	test("a browser flow without a binding is a configuration error", async () => {
+		let result = await runFlowCheck({
+			source: [
+				"use browser",
+				'test "the login page still greets" {',
+				"\twhen {",
+				`\t\tbrowser.open "${ORIGIN}/login"`,
+				"\t}",
+				"\tthen {",
+				'\t\texpect browser.heading "Sign in"',
+				"\t}",
+				"}",
+			].join("\n"),
+			verifiedDomains: [DOMAIN],
+			browser: null,
+		});
+
+		expect(result.status).toBe("error");
+		expect(result.errorMessage).toMatch(/Browser Run/i);
 	});
 });

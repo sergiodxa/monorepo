@@ -1,15 +1,17 @@
 /**
  * Runs a customer's executable spec and reports what it concluded (ADR-027).
  *
- * Decides three things itself: which capabilities exist (`http`, `url`, `jwt`, `sample`,
- * `html`, `str` and `spec` only), which hosts a verified domain covers, and how many
- * requests, how much time, and how large a response a run gets before it is cut off.
+ * Decides which capabilities exist (`http`, `url`, `jwt`, `sample`, `html`, `str`,
+ * `spec`, and `browser` when Browser Run is bound), which hosts a verified domain
+ * covers, and how many requests, how much time, and how large a response a run gets
+ * before it is cut off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Result } from "@sdxc/result";
+import type { BrowserRunBinding } from "@sdxc/spec/browser-run";
 import type {
 	ArgumentNode,
 	BlockNode,
@@ -27,6 +29,7 @@ import type {
 
 import { randomToken } from "@sdxc/crypto";
 import { failure, isFailure } from "@sdxc/result";
+import { createBrowserRunPlugin } from "@sdxc/spec/browser-run";
 import {
 	createHtmlPlugin,
 	createHttpPlugin,
@@ -43,6 +46,7 @@ import {
 	runTests,
 	ToolError,
 } from "@sdxc/spec/workers";
+import { env } from "cloudflare:workers";
 
 import type { FlowStatus } from "~/database/schema";
 
@@ -54,6 +58,14 @@ import {
 
 /** The path a flow's single source is reported under. Shown in failure detail. */
 const SOURCE_PATH = "flow.spec";
+
+/**
+ * Whether a source reaches for the `browser` namespace — either by `use browser` or by a
+ * qualified `browser.` call. Used to decide whether to open a Browser Run session.
+ */
+export function sourceUsesBrowser(source: string): boolean {
+	return /\buse\s+browser\b/.test(source) || /\bbrowser\./.test(source);
+}
 
 export type { FlowStatus };
 
@@ -92,6 +104,11 @@ export interface FlowCheckInput {
 	 * one colliding with itself; pass a fixed value to reproduce a run's data.
 	 */
 	seed?: Seed;
+	/**
+	 * Browser Run binding for specs that use the `browser` namespace. Defaults to `env.BROWSER`
+	 * in the Worker; pass an explicit value in tests.
+	 */
+	browser?: BrowserRunBinding | null;
 	/** Overrides the {@link FLOW_RUN_TIMEOUT_MS} deadline. For tests. */
 	timeoutMs?: number;
 	/** Overrides the {@link FLOW_RUN_MAX_REQUESTS} ceiling. For tests. */
@@ -114,28 +131,52 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 	let grants = parseGrants([`--allow-net=${inspection.allowed}`]);
 	if (isFailure(grants)) return errorResult(grants.error.message);
 
+	let needsBrowser = sourceUsesBrowser(input.source);
+	let browser = input.browser === undefined ? env.BROWSER : input.browser;
+	if (needsBrowser && (browser === null || browser === undefined)) {
+		return errorResult(
+			"This flow uses the browser namespace, but Browser Run is not configured on this Worker.",
+		);
+	}
+
 	let budget = createRequestBudget({
 		maxRequests: input.maxRequests ?? FLOW_RUN_MAX_REQUESTS,
 		timeoutMs: input.timeoutMs ?? FLOW_RUN_TIMEOUT_MS,
 		maxResponseBytes: FLOW_RUN_MAX_RESPONSE_BYTES,
 	});
 
+	let plugins: Plugin[] = [
+		budget.wrap(createHttpPlugin({ maxResponseBytes: FLOW_RUN_MAX_RESPONSE_BYTES })),
+		createUrlPlugin(),
+		createJwtPlugin(),
+		createSamplePlugin(),
+		/**
+		 * Unbudgeted: each answers from the arguments it is handed or from the run's own
+		 * identity, so none of them can spend a request or reach a host.
+		 */
+		createHtmlPlugin(),
+		createStrPlugin(),
+		createSpecPlugin(),
+	];
+	if (needsBrowser && browser !== null && browser !== undefined) {
+		/**
+		 * Browser actions are budgeted like HTTP requests: each tool call that reaches the
+		 * network counts toward the run cap, so a click-heavy flow cannot run unbounded.
+		 */
+		plugins.push(
+			budget.wrap(
+				createBrowserRunPlugin({
+					browser,
+					allowedDomains: input.verifiedDomains,
+				}),
+			),
+		);
+	}
+
 	let startedAt = Date.now();
 	let outcome = await runTests({
 		suite: loaded.data,
-		plugins: [
-			budget.wrap(createHttpPlugin({ maxResponseBytes: FLOW_RUN_MAX_RESPONSE_BYTES })),
-			createUrlPlugin(),
-			createJwtPlugin(),
-			createSamplePlugin(),
-			/**
-			 * Unbudgeted: each answers from the arguments it is handed or from the run's own
-			 * identity, so none of them can spend a request or reach a host.
-			 */
-			createHtmlPlugin(),
-			createStrPlugin(),
-			createSpecPlugin(),
-		],
+		plugins,
 		grants: grants.data.grants,
 		createWorkspace: createNoFilesystemWorkspace,
 		seed: input.seed ?? randomToken(),
