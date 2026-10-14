@@ -178,7 +178,13 @@ describe("GET /", () => {
 		expect(body).toContain("Min Check Interval");
 
 		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "monitors" })}"`);
+		expect(body).toContain(`href="${routes.marketing.feature.href({ slug: "browser-flows" })}"`);
 		expect(body).toContain("Learn more");
+
+		expect(body).toContain("Test in a real browser");
+		expect(body).toContain('id="browser-flows"');
+		expect(body).toContain("use browser");
+		expect(body).toContain("signing in lands on the dashboard");
 
 		expect(body).toContain("Maintenance Windows");
 		expect(body).toContain("Cron Job Monitoring");

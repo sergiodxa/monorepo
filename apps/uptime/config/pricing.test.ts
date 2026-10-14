@@ -132,15 +132,17 @@ describe("the English copy formatters", () => {
 	});
 
 	/**
-	 * These four are the only values `resources/content/marketing.ts` interpolates,
-	 * matched against what `toLocaleString("en-US", …)` returned for them — including
-	 * grouping past one separator, which no real input reaches yet.
+	 * The values `resources/content/marketing.ts` interpolates, matched against what
+	 * `toLocaleString("en-US", …)` returned for them — including grouping past one
+	 * separator, which no real input reaches yet. Browser-flow copy quotes per-thousand
+	 * run pricing as {@link PRICE_PER_FLOW_RUN_USD} × 1000.
 	 */
 	test("produces the exact strings the copy quoted before the formatters dropped Intl", () => {
 		expect(formatUsd(BASE_PRICE_USD)).toBe("$5");
 		expect(formatUsd(PRICE_PER_BLOCK_USD)).toBe("$1");
 		expect(formatPings(INCLUDED_PINGS)).toBe("100,000");
 		expect(formatPings(PINGS_PER_BLOCK)).toBe("10,000");
+		expect(formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)).toBe("$2.50");
 
 		expect(formatPings(1_234_567)).toBe("1,234,567");
 		expect(formatUsd(1_234_567.5)).toBe("$1,234,567.50");

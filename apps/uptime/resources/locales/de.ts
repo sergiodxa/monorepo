@@ -92,7 +92,7 @@ export default {
 				everythingIncluded: {
 					title: "Alles inklusive",
 					description:
-						"HTTP-, DNS-, TCP- und SSL-Prüfungen, Cron-Job-Heartbeats, Benachrichtigungen und Statusseiten. Ein Tarif, nichts als Zusatzoption verkauft.",
+						"HTTP-, DNS-, TCP- und SSL-Prüfungen, Cron-Job-Heartbeats, mehrstufige Flows — inklusive Click-throughs in einem echten Browser — Benachrichtigungen und Statusseiten. Ein Tarif, nichts als Zusatzoption verkauft.",
 				},
 				noMonitorMath: {
 					title: "Kein Monitor-Rechnen",
@@ -154,6 +154,37 @@ export default {
 					title: "Überwachen Sie ganze Flows",
 					description:
 						"Führen Sie mehrere Anfragen in Reihe aus und prüfen Sie, was zurückkommt — anmelden, Token lesen, den damit autorisierten Endpunkt aufrufen. Die Frage, die eine einzelne Prüfung nicht stellen kann.",
+				},
+				ninth: {
+					title: "Im echten Browser testen",
+					description:
+						"Öffnen Sie eine Live-Seite, füllen Sie Felder aus, klicken Sie auf Schaltflächen und prüfen Sie, was Besucher sehen, nachdem JavaScript gelaufen ist. Erkennen Sie Login- und Checkout-Fehler, die eine HTTP-Prüfung übersehen würde.",
+				},
+			},
+		},
+
+		browserExamples: {
+			badge: "Browser-Flows",
+			title: "So sieht eine Prüfung im echten Browser aus",
+			description:
+				"Eine kurze ausführbare Spezifikation steuert eine Live-Browser-Run-Sitzung — denselben Click-through, den ein Besucher nehmen würde. Drei Beispiele, die Teams zeitgesteuert ausführen.",
+			learnMore: "Browser-Flows entdecken",
+
+			list: {
+				signIn: {
+					title: "Anmeldung landet auf dem Dashboard",
+					description:
+						"Füllen Sie E-Mail und Passwort aus, klicken Sie auf Anmelden und erwarten Sie die Dashboard-Überschrift, sobald der Client geroutet hat.",
+				},
+				checkout: {
+					title: "Checkout erreicht die Bestätigung",
+					description:
+						"Führen Sie den Warenkorb bis zur Zahlung und prüfen Sie die Bestätigungsüberschrift, die nur erscheint, wenn die Zahlung gelingt.",
+				},
+				spa: {
+					title: "Eine clientseitig gerenderte Seite zeichnet",
+					description:
+						"Öffnen Sie eine SPA-Route und warten Sie auf die Überschrift, die die Hydration zeigen soll — ein 200 auf dem Shell reicht nicht.",
 				},
 			},
 		},
@@ -411,7 +442,7 @@ export default {
 
 				twentieth: {
 					q: "Kann ich einen Login- oder Checkout-Flow überwachen?",
-					a: "Ja. Ein Flow-Monitor führt mehrere Anfragen in Reihe aus, mit Zusicherungen dazwischen: Er kann sich anmelden, das zurückgegebene Token lesen und den Endpunkt aufrufen, den dieses Token autorisiert. Ein Flow läuft auf HTTP-Ebene statt in einem Browser, und nur gegen Domains, die Ihr Team verifiziert hat.",
+					a: "Ja. Ein Flow-Monitor führt mehrere Schritte in Reihe aus, mit Zusicherungen dazwischen. Ein HTTP-Flow kann sich anmelden, das Token lesen und den Endpunkt aufrufen, den dieses Token autorisiert. Ein Browser-Flow öffnet eine echte Browser-Run-Sitzung, füllt aus und klickt wie ein Besucher, und prüft, was die Live-Seite nach dem Ausführen von JavaScript exponiert. Beide laufen nur gegen Domains, die Ihr Team verifiziert hat.",
 				},
 			},
 		},
@@ -442,6 +473,7 @@ export default {
 					analytics: "Analytik",
 					api: "API-Zugang",
 					flowMonitors: "Flow-Monitore",
+					browserFlows: "Browser-Flows",
 				},
 				useCases: {
 					title: "Anwendungsfälle",

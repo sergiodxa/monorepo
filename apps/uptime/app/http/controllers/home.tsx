@@ -1,10 +1,11 @@
 /**
  * Home controller — the public marketing homepage: hero, trust indicators, benefit
- * rows, feature and use-case grids, a pricing calculator, and an FAQ, inside
- * `MarketingLayout`. Serves as the top-of-funnel entry point and the redirect target
- * for unauthenticated `requireUser` guards. The pricing calculator is the page's one
- * `clientEntry` island; the hero's try-it form `POST`s straight to `/try`, carrying the
- * honeypot fields that route verifies, so the check runs on the first click.
+ * rows, feature and use-case grids, browser-flow examples, a pricing calculator, and
+ * an FAQ, inside `MarketingLayout`. Serves as the top-of-funnel entry point and the
+ * redirect target for unauthenticated `requireUser` guards. The pricing calculator is
+ * the page's one `clientEntry` island; the hero's try-it form `POST`s straight to
+ * `/try`, carrying the honeypot fields that route verifies, so the check runs on the
+ * first click.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +18,7 @@ import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { IntlProvider, Trans } from "@sdxc/i18n/ui";
 import {
 	ActivityIcon,
+	AppWindowIcon,
 	ArrowRightIcon,
 	BellIcon,
 	CheckIcon,
@@ -65,6 +67,7 @@ import { bs, is, m, maxIs, mbe, mbs, mi, p, pb, pbe, pbs, pi } from "@sdxc/u/siz
 import { hover } from "@sdxc/u/state";
 import { translateX, translateY } from "@sdxc/u/transform";
 import {
+	font,
 	fontSize,
 	leading,
 	nowrap,
@@ -72,8 +75,9 @@ import {
 	textDecoration,
 	tracking,
 	weight,
+	whiteSpace,
 } from "@sdxc/u/typography";
-import { Button, Heading, LinkButton, TextField } from "@sdxc/ui";
+import { Button, Heading, HeadingScope, LinkButton, TextField } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
@@ -102,6 +106,66 @@ const SCREENSHOT_LIGHT = "/screenshot-light.webp";
 
 /** Dark-mode hero screenshot, selected by the `<source>` media condition. */
 const SCREENSHOT_DARK = "/screenshot-dark.webp";
+
+/**
+ * Spec sources shown on the homepage browser-examples section. The language of the
+ * DSL is English by design, so these stay module constants rather than locale strings.
+ */
+const BROWSER_FLOW_EXAMPLES = [
+	{
+		key: "signIn",
+		source: `use browser
+
+test "signing in lands on the dashboard" {
+	when {
+		browser.open "https://app.example.com/login"
+		browser.fill textbox "Email" with "uptime-monitor@example.com"
+		browser.fill textbox "Password" with "the monitor account's password"
+		browser.click button "Sign in"
+	}
+	then {
+		eventually within 5s {
+			expect browser.path "/dashboard"
+		}
+		expect browser.heading "Dashboard"
+	}
+}`,
+	},
+	{
+		key: "checkout",
+		source: `use browser
+
+test "checkout reaches confirmation" {
+	when {
+		browser.open "https://shop.example.com/cart"
+		browser.click button "Checkout"
+		browser.fill textbox "Card number" with "4242424242424242"
+		browser.click button "Pay now"
+	}
+	then {
+		eventually within 10s {
+			expect browser.heading "Order confirmed"
+		}
+	}
+}`,
+	},
+	{
+		key: "spa",
+		source: `use browser
+
+test "the settings page paints" {
+	when {
+		browser.open "https://app.example.com/settings"
+	}
+	then {
+		eventually within 5s {
+			expect browser.heading "Settings"
+		}
+		expect browser.button "Save changes"
+	}
+}`,
+	},
+] as const;
 
 /**
  * Vertical section padding shared by every full-width section: 64px, growing to
@@ -252,7 +316,20 @@ export default createAction(routes.home, async (ctx) => {
 			slug: "flows",
 			icon: <WorkflowIcon size={24} strokeWidth={1.5} />,
 		},
+		{
+			title: t("landing.features.list.ninth.title"),
+			description: t("landing.features.list.ninth.description"),
+			slug: "browser-flows",
+			icon: <AppWindowIcon size={24} strokeWidth={1.5} />,
+		},
 	];
+
+	let BROWSER_EXAMPLES = BROWSER_FLOW_EXAMPLES.map((example) => ({
+		key: example.key,
+		title: t(`landing.browserExamples.list.${example.key}.title`),
+		description: t(`landing.browserExamples.list.${example.key}.description`),
+		source: example.source,
+	}));
 
 	let COMPLETE_FEATURES = [
 		{
@@ -646,6 +723,76 @@ export default createAction(routes.home, async (ctx) => {
 									learnMore={t("landing.features.learnMore")}
 								/>
 							))}
+						</div>
+					</div>
+				</section>
+
+				<section id="browser-flows" mix={[...sectionPadding(), ...tintedSection()]}>
+					<div mix={[...marketingContainer()]}>
+						<SectionHeader
+							badge={t("landing.browserExamples.badge")}
+							title={t("landing.browserExamples.title")}
+							description={t("landing.browserExamples.description")}
+						/>
+
+						<div mix={[grid(), gap(8), ...responsiveGrid()]}>
+							{BROWSER_EXAMPLES.map((example) => (
+								<article
+									key={example.key}
+									mix={[
+										vstack({ gap: 4 }),
+										p(5),
+										rounded("xl"),
+										border({ color: "neutral", width: 1 }),
+										bg("neutral.tint"),
+									]}
+								>
+									<div mix={[vstack({ gap: 2 })]}>
+										<HeadingScope level={3}>
+											<Heading mix={[m(0), fontSize("lg"), weight(600)]}>{example.title}</Heading>
+										</HeadingScope>
+										<p mix={[m(0), fontSize("sm"), leading("relaxed"), fg("neutral")]}>
+											{example.description}
+										</p>
+									</div>
+									<pre
+										mix={[
+											m(0),
+											p(4),
+											rounded("lg"),
+											bg("color.neutral.900"),
+											dark(bg("color.neutral.950")),
+											fg("color.neutral.100"),
+											font("mono"),
+											fontSize("xs"),
+											leading("relaxed"),
+											whiteSpace("pre"),
+											overflow("auto"),
+										]}
+									>
+										<code>{example.source}</code>
+									</pre>
+								</article>
+							))}
+						</div>
+
+						<div mix={[mbs(8), flex(), justify("center")]}>
+							<a
+								href={routes.marketing.feature.href({ slug: "browser-flows" })}
+								mix={[
+									inlineFlex(),
+									items("center"),
+									gap(2),
+									fontSize("sm"),
+									weight(600),
+									fg("brand"),
+									textDecoration("none"),
+									hover([textDecoration("underline")]),
+								]}
+							>
+								{t("landing.browserExamples.learnMore")}
+								<ArrowRightIcon size={16} strokeWidth={1.5} />
+							</a>
 						</div>
 					</div>
 				</section>

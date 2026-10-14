@@ -93,7 +93,7 @@ export default {
 				everythingIncluded: {
 					title: "Tout est inclus",
 					description:
-						"Vérifications HTTP, DNS, TCP et SSL, signaux de tâches cron, alertes et pages de statut. Un seul forfait, rien vendu en supplément.",
+						"Vérifications HTTP, DNS, TCP et SSL, signaux de tâches cron, flux en plusieurs étapes — y compris des parcours dans un vrai navigateur — alertes et pages de statut. Un seul forfait, rien vendu en supplément.",
 				},
 				noMonitorMath: {
 					title: "Pas de calcul de moniteurs",
@@ -155,6 +155,37 @@ export default {
 					title: "Surveillez des flux entiers",
 					description:
 						"Exécutez plusieurs requêtes dans l'ordre et vérifiez ce qui revient : connectez-vous, lisez le jeton, appelez le point de terminaison qu'il autorise. La question qu'une vérification isolée ne peut pas poser.",
+				},
+				ninth: {
+					title: "Testez dans un vrai navigateur",
+					description:
+						"Ouvrez une page en direct, remplissez des champs, cliquez sur des boutons et vérifiez ce que voient les visiteurs après l'exécution de JavaScript. Détectez les pannes de connexion et de paiement qu'une vérification HTTP manquerait.",
+				},
+			},
+		},
+
+		browserExamples: {
+			badge: "Flux navigateur",
+			title: "À quoi ressemble une vérification dans un vrai navigateur",
+			description:
+				"Une courte spécification exécutable pilote une session Browser Run en direct — le même parcours qu'un visiteur. Trois exemples que les équipes exécutent selon un calendrier.",
+			learnMore: "Découvrir les flux navigateur",
+
+			list: {
+				signIn: {
+					title: "La connexion arrive sur le tableau de bord",
+					description:
+						"Remplissez E-mail et Mot de passe, cliquez sur Se connecter, et attendez le titre du tableau de bord une fois le client routé.",
+				},
+				checkout: {
+					title: "Le paiement atteint la confirmation",
+					description:
+						"Parcourez le panier jusqu'au paiement, puis vérifiez le titre de confirmation qui n'apparaît qu'après un paiement réussi.",
+				},
+				spa: {
+					title: "Une page rendue côté client s'affiche",
+					description:
+						"Ouvrez une route SPA et attendez le titre que l'hydratation est censée montrer — un 200 sur le shell ne suffit pas.",
 				},
 			},
 		},
@@ -409,7 +440,7 @@ export default {
 
 				twentieth: {
 					q: "Puis-je surveiller un flux de connexion ou de paiement ?",
-					a: "Oui. Un moniteur de flux exécute plusieurs requêtes dans l'ordre, avec des assertions entre elles : il peut se connecter, relire le jeton obtenu et appeler le point de terminaison que ce jeton autorise. Un flux s'exécute au niveau HTTP et non dans un navigateur, et uniquement vers des domaines que votre équipe a vérifiés.",
+					a: "Oui. Un moniteur de flux exécute plusieurs étapes dans l'ordre, avec des assertions entre elles. Un flux HTTP peut se connecter, relire le jeton et appeler le point de terminaison que ce jeton autorise. Un flux navigateur ouvre une vraie session Browser Run, remplit et clique comme un visiteur, et vérifie ce que la page en direct expose après l'exécution de JavaScript. Les deux ne s'exécutent que vers des domaines que votre équipe a vérifiés.",
 				},
 			},
 		},
@@ -440,6 +471,7 @@ export default {
 					analytics: "Analytique",
 					api: "Accès API",
 					flowMonitors: "Moniteurs de flux",
+					browserFlows: "Flux navigateur",
 				},
 				useCases: {
 					title: "Cas d'utilisation",

@@ -125,6 +125,7 @@ export function buildMarketingChrome(
 				{ label: t("landing.footer.sections.features.analytics"), slug: "analytics" },
 				{ label: t("landing.footer.sections.features.api"), slug: "api" },
 				{ label: t("landing.footer.sections.features.flowMonitors"), slug: "flows" },
+				{ label: t("landing.footer.sections.features.browserFlows"), slug: "browser-flows" },
 			].map((link) => ({
 				label: link.label,
 				href: routes.marketing.feature.href({ slug: link.slug }),

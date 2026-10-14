@@ -92,7 +92,7 @@ export default {
 				everythingIncluded: {
 					title: "Todo incluido",
 					description:
-						"Comprobaciones HTTP, DNS, TCP y SSL, latidos de cron jobs, alertas y páginas de estado. Un solo plan, nada se vende aparte.",
+						"Comprobaciones HTTP, DNS, TCP y SSL, latidos de cron jobs, flujos de varios pasos — incluidos click-throughs en un navegador real — alertas y páginas de estado. Un solo plan, nada se vende aparte.",
 				},
 				noMonitorMath: {
 					title: "Sin cuentas de monitores",
@@ -154,6 +154,37 @@ export default {
 					title: "Monitoree flujos completos",
 					description:
 						"Ejecute varias solicitudes en orden y compruebe lo que devuelven: inicie sesión, lea el token y llame al endpoint que ese token autoriza. La pregunta que una sola comprobación no puede hacer.",
+				},
+				ninth: {
+					title: "Pruebe en un navegador real",
+					description:
+						"Abra una página en vivo, complete campos, haga clic en botones y compruebe lo que ven los visitantes después de que JavaScript se ejecute. Detecte fallos de login y checkout que una comprobación HTTP no vería.",
+				},
+			},
+		},
+
+		browserExamples: {
+			badge: "Flujos en navegador",
+			title: "Así se ve una comprobación en un navegador real",
+			description:
+				"Una especificación ejecutable corta conduce una sesión Browser Run en vivo — el mismo click-through que daría un visitante. Tres ejemplos que los equipos ejecutan con programación.",
+			learnMore: "Explorar flujos en navegador",
+
+			list: {
+				signIn: {
+					title: "El inicio de sesión llega al panel",
+					description:
+						"Complete Email y Contraseña, haga clic en Iniciar sesión y espere el encabezado del panel cuando el cliente haya enrutado.",
+				},
+				checkout: {
+					title: "El checkout llega a la confirmación",
+					description:
+						"Recorra el carrito hasta pagar y compruebe el encabezado de confirmación que solo aparece cuando el pago tiene éxito.",
+				},
+				spa: {
+					title: "Una página renderizada en el cliente se pinta",
+					description:
+						"Abra una ruta SPA y espere el encabezado que la hidratación debería mostrar — un 200 en el shell no basta.",
 				},
 			},
 		},
@@ -408,7 +439,7 @@ export default {
 
 				twentieth: {
 					q: "¿Puedo monitorear un flujo de inicio de sesión o de compra?",
-					a: "Sí. Un monitor de flujo ejecuta varias solicitudes en orden con aserciones entre ellas, de modo que puede iniciar sesión, leer el token devuelto y llamar al endpoint que ese token autoriza. Un flujo se ejecuta a nivel HTTP y no en un navegador, y solo contra dominios que su equipo haya verificado.",
+					a: "Sí. Un monitor de flujo ejecuta varios pasos en orden con aserciones entre ellos. Un flujo HTTP puede iniciar sesión, leer el token y llamar al endpoint que ese token autoriza. Un flujo en navegador abre una sesión Browser Run real, completa campos y hace clic como un visitante, y comprueba lo que la página en vivo expone después de que JavaScript se ejecute. Ambos solo se ejecutan contra dominios que su equipo haya verificado.",
 				},
 			},
 		},
@@ -439,6 +470,7 @@ export default {
 					analytics: "Analíticas",
 					api: "Acceso API",
 					flowMonitors: "Monitores de flujo",
+					browserFlows: "Flujos en navegador",
 				},
 				useCases: {
 					title: "Casos de uso",
