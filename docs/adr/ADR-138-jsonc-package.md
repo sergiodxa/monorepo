@@ -18,6 +18,10 @@ rest to `JSON.parse`. The `sdxc` CLI (ADR-136) reads its project configuration f
 - Stripping comments by deleting them shifts every later offset, so a `JSON.parse` error points
   at the wrong place in the file the user is editing.
 - A comment marker inside a string (`"https://example.com"`) is string content, not a comment.
+- `JSON.parse` reports a position only on some engines. V8 (Node, Workers) says
+  `… in JSON at position 8 (line 1 column 9)`; JavaScriptCore (Bun) says
+  `JSON Parse error: Property name must be a string literal`, with no position. A position read
+  out of the message is therefore missing on Bun, where the `sdxc` CLI and `@sdxc/spec` run.
 
 ## Decision
 
@@ -34,6 +38,12 @@ if (isFailure(parsed)) parsed.error.line; // 1-based line and column in `text`
   replaced by spaces of the same length, outside strings only, before `JSON.parse`, so every
   offset in the result still points into the original text. `JSONCParseError` carries the
   message, `offset`, `line` and `column`.
+- **Positions come from the package, on every engine.** The stripping pass already walks the
+  text token by token; it also checks the JSON grammar as it goes (values, `:` and `,`
+  placement, string escapes, number syntax) and records the first token that breaks it. When
+  `JSON.parse` fails, the error carries that token's offset and a message of the package's own
+  wording, so the same input reports the same `line`, `column` and message on Node, Bun and
+  Workers. `JSON.parse` still produces every value, so accepted input is exactly what it accepts.
 - **`strip(text)`** returns that same-length JSON text for callers that parse it themselves.
 - Writing is out of scope: `JSON.stringify` writes valid JSONC, and a writer that preserves
   comments is a separate problem.
@@ -46,11 +56,14 @@ wording and gain a line and column.
 ### Positive
 
 - **One reader** for every JSONC file the packages and the CLI read.
-- **Errors point at the user's text**, line and column included.
+- **Errors point at the user's text**, line and column included, and read the same on every
+  runtime.
 
 ### Negative
 
 - **Another package to publish** for a small amount of code.
+- **A JSON grammar check of our own**, used only to locate errors; a test runs a corpus of
+  invalid documents through it and through V8's `JSON.parse` and fails when the positions differ.
 
 ### Neutral
 
@@ -76,5 +89,5 @@ less code than evaluating a dependency's edge cases.
 
 ## Current Progress
 
-- [ ] `@sdxc/jsonc` with `parse` and `strip`
+- [ ] `@sdxc/jsonc` with `parse` and `strip`, and engine-independent error positions
 - [ ] `@sdxc/spec` moved to `JSONC.parse`
