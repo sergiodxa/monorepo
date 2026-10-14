@@ -21,7 +21,12 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/location": "workspace:*",
-		"@sdxc/result": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

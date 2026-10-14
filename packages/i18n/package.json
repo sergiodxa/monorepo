@@ -14,7 +14,12 @@
 	},
 	"dependencies": {
 		"@sdxc/logger": "workspace:*",
-		"@sdxc/messageformat": "workspace:*",
+		"@sdxc/messageformat": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

@@ -12,7 +12,12 @@
 	},
 	"dependencies": {
 		"@sdxc/result": "workspace:*",
-		"@sdxc/types": "workspace:*",
+		"@sdxc/types": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

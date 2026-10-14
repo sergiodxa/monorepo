@@ -11,14 +11,13 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
-	"dependencies": {
+	"devDependencies": {
+		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0"
 	},
-	"devDependencies": {
-		"@sdxc/jobs": "workspace:*"
-	},
 	"peerDependencies": {
-		"@sdxc/jobs": "workspace:*"
+		"@sdxc/jobs": "workspace:*",
+		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/jobs": {

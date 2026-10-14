@@ -10,10 +10,11 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
-	"dependencies": {
+	"devDependencies": {
+		"@sdxc/response": "workspace:*",
 		"remix": "3.0.0"
 	},
-	"devDependencies": {
-		"@sdxc/response": "workspace:*"
+	"peerDependencies": {
+		"remix": "3.0.0"
 	}
 }

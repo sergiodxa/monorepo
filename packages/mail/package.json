@@ -21,7 +21,12 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/uuid": "workspace:*",
+		"@sdxc/uuid": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

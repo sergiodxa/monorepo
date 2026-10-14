@@ -24,10 +24,13 @@
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
-		"@sdxc/well-known": "workspace:*",
+		"@sdxc/well-known": "workspace:*"
+	},
+	"devDependencies": {
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"remix": "3.0.0",
 		"vitest": "^4.1.10"
 	},
 	"peerDependenciesMeta": {

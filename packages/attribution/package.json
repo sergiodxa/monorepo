@@ -17,7 +17,12 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/user-agent": "workspace:*",
-		"@sdxc/validate": "workspace:*",
+		"@sdxc/validate": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

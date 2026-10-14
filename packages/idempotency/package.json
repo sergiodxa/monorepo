@@ -21,13 +21,16 @@
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*",
-		"@sdxc/uuid": "workspace:*",
-		"remix": "3.0.0"
+		"@sdxc/uuid": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20261011.1",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
-		"@sdxc/data-table-sqlstorage": "workspace:*"
+		"@sdxc/data-table-sqlstorage": "workspace:*",
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
 	}
 }

@@ -12,7 +12,10 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
-	"dependencies": {
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

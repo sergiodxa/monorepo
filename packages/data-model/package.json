@@ -16,8 +16,7 @@
 	"dependencies": {
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
-		"@standard-schema/spec": "^1.1.0",
-		"remix": "3.0.0"
+		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20261011.1",
@@ -28,11 +27,13 @@
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/mcp": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
-		"@sdxc/sample": "workspace:*"
+		"@sdxc/sample": "workspace:*",
+		"remix": "3.0.0"
 	},
 	"peerDependencies": {
 		"@sdxc/jobs": "workspace:*",
-		"@sdxc/sample": "workspace:*"
+		"@sdxc/sample": "workspace:*",
+		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/jobs": {

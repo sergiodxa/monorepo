@@ -11,7 +11,12 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pitlane/assets": "0.1.0",
+		"@pitlane/assets": "0.1.0"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

@@ -12,7 +12,12 @@
 	},
 	"dependencies": {
 		"@sdxc/attribution": "workspace:*",
-		"@sdxc/robots": "workspace:*",
+		"@sdxc/robots": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

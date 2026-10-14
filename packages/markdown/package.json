@@ -23,10 +23,13 @@
 	"dependencies": {
 		"@sdxc/result": "workspace:*",
 		"@sdxc/yaml": "workspace:*",
-		"@standard-schema/spec": "^1.1.0",
-		"remix": "3.0.0"
+		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
-		"@sdxc/xml": "workspace:*"
+		"@sdxc/xml": "workspace:*",
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
 	}
 }

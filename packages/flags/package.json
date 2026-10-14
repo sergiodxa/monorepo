@@ -27,6 +27,9 @@
 		"@sdxc/validate": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
 	"peerDependencies": {
 		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0",

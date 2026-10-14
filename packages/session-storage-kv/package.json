@@ -11,7 +11,12 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@sdxc/duration": "workspace:*",
+		"@sdxc/duration": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

@@ -22,7 +22,12 @@
 		"@remix-run/ui": "0.12.1",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/u": "workspace:*",
-		"@sdxc/uuid": "workspace:*",
+		"@sdxc/uuid": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

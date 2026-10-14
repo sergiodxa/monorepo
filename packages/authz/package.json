@@ -23,7 +23,8 @@
 		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
-		"@sdxc/json-schema": "workspace:*"
+		"@sdxc/json-schema": "workspace:*",
+		"remix": "3.0.0"
 	},
 	"peerDependencies": {
 		"@sdxc/billing": "workspace:*",

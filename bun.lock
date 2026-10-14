@@ -484,9 +484,12 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@sdxc/well-known": "workspace:*",
+      },
+      "devDependencies": {
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "remix": "3.0.0",
         "vitest": "^4.1.10",
       },
       "optionalPeers": [
@@ -505,6 +508,11 @@
       "version": "0.0.1",
       "dependencies": {
         "@pitlane/assets": "0.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -525,6 +533,11 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/user-agent": "workspace:*",
         "@sdxc/validate": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -568,6 +581,7 @@
       },
       "devDependencies": {
         "@sdxc/json-schema": "workspace:*",
+        "remix": "3.0.0",
       },
       "peerDependencies": {
         "@sdxc/billing": "workspace:*",
@@ -603,6 +617,11 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -640,17 +659,23 @@
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
     "packages/catch-response-middleware": {
       "name": "@sdxc/catch-response-middleware",
       "version": "0.0.1",
-      "dependencies": {
-        "remix": "3.0.0",
-      },
       "devDependencies": {
         "@sdxc/response": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/cloudflare-mocks": {
@@ -705,7 +730,6 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
-        "remix": "3.0.0",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
@@ -717,10 +741,12 @@
         "@sdxc/mcp": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/sample": "workspace:*",
+        "remix": "3.0.0",
       },
       "peerDependencies": {
         "@sdxc/jobs": "workspace:*",
         "@sdxc/sample": "workspace:*",
+        "remix": "3.0.0",
       },
       "optionalPeers": [
         "@sdxc/jobs",
@@ -730,34 +756,35 @@
     "packages/data-table-d1": {
       "name": "@sdxc/data-table-d1",
       "version": "0.0.0",
-      "dependencies": {
-        "remix": "3.0.0",
-      },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/data-table-sqlstorage": {
       "name": "@sdxc/data-table-sqlstorage",
       "version": "0.0.0",
-      "dependencies": {
-        "remix": "3.0.0",
-      },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/database-middleware": {
       "name": "@sdxc/database-middleware",
       "version": "0.0.1",
-      "dependencies": {
-        "remix": "3.0.0",
-      },
       "devDependencies": {
         "@sdxc/jobs": "workspace:*",
+        "remix": "3.0.0",
       },
       "peerDependencies": {
         "@sdxc/jobs": "workspace:*",
+        "remix": "3.0.0",
       },
       "optionalPeers": [
         "@sdxc/jobs",
@@ -777,6 +804,11 @@
       "dependencies": {
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -805,6 +837,11 @@
       "dependencies": {
         "@sdxc/result": "workspace:*",
         "@sdxc/zone-file": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -842,6 +879,11 @@
       "dependencies": {
         "@sdxc/result": "workspace:*",
         "@sdxc/types": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -869,6 +911,9 @@
         "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
       "peerDependencies": {
         "@sdxc/jobs": "workspace:*",
         "remix": "3.0.0",
@@ -890,13 +935,14 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/semver": "workspace:*",
         "@sdxc/types": "workspace:*",
-        "remix": "3.0.0",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
         "@sdxc/uuid": "workspace:*",
+        "remix": "3.0.0",
       },
       "peerDependencies": {
+        "remix": "3.0.0",
         "vitest": "^4.1.10",
       },
       "optionalPeers": [
@@ -909,6 +955,11 @@
       "dependencies": {
         "@sdxc/ip": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -925,6 +976,11 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -933,6 +989,11 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/api-client": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -952,6 +1013,11 @@
         "@sdxc/duration": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -972,6 +1038,11 @@
       "dependencies": {
         "@sdxc/logger": "workspace:*",
         "@sdxc/messageformat": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -986,12 +1057,13 @@
     "packages/icons": {
       "name": "@sdxc/icons",
       "version": "0.0.1",
-      "dependencies": {
-        "remix": "3.0.0",
-      },
       "devDependencies": {
         "@types/node": "^26.6.5",
         "lucide-static": "^1.55.0",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/idempotency": {
@@ -1005,13 +1077,16 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/uuid": "workspace:*",
-        "remix": "3.0.0",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/ip": {
@@ -1081,6 +1156,11 @@
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1111,14 +1191,20 @@
     "packages/lazy-frame": {
       "name": "@sdxc/lazy-frame",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
     "packages/lazy-route": {
       "name": "@sdxc/lazy-route",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1159,6 +1245,11 @@
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1169,10 +1260,13 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/yaml": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
-        "remix": "3.0.0",
       },
       "devDependencies": {
         "@sdxc/xml": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/math": {
@@ -1181,6 +1275,11 @@
       "dependencies": {
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1191,6 +1290,11 @@
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1202,6 +1306,8 @@
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1224,10 +1330,13 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
+      },
+      "devDependencies": {
         "remix": "3.0.0",
       },
       "peerDependencies": {
         "@sdxc/web-push": "workspace:*",
+        "remix": "3.0.0",
         "vitest": "^4.1.10",
       },
       "optionalPeers": [
@@ -1242,6 +1351,11 @@
         "@sdxc/html": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1252,6 +1366,11 @@
         "@sdxc/microformats": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1268,13 +1387,21 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
     "packages/no-www-middleware": {
       "name": "@sdxc/no-www-middleware",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1288,6 +1415,11 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/yaml": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1317,6 +1449,11 @@
         "@sdxc/link-header": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1327,6 +1464,11 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1345,6 +1487,11 @@
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1388,6 +1535,11 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/uuid": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1399,6 +1551,11 @@
         "@sdxc/duration": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1455,6 +1612,11 @@
       "dependencies": {
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1465,13 +1627,16 @@
         "@sdxc/pagination": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
-        "remix": "3.0.0",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/security-headers": {
@@ -1481,6 +1646,11 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1497,6 +1667,11 @@
       "dependencies": {
         "@sdxc/attribution": "workspace:*",
         "@sdxc/robots": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1509,6 +1684,11 @@
       "version": "0.0.0",
       "dependencies": {
         "@sdxc/duration": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1527,6 +1707,11 @@
         "@sdxc/doh": "workspace:*",
         "@sdxc/email-address": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1555,6 +1740,11 @@
       "dependencies": {
         "@sdxc/result": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1565,13 +1755,21 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
     "packages/trailing-slash-middleware": {
       "name": "@sdxc/trailing-slash-middleware",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1589,7 +1787,10 @@
     "packages/u": {
       "name": "@sdxc/u",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1601,13 +1802,21 @@
         "@sdxc/icons": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/uuid": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
     "packages/user-agent": {
       "name": "@sdxc/user-agent",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1639,6 +1848,11 @@
         "@sdxc/jwt": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },
@@ -1707,6 +1921,11 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
         "remix": "3.0.0",
       },
     },

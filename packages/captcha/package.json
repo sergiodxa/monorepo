@@ -21,7 +21,12 @@
 	"dependencies": {
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/validate": "workspace:*",
+		"@sdxc/validate": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
 		"remix": "3.0.0"
 	}
 }

@@ -12,11 +12,12 @@
 		"typecheck": "tsc --noEmit",
 		"generate": "bun run scripts/generate-icons.ts"
 	},
-	"dependencies": {
-		"remix": "3.0.0"
-	},
 	"devDependencies": {
 		"@types/node": "^26.6.5",
-		"lucide-static": "^1.55.0"
+		"lucide-static": "^1.55.0",
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
 	}
 }
