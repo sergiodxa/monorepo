@@ -73,8 +73,9 @@ describe("GET /browser-flows", () => {
 		expect(body).toContain(browserFlowsPage.title);
 		expect(body).toContain("use browser");
 		expect(body).toContain("signing in lands on the dashboard");
-		expect(body).toContain("monitor@example.com");
-		expect(body).toContain("monitor-password");
+		expect(body).toContain("m@example.com");
+		expect(body).toContain("monitor-pw");
+		expect(body).toContain('id="browser-flow-examples"');
 		expect(body).toContain(browserFlowsPage.pricing.figure);
 	});
 

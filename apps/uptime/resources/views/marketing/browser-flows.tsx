@@ -32,7 +32,7 @@ import {
 } from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { dark, media } from "@sdxc/u/responsive";
-import { bs, is, m, maxIs, mi, mbs, p, pb, pi } from "@sdxc/u/size";
+import { bs, is, m, maxIs, mi, minIs, mbs, p, pb, pi } from "@sdxc/u/size";
 import { translateX, translateY } from "@sdxc/u/transform";
 import {
 	font,
@@ -46,6 +46,7 @@ import {
 import { Heading, HeadingScope, LinkButton } from "@sdxc/ui";
 
 import AuthCta from "~/resources/components/marketing/auth-cta";
+import BrowserFlowExamplesCarousel from "~/resources/components/marketing/browser-flow-examples-carousel";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingStep from "~/resources/components/marketing/step";
@@ -285,36 +286,19 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 					</div>
 				</section>
 
-				<section id="examples" mix={[...sectionPadding(), ...tintedSection()]}>
-					<div mix={[...marketingContainer()]}>
+				<section id="examples" mix={[...sectionPadding(), ...tintedSection(), overflow("hidden")]}>
+					<div mix={[...marketingContainer(), minIs(0)]}>
 						<SectionHeader
 							badge={page.examples.badge}
 							title={page.examples.title}
 							description={page.examples.description}
 						/>
-						<div
-							mix={[
-								grid(),
-								gap(8),
-								media("(min-width: 1024px)", gridTemplate({ columns: "repeat(3, 1fr)" })),
-							]}
-						>
-							{BROWSER_FLOW_EXAMPLES.map((example) => (
-								<article key={example.key} mix={[vstack({ gap: 4 })]}>
-									<div mix={[vstack({ gap: 2 })]}>
-										<HeadingScope level={3}>
-											<Heading mix={[m(0), fontSize("lg"), weight(600)]}>{example.title}</Heading>
-										</HeadingScope>
-										<p mix={[m(0), fontSize("sm"), leading("relaxed"), fg("neutral")]}>
-											{example.description}
-										</p>
-									</div>
-									<pre mix={specBlockMix()}>
-										<code>{example.source}</code>
-									</pre>
-								</article>
-							))}
-						</div>
+						<BrowserFlowExamplesCarousel
+							label={page.examples.title}
+							previousLabel="Previous example"
+							nextLabel="Next example"
+							examples={[...BROWSER_FLOW_EXAMPLES]}
+						/>
 					</div>
 				</section>
 

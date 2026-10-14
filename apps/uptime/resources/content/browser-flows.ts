@@ -36,8 +36,8 @@ export const BROWSER_FLOW_EXAMPLES: readonly BrowserFlowExample[] = [
 test "signing in lands on the dashboard" {
 	when {
 		browser.open "https://app.example.com/login"
-		browser.fill textbox "Email" with "monitor@example.com"
-		browser.fill textbox "Password" with "monitor-password"
+		browser.fill textbox "Email" with "m@example.com"
+		browser.fill textbox "Password" with "monitor-pw"
 		browser.click button "Sign in"
 	}
 	then {
@@ -59,7 +59,7 @@ test "checkout reaches confirmation" {
 	when {
 		browser.open "https://shop.example.com/cart"
 		browser.click button "Checkout"
-		browser.fill textbox "Card number" with "4242424242424242"
+		browser.fill textbox "Card" with "4242424242424242"
 		browser.click button "Pay now"
 	}
 	then {
@@ -84,7 +84,7 @@ test "the settings page paints" {
 		eventually within 5s {
 			expect browser.heading "Settings"
 		}
-		expect browser.button "Save changes"
+		expect browser.button "Save"
 	}
 }`,
 	},
