@@ -1,8 +1,8 @@
 /**
  * Dedicated `/browser-flows` marketing view — a selling page built around a live
- * click-through spec rather than the shared feature-grid template. The hero puts the
- * brand and one example side by side; later sections contrast HTTP vs browser, list
- * more examples, state run pricing, and answer FAQ.
+ * click-through spec rather than the shared feature-grid template. The hero leads with
+ * the brand and a full-width example below the copy; later sections contrast HTTP vs
+ * browser, list more examples, state run pricing, and answer FAQ.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -153,132 +153,79 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 						]}
 					/>
 
-					<div mix={[...marketingContainer(), relative()]}>
-						<div
-							mix={[
-								grid(),
-								gap(10),
-								items("center"),
-								media("(min-width: 1024px)", [
-									gridTemplate({ columns: "minmax(0, 1fr) minmax(0, 1.1fr)" }),
-									gap(14),
-								]),
-							]}
-						>
-							<div
+					<div
+						mix={[
+							...marketingContainer(),
+							relative(),
+							vstack({ gap: 10, align: "center" }),
+							textAlign("center"),
+						]}
+					>
+						<div mix={[vstack({ gap: 5, align: "center" }), maxIs("720px")]}>
+							<p
 								mix={[
-									vstack({ gap: 6, align: "center" }),
-									textAlign("center"),
-									media("(min-width: 1024px)", [items("start"), textAlign("start")]),
+									m(0),
+									fontSize("5xl"),
+									weight(700),
+									leading(1),
+									tracking("tight"),
+									fg("brand"),
+									media("(min-width: 640px)", fontSize("6xl")),
+									media("(min-width: 1024px)", fontSize("7xl")),
 								]}
 							>
-								<p mix={[m(0), fontSize("sm"), weight(700), tracking("widest"), fg("brand")]}>
-									{page.brand}
-								</p>
-								<span
-									mix={[
-										inlineFlex(),
-										items("center"),
-										p("2px", "10px"),
-										rounded("999px"),
-										fontSize("xs"),
-										weight(600),
-										border({ color: "brand", width: 1 }),
-										bg("brand.tint"),
-										fg("brand"),
-									]}
-								>
-									{page.badge}
-								</span>
-								<Heading
-									level={1}
-									mix={[
-										m(0),
-										fontSize("4xl"),
-										weight(700),
-										leading(1.1),
-										tracking("tight"),
-										maxIs("640px"),
-										media("(min-width: 640px)", fontSize("5xl")),
-										media("(min-width: 1024px)", fontSize("6xl")),
-									]}
-								>
-									{page.title} <span mix={[fg("brand")]}>{page.highlight}</span>
-								</Heading>
-								<p mix={[m(0), maxIs("540px"), fontSize("lg"), leading(1.625), fg("neutral")]}>
-									{page.description}
-								</p>
-								<div
-									mix={[
-										flex(),
-										flexWrap("wrap"),
-										gap(3),
-										justify("center"),
-										media("(min-width: 1024px)", justify("start")),
-									]}
-								>
-									{isSignedIn ? (
-										<AuthCta
-											isSignedIn
-											startLabel={startLabel}
-											dashboardLabel={dashboardLabel}
-											icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
-										/>
-									) : (
-										<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
-											{tryLabel}
-											<ArrowRightIcon size={20} strokeWidth={1.5} />
-										</LinkButton>
-									)}
-									<LinkButton
-										href={`${routes.home.href()}#pricing`}
-										color="neutral"
-										variant="outline"
-										size="lg"
-									>
-										{pricingLabel}
+								{page.brand}
+							</p>
+							<Heading
+								level={1}
+								mix={[
+									m(0),
+									fontSize("3xl"),
+									weight(700),
+									leading(1.15),
+									tracking("tight"),
+									media("(min-width: 640px)", fontSize("4xl")),
+									media("(min-width: 1024px)", fontSize("5xl")),
+								]}
+							>
+								{page.title} <span mix={[fg("brand")]}>{page.highlight}</span>
+							</Heading>
+							<p mix={[m(0), maxIs("560px"), fontSize("lg"), leading(1.625), fg("neutral")]}>
+								{page.description}
+							</p>
+							<div mix={[flex(), flexWrap("wrap"), gap(3), justify("center"), mbs(1)]}>
+								{isSignedIn ? (
+									<AuthCta
+										isSignedIn
+										startLabel={startLabel}
+										dashboardLabel={dashboardLabel}
+										icon={<ArrowRightIcon size={20} strokeWidth={1.5} />}
+									/>
+								) : (
+									<LinkButton href={routes.trial.check.index.href()} color="brand" size="lg">
+										{tryLabel}
+										<ArrowRightIcon size={20} strokeWidth={1.5} />
 									</LinkButton>
-								</div>
-								<ul
-									mix={[
-										flex(),
-										flexWrap("wrap"),
-										gap(2, 5),
-										m(0),
-										p(0),
-										listStyle("none"),
-										justify("center"),
-										media("(min-width: 1024px)", justify("start")),
-									]}
+								)}
+								<LinkButton
+									href={`${routes.home.href()}#pricing`}
+									color="neutral"
+									variant="outline"
+									size="lg"
 								>
-									{page.highlights.map((item) => (
-										<li
-											key={item}
-											mix={[
-												inlineFlex(),
-												items("center"),
-												gap(2),
-												fontSize("sm"),
-												weight(500),
-												fg("neutral.emphasis"),
-											]}
-										>
-											<CheckIcon size={16} strokeWidth={2} mix={[fg("brand")]} />
-											{item}
-										</li>
-									))}
-								</ul>
+									{pricingLabel}
+								</LinkButton>
 							</div>
-
-							<figure mix={[m(0), vstack({ gap: 3 })]}>
-								<figcaption mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
-									{heroExample.title}
-								</figcaption>
-								<pre mix={specBlockMix()}>
-									<code>{heroExample.source}</code>
-								</pre>
-							</figure>
 						</div>
+
+						<figure mix={[m(0), is("full"), maxIs("960px"), vstack({ gap: 3 })]}>
+							<figcaption mix={[m(0), fontSize("sm"), weight(600), fg("neutral.emphasis")]}>
+								{heroExample.title}
+							</figcaption>
+							<pre mix={specBlockMix()}>
+								<code>{heroExample.source}</code>
+							</pre>
+						</figure>
 					</div>
 				</section>
 

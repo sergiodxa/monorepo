@@ -36,8 +36,8 @@ export const BROWSER_FLOW_EXAMPLES: readonly BrowserFlowExample[] = [
 test "signing in lands on the dashboard" {
 	when {
 		browser.open "https://app.example.com/login"
-		browser.fill textbox "Email" with "uptime-monitor@example.com"
-		browser.fill textbox "Password" with "the monitor account's password"
+		browser.fill textbox "Email" with "monitor@example.com"
+		browser.fill textbox "Password" with "monitor-password"
 		browser.click button "Sign in"
 	}
 	then {
@@ -95,17 +95,11 @@ export const browserFlowsPage = {
 	metaTitle: "Browser Flow Monitoring | Uptime",
 	metaDescription:
 		"Test your app in a real browser on a schedule — click, fill, and assert on what visitors see after JavaScript runs. Catch login and checkout breaks HTTP checks miss.",
-	badge: "Browser Flows",
 	brand: "Uptime",
 	title: "Test your app in",
 	highlight: "a real browser",
 	description:
-		"A homepage returning 200 still leaves a broken login invisible. A browser flow opens a live Browser Run session, fills and clicks the way a visitor would, and asserts on what the page exposes after scripts have run.",
-	highlights: [
-		"Real Browser Run sessions",
-		"Click, fill, assert on the live page",
-		`${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs`,
-	],
+		"A 200 on the homepage still hides a broken login. A browser flow clicks through the live page and asserts on what visitors see after JavaScript runs.",
 	heroExampleKey: "signIn" as const,
 	contrast: {
 		badge: "Why a browser",
