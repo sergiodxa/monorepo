@@ -292,6 +292,23 @@ test("loadProjectConfig reports invalid JSONC", async () => {
 	}
 });
 
+test("loadProjectConfig points an invalid JSONC error at its line and column past comments", async () => {
+	let dir = makeTempDir();
+	try {
+		writeFileSync(
+			join(dir, "config.jsonc"),
+			'{\n  // plugins below\n  /* block */ "plugins" {}\n}',
+			"utf8",
+		);
+		let config = await loadProjectConfig(dir);
+		expect(isFailure(config) && config.error.message).toContain(
+			"is not valid JSONC: Expected ':' after a property name at line 3, column 25",
+		);
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+});
+
 test("planPluginLaunch partitions declarations by the grant", () => {
 	let config = {
 		plugins: [

@@ -17,6 +17,7 @@ import { isAbsolute, resolve } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import * as JSONC from "@sdxc/jsonc";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Base, Connection } from "./bases.js";
@@ -316,18 +317,18 @@ function grantAdmits(grant: PluginLaunchGrant, namespace: string): boolean {
 	return false;
 }
 
-/** Parse config text as JSONC, tolerating comments and trailing commas. */
+/** Parse config text as JSONC, the failure naming the line and column that broke it. */
 function parseJsonc(text: string, path: string): Result<unknown, SpecError> {
-	try {
-		return success(JSON.parse(stripTrailingCommas(stripComments(text))));
-	} catch (error) {
+	let parsed = JSONC.parse(text);
+	if (isFailure(parsed)) {
 		return failure(
 			new LoadError(
 				"load-error",
-				`spec/config.jsonc ${path} is not valid JSONC: ${errorMessage(error)}`,
+				`spec/config.jsonc ${path} is not valid JSONC: ${parsed.error.message}`,
 			),
 		);
 	}
+	return parsed;
 }
 
 /**
@@ -687,83 +688,6 @@ function resolveCommandPart(part: string, directory: string): string {
 /** Whether a value is a non-null, non-array object. */
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-/**
- * Remove `//` line and block comments from JSONC text without touching comment
- * markers that appear inside string literals.
- */
-function stripComments(source: string): string {
-	let out = "";
-	let inString = false;
-	let escaped = false;
-	let index = 0;
-	while (index < source.length) {
-		let char = source[index];
-		if (inString) {
-			out += char;
-			if (escaped) escaped = false;
-			else if (char === "\\") escaped = true;
-			else if (char === '"') inString = false;
-			index += 1;
-			continue;
-		}
-		if (char === '"') {
-			inString = true;
-			out += char;
-			index += 1;
-			continue;
-		}
-		if (char === "/" && source[index + 1] === "/") {
-			index += 2;
-			while (index < source.length && source[index] !== "\n") index += 1;
-			continue;
-		}
-		if (char === "/" && source[index + 1] === "*") {
-			index += 2;
-			while (index < source.length && !(source[index] === "*" && source[index + 1] === "/")) {
-				index += 1;
-			}
-			index += 2;
-			continue;
-		}
-		out += char;
-		index += 1;
-	}
-	return out;
-}
-
-/**
- * Remove commas that immediately precede a `}` or `]` (ignoring whitespace),
- * again leaving string contents untouched — the second half of JSONC leniency.
- */
-function stripTrailingCommas(source: string): string {
-	let out = "";
-	let inString = false;
-	let escaped = false;
-	for (let index = 0; index < source.length; index++) {
-		let char = source[index];
-		if (inString) {
-			out += char;
-			if (escaped) escaped = false;
-			else if (char === "\\") escaped = true;
-			else if (char === '"') inString = false;
-			continue;
-		}
-		if (char === '"') {
-			inString = true;
-			out += char;
-			continue;
-		}
-		if (char === ",") {
-			let ahead = index + 1;
-			while (ahead < source.length && /\s/.test(source[ahead] ?? "")) ahead += 1;
-			let next = source[ahead];
-			if (next === "}" || next === "]") continue;
-		}
-		out += char;
-	}
-	return out;
 }
 
 /** Render an unknown thrown value as a one-line message. */

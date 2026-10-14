@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-14
+**Accepted** - 2026-10-14
 
 ## Background
 
@@ -89,5 +89,5 @@ less code than evaluating a dependency's edge cases.
 
 ## Current Progress
 
-- [ ] `@sdxc/jsonc` with `parse` and `strip`, and engine-independent error positions
-- [ ] `@sdxc/spec` moved to `JSONC.parse`
+- [x] `@sdxc/jsonc` with `parse` and `strip`, and engine-independent error positions
+- [x] `@sdxc/spec` moved to `JSONC.parse`

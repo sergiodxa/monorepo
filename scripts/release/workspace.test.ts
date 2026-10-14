@@ -298,6 +298,7 @@ describe("readPackages", () => {
 		expect(spec?.dependencies).toEqual([
 			"@sdxc/duration",
 			"@sdxc/html",
+			"@sdxc/jsonc",
 			"@sdxc/random",
 			"@sdxc/result",
 			"@sdxc/sample",
