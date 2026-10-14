@@ -167,7 +167,6 @@ export default function PackageGroups(handle: Handle<PackageGroups.Props>) {
 										gridRow: `2 / span ${groups.length}`,
 										contain: "size",
 										overflowY: "auto",
-										overscrollBehavior: "contain",
 									}),
 									p(6, 8),
 									borderEdge("inline-start", { color: "neutral.border", width: 1, style: "solid" }),
