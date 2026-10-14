@@ -92,7 +92,7 @@ export default {
 				everythingIncluded: {
 					title: "Everything included",
 					description:
-						"HTTP, DNS, TCP and SSL checks, cron job heartbeats, alerts and status pages. One plan, nothing sold as an add-on.",
+						"HTTP, DNS, TCP and SSL checks, cron job heartbeats, multi-step flows — including real-browser click-throughs — alerts and status pages. One plan, nothing sold as an add-on.",
 				},
 				noMonitorMath: {
 					title: "No monitor math",
@@ -154,6 +154,37 @@ export default {
 					title: "Monitor entire flows",
 					description:
 						"Run several requests in order and check what comes back \u2014 sign in, read the token, call the endpoint it authorises. The question a single check cannot ask.",
+				},
+				ninth: {
+					title: "Test in a real browser",
+					description:
+						"Open a live page, fill fields, click buttons, and assert on what visitors see after JavaScript runs. Catch login and checkout breaks an HTTP check would miss.",
+				},
+			},
+		},
+
+		browserExamples: {
+			badge: "Browser Flows",
+			title: "See what a real-browser check looks like",
+			description:
+				"A short executable spec drives a live Browser Run session — the same click-through a visitor would take. Three examples teams run on a schedule.",
+			learnMore: "Explore browser flows",
+
+			list: {
+				signIn: {
+					title: "Sign-in lands on the dashboard",
+					description:
+						"Fill the Email and Password fields, click Sign in, and expect the dashboard heading once the client has routed.",
+				},
+				checkout: {
+					title: "Checkout reaches the confirmation",
+					description:
+						"Walk the cart through to pay, then assert on the confirmation heading that only renders after payment succeeds.",
+				},
+				spa: {
+					title: "A client-rendered page paints",
+					description:
+						"Open a SPA route and wait for the heading that hydration is supposed to show — a 200 on the shell is not enough.",
 				},
 			},
 		},
@@ -456,7 +487,7 @@ export default {
 
 				twentieth: {
 					q: "Can I monitor a login or a checkout flow?",
-					a: "Yes. A flow monitor runs several requests in order with assertions between them, so it can sign in, read the token back, and call the endpoint that token authorises. A flow runs at the HTTP level rather than in a browser, and only against domains your team has verified.",
+					a: "Yes. A flow monitor runs several steps in order with assertions between them. An HTTP flow can sign in, read the token back, and call the endpoint that token authorises. A browser flow opens a real Browser Run session, fills and clicks the way a visitor would, and asserts on what the live page exposes after JavaScript runs. Both run only against domains your team has verified.",
 				},
 			},
 		},
@@ -487,6 +518,7 @@ export default {
 					analytics: "Analytics",
 					api: "API Access",
 					flowMonitors: "Flow Monitors",
+					browserFlows: "Browser Flows",
 				},
 				useCases: {
 					title: "Use Cases",

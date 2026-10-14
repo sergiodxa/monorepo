@@ -92,7 +92,7 @@ export default {
 				everythingIncluded: {
 					title: "Tutto incluso",
 					description:
-						"Controlli HTTP, DNS, TCP e SSL, heartbeat dei cron job, avvisi e pagine di stato. Un solo piano, niente venduto come componente aggiuntivo.",
+						"Controlli HTTP, DNS, TCP e SSL, heartbeat dei cron job, flussi multi-step — inclusi click-through in un browser reale — avvisi e pagine di stato. Un solo piano, niente venduto come componente aggiuntivo.",
 				},
 				noMonitorMath: {
 					title: "Nessun calcolo sui monitor",
@@ -154,6 +154,37 @@ export default {
 					title: "Monitori interi flussi",
 					description:
 						"Esegua più richieste in ordine e verifichi cosa risponde il servizio: accedere, leggere il token, chiamare l'endpoint che quel token autorizza. La domanda che un singolo controllo non può porre.",
+				},
+				ninth: {
+					title: "Testi in un browser reale",
+					description:
+						"Apri una pagina live, compila i campi, clicca i pulsanti e verifica ciò che vedono i visitatori dopo l'esecuzione di JavaScript. Individua login e checkout che un controllo HTTP non vedrebbe.",
+				},
+			},
+		},
+
+		browserExamples: {
+			badge: "Flussi browser",
+			title: "Come appare un controllo in un browser reale",
+			description:
+				"Una breve specifica eseguibile guida una sessione Browser Run live — lo stesso click-through di un visitatore. Tre esempi che i team eseguono a intervalli.",
+			learnMore: "Esplora i flussi browser",
+
+			list: {
+				signIn: {
+					title: "L'accesso arriva alla dashboard",
+					description:
+						"Compila Email e Password, clicca Accedi e attendi il titolo della dashboard una volta che il client ha fatto il routing.",
+				},
+				checkout: {
+					title: "Il checkout raggiunge la conferma",
+					description:
+						"Percorri il carrello fino al pagamento e verifica il titolo di conferma che appare solo dopo un pagamento riuscito.",
+				},
+				spa: {
+					title: "Una pagina renderizzata sul client si disegna",
+					description:
+						"Apri una route SPA e attendi il titolo che l'hydration dovrebbe mostrare — un 200 sullo shell non basta.",
 				},
 			},
 		},
@@ -405,7 +436,7 @@ export default {
 
 				twentieth: {
 					q: "Posso monitorare un flusso di accesso o di acquisto?",
-					a: "Sì. Un monitor di flusso esegue più richieste in ordine con asserzioni tra una e l'altra, quindi può accedere, rileggere il token ottenuto e chiamare l'endpoint che quel token autorizza. Un flusso viene eseguito a livello HTTP e non in un browser, e solo verso domini che il suo team ha verificato.",
+					a: "Sì. Un monitor di flusso esegue più passaggi in ordine con asserzioni tra uno e l'altro. Un flusso HTTP può accedere, rileggere il token e chiamare l'endpoint che quel token autorizza. Un flusso browser apre una vera sessione Browser Run, compila e clicca come un visitatore e verifica ciò che la pagina live espone dopo l'esecuzione di JavaScript. Entrambi vengono eseguiti solo verso domini che il suo team ha verificato.",
 				},
 			},
 		},
@@ -436,6 +467,7 @@ export default {
 					analytics: "Analisi",
 					api: "Accesso API",
 					flowMonitors: "Monitor di flusso",
+					browserFlows: "Flussi browser",
 				},
 				useCases: {
 					title: "Casi d'uso",

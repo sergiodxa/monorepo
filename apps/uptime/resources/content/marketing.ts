@@ -27,6 +27,7 @@ import {
 	monthlyPings,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
+	PRICE_PER_FLOW_RUN_USD,
 } from "~/config/pricing";
 
 export namespace MarketingContent {
@@ -736,13 +737,17 @@ export const features: Record<string, MarketingContent.Page> = {
 		slug: "flows",
 		metaTitle: "Flow Monitoring | Uptime",
 		metaDescription:
-			"Multi-step HTTP checks that sign in, read the token back, and call the endpoint it authorises — so you know people can still do the thing they came to do.",
+			"Multi-step checks that sign in, read the token back, and call the endpoint it authorises — or drive a real browser when the failure only appears after JavaScript runs.",
 		badge: "Flow Monitors",
 		title: "A homepage returning 200",
 		highlight: "isn't a working product",
 		description:
-			"A flow monitor's configuration is a short executable spec: several HTTP requests in order, with assertions between them. Sign in, read the token back, call the endpoint it authorises — so the question a check answers is whether somebody can still do the thing they came to do.",
-		highlights: ["Multi-step HTTP checks", "Auth and JWT verification", "Failures name your line"],
+			"A flow monitor's configuration is a short executable spec: several steps in order, with assertions between them. Sign in over HTTP and verify the token, or `use browser` to click through the live page — so the question a check answers is whether somebody can still do the thing they came to do.",
+		highlights: [
+			"Multi-step HTTP or browser",
+			"Auth and JWT verification",
+			"Failures name your line",
+		],
 		trustIndicators: [
 			{ icon: "list-ordered", value: "20", label: "Requests per run" },
 			{ icon: "timer", value: "30s", label: "Run time limit" },
@@ -813,7 +818,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				question: "Does a flow drive a browser?",
 				answer:
-					"No. A flow makes HTTP requests, parses URLs, and verifies tokens. Nothing clicks, fills a field, or renders a page, so a failure that only appears in a browser won't show up here.",
+					"Only when you ask for one. A flow that sticks to `http` stays a sequence of requests. A flow that `use`s `browser` opens a real Browser Run session, clicks and fills the way a person would, and asserts on what the live page exposes — headings, buttons, the URL after a redirect. Failures that only appear once scripts have run belong on a browser flow; API paths stay on HTTP.",
 			},
 			{
 				question: "What can't a spec express?",
@@ -828,7 +833,110 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				question: "How long does a run get?",
 				answer:
-					"Thirty seconds and 20 requests, whichever comes first. That covers a sign-in, a read-back, and the calls the token authorises.",
+					"Thirty seconds and 20 requests, whichever comes first. That covers a sign-in, a read-back, and the calls the token authorises — or a short click-through in a browser session.",
+			},
+		],
+	},
+
+	"browser-flows": {
+		slug: "browser-flows",
+		metaTitle: "Browser Flow Monitoring | Uptime",
+		metaDescription:
+			"Test your app in a real browser on a schedule — click, fill, and assert on what visitors see after JavaScript runs. Catch login and checkout breaks HTTP checks miss.",
+		badge: "Browser Flows",
+		title: "Test your app in",
+		highlight: "a real browser",
+		description:
+			"A browser flow opens a live Browser Run session, drives the page the way a person would — open, fill, click, press — and asserts on what the document exposes after scripts have run. A homepage returning 200 still leaves a broken login form invisible to an HTTP check; a browser flow catches the failure your visitors would hit.",
+		highlights: [
+			"Real Browser Run sessions",
+			"Click, fill, assert on the live page",
+			`${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs`,
+		],
+		trustIndicators: [
+			{ icon: "app-window", value: "Real", label: "Browser session" },
+			{ icon: "mouse-pointer-click", value: "A11y", label: "Role + name addressing" },
+			{ icon: "timer", value: "30s", label: "Run time limit" },
+			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
+		],
+		features: [
+			{
+				title: "Drive the page like a visitor",
+				description:
+					"`browser.open`, `fill`, `click`, and `press` against accessibility roles and names — the same vocabulary a person uses when they look for the Email field and the Sign in button.",
+				icon: "mouse-pointer-click",
+			},
+			{
+				title: "Assert on what actually rendered",
+				description:
+					"Headings, buttons, links, the path after a redirect, the document title — observables read the live document, so a client-rendered failure surfaces as a failed expectation.",
+				icon: "eye",
+			},
+			{
+				title: "Same alerts, same cooldowns",
+				description:
+					"Browser flow failures go through the channels, cooldowns, and maintenance windows you already configured for every other monitor.",
+				icon: "bell-ring",
+			},
+			{
+				title: "Priced per run, not per click",
+				description: `One browser run bills ${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs on a separate meter — nothing folded into the ping allowance — so an hourly login check stays a few cents a month.`,
+				icon: "dollar-sign",
+			},
+			{
+				title: "Verified domains only",
+				description:
+					"Every URL the session opens or navigates to is checked against domains your team has verified, and the session itself is guardrailed to those hosts.",
+				icon: "badge-check",
+			},
+			{
+				title: "A failing line, not a status code",
+				description:
+					"The assertion that broke, its line number, and expected against observed — rendered on your own spec with that line marked.",
+				icon: "file-code",
+			},
+		],
+		steps: [
+			{
+				title: "Verify the domain",
+				description:
+					"Prove the team controls the host the browser will drive. A session won't navigate outside verified domains.",
+			},
+			{
+				title: "Write the click-through",
+				description:
+					'`use browser`, open the page, fill the fields by role and name, click the button, and assert on the heading or path that means "it worked".',
+			},
+			{
+				title: "Get alerted on the failing step",
+				description:
+					"A broken sign-in or checkout alerts through your existing channels, naming the expectation that failed.",
+			},
+		],
+		faqs: [
+			{
+				question: "When should I use a browser flow instead of HTTP?",
+				answer:
+					"When the failure only appears once JavaScript has run and the page is laid out — a client-rendered login, a checkout that depends on hydration, a dashboard that never paints. An API path that answers with JSON stays on an HTTP flow.",
+			},
+			{
+				question: "How is a browser run billed?",
+				answer: `One event per run on a separate flow-run meter at ${formatUsd(PRICE_PER_FLOW_RUN_USD * 1000)} per 1,000 runs — none included in the subscription — plus the measured session seconds on the cost ledger. HTTP-only flows still bill one ping per request from the shared allowance.`,
+			},
+			{
+				question: "How often can a browser flow run?",
+				answer:
+					"Every 15 minutes at the fastest, then 30 minutes, hourly, every 3, 6 or 12 hours, or daily; hourly is the default. Pair it with a 1-minute HTTP monitor on the endpoint the page depends on when you need faster detection.",
+			},
+			{
+				question: "Do I need Playwright or a test suite?",
+				answer:
+					"No. The flow is a short executable spec in the dashboard — open, fill, click, expect — not a repo of Playwright scripts to maintain. Teams that already own a Playwright suite and want monitors-as-code may still prefer a tool built around that model.",
+			},
+			{
+				question: "What can't a browser flow express?",
+				answer:
+					"Branching, computation, and generated data. A signup that needs a fresh address every run wants a fixed fixture account, the same constraint every other flow has.",
 			},
 		],
 	},
@@ -1678,7 +1786,7 @@ export const useCases: Record<string, MarketingContent.Page> = {
 			{
 				question: "Does this test the login page in a browser?",
 				answer:
-					"No — a flow makes HTTP requests and verifies tokens; nothing renders the page or runs client-side code. A login that breaks only in the browser needs a different tool.",
+					"When you want it to. An HTTP login flow posts credentials and verifies the token. A browser login flow opens the page, fills the Email and Password fields, clicks Sign in, and asserts on the dashboard heading — catching failures that only appear after client-side code runs. Use whichever matches how the break would show up for a visitor.",
 			},
 		],
 	},
@@ -1998,7 +2106,11 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "DNS monitoring", us: "Included", them: "Not available" },
 			{ label: "TCP monitoring", us: "Included", them: "Add-on on higher tiers" },
 			{ label: "Cron job monitoring", us: "Included", them: "Not available" },
-			{ label: "Multi-step flow monitoring", us: "Included (HTTP-level)", them: "Not available" },
+			{
+				label: "Multi-step flow monitoring",
+				us: "Included (HTTP and browser)",
+				them: "Not available",
+			},
 			{ label: "Data retention", us: "365 days", them: "Varies by plan" },
 		],
 		features: [
@@ -2105,7 +2217,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "Cron job monitoring", us: "Included", them: "Included" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Included (multi-step API checks)",
 			},
 			{ label: "Status pages", us: "Included", them: "Included on higher tiers" },
@@ -2219,7 +2331,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "Cron job monitoring", us: "Included", them: "Not available" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Included, as recorded browser checks",
 			},
 			{ label: "Real user monitoring", us: "Not included", them: "Available as an add-on" },
@@ -2259,9 +2371,9 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 					"If you need per-country latency data or genuinely global coverage, Pingdom's probe network is far denser than ours.",
 			},
 			{
-				title: "Their recorded checks go through a real browser",
+				title: "Their recorded checks are a different product shape",
 				description:
-					"Uptime's flow monitors chain HTTP requests with assertions between them, which covers a login or a cart API. A click handler, a rendered form, or anything that only breaks inside the page is Pingdom's ground, not ours.",
+					"Pingdom's transaction checks are recorded browser sessions aimed at larger teams. Uptime's browser flows are a short accessibility-addressed spec — open, fill, click, expect — without the enterprise transaction-recording workflow.",
 			},
 		],
 		perfectFor: {
@@ -2334,7 +2446,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "Cron job monitoring", us: "Included", them: "Not available" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Not a core feature",
 			},
 			{ label: "Status pages", us: "Included", them: "Included on paid tiers" },
@@ -2448,7 +2560,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "Cron job monitoring", us: "Included", them: "Available via a separate product" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Included, browser and API tests",
 			},
 			{ label: "Status pages", us: "Included", them: "Not a core feature" },
@@ -2483,9 +2595,9 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 					"Datadog correlates a slow request with the trace and log lines behind it. Uptime does no tracing, no log ingestion, and no code-level instrumentation.",
 			},
 			{
-				title: "Their synthetics drive a real browser",
+				title: "Their synthetics are a fuller scripting environment",
 				description:
-					"Datadog scripts browser sessions against a rendered page. Uptime's flow monitors chain HTTP requests and assert between them, which is the narrower thing: no page is rendered and no client-side code runs.",
+					"Datadog scripts arbitrary browser sessions with the breadth of an observability suite behind them. Uptime's browser flows are a fixed-sequence DSL — click, fill, assert on roles and names — without traces, logs, or a general-purpose script runtime.",
 			},
 			{
 				title: "If you're already paying for Datadog, adding synthetics is simpler",
@@ -2566,7 +2678,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "Cron job monitoring", us: "Included", them: "Not a core feature" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Included, as browser-based checks",
 			},
 			{ label: "Status pages", us: "Included", them: "Included on higher tiers" },
@@ -2660,7 +2772,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		highlights: ["No code required", "DNS + TCP monitoring", "Usage-based pricing"],
 		competitor: "Checkly",
 		summary:
-			"Checkly is built around code-based synthetic tests (Playwright scripts) for deep browser checks; Uptime is a no-code alternative for teams who need reliable HTTP, DNS, TCP, cron-job, and multi-step flow monitoring without a test suite to maintain.",
+			"Checkly is built around code-based synthetic tests (Playwright scripts) that live in your repo; Uptime is a dashboard-configured alternative for teams who need HTTP, DNS, TCP, cron-job, and multi-step flow monitoring — including real-browser click-throughs — without a Playwright suite to maintain.",
 		rows: [
 			{ label: "Setup style", us: "No-code form", them: "Code-based (Playwright scripts)" },
 			{ label: "Pricing model", us: "Usage-based (pay per ping)", them: "Per-check-run pricing" },
@@ -2669,7 +2781,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "Browser-based checks", us: "Not included", them: "Included" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Included, written as code",
 			},
 			{ label: "Status pages", us: "Included", them: "Included" },
@@ -2698,9 +2810,9 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 		],
 		honestTake: [
 			{
-				title: "Playwright browser testing is what Checkly is for",
+				title: "Full Playwright is what Checkly is for",
 				description:
-					"Driving a checkout as a real browser session — clicking, filling, and asserting on what renders — is their core product, and Uptime cannot do it at all.",
+					"Checkly runs real Playwright scripts — branching, fixtures, generated data, the whole API. Uptime's browser flows open a real session too, but through a short fixed-sequence DSL with accessibility addressing, not a general-purpose test runtime.",
 			},
 			{
 				title: "Monitoring-as-code is a genuinely better model for some teams",
@@ -2710,7 +2822,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				title: "Their multi-step checks can compute, branch, and generate data",
 				description:
-					"Uptime's flow monitors chain requests and assert on what comes back, but a spec is a fixed sequence with no branching and no generated values. A check that needs a unique signup address every run belongs in Checkly.",
+					"Uptime's flow monitors — HTTP or browser — are a fixed sequence with no branching and no generated values. A check that needs a unique signup address every run belongs in Checkly.",
 			},
 			{
 				title: "First-class Terraform and Pulumi providers",
@@ -2759,11 +2871,12 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{
 				question: "Does Uptime support full browser-based synthetic tests?",
 				answer:
-					"Not in a browser. Flow monitors chain several HTTP requests with assertions between them — sign in, read the token back, call the endpoint it authorises — so a broken login is caught at the HTTP level. Nothing renders a page or runs client-side code, so if the failure you need to catch only appears in a browser, Checkly is the right tool.",
+					"Yes for click-through checks: a flow that `use`s `browser` opens a real Browser Run session, fills and clicks by accessibility role and name, and asserts on what the live page exposes. It is a short fixed-sequence DSL, not Playwright — if you need branching, generated data, or monitors that live in your repo as Playwright scripts, Checkly is the right tool.",
 			},
 			{
 				question: "Do I need to write any code to use Uptime?",
-				answer: "No — every monitor is configured through a simple form.",
+				answer:
+					"HTTP, DNS, TCP, SSL and cron monitors are form-configured. Flow monitors — including browser flows — are a short executable spec in the dashboard, not a repo of test files.",
 			},
 		],
 	},
@@ -2792,7 +2905,11 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "DNS monitoring", us: "Included", them: "Included" },
 			{ label: "Cron job monitoring", us: "Included", them: "Included (via scheduler pings)" },
 			{ label: "TCP monitoring", us: "Included", them: "Not a core feature" },
-			{ label: "Multi-step flow monitoring", us: "Included (HTTP-level)", them: "Not available" },
+			{
+				label: "Multi-step flow monitoring",
+				us: "Included (HTTP and browser)",
+				them: "Not available",
+			},
 			{ label: "Status pages", us: "Included", them: "Included" },
 		],
 		features: [
@@ -2903,7 +3020,7 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "SSL monitoring", us: "Included", them: "Included" },
 			{
 				label: "Multi-step flow monitoring",
-				us: "Included (HTTP-level)",
+				us: "Included (HTTP and browser)",
 				them: "Not a core feature",
 			},
 			{ label: "Status pages", us: "Included", them: "Included on higher tiers" },
@@ -2937,9 +3054,9 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 					"Cronitor can report what your actual visitors experienced. Uptime only knows what its own synthetic checks saw.",
 			},
 			{
-				title: "Their browser checks execute JavaScript",
+				title: "Their browser checks sit beside error tracking",
 				description:
-					"Cronitor can load a page in a real browser and assert on the rendered result. Uptime reads the raw HTTP response, so a client-rendered failure can slip past a status-code check.",
+					"Cronitor can load a page in a real browser and assert on the rendered result in the same product as exception tracking. Uptime's browser flows drive a real session too, but error tracking lives elsewhere — or not at all.",
 			},
 			{
 				title: "Error tracking lives in the same product",
@@ -3007,7 +3124,11 @@ export const comparisons: Record<string, MarketingContent.ComparisonPage> = {
 			{ label: "DNS monitoring", us: "Included", them: "Not available" },
 			{ label: "TCP monitoring", us: "Included", them: "Not available" },
 			{ label: "SSL monitoring", us: "Included", them: "Not available" },
-			{ label: "Multi-step flow monitoring", us: "Included (HTTP-level)", them: "Not available" },
+			{
+				label: "Multi-step flow monitoring",
+				us: "Included (HTTP and browser)",
+				them: "Not available",
+			},
 			{ label: "Status pages", us: "Included", them: "Included" },
 		],
 		features: [
