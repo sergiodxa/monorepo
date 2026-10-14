@@ -195,6 +195,16 @@ function isDevelopment(context: RequestContext): boolean {
 }
 
 /**
+ * Whether a response already says how long it stays fresh, which a handler that builds
+ * its own headers (a static document, a negotiated variant) is trusted to have chosen.
+ *
+ * @param response - The response the handler produced.
+ */
+function statesFreshness(response: Response): boolean {
+	return response.headers.has(CACHE_CONTROL_HEADER) || response.headers.has("Expires");
+}
+
+/**
  * Writes headers onto a finished response, falling back to a copy when the
  * response's headers reject mutation, as platform-produced responses do.
  *
@@ -221,9 +231,9 @@ function withHeaders(
 }
 
 /**
- * Creates a middleware publishing `context.cache`; a route that never
- * declares costs nothing. Register it outside code that attaches
- * `Set-Cookie` or rewrites the response, since its refusal checks inspect it.
+ * Creates a middleware publishing `context.cache`; a route that never declares is
+ * kept out of every cache unless it set its own freshness. Register it outside code
+ * that attaches `Set-Cookie` or rewrites the response, since its checks inspect it.
  *
  * @param options - Plumbing only; see {@link WorkersCacheMiddlewareOptions}.
  * @returns A middleware that publishes `context.cache`.
@@ -294,13 +304,18 @@ export default function cache(options: WorkersCacheMiddlewareOptions): Middlewar
 		}
 
 		/**
-		 * Applies the declaration to the finished response, or leaves the response
-		 * exactly as the handler built it when no header should be written.
+		 * Applies the declaration to the finished response. An undeclared response that states
+		 * no freshness of its own is marked non-cacheable, because Workers Cache stores a
+		 * header-less `200` for two hours under a key that ignores the visitor's cookies.
 		 */
 		function apply(response: Response): Response {
-			if (policy === undefined) return response;
 			if (!CACHEABLE_METHODS.has(context.method.toUpperCase())) return response;
 			if (!CACHEABLE_STATUS_CODES.has(response.status)) return response;
+
+			if (policy === undefined) {
+				if (statesFreshness(response)) return response;
+				return withHeaders(response, [[CACHE_CONTROL_HEADER, NON_CACHEABLE_POLICY]]);
+			}
 
 			if (response.headers.has("Set-Cookie")) return refuse(response, "set-cookie");
 			if (isPublicPolicy(policy) && hasSession(context)) {

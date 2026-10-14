@@ -88,7 +88,10 @@ router.post("/posts/:id", async (ctx) => {
 ```
 
 `ctx.cache()` records the declaration; the middleware writes `Cache-Control` and `Cache-Tag`
-onto the finished response. A route that never calls it is left untouched.
+onto the finished response. A `GET` that never calls it is marked `private, no-store`, unless
+the response set its own `Cache-Control` or `Expires`: Workers Cache stores a header-less `200`
+for two hours under a key that ignores cookies, so an undeclared signed-in page would otherwise
+be replayed, stale, to every visitor of its URL.
 
 ## API
 
@@ -141,9 +144,11 @@ Default export of `@sdxc/workers-cache/middleware`. `options.cache` is a `CacheI
   logged as `cache.purge_failed`.
 
 After the handler returns, a declaration is written only for a `GET` or `HEAD` with a status in
-`CACHEABLE_STATUS_CODES`. When the response carries `Set-Cookie`, or the policy is `public` and
-the request has a session (or, with no session middleware, any cookie), the response is
-downgraded to `NON_CACHEABLE_POLICY` with no tags and a `cache.downgraded` warning. In
+`CACHEABLE_STATUS_CODES`. Such a response with no declaration, and no `Cache-Control` or
+`Expires` of its own, gets `NON_CACHEABLE_POLICY`. When the response carries `Set-Cookie`, or
+the policy is `public` and the request has a session (or, with no session middleware, any
+cookie), the response is downgraded to `NON_CACHEABLE_POLICY` with no tags and a
+`cache.downgraded` warning. In
 development (`NODE_ENV`, or a request to a local host) it throws `UnsafeCachePolicyError`
 instead.
 

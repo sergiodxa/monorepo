@@ -1,8 +1,8 @@
 /**
  * Covers the cache middleware: declaration recording and tag accumulation, the
  * headers written onto the finished response, every row of the refusal table
- * including the development throw, what each path records on the invocation's
- * log, and the awaited and deferred purge paths through a recording cache double.
+ * including the development throw and the undeclared default, what each path
+ * records on the log, and the awaited and deferred purges through a recording double.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -380,19 +380,70 @@ describe("cache middleware refusals", () => {
 		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
 	});
 
-	test("emits nothing when no declaration was made", async () => {
+	test("marks an undeclared response non-cacheable, without a warning", async () => {
 		let { log, record } = openLog();
 		let middleware = cacheMiddleware({ cache: createRecordingCache() });
-		let context = makeContext();
-		let handled = new Response("ok", { headers: { "Set-Cookie": "flash=1" } });
+		let context = makeContext("/cms/posts/1/edit", { headers: { Cookie: "session=abc" } });
 
-		let response = await log.run(() => middleware(context, async () => handled));
+		let response = await log.run(() => middleware(context, async () => new Response("form")));
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
+		expect(Object.keys(record()).filter((key) => key.startsWith("cache."))).toEqual([]);
+		expect(record().notes).toBeUndefined();
+	});
+
+	test("marks an undeclared response non-cacheable even in development", async () => {
+		process.env.NODE_ENV = "development";
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		let response = await middleware(context, async () => new Response("ok"));
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+	});
+
+	test("keeps the Cache-Control an undeclared response set for itself", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext("/.well-known/thing");
+		let handled = new Response("ok", { headers: { "Cache-Control": "public, max-age=3600" } });
+
+		let response = await middleware(context, async () => handled);
+
+		expect(response).toBe(handled);
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe("public, max-age=3600");
+	});
+
+	test("keeps the Expires an undeclared response set for itself", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+		let handled = new Response("ok", { headers: { Expires: "Wed, 21 Oct 2026 07:28:00 GMT" } });
+
+		let response = await middleware(context, async () => handled);
 
 		expect(response).toBe(handled);
 		expect(response.headers.has(CACHE_CONTROL_HEADER)).toBe(false);
-		expect(response.headers.has(CACHE_TAG_HEADER)).toBe(false);
-		expect(Object.keys(record).filter((key) => key.startsWith("cache."))).toEqual([]);
-		expect(record().notes).toBeUndefined();
+	});
+
+	test("leaves an undeclared redirect after a write untouched", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext("/cms/posts/1", { method: "POST" });
+		let handled = new Response(null, { status: 303, headers: { Location: "/cms/posts/1/edit" } });
+
+		let response = await middleware(context, async () => handled);
+
+		expect(response).toBe(handled);
+		expect(response.headers.has(CACHE_CONTROL_HEADER)).toBe(false);
+	});
+
+	test("marks an undeclared response with immutable headers through a copy", async () => {
+		let middleware = cacheMiddleware({ cache: createRecordingCache() });
+		let context = makeContext();
+
+		let response = await middleware(context, async () => makeImmutable(new Response("ok")));
+
+		expect(response.headers.get(CACHE_CONTROL_HEADER)).toBe(NON_CACHEABLE_POLICY);
+		expect(await response.text()).toBe("ok");
 	});
 
 	test("throws in development instead of only warning", async () => {

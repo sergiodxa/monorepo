@@ -184,6 +184,10 @@ Before writing any header, the middleware inspects the finished response and app
 | Status is not cacheable                       | Emit nothing                                                       |
 | `ctx.cache()` was never called                | Emit nothing, leaving the response exactly as the handler built it |
 
+> Superseded by [ADR-135](./ADR-135-undeclared-responses-are-not-cacheable.md): Workers Cache
+> stores a response without `Cache-Control` for two hours, so an undeclared response is now
+> marked `private, no-store` unless it set its own freshness.
+
 Downgrades log at error level and throw in development, since a downgrade means a route asked for something unsafe. Enforcing this centrally is the middleware's main reason to exist: ADR-022 can only state the rule, while the middleware holds the finished response and can act on it.
 
 #### Purge Is Awaited By Default
