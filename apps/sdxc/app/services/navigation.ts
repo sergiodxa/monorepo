@@ -14,7 +14,7 @@ import { listComponentListings } from "~/app/services/components";
 import { listGuides } from "~/app/services/docs";
 import { toHeadline } from "~/app/services/headline";
 import { listPackageGroups } from "~/app/services/packages";
-import { listUiExportListings } from "~/app/services/ui-exports";
+import { listUiExports } from "~/app/services/ui-exports";
 import { UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
 import { listUtilityFamilies } from "~/app/services/utilities";
 import routes from "~/routes/web";
@@ -163,10 +163,9 @@ export async function listUiExportGroups(): Promise<NavGroup[]> {
 	return await Promise.all(
 		UI_SUBPATHS.map(async (subpath) => ({
 			title: UI_SUBPATH_TITLES[subpath],
-			entries: (await listUiExportListings(subpath)).map((entry) => ({
+			entries: (await listUiExports(subpath)).map((entry) => ({
 				title: entry.name,
 				href: routes.api.uiExport.href({ subpath, slug: entry.slug }),
-				description: entry.summary ? toHeadline(entry.summary) : undefined,
 			})),
 		})),
 	);

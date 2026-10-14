@@ -114,9 +114,11 @@ describe("GET /api/:name", () => {
 		expect(body).toContain('href="#components"');
 		expect(body).toContain('id="components"');
 		expect(body).toContain('id="styles"');
-		expect(body).toContain("Browse components");
+		expect(body).toContain("Explore components");
+		expect(body).toContain('id="ui-explore-components"');
 		expect(body).toContain("A compact pill");
 		expect(body).toContain("rtlAwareGradientDirection");
+		expect(body).toContain('src="/frames/previews/button"');
 	});
 });
 

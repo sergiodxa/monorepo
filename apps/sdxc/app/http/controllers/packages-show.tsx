@@ -49,6 +49,7 @@ import PackageFact from "~/resources/components/package-fact";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import { TableOfContents } from "~/resources/components/table-of-contents";
+import UiCatalogue from "~/resources/components/ui-catalogue";
 import UiPackageHero from "~/resources/components/ui-package-hero";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -76,6 +77,8 @@ export default createAction(routes.api.show, async (ctx) => {
 	let markdownHref = routes.markdown.package.href({ name });
 	let sourceUrl = `${SOURCE_BASE}${name}`;
 	let isUiCatalogue = name === "ui";
+	let uiComponents = isUiCatalogue ? await listUiComponents() : [];
+	let uiExports = isUiCatalogue ? await listUiExportGroups() : [];
 
 	let response = await ctx.render(
 		<DocumentLayout
@@ -98,6 +101,7 @@ export default createAction(routes.api.show, async (ctx) => {
 						<UiPackageHero
 							name={entry.name}
 							description={entry.description}
+							componentCount={uiComponents.length}
 							markdownHref={markdownHref}
 							markdownUrl={absoluteUrl(markdownHref)}
 							sourceUrl={sourceUrl}
@@ -160,9 +164,13 @@ export default createAction(routes.api.show, async (ctx) => {
 						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
 							{body.content}
 						</Typeset>
+					) : isUiCatalogue ? (
+						<div mix={[m("2.5rem", 0, 0, 0)]}>
+							<UiCatalogue components={uiComponents} exports={uiExports} />
+						</div>
 					) : (
 						<div mix={[m("2.5rem", 0, 0, 0)]}>
-							<CatalogueIndex groups={await readCatalogue(name)} />
+							<CatalogueIndex groups={await listUtilityGroups()} />
 						</div>
 					)}
 				</article>
@@ -174,25 +182,17 @@ export default createAction(routes.api.show, async (ctx) => {
 });
 
 /**
- * The index a catalogue package's page draws in place of its README: the utilities under
- * their families, or the theme contract ahead of the components that read it and the
- * subpaths the components are built from.
+ * Components for the `@sdxc/ui` explorer: theming first, then every component with the
+ * short line its tile shows under the name.
  */
-async function readCatalogue(name: string) {
-	if (name === "u") return await listUtilityGroups();
+async function listUiComponents() {
 	return [
 		{
-			title: "Components",
-			entries: [
-				{
-					title: "Theming",
-					href: routes.api.component.href({ component: "theming" }),
-					description: "Every --ui-* variable the catalogue reads, and what redefining one moves.",
-				},
-				...(await listComponentEntries()),
-			],
+			title: "Theming",
+			href: routes.api.component.href({ component: "theming" }),
+			description: "Every --ui-* variable the catalogue reads, and what redefining one moves.",
 		},
-		...(await listUiExportGroups()),
+		...(await listComponentEntries()),
 	];
 }
 
