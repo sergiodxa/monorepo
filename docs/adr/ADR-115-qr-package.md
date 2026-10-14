@@ -26,7 +26,7 @@ package that runs unchanged in a Worker, answers a `Result`, and renders through
 | -------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
 | `apps/auth-saas/app/views/hosted/enrol-totp-factor.tsx`        | The `otpauth://` URI from `beginTotpEnrolment`           | Setup key and link only; the header explains why             |
 | `packages/crypto/src/totp.ts` (`totp.uri`)                     | Builds that URI; its README says to show it as a QR code | Leaves drawing to the caller                                 |
-| `apps/sdxc/resources/docs/identity-and-security/two-factor.md` | The same URI, in a tutorial                              | Asks the reader to bring a QR library behind `qrCodeDataUrl` |
+| `apps/sdxc-site/resources/docs/identity-and-security/two-factor.md` | The same URI, in a tutorial                              | Asks the reader to bring a QR library behind `qrCodeDataUrl` |
 | `docs/adr/auth-saas/ADR-039-device-authorization-grant.md`     | `verification_uri_complete`, `…/device?user_code=…`      | Drawn by the device's own client, never by the server        |
 
 The device grant is a client concern: the TV or CLI that started the grant shows the code, and
@@ -377,7 +377,7 @@ rather than a fixed set of renderers.
 
 1. `@sdxc/qr/ui` with `QrCode`, tested through `renderToString`: the role, the label, the
    viewBox including the margin, and `forced-color-adjust: none`.
-2. `apps/sdxc`: the two-factor guide switches to `QR.encode` and `QrCode`, in its own commit.
+2. `apps/sdxc-site`: the two-factor guide switches to `QR.encode` and `QrCode`, in its own commit.
 
 ### Phase 3: `auth-saas`
 

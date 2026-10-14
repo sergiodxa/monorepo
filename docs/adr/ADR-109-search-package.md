@@ -29,7 +29,7 @@ every other list does. That is what this package is for.
 | ---------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------------------- |
 | `apps/blog/app/repositories/search.ts` (`PostSearch.query`)                                    | D1, key/value `post_meta` | Lowercased substring over title, tags, excerpt      | Title > tag > body, then newest, in memory            | `slice(0, limit)` after reading every published post                        |
 | `apps/reader/database/user-do.ts` (`SearchQuery`, `searchStatement`, `likePattern`, `seekSql`) | Durable Object SQLite     | `LIKE '%…%' ESCAPE '\'` over title, summary, author | None; the list's own `(published_at, id)` order       | `Pagination.byKeyset` over a hand-written `KeysetQuery`, date-bounded steps |
-| `apps/sdxc/app/services/search-query.ts` (`rankDocuments`)                                     | Static, in the browser    | Word-start match per token, every token required    | Hand-tuned field scores, scope-stripped package names | `slice(0, limit)`                                                           |
+| `apps/sdxc-site/app/services/search-query.ts` (`rankDocuments`)                                     | Static, in the browser    | Word-start match per token, every token required    | Hand-tuned field scores, scope-stripped package names | `slice(0, limit)`                                                           |
 
 The blog's ADR-003 chose in-memory matching because the app had no database test harness, and
 says the signature is what is meant to last. The reader's ADR-016 measured FTS5 against its
@@ -530,7 +530,7 @@ END;
 
 - **The reader keeps its ADR-016 decision.** It adopts the `LIKE` strategy now and gets FTS5 by
   adding a migration and a `fts` entry when its own measurement says so.
-- **`apps/sdxc` keeps its ranker.** See Alternatives.
+- **`apps/sdxc-site` keeps its ranker.** See Alternatives.
 - **The package has no opinion on cross-type search.** The blog's article, tutorial and glossary
   results come from one search document table because the app chose that layout.
 
@@ -645,7 +645,7 @@ punish. The package's queries still work over an external-content index, since t
 
 ### 5. Ranking in memory, in the package
 
-Moving `apps/sdxc`'s `rankDocuments`, or the blog's buckets, into the package as a third
+Moving `apps/sdxc-site`'s `rankDocuments`, or the blog's buckets, into the package as a third
 strategy for small corpora.
 
 **Rejected because**: it is a second ranking model beside `bm25()` with different semantics,

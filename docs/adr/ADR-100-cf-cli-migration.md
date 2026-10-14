@@ -85,7 +85,7 @@ than declaring their bindings twice.
 ## Current Progress
 
 - [x] `apps/books` (deployed)
-- [x] `apps/demo`, `apps/r3-auth`, `apps/r3-gallery`, `apps/sdxc`, `apps/blog-saas`
+- [x] `apps/demo`, `apps/r3-auth`, `apps/r3-gallery`, `apps/sdxc-site`, `apps/blog-saas`
 - [ ] `apps/blog`, `apps/uptime`, `apps/reader`, `apps/auth-saas` (blocked on the Workers pool)
 
 ## References

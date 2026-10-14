@@ -16,7 +16,7 @@ import { dirname, join, relative } from "node:path";
 export const CONVERTED_APPS = [
 	"demo",
 	"books",
-	"sdxc",
+	"sdxc-site",
 	"blog",
 	"r3-auth",
 	"uptime",

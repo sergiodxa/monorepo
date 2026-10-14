@@ -38,7 +38,7 @@ distiller and a writer buried in a template literal.
 `@sdxc/distill` is public and exports `isAllowed`, `productToken`, `robotsUrl` and `fetchRobots`,
 so moving them is a change to a published surface. Only `apps/reader` consumes them in the repo.
 No app other than those built on `@sdxc/blog-engine` (`apps/blog-saas`) serves a `robots.txt`;
-`apps/blog`, `apps/uptime` and `apps/sdxc` serve none.
+`apps/blog`, `apps/uptime` and `apps/sdxc-site` serve none.
 
 ### What RFC 9309 asks, and where distill stands
 
@@ -80,7 +80,7 @@ Three newer conventions come up next to `robots.txt`:
 | Content Signals (`Content-Signal:` line) | A record inside `robots.txt`: `search=yes, ai-input=yes, ai-train=no` | parsed and written by this package, as a typed group record    |
 | IETF AI Preferences (`aipref`)           | A vocabulary with a `robots.txt` attachment, still a draft            | tracked; the generic record list carries it until it is an RFC |
 | `ai.txt`                                 | A separate file with its own format                                   | out of scope                                                   |
-| `llms.txt`                               | A Markdown site map for models, not an exclusion mechanism            | stays in `apps/sdxc` (`app/services/llms.ts`)                  |
+| `llms.txt`                               | A Markdown site map for models, not an exclusion mechanism            | stays in `apps/sdxc-site` (`app/services/llms.ts`)                  |
 
 ## Decision
 
@@ -117,7 +117,7 @@ Out of scope, and where each lives instead:
 - The `<meta name="robots">` element lives in `@sdxc/seo`, which builds its content with
   `./directives`
 - Sitemaps themselves live in `@sdxc/sitemap`
-- `llms.txt` lives in `apps/sdxc`
+- `llms.txt` lives in `apps/sdxc-site`
 - Serving `/robots.txt` and `/.well-known/*` routing live in each app, and in `@sdxc/well-known`
   ([ADR-083](./ADR-083-well-known-package.md)) for the latter
 

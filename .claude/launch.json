@@ -38,10 +38,10 @@
 			"port": 3006
 		},
 		{
-			"name": "sdxc",
+			"name": "sdxc-site",
 			"runtimeExecutable": "bun",
 			"runtimeArgs": ["run", "dev"],
-			"cwd": "apps/sdxc",
+			"cwd": "apps/sdxc-site",
 			"port": 3007
 		},
 		{

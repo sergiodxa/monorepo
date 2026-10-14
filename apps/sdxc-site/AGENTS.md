@@ -1,4 +1,4 @@
-# AGENTS.md — sdxc
+# AGENTS.md — sdxc-site
 
 Instructions for working in this app. The root `AGENTS.md` still applies; this file
 covers what is specific to a site whose pages are markdown rather than views.

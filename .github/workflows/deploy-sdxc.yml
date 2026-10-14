@@ -87,12 +87,12 @@ jobs:
       # before the build rather than taken from the repository. Its bindings and secrets come
       # from `cloudflare.config.ts` alone, so the step needs no `.dev.vars` or credentials.
       - name: Generate framework types
-        run: bun run --cwd apps/sdxc cf:typegen
+        run: bun run --cwd apps/sdxc-site cf:typegen
 
       # Extracts the catalogue from the packages and bundles the worker, in that order —
       # which is what makes the deployed reference match the source this run checked out.
       - name: Build
-        run: bun run --cwd apps/sdxc build
+        run: bun run --cwd apps/sdxc-site build
 
       # `cf` authenticates from `CLOUDFLARE_API_TOKEN` and picks the account from
       # `CLOUDFLARE_ACCOUNT_ID`, then uploads the Build Output the step above wrote.
@@ -100,4 +100,4 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun run --cwd apps/sdxc cf:deploy
+        run: bun run --cwd apps/sdxc-site cf:deploy

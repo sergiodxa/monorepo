@@ -250,7 +250,7 @@ function createLanguage<
 
 - **Text form breaks**: every text-form expression gains `ctx.`. That reaches this package's
   README and tests, the flags-engine README, and the conditions and feature-flags guides in
-  `apps/sdxc`, each its own commit, and the docs site needs a deploy.
+  `apps/sdxc-site`, each its own commit, and the docs site needs a deploy.
 - **Two evaluation outcomes**: code generic over any language handles a boolean and a `Result`.
 - **Strict mode demands typed data**: a D1 row whose booleans arrive as `0` and `1` fails a strict
   comparison against `true` until the caller maps it.
@@ -292,7 +292,7 @@ its own commit.
 1. Tokenizer and parser: `ctx` keyword, segment quoting, path arguments in calls, the old-text
    message, reserved names in `createLanguage`.
 2. Both printers in `stringify`; a round-trip test for every operator with and without a path.
-3. Update the text form in this package's README, the flags-engine README, and the `apps/sdxc`
+3. Update the text form in this package's README, the flags-engine README, and the `apps/sdxc-site`
    guides (one commit per workspace, then deploy sdxc), and add a note to ADR-105's text-form
    section pointing here.
 

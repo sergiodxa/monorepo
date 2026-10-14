@@ -1,5 +1,5 @@
 {
-	"name": "@apps/sdxc",
+	"name": "@apps/sdxc-site",
 	"private": true,
 	"type": "module",
 	"scripts": {

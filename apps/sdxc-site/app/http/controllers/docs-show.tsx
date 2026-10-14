@@ -34,7 +34,7 @@ import routes from "~/routes/web";
 
 /** Where a guide's own file is read on GitHub, which is what its `Open` menu points at. */
 const GUIDE_SOURCE_BASE =
-	"https://github.com/sergiodxa/monorepo/blob/main/apps/sdxc/resources/docs/";
+	"https://github.com/sergiodxa/monorepo/blob/main/apps/sdxc-site/resources/docs/";
 
 export default createAction(routes.docs.show, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);

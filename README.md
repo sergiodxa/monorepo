@@ -41,11 +41,11 @@ upgrade path for readers who started with an earlier edition.
 
 ## Sites and Services
 
-| App                     | What it does                                                                                                                    | Live at                                          |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| [blog](apps/blog)       | My personal site and CMS: articles, tutorials and bookmarks, with Webmentions and ActivityPub so the fediverse can follow along | [sergiodxa.com](https://sergiodxa.com)           |
-| [r3-auth](apps/r3-auth) | The OAuth 2.0 and OpenID Connect provider every app here signs in with: GitHub or email and password                            | [auth.sergiodxa.com](https://auth.sergiodxa.com) |
-| [sdxc](apps/sdxc)       | Documentation, guides and changelog for the `@sdxc` packages                                                                    | [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com) |
+| App                         | What it does                                                                                                                    | Live at                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| [blog](apps/blog)           | My personal site and CMS: articles, tutorials and bookmarks, with Webmentions and ActivityPub so the fediverse can follow along | [sergiodxa.com](https://sergiodxa.com)           |
+| [r3-auth](apps/r3-auth)     | The OAuth 2.0 and OpenID Connect provider every app here signs in with: GitHub or email and password                            | [auth.sergiodxa.com](https://auth.sergiodxa.com) |
+| [sdxc-site](apps/sdxc-site) | Documentation, guides and changelog for the `@sdxc` packages                                                                    | [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com) |
 
 ## In the Workshop
 

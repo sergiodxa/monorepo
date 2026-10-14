@@ -365,16 +365,16 @@ export default defineConfig({
 				},
 			},
 			{
-				root: "apps/sdxc",
+				root: "apps/sdxc-site",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {
-						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc/app/test/assets-manifest.ts`,
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc-site/app/test/assets-manifest.ts`,
 					},
 				},
 				test: {
-					name: "sdxc",
+					name: "sdxc-site",
 					include: ["**/*.test.ts?(x)"],
 					globalSetup: ["scripts/catalogue.setup.ts"],
 					pool: "threads",
@@ -502,11 +502,11 @@ export default defineConfig({
 		overrides: [
 			{
 				/**
-				 * The sdxc guides render their code in a column 86 characters wide, with tabs
+				 * The sdxc-site guides render their code in a column 86 characters wide, with tabs
 				 * drawn four columns wide. Formatting their samples to that width keeps every
 				 * line of every guide visible without scrolling sideways.
 				 */
-				files: ["apps/sdxc/resources/docs/**/*.md"],
+				files: ["apps/sdxc-site/resources/docs/**/*.md"],
 				options: { printWidth: 86, tabWidth: 4 },
 			},
 		],

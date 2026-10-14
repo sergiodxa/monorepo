@@ -1264,7 +1264,7 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 
 ### Phase 5: Package chores
 
-1. README, LICENSE, root README row, `apps/sdxc` group and guide, npm bootstrap.
+1. README, LICENSE, root README row, `apps/sdxc-site` group and guide, npm bootstrap.
 2. Port one existing model layer to validate the API, starting with a module where the model
    already dispatches side effects (uptime's `Monitor`) and one that pairs rows with a `*Query`
    variant, then migrate the remaining apps' `data/`, `models/` and `repositories/` modules.
@@ -1340,7 +1340,7 @@ and recursion guards on top.
 - [x] Phase 2: Core, including the `byKeyset` guard in `@sdxc/pagination`
 - [x] Phase 3: Hosts
 - [x] Phase 4: Testing: `./testing`, and demo's tests seed postings through a factory
-- [ ] Phase 5: Package chores: README, LICENSE, the root README row and the `apps/sdxc` group
+- [ ] Phase 5: Package chores: README, LICENSE, the root README row and the `apps/sdxc-site` group
       and guide are done, and demo, blog, r3-auth, auth-saas (control plane), reader and uptime
       are ported; the npm bootstrap and auth-saas's per-tenant Durable Object repositories remain
 

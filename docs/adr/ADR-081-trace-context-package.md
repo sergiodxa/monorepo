@@ -43,7 +43,7 @@ across `apps/` and `packages/` finds nothing. The pieces a trace would travel th
 | `apps/auth-saas/app/http/middleware/tenant.ts` | `env.TENANT.getByName(id)` published as `ctx.tenantStub`, called over RPC         | same as the reader: `ctx.tenantStub.resumeAuthorization(...)` carries no headers            |
 
 `APIClient` subclasses today: `packages/billing` (Polar, Stripe, Mercado Pago),
-`packages/hostname`, and `apps/sdxc/app/services/sponsors.ts`. Workers that mount
+`packages/hostname`, and `apps/sdxc-site/app/services/sponsors.ts`. Workers that mount
 `log(logger)`: reader, r3-auth, sdxc, books, blog, blog-saas, auth-saas (three routers) and
 uptime.
 

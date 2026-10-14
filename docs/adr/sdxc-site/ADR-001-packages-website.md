@@ -54,7 +54,7 @@ marking them up.
 
 ## Decision
 
-Build `apps/sdxc` — a Remix v3 app on Cloudflare Workers — serving a marketing landing page and
+Build `apps/sdxc-site` — a Remix v3 app on Cloudflare Workers — serving a marketing landing page and
 one documentation tree that holds both handwritten guides and a reference for every public
 package.
 
@@ -814,7 +814,7 @@ readable code, and quietly implying a deployment would be the same dishonesty as
 
 ### Neutral
 
-- Guides live in `apps/sdxc/resources/docs`, package reference lives beside the code. Two homes
+- Guides live in `apps/sdxc-site/resources/docs`, package reference lives beside the code. Two homes
   for documentation, split by who owns the sentence.
 
 ---
