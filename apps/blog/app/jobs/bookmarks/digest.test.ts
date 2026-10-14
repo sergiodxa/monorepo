@@ -143,4 +143,18 @@ describe("the sweep job", () => {
 
 		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.archive, []);
 	});
+
+	test("inspects a bookmark of a Wayback Machine capture without archiving it", async () => {
+		let capture = await bookmark(
+			"https://web.archive.org/web/20240714085730/https://pilcrowonpaper.com/blog/how-i-would-do-auth/",
+		);
+
+		let ctx = createJobContext(jobs.bookmarks.sweep, { id: "m", attempts: 1 });
+		ctx.set(Database, db, { property: "db" });
+		publishModels(ctx, db);
+		await sweep(ctx);
+
+		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.inspect, [{ postId: capture }]);
+		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.archive, []);
+	});
 });

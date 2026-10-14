@@ -120,8 +120,18 @@ export function bookmarkLabel(meta: { title: string; url: string }): string {
 	return normalizeUrl(meta.url).replace(/^https?:\/\//i, "");
 }
 
-/** The Wayback Machine URL of a capture made at `at`, or `null` when `at` is not a date. */
+/** Whether a URL already opens a Wayback Machine capture, as a bookmark of a dead page does. */
+export function isWaybackCapture(url: string): boolean {
+	return /^https?:\/\/(web\.)?archive\.org\/web\//i.test(url);
+}
+
+/**
+ * The Wayback Machine URL of a capture made at `at`, or `null` when `at` is not a date. A URL
+ * that already is a capture answers itself, since a capture of the archive's page is the
+ * archive's own page wrapped in its toolbar a second time.
+ */
 export function waybackSnapshotUrl(url: string, at: string): string | null {
+	if (isWaybackCapture(url)) return url;
 	let instant = new Date(at);
 	if (Number.isNaN(instant.getTime())) return null;
 	let timestamp = instant.toISOString().replaceAll(/\D/g, "").slice(0, 14);

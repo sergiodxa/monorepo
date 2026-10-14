@@ -45,17 +45,17 @@ beforeEach(async () => {
 	author = await seedAuthor(db);
 });
 
-/** Saves a bookmark of the page with its record, created at `created_at` when given. */
-async function bookmark(created_at?: string): Promise<string> {
+/** Saves a bookmark of `url` with its record, created at `created_at` when given. */
+async function bookmark(created_at?: string, url = PAGE_URL): Promise<string> {
 	let created = unwrap(
 		await bindModels(db).likes.create({
 			author_id: author,
 			...(created_at ? { created_at } : {}),
-			meta: { url: PAGE_URL, title: "Saved" },
+			meta: { url, title: "Saved" },
 		}),
 	);
 	if (!created) throw new Error("Seeding the bookmark failed");
-	await bindModels(db).bookmarks.claim(created.id, bookmarkAddress(PAGE_URL), null);
+	await bindModels(db).bookmarks.claim(created.id, bookmarkAddress(url), null);
 	return created.id;
 }
 
@@ -176,6 +176,18 @@ describe("the archive job", () => {
 
 		let record = await bindModels(db).bookmarks.find(id);
 		expect(record?.archive_attempted_at).not.toBeNull();
+		expect((await bindModels(db).likes.find(id))?.meta.archived_at).toBe("");
+	});
+
+	test("leaves a bookmark of a Wayback Machine capture without asking the archive", async () => {
+		let id = await bookmark(
+			undefined,
+			"https://web.archive.org/web/20240714085730/https://pilcrowonpaper.com/blog/how-i-would-do-auth/",
+		);
+
+		await expect(run(id)).rejects.toBeInstanceOf(Job.Ack);
+
+		expect((await bindModels(db).bookmarks.find(id))?.archive_job).toBeNull();
 		expect((await bindModels(db).likes.find(id))?.meta.archived_at).toBe("");
 	});
 });

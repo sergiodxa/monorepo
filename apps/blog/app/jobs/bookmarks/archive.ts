@@ -10,7 +10,7 @@ import jobs from "~/app/jobs";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { normalizeUrl } from "~/app/models/post-values";
+import { isWaybackCapture, normalizeUrl } from "~/app/models/post-values";
 import { captureStatus, closestCapture, requestCapture } from "~/app/services/wayback";
 import { waybackKeys } from "~/app/services/wayback-keys";
 
@@ -29,6 +29,7 @@ export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 
 	let url = normalizeUrl(bookmark.meta.url);
 	if (!/^https?:\/\//i.test(url)) return ctx.ack("The bookmark links within the site");
+	if (isWaybackCapture(url)) return ctx.ack("The bookmark already links to the Wayback Machine");
 
 	let record = await ctx.models.bookmarks.find(bookmark.id);
 	if (!record) return ctx.ack("The bookmark has no record yet");

@@ -10,7 +10,7 @@ import jobs from "~/app/jobs";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { normalizeUrl } from "~/app/models/post-values";
+import { isWaybackCapture, normalizeUrl } from "~/app/models/post-values";
 
 /** How long a bookmark the archive could not capture waits before it is tried again. */
 const ARCHIVE_RETRY_MS = 30 * 24 * 60 * 60 * 1000;
@@ -29,6 +29,7 @@ export default createJobHandler(jobs.bookmarks.sweep, async (ctx) => {
 	let retryBefore = new Date(Date.now() - ARCHIVE_RETRY_MS).toISOString();
 	let unarchived = external.filter((bookmark) => {
 		if (bookmark.meta.archived_at !== "") return false;
+		if (isWaybackCapture(normalizeUrl(bookmark.meta.url))) return false;
 		let attempted = records.get(bookmark.id)?.archive_attempted_at ?? null;
 		return attempted === null || attempted < retryBefore;
 	});

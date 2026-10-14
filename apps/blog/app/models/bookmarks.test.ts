@@ -12,7 +12,12 @@ import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { openDatabase } from "~/app/initializers/database";
-import { bookmarkAddress, cleanUrl, waybackSnapshotUrl } from "~/app/models/post-values";
+import {
+	bookmarkAddress,
+	cleanUrl,
+	isWaybackCapture,
+	waybackSnapshotUrl,
+} from "~/app/models/post-values";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
@@ -53,6 +58,14 @@ describe("waybackSnapshotUrl", () => {
 			"https://web.archive.org/web/20261007153045/https://example.com/a",
 		);
 		expect(waybackSnapshotUrl("https://example.com/a", "not a date")).toBeNull();
+	});
+
+	test("opens a URL that already is a capture as it is", () => {
+		let capture =
+			"https://web.archive.org/web/20240714085730/https://pilcrowonpaper.com/blog/how-i-would-do-auth/";
+		expect(waybackSnapshotUrl(capture, "2024-07-14T09:34:37.000Z")).toBe(capture);
+		expect(isWaybackCapture("http://archive.org/web/2020/https://example.com/a")).toBe(true);
+		expect(isWaybackCapture("https://example.com/web.archive.org/web/")).toBe(false);
 	});
 });
 
