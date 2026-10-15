@@ -21,6 +21,7 @@ import type { Published, ReleasePlan } from "./plan.js";
 import type { Package } from "./workspace.js";
 
 import { buildPackage, createStagingRoot } from "./build.js";
+import { CHANGELOG_PACKAGE, writeChangelog } from "./changelog.js";
 import {
 	attributeCommits,
 	attributeCorrections,
@@ -168,6 +169,14 @@ async function main(): Promise<Result<void, Error>> {
 		say(`\nBuilding ${name}@${today} into ${stagingDir}`);
 		let built = await buildPackage(pkg, REPO_ROOT, stagingDir, manifest.data);
 		if (isFailure(built)) return built;
+		if (name === CHANGELOG_PACKAGE) {
+			let changelog = await writeChangelog(stagingDir, {
+				version: today,
+				current: commits.data,
+				packages,
+			});
+			if (isFailure(changelog)) return changelog;
+		}
 		staged.set(name, stagingDir);
 	}
 	for (let [name, stagingDir] of staged) {

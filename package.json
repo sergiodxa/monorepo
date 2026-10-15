@@ -29,6 +29,7 @@
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.21.3",
 		"@sdxc/codemod": "workspace:*",
+		"@sdxc/jsonl": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/semver": "workspace:*",
