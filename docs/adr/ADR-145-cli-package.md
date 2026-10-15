@@ -497,7 +497,21 @@ routes, jobs and MCP tools are.
 
 ## Current Progress
 
-- [ ] Phase 1: Package
+- [ ] Phase 1: Package (`packages/cli`), built; npm bootstrap outstanding
+  - [x] Contract, parsing and one usage error per run; long aliases (`--jobs` for
+        `--concurrency`) beside short ones, for `spec`
+  - [x] Generated help and closest-name suggestions
+  - [x] `createCLI`, `map`, `lazy`, `createCommand`; middleware and context share `@sdxc/jobs`'
+        shape (`CommandMiddleware<Effect>`, `ctx.set(key, value, { property })`), and a middleware
+        may also return a failure to end the run; `exit(code, message?)` for codes other than 0, 1,
+        2 and 130
+  - [x] Process context, `exec`, `style`, and `@sdxc/cli/test`'s `invoke()`; an unscripted
+        command fails like an unscripted prompt
+  - [x] The seven prompts, bound and handler-called, on `node:readline` keypress events
+  - [x] `ctx.task` with nesting, terminal ownership and the plain fallback
+  - [x] README, root README row, docs-site group, `sdxc/cli` in the umbrella; `sdxc`'s handwritten
+        sources moved to `src/sdxc.ts` and `src/sdxc/` so the generator can write `src/cli.ts`
+  - [ ] Bootstrap on npm and configure the trusted publisher
 - [ ] Phase 2: `sdxc` on `@sdxc/cli`
 - [ ] Phase 3: `spec` on `@sdxc/cli`
 - [ ] Phase 4: App command lines
