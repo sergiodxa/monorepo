@@ -1,0 +1,15 @@
+/**
+ * The {{title}} job.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import handler from "{{specifier}}";
+
+describe("{{name}}", () => {
+	test("exports the handler the dispatcher maps", () => {
+		expect(handler).toBeDefined();
+	});
+
+	test.todo("does the {{title}} work");
+});

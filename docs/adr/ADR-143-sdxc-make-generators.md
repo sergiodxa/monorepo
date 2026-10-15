@@ -180,5 +180,5 @@ kind typed most often would be the longest.
 
 ## Current Progress
 
-- [ ] Stubs, project stubs, migration chains
+- [x] Stubs, project stubs, migration chains
 - [ ] Declaration and mapping for `job`, `controller` and `mcp`

@@ -1,0 +1,14 @@
+/**
+ * The fields the {{title}} form submits, validated before anything trusts them.
+ */
+
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
+
+/** The {{title}} fields, as an action receives them. */
+export const {{Name}}Schema = f.object({
+	name: f.field(s.string()),
+});
+
+/** A validated {{title}} submission. */
+export type {{Name}}Input = s.InferOutput<typeof {{Name}}Schema>;

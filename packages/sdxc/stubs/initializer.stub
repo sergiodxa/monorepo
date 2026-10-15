@@ -1,0 +1,7 @@
+/**
+ * The app's one {{title}}: describe what it is configured with and who reads it. Build it
+ * here, once, so every caller shares the same instance.
+ */
+
+/** The {{title}} every caller imports. */
+export const {{key}} = { name: "{{name}}" };

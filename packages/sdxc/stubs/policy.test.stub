@@ -1,0 +1,17 @@
+/**
+ * The {{title}} policy.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import { {{key}} } from "{{specifier}}";
+
+describe("{{key}}", () => {
+	test("refuses an anonymous visitor", () => {
+		expect({{key}}(null)).toBe(false);
+	});
+
+	test("allows a signed-in actor", () => {
+		expect({{key}}({ id: "1" })).toBe(true);
+	});
+});

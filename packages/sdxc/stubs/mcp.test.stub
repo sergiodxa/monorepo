@@ -1,0 +1,15 @@
+/**
+ * The {{title}} MCP handler.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import handler from "{{specifier}}";
+
+describe("{{name}}", () => {
+	test("exports the handler the MCP server maps", () => {
+		expect(handler).toBeDefined();
+	});
+
+	test.todo("answers {{title}}");
+});

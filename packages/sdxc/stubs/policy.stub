@@ -1,0 +1,13 @@
+/**
+ * The {{title}} policy: describe who may do what, and why the rule sits here.
+ */
+
+/** Who an authorization rule is asked about; `null` for an anonymous visitor. */
+export interface Actor {
+	id: string;
+}
+
+/** Whether `actor` passes the {{title}} rule. */
+export function {{key}}(actor: Actor | null): boolean {
+	return actor !== null;
+}

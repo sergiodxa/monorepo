@@ -17,7 +17,11 @@ export default defineConfig({
 			serverEntry: "bootstrap/worker.ts",
 			serverHandler: false,
 		}),
-		cloudflare({ viteEnvironment: { name: "ssr" } }),
+		/**
+		 * Tests import modules on their own, in Node, so the Worker runtime the plugin starts
+		 * is left out while Vitest runs.
+		 */
+		process.env.VITEST === undefined ? cloudflare({ viteEnvironment: { name: "ssr" } }) : null,
 	],
 
 	test: {

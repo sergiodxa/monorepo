@@ -1,0 +1,33 @@
+/**
+ * The {{title}} form: the page that shows it and the action that receives it. Describe what
+ * a submission changes and where the visitor lands afterwards.
+ */
+
+import { createController } from "remix/router";
+
+import DocumentLayout from "~/resources/layouts/document";
+import routes from "{{routes}}";
+
+export default createController(routes.{{path}}, {
+	actions: {
+		/** Renders the form. */
+		index(ctx) {
+			return ctx.render(
+				<DocumentLayout assets={ctx.assets} title="{{title}}">
+					<h1>{{title}}</h1>
+					<form method="post" action={routes.{{path}}.action.href()}>
+						<button type="submit">Send</button>
+					</form>
+				</DocumentLayout>,
+			);
+		},
+
+		/** Receives a submission and sends the visitor back to the form. */
+		action() {
+			return new Response(null, {
+				status: 303,
+				headers: { location: routes.{{path}}.index.href() },
+			});
+		},
+	},
+});

@@ -1,0 +1,13 @@
+/**
+ * The {{title}} middleware.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import {{key}} from "{{specifier}}";
+
+describe("{{name}}", () => {
+	test("creates a middleware function", () => {
+		expect(typeof {{key}}()).toBe("function");
+	});
+});

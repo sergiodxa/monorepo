@@ -28,7 +28,7 @@
 		"noImplicitOverride": true,
 		"jsx": "react-jsx",
 		"jsxImportSource": "remix/component",
-		"types": ["vite/client"],
+		"types": ["node", "vite/client"],
 		"paths": {
 			"~/app/*": ["./app/*"],
 			"~/config/*": ["./config/*"],

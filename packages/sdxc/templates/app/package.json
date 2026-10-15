@@ -20,9 +20,11 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
 		"@pitlane/vite-plugin-remix": "0.8.0",
+		"@types/node": "^26.6.5",
 		"cf": "1.0.0-beta.5",
 		"typescript": "^6.0.3",
 		"vite": "^8.3.4",
-		"vite-plus": "0.3.3"
+		"vite-plus": "0.3.3",
+		"vitest": "4.1.11"
 	}
 }

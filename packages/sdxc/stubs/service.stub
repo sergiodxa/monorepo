@@ -1,0 +1,13 @@
+/**
+ * {{title}}: describe the rule this service carries out across models, and what a caller can
+ * rely on when it succeeds.
+ */
+
+import type { Result } from "sdxc/result";
+
+import { success } from "sdxc/result";
+
+/** Carries out {{title}}; a failure says why nothing changed. */
+export function {{key}}(): Result<void, Error> {
+	return success(undefined);
+}

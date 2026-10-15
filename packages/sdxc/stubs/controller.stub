@@ -1,0 +1,17 @@
+/**
+ * The {{title}} page: describe what a visitor finds here and why the route exists.
+ */
+
+import { createAction } from "remix/router";
+
+import DocumentLayout from "~/resources/layouts/document";
+import routes from "{{routes}}";
+
+/** Renders the {{title}} page. */
+export default createAction(routes.{{path}}, (ctx) =>
+	ctx.render(
+		<DocumentLayout assets={ctx.assets} title="{{title}}">
+			<h1>{{title}}</h1>
+		</DocumentLayout>,
+	),
+);

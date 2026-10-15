@@ -1,0 +1,11 @@
+/**
+ * The {{title}} job: describe what it changes and why it runs off the request.
+ */
+
+import { createJobHandler } from "sdxc/jobs";
+
+import jobs from "~/app/jobs";
+
+export default createJobHandler(jobs.{{path}}, async (ctx) => {
+	ctx.log.set({ job: { input: ctx.input } });
+});

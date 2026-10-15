@@ -1,0 +1,13 @@
+/**
+ * The {{title}} initializer.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import { {{key}} } from "{{specifier}}";
+
+describe("{{key}}", () => {
+	test("is built once, at import", () => {
+		expect({{key}}).toBeDefined();
+	});
+});

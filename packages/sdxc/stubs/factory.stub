@@ -1,0 +1,10 @@
+/**
+ * The {{title}} factory tests seed rows with, through the same model the app writes with.
+ */
+
+import { defineFactory } from "sdxc/data-model/testing";
+
+import { {{Name}} } from "{{model}}";
+
+/** A complete {{title}} row; a test overrides only the fields it is about. */
+export const {{Name}}Factory = defineFactory({{Name}}, {});

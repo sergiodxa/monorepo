@@ -1,0 +1,44 @@
+/**
+ * The {{title}} email: describe who receives it and what it tells them.
+ */
+
+import type { Handle } from "remix/component";
+import type { Email as EmailContract } from "sdxc/mail";
+
+import { Email } from "sdxc/mail";
+
+/** What the {{title}} email says. */
+export interface {{Name}}Copy {
+	heading: string;
+	body: string;
+}
+
+/** Renders the email's body from copy the caller wrote. */
+function {{Name}}Body(handle: Handle<{{Name}}Copy>) {
+	return () => (
+		<Email.Layout preview={handle.props.heading} title={handle.props.heading}>
+			<Email.Heading>{handle.props.heading}</Email.Heading>
+			<Email.Text>{handle.props.body}</Email.Text>
+		</Email.Layout>
+	);
+}
+
+/** The {{title}} email, addressed to one recipient. */
+export class {{Name}}Email implements EmailContract {
+	constructor(
+		private recipient: string,
+		private copy: {{Name}}Copy,
+	) {}
+
+	get to() {
+		return { email: this.recipient };
+	}
+
+	get subject() {
+		return this.copy.heading;
+	}
+
+	body() {
+		return <{{Name}}Body {...this.copy} />;
+	}
+}

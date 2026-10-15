@@ -1,0 +1,16 @@
+/**
+ * The {{title}} email.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import { {{Name}}Email } from "{{specifier}}";
+
+describe("{{Name}}Email", () => {
+	test("is addressed to its recipient under its heading", () => {
+		let email = new {{Name}}Email("ada@example.com", { heading: "Hello", body: "Welcome." });
+
+		expect(email.to).toEqual({ email: "ada@example.com" });
+		expect(email.subject).toBe("Hello");
+	});
+});

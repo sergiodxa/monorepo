@@ -1,0 +1,24 @@
+/**
+ * The {{title}} model and its table: describe what a row records and the rules that keep it
+ * consistent. Keep the columns in step with the migration that creates the table.
+ */
+
+import type { TableRow } from "remix/data-table";
+
+import { column as c, table } from "remix/data-table";
+import { createModel } from "sdxc/data-model";
+
+/** The `{{snake}}` table, as its migration creates it. */
+export const {{key}}Table = table({
+	name: "{{snake}}",
+	columns: {
+		id: c.text().primaryKey(),
+		created_at: c.integer(),
+		updated_at: c.integer(),
+	},
+});
+
+/** One {{title}} row as it reads back from the database. */
+export type {{Name}}Row = TableRow<typeof {{key}}Table>;
+
+export const {{Name}} = createModel({{key}}Table, {});

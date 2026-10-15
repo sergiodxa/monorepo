@@ -1,0 +1,22 @@
+/**
+ * The {{title}} form's validation.
+ */
+
+import { isFailure, isSuccess } from "sdxc/result";
+import { validate } from "sdxc/validate";
+import { describe, expect, test } from "vitest";
+
+import { {{Name}}Schema } from "{{specifier}}";
+
+describe("{{Name}}Schema", () => {
+	test("accepts a complete submission", async () => {
+		let form = new FormData();
+		form.set("name", "Ada");
+
+		expect(isSuccess(await validate(form, {{Name}}Schema))).toBe(true);
+	});
+
+	test("refuses a submission missing a field", async () => {
+		expect(isFailure(await validate(new FormData(), {{Name}}Schema))).toBe(true);
+	});
+});

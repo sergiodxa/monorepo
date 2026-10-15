@@ -1,0 +1,12 @@
+/**
+ * Answers the `{{uri}}` resource: describe what a read returns, and `null` for one that does
+ * not exist.
+ */
+
+import { createResource } from "sdxc/mcp";
+
+import resourceset from "~/app/mcp/resources";
+
+export default createResource(resourceset.{{path}}, {
+	read: () => "# {{title}}\n",
+});

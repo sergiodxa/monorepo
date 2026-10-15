@@ -1,0 +1,15 @@
+/**
+ * The {{title}} model.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import { {{Name}} } from "{{specifier}}";
+
+describe("{{Name}}", () => {
+	test("is defined over its table", () => {
+		expect({{Name}}).toBeDefined();
+	});
+
+	test.todo("keeps a {{title}} row consistent");
+});

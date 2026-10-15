@@ -1,0 +1,11 @@
+/**
+ * The {{title}} middleware: describe what it publishes on the context or which requests it
+ * answers before the handler runs.
+ */
+
+import type { Middleware } from "remix/router";
+
+/** Creates the middleware; add it to a router's chain or to a route's `lazy()` guards. */
+export default function {{key}}(): Middleware {
+	return (_context, next) => next();
+}
