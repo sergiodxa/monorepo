@@ -32,6 +32,7 @@ npx sdxc create my-app              # a Remix v3 app, or --template org/repo fro
 npx sdxc make controller posts/show # a file where the app layout puts it, with its test
 npx sdxc ui add dialog              # copy a component into the project to edit it
 npx sdxc upgrade                    # move to the latest release and print a prompt for the code
+npx sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts
 ```
 
 On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
@@ -52,13 +53,14 @@ The JSON Schema 2020-12 document for one line of the lock file, `.config/sdxc.lo
 
 ### The `sdxc` command
 
-| Command        | What it does                                                                   |
-| -------------- | ------------------------------------------------------------------------------ |
-| `sdxc create`  | Writes a new project from the built-in `app` template or a GitHub repository   |
-| `sdxc init`    | Writes `.config/sdxc.jsonc` with every key at its default                      |
-| `sdxc make`    | Writes a controller, job, model, migration or other file, declared and mapped  |
-| `sdxc ui`      | Copies `@sdxc/ui` components into the project and points imports at the copies |
-| `sdxc upgrade` | Moves `sdxc` and `remix` to a release and prints the prompt to update the code |
+| Command        | What it does                                                                    |
+| -------------- | ------------------------------------------------------------------------------- |
+| `sdxc create`  | Writes a new project from the built-in `app` template or a GitHub repository    |
+| `sdxc init`    | Writes `.config/sdxc.jsonc` with every key at its default                       |
+| `sdxc run`     | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime |
+| `sdxc make`    | Writes a controller, job, model, migration or other file, declared and mapped   |
+| `sdxc ui`      | Copies `@sdxc/ui` components into the project and points imports at the copies  |
+| `sdxc upgrade` | Moves `sdxc` and `remix` to a release and prints the prompt to update the code  |
 
 `sdxc <command> --help` lists each command's arguments and flags. Commands run from the project root, the nearest directory with a `package.json`.
 

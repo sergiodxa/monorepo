@@ -48,6 +48,7 @@ describe("help", () => {
 				"  create   Write a new project from a built-in template or a GitHub repository",
 				"  init     Write .config/sdxc.jsonc with every default spelled out",
 				"  make     Write a controller, job, model or other file where the app layout puts it",
+				"  run      Run the project's own command line, bootstrap/cli.ts, with its runtime",
 				"  ui       Copy @sdxc/ui components into the project and keep imports on the copies",
 				"  upgrade  Move to another sdxc release and print the prompt for the code",
 				"",

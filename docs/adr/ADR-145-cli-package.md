@@ -351,6 +351,13 @@ export default createCLI({ name: "app", commands: commandset, middleware: [datab
 - **It runs on the app's runtime, started by a script.** `bootstrap/cli.ts` is a plain module:
   `"cli": "bun ./bootstrap/cli.ts"` (or `node`) in `package.json`, run as
   `bun run cli users grant ada@example.com`. Nothing installs it globally.
+- **`sdxc run` runs it from anywhere in the project.** With `sdxc` installed globally,
+  `sdxc run users grant ada@example.com` finds the project root and its `bootstrap/cli.ts`, and
+  runs it with the project's runtime: Bun for a project on Bun, Node (which strips TypeScript
+  types itself) otherwise. Every token after `run` reaches the app's command line untouched
+  through `argument.rest()`, `--help` included, and its exit code is `sdxc run`'s. It reads only
+  the app's file, so a global `sdxc` of any release runs any project; the package script stays
+  the way that needs nothing installed.
 - **Where the data comes from is the app's middleware.** The `database()` middleware a command
   line installs connects the way the app's server does: a Postgres URL, a SQLite file. Commands
   that can reach production declare a `--remote` flag, and the middleware reads it to pick the
@@ -499,9 +506,10 @@ routes, jobs and MCP tools are.
 
 ### Phase 4: App command lines
 
-1. The `app/commands/` row in the app layout rules, and `bootstrap/cli.ts`, `app/commands/index.ts`
+1. `sdxc run`, running the project's `bootstrap/cli.ts` with its runtime.
+2. The `app/commands/` row in the app layout rules, and `bootstrap/cli.ts`, `app/commands/index.ts`
    and the `cli` script in the `app` template.
-2. `sdxc make command`, declaring and mapping like `make job`, verified against the materialized
+3. `sdxc make command`, declaring and mapping like `make job`, verified against the materialized
    template.
 
 ## References

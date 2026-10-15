@@ -221,6 +221,16 @@ export const SDXC_COMMANDS = commands({
 			},
 		}),
 	}),
+	run: command({
+		description: "Run the project's own command line, bootstrap/cli.ts, with its runtime",
+		arguments: {
+			args: argument.rest({
+				valueName: "command",
+				description: "The app's command and its arguments, passed through as typed",
+			}),
+		},
+		examples: ["run users find ada@example.com --limit 5", "run --help"],
+	}),
 	ui: commands({
 		description: "Copy @sdxc/ui components into the project and keep imports on the copies",
 		list: command({ description: "Every component, marking copies that are edited or behind" }),
