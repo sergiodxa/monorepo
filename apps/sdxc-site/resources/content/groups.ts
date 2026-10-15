@@ -19,6 +19,7 @@ export interface PackageGroupDefinition {
 export const OTHER_GROUP = "Everything else";
 
 export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
+	{ title: "Everything at once", packages: ["sdxc"] },
 	{
 		title: "HTTP & responses",
 		packages: [
@@ -86,6 +87,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"zip",
 			"distill",
 			"jsdoc",
+			"codemod",
 		],
 	},
 	{
