@@ -1,0 +1,8 @@
+import { createJobDispatcher } from "@sdxc/jobs";
+
+import jobs from "~/app/jobs/index.js";
+
+export const dispatcher = createJobDispatcher({
+	jobs,
+	logger,
+});

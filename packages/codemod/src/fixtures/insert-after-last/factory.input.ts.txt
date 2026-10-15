@@ -1,0 +1,10 @@
+import { createRouter } from "remix/fetch-router";
+
+import routes from "~/routes/web.js";
+
+export function createWebRouter() {
+	let router = createRouter();
+	router.map(routes.home, () => import("~/app/http/controllers/home.js"));
+	router.map(routes.about, () => import("~/app/http/controllers/about.js")); // static page
+	return router;
+}

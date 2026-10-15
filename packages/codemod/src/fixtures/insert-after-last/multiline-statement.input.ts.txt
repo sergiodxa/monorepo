@@ -1,0 +1,5 @@
+export function createMcp() {
+	let mcp = createMcpHandler();
+	mcp.tools.map(toolset.search, lazy(() => import("~/app/mcp/tools/search.js")));
+	return mcp;
+}

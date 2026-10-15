@@ -1,0 +1,3 @@
+import { resources } from "@sdxc/mcp";
+
+export const resourceset = resources({});

@@ -262,23 +262,24 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
 ### Formats and Parsers
 
-| Package                                       | Description                                                                                         |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| [@sdxc/csv](packages/csv)                     | Read and write RFC 4180 CSV, with a streaming writer and formula neutralization                     |
-| [@sdxc/epub](packages/epub)                   | Build EPUB 3.3 publications from XHTML chapters, checked against what epubcheck rejects             |
-| [@sdxc/icalendar](packages/icalendar)         | Read and write iCalendar documents, with recurrence rules and time zones                            |
-| [@sdxc/jsdoc](packages/jsdoc)                 | Read JSDoc out of source text into a JSON documentation model                                       |
-| [@sdxc/json-pointer](packages/json-pointer)   | Parse, stringify, get and set RFC 6901 JSON Pointers                                                |
-| [@sdxc/json-schema](packages/json-schema)     | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12 |
-| [@sdxc/jsonc](packages/jsonc)                 | JSON with comments and trailing commas, parsed with errors that point at the line and column        |
-| [@sdxc/jsonl](packages/jsonl)                 | JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure    |
-| [@sdxc/messageformat](packages/messageformat) | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                         |
-| [@sdxc/qr](packages/qr)                       | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer     |
-| [@sdxc/semver](packages/semver)               | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons                        |
-| [@sdxc/xml](packages/xml)                     | XML parser and serializer for RSS-style feeds                                                       |
-| [@sdxc/yaml](packages/yaml)                   | YAML reading and writing over a documented subset                                                   |
-| [@sdxc/zip](packages/zip)                     | Streaming ZIP archive writer with CRC-32, storing every entry uncompressed                          |
-| [@sdxc/zone-file](packages/zone-file)         | Read and write RFC 1035 DNS zone files, with the record data codec for every typed record           |
+| Package                                       | Description                                                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [@sdxc/codemod](packages/codemod)             | Source-to-source edits of JavaScript and TypeScript imports and declarations, changing only the edited ranges |
+| [@sdxc/csv](packages/csv)                     | Read and write RFC 4180 CSV, with a streaming writer and formula neutralization                               |
+| [@sdxc/epub](packages/epub)                   | Build EPUB 3.3 publications from XHTML chapters, checked against what epubcheck rejects                       |
+| [@sdxc/icalendar](packages/icalendar)         | Read and write iCalendar documents, with recurrence rules and time zones                                      |
+| [@sdxc/jsdoc](packages/jsdoc)                 | Read JSDoc out of source text into a JSON documentation model                                                 |
+| [@sdxc/json-pointer](packages/json-pointer)   | Parse, stringify, get and set RFC 6901 JSON Pointers                                                          |
+| [@sdxc/json-schema](packages/json-schema)     | Schema builders that validate like remix/data-schema and describe themselves as JSON Schema 2020-12           |
+| [@sdxc/jsonc](packages/jsonc)                 | JSON with comments and trailing commas, parsed with errors that point at the line and column                  |
+| [@sdxc/jsonl](packages/jsonl)                 | JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure              |
+| [@sdxc/messageformat](packages/messageformat) | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                   |
+| [@sdxc/qr](packages/qr)                       | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer               |
+| [@sdxc/semver](packages/semver)               | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons                                  |
+| [@sdxc/xml](packages/xml)                     | XML parser and serializer for RSS-style feeds                                                                 |
+| [@sdxc/yaml](packages/yaml)                   | YAML reading and writing over a documented subset                                                             |
+| [@sdxc/zip](packages/zip)                     | Streaming ZIP archive writer with CRC-32, storing every entry uncompressed                                    |
+| [@sdxc/zone-file](packages/zone-file)         | Read and write RFC 1035 DNS zone files, with the record data codec for every typed record                     |
 
 ### Cloudflare
 

@@ -1,0 +1,9 @@
+import { Dialog } from "sdxc/ui";
+import { Card, Button, Popover, Menu, Tabs } from "~/components/ui/index.js";
+import type {
+	CardProps,
+	ButtonProps,
+} from "~/components/ui/index.js";
+
+export { Button, Card, Dialog, Menu, Popover, Tabs };
+export type { ButtonProps, CardProps };

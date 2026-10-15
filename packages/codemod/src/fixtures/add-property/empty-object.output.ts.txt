@@ -1,0 +1,7 @@
+import { resources } from "@sdxc/mcp";
+
+export const resourceset = resources({
+	postings: {
+		one: resource(),
+	},
+});

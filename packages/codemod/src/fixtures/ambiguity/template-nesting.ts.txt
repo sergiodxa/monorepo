@@ -1,0 +1,12 @@
+let c = "c";
+let nested = `a ${`b ${c}`} d`;
+let deeper = `1 ${`2 ${`3 ${c} 3`} 2`} 1`;
+let braces = `x ${{ a: 1 }.a} ${(() => { return "}"; })()} y`;
+let regexInside = `${/}/.source} z`;
+let comment = `/* not a comment */ ${c} // not either`;
+let escaped = `\${not} \` ${c}`;
+let tagged = String.raw`a\n${c}`;
+type Template = `prefix-${string}-suffix`;
+let divided = `${c}`.length / 2;
+let computed = import(`./not-a-literal-${c}.js`);
+let literal = import(`./no-substitution.js`);

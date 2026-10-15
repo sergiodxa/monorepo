@@ -1,0 +1,2 @@
+export { Button, Dialog as Modal } from "sdxc/ui";
+export type { ButtonProps } from "sdxc/ui";

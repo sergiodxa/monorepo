@@ -1,0 +1,7 @@
+import { Dialog } from "sdxc/ui";
+import { Button } from "~/components/ui/button.js";
+import { cn } from "~/lib/cn.js";
+
+export function Page() {
+	return <Button>Open</Button>;
+}

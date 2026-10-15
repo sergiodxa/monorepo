@@ -1,0 +1,8 @@
+import { render } from "./render.js";
+let note = (
+	<section>
+		Don't import {"./braced.js"} unless {'it\'s'} needed: export * from "./text.js";
+		<pre>{`/* ${"x"} */`}</pre>
+	</section>
+);
+render(note / 1, <hr />);

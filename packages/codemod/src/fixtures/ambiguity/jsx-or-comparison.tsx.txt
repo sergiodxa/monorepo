@@ -1,0 +1,23 @@
+declare let a: number, b: number, items: string[];
+let less = a < b;
+let both = a < b && b > a;
+let shifted = (a << 2) >> 1 >>> 0;
+let element = <p>Don't import "./not-an-import.js" here // or here</p>;
+let fragment = (
+	<>
+		<span title="it's /* fine */" data-x='"'>
+			{items.map((item) => (
+				<b key={item}>{item}</b>
+			))}
+		</span>
+		{/* import("./comment.js") */}
+		<input value={a < b ? "x" : "y"} disabled />
+		<a.b.c x-y:z="1" {...{ spread: true }} />
+	</>
+);
+let slashText = <i>/not-a-regex/ and a &lt; b</i>;
+function render() {
+	return <div style={{ width: a / b }}>{`template ${a}`}</div>;
+}
+if (a) <br />;
+let dynamic = import("./in-tsx.js");

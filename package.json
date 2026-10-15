@@ -28,6 +28,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.21.3",
+		"@sdxc/codemod": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/semver": "workspace:*",
@@ -38,6 +39,7 @@
 		"@types/node": "^26.4.0",
 		"happy-dom": "^20.14.5",
 		"msw": "^2.15.0",
+		"oxc-parser": "^0.154.0",
 		"typescript": "^6.0.3",
 		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
 		"vite-plus": "0.3.3",

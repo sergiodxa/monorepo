@@ -1,0 +1,14 @@
+// import "./line-comment.js";
+/* import "./block-comment.js"; */
+/**
+ * import { doc } from "./jsdoc.js";
+ */
+let single = 'import "./in-single-quotes.js"';
+let double = "export * from './in-double-quotes.js'";
+let template = `import("./in-template.js")`;
+let regex = /import "\.\/in-regex.js"/;
+let url = "http://example.com/*not a comment*/";
+let slashes = "//still a string";
+let continued = "line \
+continued";
+let call = String(/* import("./inline-comment.js") */ "x");

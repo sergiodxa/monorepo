@@ -1,0 +1,10 @@
+let identity = <T,>(x: T) => x;
+let bounded = <T extends object>(x: T) => x;
+let constant = <const T,>(x: T) => x;
+let defaulted = <T = string,>(x: T) => x;
+let afterArrow = identity(/after/);
+let element = <T>text</T>;
+type GenericFunction = <T>(x: T) => T;
+let annotated: <T>(x: T) => T = (x) => x;
+let parenthesized = <b>(note)</b>;
+let after = /after-type/.test("");

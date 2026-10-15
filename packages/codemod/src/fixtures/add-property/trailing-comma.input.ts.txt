@@ -1,0 +1,13 @@
+import { job, jobs } from "@sdxc/jobs";
+import * as s from "remix/data-schema";
+
+/** Keyed by the name each job travels under. */
+export default jobs({
+	trials: {
+		/** Starts a trial. */
+		start: job({ input: s.object({ accountId: s.string() }) }),
+		/** Ends a trial. */
+		end: job({ input: s.object({ accountId: s.string() }) }),
+	},
+	digest: job({ cron: "0 14 * * *" }),
+});

@@ -1,0 +1,17 @@
+declare function f<T>(x?: T): T;
+declare let a: number, b: number, c: number;
+let call = f<string>("x");
+let nested = f<Array<Array<number>>>([]);
+let comparison = a < b > c;
+let tagged = f<string>`template`;
+let instantiation = f<number>;
+let divided = f<number>(1) / 2;
+let shifted = a >> b;
+let generic = new Map<string, Set<number>>();
+let assertion = <number>(<unknown>a) / 2;
+let typed: Promise<typeof import("./type-only.js")> | undefined;
+type Imported = import("./type-position.js").Name;
+type Generic = import("./type-generic.js").Box<string>;
+let awaited = await import("./awaited.js");
+let chained = import("./chained.js").then((module) => module);
+let mocked = f<typeof import("./type-argument.js")>();

@@ -1,0 +1,12 @@
+import { form, get, post, route } from "remix/routes";
+
+export default route({
+	home: get("/"),
+	api: route("/api", {
+		subscribe: post("/api/subscribe"),
+		admin: route("/admin", {
+			users: get("/api/admin/users"),
+		}),
+	}),
+	sample: form("/sample"),
+});

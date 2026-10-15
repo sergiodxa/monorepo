@@ -249,8 +249,8 @@ both bring a Babel parser stack for a task that needs specifier ranges.
 
 ## Current Progress
 
-- [ ] Tokenizer and structure, with the oracle test and the ambiguity fixtures
-- [ ] `findModuleReferences`, `rewriteSpecifiers`, `moveImports`
-- [ ] `addProperty`, `insertAfterLast`
-- [ ] Exact-output fixtures for every edit
+- [x] Tokenizer and structure, with the oracle test and the ambiguity fixtures
+- [x] `findModuleReferences`, `rewriteSpecifiers`, `moveImports`
+- [x] `addProperty`, `insertAfterLast`
+- [x] Exact-output fixtures for every edit
 - [ ] Release build and repo tests moved to `findModuleReferences`

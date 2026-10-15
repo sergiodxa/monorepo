@@ -1,0 +1,4 @@
+import { Button as PrimaryButton, type ButtonProps, Dialog, type DialogProps } from "sdxc/ui";
+
+export let props: ButtonProps | DialogProps = {};
+export { PrimaryButton, Dialog };

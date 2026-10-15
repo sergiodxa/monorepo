@@ -1,0 +1,10 @@
+import { job, jobs } from "@sdxc/jobs";
+
+export default jobs({
+	digest: job({ cron: "0 14 * * *" }),
+	trials: {
+		expire: job({
+			input: s.object({ accountId: s.string() }),
+		}),
+	},
+});

@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+import "./side-effect.js";
+import defaultName from "./default.js";
+import defaultAndNamed, { named } from "./default-and-named.js";
+import defaultAndNamespace, * as namespace from "./default-and-namespace.js";
+import * as onlyNamespace from "./namespace.js";
+import {
+	a as alias,
+	type B,
+	type C as D,
+	"string-name" as stringName,
+	default as renamedDefault,
+} from "./named.js";
+import type TypeDefault from "./type-default.js";
+import type { TypeNamed } from "./type-named.js";
+import type * as TypeNamespace from "./type-namespace.js";
+import type from "./default-named-type.js";
+import json from "./data.json" with { type: "json" };
+import {} from "./empty-braces.js";
+import { trailing } from './single-quoted.js'
+import equals = require("./import-equals.js");
+import "./escaped-a.js";
+export * from "./star.js";
+export * as starAlias from "./star-alias.js";
+export { x, y as z, default, default as other } from "./reexport.js";
+export type { T } from "./type-reexport.js";
+export type * from "./type-star.js";
+export type * as TypeStar from "./type-star-alias.js";
+export { type U, type V as W } from "./mixed-type.js";
+export { "string-export" as "renamed-string" } from "./string-export.js";
+export { local };
+export const value = import("./dynamic.js");
+export default import.meta.url;
+let local = 1;
+declare module "./ambient.js" {
+	import inner from "./inside-ambient.js";
+}
+const spaced = import(
+	"./multiline.js"
+);
+const withOptions = import("./with-options.js", { with: { type: "json" } });

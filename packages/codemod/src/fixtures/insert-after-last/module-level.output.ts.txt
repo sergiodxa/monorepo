@@ -1,0 +1,19 @@
+import { createRouter } from "remix/fetch-router";
+
+export const webRouter = createRouter();
+
+function helper() {
+    webRouter.map(routes.internal, internal);
+}
+
+webRouter.map(routes.home, home);
+webRouter.map(
+    routes.posts,
+    posts,
+);
+webRouter.map(
+    routes.feed,
+    feed,
+);
+
+export default webRouter;

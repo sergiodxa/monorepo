@@ -1,0 +1,23 @@
+declare let x: boolean, y: string, a: number, b: number;
+if (x) /if-head/.test(y);
+while (x) /while\/head/g.exec(y);
+for (;;) /for-head/.test(y);
+with (y) /with-head/.test(y);
+let half = a / b / 2;
+let ratio = (a + b) / 2;
+let index = [a][0]! / 2;
+let parts = y.split(/\//);
+let matched = typeof /typeof/ === "object";
+function check() {
+	return /return/.test(y);
+}
+let negated = !/bang/.test(y);
+let postfix = a++ / 2;
+let prefix = ++/prefix/.lastIndex;
+let member = y.length / 2;
+let keywordMember = { return: 1 }.return / 2;
+let chosen = x ? /consequent/ : /alternate/;
+let commented = a /* comment */ / b; // trailing /not-a-regex/
+let klass = /[/]"'`/.source;
+let assigned = (a /= 2);
+let list = [/first/, /second/];

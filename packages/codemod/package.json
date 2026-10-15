@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/codemod",
+	"version": "0.0.1",
+	"description": "Source-to-source edits of JavaScript and TypeScript imports and declarations, changing only the edited ranges",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}

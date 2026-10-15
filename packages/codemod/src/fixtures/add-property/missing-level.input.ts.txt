@@ -1,0 +1,5 @@
+import { job, jobs } from "@sdxc/jobs";
+
+export default jobs({
+	digest: job({ cron: "0 14 * * *" }),
+});

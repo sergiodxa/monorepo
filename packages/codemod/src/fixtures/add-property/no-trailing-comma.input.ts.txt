@@ -1,0 +1,6 @@
+import { tool, tools } from "@sdxc/mcp";
+
+export const toolset = tools({
+  search: tool({ description: "Search postings" }),
+  fetch: tool({ description: "Fetch one posting" }) // the last one
+});

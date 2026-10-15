@@ -1,0 +1,35 @@
+let a = 1, b = 2, y = "";
+{
+	a += 1;
+}
+/after-block/.test(y);
+let object = { a, b } / 2;
+function declared() {}
+/after-function-declaration/.test(y);
+if (a) {
+	b = 1;
+} /after-if-block/.test(y);
+label: {
+	break label;
+}
+/after-label/.test(y);
+let nested = { inner: { deep: 1 } }.inner / 2;
+switch (a) {
+	case 1: {
+		break;
+	}
+}
+/after-switch/.test(y);
+class Klass {
+	method() {
+		return 1;
+	}
+}
+/after-class/.test(y);
+let parenthesized = ({}) / 2;
+try {
+	a = 3;
+} finally {
+	b = 4;
+}
+/after-finally/.test(y);

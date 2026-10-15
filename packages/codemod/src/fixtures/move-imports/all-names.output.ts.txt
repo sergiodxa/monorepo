@@ -1,0 +1,4 @@
+import { Button } from '~/components/ui/button.js'
+import { Dialog } from '~/components/ui/button.js'
+
+export let components = [Button, Dialog]

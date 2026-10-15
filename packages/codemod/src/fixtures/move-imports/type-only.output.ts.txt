@@ -1,0 +1,6 @@
+import type { DialogProps } from "sdxc/ui";
+import type { ButtonProps } from "~/components/ui/button.js";
+import { Button } from "~/components/ui/button.js";
+
+export type Props = ButtonProps & DialogProps;
+export { Button };

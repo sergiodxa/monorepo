@@ -1,0 +1,11 @@
+let y = "";
+let empty = () => {}
+/after-arrow-body/.test(y);
+let parenthesized = ({}) / 2;
+let returnsObject = () => ({ a: 1 });
+let mapped = [1].map((x) => {
+	return x;
+}).length / 2;
+let asyncArrow = async () => {
+	await import("./in-arrow.js");
+};
