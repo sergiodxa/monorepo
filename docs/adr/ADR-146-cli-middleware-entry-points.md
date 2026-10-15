@@ -10,8 +10,9 @@
 router and an `@sdxc/jobs` dispatcher do. An app's command line wants the same services its
 routes and jobs read: `ctx.db`, `ctx.models`, `ctx.log`. Several packages already publish one
 service for two hosts, a router and a job dispatcher, through thin entry points over a shared
-core. This ADR adds the command line as a third host, starting with `@sdxc/data-model/cli`, and
-decides which other middleware gets a `./cli` entry.
+core. This ADR adds the command line as a third host, starting with `@sdxc/data-model/cli`,
+decides which other middleware gets a `./cli` entry, and proposes the package that reaches
+Cloudflare's services from outside a Worker, which those entries need against production.
 
 ## Context
 
@@ -49,9 +50,8 @@ context's.
 | `@sdxc/logger`                                                                                                                                                                                                                                                                                                                                                              | `./middleware` (router)              | route and method, recorded after | one log per run, recording the command path and exit code |
 | `@sdxc/trace-context`                                                                                                                                                                                                                                                                                                                                                       | `./middleware` (router)              | the `traceparent` header         | a trace per run, continued from a `TRACEPARENT` variable  |
 | `@sdxc/jobs`                                                                                                                                                                                                                                                                                                                                                                | `./router` (`jobEnqueuer`)           | nothing                          | enqueue a job from a command                              |
-| `@sdxc/flags`                                                                                                                                                                                                                                                                                                                                                               | `./middleware/router`, `/dispatcher` | the subject, router only         | a client whose subject the handler binds, as in a job     |
-| `@sdxc/authz`                                                                                                                                                                                                                                                                                                                                                               | `./middleware/router`, `/dispatcher` | the subject, router only         | a binder whose subject the handler binds, as in a job     |
-| `@sdxc/i18n`                                                                                                                                                                                                                                                                                                                                                                | `./middleware`                       | `Accept-Language`, cookies, URL  | a locale from `LC_ALL`, `LC_MESSAGES`, `LANG`             |
+| `@sdxc/flags`, `@sdxc/authz`                                                                                                                                                                                                                                                                                                                                                | `./middleware/router`, `/dispatcher` | the subject, router only         | nothing: the developer running a command has full access  |
+| `@sdxc/i18n`                                                                                                                                                                                                                                                                                                                                                                | `./middleware`                       | `Accept-Language`, cookies, URL  | text in each recipient's language                         |
 | `@sdxc/mail`, `@sdxc/billing`, `@sdxc/newsletter`                                                                                                                                                                                                                                                                                                                           | `./middleware`                       | nothing                          | the configured provider, for admin commands               |
 | `@sdxc/assets-middleware`, `@sdxc/attribution`, `@sdxc/captcha`, `@sdxc/catch-response-middleware`, `@sdxc/get-client-ip`, `@sdxc/honeypot`, `@sdxc/http` (`head-requests`), `@sdxc/idempotency`, `@sdxc/no-www-middleware`, `@sdxc/rate-limit`, `@sdxc/security-headers`, `@sdxc/trailing-slash-middleware`, `@sdxc/user-agent`, `@sdxc/well-known`, `@sdxc/workers-cache` | `./middleware`                       | the request or response itself   | nothing: each exists to shape an HTTP exchange            |
 
@@ -69,12 +69,11 @@ Phase 1, which is in progress.
 
 A package that publishes a service adds a command-line entry named like its other host entries:
 `./cli` beside `./router` and `./jobs` (`@sdxc/data-model/cli`, `@sdxc/database-middleware/cli`,
-`@sdxc/jobs/cli`), and `./middleware/cli` beside `./middleware/router` and
-`./middleware/dispatcher` (`@sdxc/flags`, `@sdxc/authz`). A package with a single `./middleware`
-entry gains `./middleware/cli`, and its existing entry stays the router one.
+`@sdxc/jobs/cli`). A package with a single `./middleware` entry gains `./middleware/cli`, and its
+existing entry stays the router one.
 
 - Every entry is an adapter over the core the other entries share, and publishes under the same
-  context key, so a model method, a policy or a service reads the same value in a route, a job
+  context key, so a model method or a service reads the same value in a route, a job
   or a command.
 - `@sdxc/cli` is an optional peer dependency, as `remix` is for packages that serve both hosts.
   An app without a command line installs nothing new.
@@ -97,24 +96,72 @@ entry gains `./middleware/cli`, and its existing entry stays the router one.
   environment variable, OpenTelemetry's carrier for processes, or starts one, publishes
   `ctx.trace`, and stamps the run's log. Jobs a command enqueues carry it, so a backfill and the
   jobs it starts share one trace.
-- **`@sdxc/jobs/cli`:** `jobEnqueuer(queue)` publishes `ctx.jobs`. The queue is whatever the app
-  passes; reaching a Cloudflare queue from outside the Worker needs a client of its own, the same
-  constraint ADR-145 records for bindings.
-- **`@sdxc/flags/middleware/cli`** and **`@sdxc/authz/middleware/cli`:** like their dispatcher
-  entries, they publish a client or binder with the shared fact sources, and the handler binds the
-  subject, typically from an `--as <user>` flag, so a command acting for a user is held to that
-  user's flags and policies.
+- **`@sdxc/jobs/cli`:** `jobEnqueuer(queue)` publishes `ctx.jobs`, and what enqueuing means is
+  the queue the app passes:
+  - **Locally,** `@sdxc/jobs/memory`'s queue, drained through the app's own dispatcher in the
+    command's process once the handler returns. The job runs where the developer is watching:
+    its logs, errors and retries show in the terminal, against the same local database.
+  - **Against production (`--remote`),** a Cloudflare queue reached through the Queues HTTP API
+    (section 4), so the deployed consumer runs the job exactly as if a request had enqueued it.
+    A backfill command enqueues one job per batch and returns; the Worker does the work.
 - **`@sdxc/i18n/middleware/cli`:** `i18n(options)` takes the router entry's resources and
-  supported languages and picks the locale from `LC_ALL`, then `LC_MESSAGES`, then `LANG`
-  (`es_AR.UTF-8` is `es-AR`), falling back to the fallback language, and publishes `ctx.locale`
-  and `ctx.intl` as the router entry does.
-- **`@sdxc/mail/middleware/cli`, `@sdxc/billing/middleware/cli`, `@sdxc/newsletter/middleware/cli`:**
-  publish the configured provider, for commands such as resending an invitation or granting an
-  entitlement by hand.
+  supported languages and publishes `ctx.translate`, the `createTranslator` factory, for text a
+  command writes to users: `ctx.translate(user.language).t("invite.subject")`, recording the
+  `locale` it bound to. It also publishes `ctx.intl` for the command's own output, in the
+  developer's language from `LC_ALL`, `LC_MESSAGES` or `LANG` (`es_AR.UTF-8` is `es-AR`).
+- **`@sdxc/mail/middleware/cli`:** publishes the mailer the app configures, so a command resends
+  an invitation or a receipt with the same templates a route uses. `@sdxc/mail`'s
+  `CloudflareTransport` already takes a `SendEmailBinding`; given the Email Service adapter from
+  section 4 it sends from a command unchanged. Locally the app passes `MemoryTransport` or one that
+  prints each message, so a command run on a laptop never emails a real user.
+- **`@sdxc/billing/middleware/cli`, `@sdxc/newsletter/middleware/cli`:** publish the configured
+  provider, for granting an entitlement or subscribing an address by hand. Both providers are
+  already HTTP APIs, so they work from a command as they are, with the same secrets.
+
+`@sdxc/flags` and `@sdxc/authz` get no entry: a command line is a developer's tool, and the
+developer running it already has every permission those packages would check.
 
 The HTTP-only middleware in the table gets no entry.
 
-### 4. What an app's command line looks like
+### 4. Cloudflare's services from outside a Worker
+
+Add `packages/cloudflare-api`, published as `@sdxc/cloudflare-api` (the package still needs the
+user's approval before it is created): the Workers binding interfaces implemented over
+Cloudflare's REST API, so code written against a binding runs unchanged in a command.
+
+```typescript
+import { d1, emailSender, queue } from "@sdxc/cloudflare-api";
+
+let api = { accountId: env.CLOUDFLARE_ACCOUNT_ID, token: env.CLOUDFLARE_API_TOKEN };
+
+let db = d1(api, { databaseId }); // D1Database, for @sdxc/data-table-d1
+let jobs = queue(api, { queueId }); // Queue, for @sdxc/jobs/cloudflare
+let email = emailSender(api); // SendEmailBinding, for @sdxc/mail/cloudflare
+```
+
+| Binding            | Endpoint                                                | Status                      |
+| ------------------ | ------------------------------------------------------- | --------------------------- |
+| `D1Database`       | `/accounts/<account>/d1/database/<id>/query`            | general availability        |
+| `Queue`            | `/accounts/<account>/queues/<id>/messages` (and batch)  | general availability        |
+| `SendEmailBinding` | `/accounts/<account>/email/sending/send`                | public beta, Workers Paid   |
+| `KVNamespace`      | `/accounts/<account>/storage/kv/namespaces/<id>/values` | later, when a command needs |
+| `R2Bucket`         | R2's S3-compatible API                                  | later, when a command needs |
+
+- Each implements the interface `@cloudflare/workers-types` declares, with the binding's own
+  semantics: a failed call rejects as the binding's does, so callers written for the binding
+  handle it the same way.
+- Account and resource ids come from the app's `cloudflare.config.ts`; the token comes from
+  `CLOUDFLARE_API_TOKEN` and is never read from a file in the project.
+- Where the REST API differs from the binding, the difference is the adapter's documented
+  contract: Email Service answers per-recipient status where the binding answers one message
+  id, and D1's `batch()` atomicity over HTTP is checked in a spike before the adapter claims it.
+- Durable Objects, service bindings and other bindings without a public API stay out; a command
+  that needs one calls the deployed Worker over HTTP.
+
+The local half needs no adapter: D1 is Miniflare's SQLite file (ADR-145, section 8), jobs run
+through the memory queue, and mail goes to a memory or printing transport.
+
+### 5. What an app's command line looks like
 
 ```typescript
 let cli = createCLI({
@@ -130,17 +177,19 @@ The order matches a router's: the log first, the trace stamping it, then service
 
 ### Positive
 
-- **One service, three hosts.** A model, policy or mailer behaves the same in a route, a job and a
+- **One service, three hosts.** A model or mailer behaves the same in a route, a job and a
   command, published under one key.
 - **Typed without casts.** Effects flow from each entry into the handler's `ctx`.
 - **Commands are logged and traced** like requests and jobs, with no command-specific code.
 
 ### Negative
 
-- **Eleven new entry points** to document, test and keep in step with their siblings.
+- **Nine new entry points** and a new package to document, test and keep in step with their siblings.
 - **`@sdxc/cli`'s context is constrained** to the job context's shape before the package ships.
-- **Bindings are still the app's problem.** A `./cli` entry publishes what it is given; reaching
-  Cloudflare storage and queues from outside the Worker waits on ADR-145's Phase 4.
+- **A second implementation of each binding** to keep in step with Cloudflare's, over APIs some
+  of which (Email Service) are still in beta.
+- **Commands against production hold an API token** with write access to the account's D1,
+  Queues and email; ADR-145's confirmation before a `--remote` run is the guard.
 
 ### Neutral
 
@@ -163,6 +212,15 @@ Build a `Request` per command and reuse the router middleware unchanged.
 **Rejected because**: middleware that reads URLs, headers or cookies would see a fabricated
 request, and the router's response types say nothing a command line can use.
 
+### 3. Wrangler's platform proxy for remote bindings
+
+Wrangler can hand a Node process binding objects that proxy to their remote resources, which
+covers every binding type with one mechanism.
+
+**Rejected because**: it ties every command to Wrangler and a proxy Worker it deploys, where the
+repo runs Workers through its own `cf` CLI, and its behaviour is Wrangler's rather than a
+documented API's. Revisit if a command needs a binding with no REST API.
+
 ## Implementation Plan
 
 ### Phase 1: Context
@@ -177,15 +235,23 @@ request, and the router's response types say nothing a command line can use.
 
 ### Phase 3: The rest
 
-1. `@sdxc/jobs/cli`, `@sdxc/flags/middleware/cli`, `@sdxc/authz/middleware/cli`.
+1. `@sdxc/jobs/cli`, with the memory queue drained in process.
 2. `@sdxc/i18n/middleware/cli`, `@sdxc/mail/middleware/cli`, `@sdxc/billing/middleware/cli`,
    `@sdxc/newsletter/middleware/cli`.
 3. Regenerate the `sdxc` export map.
+
+### Phase 4: `@sdxc/cloudflare-api`
+
+1. With the user's approval of the package: `d1`, after a spike against a real database
+   (statements, `batch()`, errors), then `queue` and `emailSender`.
+2. README, `LICENSE.md`, root README row, docs-site group.
 
 ## References
 
 - [ADR-145: `@sdxc/cli` Package](./ADR-145-cli-package.md)
 - [OpenTelemetry: Environment Variables as Context Propagation Carriers](https://opentelemetry.io/docs/specs/otel/context/env-carriers/)
+- [Cloudflare Queues: publish via HTTP](https://developers.cloudflare.com/queues/examples/publish-to-a-queue-via-http/)
+- [Cloudflare Email Service REST API](https://developers.cloudflare.com/email-service/api/send-emails/rest-api/)
 - [POSIX locale environment variables](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html)
 
 ## Current Progress
@@ -193,3 +259,4 @@ request, and the router's response types say nothing a command line can use.
 - [ ] Phase 1: Context
 - [ ] Phase 2: Services an app command reads first
 - [ ] Phase 3: The rest
+- [ ] Phase 4: `@sdxc/cloudflare-api`
