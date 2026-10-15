@@ -43,12 +43,17 @@ The same module as `@sdxc/<name>` and `@sdxc/<name>/<subpath>`, default export i
 
 The JSON Schema 2020-12 document for the CLI configuration, which the `$schema` key of `.config/sdxc.jsonc` points editors at.
 
+### `sdxc/lock.schema.json`
+
+The JSON Schema 2020-12 document for one line of the lock file, `.config/sdxc.lock.jsonl` unless `lock` moves it, where the CLI records state such as copied components. Commit the lock file and leave it to the CLI.
+
 ### The `sdxc` command
 
 Every command works from the project root: the nearest directory at or above the current one that holds a `package.json`.
 
 - `sdxc init [--dry-run]`: writes `.config/sdxc.jsonc`; `--dry-run` prints it instead.
 - `sdxc create [directory] [--template <template>] [--git | --no-git]`: writes a new project into a missing or empty directory from the built-in `app` template (a Remix v3 Worker on Cloudflare) or from any GitHub repository, `--template org/repo[/path][#ref]`, sending `GITHUB_TOKEN` or `GH_TOKEN` when set. It installs nothing and prints the next steps.
+- `sdxc ui list | add <component...> [--with-deps] | diff <component> | update <component...> [--force] | remove <component...>`: copies `@sdxc/ui` components from the installed release into `ui.directory` and points every import of them in the project, `sdxc/ui` and `sdxc/ui/<name>` alike, at the copies; `update` replaces only copied files still unedited, and `remove` points the imports back. `add`, `update` and `remove` take `--dry-run`.
 - `sdxc upgrade [version] [--no-install] [--output <file>]`: moves `sdxc`, and `remix` with it, to `version` (the latest when omitted), installs it, and prints the prompt an AI agent follows to update the code; `sdxc upgrade --prompt --from <version>` prints that prompt again without changing anything.
 
 ### Configuration

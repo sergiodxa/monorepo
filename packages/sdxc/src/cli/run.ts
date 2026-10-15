@@ -14,6 +14,7 @@ import { isFailure, wrap } from "@sdxc/result";
 import { create } from "./create/index.js";
 import { init } from "./init.js";
 import { findProjectRoot } from "./project.js";
+import { ui } from "./ui/index.js";
 import { upgrade } from "./upgrade/index.js";
 
 /** Where the CLI runs and writes; the binary passes the process's own. */
@@ -30,6 +31,7 @@ export const USAGE = [
 	"Commands:",
 	"  create      Write a new project from a built-in template or a GitHub repository",
 	"  init        Write .config/sdxc.jsonc with every default spelled out",
+	"  ui          Copy @sdxc/ui components into the project and keep imports on the copies",
 	"  upgrade     Move to another sdxc release and print the prompt for the code",
 	"",
 	"Options:",
@@ -47,6 +49,7 @@ export const USAGE = [
 export async function run(argv: readonly string[], io: CommandIO): Promise<number> {
 	if (argv[0] === "upgrade") return upgrade(argv.slice(1), io);
 	if (argv[0] === "create") return create(argv.slice(1), io);
+	if (argv[0] === "ui") return ui(argv.slice(1), io);
 	let args = wrap(() =>
 		parseArgs({
 			args: [...argv],
