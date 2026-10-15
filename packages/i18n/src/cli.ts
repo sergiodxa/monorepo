@@ -18,20 +18,6 @@ import { createTranslator } from "./lib/translator.js";
 
 export { CurrentIntl, CurrentLocale, Translators } from "./context.js";
 
-/**
- * Declared in an imported module, not an ambient .d.ts, so the augmentation applies in
- * consuming projects that import the middleware. A middleware's declared effect names one
- * property, so the two that describe the developer's own language are typed here.
- */
-declare module "@sdxc/cli" {
-	interface CommandContext<Arguments, Flags> {
-		/** The supported language of whoever runs the command, from their locale variables. */
-		readonly locale: string;
-		/** Translator fixed to {@link locale}, for the command's own output. */
-		readonly intl: I18n;
-	}
-}
-
 /** The variables a POSIX system names a process's message language in, highest priority first. */
 const LOCALE_VARIABLES = ["LC_ALL", "LC_MESSAGES", "LANG"] as const;
 
@@ -52,7 +38,11 @@ const NEUTRAL_LOCALES = new Set(["C", "POSIX"]);
  */
 export default function i18n(
 	options: TranslatorOptions,
-): CommandMiddleware<{ key: typeof Translators; value: Translator; property: "translate" }> {
+): CommandMiddleware<
+	| { key: typeof Translators; value: Translator; property: "translate" }
+	| { key: typeof CurrentLocale; value: string; property: "locale" }
+	| { key: typeof CurrentIntl; value: I18n; property: "intl" }
+> {
 	let translate = createTranslator({ ...options, onError: options.onError ?? logError });
 
 	return async (ctx, next) => {

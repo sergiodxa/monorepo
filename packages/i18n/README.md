@@ -235,7 +235,7 @@ The function and option types used above. `I18nMiddlewareOptions` comes from `@s
 
 #### `CurrentLocale`, `CurrentIntl` and `Translators`
 
-The context keys, from `@sdxc/i18n/middleware` (`CurrentLocale`, `CurrentIntl`) and `@sdxc/i18n/middleware/cli` (all three), for code that reads by key: `ctx.get(CurrentIntl)`. Importing the command-line entry adds `locale: string` and `intl: I18n` to `@sdxc/cli`'s `CommandContext`.
+The context keys, from `@sdxc/i18n/middleware` (`CurrentLocale`, `CurrentIntl`) and `@sdxc/i18n/middleware/cli` (all three), for code that reads by key: `ctx.get(CurrentIntl)`. A command line whose middleware includes `i18n()` types `ctx.translate`, `ctx.locale` and `ctx.intl` on every handler.
 
 ## Pattern: Reading The Language From The Session
 
