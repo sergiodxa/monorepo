@@ -120,5 +120,8 @@ while upgrades across more than a year are rare and need mainly the breaking cha
 
 ## Current Progress
 
-- [ ] `changelog.jsonl` in the release build
-- [ ] `sdxc upgrade` and the prompt
+- [x] `changelog.jsonl` in the release build (`scripts/release/changelog.ts`, written into the
+      staged `sdxc` package after it builds)
+- [x] `sdxc upgrade` and the prompt (`packages/sdxc/src/cli/upgrade/`); vendored components are
+      read from the lock file's `ui` lines and each registry entry's `changedIn` as ADR-141
+      specifies them, and are listed once the registry ships in the tarball
