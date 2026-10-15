@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyCommandContext, CommandMiddleware, Env } from "@sdxc/cli";
+import type { CommandMiddleware, Env } from "@sdxc/cli";
 
 import { currentLog } from "@sdxc/logger";
 
@@ -43,23 +43,9 @@ function traceEnv(trace: TraceContext): Env {
 }
 
 /**
- * Makes every child `ctx.exec` starts continue `trace`. A `TRACEPARENT` the caller passes in
- * `options.env` wins, with the `TRACESTATE` the caller passes beside it.
- */
-function propagate(ctx: AnyCommandContext, trace: TraceContext): void {
-	let exec = ctx.exec.bind(ctx);
-	let carried = traceEnv(trace);
-	let execWithTrace: AnyCommandContext["exec"] = (command, options = {}) => {
-		if (options.env?.TRACEPARENT !== undefined) return exec(command, options);
-		return exec(command, { ...options, env: { ...options.env, ...carried } });
-	};
-	Object.defineProperty(ctx, "exec", { value: execWithTrace, configurable: true });
-}
-
-/**
  * Continues or starts the run's trace, binds it for `currentTrace()`, publishes it as
  * `ctx.trace`, sets `traceFields()` on the current log, and hands it to every child process
- * `ctx.exec` starts as `TRACEPARENT`. When a trace is already current (a host bound one) it is
+ * `ctx.exec` starts as `TRACEPARENT`, unless the call passes its own in `options.env`. When a trace is already current (a host bound one) it is
  * joined, as `log()` joins a log. Jobs the command enqueues carry the trace.
  *
  * @example createCLI({ name: "app", commands, middleware: [log(logger), trace()] });
@@ -74,7 +60,7 @@ export function trace(): CommandMiddleware<{
 
 		if (current !== undefined) {
 			ctx.set(CurrentTrace, current, TRACE_PROPERTY);
-			propagate(ctx, current);
+			ctx.setExecEnv(traceEnv(current));
 			await next();
 			return;
 		}
@@ -82,7 +68,7 @@ export function trace(): CommandMiddleware<{
 		let started = traceOf(ctx.env);
 		currentLog()?.set(traceFields(started));
 		ctx.set(CurrentTrace, started, TRACE_PROPERTY);
-		propagate(ctx, started);
+		ctx.setExecEnv(traceEnv(started));
 
 		await runWithTrace(started, () => next());
 	};
