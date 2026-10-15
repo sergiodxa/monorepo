@@ -22,6 +22,12 @@ import { resolveInside } from "../project.js";
 export const DEFAULT_TEMPLATE = "app";
 
 /**
+ * The built-in templates `sdxc create` offers to pick from on a terminal, in the order it lists
+ * them; a test keeps it equal to the package's `templates/` folder.
+ */
+export const BUILTIN_TEMPLATES: readonly string[] = ["app"];
+
+/**
  * Built-in template files stored under another name, because npm drops a `.gitignore` from a
  * published tarball; each is written under the name it maps to.
  */
