@@ -205,6 +205,7 @@ request, and the router's response types say nothing a command line can use.
 
 ## Current Progress
 
-- [ ] Phase 1: Context
+- [x] Phase 1: Context — `@sdxc/cli`'s `get`/`has`/`set` with `property`,
+      `CommandMiddleware<Effect>` and `AnyCommandContext`, shipped with ADR-145 Phase 1
 - [ ] Phase 2: Services an app command reads first
 - [ ] Phase 3: The rest
