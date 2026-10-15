@@ -9,6 +9,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { findModuleReferences } from "@sdxc/codemod";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 /** The packages a document subpath may import. */
@@ -21,9 +23,6 @@ const ALLOWED = new Set([
 
 /** The modules that may reach the optional peers. */
 const PEER_MODULES = new Set(["response.ts", "middleware.ts"]);
-
-/** Matches the specifier of every import or re-export. */
-const SPECIFIER = /(?:import|export)[^"';]*?from\s+"([^"]+)"/g;
 
 /**
  * The bare package a specifier names, or `null` for a relative import.
@@ -53,9 +52,10 @@ describe("document subpaths", () => {
 	test.each(sourceModules(root).filter((file) => !PEER_MODULES.has(file)))(
 		"%s imports only the allowed packages",
 		(file) => {
-			let text = readFileSync(join(root, file), "utf8");
-			let packages = [...text.matchAll(SPECIFIER)]
-				.map((match) => packageOf(match[1] ?? ""))
+			let references = unwrap(findModuleReferences(file, readFileSync(join(root, file), "utf8")));
+			let packages = references
+				.filter((reference) => reference.kind === "import" || reference.kind === "export")
+				.map((reference) => packageOf(reference.specifier))
 				.filter((name) => name !== null);
 			expect(packages.filter((name) => !ALLOWED.has(name))).toEqual([]);
 		},
