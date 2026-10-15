@@ -219,7 +219,7 @@ Without a terminal, task lines carry no durations, so output compares exactly.
 
 #### `CommandMiddleware<Effect>`
 
-`(ctx, next) => void | CommandResult`. `next()` resolves to what the rest of the chain answered, so a middleware can log the outcome. A middleware that answers a failure ends the run; `Effect` (`{ key, value, property }`) names what it publishes, so the handler's `ctx` gains that property, typed.
+`(ctx, next) => void | CommandResult`. `next()` resolves to what the rest of the chain answered, so a middleware can log the outcome. A middleware that answers a failure ends the run; `Effect` (`{ key, value, property }`) names what it publishes, so the handler's `ctx` gains that property, typed. A middleware publishing several values declares a union of effects, one per property.
 
 A middleware's own `ctx` is `AnyCommandContext`, without the properties earlier middleware installed, since one middleware can run in many chains. It reads them with `ctx.require(Key)`; a package whose middleware is always installed may instead augment `CommandContext` with its property.
 

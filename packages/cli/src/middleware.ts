@@ -38,7 +38,8 @@ export interface EmptyContextEffect {
 declare const contextEffect: unique symbol;
 
 /**
- * Runs before the command's handler, in the order declared. It calls `next()` to continue; one
+ * Runs before the command's handler, in the order declared. `Effect` names what it publishes; a
+ * middleware publishing several values declares a union of effects, one per property. It calls `next()` to continue; one
  * that returns a failure instead ends the run with it, the way a handler's failure does, and one
  * that returns without calling `next()` ends the run successfully without the handler.
  *
@@ -51,6 +52,7 @@ declare const contextEffect: unique symbol;
  * 		await next();
  * 	};
  * }
+ * @example CommandMiddleware<{ key: typeof Locale; value: string; property: "locale" } | { key: typeof Intl; value: I18n; property: "intl" }>
  */
 export type CommandMiddleware<Effect extends ContextEffect = EmptyContextEffect> = ((
 	context: AnyCommandContext,
@@ -77,7 +79,7 @@ type EffectOf<Middleware> = Middleware extends {
 type NoProperties = Record<never, never>;
 
 /** The property one effect installs, ignoring an effect that installs none. */
-type PropertyOf<Effect> = Effect extends {
+type EachProperty<Effect> = Effect extends {
 	property: infer Property extends string;
 	value: infer Value;
 }
@@ -85,6 +87,16 @@ type PropertyOf<Effect> = Effect extends {
 		? NoProperties
 		: { readonly [Key in Property]: Value }
 	: NoProperties;
+
+/** Folds a union of property objects into one object holding all of them. */
+type Merge<Union> = (Union extends unknown ? (each: Union) => void : never) extends (
+	all: infer All,
+) => void
+	? All
+	: never;
+
+/** Every property an effect installs: one, or each member of a union of effects. */
+type PropertyOf<Effect> = [Effect] extends [never] ? NoProperties : Merge<EachProperty<Effect>>;
 
 /**
  * Every property a chain installs, folded left to right so a later middleware overriding a name

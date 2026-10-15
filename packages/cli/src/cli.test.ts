@@ -336,6 +336,29 @@ describe("middleware", () => {
 		expect(order).toEqual(["cli", "command", "handler"]);
 	});
 
+	test("types every property a middleware declares as a union of effects", async () => {
+		const LOCALE = createContextKey<string>();
+		const COUNT = createContextKey<number>();
+		let both: CommandMiddleware<
+			| { key: typeof LOCALE; value: string; property: "locale" }
+			| { key: typeof COUNT; value: number; property: "count" }
+		> = async (ctx, next) => {
+			ctx.set(LOCALE, "es", { property: "locale" });
+			ctx.set(COUNT, 2, { property: "count" });
+			await next();
+		};
+		let cli = createCLI({ name: "sdxc", commands: CONTRACT, middleware: [both, project()] });
+		cli.map(CONTRACT.init, (ctx) => {
+			expectTypeOf(ctx.locale).toEqualTypeOf<string>();
+			expectTypeOf(ctx.count).toEqualTypeOf<number>();
+			expectTypeOf(ctx.project).toEqualTypeOf<string>();
+			ctx.stdout(`${ctx.locale} ${ctx.count}\n`);
+			return success();
+		});
+
+		expect((await invoke(cli, ["init"])).stdout).toBe("es 2\n");
+	});
+
 	test("types a helper shared by commands behind one chain", async () => {
 		const CHAIN = [project()] as const;
 		/** Reads what every command behind `CHAIN` receives. */
