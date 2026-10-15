@@ -9,13 +9,12 @@
 
 import type { Middleware } from "remix/router";
 
-import { unwrap } from "@sdxc/result";
 import { createContextKey } from "remix/router";
 
 import type { JobEnqueuer } from "./enqueue.js";
 import type { JobQueue } from "./queue.js";
 
-import { createJobEnqueuer } from "./enqueue.js";
+import { queueEnqueuer } from "./enqueue.js";
 
 export type { JobEnqueuer } from "./enqueue.js";
 
@@ -51,10 +50,7 @@ const JOBS_PROPERTY = { property: "jobs" } as const;
 export function jobEnqueuer(
 	queue: JobQueue,
 ): Middleware<{ key: typeof Jobs; value: JobEnqueuer; property: "jobs" }> {
-	let enqueuer = createJobEnqueuer(async (messages) => {
-		if (messages.length === 0) return;
-		unwrap(await queue.send(messages));
-	});
+	let enqueuer = queueEnqueuer(queue);
 
 	return (ctx, next) => {
 		ctx.set(Jobs, enqueuer, JOBS_PROPERTY);

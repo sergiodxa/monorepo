@@ -10,8 +10,10 @@
 import type { JSONValue } from "@sdxc/types";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { unwrap } from "@sdxc/result";
+
 import type { EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs.js";
-import type { JobMessage } from "./queue.js";
+import type { JobMessage, JobQueue } from "./queue.js";
 
 /** Enqueues jobs from the app's map, each message addressed by the job's own name. */
 export interface JobEnqueuer {
@@ -50,4 +52,17 @@ export function createJobEnqueuer(send: (messages: JobMessage[]) => Promise<void
 			await send(inputs.map((input) => ({ job: job.name, body: input as JSONValue })));
 		},
 	};
+}
+
+/**
+ * The enqueuer a host's middleware publishes: it writes straight through `queue`, raising the
+ * backend's own failure so a caller that could not enqueue fails rather than reporting work
+ * that never runs.
+ * @param queue The backend to write through.
+ */
+export function queueEnqueuer(queue: JobQueue): JobEnqueuer {
+	return createJobEnqueuer(async (messages) => {
+		if (messages.length === 0) return;
+		unwrap(await queue.send(messages));
+	});
 }

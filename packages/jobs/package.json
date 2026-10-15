@@ -6,6 +6,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./cli": "./src/cli.ts",
 		"./cloudflare": "./src/adapters/cloudflare.ts",
 		"./conformance": "./src/testing/conformance.ts",
 		"./errors": "./src/errors.ts",
@@ -29,16 +30,21 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20261011.1",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": "^5.20261011.1",
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0",
 		"vitest": "^4.1.10"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {
+			"optional": true
+		},
+		"@sdxc/cli": {
 			"optional": true
 		},
 		"remix": {

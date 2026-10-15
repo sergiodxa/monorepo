@@ -15,8 +15,9 @@ npm add @sdxc/jobs
 
 Payload schemas are any [Standard Schema](https://standardschema.dev), such as `remix/data-schema`
 from [`remix`](https://www.npmjs.com/package/remix). The optional peers are
-`@cloudflare/workers-types` for `./cloudflare`, `remix` for the context keys and `./router`, and
-`vitest` for `./conformance`.
+`@cloudflare/workers-types` for `./cloudflare`, `remix` for the context keys and `./router`,
+[`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) (with `remix`) for `./cli`, and `vitest`
+for `./conformance`.
 
 | Entry point     | Exports                                                                   |
 | --------------- | ------------------------------------------------------------------------- |
@@ -24,6 +25,7 @@ from [`remix`](https://www.npmjs.com/package/remix). The optional peers are
 | `./cloudflare`  | `queue` and `worker` for Cloudflare Queues                                |
 | `./memory`      | An in-memory `queue` for tests and platform-free runs                     |
 | `./router`      | `jobEnqueuer()`, the `remix/router` middleware publishing `ctx.jobs`      |
+| `./cli`         | `jobEnqueuer()`, the `@sdxc/cli` middleware publishing `ctx.jobs`         |
 | `./queue`       | The `JobQueue` interface an adapter implements                            |
 | `./errors`      | Each ending class on its own, for type positions                          |
 | `./uptime`      | `createUptimeReporter()`, a cron-monitor ping                             |
@@ -273,6 +275,15 @@ enqueued during a request or another job continues that trace, so the two share 
 Publishes `ctx.jobs` (a `JobEnqueuer` with `enqueue` and `enqueueMany`) and the `Jobs` context
 key. Importing it types `ctx.jobs` on every `RequestContext`, and a failed write throws the
 queue's `JobQueueError`.
+
+### `jobEnqueuer(queue: JobQueue, options?: { dispatcher }): CommandMiddleware` from `./cli`
+
+Publishes `ctx.jobs` to an [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) command under
+the same `Jobs` key, writing through `queue`; each message carries the run's trace. With
+`options.dispatcher`, `queue` is a memory queue whose jobs run through that dispatcher in the
+command's process once the handler settles, round after round until nothing is due. A job that
+throws settles as a retry, and messages still delayed are noted as `jobs.pending` on the
+command's log.
 
 ### `queue(binding)` and `worker(dispatcher, options?)` from `./cloudflare`
 
@@ -550,6 +561,54 @@ test("the midnight tick runs cleanup once", async () => {
 	expect(dispatcher.crons).toEqual(["0 0 * * *"]);
 });
 ```
+
+## Pattern: Running Enqueued Jobs From A Command
+
+A command line's `jobEnqueuer()` takes the queue the run should write to. Locally that is a memory
+queue drained through the app's own dispatcher, so a job a command enqueues runs in the terminal
+the developer is watching, against the same database; against production it is the deployed
+queue, and the deployed consumer does the work.
+
+```typescript
+import { command, commands, createCLI, success } from "@sdxc/cli";
+import { createJobDispatcher } from "@sdxc/jobs";
+import { jobEnqueuer } from "@sdxc/jobs/cli";
+import * as memory from "@sdxc/jobs/memory";
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware/cli";
+import { trace } from "@sdxc/trace-context/middleware/cli";
+
+import jobs from "./jobs.js";
+
+let logger = createLogger({ service: "app-cli" });
+let queue = memory.queue();
+let dispatcher = createJobDispatcher({ queue, logger, maxAttempts: 3 });
+dispatcher.map(jobs.sendReceipt, () => import("./jobs/send-receipt.js"));
+
+let contract = commands({
+	receipts: commands({ resend: command({ description: "Resend receipts" }) }),
+});
+
+let cli = createCLI({
+	name: "app",
+	commands: contract,
+	middleware: [log(logger), trace(), jobEnqueuer(queue, { dispatcher })],
+});
+
+cli.map(contract.receipts.resend, async (ctx) => {
+	let orders = await findUnsentOrders();
+	await ctx.jobs.enqueueMany(
+		jobs.sendReceipt,
+		orders.map((order) => ({ orderId: order.id })),
+	);
+	return success();
+});
+
+process.exitCode = await cli.run(process.argv.slice(2));
+```
+
+Each job writes its own `job` record under the command's log and continues its trace. Building
+the dispatcher over the same memory queue means the jobs those jobs enqueue run as well.
 
 ## Pattern: Writing A Queue Adapter
 
