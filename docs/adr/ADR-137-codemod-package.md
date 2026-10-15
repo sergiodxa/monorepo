@@ -253,4 +253,4 @@ both bring a Babel parser stack for a task that needs specifier ranges.
 - [x] `findModuleReferences`, `rewriteSpecifiers`, `moveImports`
 - [x] `addProperty`, `insertAfterLast`
 - [x] Exact-output fixtures for every edit
-- [ ] Release build and repo tests moved to `findModuleReferences`
+- [x] Release build and repo tests moved to `findModuleReferences`
