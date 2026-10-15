@@ -20,11 +20,11 @@ import { compare } from "@sdxc/semver";
 
 import type { CommandIO } from "../run.js";
 
+import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { findProjectRoot } from "../project.js";
 
 import {
 	bumpManifest,
-	detectPackageManager,
 	installedVersion,
 	listedScopedPackages,
 	lists,
@@ -185,7 +185,10 @@ export async function upgrade(
 		}
 	}
 
-	let manager = await detectPackageManager(root.data, manifest);
+	let manager = await packageManager({
+		declared: manifest.packageManager,
+		findLockFile: lockFileAtOrAbove(root.data),
+	});
 	let remixFrom = bumped.bumps.find((bump) => bump.name === "remix")?.from ?? null;
 	let promptCommand = [
 		...manager.exec,

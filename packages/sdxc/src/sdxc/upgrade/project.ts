@@ -1,13 +1,12 @@
 /**
  * What `sdxc upgrade` reads from and changes in the project: the installed `sdxc` version, the
- * dependency pins in `package.json`, the package manager that installs them, and the files that
- * import `sdxc` or an `@sdxc/*` package.
+ * dependency pins in `package.json`, and the files that import `sdxc` or an `@sdxc/*` package.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 
 import type { Result } from "@sdxc/result";
@@ -37,49 +36,12 @@ const MANIFEST_SCHEMA = s.object({
 /** The project's `package.json` fields the upgrade reads. */
 export type Manifest = s.InferOutput<typeof MANIFEST_SCHEMA>;
 
-/** A package manager, with how the project installs and how it runs an installed binary. */
-export interface PackageManager {
-	name: "bun" | "npm" | "pnpm" | "yarn";
-	install: string[];
-	/** The command prefix that runs a binary from the project's own `node_modules`. */
-	exec: string[];
-	/** The command prefix that runs a `package.json` script. */
-	run: string[];
-}
-
 /** One dependency pin `bumpManifest` changed. */
 export interface Bump {
 	name: string;
 	from: string;
 	to: string;
 }
-
-/** The package managers by name, with the commands each one spells. */
-const PACKAGE_MANAGERS: Record<PackageManager["name"], PackageManager> = {
-	bun: { name: "bun", install: ["bun", "install"], exec: ["bunx", "sdxc"], run: ["bun", "run"] },
-	npm: { name: "npm", install: ["npm", "install"], exec: ["npx", "sdxc"], run: ["npm", "run"] },
-	pnpm: {
-		name: "pnpm",
-		install: ["pnpm", "install"],
-		exec: ["pnpm", "exec", "sdxc"],
-		run: ["pnpm", "run"],
-	},
-	yarn: {
-		name: "yarn",
-		install: ["yarn", "install"],
-		exec: ["yarn", "sdxc"],
-		run: ["yarn", "run"],
-	},
-};
-
-/** Lock files by the package manager that writes them, in lookup order. */
-const LOCK_FILES: Array<[string, PackageManager["name"]]> = [
-	["bun.lock", "bun"],
-	["bun.lockb", "bun"],
-	["pnpm-lock.yaml", "pnpm"],
-	["yarn.lock", "yarn"],
-	["package-lock.json", "npm"],
-];
 
 /** The project's `package.json`, as written and as parsed. */
 export async function readManifest(
@@ -112,29 +74,6 @@ export async function installedVersion(root: string): Promise<Result<string, Err
 		if (parent === directory) {
 			return failure(new Error("sdxc is not installed; install the project's dependencies first"));
 		}
-		directory = parent;
-	}
-}
-
-/**
- * The project's package manager: the `packageManager` field when it names one, otherwise the
- * first lock file found at or above the root, otherwise npm.
- */
-export async function detectPackageManager(
-	root: string,
-	manifest: Manifest,
-): Promise<PackageManager> {
-	let declared = manifest.packageManager?.split("@")[0];
-	if (declared !== undefined && declared in PACKAGE_MANAGERS) {
-		return PACKAGE_MANAGERS[declared as PackageManager["name"]];
-	}
-	let directory = root;
-	while (true) {
-		for (let [file, name] of LOCK_FILES) {
-			if (isSuccess(await wrap(() => stat(join(directory, file))))) return PACKAGE_MANAGERS[name];
-		}
-		let parent = dirname(directory);
-		if (parent === directory) return PACKAGE_MANAGERS.npm;
 		directory = parent;
 	}
 }

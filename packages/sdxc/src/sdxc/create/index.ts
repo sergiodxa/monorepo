@@ -17,12 +17,13 @@ import { isFailure, success, wrap } from "@sdxc/result";
 
 import type { CommandIO } from "../run.js";
 
+import { packageManager, scriptCommand } from "../package-manager.js";
+
 import type { Git } from "./git.js";
 import type { TemplateSource, TemplateTree } from "./templates.js";
 
 import { SYSTEM_GIT } from "./git.js";
 import { describe, downloadTemplate } from "./github.js";
-import { commandsFor, inferPackageManager } from "./package-manager.js";
 import { resolveTarget } from "./target.js";
 import {
 	completeBuiltin,
@@ -157,15 +158,16 @@ export async function create(
 		}
 	}
 
-	let manager = inferPackageManager(
-		fetched.data.tree,
-		options.userAgent ?? process.env.npm_config_user_agent,
-	);
+	let tree = fetched.data.tree;
+	let manager = await packageManager({
+		declared: treeManifest(tree)?.packageManager,
+		findLockFile: (names) => names.find((name) => tree.files.has(name)) ?? null,
+		userAgent: options.userAgent ?? process.env.npm_config_user_agent,
+	});
 	let steps = [];
 	if (shown !== "") steps.push(`cd ${shown.includes(" ") ? JSON.stringify(shown) : shown}`);
-	let commands = commandsFor(manager, "dev");
-	steps.push(commands.install);
-	if (hasScript(fetched.data.tree, "dev")) steps.push(commands.run);
+	steps.push(manager.install.join(" "));
+	if (hasScript(tree, "dev")) steps.push(scriptCommand(manager, "dev"));
 	io.stdout(`\nNext steps:\n${steps.map((step) => `  ${step}\n`).join("")}`);
 	return 0;
 }
@@ -191,14 +193,29 @@ async function fetchTemplate(
 	return success({ tree: tree.data, description: `the ${source.name} template` });
 }
 
+/** The fields of the tree's `package.json` the next steps read, or `null` without a readable one. */
+function treeManifest(
+	tree: TemplateTree,
+): { packageManager?: string; scripts?: Record<string, unknown> } | null {
+	let bytes = tree.files.get("package.json");
+	if (bytes === undefined) return null;
+	let manifest = wrap(() => JSON.parse(new TextDecoder().decode(bytes)) as unknown);
+	if (isFailure(manifest) || typeof manifest.data !== "object" || manifest.data === null) {
+		return null;
+	}
+	let { packageManager: declared, scripts } = manifest.data as Record<string, unknown>;
+	return {
+		...(typeof declared === "string" ? { packageManager: declared } : {}),
+		...(typeof scripts === "object" && scripts !== null
+			? { scripts: scripts as Record<string, unknown> }
+			: {}),
+	};
+}
+
 /** Whether the tree's `package.json` declares `script`. */
 function hasScript(tree: TemplateTree, script: string): boolean {
-	let bytes = tree.files.get("package.json");
-	if (bytes === undefined) return false;
-	let manifest = wrap(() => JSON.parse(new TextDecoder().decode(bytes)) as unknown);
-	if (isFailure(manifest)) return false;
-	let scripts = (manifest.data as { scripts?: unknown } | null)?.scripts;
-	return typeof scripts === "object" && scripts !== null && script in scripts;
+	let scripts = treeManifest(tree)?.scripts;
+	return scripts !== undefined && script in scripts;
 }
 
 /**

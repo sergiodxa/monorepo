@@ -17,11 +17,12 @@ import { compare } from "@sdxc/semver";
 
 import { loadConfig } from "../config.js";
 import { readLock, uiEntries } from "../lock.js";
+import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 
 import type { ChangelogEntry } from "./changelog.js";
 
 import { entriesBetween, fullHistoryStart, readChangelog } from "./changelog.js";
-import { detectPackageManager, projectImports, readManifest } from "./project.js";
+import { projectImports, readManifest } from "./project.js";
 
 /** Where each release's GitHub Release lives, `<RELEASES>/tag/v<version>`. */
 const RELEASES = "https://github.com/sergiodxa/monorepo/releases";
@@ -153,7 +154,10 @@ export async function buildPrompt(options: {
 	if (isFailure(entries)) return entries;
 	let project = await readManifest(options.root);
 	if (isFailure(project)) return project;
-	let manager = await detectPackageManager(options.root, project.data.manifest);
+	let manager = await packageManager({
+		declared: project.data.manifest.packageManager,
+		findLockFile: lockFileAtOrAbove(options.root),
+	});
 	let scripts = project.data.manifest.scripts ?? {};
 	let imports = await projectImports(options.root);
 	let packages = new Set(["sdxc"]);
