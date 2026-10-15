@@ -73,6 +73,6 @@ answer may never come.
 
 ## Current Progress
 
-- [ ] `packages/kit` holds the command line, templates, stubs, schemas, registry and changelog
-- [ ] `packages/sdxc` re-exports `sdxc/kit` and runs the kit from its `bin`
+- [x] `packages/kit` holds the command line, templates, stubs, schemas, registry and changelog
+- [x] `packages/sdxc` re-exports `sdxc/kit` and runs the kit from its `bin`
 - [ ] Bootstrap `@sdxc/kit` on npm and configure its trusted publisher

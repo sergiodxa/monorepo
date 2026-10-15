@@ -531,7 +531,7 @@ routes, jobs and MCP tools are.
 
 ## Current Progress
 
-- [ ] Phase 1: Package (`packages/cli`), built; npm bootstrap outstanding
+- [x] Phase 1: Package (`packages/cli`)
   - [x] Contract, parsing and one usage error per run; long aliases (`--jobs` for
         `--concurrency`) beside short ones, for `spec`
   - [x] Generated help and closest-name suggestions
@@ -545,7 +545,7 @@ routes, jobs and MCP tools are.
   - [x] `ctx.task` with nesting, terminal ownership and the plain fallback
   - [x] README, root README row, docs-site group, `sdxc/cli` in the umbrella; `sdxc`'s handwritten
         sources moved to `src/sdxc.ts` and `src/sdxc/` so the generator can write `src/cli.ts`
-  - [ ] Bootstrap on npm and configure the trusted publisher
+  - [x] Bootstrap on npm and configure the trusted publisher
 - [x] Phase 2: `sdxc` on `@sdxc/cli`
   - [x] `SDXC_COMMANDS` in `src/sdxc/contract.ts`, `createSDXC()` in `src/sdxc/cli.ts` mapping
         every handler in `src/sdxc/commands/` through `lazy()`; `project()` publishes
