@@ -13,7 +13,8 @@ npm add @sdxc/logger
 ```
 
 The `@sdxc/logger/middleware` entry point needs [`remix`](https://www.npmjs.com/package/remix)
-v3 installed alongside it. The current log lives in `AsyncLocalStorage`, so the Worker enables
+v3 installed alongside it, and `@sdxc/logger/middleware/cli` also needs
+[`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli). The current log lives in `AsyncLocalStorage`, so the Worker enables
 the `nodejs_compat` compatibility flag.
 
 ## Usage
@@ -205,6 +206,14 @@ one is open; otherwise it opens a `request` log with `logger`'s configuration, r
 `http.status`, and writes it once the response settles. Either way it records `route` and
 `http.method`. Without a `logger` the record carries no `service`.
 
+### `log(logger?: Logger)` from `@sdxc/logger/middleware/cli`
+
+[`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) middleware publishing the command run's
+log as `ctx.log`, under `CurrentLog`, and for `currentLog()`. It joins the current log when one
+is open, adding `command.duration_ms`; otherwise it opens a `command` log written once the
+handler settles. Either way it records `command.path` (`users find`), and a run that throws
+records `command.exit_code`.
+
 ### `CurrentLog` from `@sdxc/logger/middleware`
 
 The context key `log()` publishes under, read as `ctx.get(CurrentLog)` by code that receives a
@@ -212,7 +221,7 @@ context without knowing its middleware.
 
 ### Types
 
-- `Log.Kind`: `"request" | "cron" | "queue" | "job" | "alarm"`.
+- `Log.Kind`: `"request" | "cron" | "queue" | "job" | "alarm" | "command"`.
 - `Log.Outcome`: `"ok" | "degraded" | "error"`.
 - `Log.Value`: `string | number | boolean | null`.
 - `Log.Fields`: a record of values, or of one level of nested values.
@@ -271,6 +280,42 @@ export const dispatcher = createJobDispatcher({ logger });
 ```
 
 Inside a job handler, `ctx.log` and `currentLog()` read the job's own log.
+
+## Pattern: Logging a Command Line
+
+A command line built with [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) writes one
+`command` record per run. A command keeps stderr for its own output, so its logger writes
+somewhere else, here to a file:
+
+```typescript
+import { appendFileSync } from "node:fs";
+
+import { command, commands, createCLI, success } from "@sdxc/cli";
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware/cli";
+
+let logger = createLogger({
+	service: "app-cli",
+	sink: (record) => appendFileSync("cli.log", `${JSON.stringify(record)}\n`),
+});
+
+let contract = commands({
+	users: commands({ prune: command({ description: "Remove stale users" }) }),
+});
+
+let cli = createCLI({ name: "app", commands: contract, middleware: [log(logger)] });
+
+cli.map(contract.users.prune, async (ctx) => {
+	let removed = await ctx.log.time("db", () => pruneUsers());
+	ctx.log.set({ users: { removed } });
+	return success();
+});
+
+process.exitCode = await cli.run(process.argv.slice(2));
+```
+
+The record carries `kind: "command"`, `command.path: "users prune"`, `duration_ms` and whatever
+the handler set; code the handler calls reads the same log through `currentLog()`.
 
 ## Pattern: A Durable Object Alarm
 

@@ -21,7 +21,7 @@ const MAX_NOTES = 200;
 
 export namespace Log {
 	/** What kind of invocation produced the log. */
-	export type Kind = "request" | "cron" | "queue" | "job" | "alarm";
+	export type Kind = "request" | "cron" | "queue" | "job" | "alarm" | "command";
 
 	/** How the invocation ended: `ok` until `warn` or `fail` says otherwise. */
 	export type Outcome = "ok" | "degraded" | "error";

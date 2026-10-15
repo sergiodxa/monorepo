@@ -601,11 +601,16 @@
         "@sdxc/webhooks": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
+      "optionalPeers": [
+        "@sdxc/cli",
+      ],
     },
     "packages/bracket-params": {
       "name": "@sdxc/bracket-params",
@@ -739,6 +744,7 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
+        "@sdxc/cli": "workspace:*",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
@@ -750,11 +756,13 @@
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/sample": "workspace:*",
         "remix": "3.0.0",
       },
       "optionalPeers": [
+        "@sdxc/cli",
         "@sdxc/jobs",
         "@sdxc/sample",
       ],
@@ -784,15 +792,21 @@
     "packages/database-middleware": {
       "name": "@sdxc/database-middleware",
       "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "remix": "3.0.0",
       },
       "optionalPeers": [
+        "@sdxc/cli",
         "@sdxc/jobs",
       ],
     },
@@ -1046,11 +1060,16 @@
         "@sdxc/messageformat": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
+      "optionalPeers": [
+        "@sdxc/cli",
+      ],
     },
     "packages/icalendar": {
       "name": "@sdxc/icalendar",
@@ -1231,13 +1250,16 @@
         "@sdxc/result": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "@types/node": "^26.6.5",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
       "optionalPeers": [
+        "@sdxc/cli",
         "remix",
       ],
     },
@@ -1253,11 +1275,16 @@
         "@sdxc/uuid": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
+      "optionalPeers": [
+        "@sdxc/cli",
+      ],
     },
     "packages/markdown": {
       "name": "@sdxc/markdown",
@@ -1395,11 +1422,16 @@
         "@sdxc/webhooks": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
+      "optionalPeers": [
+        "@sdxc/cli",
+      ],
     },
     "packages/no-www-middleware": {
       "name": "@sdxc/no-www-middleware",

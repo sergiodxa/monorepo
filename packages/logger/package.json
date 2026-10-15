@@ -6,7 +6,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./middleware": "./src/middleware.ts"
+		"./middleware": "./src/middleware.ts",
+		"./middleware/cli": "./src/cli.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -17,13 +18,18 @@
 		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@types/node": "^26.6.5",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		},
 		"remix": {
 			"optional": true
 		}
