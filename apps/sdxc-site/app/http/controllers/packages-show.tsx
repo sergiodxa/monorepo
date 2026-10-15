@@ -53,12 +53,6 @@ import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/**
- * The package that re-exports the whole collection, whose page links the package list in
- * place of naming each dependency.
- */
-const UMBRELLA = "sdxc";
-
 /** Where a package's source is read, which is what every "source" link points at. */
 const SOURCE_BASE = "https://github.com/sergiodxa/monorepo/tree/main/packages/";
 
@@ -106,13 +100,7 @@ export default createAction(routes.api.show, async (ctx) => {
 						</InstallCommand>
 
 						<dl mix={[vstack({ gap: 2 }), m(0)]}>
-							{name === UMBRELLA ? (
-								<PackageFact label="Installs with">
-									<a href={routes.api.index.href()} mix={[text("sm"), fg("brand")]}>
-										{entry.internalDependencies.length} packages
-									</a>
-								</PackageFact>
-							) : entry.internalDependencies.length > 0 ? (
+							{entry.internalDependencies.length > 0 ? (
 								<PackageFact label="Installs with">
 									{entry.internalDependencies.map((dependency) => (
 										<a

@@ -84,13 +84,12 @@ describe("GET /api/:name", () => {
 		expect(body).not.toContain("Through sdxc");
 	});
 
-	test("links the package list from the sdxc page in place of naming every dependency", async () => {
-		let body = await (await fetchApp("/api/sdxc")).text();
+	test("leaves the private sdxc umbrella out of the package pages", async () => {
+		let page = await fetchApp("/api/sdxc");
+		let index = await (await fetchApp("/api")).text();
 
-		expect(body).toContain("npm add sdxc remix");
-		expect(body).toMatch(
-			/Installs with<\/dt><dd[^>]*><a[^>]*href="\/api"[^>]*>\d+ packages<\/a><\/dd>/,
-		);
+		expect(page.status).toBe(404);
+		expect(index).not.toContain('href="/api/sdxc"');
 	});
 
 	test("rewrites a sibling's npm link to its page here", async () => {

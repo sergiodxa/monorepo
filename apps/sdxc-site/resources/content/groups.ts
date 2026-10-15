@@ -19,7 +19,7 @@ export interface PackageGroupDefinition {
 export const OTHER_GROUP = "Everything else";
 
 export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
-	{ title: "Everything at once", packages: ["sdxc", "kit"] },
+	{ title: "The sdxc command", packages: ["kit"] },
 	{
 		title: "HTTP & responses",
 		packages: [

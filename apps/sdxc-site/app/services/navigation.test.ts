@@ -38,10 +38,10 @@ describe("buildPackagesNav", () => {
 		expect(entries.length).toBeGreaterThan(0);
 
 		for (let entry of entries) {
-			expect(entry.title).toMatch(/^(?:@sdxc\/[a-z0-9-]+|sdxc)$/);
+			expect(entry.title).toMatch(/^@sdxc\/[a-z0-9-]+$/);
 			expect(entry.href).toBe(`/api/${entry.title.replace(/^@sdxc\//, "")}`);
 		}
-		expect(entries).toContainEqual({ title: "sdxc", href: "/api/sdxc" });
+		expect(entries).not.toContainEqual({ title: "sdxc", href: "/api/sdxc" });
 
 		let titles = entries.map((entry) => entry.title);
 		expect(titles).not.toContain("@sdxc/u");
