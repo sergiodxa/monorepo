@@ -67,7 +67,7 @@ describe(models, () => {
 		let cli = createCLI({
 			name: "app",
 			commands: CONTRACT,
-			middleware: [database(db), models(registry, (ctx) => ({ db: ctx.get(DB) as Database }))],
+			middleware: [database(db), models(registry, (ctx) => ({ db: ctx.require(DB) }))],
 		});
 		cli.map(CONTRACT.users.create, async (ctx) => {
 			let created = await ctx.models.users.create({
