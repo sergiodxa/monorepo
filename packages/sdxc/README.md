@@ -25,13 +25,16 @@ import "sdxc/ui/reset.css";
 
 A bundle carries only the subpaths it imports. Import every package through `sdxc` and list no `@sdxc/*` package beside it: a package installed twice, once on its own and once through `sdxc`, holds two instances whose context keys and `instanceof` checks do not match.
 
-### Write the CLI configuration
+### Start a project and grow it
 
 ```sh
-npx sdxc init
+npx sdxc create my-app              # a Remix v3 app, or --template org/repo from GitHub
+npx sdxc make controller posts/show # a file where the app layout puts it, with its test
+npx sdxc ui add dialog              # copy a component into the project to edit it
+npx sdxc upgrade                    # move to the latest release and print a prompt for the code
 ```
 
-`sdxc init` writes `.config/sdxc.jsonc` with every key at its default and a comment explaining it. It refuses to run when the project already has a configuration file.
+On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
 
 ## API
 
@@ -49,17 +52,19 @@ The JSON Schema 2020-12 document for one line of the lock file, `.config/sdxc.lo
 
 ### The `sdxc` command
 
-Every command works from the project root: the nearest directory at or above the current one that holds a `package.json`. `sdxc <command> --help` lists what each one takes. On a terminal a command asks for what the command line left out; every question has a flag, and without a terminal the defaults apply, so scripts and agents never wait on one.
+| Command        | What it does                                                                   |
+| -------------- | ------------------------------------------------------------------------------ |
+| `sdxc create`  | Writes a new project from the built-in `app` template or a GitHub repository   |
+| `sdxc init`    | Writes `.config/sdxc.jsonc` with every key at its default                      |
+| `sdxc make`    | Writes a controller, job, model, migration or other file, declared and mapped  |
+| `sdxc ui`      | Copies `@sdxc/ui` components into the project and points imports at the copies |
+| `sdxc upgrade` | Moves `sdxc` and `remix` to a release and prints the prompt to update the code |
 
-- `sdxc init [--dry-run]`: writes `.config/sdxc.jsonc`; `--dry-run` prints it instead.
-- `sdxc create [directory] [--template <template>] [--git | --no-git]`: writes a new project into a missing or empty directory from the built-in `app` template (a Remix v3 Worker on Cloudflare) or from any GitHub repository, `--template org/repo[/path][#ref]`, sending `GITHUB_TOKEN` or `GH_TOKEN` when set, or a token asked for on a terminal after GitHub refuses the download. It installs nothing and prints the next steps.
-- `sdxc ui list | add <component...> [--with-deps] | diff <component> | update <component...> [--force] | remove <component...>`: copies `@sdxc/ui` components from the installed release into `ui.directory` and points every import of them in the project, `sdxc/ui` and `sdxc/ui/<name>` alike, at the copies; `update` replaces copied files still unedited and asks before replacing an edited one, and `remove` points the imports back. `add`, `update` and `remove` take `--dry-run`.
-- `sdxc make <kind> <name>` (each kind a subcommand with its own flags): writes a `controller`, `middleware`, `validator`, `job`, `model`, `migration`, `factory`, `service`, `policy`, `initializer`, `email` or `mcp` file where the app layout puts it, with a test beside it (`make.tests`); a slash in the name is a folder (`sdxc make job trials/expire`). `sdxc make migration <name> [--chain <chain>]` numbers the file after the highest in that chain's folder. `make job` (`--cron <expression>`), `make controller` (`--method`, `--path`, `--routes`) and `make mcp` (`--resource`) also declare what they wrote, in `app/jobs/index.ts`, the route contract or the MCP declarations, and map it in the initializer that serves it; when either edit cannot be placed, neither is made and both are printed to make by hand. A stub in `make.stubs` replaces the built-in one of the same name, and `sdxc make stubs [kind...]` copies the built-in stubs there to edit.
-- `sdxc upgrade [version] [--no-install] [--output <file>]`: moves `sdxc`, and `remix` with it, to `version` (the latest when omitted), installs it, and prints the prompt an AI agent follows to update the code, asking first on a terminal when the release breaks a package the project imports; `sdxc upgrade --prompt --from <version>` prints that prompt again without changing anything.
+`sdxc <command> --help` lists each command's arguments and flags. Commands run from the project root, the nearest directory with a `package.json`.
 
 ### Configuration
 
-The CLI reads `.config/sdxc.jsonc`, or `sdxc.jsonc` at the project root, as JSON with comments, and stops when both exist. Every key is optional, an unknown key is an error, and every configured path must stay inside the project.
+The CLI reads `.config/sdxc.jsonc` (or `sdxc.jsonc` at the project root). Every key is optional.
 
 | Key               | Default                                | Meaning                                                                      |
 | ----------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
@@ -73,7 +78,7 @@ The CLI reads `.config/sdxc.jsonc`, or `sdxc.jsonc` at the project root, as JSON
 | `format`          | none                                   | Command run once on every file a command wrote or edited, the paths appended |
 | `lock`            | `.config/sdxc.lock.jsonl`              | Where the CLI keeps its state                                                |
 
-`format` is an argument list run without a shell, such as `["bunx", "vp", "fmt"]`. A non-zero exit is reported and leaves the files as the CLI wrote them.
+`format` is an argument list, such as `["bunx", "vp", "fmt"]`.
 
 ## Versioning
 
