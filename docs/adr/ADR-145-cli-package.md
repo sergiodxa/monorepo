@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-14
+**Accepted** - 2026-10-15
 
 ## Background
 
@@ -340,14 +340,19 @@ export default createCommand(commandset.users.grant, async (ctx) => {
 	...
 });
 
+// app/initializers/cli.ts
+export let cli = createCLI({ name: "app", commands: commandset, middleware: [database()] });
+cli.map(commandset.users.grant, lazy(() => import("../commands/users/grant.js")));
+
 // bootstrap/cli.ts
-export default createCLI({ name: "app", commands: commandset, middleware: [database()] });
+process.exitCode = await cli.run(process.argv.slice(2));
 ```
 
 - The layout gains one row: a command line command goes in `app/commands/`, declared in
-  `app/commands/index.ts` with one handler file per command, laid out like `app/mcp/`, and
-  `bootstrap/cli.ts` maps each through `lazy()`. `sdxc make command users/grant` writes the
-  handler, its test, the declaration and the mapping, as it does for jobs and tools.
+  `app/commands/index.ts` with one handler file per command, laid out like `app/mcp/`.
+  `app/initializers/cli.ts` builds the command line and maps each handler through `lazy()`, so a
+  test imports it, and `bootstrap/cli.ts` only runs it. `sdxc make command users/grant` writes
+  the handler, its test, the declaration and the mapping, as it does for jobs and tools.
 - **It runs on the app's runtime, started by a script.** `bootstrap/cli.ts` is a plain module:
   `"cli": "bun ./bootstrap/cli.ts"` (or `node`) in `package.json`, run as
   `bun run cli users grant ada@example.com`. Nothing installs it globally.
