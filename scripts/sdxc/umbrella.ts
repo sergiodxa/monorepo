@@ -1,8 +1,8 @@
 /**
- * Generates the `sdxc` umbrella package from the workspace: one re-export module per export
- * subpath of every exposed `@sdxc/*` package, the `exports` map pointing at them, the dependency
- * list, `config.schema.json` and `lock.schema.json`. Pure over the files it reads, so the drift test and the
- * writer share one definition of what the committed package must hold.
+ * Generates the `sdxc` umbrella package from the workspace (one re-export module per export
+ * subpath of every exposed `@sdxc/*` package, the `exports` map and the dependency list) and the
+ * kit's `config.schema.json` and `lock.schema.json`. Pure over the files it reads, so the drift
+ * test and the writer share one definition of what the committed packages must hold.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,8 +19,8 @@ import ts from "typescript";
 
 import type { ExportTarget, Package, PackageManifest } from "../release/workspace.js";
 
-import { configJSONSchema } from "../../packages/sdxc/src/sdxc/config.js";
-import { lockJSONSchema } from "../../packages/sdxc/src/sdxc/lock.js";
+import { configJSONSchema } from "../../packages/kit/src/config.js";
+import { lockJSONSchema } from "../../packages/kit/src/lock.js";
 import { WORKSPACE_SCOPE, readPackages } from "../release/workspace.js";
 
 /** The umbrella's directory under `packages/`, which is also its unscoped name. */
@@ -37,15 +37,15 @@ export const EXCLUDED_PACKAGES: ReadonlySet<string> = new Set([
 	"@sdxc/spec",
 ]);
 
+/** The kit's directory under `packages/`, the package that owns the command line's schemas. */
+export const KIT_DIR = "kit";
+
 /**
- * Entries directly under the umbrella's `src/` that hold its handwritten command line. They take
- * the umbrella's own name, which no exposed package can have, so every package directory name
- * stays free for a generated subpath; the generator owns everything else there.
+ * Entries directly under the umbrella's `src/` that are handwritten: the binary that runs the
+ * kit's command line. It takes the umbrella's own name, which no exposed package can have, so
+ * every package directory name stays free for a generated subpath; the generator owns the rest.
  */
-export const HANDWRITTEN_SOURCES: ReadonlySet<string> = new Set([
-	UMBRELLA_DIR,
-	`${UMBRELLA_DIR}.ts`,
-]);
+export const HANDWRITTEN_SOURCES: ReadonlySet<string> = new Set([`${UMBRELLA_DIR}.ts`]);
 
 /** The command that rewrites the umbrella, as every generated header and failure names it. */
 export const GENERATE_COMMAND = "bun run sdxc:generate";
@@ -66,7 +66,7 @@ const AUTHOR_TAGS = [
 
 /** Everything the committed umbrella derives from the workspace. */
 export interface Umbrella {
-	/** File contents keyed by path relative to `packages/sdxc`, sources and the schema alike. */
+	/** File contents keyed by path relative to `packages/sdxc`, re-exports and copied JSON alike. */
 	files: Map<string, string>;
 	/** The package's whole `exports` map. */
 	exports: Record<string, ExportTarget>;
@@ -75,9 +75,9 @@ export interface Umbrella {
 }
 
 /**
- * The umbrella for the workspace at `root`. Fails on a target the generator cannot forward (a fallback array, a wildcard under
- * conditions, a file that is neither TypeScript nor CSS), and two subpaths that would write
- * different content to one file.
+ * The umbrella for the workspace at `root`. Fails on a target the generator cannot forward (a
+ * fallback array, a wildcard under conditions, a file that is not TypeScript, CSS or JSON), and
+ * two subpaths that would write different content to one file.
  */
 export async function generateUmbrella(root: string): Promise<Result<Umbrella, Error>> {
 	let workspace = await readPackages(root);
@@ -99,14 +99,6 @@ export async function generateUmbrella(root: string): Promise<Result<Umbrella, E
 			exports[entry.key] = entry.target;
 		}
 	}
-	let schema = configJSONSchema();
-	if (isFailure(schema)) return schema;
-	files.set("config.schema.json", `${JSON.stringify(schema.data, null, "\t")}\n`);
-	exports["./config.schema.json"] = "./config.schema.json";
-	let lockSchema = lockJSONSchema();
-	if (isFailure(lockSchema)) return lockSchema;
-	files.set("lock.schema.json", `${JSON.stringify(lockSchema.data, null, "\t")}\n`);
-	exports["./lock.schema.json"] = "./lock.schema.json";
 	return success({ files, exports, dependencies: exposed.map((pkg) => pkg.name).sort() });
 }
 
@@ -127,15 +119,42 @@ export function umbrellaManifest(manifest: PackageManifest, umbrella: Umbrella):
 }
 
 /**
- * Every way the committed umbrella in `packages/sdxc` differs from what the workspace at `root`
- * generates, one sorted line per file or manifest field, so the drift test names exactly what a
- * regeneration would change. JSON files compare by value, since the formatter owns their layout.
+ * The kit's JSON Schema documents, keyed by path relative to `packages/kit`, each rendered from
+ * the schema the command line validates with, so editors and the CLI read one definition.
+ */
+export function generateKitSchemas(): Result<Map<string, string>, Error> {
+	let config = configJSONSchema();
+	if (isFailure(config)) return config;
+	let lock = lockJSONSchema();
+	if (isFailure(lock)) return lock;
+	return success(
+		new Map([
+			["config.schema.json", `${JSON.stringify(config.data, null, "\t")}\n`],
+			["lock.schema.json", `${JSON.stringify(lock.data, null, "\t")}\n`],
+		]),
+	);
+}
+
+/**
+ * Every way the committed umbrella in `packages/sdxc`, and the kit's schemas, differ from what
+ * the workspace at `root` generates, one sorted line per file or manifest field, so the drift
+ * test names exactly what a regeneration would change. JSON compares by value, since the
+ * formatter owns its layout; a kit schema's line starts with `kit/`.
  */
 export async function umbrellaDrift(root: string): Promise<Result<string[], Error>> {
 	let umbrella = await generateUmbrella(root);
 	if (isFailure(umbrella)) return umbrella;
 	let packageDir = join(root, "packages", UMBRELLA_DIR);
 	let problems: string[] = [];
+	let schemas = generateKitSchemas();
+	if (isFailure(schemas)) return schemas;
+	for (let [path, expected] of schemas.data) {
+		let committed = await wrap(() => readFile(join(root, "packages", KIT_DIR, path), "utf8"));
+		if (isFailure(committed)) problems.push(`${KIT_DIR}/${path} is missing`);
+		else if (!isDeepStrictEqual(JSON.parse(committed.data), JSON.parse(expected))) {
+			problems.push(`${KIT_DIR}/${path} is out of date`);
+		}
+	}
 	for (let [path, expected] of umbrella.data.files) {
 		let committed = await wrap(() => readFile(join(packageDir, path), "utf8"));
 		if (isFailure(committed)) {
@@ -222,6 +241,7 @@ async function packageEntries(root: string, pkg: Package): Promise<Result<Entry[
 /**
  * A plain subpath: one module per string target, conditions kept, so `./sqlite` with `bun` and
  * `default` targets becomes `sqlite.bun.ts` and `sqlite.default.ts` under the same conditions.
+ * A JSON target is copied, since a JSON document cannot re-export another.
  */
 async function subpathEntry(
 	root: string,
@@ -257,6 +277,14 @@ async function subpathEntry(
 			files.set(path, stylesheet(specifier));
 			return success(`./${path}`);
 		}
+		if (target.endsWith(".json")) {
+			let source = join(root, "packages", pkg.dir, target);
+			let content = await wrap(() => readFile(source, "utf8"));
+			if (isFailure(content)) return failure(new Error(`${source}: ${content.error.message}`));
+			let path = `${base.endsWith(".json") ? base.slice(0, -5) : base}${suffix}.json`;
+			files.set(path, content.data);
+			return success(`./${path}`);
+		}
 		if (TYPESCRIPT_TARGET.test(target)) {
 			let hasDefault = await hasDefaultExport(join(root, "packages", pkg.dir, target));
 			if (isFailure(hasDefault)) return hasDefault;
@@ -265,7 +293,7 @@ async function subpathEntry(
 			return success(`./${path}`);
 		}
 		return failure(
-			new Error(`${specifier} exports ${target}, which is neither TypeScript nor CSS`),
+			new Error(`${specifier} exports ${target}, which is not TypeScript, CSS or JSON`),
 		);
 	}
 

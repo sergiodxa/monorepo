@@ -1,6 +1,6 @@
 /**
  * The templates `sdxc create` starts a project from: a name without a slash is a template
- * shipped in the `sdxc` package, and `org/repo[/path][#ref]` is a GitHub repository. Either
+ * shipped in the `@sdxc/kit` package, and `org/repo[/path][#ref]` is a GitHub repository. Either
  * way the template becomes an in-memory file tree, completed for the new project, then written.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -47,15 +47,15 @@ export interface TemplateTree {
 	directories: Set<string>;
 }
 
-/** The `sdxc` package's own manifest fields a built-in template pins. */
+/** The kit's own manifest fields a built-in template pins. */
 interface OwnManifest {
 	version?: string;
 	peerDependencies?: Record<string, string>;
 }
 
-/** The directory of the installed `sdxc` package, which holds `templates/` and `package.json`. */
+/** The directory of the installed `@sdxc/kit` package, which holds `templates/` and `package.json`. */
 export function defaultPackageRoot(): string {
-	return fileURLToPath(new URL("../../../", import.meta.url));
+	return fileURLToPath(new URL("../../", import.meta.url));
 }
 
 /**
@@ -145,8 +145,8 @@ async function readInto(directory: string, prefix: string, tree: TemplateTree): 
 }
 
 /**
- * Completes a built-in template for the project `name`: names it, pins `sdxc` to the version
- * running and `remix` to the peer that version declares, and writes `.config/sdxc.jsonc` as
+ * Completes a built-in template for the project `name`: names it, pins `sdxc` to the kit's own
+ * version, the release both ship in, and `remix` to the peer the kit declares, and writes `.config/sdxc.jsonc` as
  * `sdxc init` renders it, so a new configuration key reaches new projects on its own.
  */
 export async function completeBuiltin(

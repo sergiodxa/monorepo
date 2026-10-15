@@ -154,9 +154,10 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
 ### Everything at Once
 
-| Package               | Description                                                                       |
-| --------------------- | --------------------------------------------------------------------------------- |
-| [sdxc](packages/sdxc) | Every @sdxc package under one install and one version, with the sdxc command line |
+| Package                   | Description                                                                                                |
+| ------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| [sdxc](packages/sdxc)     | Every @sdxc package under one install and one version, with the sdxc command line from @sdxc/kit           |
+| [@sdxc/kit](packages/kit) | The sdxc command line: start a Remix v3 app, generate its files, copy UI components into it and upgrade it |
 
 ### Authentication and Identity
 

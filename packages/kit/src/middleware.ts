@@ -1,6 +1,6 @@
 /**
  * What `sdxc` commands share, published onto the context by middleware: the project they work
- * in, with its loaded configuration, and the `sdxc` package their templates, stubs, registry and
+ * in, with its loaded configuration, and the `@sdxc/kit` package their templates, stubs, registry and
  * changelog come from, which a test replaces with a fixture package.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -29,7 +29,7 @@ export interface Project {
 /** The project `project()` found, read as `ctx.project`. */
 export const CurrentProject: { defaultValue?: Project } = createContextKey<Project>();
 
-/** The directory of the `sdxc` package a command reads from, read as `ctx.packageRoot`. */
+/** The directory of the `@sdxc/kit` package a command reads from, read as `ctx.packageRoot`. */
 export const PackageRoot: { defaultValue?: string } = createContextKey<string>();
 
 /**
@@ -56,7 +56,7 @@ export function project(): CommandMiddleware<{
 }
 
 /**
- * Publishes the `sdxc` package directory. `packageRoot(directory)` installs that one;
+ * Publishes the `@sdxc/kit` package directory. `packageRoot(directory)` installs that one;
  * `packageRoot()` keeps the one an earlier middleware installed, or installs the package this
  * module runs from, so a command lists it in its own chain and a test's CLI overrides it.
  */

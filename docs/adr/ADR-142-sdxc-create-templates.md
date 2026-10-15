@@ -27,7 +27,7 @@ any GitHub repository.
   apart from a `.git` folder, so `git init && sdxc create` works; anything else is refused. The
   project is named after the target's last path segment, written to `package.json`'s `name`.
 - **Built-in templates.** A `--template` without a slash names a template shipped in the tarball,
-  from `packages/sdxc/templates/<name>/`; it defaults to `app`, a Remix v3 Worker in the ADR-129
+  from `packages/kit/templates/<name>/`; it defaults to `app`, a Remix v3 Worker in the ADR-129
   layout with `cloudflare.config.ts`, a Vite+ configuration, `.config/sdxc.jsonc`, and `sdxc` and
   `remix` pinned to the versions that release ships with. A test materializes each built-in
   template into a temporary directory and type checks it, so one that stops compiling fails CI.

@@ -35,7 +35,7 @@ async function project(): Promise<string> {
 
 /** The file `init` writes for the schema as it stands, which the built-in templates ship too. */
 const EXPECTED = `{
-	"$schema": "../node_modules/sdxc/config.schema.json",
+	"$schema": "../node_modules/sdxc/src/kit/config.schema.json",
 	"ui": {
 		// Where \`sdxc ui add\` writes components
 		"directory": "resources/components/ui",

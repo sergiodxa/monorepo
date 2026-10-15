@@ -1,7 +1,7 @@
 /**
  * The npm registry as `sdxc upgrade` reads it: one published `sdxc` version, the `remix` version
- * it declares as its peer, and the changelog it ships, so the bump knows all three before
- * anything is installed.
+ * it declares as its peer, and the changelog the `@sdxc/kit` of the same release ships, so the
+ * bump knows all three before anything is installed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,8 +19,14 @@ import { CHANGELOG_FILE, parseChangelog } from "./changelog.js";
 /** Where npm serves one version's manifest, `<REGISTRY>/sdxc/<version or dist-tag>`. */
 export const REGISTRY = "https://registry.npmjs.org";
 
-/** Where one published file of a version is served, `<PACKAGE_FILES>/sdxc@<version>/<file>`. */
+/** Where one published file of a version is served, `<PACKAGE_FILES>/<name>@<version>/<file>`. */
 export const PACKAGE_FILES = "https://unpkg.com";
+
+/**
+ * The package that carries each release's changelog. Every release that ships `sdxc` ships it
+ * at the same version, so an `sdxc` version names the kit holding its changelog.
+ */
+export const CHANGELOG_PACKAGE = "@sdxc/kit";
 
 /** The fields of a version manifest the upgrade reads. */
 const VERSION_SCHEMA = s.object({
@@ -65,14 +71,14 @@ export async function fetchRelease(
 }
 
 /**
- * The changelog the published `sdxc` release `version` ships, read before it is installed so
- * the upgrade can say what breaks on the way.
+ * The changelog of the release `version`, read from its `@sdxc/kit` before anything is
+ * installed so the upgrade can say what breaks on the way.
  */
 export async function fetchChangelog(
 	version: string,
 	signal?: AbortSignal,
 ): Promise<Result<ChangelogEntry[], Error>> {
-	let url = `${PACKAGE_FILES}/sdxc@${encodeURIComponent(version)}/${CHANGELOG_FILE}`;
+	let url = `${PACKAGE_FILES}/${CHANGELOG_PACKAGE}@${encodeURIComponent(version)}/${CHANGELOG_FILE}`;
 	let response = await wrap(() => fetch(url, { signal }));
 	if (isFailure(response)) return response;
 	if (!response.data.ok) {

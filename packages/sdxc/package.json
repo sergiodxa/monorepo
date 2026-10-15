@@ -1,7 +1,7 @@
 {
 	"name": "sdxc",
 	"version": "0.0.1",
-	"description": "Every @sdxc package under one install and one version, with the sdxc command line",
+	"description": "Every @sdxc package under one install and one version, with the sdxc command line from @sdxc/kit",
 	"license": "MIT",
 	"bin": {
 		"sdxc": "./src/sdxc.ts"
@@ -175,6 +175,9 @@
 		"./jwt": "./src/jwt.ts",
 		"./jwt/algorithm": "./src/jwt/algorithm.ts",
 		"./jwt/r2": "./src/jwt/r2.ts",
+		"./kit": "./src/kit.ts",
+		"./kit/config.schema.json": "./src/kit/config.schema.json",
+		"./kit/lock.schema.json": "./src/kit/lock.schema.json",
 		"./lazy-frame/ui": "./src/lazy-frame/ui.ts",
 		"./lazy-route": "./src/lazy-route.ts",
 		"./link-header": "./src/link-header.ts",
@@ -378,9 +381,7 @@
 		"./xml": "./src/xml.ts",
 		"./yaml": "./src/yaml.ts",
 		"./zip": "./src/zip.ts",
-		"./zone-file": "./src/zone-file.ts",
-		"./config.schema.json": "./config.schema.json",
-		"./lock.schema.json": "./lock.schema.json"
+		"./zone-file": "./src/zone-file.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -440,6 +441,7 @@
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
+		"@sdxc/kit": "workspace:*",
 		"@sdxc/lazy-frame": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/link-header": "workspace:*",
@@ -505,12 +507,7 @@
 		"@sdxc/zone-file": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
-		"@pitlane/assets": "0.1.0",
-		"@pitlane/vite-plugin-remix": "0.8.0",
-		"cf": "1.0.0-beta.5",
-		"remix": "3.0.0",
-		"vite": "^8.3.4"
+		"remix": "3.0.0"
 	},
 	"peerDependencies": {
 		"remix": "3.0.0"

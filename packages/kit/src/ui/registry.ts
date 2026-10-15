@@ -1,5 +1,5 @@
 /**
- * The component registry the installed `sdxc` carries in `registry/ui/`, written by its release
+ * The component registry the installed `@sdxc/kit` carries in `registry/ui/`, written by its release
  * build: every `@sdxc/ui` component with its source already importing `sdxc/*`. Reading it from
  * the package itself keeps each copy matched to the helpers installed beside it.
  *
@@ -16,7 +16,7 @@ import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-/** Where the registry sits inside the `sdxc` package. */
+/** Where the registry sits inside the `@sdxc/kit` package. */
 export const REGISTRY_DIR = "registry/ui";
 
 /** A file the registry ships, named as its copy is named in the app: one path segment. */
@@ -45,7 +45,7 @@ export interface Registry {
 }
 
 /**
- * The registry of the `sdxc` package at `packageRoot`, with the version its `package.json`
+ * The registry of the `@sdxc/kit` package at `packageRoot`, with the version its `package.json`
  * declares. A package without `registry/ui` is a failure: the registry exists only in a
  * published release.
  */
@@ -66,7 +66,7 @@ export async function readRegistry(packageRoot: string): Promise<Result<Registry
 	if (isFailure(files)) {
 		return failure(
 			new Error(
-				`This sdxc has no component registry at ${dir}; sdxc ui reads it from a published sdxc release`,
+				`This @sdxc/kit has no component registry at ${dir}; sdxc ui reads it from a published @sdxc/kit release`,
 			),
 		);
 	}

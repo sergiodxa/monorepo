@@ -523,7 +523,7 @@ export default defineConfig({
 		 * they resolve only once materialized; their own test materializes each one and type
 		 * checks it there.
 		 */
-		ignorePatterns: ["packages/sdxc/templates/**"],
+		ignorePatterns: ["packages/kit/templates/**"],
 		plugins: [
 			"eslint",
 			"import",

@@ -72,7 +72,7 @@ describe("readRegistry", () => {
 		let invalid = await readRegistry(misnamed);
 
 		expect(missing.status === "failure" && missing.error.message).toContain(
-			"This sdxc has no component registry",
+			"This @sdxc/kit has no component registry",
 		);
 		expect(invalid.status === "failure" && invalid.error.message).toBe(
 			"registry/ui/tabs.json is not a registry entry",

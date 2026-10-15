@@ -1,6 +1,6 @@
 /**
  * The stubs `sdxc make` writes files from. A project overrides any of them by keeping a file
- * of the same name in `make.stubs`; every other stub comes from the `sdxc` package. A stub is
+ * of the same name in `make.stubs`; every other stub comes from the `@sdxc/kit` package. A stub is
  * the file's text with `{{placeholder}}`s, and one the kind does not define is an error.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -38,7 +38,7 @@ export function stubName(kind: KindName, variant: string | null, test: boolean):
 	return [kind, variant, test ? "test" : null, "stub"].filter((part) => part !== null).join(".");
 }
 
-/** The folder of built-in stubs in the `sdxc` package at `packageRoot`. */
+/** The folder of built-in stubs in the `@sdxc/kit` package at `packageRoot`. */
 export function builtinStubsDir(packageRoot: string): string {
 	return join(packageRoot, "stubs");
 }

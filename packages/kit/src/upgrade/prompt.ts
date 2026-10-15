@@ -134,8 +134,8 @@ export function renderPrompt(input: PromptInput): string {
 }
 
 /**
- * Gathers the prompt for the project at `root` from the `sdxc` installed at `packageRoot`,
- * which is the target release: its version, its changelog, its component registry and its
+ * Gathers the prompt for the project at `root` from the `@sdxc/kit` installed at `packageRoot`,
+ * which the target `sdxc` release pins: its version, its changelog, its component registry and its
  * `remix` peer, compared with `remixFrom` when the bump changed `remix`.
  */
 export async function buildPrompt(options: {
@@ -148,7 +148,7 @@ export async function buildPrompt(options: {
 	if (isFailure(own)) return own;
 	let to = own.data.version;
 	if (compare(options.from, to) > 0) {
-		return failure(new Error(`--from ${options.from} is newer than this sdxc, ${to}`));
+		return failure(new Error(`--from ${options.from} is newer than this @sdxc/kit, ${to}`));
 	}
 	let entries = await readChangelog(options.packageRoot);
 	if (isFailure(entries)) return entries;
@@ -191,7 +191,7 @@ export function packageOf(specifier: string): string {
 	return first === undefined ? "sdxc" : `@sdxc/${first}`;
 }
 
-/** The version and `remix` peer of the running `sdxc`. */
+/** The version and `remix` peer of the running kit, which match the `sdxc` it shipped with. */
 async function readOwnManifest(
 	packageRoot: string,
 ): Promise<Result<{ version: string; remix: string | null }, Error>> {

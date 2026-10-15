@@ -28,8 +28,9 @@ export interface Spawned {
 
 /**
  * Creates `template` as the project `name` inside a fresh temporary directory and links every
- * dependency its `package.json` lists: `sdxc` to this package, anything else to the copy this
- * workspace installed. Answers the project directory; the caller removes its parent.
+ * dependency its `package.json` lists: `sdxc` to the umbrella beside this package in the
+ * workspace, anything else to the copy this workspace installed. Answers the project directory;
+ * the caller removes its parent.
  */
 export async function materialize(template: string, name = "app"): Promise<Result<string, Error>> {
 	let parent = await mkdtemp(join(tmpdir(), "sdxc-template-"));
@@ -49,7 +50,9 @@ export async function materialize(template: string, name = "app"): Promise<Resul
 	let names = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
 	for (let dependency of names) {
 		let source =
-			dependency === "sdxc" ? success(packageRoot) : await installed(packageRoot, dependency);
+			dependency === "sdxc"
+				? success(join(packageRoot, "..", "sdxc"))
+				: await installed(packageRoot, dependency);
 		if (isFailure(source)) return source;
 		let link = join(project, "node_modules", dependency);
 		await mkdir(dirname(link), { recursive: true });
@@ -96,7 +99,9 @@ async function installed(packageRoot: string, dependency: string): Promise<Resul
 		}
 	}
 	return failure(
-		new Error(`${dependency} is not installed in this workspace; add it to sdxc's devDependencies`),
+		new Error(
+			`${dependency} is not installed in this workspace; add it to @sdxc/kit's devDependencies`,
+		),
 	);
 }
 

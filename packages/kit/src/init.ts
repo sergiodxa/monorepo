@@ -20,8 +20,12 @@ import { CONFIG_LOCATIONS, configJSONSchema, findConfigFile } from "./config.js"
 /** Where `init` writes the configuration, relative to the project root. */
 export const INIT_LOCATION = CONFIG_LOCATIONS[0];
 
-/** The `$schema` reference, relative to {@link INIT_LOCATION}, that brings editor completion. */
-export const SCHEMA_REFERENCE = "../node_modules/sdxc/config.schema.json";
+/**
+ * The `$schema` reference, relative to {@link INIT_LOCATION}, that brings editor completion: the
+ * file behind the umbrella's `sdxc/kit/config.schema.json`, since `sdxc` is the dependency every
+ * project lists and every package manager installs at `node_modules/sdxc`.
+ */
+export const SCHEMA_REFERENCE = "../node_modules/sdxc/src/kit/config.schema.json";
 
 /** What `init` did, for the CLI to report. */
 export interface InitOutcome {

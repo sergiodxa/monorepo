@@ -1,5 +1,5 @@
 /**
- * The `changelog.jsonl` every published `sdxc` carries: one entry per commit, package and
+ * The `changelog.jsonl` every published `@sdxc/kit` carries: one entry per commit, package and
  * release, written by the release build. `sdxc upgrade` reads it offline from the installed
  * package, so the prompt describes exactly the releases that package was built from.
  *
@@ -17,7 +17,7 @@ import * as JSONL from "@sdxc/jsonl";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 import { compare } from "@sdxc/semver";
 
-/** The file name at the root of the `sdxc` package. */
+/** The file name at the root of the `@sdxc/kit` package. */
 export const CHANGELOG_FILE = "changelog.jsonl";
 
 /** One line of the changelog; unknown keys are ignored so a newer file still reads. */
@@ -34,14 +34,14 @@ const ENTRY_SCHEMA = s.object({
 export type ChangelogEntry = s.InferOutput<typeof ENTRY_SCHEMA>;
 
 /**
- * Every entry of the changelog in the `sdxc` package at `packageRoot`. A missing file, a line
+ * Every entry of the changelog in the `@sdxc/kit` package at `packageRoot`. A missing file, a line
  * that is not JSON, or a line without the entry fields is a failure naming the file and line.
  */
 export async function readChangelog(packageRoot: string): Promise<Result<ChangelogEntry[], Error>> {
 	let path = join(packageRoot, CHANGELOG_FILE);
 	let text = await wrap(() => readFile(path, "utf8"));
 	if (isFailure(text)) {
-		return failure(new Error(`This sdxc carries no ${CHANGELOG_FILE} (${path})`));
+		return failure(new Error(`This @sdxc/kit carries no ${CHANGELOG_FILE} (${path})`));
 	}
 	return parseChangelog(text.data, path);
 }

@@ -57,7 +57,7 @@ export type MakeContext = Pick<AnyCommandContext, "stdout" | "exec" | "task">;
  * Plans, writes, declares and formats one file of `input.kind`, printing each path written and
  * edited; under `dryRun` it prints the files and the diff of each edit instead.
  *
- * @param packageRoot - The `sdxc` package, whose `stubs/` holds the built-in stubs.
+ * @param packageRoot - The `@sdxc/kit` package, whose `stubs/` holds the built-in stubs.
  */
 export async function make(
 	ctx: MakeContext,

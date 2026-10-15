@@ -86,7 +86,7 @@ export type UICommandContext = Pick<AnyCommandContext, "exec" | "task" | "stdout
 /**
  * Reads the installed registry, the lock file and the copies' layout of the project at `root`.
  *
- * @param packageRoot - The `sdxc` package holding the registry.
+ * @param packageRoot - The `@sdxc/kit` package holding the registry.
  */
 export async function loadContext(
 	project: { root: string; config: Config },

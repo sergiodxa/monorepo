@@ -1,11 +1,13 @@
 /**
  * The `sdxc` command line: its contract with every handler mapped through `lazy()`, so a run
- * imports only the command it reaches and `--help` imports none. The binary runs it against
- * the process; a test builds its own with a fixture `sdxc` package.
+ * imports only the command it reaches and `--help` imports none. Both binaries, the kit's and
+ * the `sdxc` umbrella's, run it against the process; a test builds its own with a fixture kit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { readFileSync } from "node:fs";
 
 import type { CLI } from "@sdxc/cli";
 
@@ -19,11 +21,22 @@ export interface SDXCOptions {
 	/** Printed by `--version`; without one the flag does not exist. */
 	version?: string;
 	/**
-	 * The `sdxc` package commands read templates, stubs, the component registry and the
+	 * The kit package commands read templates, stubs, the component registry and the
 	 * changelog from.
 	 * @default the package this module runs from
 	 */
 	packageRoot?: string;
+}
+
+/**
+ * The version in the kit's own `package.json`, which sits one level above both `src/` and
+ * `dist/`, so `--version` names the release whichever binary started the run.
+ */
+export function kitVersion(): string | undefined {
+	let manifest = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as {
+		version?: unknown;
+	};
+	return typeof manifest.version === "string" ? manifest.version : undefined;
 }
 
 /**

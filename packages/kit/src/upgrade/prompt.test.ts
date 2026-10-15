@@ -216,7 +216,7 @@ describe("sdxc upgrade --prompt", () => {
 		expect(result).toEqual({
 			code: 1,
 			stdout: "",
-			stderr: "--from 2026.11.1 is newer than this sdxc, 2026.10.14\n",
+			stderr: "--from 2026.11.1 is newer than this @sdxc/kit, 2026.10.14\n",
 		});
 	});
 

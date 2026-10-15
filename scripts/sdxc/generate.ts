@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
- * `bun run sdxc:generate`: rewrites the committed `sdxc` umbrella from the workspace — every
- * re-export module, `config.schema.json`, and the manifest's `exports` and dependencies — and
- * deletes generated files no subpath backs any more. Re-run it after adding a package or an
- * export subpath; the drift test fails until the regeneration is committed.
+ * `bun run sdxc:generate`: rewrites the kit's JSON schemas, then the committed `sdxc` umbrella
+ * (every re-export module and the manifest's `exports` and dependencies), and deletes generated
+ * files no subpath backs any more. Re-run it after adding a package, an export subpath or a
+ * configuration key; the drift test fails until the regeneration is committed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,10 +21,27 @@ import type { PackageManifest } from "../release/workspace.js";
 
 import { REPO_ROOT } from "../release/workspace.js";
 
-import { UMBRELLA_DIR, generateUmbrella, umbrellaManifest, umbrellaSources } from "./umbrella.js";
+import {
+	KIT_DIR,
+	UMBRELLA_DIR,
+	generateKitSchemas,
+	generateUmbrella,
+	umbrellaManifest,
+	umbrellaSources,
+} from "./umbrella.js";
 
-/** Writes the umbrella and answers a one-line summary of what changed. */
+/**
+ * Writes the kit's schemas and then the umbrella, which copies them, and answers a one-line
+ * summary of what changed.
+ */
 async function main(): Promise<Result<string, Error>> {
+	let schemas = generateKitSchemas();
+	if (isFailure(schemas)) return schemas;
+	let kitDir = join(REPO_ROOT, "packages", KIT_DIR);
+	let schemasWritten = await wrap(async () => {
+		for (let [path, content] of schemas.data) await writeFile(join(kitDir, path), content);
+	});
+	if (isFailure(schemasWritten)) return schemasWritten;
 	let umbrella = await generateUmbrella(REPO_ROOT);
 	if (isFailure(umbrella)) return umbrella;
 	let packageDir = join(REPO_ROOT, "packages", UMBRELLA_DIR);
@@ -56,8 +73,10 @@ async function main(): Promise<Result<string, Error>> {
 			"vp",
 			"fmt",
 			relative(REPO_ROOT, manifestPath),
-			`packages/${UMBRELLA_DIR}/config.schema.json`,
-			`packages/${UMBRELLA_DIR}/lock.schema.json`,
+			...[...schemas.data.keys()].map((path) => `packages/${KIT_DIR}/${path}`),
+			...[...umbrella.data.files.keys()]
+				.filter((path) => path.endsWith(".json"))
+				.map((path) => `packages/${UMBRELLA_DIR}/${path}`),
 		],
 		{ cwd: REPO_ROOT, stdio: "inherit" },
 	);

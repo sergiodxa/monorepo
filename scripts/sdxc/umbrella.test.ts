@@ -16,7 +16,12 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import type { PackageManifest } from "../release/workspace.js";
 
-import { generateUmbrella, umbrellaDrift, umbrellaManifest } from "./umbrella.js";
+import {
+	generateKitSchemas,
+	generateUmbrella,
+	umbrellaDrift,
+	umbrellaManifest,
+} from "./umbrella.js";
 
 /** Fixture roots created by the current test, removed after it. */
 const ROOTS: string[] = [];
@@ -63,8 +68,6 @@ describe("generateUmbrella", () => {
 		expect(umbrella.exports).toEqual({
 			"./markdown": "./src/markdown.ts",
 			"./markdown/plugin/lint": "./src/markdown/plugin/lint.ts",
-			"./config.schema.json": "./config.schema.json",
-			"./lock.schema.json": "./lock.schema.json",
 		});
 		expect(umbrella.dependencies).toEqual(["@sdxc/markdown"]);
 		expect(umbrella.files.get("src/markdown/plugin/lint.ts")).toBe(
@@ -144,10 +147,7 @@ describe("generateUmbrella", () => {
 
 		let umbrella = unwrap(await generateUmbrella(root));
 
-		expect(umbrella.exports).toEqual({
-			"./config.schema.json": "./config.schema.json",
-			"./lock.schema.json": "./lock.schema.json",
-		});
+		expect(umbrella.exports).toEqual({});
 	});
 
 	test("keeps conditions, writing one module per condition", async () => {
@@ -201,36 +201,25 @@ describe("generateUmbrella", () => {
 		let umbrella = unwrap(await generateUmbrella(root));
 
 		expect(umbrella.dependencies).toEqual(["@sdxc/result"]);
-		expect(Object.keys(umbrella.exports)).toEqual([
-			"./result",
-			"./config.schema.json",
-			"./lock.schema.json",
-		]);
+		expect(Object.keys(umbrella.exports)).toEqual(["./result"]);
 	});
 
-	test("emits the configuration schema as JSON Schema 2020-12", async () => {
-		let root = await workspace(UMBRELLA);
+	test("copies a JSON export verbatim under the package directory", async () => {
+		let root = await workspace({
+			...UMBRELLA,
+			"packages/kit/package.json": manifest("kit", {
+				exports: { "./config.schema.json": "./config.schema.json" },
+			}),
+			"packages/kit/config.schema.json": '{ "type": "object" }\n',
+		});
 
-		let schema = JSON.parse(
-			unwrap(await generateUmbrella(root)).files.get("config.schema.json") ?? "",
-		);
+		let umbrella = unwrap(await generateUmbrella(root));
 
-		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-		expect(schema.properties.lock.default).toBe(".config/sdxc.lock.jsonl");
+		expect(umbrella.exports["./kit/config.schema.json"]).toBe("./src/kit/config.schema.json");
+		expect(umbrella.files.get("src/kit/config.schema.json")).toBe('{ "type": "object" }\n');
 	});
 
-	test("emits the lock file's entry schema as JSON Schema 2020-12", async () => {
-		let root = await workspace(UMBRELLA);
-
-		let schema = JSON.parse(
-			unwrap(await generateUmbrella(root)).files.get("lock.schema.json") ?? "",
-		);
-
-		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
-		expect(schema.required).toEqual(["kind", "name"]);
-	});
-
-	test("forwards a package named cli beside the handwritten command line", async () => {
+	test("forwards a package named cli beside the handwritten binary", async () => {
 		let root = await workspace({
 			...UMBRELLA,
 			"packages/cli/package.json": manifest("cli", { exports: { ".": "./src/index.ts" } }),
@@ -243,10 +232,10 @@ describe("generateUmbrella", () => {
 		expect([...umbrella.files.keys()]).not.toContain("src/sdxc.ts");
 	});
 
-	test("refuses a target that is neither TypeScript nor CSS, and a fallback array", async () => {
+	test("refuses a target that is not TypeScript, CSS or JSON, and a fallback array", async () => {
 		let json = await workspace({
 			...UMBRELLA,
-			"packages/data/package.json": manifest("data", { exports: { "./list": "./list.json" } }),
+			"packages/data/package.json": manifest("data", { exports: { "./list": "./list.txt" } }),
 		});
 		let array = await workspace({
 			...UMBRELLA,
@@ -259,11 +248,27 @@ describe("generateUmbrella", () => {
 		let arrayResult = await generateUmbrella(array);
 
 		expect(isFailure(jsonResult) && jsonResult.error.message).toBe(
-			"@sdxc/data/list exports ./list.json, which is neither TypeScript nor CSS",
+			"@sdxc/data/list exports ./list.txt, which is not TypeScript, CSS or JSON",
 		);
 		expect(isFailure(arrayResult) && arrayResult.error.message).toBe(
 			"@sdxc/data exports a fallback array, which sdxc cannot forward",
 		);
+	});
+});
+
+describe("generateKitSchemas", () => {
+	test("renders the configuration schema as JSON Schema 2020-12", () => {
+		let schema = JSON.parse(unwrap(generateKitSchemas()).get("config.schema.json") ?? "");
+
+		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+		expect(schema.properties.lock.default).toBe(".config/sdxc.lock.jsonl");
+	});
+
+	test("renders the lock file's entry schema as JSON Schema 2020-12", () => {
+		let schema = JSON.parse(unwrap(generateKitSchemas()).get("lock.schema.json") ?? "");
+
+		expect(schema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
+		expect(schema.required).toEqual(["kind", "name"]);
 	});
 });
 
@@ -289,11 +294,7 @@ describe("umbrellaManifest", () => {
 		expect(next).toEqual({
 			name: "sdxc",
 			bin: { sdxc: "./src/sdxc.ts" },
-			exports: {
-				"./result": "./src/result.ts",
-				"./config.schema.json": "./config.schema.json",
-				"./lock.schema.json": "./lock.schema.json",
-			},
+			exports: { "./result": "./src/result.ts" },
 			dependencies: { "@sdxc/result": "workspace:*", left: "1.0.0" },
 			peerDependencies: { remix: "3.0.0" },
 		});
@@ -321,8 +322,8 @@ describe("umbrellaDrift", () => {
 		let problems = unwrap(await umbrellaDrift(root));
 
 		expect(problems).toEqual([
-			"config.schema.json is missing",
-			"lock.schema.json is missing",
+			"kit/config.schema.json is missing",
+			"kit/lock.schema.json is missing",
 			"package.json dependencies are out of date",
 			"package.json exports are out of date",
 			"src/gone/index.ts backs no export subpath",

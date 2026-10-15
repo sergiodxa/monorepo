@@ -61,7 +61,11 @@ const SERVER = setupServer(
 			peerDependencies: { remix: published.remix },
 		});
 	}),
-	http.get("https://unpkg.com/:release/changelog.jsonl", () => HttpResponse.text(CHANGELOG)),
+	http.get("https://unpkg.com/@sdxc/:release/changelog.jsonl", ({ params }) =>
+		String(params.release).startsWith("kit@")
+			? HttpResponse.text(CHANGELOG)
+			: new HttpResponse(null, { status: 404 }),
+	),
 );
 
 beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
@@ -190,7 +194,7 @@ describe("sdxc upgrade", () => {
 		let root = await fixtureProject();
 		SERVER.use(
 			http.get(
-				"https://unpkg.com/:release/changelog.jsonl",
+				"https://unpkg.com/@sdxc/:release/changelog.jsonl",
 				() => new HttpResponse(null, { status: 503 }),
 				{ once: true },
 			),

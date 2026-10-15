@@ -1,0 +1,89 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"$schema": {
+			"type": "string",
+			"description": "The JSON Schema editors check this file against"
+		},
+		"ui": {
+			"type": "object",
+			"properties": {
+				"directory": {
+					"type": "string",
+					"default": "resources/components/ui",
+					"description": "Where `sdxc ui add` writes components"
+				},
+				"alias": {
+					"type": "string",
+					"description": "Import prefix for the copies; inferred from tsconfig `paths` when omitted",
+					"examples": ["~/components/ui"]
+				},
+				"tests": {
+					"type": "boolean",
+					"default": false,
+					"description": "Copy a component's tests beside it"
+				}
+			},
+			"additionalProperties": false,
+			"default": {
+				"directory": "resources/components/ui",
+				"tests": false
+			}
+		},
+		"make": {
+			"type": "object",
+			"properties": {
+				"routes": {
+					"type": "string",
+					"default": "web",
+					"description": "Route contract `sdxc make controller` adds to, a module in routes/"
+				},
+				"migrations": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "string"
+					},
+					"default": {
+						"default": "database/migrations"
+					},
+					"description": "Migration chains by name; `--chain <name>` picks one"
+				},
+				"tests": {
+					"type": "boolean",
+					"default": true,
+					"description": "Write a test beside every generated file except migrations and factories"
+				},
+				"stubs": {
+					"type": "string",
+					"default": ".config/sdxc/stubs",
+					"description": "Stubs here replace the built-in ones; `sdxc make stubs` copies them out"
+				}
+			},
+			"additionalProperties": false,
+			"default": {
+				"routes": "web",
+				"migrations": {
+					"default": "database/migrations"
+				},
+				"tests": true,
+				"stubs": ".config/sdxc/stubs"
+			}
+		},
+		"format": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"minItems": 1,
+			"description": "Command run on every file the CLI writes or edits, paths appended",
+			"examples": [["bunx", "vp", "fmt"]]
+		},
+		"lock": {
+			"type": "string",
+			"default": ".config/sdxc.lock.jsonl",
+			"description": "Where the CLI keeps its state; commit it with the project"
+		}
+	},
+	"additionalProperties": false
+}

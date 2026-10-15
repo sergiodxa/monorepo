@@ -54,7 +54,7 @@ export interface Plan {
  * Plans `request` in the project at `root`. Every planned path must be free; an existing file
  * is a failure naming it, before any stub is read.
  *
- * @param packageRoot - The `sdxc` package, whose `stubs/` holds the built-in stubs.
+ * @param packageRoot - The `@sdxc/kit` package, whose `stubs/` holds the built-in stubs.
  * @param overrides - Placeholder values a declaration decided, such as a job's reused group.
  */
 export async function plan(

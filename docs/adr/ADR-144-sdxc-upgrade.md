@@ -122,6 +122,6 @@ while upgrades across more than a year are rare and need mainly the breaking cha
 
 - [x] `changelog.jsonl` in the release build (`scripts/release/changelog.ts`, written into the
       staged `sdxc` package after it builds)
-- [x] `sdxc upgrade` and the prompt (`packages/sdxc/src/sdxc/upgrade/`); vendored components are
+- [x] `sdxc upgrade` and the prompt (`packages/kit/src/upgrade/`); vendored components are
       read from the lock file's `ui` lines and each registry entry's `changedIn` as ADR-141
       specifies them, and are listed once the registry ships in the tarball
