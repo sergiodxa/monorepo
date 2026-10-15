@@ -7,6 +7,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./middleware": "./src/middleware.ts",
+		"./middleware/cli": "./src/cli.ts",
 		"./traceparent": "./src/traceparent.ts",
 		"./tracestate": "./src/tracestate.ts"
 	},
@@ -19,9 +20,16 @@
 		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		}
 	}
 }

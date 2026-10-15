@@ -1935,11 +1935,16 @@
         "@sdxc/result": "workspace:*",
       },
       "devDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
+        "@sdxc/cli": "workspace:*",
         "remix": "3.0.0",
       },
+      "optionalPeers": [
+        "@sdxc/cli",
+      ],
     },
     "packages/trailing-slash-middleware": {
       "name": "@sdxc/trailing-slash-middleware",

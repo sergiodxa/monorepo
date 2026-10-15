@@ -19,6 +19,7 @@ log from [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger); parsers a
 from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result). [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs)
 carries the current trace into every job it enqueues, and
 [`@sdxc/api-client`](https://www.npmjs.com/package/@sdxc/api-client) injects it into every request.
+`@sdxc/trace-context/middleware/cli` runs on [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli).
 
 ## Usage
 
@@ -39,6 +40,21 @@ router.get("/", (ctx) => Response.json({ traceId: ctx.trace.traceId }));
 `trace()` continues the caller's `traceparent` or starts a new trace, publishes it as `ctx.trace`,
 and sets `trace_id`, `span_id`, `trace_flags` and `parent_span_id` on the request's log. Mount it
 directly after `log(logger)`.
+
+### Give every command run a trace
+
+```typescript
+import { createCLI } from "@sdxc/cli";
+import { log } from "@sdxc/logger/middleware/cli";
+import { trace } from "@sdxc/trace-context/middleware/cli";
+
+let cli = createCLI({ name: "app", commands, middleware: [log(logger), trace()] });
+```
+
+The command line's `trace()` continues the trace in the `TRACEPARENT` and `TRACESTATE`
+environment variables, OpenTelemetry's carrier for processes, or starts one. Every child process
+`ctx.exec` starts receives `TRACEPARENT` naming the run's span, so a script that calls another
+traced command keeps one `trace_id`.
 
 ### Propagate it to outbound requests
 
@@ -152,6 +168,16 @@ Continues or starts the request's trace, binds it for `currentTrace()`, publishe
 
 The context key `trace()` sets, for reading the trace where the middleware chain's types are
 unknown: `ctx.get(CurrentTrace)`.
+
+### `@sdxc/trace-context/middleware/cli`
+
+#### `trace()`
+
+[`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) middleware continuing the trace in the
+`TRACEPARENT` environment variable (with `TRACESTATE`), or starting one when it is missing or
+invalid. It binds the trace for `currentTrace()`, publishes it as `ctx.trace` under `CurrentTrace`,
+sets `traceFields()` on the current log, and sets `TRACEPARENT` (and `TRACESTATE`) on every child
+`ctx.exec` starts unless the call passes its own `TRACEPARENT`. A trace already current is joined.
 
 ### `@sdxc/trace-context/traceparent`
 
