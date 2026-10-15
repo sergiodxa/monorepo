@@ -157,6 +157,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"zone-file",
 			"rdap",
 			"mcp",
+			"cli",
 			"cloudflare-pricing",
 		],
 	},
