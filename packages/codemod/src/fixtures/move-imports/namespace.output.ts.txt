@@ -1,0 +1,9 @@
+import * as ui from "~/components/ui/index.js";
+import Ui from "sdxc/ui";
+import * as all from "~/components/ui/index.js";
+import type * as types from "~/components/ui/index.js";
+import { Button } from "sdxc/ui";
+export * from "~/components/ui/index.js";
+export * as everything from "~/components/ui/index.js";
+
+export let parts: types.Parts = [ui, Ui, all, Button];

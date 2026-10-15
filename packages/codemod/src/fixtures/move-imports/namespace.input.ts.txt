@@ -1,0 +1,8 @@
+import * as ui from "sdxc/ui";
+import Ui, * as all from "sdxc/ui";
+import type * as types from "sdxc/ui";
+import { Button } from "sdxc/ui";
+export * from "sdxc/ui";
+export * as everything from "sdxc/ui";
+
+export let parts: types.Parts = [ui, Ui, all, Button];

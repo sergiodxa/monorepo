@@ -22,8 +22,9 @@ export interface Edit {
 	source: string;
 	changed: boolean;
 	/**
-	 * References the edit matched but could not change, such as a default or namespace import
-	 * `moveImports` cannot split by name; always empty for the insertions.
+	 * References the edit matched but could not change, such as a namespace import that
+	 * `moveImports` leaves on the old module while names it reaches move; always empty for the
+	 * insertions.
 	 */
 	unhandled: ModuleReference[];
 }

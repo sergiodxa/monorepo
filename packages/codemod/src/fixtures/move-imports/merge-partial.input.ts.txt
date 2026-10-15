@@ -1,0 +1,4 @@
+import Ui, { Button, Dialog } from "sdxc/ui";
+import { Menu, Tabs } from "sdxc/ui";
+
+export { Button, Dialog, Menu, Tabs, Ui };

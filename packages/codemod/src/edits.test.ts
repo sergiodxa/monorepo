@@ -14,7 +14,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { parseSync } from "oxc-parser";
 import { describe, expect, test } from "vitest";
 
-import type { Edit } from "./index.js";
+import type { Edit, MoveOptions } from "./index.js";
 
 import {
 	addProperty,
@@ -37,6 +37,11 @@ const FIXTURES = join(import.meta.dirname, "fixtures");
 
 /** The default component move every `moveImports` fixture applies unless it says otherwise. */
 const MOVE_BUTTON = { from: "sdxc/ui", names: ["Button"], to: "~/components/ui/button.js" };
+
+/** A move of `names` from `sdxc/ui` to a barrel, where several declarations can land together. */
+function moveToIndex(names: string[]): MoveOptions {
+	return { from: "sdxc/ui", names, to: "~/components/ui/index.js" };
+}
 
 /** The job value every `addProperty` fixture inserts, multi-line so its indentation is checked. */
 const JOB = "job({\n\tinput: s.object({ accountId: s.string() }),\n})";
@@ -95,7 +100,45 @@ const CASES: Record<string, Case[]> = {
 			name: "default-and-namespace",
 			extension: "ts",
 			run: (f, s) => moveImports(f, s, MOVE_BUTTON),
-			unhandled: 3,
+			unhandled: 2,
+		},
+		{
+			name: "default-import",
+			extension: "ts",
+			run: (f, s) => moveImports(f, s, moveToIndex(["default", "Button", "ButtonProps"])),
+		},
+		{
+			name: "namespace",
+			extension: "ts",
+			run: (f, s) => moveImports(f, s, moveToIndex(["*"])),
+		},
+		{
+			name: "merge",
+			extension: "ts",
+			run: (f, s) =>
+				moveImports(
+					f,
+					s,
+					moveToIndex([
+						"Button",
+						"Dialog",
+						"Menu",
+						"ButtonProps",
+						"DialogProps",
+						"Tooltip",
+						"Toast",
+					]),
+				),
+		},
+		{
+			name: "merge-partial",
+			extension: "ts",
+			run: (f, s) => moveImports(f, s, moveToIndex(["default", "Button", "Menu"])),
+		},
+		{
+			name: "merge-default",
+			extension: "ts",
+			run: (f, s) => moveImports(f, s, moveToIndex(["default", "Button"])),
 		},
 		{
 			name: "reexport",
@@ -280,6 +323,25 @@ describe("edit failures and no-ops", () => {
 		let result = rewriteSpecifiers("a.ts", 'import { a } from "./x.js', () => "./y.js");
 
 		expect(isFailure(result) && result.error.code).toBe("unterminated");
+	});
+
+	test("moveImports keeps a second default in a declaration of its own", () => {
+		let source =
+			'import Ui from "sdxc/ui";\nimport Theme from "sdxc/ui";\nimport { Card } from "sdxc/ui";\n';
+
+		let moved = unwrap(moveImports("a.ts", source, moveToIndex(["default", "Card"])));
+
+		expect(moved.source).toBe(
+			'import Ui, { Card } from "~/components/ui/index.js";\nimport Theme from "~/components/ui/index.js";\n',
+		);
+	});
+
+	test("moveImports reports a namespace import that stays while named imports move", () => {
+		let source = 'import * as ui from "sdxc/ui";\nimport { Button } from "sdxc/ui";\n';
+
+		let moved = unwrap(moveImports("a.ts", source, MOVE_BUTTON));
+
+		expect(moved.unhandled.map((reference) => reference.names[0]?.local)).toEqual(["ui"]);
 	});
 
 	test("an edit with nothing to change returns the source untouched", () => {

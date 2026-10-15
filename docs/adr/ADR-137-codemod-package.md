@@ -128,12 +128,22 @@ let moved = moveImports("page.tsx", source, {
   binds, and its source range.
 - **`rewriteSpecifiers`** replaces the specifier of every reference the callback maps to a new
   string and keeps the original quote character; `null` leaves a reference untouched.
-- **`moveImports`** moves named imports and named re-exports from one specifier to another. When
-  every name moves, the specifier is replaced in place; otherwise the declaration keeps the rest
-  and a new declaration for the moved names follows it, with aliases, `type` modifiers and the
-  original quote and semicolon style. When a declaration for `to` already exists, the names join
-  it. Default and namespace imports of `from` cannot be split by name and are returned as
-  unhandled, for the caller to report.
+- **`moveImports`** moves imports and re-exports from one specifier to another, matching each
+  binding by the name the module exports: a named binding by its name, a default by
+  `"default"`, and a namespace import, `export * as X` or bare `export *` by `"*"`, which
+  repoints the whole declaration. When every binding of a declaration moves, its specifier is
+  replaced in place; otherwise the declaration keeps the rest, with aliases, `type` modifiers and
+  the original quote and semicolon style carried to `to`.
+  - Every moved binding of one kind (import or re-export, type-only or not) lands in one
+    declaration of `to`: an existing one, else the first declaration repointed in place, else
+    one new declaration after the first that keeps names. Two declarations that both move
+    become one, so `to` is never named twice for one kind.
+  - A default joins the named imports (`import Ui, { Button }`). A namespace, a type-only default
+    and a second default keep declarations of their own, the shapes the grammar and TypeScript's
+    `import type` admit. `import type` stays a separate declaration from `import`, the repo's
+    convention for type imports.
+  - A namespace import or `export *` of `from` that stays while other names move reaches them
+    through the whole module, and comes back as unhandled for the caller to report.
 
 ### Insertions
 
@@ -183,7 +193,8 @@ found or could not be scanned, which the CLI turns into the printed fallback ins
   `addProperty` and `insertAfterLast` has input and expected-output fixtures compared byte for
   byte, covering the shapes the CLI meets: nested `route()` groups, a missing nesting level,
   trailing commas present and absent, tabs and spaces, `router.map` inside a factory and at
-  module level, aliases and `type` modifiers on moved names. An edit that lands in the wrong
+  module level, aliases and `type` modifiers on moved names, default and namespace
+  imports and `export *`, and declarations that merge into one. An edit that lands in the wrong
   object or the wrong block fails here even when the result still parses.
 - **Edits re-scan.** Every edit test also scans its output again and parses it with
   `oxc-parser`, so an edit that produces invalid code fails.
@@ -260,3 +271,5 @@ both bring a Babel parser stack for a task that needs specifier ranges.
 - [x] Exact-output fixtures for every edit
 - [x] Release build and repo tests moved to `findModuleReferences`
 - [x] JSX read in `.js`, `.mjs` and `.cjs`, with ambiguity fixtures for JSX against `<` in each
+- [x] `moveImports` moves default imports (`"default"`), namespace imports and `export *` (`"*"`)
+- [x] `moveImports` merges the moved bindings of one kind into one declaration of `to`

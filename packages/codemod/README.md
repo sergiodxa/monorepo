@@ -43,7 +43,7 @@ let rewritten = rewriteSpecifiers("dialog.tsx", source, (reference) =>
 
 Only the string literals that change are replaced, each in its original quote character.
 
-### Move named imports to another module
+### Move imports to another module
 
 ```typescript
 import { moveImports } from "@sdxc/codemod";
@@ -56,6 +56,8 @@ let moved = moveImports("page.tsx", 'import { Button, Dialog } from "acme/ui";\n
 // import { Dialog } from "acme/ui";
 // import { Button } from "~/components/ui/button.js";
 ```
+
+Name `"default"` to move a default import and `"*"` to move `import * as ui`, `export *` and `export * as ui`.
 
 ### Add to a declaration object and to a sequence of calls
 
@@ -88,12 +90,12 @@ Replaces the specifier of every reference `map` answers a string for; `null` lea
 
 ### `moveImports(filename, source, options: MoveOptions): Result<Edit, CodemodError>`
 
-Moves the named imports and named re-exports `options.names` (as the module exports them, whatever alias a declaration gives them) from `options.from` to `options.to`.
+Moves the imports and re-exports of `options.names` from `options.from` to `options.to`. A name is matched as the module exports it, whatever alias a declaration gives it: a named binding by its name, a default binding by `"default"`, and a namespace (`import * as ui`, `export * as ui`) or a bare `export *` by `"*"`.
 
-- A declaration whose names all move has its specifier replaced in place.
-- Otherwise the declaration keeps the rest, and a declaration for the moved names follows it, keeping aliases, `type` modifiers, `import type`, the quote character and the semicolon style.
-- When a declaration of the same kind for `options.to` exists, the moved names join it, one per line when its list is written one per line.
-- Default imports, namespace imports and `export *` of `options.from` cannot be split by name. They are returned in `unhandled` and left as they are.
+- A declaration whose bindings all move has its specifier replaced in place.
+- Otherwise the declaration keeps the rest, and the moved bindings go to `options.to`, keeping aliases, `type` modifiers, `import type`, the quote character and the semicolon style.
+- Every moved binding of one kind (imports or re-exports, type-only or not) lands in one declaration of `options.to`: an existing one, the first one repointed in place, or one new declaration. `import { A } from "x"` and `import { B } from "x"` both moving become `import { A, B } from "y"`, and a default joins the names (`import Ui, { A } from "y"`). A namespace, a type-only default and a second default keep declarations of their own, and `import type` stays apart from `import`.
+- A namespace import or `export *` of `options.from` that stays while other names move reaches those names through the whole module. It is returned in `unhandled` and left as it is.
 
 ### `addProperty(filename, source, options: AddPropertyOptions): Result<Edit, CodemodError>`
 
@@ -107,7 +109,7 @@ Places `options.statement` on a new line after the last statement that calls `op
 
 ### `Edit`
 
-`{ source, changed, unhandled }`: the edited text (the input itself when nothing `changed`), and for `moveImports` the references it matched but could not change. Every edit scans its own output again and fails with `invalid-output` instead of returning source that does not scan.
+`{ source, changed, unhandled }`: the edited text (the input itself when nothing `changed`), and for `moveImports` the namespace imports and `export *` declarations it left on the old module. Every edit scans its own output again and fails with `invalid-output` instead of returning source that does not scan.
 
 ### `CodemodError`
 

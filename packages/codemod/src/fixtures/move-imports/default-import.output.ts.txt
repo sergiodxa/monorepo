@@ -1,0 +1,8 @@
+import { Dialog } from "sdxc/ui";
+import Ui, { Button } from "~/components/ui/index.js";
+import type DefaultProps from "~/components/ui/index.js";
+import type { ButtonProps } from "~/components/ui/index.js";
+export { default as UiDefault } from "~/components/ui/index.js";
+
+export let props: ButtonProps | DefaultProps = {};
+export { Button, Dialog, Ui };

@@ -1,0 +1,9 @@
+import { Button, Dialog, Menu } from "~/components/ui/index.js";
+import { Popover } from "sdxc/ui";
+import { Tabs } from "sdxc/ui";
+import type { ButtonProps, DialogProps } from "~/components/ui/index.js";
+import type { PopoverProps } from "sdxc/ui";
+export { Tooltip, Toast as Notice } from "~/components/ui/index.js";
+
+export let components = [Button, Dialog, Popover, Menu, Tabs];
+export type { ButtonProps, DialogProps, PopoverProps };

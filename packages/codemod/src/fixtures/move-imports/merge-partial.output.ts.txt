@@ -1,0 +1,5 @@
+import { Dialog } from "sdxc/ui";
+import Ui, { Button, Menu } from "~/components/ui/index.js";
+import { Tabs } from "sdxc/ui";
+
+export { Button, Dialog, Menu, Tabs, Ui };
