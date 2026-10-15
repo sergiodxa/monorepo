@@ -74,6 +74,12 @@ export interface ModuleReference {
 export interface FindOptions {
 	/** Dotted callees whose first argument is a specifier, such as `vi.mock` or `require`. */
 	calls?: string[];
+	/**
+	 * Also report TypeScript import types (`typeof import("…")`, `import("…").Name`), as
+	 * `dynamic` references with `typeOnly` set; a declaration file names its dependencies this way.
+	 * @default false
+	 */
+	importTypes?: boolean;
 }
 
 /**
@@ -103,7 +109,7 @@ export function referencesIn(
 		if (token.type !== "identifier" || isMember(structure, index)) continue;
 		if (token.value === "import") {
 			if (isPunctuator(code[index + 1], "(")) {
-				let reference = dynamicImport(structure, index);
+				let reference = dynamicImport(structure, index, options.importTypes === true);
 				if (reference !== null) references.push(reference);
 			} else if (!isPunctuator(code[index + 1], ".") && structure.depth[index] === 0) {
 				let reference = importDeclaration(structure, index);
@@ -139,22 +145,27 @@ export function referencesIn(
 }
 
 /**
- * The `import("…")` at `code[index]`, or `null` when its argument is not a string literal or
- * it is a TypeScript import type (`typeof import("…")`, `import("…").Name`).
+ * The `import("…")` at `code[index]`, or `null` when its argument is not a string literal, or
+ * when it is a TypeScript import type (`typeof import("…")`, `import("…").Name`) and
+ * `importTypes` is off.
  */
-function dynamicImport(structure: Structure, index: number): ModuleReference | null {
+function dynamicImport(
+	structure: Structure,
+	index: number,
+	importTypes: boolean,
+): ModuleReference | null {
 	let code = structure.code;
 	let literal = code[index + 2];
 	let after = code[index + 3];
 	if (literal?.type !== "string") return null;
 	if (!isPunctuator(after, ")") && !isPunctuator(after, ",")) return null;
-	if (isIdentifier(code[index - 1], "typeof")) return null;
 	let close = structure.match[index + 1] ?? -1;
-	if (isTypeQualifier(code, close + 1)) return null;
+	let type = isIdentifier(code[index - 1], "typeof") || isTypeQualifier(code, close + 1);
+	if (type && !importTypes) return null;
 	return {
 		kind: "dynamic",
 		specifier: cook(literal.value),
-		typeOnly: false,
+		typeOnly: type,
 		names: [],
 		range: { start: code[index]!.start, end: code[close]!.end },
 		specifierRange: { start: literal.start, end: literal.end },

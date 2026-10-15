@@ -73,6 +73,22 @@ describe("findModuleReferences", () => {
 		]);
 	});
 
+	test("reports TypeScript import types as type-only dynamic references when asked", () => {
+		let source = [
+			'type Lazy = typeof import("./lazy.js");',
+			'let value: import("./types.js").Value;',
+			'let page = await import("./page.js");',
+		].join("\n");
+
+		let references = unwrap(findModuleReferences("a.d.ts", source, { importTypes: true }));
+
+		expect(references.map((reference) => [reference.specifier, reference.typeOnly])).toEqual([
+			["./lazy.js", true],
+			["./types.js", true],
+			["./page.js", false],
+		]);
+	});
+
 	test("ignores specifiers in JSX text, strings, template literals and comments", () => {
 		let source = [
 			'// import "./comment.js";',

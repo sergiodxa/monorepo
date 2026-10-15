@@ -80,7 +80,7 @@ let mapped = insertAfterLast("dispatcher.ts", source, {
 
 ### `findModuleReferences(filename: string, source: string, options?: FindOptions): Result<ModuleReference[], CodemodError>`
 
-Every static import and side-effect import, every `export … from`, every `import()` whose argument is a string literal, and the first argument of each call whose callee is listed in `options.calls` (dotted paths such as `vi.mock`, or `require`), in source order. These are the specifiers a module loader resolves: imports and re-exports at the top level, where ECMAScript allows them, and `import()` in expressions. TypeScript import types (`typeof import("…")`, `import("…").Name`) and `import x = require("…")` belong to the type checker and to CommonJS, and stay out of the list.
+Every static import and side-effect import, every `export … from`, every `import()` whose argument is a string literal, and the first argument of each call whose callee is listed in `options.calls` (dotted paths such as `vi.mock`, or `require`), in source order. These are the specifiers a module loader resolves: imports and re-exports at the top level, where ECMAScript allows them, and `import()` in expressions. TypeScript import types (`typeof import("…")`, `import("…").Name`) and `import x = require("…")` belong to the type checker and to CommonJS, and stay out of the list unless `options.importTypes` is set, which reports them as `dynamic` references with `typeOnly` set, the way a declaration file names its dependencies.
 
 ### `rewriteSpecifiers(filename, source, map, options?): Result<Edit, CodemodError>`
 
