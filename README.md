@@ -152,6 +152,12 @@ Versions are calendar dates (`2026.9.4`), released daily from whatever changed, 
 released together are pinned to each other so they always work together. Guides and API
 references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
+### Everything at Once
+
+| Package               | Description                                                                       |
+| --------------------- | --------------------------------------------------------------------------------- |
+| [sdxc](packages/sdxc) | Every @sdxc package under one install and one version, with the sdxc command line |
+
 ### Authentication and Identity
 
 | Package                                           | Description                                                                                                    |

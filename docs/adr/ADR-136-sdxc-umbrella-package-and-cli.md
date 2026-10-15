@@ -324,4 +324,15 @@ per location, an ambiguity error and three `init` renderers.
 ## Current Progress
 
 - [ ] Phase 1: Package and export map
-- [ ] Phase 2: CLI and configuration
+  - [x] Rename `apps/sdxc` to `apps/sdxc-site`
+  - [x] `remix` as a peer dependency of every package that imports it
+  - [x] Release tooling and `test/public-packages.test.ts` accept the unscoped `sdxc`
+  - [x] Generator (`bun run sdxc:generate`) with wildcard expansion, conditions, stylesheets
+        and the exclusion list; drift test in `test/sdxc-umbrella.test.ts`; `packages/sdxc`
+        generated
+  - [ ] README, `LICENSE.md`, root README row and docs-site group (done); bootstrap on npm and
+        trusted publisher (pending)
+  - [ ] Documentation site on `sdxc/*`
+- [x] Phase 2: CLI and configuration
+  - [x] `bin`, project root, configuration lookup and validation, `config.schema.json`, `format`
+  - [x] `sdxc init`
