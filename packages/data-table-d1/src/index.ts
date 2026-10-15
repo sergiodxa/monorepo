@@ -75,6 +75,20 @@ interface D1PreparedQuery {
 	run<T = Record<string, unknown>>(): Promise<{ results?: T[]; meta?: D1Meta }>;
 }
 
+/** A prepared D1 statement before its values are bound. */
+interface D1BindableQuery extends D1PreparedQuery {
+	bind(...values: unknown[]): D1PreparedQuery;
+}
+
+/**
+ * The calls the adapter makes on a D1 binding. Declared here so a binding typed by any source
+ * fits it: a Worker's generated `D1Database`, `@cloudflare/workers-types`, or a test's own.
+ */
+export interface D1Binding {
+	prepare(query: string): D1BindableQuery;
+	exec(query: string): Promise<unknown>;
+}
+
 /**
  * Creates a `DatabaseDriver` backed by a Cloudflare D1 database, compiling operations
  * to SQLite-dialect SQL. D1 commits each statement independently and immediately, so
@@ -84,10 +98,7 @@ interface D1PreparedQuery {
  * optional {@link D1StatementObserver} for per-statement row counts.
  * @returns A `DatabaseDriver` implementation for D1.
  */
-export function createD1DatabaseAdapter(
-	db: D1Database,
-	options?: D1AdapterOptions,
-): DatabaseDriver {
+export function createD1DatabaseAdapter(db: D1Binding, options?: D1AdapterOptions): DatabaseDriver {
 	let transactions = new Set<string>();
 	let transactionCounter = 0;
 	/** Read once so the hot path is a closure variable check, not a property lookup. */
