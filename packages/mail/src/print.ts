@@ -22,7 +22,7 @@ export interface PrintTransportOptions {
 	 * Receives each printed message as one string ending in a newline, such as `ctx.stderr`
 	 * in a command or `(text) => process.stderr.write(text)` in a script.
 	 */
-	write(text: string): void;
+	write: (text: string) => void;
 	/**
 	 * Print the raw MIME message, headers and every part, instead of the readable summary.
 	 * @default false
