@@ -18,6 +18,16 @@ import { attempt, attemptLoad } from "../lib/attempt.js";
 import { parse, serialize } from "../lib/json.js";
 import { ttlSeconds } from "../lib/ttl.js";
 
+/**
+ * The calls this cache makes on a Workers KV binding. Declared here so a binding typed by any
+ * source fits it: a Worker's generated types, `@cloudflare/workers-types`, or a test's own.
+ */
+export interface WorkerKVNamespace {
+	get(key: string, type: "text"): Promise<string | null>;
+	put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+	delete(key: string): Promise<void>;
+}
+
 /** A write handed to `waitUntil`, still in flight. */
 interface PendingWrite {
 	/** What a read on this instance answers with until KV holds it. */
@@ -43,7 +53,7 @@ export interface WorkerKVCacheOptions {
  * something other than a cache.
  */
 export class WorkerKVCache implements Cache {
-	readonly #kv: KVNamespace;
+	readonly #kv: WorkerKVNamespace;
 	readonly #waitUntil: ((promise: Promise<unknown>) => void) | undefined;
 
 	/**
@@ -57,7 +67,7 @@ export class WorkerKVCache implements Cache {
 	 * @param kv The namespace entries are stored in.
 	 * @param options How writes are deferred.
 	 */
-	constructor(kv: KVNamespace, { waitUntil }: WorkerKVCacheOptions = {}) {
+	constructor(kv: WorkerKVNamespace, { waitUntil }: WorkerKVCacheOptions = {}) {
 		this.#kv = kv;
 		this.#waitUntil = waitUntil;
 	}
