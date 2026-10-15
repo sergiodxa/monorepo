@@ -5,13 +5,13 @@ section:
     title: Operations & testing
     order: 8
 order: 4
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 Tests written against `"Test User"` and `test@test.com` pass while the real thing breaks: the
 name with an accent, the company name too long for its column, the invoice list with forty
 rows instead of one. Random data finds those cases, and then fails once on a value nobody can get back.
-[`sdxc/sample`](/api/sample) gives you the first without the second. Every generator opens on
+[`@sdxc/sample`](/api/sample) gives you the first without the second. Every generator opens on
 a seed, and the same seed with the same calls produces the same people, companies, amounts and
 dates on any machine, on any day.
 
@@ -21,7 +21,7 @@ change when your markup does. It assumes the test setup from
 [Test Workers apps](/docs/operations-and-testing/testing).
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/random @sdxc/sample remix
 ```
 
 ## One generator per fixture
@@ -30,7 +30,7 @@ A generator takes a seed and, optionally, the instant its `date` module measures
 both, in one module the tests and the previews share:
 
 ```typescript {% title="app/test/sample.ts" %}
-import { createSample } from "sdxc/sample";
+import { createSample } from "@sdxc/sample";
 
 export const REFERENCE = new Date("2026-06-15T12:00:00Z");
 
@@ -50,7 +50,7 @@ A factory draws one row's worth of input for your model. The generator's modules
 pieces, and `person.record()` returns a whole person whose email and handle match their name:
 
 ```typescript {% title="database/factories/index.ts" %}
-import type { Sample } from "sdxc/sample";
+import type { Sample } from "@sdxc/sample";
 
 import type { AccountInput } from "~/app/models/account";
 import type { InvoiceInput } from "~/app/models/invoice";
@@ -97,7 +97,7 @@ A seeding function writes a believable amount of data through your own models, w
 drawing from a stream of its own:
 
 ```typescript {% title="app/test/seed.ts" %}
-import type { Sample } from "sdxc/sample";
+import type { Sample } from "@sdxc/sample";
 import type { Database } from "remix/data-table";
 
 import Accounts from "~/app/models/account";
@@ -241,7 +241,7 @@ dates from `REFERENCE` rather than the clock. What is left is the component, so 
 snapshot is a change you made. Format dates with an explicit `timeZone` in the component too,
 or the same instant renders differently on a laptop and in CI.
 
-When you upgrade `sdxc/sample` and its word lists grow, the snapshots change together, in one
+When you upgrade `@sdxc/sample` and its word lists grow, the snapshots change together, in one
 diff you review once. That is the trade: values are reproducible for a given version, not
 promised across versions, which is also why the database test above asserts rules rather than
 names.
@@ -253,8 +253,8 @@ code that should hold for any input, draw a fresh seed each run and print it whe
 shows it:
 
 ```typescript {% title="app/services/invoice-totals.test.ts" %}
-import { systemSeed } from "sdxc/random";
-import { createSample } from "sdxc/sample";
+import { systemSeed } from "@sdxc/random";
+import { createSample } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import { totals } from "~/app/services/invoice-totals";
@@ -273,7 +273,7 @@ describe(`invoice totals (SAMPLE_SEED=${SEED})`, () => {
 });
 ```
 
-`totals` is your own function. `systemSeed()` from `sdxc/random` draws a 32-bit seed from Web Crypto.
+`totals` is your own function. `systemSeed()` from `@sdxc/random` draws a 32-bit seed from Web Crypto.
 Because the seed is in the suite's name, a failure prints it, and
 `SAMPLE_SEED=<seed> vp test run app/services` replays that exact run down to the last field.
 

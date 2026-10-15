@@ -14,14 +14,15 @@ that work with the app's own models, jobs and templates, so a backfill runs the 
 route would.
 
 This guide builds that command line for a job board. A command reaches the app's services the
-way a controller does, through middleware: [`sdxc/cli`](/api/cli) runs the commands, and
-[`sdxc/logger`](/api/logger), [`sdxc/database-middleware`](/api/database-middleware),
-[`sdxc/data-model`](/api/data-model), [`sdxc/jobs`](/api/jobs), [`sdxc/i18n`](/api/i18n) and
-[`sdxc/mail`](/api/mail) each ship a `cli` entry that publishes their service to a command
+way a controller does, through middleware: [`@sdxc/cli`](/api/cli) runs the commands, and
+[`@sdxc/logger`](/api/logger), [`@sdxc/database-middleware`](/api/database-middleware),
+[`@sdxc/data-model`](/api/data-model), [`@sdxc/jobs`](/api/jobs), [`@sdxc/i18n`](/api/i18n) and
+[`@sdxc/mail`](/api/mail) each ship a `cli` entry that publishes their service to a command
 under the same name and key their router entry uses.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/cli @sdxc/data-model @sdxc/database-middleware @sdxc/i18n @sdxc/jobs \
+	@sdxc/logger @sdxc/mail remix
 ```
 
 ## Where it lives
@@ -71,7 +72,7 @@ sdxc make command users/grant
 the declaration's arguments and flags:
 
 ```typescript {% title="app/commands/index.ts" %}
-import { argument, command, commands, flag, prompt } from "sdxc/cli";
+import { argument, command, commands, flag, prompt } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 
 const ROLES = ["member", "admin"] as const;
@@ -95,7 +96,7 @@ export default commands({
 The handler reads the app's models from `ctx.models`, which the middleware below publishes:
 
 ```typescript {% title="app/commands/users/grant.ts" %}
-import { createCommand, failure, success } from "sdxc/cli";
+import { createCommand, failure, success } from "@sdxc/cli";
 
 import commandset from "~/app/commands";
 
@@ -121,19 +122,19 @@ log first, then the services. Build it in a factory, so a test can hand it a dat
 own:
 
 ```typescript {% title="app/initializers/cli.ts" %}
-import type { MemoryQueue } from "sdxc/jobs/memory";
+import type { MemoryQueue } from "@sdxc/jobs/memory";
 import type { Database } from "remix/data-table";
 
-import { createCLI, lazy } from "sdxc/cli";
-import { models } from "sdxc/data-model/cli";
-import { DB_COMMAND, database, dbHandler } from "sdxc/database-middleware/cli";
-import i18n from "sdxc/i18n/middleware/cli";
-import { jobEnqueuer } from "sdxc/jobs/cli";
-import * as memory from "sdxc/jobs/memory";
-import { createLogger } from "sdxc/logger";
-import { log } from "sdxc/logger/middleware/cli";
-import mail from "sdxc/mail/middleware/cli";
-import { PrintTransport } from "sdxc/mail/print";
+import { createCLI, lazy } from "@sdxc/cli";
+import { models } from "@sdxc/data-model/cli";
+import { DB_COMMAND, database, dbHandler } from "@sdxc/database-middleware/cli";
+import i18n from "@sdxc/i18n/middleware/cli";
+import { jobEnqueuer } from "@sdxc/jobs/cli";
+import * as memory from "@sdxc/jobs/memory";
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware/cli";
+import mail from "@sdxc/mail/middleware/cli";
+import { PrintTransport } from "@sdxc/mail/print";
 
 import commandset from "~/app/commands";
 import { createDispatcher } from "~/app/initializers/dispatcher";
@@ -201,7 +202,7 @@ explained in the sections that follow.
 
 ### The log
 
-`log(logger)` from `sdxc/logger/middleware/cli` opens a `command` log for each run and writes it
+`log(logger)` from `@sdxc/logger/middleware/cli` opens a `command` log for each run and writes it
 once the handler settles, carrying `command.path` (`users grant`), `command.duration_ms`, and
 `command.exit_code` when the run fails. Handlers log through `ctx.log`, and code they call
 reaches the same log through `currentLog()`, exactly as in a route or a job. The logger above
@@ -210,7 +211,7 @@ command prints and can be piped.
 
 ### The database, and a SQL prompt
 
-`database()` from `sdxc/database-middleware/cli` publishes `ctx.db` under the same `Database`
+`database()` from `@sdxc/database-middleware/cli` publishes `ctx.db` under the same `Database`
 key the router entry uses, so a model method that reads `ctx.db` works unchanged. A function is
 called once per run that reaches a handler, so `--help` opens nothing.
 
@@ -242,18 +243,18 @@ changed. It runs on whatever `database()` connected, so it is a SQL shell for an
 
 ### Models
 
-`models()` from `sdxc/data-model/cli` takes the registry and the function that builds the
+`models()` from `@sdxc/data-model/cli` takes the registry and the function that builds the
 model context, exactly as the router entry does, and publishes `ctx.models`. The function runs
 on the first model access, after `database()` has published `ctx.db`.
 [Model your tables](/docs/data-and-background-work/data-models) writes the registry.
 
 ### Jobs that run where you are watching
 
-`jobEnqueuer()` from `sdxc/jobs/cli` publishes `ctx.jobs`, so a command enqueues a job the way a
+`jobEnqueuer()` from `@sdxc/jobs/cli` publishes `ctx.jobs`, so a command enqueues a job the way a
 route does:
 
 ```typescript {% title="app/commands/postings/reconfirm.ts" %}
-import { createCommand, success } from "sdxc/cli";
+import { createCommand, success } from "@sdxc/cli";
 
 import commandset from "~/app/commands";
 import jobs from "~/app/jobs";
@@ -286,7 +287,7 @@ and the command line's database.
 
 ### Translations
 
-`i18n()` from `sdxc/i18n/middleware/cli` takes the resources and languages the router entry
+`i18n()` from `@sdxc/i18n/middleware/cli` takes the resources and languages the router entry
 does, and publishes two things. `ctx.translate(language)` binds copy to the person a command
 writes to, so an email goes out in its recipient's language. `ctx.intl` and `ctx.locale` carry
 the command's own output in the language of whoever runs it, read from `LC_ALL`,
@@ -298,14 +299,14 @@ ctx.stdout(`${ctx.intl.t("cli.roleGranted", { email: user.email })}\n`);
 
 ### Mail that never leaves your laptop
 
-`mail()` from `sdxc/mail/middleware/cli` publishes the app's mailer as `ctx.email`, with the
+`mail()` from `@sdxc/mail/middleware/cli` publishes the app's mailer as `ctx.email`, with the
 sender identity and templates a route uses. The transport is the one decision that changes
 with where the command runs, so it may be a function of the run. `PrintTransport` from
-`sdxc/mail/print` writes each message to the function it is given, here the command's stderr,
+`@sdxc/mail/print` writes each message to the function it is given, here the command's stderr,
 and reports it sent, so a local run shows every message in full and emails no one:
 
 ```typescript {% title="app/commands/postings/resend.ts" %}
-import { createCommand, failure, success } from "sdxc/cli";
+import { createCommand, failure, success } from "@sdxc/cli";
 
 import commandset from "~/app/commands";
 import { PostingPublishedEmail } from "~/app/emails/posting-published";
@@ -350,11 +351,11 @@ middleware above, so every read and write it makes goes to the local file.
 
 ## Test a command
 
-`invoke()` from `sdxc/cli/test` runs a command through the same middleware, against a test
+`invoke()` from `@sdxc/cli/test` runs a command through the same middleware, against a test
 database handed to the factory:
 
 ```typescript {% title="app/commands/users/grant.test.ts" %}
-import { invoke } from "sdxc/cli/test";
+import { invoke } from "@sdxc/cli/test";
 import { expect, test } from "vitest";
 
 import { createAppCLI } from "~/app/initializers/cli";

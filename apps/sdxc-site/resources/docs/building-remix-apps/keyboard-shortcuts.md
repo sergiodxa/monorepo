@@ -5,18 +5,18 @@ section:
     title: Building Remix apps
     order: 3
 order: 11
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 An inbox someone works through all day earns keys: `j` and `k` to move between messages,
 `e` to archive, `⌘K` to jump to search, and `?` to show what the keys are. This guide adds
-those to a Remix v3 page with [`sdxc/ui`](/api/ui): the `keymap()` mixin binds them, the
+those to a Remix v3 page with [`@sdxc/ui`](/api/ui): the `keymap()` mixin binds them, the
 key-combo helpers print each hint in the glyphs of the keyboard in front of the reader,
 `ShortcutList` lays out the help panel, and an `Announcer` tells a screen reader what each
 keystroke did.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/u @sdxc/ui @sdxc/user-agent remix
 ```
 
 Every shortcut presses something already on the page. Each message is a link and each has
@@ -54,8 +54,8 @@ the request, so the controller answers it once and the first paint already shows
 glyphs:
 
 ```tsx {% title="app/http/controllers/inbox.tsx" %}
-import { isApplePlatform } from "sdxc/user-agent/helpers";
-import { parse } from "sdxc/user-agent";
+import { isApplePlatform } from "@sdxc/user-agent/helpers";
+import { parse } from "@sdxc/user-agent";
 import { createAction } from "remix/router";
 
 import { Messages } from "~/app/models/messages";
@@ -82,12 +82,12 @@ everything the keys act on. The island holding the list is that element here:
 ```tsx {% title="resources/components/inbox.tsx" %}
 import type { Handle } from "remix/component";
 
-import { visuallyHidden } from "sdxc/u/a11y";
-import { vstack } from "sdxc/u/layout";
-import { Button, Input, Modal, ShortcutList } from "sdxc/ui";
-import { Announcer } from "sdxc/ui/behaviors";
-import { keymap } from "sdxc/ui/mixins";
-import { keyComboGlyphs } from "sdxc/ui/utils";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { vstack } from "@sdxc/u/layout";
+import { Button, Input, Modal, ShortcutList } from "@sdxc/ui";
+import { Announcer } from "@sdxc/ui/behaviors";
+import { keymap } from "@sdxc/ui/mixins";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry } from "remix/component";
 
 import { INBOX_SHORTCUTS } from "~/app/inbox/shortcuts";
@@ -262,7 +262,7 @@ Where the bindings come from a `ref` callback or plain script, `bindKeymap` take
 map and follows the same stand-down rules:
 
 ```typescript {% title="app/browser/shortcuts.ts" %}
-import { bindKeymap } from "sdxc/ui/mixins";
+import { bindKeymap } from "@sdxc/ui/mixins";
 
 export function bindReaderKeys(scope: Element, signal: AbortSignal) {
 	bindKeymap(
@@ -289,6 +289,6 @@ was aimed at a field.
 
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui)
   — the components, layout mixins and islands this page builds on.
-- [`sdxc/ui`](/api/ui) — `Keyboard`, `ShortcutList`, the mixins and the behaviors.
-- [`sdxc/user-agent`](/api/user-agent) — the platform and form-factor questions a request
+- [`@sdxc/ui`](/api/ui) — `Keyboard`, `ShortcutList`, the mixins and the behaviors.
+- [`@sdxc/user-agent`](/api/user-agent) — the platform and form-factor questions a request
   answers.

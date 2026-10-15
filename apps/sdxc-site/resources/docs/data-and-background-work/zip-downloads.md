@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 17
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 Some downloads are several files: an account's data export, a month of reports a client gets as
@@ -14,11 +14,11 @@ and keeps them together on disk.
 
 This guide builds an account export: the account as JSON, its contacts as a CSV, and every
 invoice PDF from an R2 bucket, in one `.zip` that streams while it is written.
-[`sdxc/zip`](/api/zip) writes the archive, [`sdxc/csv`](/api/csv) writes the spreadsheet as a
-stream, and [`sdxc/http`](/api/http) names the download.
+[`@sdxc/zip`](/api/zip) writes the archive, [`@sdxc/csv`](/api/csv) writes the spreadsheet as a
+stream, and [`@sdxc/http`](/api/http) names the download.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/csv @sdxc/http @sdxc/result @sdxc/zip remix
 ```
 
 ## How the archive is written
@@ -43,13 +43,13 @@ An entry's source is a string, written as UTF-8, a `Uint8Array`, or a
 their CSV is written:
 
 ```typescript {% title="app/services/exports/account-archive.ts" %}
-import type { Result } from "sdxc/result";
-import type { ZipError } from "sdxc/zip";
+import type { Result } from "@sdxc/result";
+import type { ZipError } from "@sdxc/zip";
 import type { Database } from "remix/data-table";
 
-import { streamify } from "sdxc/csv";
-import { isFailure, success } from "sdxc/result";
-import { Zip } from "sdxc/zip";
+import { streamify } from "@sdxc/csv";
+import { isFailure, success } from "@sdxc/result";
+import { Zip } from "@sdxc/zip";
 
 import type { Account } from "~/app/models/accounts";
 
@@ -147,8 +147,8 @@ keep the archive for the files that fit.
 ## Serve the download
 
 ```typescript {% title="app/http/controllers/account/export.ts" %}
-import { attachment } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
+import { attachment } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { accountArchive } from "~/app/services/exports/account-archive";
@@ -212,7 +212,7 @@ storing the export in R2 for a link that stays valid for a week, from a backgrou
 ```typescript {% title="app/jobs/store-export.ts" %}
 import type { Database } from "remix/data-table";
 
-import { isFailure, success } from "sdxc/result";
+import { isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import type { Account } from "~/app/models/accounts";
@@ -249,4 +249,4 @@ records. Pass the previous value as the second argument to continue across chunk
   export off the request.
 - [Offer posts as EPUB ebooks](/docs/content-and-feeds/ebooks) — a format that is a ZIP inside,
   written by the same archive writer.
-- [`sdxc/zip`](/api/zip) — every option and error code.
+- [`@sdxc/zip`](/api/zip) — every option and error code.

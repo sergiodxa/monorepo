@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 10
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 This guide builds a job board. The list of postings continues as the reader scrolls, in both
@@ -14,26 +14,26 @@ Each posting's "Read more" opens a dialog whose content is fetched the first tim
 Every one of those pieces starts as a plain link, and a browser running no script follows the
 links instead.
 
-[`sdxc/lazy-frame`](/api/lazy-frame) ships one `remix/component` client entry,
+[`@sdxc/lazy-frame`](/api/lazy-frame) ships one `remix/component` client entry,
 `LazyFrame`. On the server it renders its `children`. In the browser it keeps them until the
 reader reaches it, by scrolling near it or by opening the dialog around it, and then mounts a
 Remix `Frame` for its `src`.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/lazy-frame remix
 ```
 
 ## Register the client entry
 
-`LazyFrame` is a client entry named `sdxc/lazy-frame/ui#LazyFrame`, so the server writes the
-bare specifier `sdxc/lazy-frame/ui` into the page, and the browser entry's `loadModule` has
+`LazyFrame` is a client entry named `@sdxc/lazy-frame/ui#LazyFrame`, so the server writes the
+bare specifier `@sdxc/lazy-frame/ui` into the page, and the browser entry's `loadModule` has
 to resolve it. An `import.meta.glob` over the app's own directories cannot reach into
 `node_modules`, so a package's islands get an explicit map keyed by that specifier. Keep the
 map in a module of its own, so a test can read it without starting the runtime:
 
 ```typescript {% title="bootstrap/client-modules.ts" %}
 export const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
-	"sdxc/lazy-frame/ui": () => import("sdxc/lazy-frame/ui"),
+	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 };
 
 export const CLIENT_MODULES = import.meta.glob([
@@ -69,7 +69,7 @@ A `LazyFrame` takes the address to fetch as `src` and the markup to keep until t
 because a browser running no script keeps them for good:
 
 ```tsx {% title="resources/views/jobs.tsx" %}
-import { LazyFrame } from "sdxc/lazy-frame/ui";
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
 
 <LazyFrame src="/jobs?page=2&frame">
 	<a href="/jobs?page=2">Older postings</a>
@@ -95,7 +95,7 @@ tell the two requests apart. The address is the one thing only the frame's reque
 ```tsx {% title="app/http/fragment.tsx" %}
 import type { RemixNode } from "remix/component";
 
-import { HTML } from "sdxc/http/content-type";
+import { HTML } from "@sdxc/http/content-type";
 import { renderToStream } from "remix/component/server";
 
 export const FRAME_PARAM = "frame";
@@ -160,7 +160,7 @@ page after page:
 ```tsx {% title="resources/views/jobs.tsx" %}
 import type { Handle } from "remix/component";
 
-import { LazyFrame } from "sdxc/lazy-frame/ui";
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
 
 import type { JobPage } from "~/app/models/job";
 
@@ -283,7 +283,7 @@ loads the first time the closest `<dialog>`, `<details>` or `[popover]` around i
 ```tsx {% title="resources/views/job-row.tsx" %}
 import type { Handle } from "remix/component";
 
-import { LazyFrame } from "sdxc/lazy-frame/ui";
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
 
 import { frameOf } from "~/app/http/fragment";
 
@@ -357,7 +357,7 @@ test("defers the older page behind the link a scriptless browser follows", async
 	let body = await (await get("/jobs")).text();
 
 	expect(body).toContain('<a href="/jobs?page=2">Older postings</a>');
-	expect(body).toContain('"moduleUrl":"sdxc/lazy-frame/ui"');
+	expect(body).toContain('"moduleUrl":"@sdxc/lazy-frame/ui"');
 	expect(body).toContain('"src":"/jobs?page=2&frame"');
 });
 
@@ -462,4 +462,4 @@ it.
   — dialogs, invoker commands and the islands this one sits beside.
 - [Paginate lists](/docs/http-apis/paginate-lists) — the page parameters and the older and
   newer addresses each frame is given.
-- [`sdxc/lazy-frame`](/api/lazy-frame) — every prop and its default.
+- [`@sdxc/lazy-frame`](/api/lazy-frame) — every prop and its default.

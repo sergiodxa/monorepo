@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 12
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 An IP address shows up in more places than it looks: the key of a rate limit, a column on a
@@ -15,13 +15,14 @@ of headers, an IPv6 address written three different ways, or `0x7f.1`. A key bui
 text counts one client as many, and a check written against it lets an internal address through.
 
 This guide parses the address once, at the edge of your app, and passes a checked value
-everywhere after. [`sdxc/get-client-ip`](/api/get-client-ip) reads the connecting address
-Cloudflare vouches for and publishes it as `ctx.ip`. [`sdxc/ip`](/api/ip) is the value it
+everywhere after. [`@sdxc/get-client-ip`](/api/get-client-ip) reads the connecting address
+Cloudflare vouches for and publishes it as `ctx.ip`. [`@sdxc/ip`](/api/ip) is the value it
 holds: an `IP` that knows its canonical spelling, the network it sits in and what the IANA
 registries say it is for, plus `IP.Range` for networks.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/get-client-ip @sdxc/http @sdxc/ip @sdxc/logger @sdxc/rate-limit \
+	@sdxc/result @sdxc/validate remix
 ```
 
 ## Publish the address once
@@ -31,8 +32,8 @@ Cloudflare attaches to every request it routes, parses it, and publishes the res
 before any route middleware or handler runs.
 
 ```tsx {% title="app/initializers/router.tsx" %}
-import getClientIP from "sdxc/get-client-ip/middleware";
-import { log } from "sdxc/logger/middleware";
+import getClientIP from "@sdxc/get-client-ip/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
@@ -75,15 +76,15 @@ The sections below take each of those in turn.
 
 An IPv6 client is normally handed a whole `/64`, and its operating system rotates through
 addresses inside it on its own. A limit keyed on the full address gives that client a fresh
-budget with every rotation. `addressKey` from `sdxc/rate-limit` keys on the network the
+budget with every rotation. `addressKey` from `@sdxc/rate-limit` keys on the network the
 address sits in instead: the address itself for IPv4, its `/64` for IPv6, written as canonical
 text. A `null` address answers `"unknown"`, the one bucket every unidentified caller shares.
 
 ```typescript {% title="app/http/middleware/rate-limit.ts" %}
 import type { Middleware } from "remix/router";
 
-import { addressKey, KVAdapter } from "sdxc/rate-limit";
-import { rateLimit } from "sdxc/rate-limit/middleware";
+import { addressKey, KVAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env } from "cloudflare:workers";
 
 export function clientBudget(prefix: string, limit: number): Middleware {
@@ -111,8 +112,8 @@ once, where the value enters. Write your own services against the type:
 ```typescript {% title="app/services/sign-ins.ts" %}
 import type { Database } from "remix/data-table";
 
-import { IP } from "sdxc/ip";
-import { isSuccess } from "sdxc/result";
+import { IP } from "@sdxc/ip";
+import { isSuccess } from "@sdxc/result";
 
 import { SignIns } from "~/app/models/sign-ins";
 
@@ -176,9 +177,9 @@ handful of ranges per request costs microseconds.
 ```typescript {% title="app/http/middleware/office-only.ts" %}
 import type { Middleware } from "remix/router";
 
-import { forbidden } from "sdxc/http/response/json";
-import { IP } from "sdxc/ip";
-import { isSuccess } from "sdxc/result";
+import { forbidden } from "@sdxc/http/response/json";
+import { IP } from "@sdxc/ip";
+import { isSuccess } from "@sdxc/result";
 
 export const OFFICE_NETWORKS = ["203.0.113.0/24", "2001:db8:42::/48"];
 
@@ -209,14 +210,14 @@ no IPv6 client: list the office's IPv6 prefix too when it has one.
 ## Refuse an internal address someone typed
 
 A webhook target, an uptime probe or an avatar URL is a host chosen by someone else, and your
-Worker will connect to it. When that host is an address literal, `sdxc/ip` classifies it before
+Worker will connect to it. When that host is an address literal, `@sdxc/ip` classifies it before
 anything is stored:
 
 ```typescript {% title="app/http/controllers/webhooks/create.ts" %}
-import { created, unprocessableEntity } from "sdxc/http/response/json";
-import { IP } from "sdxc/ip";
-import { isFailure, isSuccess } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { created, unprocessableEntity } from "@sdxc/http/response/json";
+import { IP } from "@sdxc/ip";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -268,9 +269,9 @@ In a test, no edge sits in front of the router, so `ctx.ip` is `null` until the 
 caller:
 
 ```typescript {% title="app/http/middleware/office-only.test.ts" %}
-import getClientIP from "sdxc/get-client-ip/middleware";
-import { IP } from "sdxc/ip";
-import { isSuccess } from "sdxc/result";
+import getClientIP from "@sdxc/get-client-ip/middleware";
+import { IP } from "@sdxc/ip";
+import { isSuccess } from "@sdxc/result";
 import { createRouter } from "remix/router";
 import { expect, test } from "vitest";
 

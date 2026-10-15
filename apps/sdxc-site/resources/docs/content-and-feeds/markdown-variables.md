@@ -5,12 +5,12 @@ section:
     title: Content & feeds
     order: 7
 order: 9
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 Onboarding pages, plan summaries and transactional copy say the same thing to every reader
 with a few values changed: the product's name, the plan a workspace pays for, the link to its
-billing page. [`sdxc/markdown`](/api/markdown) reads those values as variables. The parser
+billing page. [`@sdxc/markdown`](/api/markdown) reads those values as variables. The parser
 keeps each one as a node in the tree, and the `variables` plugin fills them in when a page
 renders, so one parsed document serves every reader and the file an author edits stays the
 template.
@@ -19,7 +19,7 @@ This guide builds on [A markdown content pipeline](/docs/content-and-feeds/markd
 which covers the options object, the loader and the route.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/markdown @sdxc/result remix
 ```
 
 ## Write the holes into the document
@@ -57,7 +57,7 @@ schema describes the values it receives once filled, so `plans` is an array of p
 even though the source writes a variable:
 
 ```typescript {% title="app/services/content/schema.ts" %}
-import type { Markdown } from "sdxc/markdown";
+import type { Markdown } from "@sdxc/markdown";
 
 import * as s from "remix/data-schema";
 
@@ -82,8 +82,8 @@ included. Pass the options the document was parsed with, so the plugin can run t
 were waiting on these values:
 
 ```typescript {% title="app/services/content/onboarding.ts" %}
-import { Markdown } from "sdxc/markdown";
-import { variables } from "sdxc/markdown/plugin/variables";
+import { Markdown } from "@sdxc/markdown";
+import { variables } from "@sdxc/markdown/plugin/variables";
 
 import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
@@ -141,10 +141,10 @@ variable takes only relative, `http`, `https`, `mailto` and `tel` URLs, so a val
 written it.
 
 ```typescript {% title="app/services/content/onboarding-page.ts" %}
-import type { Markdown } from "sdxc/markdown";
+import type { Markdown } from "@sdxc/markdown";
 
-import { MarkdownParseError } from "sdxc/markdown";
-import { isFailure } from "sdxc/result";
+import { MarkdownParseError } from "@sdxc/markdown";
+import { isFailure } from "@sdxc/result";
 
 import { fillOnboarding } from "~/app/services/content/onboarding";
 
@@ -191,8 +191,8 @@ comments included. An editing API can parse a file, change its frontmatter, and 
 filling a value or dropping a note:
 
 ```typescript {% title="app/services/content/save.ts" %}
-import { Markdown } from "sdxc/markdown";
-import { isFailure, success } from "sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { isFailure, success } from "@sdxc/result";
 
 import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
@@ -218,4 +218,4 @@ is the template every workspace is filled from.
   route a filled document renders through.
 - [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) — the passes to
   run after the values are in.
-- [`sdxc/markdown`](/api/markdown) — the attribute grammar and the variable node in full.
+- [`@sdxc/markdown`](/api/markdown) — the attribute grammar and the variable node in full.

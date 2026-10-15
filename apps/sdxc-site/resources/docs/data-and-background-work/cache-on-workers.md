@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 1
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 A Worker has two caches worth using, and they answer different questions. Workers KV holds
@@ -13,24 +13,24 @@ _values_: the list of releases you fetched from an API, a rendered feed, anythin
 rather not compute twice. The platform's HTTP cache holds _responses_: a whole page, stored at
 the edge and replayed without your Worker running at all.
 
-This guide sets up both. [`sdxc/cache`](/api/cache) reads and writes values through KV and
-answers every call with a `Result`, and [`sdxc/workers-cache`](/api/workers-cache) declares
+This guide sets up both. [`@sdxc/cache`](/api/cache) reads and writes values through KV and
+answers every call with a `Result`, and [`@sdxc/workers-cache`](/api/workers-cache) declares
 which responses the edge may store, tags them, and purges them when the content changes.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/cache @sdxc/http @sdxc/logger @sdxc/result @sdxc/workers-cache remix
 ```
 
 ## Open a cache for each request
 
-`WorkerKVCache` lives at `sdxc/cache/worker-kv` and takes a KV namespace binding. Given a
+`WorkerKVCache` lives at `@sdxc/cache/worker-kv` and takes a KV namespace binding. Given a
 `waitUntil`, it hands each write to the invocation instead of awaiting it, so the reader who paid
 for a miss does not also pay for the put.
 
 ```typescript {% title="app/initializers/cache.ts" %}
-import type { Cache } from "sdxc/cache";
+import type { Cache } from "@sdxc/cache";
 
-import { WorkerKVCache } from "sdxc/cache/worker-kv";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env, waitUntil } from "cloudflare:workers";
 
 export function requestCache(): Cache {
@@ -51,7 +51,7 @@ a test hand it a `MemoryCache` instead.
 returns that. The value's type comes from the loader, so nothing is annotated:
 
 ```tsx {% title="app/http/controllers/packages.tsx" %}
-import { isFailure } from "sdxc/result";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { requestCache } from "~/app/initializers/cache";
@@ -81,14 +81,14 @@ the string it serialized to, and the type says so, on a hit and on a miss alike.
 ## Choose a TTL
 
 `ttl` takes a duration string such as `"10 minutes"` or `"1 day"`, checked at compile time by
-[`sdxc/duration`](/api/duration), or a number of whole seconds. Leave it out and the entry never
+[`@sdxc/duration`](/api/duration), or a number of whole seconds. Leave it out and the entry never
 expires.
 
 KV refuses a TTL under 60 seconds. A shorter one leaves the entry unwritten and reports
 `unavailable`, so a lifetime you compute at runtime needs a floor:
 
 ```typescript {% title="app/services/daily-report.ts" %}
-import type { Cache } from "sdxc/cache";
+import type { Cache } from "@sdxc/cache";
 
 import { buildReport, secondsUntilMidnight } from "~/app/services/report";
 
@@ -105,9 +105,9 @@ blank. Write every successful fetch under two keys: one that expires, whose pres
 "fresh" means, and one that never does, which answers when the upstream refuses you.
 
 ```typescript {% title="app/services/releases.ts" %}
-import type { Cache } from "sdxc/cache";
+import type { Cache } from "@sdxc/cache";
 
-import { isSuccess } from "sdxc/result";
+import { isSuccess } from "@sdxc/result";
 
 import type { Release } from "~/app/services/github";
 
@@ -144,15 +144,15 @@ they hold and keep one shape per prefix.
 ## Store whole responses at the edge
 
 A value in KV still costs a Worker invocation to serve. For a public page, the edge can serve the
-response itself. `sdxc/workers-cache` handles the part HTTP does not standardize: tagging a
+response itself. `@sdxc/workers-cache` handles the part HTTP does not standardize: tagging a
 response and purging by tag.
 
 Declare the tags once, as functions, so the header a page writes and the purge that clears it
 cannot drift apart:
 
 ```typescript {% title="app/services/edge-cache.ts" %}
-import { policy } from "sdxc/http/cache";
-import { createTags } from "sdxc/workers-cache";
+import { policy } from "@sdxc/http/cache";
+import { createTags } from "@sdxc/workers-cache";
 
 export const TAGS = createTags({
 	release: (version: string) => `release:${version}`,
@@ -173,8 +173,8 @@ Register the middleware once, handing it the platform cache. List it ahead of yo
 auth middleware, so the check it runs on the finished response sees everything they added:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { log } from "sdxc/logger/middleware";
-import workersCache from "sdxc/workers-cache/middleware";
+import { log } from "@sdxc/logger/middleware";
+import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
 import { createRouter } from "remix/router";
 
@@ -220,8 +220,8 @@ A write action purges the tags it invalidated. `ctx.cache.purge()` awaits the pl
 returns a `Result`, which is what you want before redirecting to the page you just changed:
 
 ```typescript {% title="app/http/controllers/publish-release.ts" %}
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { saveRelease } from "~/app/models/releases";
@@ -249,13 +249,13 @@ which entries are wrong.
 
 ## Test both layers without a platform
 
-`MemoryCache` from `sdxc/cache/memory` serializes on write and parses on read, so it behaves
+`MemoryCache` from `@sdxc/cache/memory` serializes on write and parses on read, so it behaves
 like KV down to the `Date` coming back as a string, and its `now` option expires an entry without
 waiting for one. `createRecordingCache()` records purges instead of sending them:
 
 ```typescript {% title="app/services/edge-cache.test.ts" %}
-import { MemoryCache } from "sdxc/cache/memory";
-import { createRecordingCache, purge } from "sdxc/workers-cache";
+import { MemoryCache } from "@sdxc/cache/memory";
+import { createRecordingCache, purge } from "@sdxc/workers-cache";
 import { expect, test } from "vitest";
 
 import { TAGS } from "~/app/services/edge-cache";

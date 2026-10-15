@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 2
 order: 4
-lastUpdated: 2026-09-21
+lastUpdated: 2026-10-15
 ---
 
 Names here are meant to be guessable. A reader who has used two of these packages should be
@@ -14,12 +14,12 @@ able to predict the third, and that only works if the naming is boring on purpos
 ## Package names
 
 A package is named for the problem it solves, in lowercase and hyphenated:
-`sdxc/markdown`, `sdxc/rate-limit`, `sdxc/server-timing`. Where the problem is a format, the
-name is the format — `sdxc/yaml`, `sdxc/rss`, `sdxc/atom`, `sdxc/opml` — so the package you
+`@sdxc/markdown`, `@sdxc/rate-limit`, `@sdxc/server-timing`. Where the problem is a format, the
+name is the format — `@sdxc/yaml`, `@sdxc/rss`, `@sdxc/atom`, `@sdxc/opml` — so the package you
 want is the one you would have typed.
 
 Where a package binds a contract to one vendor, the vendor is a suffix on the contract:
-`sdxc/session-storage-kv`, `sdxc/data-table-d1`, `sdxc/data-table-sqlstorage`. The name reads
+`@sdxc/session-storage-kv`, `@sdxc/data-table-d1`, `@sdxc/data-table-sqlstorage`. The name reads
 as "this contract, on that thing", and swapping the vendor is swapping the last segment.
 
 No package is named after the author, a metaphor or an animal. The scope carries the
@@ -28,7 +28,7 @@ attribution; the name carries the job.
 ## Symmetric pairs
 
 Where a package reads a format it also writes it, and the two are `parse` and `stringify` —
-`sdxc/markdown`, `sdxc/yaml`, `sdxc/xml` and `sdxc/opml` all expose that pair. A reader who
+`@sdxc/markdown`, `@sdxc/yaml`, `@sdxc/xml` and `@sdxc/opml` all expose that pair. A reader who
 knows one knows the others.
 
 ## Prefixes that mean something
@@ -45,8 +45,8 @@ A function's own types are declared in a namespace merged with it, so they are r
 the same import and read as belonging to it:
 
 ```typescript
-import { redirect } from "sdxc/response";
-import { retry } from "sdxc/result";
+import { redirect } from "@sdxc/response";
+import { retry } from "@sdxc/result";
 
 let options: retry.Options<Error> = { times: 3, delay: 100, backoff: "exponential" };
 return redirect("/articles", { status: redirect.Status.SeeOther });

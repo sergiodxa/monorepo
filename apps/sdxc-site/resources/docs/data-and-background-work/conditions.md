@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 10
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-15
 ---
 
 Sooner or later a customer asks for a rule your code does not have: notify me only when a
@@ -18,11 +18,12 @@ That condition is untrusted input that lives in your database and runs on every 
 needs a schema to accept it, a compile step to catch what a schema cannot, evaluation that
 never coerces a string into a number, and a way for a person to type it without writing JSON.
 This guide builds alert rules for a monitoring product with
-[`sdxc/expression`](/api/expression), which supplies all four, and accepts the rules through
-[`sdxc/validate`](/api/validate), with failures as [`sdxc/result`](/api/result) values.
+[`@sdxc/expression`](/api/expression), which supplies all four, and accepts the rules through
+[`@sdxc/validate`](/api/validate), with failures as [`@sdxc/result`](/api/result) values.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/expression @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/result @sdxc/validate \
+	remix
 ```
 
 ## Define the dialect once
@@ -32,7 +33,7 @@ referenced. Define it in one module, and every step reads the same grammar: the 
 accepts a rule, the compiler, the evaluator, and the text form.
 
 ```typescript {% title="app/services/alert-conditions.ts" %}
-import { createLanguage } from "sdxc/expression";
+import { createLanguage } from "@sdxc/expression";
 
 const ALERT_BUILTINS = [
 	"all",
@@ -78,9 +79,9 @@ An API client sends the rule as JSON, which is also the form you store. The lang
 condition's shape with everything else:
 
 ```typescript {% title="app/http/controllers/api/alert-rules.ts" %}
-import { created, unprocessableEntity } from "sdxc/http/response/json";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { created, unprocessableEntity } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { minLength } from "remix/data-schema/checks";
 import { createAction } from "remix/router";
@@ -140,9 +141,9 @@ rule can compare two fields as easily as a field and a value: `ctx.check.ownerId
 action parses what came back:
 
 ```tsx {% title="app/http/controllers/alert-rules-edit.tsx" %}
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
@@ -243,8 +244,8 @@ synchronous and pure, so the work belongs wherever the result is handled. Here i
 since sending the notification is I/O nobody waits on:
 
 ```typescript {% title="app/jobs/alerts/route.ts" %}
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
 import { AlertRules } from "~/app/models/alert-rules";
@@ -289,7 +290,7 @@ only part that has to run per event.
 The context is the vocabulary your customers write against, so build it on purpose:
 
 ```typescript {% title="app/services/alert-context.ts" %}
-import type { Context } from "sdxc/expression";
+import type { Context } from "@sdxc/expression";
 
 import type { CheckResult } from "~/app/models/check-results";
 
@@ -308,7 +309,7 @@ Listing the fields keeps a rule from reading a column you never meant to expose,
 `Date` stays a value rather than an object to walk into. A path that resolves to nothing
 makes every operator false except `exists`, so a misspelled field never matches everyone.
 When code beside a rule reads a field the author named, such as a `groupBy` path deciding
-which alerts collapse into one, `read(context, rule.groupBy)` from `sdxc/expression`
+which alerts collapse into one, `read(context, rule.groupBy)` from `@sdxc/expression`
 resolves it exactly the way a condition would.
 
 ## Add an operator of your own
@@ -317,8 +318,8 @@ The built-ins compare values. A rule like "the certificate expires within 14 day
 operator that knows about dates, and `defineOperator` adds it:
 
 ```typescript {% title="app/services/alert-conditions.ts" %}
-import { createLanguage, defineOperator } from "sdxc/expression";
-import { failure, success } from "sdxc/result";
+import { createLanguage, defineOperator } from "@sdxc/expression";
+import { failure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 const DAY_MS = 86_400_000;
@@ -354,16 +355,16 @@ it is missing, so `test` only ever sees a value that is there, and still checks 
 ## Speak the same language in flags and logs
 
 Two other packages read conditions in this language, so a rule learned once works in each.
-`sdxc/flags-engine` exports `flagConditions`, its targeting dialect: every built-in, a
+`@sdxc/flags-engine` exports `flagConditions`, its targeting dialect: every built-in, a
 `semver` operator, and references spelled `segment`. Its `parse` and `stringify` give a flag
 admin page the same text editing as above, and
 [Feature flags](/docs/data-and-background-work/feature-flags) covers the rules themselves.
 
-`sdxc/logger` takes a condition in the JSON form as its sampling `keep`, so the exemption can
+`@sdxc/logger` takes a condition in the JSON form as its sampling `keep`, so the exemption can
 come from configuration rather than code:
 
 ```typescript {% title="app/initializers/logger.ts" %}
-import { createLogger } from "sdxc/logger";
+import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({
 	service: "alerts",
@@ -382,7 +383,7 @@ exemption costs volume, never the logs it was written to keep. Sampling itself i
 The language is plain functions with no I/O, so a test compiles and evaluates directly:
 
 ```typescript {% title="app/services/alert-conditions.test.ts" %}
-import { isFailure, unwrap } from "sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { alertConditions } from "~/app/services/alert-conditions";

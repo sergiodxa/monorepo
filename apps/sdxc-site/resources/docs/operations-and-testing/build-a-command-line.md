@@ -13,13 +13,13 @@ entry, middleware that publishes what handlers share, and a way to call it from 
 guide builds a small tool for a static site, `site`, that creates posts and publishes them, and
 shows each of those parts.
 
-[`sdxc/cli`](/api/cli) parses arguments and flags, generates the help, asks on a terminal for
+[`@sdxc/cli`](/api/cli) parses arguments and flags, generates the help, asks on a terminal for
 what the command line left out, draws progress for long work, and maps exit codes. Handlers
-answer a `Result` from [`sdxc/result`](/api/result), and arguments are checked by any Standard
+answer a `Result` from [`@sdxc/result`](/api/result), and arguments are checked by any Standard
 Schema; the examples use `remix/data-schema`. It runs on Node and Bun.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/cli @sdxc/result remix
 ```
 
 ## Declare the commands
@@ -28,7 +28,7 @@ The contract lists every command, its arguments and its flags, and nothing else.
 errors and each handler's types all come from it:
 
 ```typescript {% title="src/commands.ts" %}
-import { argument, command, commands, flag, prompt } from "sdxc/cli";
+import { argument, command, commands, flag, prompt } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 
 export const COMMANDS = commands({
@@ -79,8 +79,8 @@ its first argument the name typed, so `--dry-run` arrives as `ctx.flags.dryRun`.
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { createCLI, failure, success } from "sdxc/cli";
-import { isFailure, wrap } from "sdxc/result";
+import { createCLI, failure, success } from "@sdxc/cli";
+import { isFailure, wrap } from "@sdxc/result";
 
 import { COMMANDS } from "./commands.js";
 
@@ -227,13 +227,13 @@ the way a router's middleware publishes `ctx.db`. `ctx.set` with a `property` al
 value under that name, and `CommandMiddleware` carries its type to every handler:
 
 ```typescript {% title="src/middleware/config.ts" %}
-import type { CommandMiddleware } from "sdxc/cli";
+import type { CommandMiddleware } from "@sdxc/cli";
 
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { failure } from "sdxc/cli";
-import { isFailure, wrap } from "sdxc/result";
+import { failure } from "@sdxc/cli";
+import { isFailure, wrap } from "@sdxc/result";
 import { createContextKey } from "remix/router";
 
 export interface SiteConfig {
@@ -267,7 +267,7 @@ export const cli = createCLI({
 
 Every handler now reads `ctx.config.bucket`. A middleware that returns a failure ends the run
 there, with the failure's exit code, and code after `await next()` runs once the handler
-settles, which is where a connection closes. Many `sdxc` packages ship middleware for a command
+settles, which is where a connection closes. Many `@sdxc` packages ship middleware for a command
 line under a `cli` entry, so a command reads the same database, models, log and mailer a route
 does; [Your app's command line](/docs/operations-and-testing/your-apps-command-line) puts them
 together. A real configuration file with comments is
@@ -280,7 +280,7 @@ A larger program declares its commands in one module and keeps each handler in i
 only when that command runs, so `site --help` loads no handler at all:
 
 ```typescript {% title="src/commands/posts/publish.ts" %}
-import { createCommand, success } from "sdxc/cli";
+import { createCommand, success } from "@sdxc/cli";
 
 import { COMMANDS } from "../../commands.js";
 
@@ -291,7 +291,7 @@ export default createCommand(COMMANDS.posts.publish, async (ctx) => {
 ```
 
 ```typescript {% title="src/cli.ts" %}
-import { lazy } from "sdxc/cli";
+import { lazy } from "@sdxc/cli";
 
 cli.map(
 	COMMANDS.posts.publish,
@@ -303,7 +303,7 @@ cli.map(
 
 ## Test a command
 
-`invoke` from `sdxc/cli/test` runs a command without a terminal and answers its exit code and
+`invoke` from `@sdxc/cli/test` runs a command without a terminal and answers its exit code and
 what it printed. `answers` answers the prompts by the flag or argument they fill, `exec` replies
 to the programs a handler runs, keyed by the command as a person types it, and `cwd` and `env`
 are the whole world the run sees:
@@ -313,7 +313,7 @@ import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { invoke } from "sdxc/cli/test";
+import { invoke } from "@sdxc/cli/test";
 import { expect, test } from "vitest";
 
 import { cli } from "../../cli.js";
@@ -352,4 +352,4 @@ runs by accident. `run.exec` lists every program a handler ran, in order.
   with comments and errors that point at the line.
 - [`Result` everywhere](/docs/conventions/result-everywhere) — the shape every handler and task
   answers.
-- [`sdxc/cli`](/api/cli) — every flag option, prompt kind and context member.
+- [`@sdxc/cli`](/api/cli) — every flag option, prompt kind and context member.

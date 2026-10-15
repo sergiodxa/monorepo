@@ -12,13 +12,13 @@ A tool that changes code for people, such as a migration script, a generator or 
 step, has to leave everything it did not mean to change exactly as it was: the formatting, the
 comments, the quote style. A diff of its work should show the edit and nothing else.
 
-[`sdxc/codemod`](/api/codemod) makes source-to-source edits to the imports and declarations of
+[`@sdxc/codemod`](/api/codemod) makes source-to-source edits to the imports and declarations of
 JavaScript and TypeScript files. It scans the text rather than rebuilding it from a syntax
 tree, so each edit replaces only the ranges it changes. Every function answers a `Result`, and
 it has no runtime dependency, so it runs in a script on Node or Bun as well as in a Worker.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/codemod @sdxc/result
 ```
 
 The examples read files from a project; `projectFiles` walks it:
@@ -47,8 +47,8 @@ occupy:
 ```typescript {% title="scripts/used-packages.ts" %}
 import { readFile } from "node:fs/promises";
 
-import { findModuleReferences } from "sdxc/codemod";
-import { isFailure } from "sdxc/result";
+import { findModuleReferences } from "@sdxc/codemod";
+import { isFailure } from "@sdxc/result";
 
 import { projectFiles } from "./project-files.js";
 
@@ -62,7 +62,7 @@ for (let file of await projectFiles(process.cwd())) {
 		continue;
 	}
 	for (let reference of references.data) {
-		let match = /^sdxc\/([^/]+)/.exec(reference.specifier);
+		let match = /^@sdxc\/([^/]+)/.exec(reference.specifier);
 		if (match?.[1] !== undefined) used.add(match[1]);
 	}
 }
@@ -87,8 +87,8 @@ original quote character:
 ```typescript {% title="scripts/rename-package.ts" %}
 import { readFile, writeFile } from "node:fs/promises";
 
-import { rewriteSpecifiers } from "sdxc/codemod";
-import { isFailure } from "sdxc/result";
+import { rewriteSpecifiers } from "@sdxc/codemod";
+import { isFailure } from "@sdxc/result";
 
 import { projectFiles } from "./project-files.js";
 
@@ -120,7 +120,7 @@ modification time, so a watcher or a build cache sees only the files that moved.
 imports or re-exports them:
 
 ```typescript {% title="scripts/adopt-dialog.ts" %}
-import { moveImports } from "sdxc/codemod";
+import { moveImports } from "@sdxc/codemod";
 
 let edit = moveImports("page.tsx", source, {
 	from: "@acme/ui",
@@ -159,7 +159,7 @@ literal passed to the first call of `call`, walking into nested objects through 
 creating the levels that are missing:
 
 ```typescript {% title="scripts/add-job.ts" %}
-import { addProperty, insertAfterLast } from "sdxc/codemod";
+import { addProperty, insertAfterLast } from "@sdxc/codemod";
 
 let declared = addProperty("app/jobs/index.ts", jobsSource, {
 	call: "jobs",
@@ -212,4 +212,4 @@ anything beyond indentation.
   these into a command with flags and a `--dry-run`.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the declarations and
   dispatcher the last example edits.
-- [`sdxc/codemod`](/api/codemod) — every option, reference field and error code.
+- [`@sdxc/codemod`](/api/codemod) — every option, reference field and error code.

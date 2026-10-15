@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 4
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 A form anyone can reach will be found by bots within days. No single check stops all of them,
@@ -13,14 +13,16 @@ and every check costs something — a network call, a moment of a person's atten
 guide stacks cheap checks in front of expensive ones on a sign-up form. Each layer refuses what
 it can, and what reaches your handler has already survived the rest.
 
-[`sdxc/honeypot`](/api/honeypot) traps form-filling bots, [`sdxc/rate-limit`](/api/rate-limit)
-keyed by [`sdxc/get-client-ip`](/api/get-client-ip) caps each address, [`sdxc/captcha`](/api/captcha)
-asks for a challenge, and inside the handler [`sdxc/email-address`](/api/email-address),
-[`sdxc/password-policy`](/api/password-policy) and [`sdxc/spam`](/api/spam) judge what was
+[`@sdxc/honeypot`](/api/honeypot) traps form-filling bots, [`@sdxc/rate-limit`](/api/rate-limit)
+keyed by [`@sdxc/get-client-ip`](/api/get-client-ip) caps each address, [`@sdxc/captcha`](/api/captcha)
+asks for a challenge, and inside the handler [`@sdxc/email-address`](/api/email-address),
+[`@sdxc/password-policy`](/api/password-policy) and [`@sdxc/spam`](/api/spam) judge what was
 submitted.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/captcha @sdxc/email-address @sdxc/get-client-ip @sdxc/honeypot @sdxc/http \
+	@sdxc/lazy-route @sdxc/password-policy @sdxc/rate-limit @sdxc/result @sdxc/spam \
+	@sdxc/validate remix
 ```
 
 ## Mount the guards on the route
@@ -31,12 +33,12 @@ goes on both, because the page that renders the form has to issue the fields the
 checked against. The budget and the challenge go on the action alone.
 
 ```typescript {% title="app/initializers/router.ts" %}
-import type { Captcha } from "sdxc/captcha";
+import type { Captcha } from "@sdxc/captcha";
 
-import { captcha } from "sdxc/captcha/middleware";
-import { Honeypot } from "sdxc/honeypot";
-import { honeypot } from "sdxc/honeypot/middleware";
-import { lazy } from "sdxc/lazy-route";
+import { captcha } from "@sdxc/captcha/middleware";
+import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
+import { lazy } from "@sdxc/lazy-route";
 import { env } from "cloudflare:workers";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -96,9 +98,9 @@ can neither pick the field nor backdate the form.
 ```tsx {% title="app/http/controllers/sign-up/render.tsx" %}
 import type { RequestContext } from "remix/router";
 
-import { TurnstileWidget } from "sdxc/captcha/turnstile/ui";
-import { HoneypotFields } from "sdxc/honeypot/ui";
-import { unwrap } from "sdxc/result";
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
+import { HoneypotFields } from "@sdxc/honeypot/ui";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -134,9 +136,9 @@ a missing or expired token, from a person whose page predates a secret rotation 
 the handler with the failure published, which asks them to send the form again:
 
 ```typescript {% title="app/http/controllers/sign-up/bots.ts" %}
-import type { HoneypotError } from "sdxc/honeypot";
+import type { HoneypotError } from "@sdxc/honeypot";
 
-import { redirect } from "sdxc/http/response";
+import { redirect } from "@sdxc/http/response";
 
 import routes from "~/routes/web";
 
@@ -163,9 +165,9 @@ network the address sits in: the full address for IPv4, its `/64` for IPv6, and 
 ```typescript {% title="app/http/middleware/rate-limit.ts" %}
 import type { Middleware } from "remix/router";
 
-import { getClientIP } from "sdxc/get-client-ip";
-import { addressKey, KVAdapter } from "sdxc/rate-limit";
-import { rateLimit } from "sdxc/rate-limit/middleware";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { addressKey, KVAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env } from "cloudflare:workers";
 
 export function callerBudget(prefix: string, limit: number): Middleware {
@@ -188,10 +190,10 @@ one egress address share a budget, which is the cost of keying on an address at 
 with a `403`. `Captcha` is an interface, so the router takes whichever provider it is given:
 
 ```typescript {% title="app/initializers/captcha.ts" %}
-import type { Captcha } from "sdxc/captcha";
+import type { Captcha } from "@sdxc/captcha";
 
-import { MemoryCaptcha } from "sdxc/captcha/memory";
-import { Turnstile } from "sdxc/captcha/turnstile";
+import { MemoryCaptcha } from "@sdxc/captcha/memory";
+import { Turnstile } from "@sdxc/captcha/turnstile";
 import { env } from "cloudflare:workers";
 
 export function productionCaptcha(): Captcha {
@@ -217,10 +219,10 @@ Parse first, run the checks that need no network, then ask DNS whether the domai
 at all.
 
 ```typescript {% title="app/services/sign-up-email.ts" %}
-import { parseEmailAddress } from "sdxc/email-address";
-import { checkDisposable } from "sdxc/email-address/disposable";
-import { checkMailServer } from "sdxc/email-address/mail-server";
-import { failure, isFailure, success } from "sdxc/result";
+import { parseEmailAddress } from "@sdxc/email-address";
+import { checkDisposable } from "@sdxc/email-address/disposable";
+import { checkMailServer } from "@sdxc/email-address/mail-server";
+import { failure, isFailure, success } from "@sdxc/result";
 
 export async function checkSignUpEmail(input: string) {
 	let parsed = parseEmailAddress(input);
@@ -242,23 +244,23 @@ export async function checkSignUpEmail(input: string) {
 `lookup-failed` means the resolver did not answer, so it fails open: a DNS outage never blocks a
 sign-up, and the confirmation email is the real test. Store `address` for sending and put the
 unique index on `canonical`, so a second sign-up with different capitalization finds the
-existing account. `suggestDomain` from `sdxc/email-address/typo` offers "did you mean
+existing account. `suggestDomain` from `@sdxc/email-address/typo` offers "did you mean
 gmail.com?" for a mistyped provider.
 
 ## Check the password, then score the rest
 
 With the address known, the handler checks the password against NIST's rules — at least 15
 characters, not a common password, not built from the email, not in a breach — and scores the
-free-text field. [`sdxc/validate`](/api/validate) reads the parsed form into `SIGN_UP` first.
+free-text field. [`@sdxc/validate`](/api/validate) reads the parsed form into `SIGN_UP` first.
 
 ```typescript {% title="app/http/controllers/sign-up/action.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "sdxc/get-client-ip";
-import { checkPassword } from "sdxc/password-policy";
-import { isFailure } from "sdxc/result";
-import { createSpamFilter, DEFAULT_RULES } from "sdxc/spam";
-import { validate } from "sdxc/validate";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { checkPassword } from "@sdxc/password-policy";
+import { isFailure } from "@sdxc/result";
+import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 
 import { checkYourEmail } from "~/app/http/controllers/sign-up/bots";
@@ -314,8 +316,8 @@ SHA-1, and it runs after every local rule has passed, so `breach-check-unavailab
 an otherwise acceptable password — here it fails open. `issue` carries the values a message
 needs (`minLength`, the matched `fragment`), so `passwordMessage` is your own function turning an
 issue into copy. `createAccount` is your own service: hash the password exactly as submitted with
-`password.hash` from [`sdxc/crypto`](/api/crypto) there, and hold the account for review when it
-is told to. The root import of `sdxc/password-policy` bundles the common-password list,
+`password.hash` from [`@sdxc/crypto`](/api/crypto) there, and hold the account for review when it
+is told to. The root import of `@sdxc/password-policy` bundles the common-password list,
 about 220 KB gzipped; import from `/length`, `/context` and `/breached` if that matters more.
 
 `renderedAt` is the time the honeypot token signed, which the spam filter's timing rule scores:
@@ -361,5 +363,5 @@ reader all land on the same page.
 - [Add passkeys](/docs/identity-and-security/passkeys) — an account with no password to check.
 - [Run a newsletter list](/docs/data-and-background-work/newsletter) — the subscribe action
   behind the guards above.
-- [`sdxc/spam`](/api/spam) — reputation providers, a trainable classifier and a Workers AI
+- [`@sdxc/spam`](/api/spam) — reputation providers, a trainable classifier and a Workers AI
   second opinion.

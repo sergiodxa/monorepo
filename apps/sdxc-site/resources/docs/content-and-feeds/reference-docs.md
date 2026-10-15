@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 6
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 The comments above your exported functions already say what each parameter means, what comes
@@ -19,7 +19,7 @@ with the TypeScript compiler, which is larger than a whole Worker and expects gl
 does not have, so it runs in the build and the Worker only ever reads the JSON it produced.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/result remix
 npm add -D @sdxc/jsdoc typescript
 ```
 
@@ -37,7 +37,7 @@ always produces the same document. Walking the files is your part:
 import type { DocModule, ExtractError } from "@sdxc/jsdoc";
 
 import { extract } from "@sdxc/jsdoc";
-import { isFailure } from "sdxc/result";
+import { isFailure } from "@sdxc/result";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -260,7 +260,7 @@ The name comes from the URL, and `Object.hasOwn` is what keeps `/reference/const
 answering with something inherited. The route is a `get("/reference/:name")`:
 
 ```tsx {% title="app/http/controllers/reference.tsx" %}
-import { notFound } from "sdxc/http/response/html";
+import { notFound } from "@sdxc/http/response/html";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 

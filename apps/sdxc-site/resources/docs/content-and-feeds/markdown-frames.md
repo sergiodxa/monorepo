@@ -5,16 +5,16 @@ section:
     title: Content & feeds
     order: 7
 order: 32
-lastUpdated: 2026-10-09
+lastUpdated: 2026-10-15
 ---
 
 A guide reads best when its example runs on the page: a component you can press, a price
 from today, the latest release. The prose around that example is static, so it parses once
 and caches, and the live part is a region a route renders per request. This guide writes that
-region as a `frame` tag in markdown and draws it with [`sdxc/markdown`](/api/markdown).
+region as a `frame` tag in markdown and draws it with [`@sdxc/markdown`](/api/markdown).
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/markdown @sdxc/result remix
 ```
 
 This one is live. It is the [ColorPicker](/api/ui/color-picker) reference page's own preview,
@@ -47,8 +47,8 @@ client entry elsewhere on the page reloads the region through `handle.frames.get
 `FRAME_TAG` is the tag's definition. Register it under `tags` wherever the document is parsed:
 
 ```typescript {% title="app/services/content/guide.ts" %}
-import { Markdown } from "sdxc/markdown";
-import { FRAME_TAG } from "sdxc/markdown/plugin/frames";
+import { Markdown } from "@sdxc/markdown";
+import { FRAME_TAG } from "@sdxc/markdown/plugin/frames";
 
 export const MARKDOWN_OPTIONS = {
 	tags: { frame: FRAME_TAG },
@@ -69,8 +69,8 @@ no `src` fails the same way.
 to `toRemix` under the tag's name:
 
 ```tsx {% title="app/http/controllers/guide.tsx" %}
-import { FrameTag, toRemix } from "sdxc/markdown/remix";
-import { isFailure } from "sdxc/result";
+import { FrameTag, toRemix } from "@sdxc/markdown/remix";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { readGuide } from "~/app/services/content/guide";

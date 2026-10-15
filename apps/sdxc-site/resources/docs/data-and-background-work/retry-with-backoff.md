@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 9
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 A fixed retry delay is wrong in both directions. Ten minutes is too slow for a blip that
@@ -14,16 +14,16 @@ waiting on it comes back every ten minutes, all at once, and the host meets the 
 moment it recovers. A delay that grows with each failure answers both, and a little randomness
 on top keeps the retries that failed together from returning together.
 
-[`sdxc/backoff`](/api/backoff) is one schedule that answers "how long after the Nth
+[`@sdxc/backoff`](/api/backoff) is one schedule that answers "how long after the Nth
 failure": a base, a growth rule, a ceiling, optional free attempts and optional jitter. It
-plugs into [`sdxc/jobs`](/api/jobs) through `ctx.retry`, into `retry` from
-[`sdxc/result`](/api/result) through its `delay` option, and into any row that stores when
-to try again. Jitter draws from a [`sdxc/random`](/api/random) stream, so a test can make it
-exact. [`sdxc/outbound`](/api/outbound) does the fetching in the examples, and its errors say
+plugs into [`@sdxc/jobs`](/api/jobs) through `ctx.retry`, into `retry` from
+[`@sdxc/result`](/api/result) through its `delay` option, and into any row that stores when
+to try again. Jitter draws from a [`@sdxc/random`](/api/random) stream, so a test can make it
+exact. [`@sdxc/outbound`](/api/outbound) does the fetching in the examples, and its errors say
 which failures are worth another attempt.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/backoff @sdxc/jobs @sdxc/outbound @sdxc/random @sdxc/result
 ```
 
 ## Build the schedule once
@@ -32,7 +32,7 @@ A schedule is a pair of functions over options validated once, so it belongs at 
 built when the module loads and shared by every run:
 
 ```typescript {% title="app/services/previews/retry.ts" %}
-import { createBackoff } from "sdxc/backoff";
+import { createBackoff } from "@sdxc/backoff";
 
 export const previewBackoff = createBackoff({
 	base: "1 minute",
@@ -89,7 +89,7 @@ export function waitAfter(response: Response, attempt: number): number {
 wild. The header is the remote server's to write, so `waitAfter` clamps it to the queue's
 hold limit: an answer of a year would otherwise make the retry itself fail.
 
-Some packages read the header for you. A failed send from [`sdxc/messaging`](/api/messaging)
+Some packages read the header for you. A failed send from [`@sdxc/messaging`](/api/messaging)
 carries `retryAfter` in milliseconds, taken from `Retry-After` or the `retry_after` Discord and
 Telegram put in the body, and `null` when the platform named none, so
 `error.retryAfter ?? backoff.delay(ctx.attempts)` falls back to the schedule.
@@ -101,9 +101,9 @@ the moment a delivery fails, that count is the number of failures so far, which 
 `delay` expects:
 
 ```typescript {% title="app/jobs/previews/fetch.ts" %}
-import { createJobHandler } from "sdxc/jobs";
-import { follow, readText, release } from "sdxc/outbound";
-import { isFailure } from "sdxc/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { follow, readText, release } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
 import { Previews } from "~/app/models/previews";
@@ -143,7 +143,7 @@ export default createJobHandler(jobs.previews.fetch, async (ctx) => {
 ```
 
 `Previews` is your own model. Every failure takes one of two endings. A `timeout` or
-`network` error from `sdxc/outbound` is `retryable`, and so is a `429` or a `5xx`: the next
+`network` error from `@sdxc/outbound` is `retryable`, and so is a `429` or a `5xx`: the next
 attempt could succeed, so the job waits on the schedule. A refused host, a body over the cap or
 a `404` reaches the same result on every attempt, so `ctx.exit` ends the message and reports
 the run as failed instead of spending a day of retries on it.
@@ -156,13 +156,13 @@ failure.
 ## Retry inside one request
 
 Some retries cannot leave the request, such as a profile fetch a page is waiting to render.
-`retry` from `sdxc/result` reruns a `Result`-returning function, and its `delay` accepts a
+`retry` from `@sdxc/result` reruns a `Result`-returning function, and its `delay` accepts a
 function of the attempt, so the same kind of schedule plugs straight in:
 
 ```typescript {% title="app/services/profile.ts" %}
-import { createBackoff } from "sdxc/backoff";
-import { follow } from "sdxc/outbound";
-import { retry } from "sdxc/result";
+import { createBackoff } from "@sdxc/backoff";
+import { follow } from "@sdxc/outbound";
+import { retry } from "@sdxc/result";
 
 const quickBackoff = createBackoff({ base: 200, max: "2 seconds", jitter: "full" });
 
@@ -190,10 +190,10 @@ on the row instead: a failure count, and the time the feed is next due. `at(atte
 `Random` to draw from, so a test can pass a seeded one:
 
 ```typescript {% title="app/services/feeds/backoff.ts" %}
-import type { Random } from "sdxc/random";
+import type { Random } from "@sdxc/random";
 
-import { createBackoff } from "sdxc/backoff";
-import { systemRandom } from "sdxc/random";
+import { createBackoff } from "@sdxc/backoff";
+import { systemRandom } from "@sdxc/random";
 
 export function createFeedBackoff(random: Random = systemRandom()) {
 	return createBackoff({ base: "15 minutes", max: "1 day", jitter: 0.1, random });
@@ -206,8 +206,8 @@ A cron job sweeps the rows that are due, writes the next attempt for each failur
 the count on success:
 
 ```typescript {% title="app/jobs/feeds/sweep.ts" %}
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
 import { Feeds } from "~/app/models/feeds";
@@ -255,7 +255,7 @@ as a table of round numbers than as a curve. `steps` replaces the curve, and the
 repeats for every attempt past the end:
 
 ```typescript {% title="app/services/webhooks/schedule.ts" %}
-import { createBackoff } from "sdxc/backoff";
+import { createBackoff } from "@sdxc/backoff";
 
 export const deliveryBackoff = createBackoff({
 	steps: [
@@ -281,7 +281,7 @@ A sign-in form should forgive a typo or two and only then start making a guesser
 attempts answer `0`, and the curve starts on the failure after them:
 
 ```typescript {% title="app/services/lockout.ts" %}
-import { createBackoff } from "sdxc/backoff";
+import { createBackoff } from "@sdxc/backoff";
 
 const lockout = createBackoff({ free: 4, base: "1 second", max: "15 minutes" });
 
@@ -313,7 +313,7 @@ Jitter makes every run different, which is the point in production and a problem
 A seeded stream from `createRandom` makes the draws, and so the delays, the same on every run:
 
 ```typescript {% title="app/services/feeds/backoff.test.ts" %}
-import { createRandom } from "sdxc/random";
+import { createRandom } from "@sdxc/random";
 import { expect, test } from "vitest";
 
 import { createFeedBackoff } from "~/app/services/feeds/backoff";
@@ -351,4 +351,4 @@ covers seeds and streams beyond jitter.
   transient failures from a sending or receiving site.
 - [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — a
   delivery job that retries on the delay the platform asked for.
-- [`sdxc/backoff`](/api/backoff) — every option, including `growth` and `factor`.
+- [`@sdxc/backoff`](/api/backoff) — every option, including `growth` and `factor`.

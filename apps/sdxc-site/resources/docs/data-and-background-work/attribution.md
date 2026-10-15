@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 12
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 A visitor clicks a link in a newsletter, reads three pages, leaves, comes back a week later from
@@ -14,11 +14,11 @@ reads them on the request where the visitor becomes something you keep: an accou
 customer, a newsletter reader. The campaign is stored with that record, so a report on signups
 by campaign is a query over your own table.
 
-[`sdxc/attribution`](/api/attribution) reads the touch off a request, keeps the first and last
+[`@sdxc/attribution`](/api/attribution) reads the touch off a request, keeps the first and last
 touch per visitor and flattens them for the places they are stored.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/attribution @sdxc/logger remix
 ```
 
 ## What a touch holds
@@ -27,7 +27,7 @@ A touch is one arrival: when it happened, the page the visitor landed on and wha
 said about how they got there. `readTouch` reads one off a URL and the `Referer` header:
 
 ```typescript
-import { readTouch } from "sdxc/attribution";
+import { readTouch } from "@sdxc/attribution";
 
 let touch = readTouch(
 	new URL(
@@ -83,8 +83,8 @@ export function attributionCookie(): Cookie {
 global chain, ahead of anything that ends a request early:
 
 ```tsx {% title="app/initializers/router.tsx" %}
-import { attribution } from "sdxc/attribution/middleware";
-import { log } from "sdxc/logger/middleware";
+import { attribution } from "@sdxc/attribution/middleware";
+import { log } from "@sdxc/logger/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
@@ -147,7 +147,7 @@ The sign-up action is where a visitor becomes a record. Read the touches there a
 fields your reports group by into the account's own columns:
 
 ```typescript {% title="app/services/acquisition.ts" %}
-import type { Touch } from "sdxc/attribution";
+import type { Touch } from "@sdxc/attribution";
 
 export interface Acquisition {
 	channel: string;
@@ -172,7 +172,7 @@ A `null` touch is a visitor who arrived with nothing to credit, or one who withh
 it reads as `direct`. The action passes the first touch, which answers "what found us":
 
 ```typescript {% title="app/http/controllers/sign-up.ts" %}
-import { toMetadata } from "sdxc/attribution";
+import { toMetadata } from "@sdxc/attribution";
 import { createAction } from "remix/router";
 
 import { createAccount } from "~/app/models/accounts";
@@ -201,7 +201,7 @@ A sale usually happens on the billing platform's page, and the platform reports 
 in a webhook. Attach the touches to the checkout, and the platform hands them back on the order:
 
 ```typescript {% title="app/http/controllers/billing/checkout.ts" %}
-import { toMetadata } from "sdxc/attribution";
+import { toMetadata } from "@sdxc/attribution";
 
 let checkout = await ctx.billing.checkouts.create({
 	product: "pro",
@@ -220,7 +220,7 @@ A newsletter provider stores campaign fields beside a reader. `toCampaign` flatt
 into them, with the landing path resolved into an absolute URL against the request's:
 
 ```typescript
-import { toCampaign } from "sdxc/attribution";
+import { toCampaign } from "@sdxc/attribution";
 
 let outcome = await ctx.newsletter.subscribers.subscribe({
 	email: email.data,
@@ -235,12 +235,12 @@ builds the whole form.
 
 ## Strip tracking parameters from links
 
-`sdxc/attribution/parameters` knows every parameter the touch reader does. `withoutTracking`
+`@sdxc/attribution/parameters` knows every parameter the touch reader does. `withoutTracking`
 copies a URL without them, keeping every other parameter in the order and encoding its author
 wrote, which suits a canonical link or a link a visitor copies to share:
 
 ```typescript
-import { withoutTracking } from "sdxc/attribution/parameters";
+import { withoutTracking } from "@sdxc/attribution/parameters";
 
 withoutTracking(new URL("https://example.com/post?p=123&utm_source=x&fbclid=abc"));
 // https://example.com/post?p=123
@@ -256,7 +256,7 @@ the way a browser does, keeps the cookie the response set, and sends it with the
 converts:
 
 ```typescript {% title="app/services/acquisition.test.ts" %}
-import { attribution } from "sdxc/attribution/middleware";
+import { attribution } from "@sdxc/attribution/middleware";
 import { createCookie } from "remix/cookie";
 import { createRouter } from "remix/router";
 import { expect, test } from "vitest";

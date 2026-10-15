@@ -5,17 +5,17 @@ section:
     title: Building Remix apps
     order: 3
 order: 8
-lastUpdated: 2026-09-30
+lastUpdated: 2026-10-15
 ---
 
 `URLSearchParams` and `FormData` are flat: a name maps to strings. A list page's filters and
 a form with repeated rows are not flat, and the convention browsers and servers share for them
-is bracket syntax. [`sdxc/bracket-params`](/api/bracket-params) reads those keys into nested
+is bracket syntax. [`@sdxc/bracket-params`](/api/bracket-params) reads those keys into nested
 objects and arrays, validates the result against your schema in the same call, and writes a
 value back as a query string or a form.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/bracket-params @sdxc/http @sdxc/result @sdxc/ui remix
 ```
 
 The examples assume the router from
@@ -71,13 +71,13 @@ export type TaskQuery = s.InferOutput<typeof TaskQuerySchema>;
 ```
 
 `parse(source, schema)` reads a `URL` directly, and it also takes a query string, a
-`URLSearchParams` or an `sdxc/location` `Location`. It returns a `Result`: the schema's
+`URLSearchParams` or an `@sdxc/location` `Location`. It returns a `Result`: the schema's
 output, or a `ValidationError` whose issues carry each path. A query the page cannot read is a
 URL that names nothing, so it gets the router's 404:
 
 ```tsx {% title="app/http/controllers/tasks.tsx" %}
-import { parse } from "sdxc/bracket-params";
-import { isFailure } from "sdxc/result";
+import { parse } from "@sdxc/bracket-params";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import Task from "~/app/models/task";
@@ -117,7 +117,7 @@ it.
 ```tsx {% title="resources/views/tasks.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Button, Checkbox, CheckboxGroup, Label, TextField } from "sdxc/ui";
+import { Button, Checkbox, CheckboxGroup, Label, TextField } from "@sdxc/ui";
 
 import type { TaskRow } from "~/app/models/task";
 import type { TaskQuery } from "~/app/http/validators/task-query";
@@ -179,8 +179,8 @@ field replaced:
 ```tsx {% title="resources/views/task-links.tsx" %}
 import type { Handle } from "remix/component";
 
-import { stringify } from "sdxc/bracket-params";
-import { Link } from "sdxc/ui";
+import { stringify } from "@sdxc/bracket-params";
+import { Link } from "@sdxc/ui";
 
 import type { TaskQuery } from "~/app/http/validators/task-query";
 
@@ -248,8 +248,8 @@ is `items[0][quantity]`. The file input submits one `attachments[]` per chosen f
 ```tsx {% title="resources/views/new-invoice.tsx" %}
 import type { Handle } from "remix/component";
 
-import { fieldName } from "sdxc/bracket-params";
-import { Button, FileTrigger, Form, TextField } from "sdxc/ui";
+import { fieldName } from "@sdxc/bracket-params";
+import { Button, FileTrigger, Form, TextField } from "@sdxc/ui";
 
 interface Props {
 	issues?: ReadonlyArray<Form.Issue>;
@@ -319,9 +319,9 @@ the default URL-encoded body reads the same way.
 `parse` reads `ctx.formData` like it reads a URL, and a `File` arrives as a value unchanged:
 
 ```tsx {% title="app/http/controllers/invoices-new.tsx" %}
-import { fieldName, parse } from "sdxc/bracket-params";
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
+import { fieldName, parse } from "@sdxc/bracket-params";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { createController } from "remix/router";
 
 import Invoice from "~/app/models/invoice";
@@ -357,7 +357,7 @@ export default createController(routes.invoices.new, {
 });
 ```
 
-An issue's `path` is the structural path, `["items", 0, "quantity"]`. `sdxc/ui`'s `Form`
+An issue's `path` is the structural path, `["items", 0, "quantity"]`. `@sdxc/ui`'s `Form`
 finds a field's issues by its `name`, so the action rewrites each path into the one-segment
 bracket name the input carries, and the message lands beside `items[0][quantity]`. An issue with
 no path is about the form as a whole and passes through unchanged. Indices match as long as the
@@ -373,7 +373,7 @@ explains why each outcome answers the way it does.
 each `File` as its own field. It is how a test posts to the action without spelling every key:
 
 ```typescript {% title="app/http/controllers/invoices-new.test.ts" %}
-import { toFormData } from "sdxc/bracket-params";
+import { toFormData } from "@sdxc/bracket-params";
 
 import { createWebRouter } from "~/app/initializers/router";
 
@@ -398,7 +398,7 @@ optional field can be passed as-is.
 ## Where to go next
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params): flat forms,
-  route params and JSON bodies, with `sdxc/validate`.
+  route params and JSON bodies, with `@sdxc/validate`.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui): the
   components the forms above are built from.
 - [Paginate lists](/docs/http-apis/paginate-lists): cursors and page links for the list the

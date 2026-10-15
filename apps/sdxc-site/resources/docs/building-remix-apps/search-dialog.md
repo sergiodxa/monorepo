@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 13
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) builds the
@@ -15,14 +15,14 @@ shows the top matches as the reader types, and Enter or "See all" leads to a `/s
 with every match, paged. Each layer starts as plain HTML: a form that submits to `/search`
 works in a browser running no script, and the live results are an upgrade on top of it.
 
-[`sdxc/ui`](/api/ui) supplies the dialog, the search field, the highlighted text, the field
-error and the pager, and [`sdxc/u`](/api/u) styles what sits between them. The server side
-comes from [`sdxc/search`](/api/search) and [`sdxc/pagination`](/api/pagination), as the
-search guide set them up, and [`sdxc/workers-cache`](/api/workers-cache) caches the dialog's
+[`@sdxc/ui`](/api/ui) supplies the dialog, the search field, the highlighted text, the field
+error and the pager, and [`@sdxc/u`](/api/u) styles what sits between them. The server side
+comes from [`@sdxc/search`](/api/search) and [`@sdxc/pagination`](/api/pagination), as the
+search guide set them up, and [`@sdxc/workers-cache`](/api/workers-cache) caches the dialog's
 answers at the edge.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/pagination @sdxc/result @sdxc/u @sdxc/ui remix
 ```
 
 ## Two routes
@@ -52,8 +52,8 @@ Command Invoker API, so the dialog opens with no script at all. The dialog holds
 ```tsx {% title="resources/components/site-header.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Button, Keyboard, Modal } from "sdxc/ui";
-import { keyComboGlyphs } from "sdxc/ui/utils";
+import { Button, Keyboard, Modal } from "@sdxc/ui";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { Frame } from "remix/component";
 
 import { SEARCH_DIALOG_ID, searchFrameSrc } from "~/resources/components/search-box";
@@ -109,8 +109,8 @@ The fragment route parses `?q=` and renders the box and the top matches, with no
 them, since the page the frame sits in already has one:
 
 ```tsx {% title="app/http/controllers/search-frame.tsx" %}
-import { Pagination } from "sdxc/pagination";
-import { isFailure } from "sdxc/result";
+import { Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { matchingArticles, parseArticleQuery } from "~/app/search/articles";
@@ -186,12 +186,12 @@ and the reader lands on the full results page:
 ```tsx {% title="resources/views/search-suggestions.tsx" %}
 import type { Handle } from "remix/component";
 
-import { visuallyHidden } from "sdxc/u/a11y";
-import { listStyle } from "sdxc/u/general";
-import { gap, grid } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Link, SearchField } from "sdxc/ui";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Link, SearchField } from "@sdxc/ui";
 
 import type { SearchHit } from "~/app/search/hits";
 
@@ -272,11 +272,11 @@ Each match is a row the page and the dialog share:
 ```tsx {% title="resources/components/search-result.tsx" %}
 import type { Handle } from "remix/component";
 
-import { fg } from "sdxc/u/color";
-import { gap, grid } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Highlight, Link } from "sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { gap, grid } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Highlight, Link } from "@sdxc/ui";
 
 import type { SearchHit } from "~/app/search/hits";
 
@@ -314,8 +314,8 @@ frame at the fragment for the text so far and reloads it, once typing pauses:
 ```tsx {% title="resources/components/search-box.tsx" %}
 import type { Handle } from "remix/component";
 
-import { SearchField } from "sdxc/ui";
-import { bindKeymap } from "sdxc/ui/mixins";
+import { SearchField } from "@sdxc/ui";
+import { bindKeymap } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 export const SEARCH_DIALOG_ID = "site-search";
@@ -419,7 +419,7 @@ Closing the dialog runs `reset`, which puts the box and the frame back to the qu
 rendered with, so the dialog reopens where every reader starts. `autofocus` puts the caret in
 the box each time `showModal()` opens the dialog.
 
-The shortcuts are `bindKeymap` from `sdxc/ui/mixins`: `⌘K` or `Ctrl+K` opens the dialog from
+The shortcuts are `bindKeymap` from `@sdxc/ui/mixins`: `⌘K` or `Ctrl+K` opens the dialog from
 anywhere on the page, and `/` does too. Both stand down for a keystroke typed into a field, so
 a `/` typed into a comment box stays a `/`. Escape needs no binding, since the dialog closes on
 it natively. The browser entry has to know this module, which the
@@ -435,14 +435,14 @@ error, the count, the matches and a numbered pager, all as server HTML, from the
 passes:
 
 ```tsx {% title="resources/views/search.tsx" %}
-import type { Pagination } from "sdxc/pagination";
+import type { Pagination } from "@sdxc/pagination";
 import type { Handle } from "remix/component";
 
-import { listStyle } from "sdxc/u/general";
-import { gap, grid } from "sdxc/u/layout";
-import { m, p } from "sdxc/u/size";
-import { tabularNums, text } from "sdxc/u/typography";
-import { FieldError, Heading, Label, SearchField } from "sdxc/ui";
+import { listStyle } from "@sdxc/u/general";
+import { gap, grid } from "@sdxc/u/layout";
+import { m, p } from "@sdxc/u/size";
+import { tabularNums, text } from "@sdxc/u/typography";
+import { FieldError, Heading, Label, SearchField } from "@sdxc/ui";
 
 import type { SearchHit } from "~/app/search/hits";
 
@@ -554,4 +554,4 @@ and leaves it alone on a results page, where the reader came to read.
   reader's key caps, and the rules a keymap stands down by.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui):
   dialogs, invoker commands and islands.
-- [`sdxc/ui`](/api/ui): `Modal`, `SearchField`, `Highlight`, `FieldError` and `Pagination`.
+- [`@sdxc/ui`](/api/ui): `Modal`, `SearchField`, `Highlight`, `FieldError` and `Pagination`.

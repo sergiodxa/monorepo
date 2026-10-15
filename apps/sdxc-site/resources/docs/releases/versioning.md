@@ -5,7 +5,7 @@ section:
     title: Releases
     order: 9
 order: 1
-lastUpdated: 2026-09-21
+lastUpdated: 2026-10-15
 ---
 
 Releases here are dated rather than semantic. A version is the UTC date it was published,
@@ -26,8 +26,9 @@ Write the version you built and tested against, exactly as it was published:
 ```json {% title="package.json" %}
 {
 	"dependencies": {
-		"remix": "3.0.0",
-		"sdxc": "2026.9.21"
+		"@sdxc/markdown": "2026.9.21",
+		"@sdxc/result": "2026.9.21",
+		"remix": "3.0.0"
 	}
 }
 ```

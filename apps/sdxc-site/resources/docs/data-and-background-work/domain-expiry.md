@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 16
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 A domain that lapses takes everything on it down at once: the site stops resolving, mail
@@ -14,13 +14,13 @@ public. Every registry publishes it, along with the domain's status, registrar a
 over RDAP, the Registration Data Access Protocol: JSON over HTTPS, one server per registry,
 found through a bootstrap file IANA maintains.
 
-This guide reads that data and turns it into an expiry monitor. [`sdxc/rdap`](/api/rdap) finds
-the registry and looks the domain up. [`sdxc/cache`](/api/cache) keeps the bootstrap file
-between requests. [`sdxc/jobs`](/api/jobs) runs the lookups on a cron trigger, and
-[`sdxc/backoff`](/api/backoff) spaces out the retries when a registry has a bad hour.
+This guide reads that data and turns it into an expiry monitor. [`@sdxc/rdap`](/api/rdap) finds
+the registry and looks the domain up. [`@sdxc/cache`](/api/cache) keeps the bootstrap file
+between requests. [`@sdxc/jobs`](/api/jobs) runs the lookups on a cron trigger, and
+[`@sdxc/backoff`](/api/backoff) spaces out the retries when a registry has a bad hour.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/backoff @sdxc/cache @sdxc/jobs @sdxc/rdap @sdxc/result remix
 ```
 
 ## Build the client
@@ -31,8 +31,8 @@ the registry rather than two. The user agent goes out on every request, and it i
 that rate-limits identifies who to contact:
 
 ```typescript {% title="app/initializers/rdap.ts" %}
-import { WorkerKVCache } from "sdxc/cache/worker-kv";
-import { RDAP } from "sdxc/rdap";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { RDAP } from "@sdxc/rdap";
 import { env } from "cloudflare:workers";
 
 export const rdap = new RDAP({
@@ -52,7 +52,7 @@ points a TLD at a registry IANA does not list yet.
 dot; `Bücher.com.` queries `xn--bcher-kva.com`:
 
 ```typescript {% title="app/services/domains/describe.ts" %}
-import { isFailure, success } from "sdxc/result";
+import { isFailure, success } from "@sdxc/result";
 
 import { rdap } from "~/app/initializers/rdap";
 
@@ -95,11 +95,11 @@ domain, or the TLD runs no RDAP service, and asking again tomorrow will give the
 Everything else is an outage, and an outage should never erase a date you already have:
 
 ```typescript {% title="app/services/domains/expiry.ts" %}
-import type { RDAP, RDAPError } from "sdxc/rdap";
-import type { Result } from "sdxc/result";
+import type { RDAP, RDAPError } from "@sdxc/rdap";
+import type { Result } from "@sdxc/result";
 
-import { createBackoff } from "sdxc/backoff";
-import { isSuccess } from "sdxc/result";
+import { createBackoff } from "@sdxc/backoff";
+import { isSuccess } from "@sdxc/result";
 
 const DAY_MS = 86_400_000;
 
@@ -192,7 +192,7 @@ The expiry date is one signal and the status is the other. `redemptionPeriod` an
 `serverHold` mean the registry has taken the domain out of DNS, whatever its date says:
 
 ```typescript {% title="app/services/domains/alerts.ts" %}
-import type { RDAP } from "sdxc/rdap";
+import type { RDAP } from "@sdxc/rdap";
 
 import type { ExpiryPatch } from "~/app/services/domains/expiry";
 
@@ -231,7 +231,7 @@ Declare the job with an hourly trigger. Each domain is looked up once a day, and
 is what lets a retry come back in an hour rather than a day:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "sdxc/jobs";
+import { job, jobs } from "@sdxc/jobs";
 
 export default jobs({
 	sweepDomainExpiry: job({ cron: "0 * * * *" }),
@@ -241,8 +241,8 @@ export default jobs({
 The handler claims the domains whose `nextCheckAt` has passed and writes each outcome back:
 
 ```typescript {% title="app/jobs/sweep-domain-expiry.ts" %}
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import type { TrackedDomain } from "~/app/models/domains";
 
@@ -305,8 +305,8 @@ is the job middleware from that guide.
 An `RDAPError` is built with the code and the fields that code fills:
 
 ```typescript {% title="app/services/domains/expiry.test.ts" %}
-import { RDAPError } from "sdxc/rdap";
-import { failure } from "sdxc/result";
+import { RDAPError } from "@sdxc/rdap";
+import { failure } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { expiryOutcome } from "~/app/services/domains/expiry";
@@ -352,4 +352,4 @@ the registry and IANA's bootstrap URL with MSW, as
   `createBackoff` builds.
 - [Send alerts to chat and paging services](/docs/data-and-background-work/messaging): where an
   expiry alert goes out.
-- [`sdxc/rdap`](/api/rdap): every option, field and error code.
+- [`@sdxc/rdap`](/api/rdap): every option, field and error code.

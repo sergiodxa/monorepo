@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 13
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 This guide tells a team when their nightly sync fails. Each team connects the places it
@@ -14,13 +14,13 @@ PagerDuty service for whoever is on call, or a webhook of their own. The app wri
 alert once, and a background job delivers it to every channel, retrying the failures that a
 later attempt can clear.
 
-[`sdxc/messaging`](/api/messaging) holds the portable message and one provider per platform,
+[`@sdxc/messaging`](/api/messaging) holds the portable message and one provider per platform,
 each rendering the message in that platform's native format (Block Kit, a Discord embed,
-Telegram HTML, a PagerDuty event) and sending it with one `fetch`. [`sdxc/jobs`](/api/jobs)
-runs the delivery and [`sdxc/backoff`](/api/backoff) spaces out its retries.
+Telegram HTML, a PagerDuty event) and sending it with one `fetch`. [`@sdxc/jobs`](/api/jobs)
+runs the delivery and [`@sdxc/backoff`](/api/backoff) spaces out its retries.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/backoff @sdxc/jobs @sdxc/messaging @sdxc/result @sdxc/webhooks remix
 ```
 
 ## Write the message once
@@ -30,7 +30,7 @@ A `Message` is plain data: a required `title`, Markdown `text`, a `severity`, la
 one module, so every channel says the same thing:
 
 ```typescript {% title="app/services/notifications/messages.ts" %}
-import type { Message } from "sdxc/messaging";
+import type { Message } from "@sdxc/messaging";
 
 export interface SyncRun {
 	id: string;
@@ -91,14 +91,14 @@ bundle carries only the platforms you import. Constructing one does no I/O, whic
 cheap to build from a stored channel at the moment of sending:
 
 ```typescript {% title="app/services/notifications/destinations.ts" %}
-import type { Destination } from "sdxc/messaging";
+import type { Destination } from "@sdxc/messaging";
 
-import { DiscordWebhook } from "sdxc/messaging/discord";
-import { Opsgenie } from "sdxc/messaging/opsgenie";
-import { PagerDuty } from "sdxc/messaging/pagerduty";
-import { SlackBot, SlackWebhook } from "sdxc/messaging/slack";
-import { TelegramBot } from "sdxc/messaging/telegram";
-import { Webhook } from "sdxc/messaging/webhook";
+import { DiscordWebhook } from "@sdxc/messaging/discord";
+import { Opsgenie } from "@sdxc/messaging/opsgenie";
+import { PagerDuty } from "@sdxc/messaging/pagerduty";
+import { SlackBot, SlackWebhook } from "@sdxc/messaging/slack";
+import { TelegramBot } from "@sdxc/messaging/telegram";
+import { Webhook } from "@sdxc/messaging/webhook";
 import { env } from "cloudflare:workers";
 
 export type ChannelConfig =
@@ -158,19 +158,19 @@ rotated in the Worker's environment is used from the next message on.
 
 The other providers follow the same shape:
 
-| Import                       | Class               | Configured with                                  |
-| ---------------------------- | ------------------- | ------------------------------------------------ |
-| `sdxc/messaging/teams`       | `TeamsWorkflow`     | A Workflows webhook `url`                        |
-| `sdxc/messaging/google-chat` | `GoogleChatWebhook` | `url` on `chat.googleapis.com`                   |
-| `sdxc/messaging/whatsapp`    | `WhatsAppCloud`     | `accessToken`, `phoneNumberId`, `to`, `template` |
-| `sdxc/messaging/ntfy`        | `Ntfy`              | `topic`, `server?`, `token?`                     |
-| `sdxc/messaging/pushover`    | `Pushover`          | `token`, `user`, `emergency?`                    |
-| `sdxc/messaging/web-push`    | `BrowserPush`       | `push`, `subscription`, `ttl?`                   |
+| Import                        | Class               | Configured with                                  |
+| ----------------------------- | ------------------- | ------------------------------------------------ |
+| `@sdxc/messaging/teams`       | `TeamsWorkflow`     | A Workflows webhook `url`                        |
+| `@sdxc/messaging/google-chat` | `GoogleChatWebhook` | `url` on `chat.googleapis.com`                   |
+| `@sdxc/messaging/whatsapp`    | `WhatsAppCloud`     | `accessToken`, `phoneNumberId`, `to`, `template` |
+| `@sdxc/messaging/ntfy`        | `Ntfy`              | `topic`, `server?`, `token?`                     |
+| `@sdxc/messaging/pushover`    | `Pushover`          | `token`, `user`, `emergency?`                    |
+| `@sdxc/messaging/web-push`    | `BrowserPush`       | `push`, `subscription`, `ttl?`                   |
 
 `WhatsAppCloud` sends approved templates only, since WhatsApp accepts free-form text only in
 the 24 hours after the recipient last wrote; `template.parameters(message)` maps the message
 onto the template's body parameters. Google Chat threads every message with the same `key`.
-`BrowserPush` notifies one browser through `sdxc/web-push`; [Send
+`BrowserPush` notifies one browser through `@sdxc/web-push`; [Send
 browser push notifications](/docs/data-and-background-work/browser-push) covers subscribing
 and storing the browser.
 
@@ -182,9 +182,9 @@ The settings form stores whatever URL a person pasted, and each URL provider has
 `Webhook` accepts any public URL and refuses private and reserved hosts:
 
 ```typescript {% title="app/services/notifications/check-url.ts" %}
-import { DiscordWebhook } from "sdxc/messaging/discord";
-import { SlackWebhook } from "sdxc/messaging/slack";
-import { Webhook } from "sdxc/messaging/webhook";
+import { DiscordWebhook } from "@sdxc/messaging/discord";
+import { SlackWebhook } from "@sdxc/messaging/slack";
+import { Webhook } from "@sdxc/messaging/webhook";
 
 export function checkChannelUrl(kind: "slack" | "discord" | "webhook", url: string) {
 	if (kind === "slack") return SlackWebhook.check(url);
@@ -205,8 +205,8 @@ the attempts. Declare the job with `MESSAGE_SCHEMA`, which reads the message's J
 back, ISO `timestamp` included:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "sdxc/jobs";
-import { MESSAGE_SCHEMA } from "sdxc/messaging";
+import { job, jobs } from "@sdxc/jobs";
+import { MESSAGE_SCHEMA } from "@sdxc/messaging";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -221,8 +221,8 @@ database rather than in every queued message. The handler builds the destination
 `ctx.destinations`, published by job middleware so a test can hand in its own:
 
 ```typescript {% title="app/jobs/middleware/destinations.ts" %}
-import type { JobMiddleware } from "sdxc/jobs";
-import type { Destination } from "sdxc/messaging";
+import type { JobMiddleware } from "@sdxc/jobs";
+import type { Destination } from "@sdxc/messaging";
 import type { ChannelConfig } from "~/app/services/notifications/destinations";
 
 import { createContextKey } from "remix/router";
@@ -254,11 +254,11 @@ Add it to the dispatcher factory from
 `destinations` option beside its database source:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import type { JobQueue } from "sdxc/jobs/queue";
+import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
 import type { DestinationFactory } from "~/app/jobs/middleware/destinations";
 
-import { createJobDispatcher } from "sdxc/jobs";
+import { createJobDispatcher } from "@sdxc/jobs";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
@@ -295,9 +295,9 @@ export const dispatcher = createDispatcher();
 The handler sends once per delivery and decides what each failure means:
 
 ```typescript {% title="app/jobs/deliver-message.ts" %}
-import { createBackoff } from "sdxc/backoff";
-import { createJobHandler } from "sdxc/jobs";
-import { isSuccess } from "sdxc/result";
+import { createBackoff } from "@sdxc/backoff";
+import { createJobHandler } from "@sdxc/jobs";
+import { isSuccess } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
 import Channels from "~/app/models/channel";
@@ -360,8 +360,8 @@ Chat channels hear about every failure. Paging channels wake someone up, so they
 critical messages, and the recovery that resolves them:
 
 ```typescript {% title="app/services/notifications/notify-team.ts" %}
-import type { JobEnqueuer } from "sdxc/jobs";
-import type { Message } from "sdxc/messaging";
+import type { JobEnqueuer } from "@sdxc/jobs";
+import type { Message } from "@sdxc/messaging";
 import type { Database } from "remix/data-table";
 
 import jobs from "~/app/jobs";
@@ -411,9 +411,9 @@ on providers whose platform can do them, and `supports` narrows a destination to
 has the method:
 
 ```typescript {% title="app/services/notifications/send-or-update.ts" %}
-import type { Destination, Message, SendOptions, SentRef } from "sdxc/messaging";
+import type { Destination, Message, SendOptions, SentRef } from "@sdxc/messaging";
 
-import { supports } from "sdxc/messaging";
+import { supports } from "@sdxc/messaging";
 
 export async function sendOrUpdate(
 	destination: Destination,
@@ -442,12 +442,12 @@ is the message with a `type: "message"` field and an ISO `timestamp`, signed wit
 delivery's `id` is the `webhook-id`, so a receiver that stores ids drops a retried delivery.
 
 A receiver verifies the signature with any Standard Webhooks library. With
-[`sdxc/webhooks`](/api/webhooks), `MESSAGE_SCHEMA` reads the body back into a `Message`:
+[`@sdxc/webhooks`](/api/webhooks), `MESSAGE_SCHEMA` reads the body back into a `Message`:
 
 ```typescript {% title="app/http/controllers/alerts-inbox.ts" %}
-import { MESSAGE_SCHEMA } from "sdxc/messaging";
-import { isFailure } from "sdxc/result";
-import * as Webhooks from "sdxc/webhooks";
+import { MESSAGE_SCHEMA } from "@sdxc/messaging";
+import { isFailure } from "@sdxc/result";
+import * as Webhooks from "@sdxc/webhooks";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -475,9 +475,9 @@ Each provider has a public `render(message)` answering the exact body it sends. 
 and override `render`; the send, the URL checks and the error mapping stay the same:
 
 ```typescript {% title="app/services/notifications/compact-slack.ts" %}
-import type { Message } from "sdxc/messaging";
+import type { Message } from "@sdxc/messaging";
 
-import { SlackWebhook } from "sdxc/messaging/slack";
+import { SlackWebhook } from "@sdxc/messaging/slack";
 
 export class CompactSlack extends SlackWebhook {
 	override render(message: Message) {
@@ -495,7 +495,7 @@ and `telegramHtml` with `writeText`, are exported for an override that writes te
 
 ## Test the delivery job
 
-`MemoryDestination` from `sdxc/messaging/memory` records every successful call and fails on
+`MemoryDestination` from `@sdxc/messaging/memory` records every successful call and fails on
 cue, so the retry and `gone` branches run without a network. Hand it to the dispatcher through
 the `destinations` option, over a memory queue whose clock the test moves.
 `createTestDatabase` is the in-memory D1 from
@@ -503,8 +503,8 @@ the `destinations` option, over a memory queue whose clock the test moves.
 `insertChannel` your own model function:
 
 ```typescript {% title="app/jobs/deliver-message.test.ts" %}
-import * as memory from "sdxc/jobs/memory";
-import { MemoryDestination } from "sdxc/messaging/memory";
+import * as memory from "@sdxc/jobs/memory";
+import { MemoryDestination } from "@sdxc/messaging/memory";
 import { expect, test } from "vitest";
 
 import { createDispatcher } from "~/app/initializers/dispatcher";
@@ -551,13 +551,13 @@ makes the destination declare `update`, for testing `sendOrUpdate` against a ref
 
 ## Hold a custom provider to the contract
 
-`describeDestination` from `sdxc/messaging/conformance` registers the Vitest tests every
+`describeDestination` from `@sdxc/messaging/conformance` registers the Vitest tests every
 destination passes: it sends, declares exactly the capabilities it claims, refuses another
 provider's ref, and answers a rate limit as retryable with the delay the platform named. Run
 it against `CompactSlack`, with [MSW](https://mswjs.io) standing in for Slack:
 
 ```typescript {% title="app/services/notifications/compact-slack.test.ts" %}
-import { describeDestination } from "sdxc/messaging/conformance";
+import { describeDestination } from "@sdxc/messaging/conformance";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
@@ -603,4 +603,4 @@ ships from its own subpath.
 - [Send email](/docs/data-and-background-work/send-email) — the same job shape for mail.
 - [Send browser push notifications](/docs/data-and-background-work/browser-push) — subscribing
   a browser, and the `BrowserPush` destination.
-- [`sdxc/messaging`](/api/messaging) — every provider's options and error codes.
+- [`@sdxc/messaging`](/api/messaging) — every provider's options and error codes.

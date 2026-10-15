@@ -14,11 +14,11 @@ stands alone, so a reader handles one record at a time and a writer never builds
 The same format goes by NDJSON.
 
 This guide exports an account's activity events as a download and imports them back, with
-[`sdxc/jsonl`](/api/jsonl). Its readers answer a `Result` per line with the line's number, cap
+[`@sdxc/jsonl`](/api/jsonl). Its readers answer a `Result` per line with the line's number, cap
 how long a line may be, and resume after the rows an earlier run already handled.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/jsonl @sdxc/result remix
 ```
 
 ## Export as a stream
@@ -27,8 +27,8 @@ npm add sdxc remix
 line as the response is read, so memory stays flat however many records the export holds:
 
 ```typescript {% title="app/http/controllers/activity/export.ts" %}
-import { encode } from "sdxc/jsonl";
-import { attachment } from "sdxc/http/response";
+import { encode } from "@sdxc/jsonl";
+import { attachment } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import { activityEvents } from "~/app/models/activity";
@@ -71,8 +71,8 @@ export const ACTIVITY_EVENT = s.object({
 ```
 
 ```typescript {% title="app/services/imports/read-activity.ts" %}
-import { read } from "sdxc/jsonl";
-import { isFailure } from "sdxc/result";
+import { read } from "@sdxc/jsonl";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 import { ACTIVITY_EVENT } from "~/app/services/imports/activity-event";
@@ -131,8 +131,8 @@ from the same file and pick up after the rows it already saved:
 ```typescript {% title="app/services/imports/import-batch.ts" %}
 import type { Database } from "remix/data-table";
 
-import { read } from "sdxc/jsonl";
-import { isFailure } from "sdxc/result";
+import { read } from "@sdxc/jsonl";
+import { isFailure } from "@sdxc/result";
 
 import { Activity } from "~/app/models/activity";
 import { ACTIVITY_EVENT } from "~/app/services/imports/activity-event";
@@ -168,8 +168,8 @@ are already JSON back out byte for byte. Together they filter or split a file wi
 re-serializing every record:
 
 ```typescript {% title="app/services/exports/only-invites.ts" %}
-import { encodeLines, lines } from "sdxc/jsonl";
-import { isSuccess } from "sdxc/result";
+import { encodeLines, lines } from "@sdxc/jsonl";
+import { isSuccess } from "@sdxc/result";
 
 async function* invites(source: ReadableStream<Uint8Array>) {
 	for await (let line of lines(source, { maxLineBytes: 65_536 })) {
@@ -193,7 +193,7 @@ For a file that fits in memory, `parse` reads every value or answers the first l
 JSON, and `stringify` writes values as one string ending in a newline, each in a `Result`:
 
 ```typescript {% title="app/services/fixtures.ts" %}
-import { parse, stringify } from "sdxc/jsonl";
+import { parse, stringify } from "@sdxc/jsonl";
 
 let events = parse('{"type":"invited"}\n\n{"type":"signed_in"}\n');
 let text = stringify([{ type: "exported" }]);
@@ -207,4 +207,4 @@ let text = stringify([{ type: "exported" }]);
   import runs in.
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the schemas
   `read` checks each line with.
-- [`sdxc/jsonl`](/api/jsonl) — every option and error code.
+- [`@sdxc/jsonl`](/api/jsonl) — every option and error code.

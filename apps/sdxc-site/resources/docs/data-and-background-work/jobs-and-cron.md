@@ -9,18 +9,19 @@ lastUpdated: 2026-10-15
 ---
 
 Some work should not happen while a visitor waits: sending an email, calling a slow API, sweeping
-stale rows at three in the morning. [`sdxc/jobs`](/api/jobs) moves that work onto a queue. You
+stale rows at three in the morning. [`@sdxc/jobs`](/api/jobs) moves that work onto a queue. You
 declare every job in one map, write each handler in its own module, and a dispatcher runs them
 with the same middleware, logging, timeouts and retries whether a request enqueued them or a cron
 trigger did.
 
 The shape will feel familiar from the router: a map of addressable definitions, handlers mapped
 onto them, and middleware that publishes services onto a typed context. At the end,
-[`sdxc/cron`](/api/cron) covers the other half of scheduling: checking an expression a person
+[`@sdxc/cron`](/api/cron) covers the other half of scheduling: checking an expression a person
 typed into a form.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/cron @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/messaging @sdxc/result \
+	@sdxc/trace-context remix
 ```
 
 ## Declare the jobs
@@ -29,7 +30,7 @@ The map is declaration and nothing else. Importing it costs its schemas, so a co
 enqueue a job without pulling that job's dependencies into the request path:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "sdxc/jobs";
+import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -53,7 +54,7 @@ declaration: its type requires five fields, and an out-of-range value throws
 `createJobHandler` pairs a handler with its job, which is what types `ctx.input`:
 
 ```typescript {% title="app/jobs/expire-postings.ts" %}
-import { createJobHandler } from "sdxc/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 import { expireBefore } from "~/app/models/posting";
@@ -85,7 +86,7 @@ never-returning call only through a `const` name and `ctx` is a parameter.
 middleware. A test hands in its own source, and the handler never touches a binding:
 
 ```typescript {% title="app/jobs/middleware/database.ts" %}
-import type { JobMiddleware } from "sdxc/jobs";
+import type { JobMiddleware } from "@sdxc/jobs";
 import type { Database as DataTable } from "remix/data-table";
 
 import { createContextKey } from "remix/router";
@@ -116,7 +117,7 @@ and the dispatcher delivers. Build the queue once, in a module both sides import
 end up pointed at different backends:
 
 ```typescript {% title="app/initializers/queue.ts" %}
-import * as cloudflare from "sdxc/jobs/cloudflare";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 export const queue = cloudflare.queue(() => env.QUEUE);
@@ -131,10 +132,10 @@ The dispatcher owns the middleware chain and the timeout, delivers from the shar
 maps each job to a loader so a handler module is imported only once a message for it arrives:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import type { JobQueue } from "sdxc/jobs/queue";
+import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
 
-import { createJobDispatcher } from "sdxc/jobs";
+import { createJobDispatcher } from "@sdxc/jobs";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
@@ -170,7 +171,7 @@ The worker uses the one instance built at module scope. An augmentation of `JobT
 gives every handler the context this chain produces:
 
 ```typescript {% title="app/jobs/types.ts" %}
-import type { JobDispatcherContext } from "sdxc/jobs";
+import type { JobDispatcherContext } from "@sdxc/jobs";
 
 import type { dispatcher } from "~/app/initializers/dispatcher";
 
@@ -189,13 +190,13 @@ The factory's options exist for tests: the defaults are what production runs.
 ## Enqueue from a request
 
 A route handler enqueues through `ctx.jobs`, which `jobEnqueuer(queue)` from
-`sdxc/jobs/router` publishes. It writes through the shared queue alone, so the dispatcher, its
+`@sdxc/jobs/router` publishes. It writes through the shared queue alone, so the dispatcher, its
 middleware and every job handler stay out of the request path's module graph:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "sdxc/jobs/router";
-import { log } from "sdxc/logger/middleware";
-import { trace } from "sdxc/trace-context/middleware";
+import { jobEnqueuer } from "@sdxc/jobs/router";
+import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
 
 import { logger } from "~/app/initializers/logger";
@@ -213,7 +214,7 @@ message carry the request's trace, so each job run links back to the request tha
 A handler then enqueues with exactly the payload the job's schema accepts:
 
 ```typescript {% title="app/http/controllers/publish-posting.ts" %}
-import { redirect } from "sdxc/http/response";
+import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
@@ -234,7 +235,7 @@ export default createAction(routes.postings.create, async (ctx) => {
 ```
 
 `publishPosting` is your own model function, and `ctx.locale` is the language the
-[`sdxc/i18n`](/api/i18n) middleware detected, so the email can be written in it.
+[`@sdxc/i18n`](/api/i18n) middleware detected, so the email can be written in it.
 
 A job with no `input` is enqueued with no second argument, and `enqueueMany` writes one message
 per input in a single call. When the queue refuses a send, `enqueue` raises the backend's
@@ -248,7 +249,7 @@ same arguments.
 beside the `fetch` handler the router from `createWebRouter()` answers:
 
 ```typescript {% title="bootstrap/worker.ts" %}
-import * as cloudflare from "sdxc/jobs/cloudflare";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 
 import { dispatcher } from "~/app/initializers/dispatcher";
 import { createWebRouter } from "~/app/initializers/router";
@@ -298,14 +299,14 @@ against your configuration catches a job whose trigger was never added.
 
 A job that exits, or fails on its last delivery, is work that will not happen unless someone
 looks. The dispatcher's `onEnd` hook runs once a delivery's ending is decided and before it is
-settled, so it can tell a channel before the message is acked. [`sdxc/messaging`](/api/messaging)
+settled, so it can tell a channel before the message is acked. [`@sdxc/messaging`](/api/messaging)
 sends one portable message to Slack, Discord, PagerDuty and the rest:
 
 ```typescript {% title="app/jobs/alert-ops.ts" %}
-import type { AnyJobContext, JobStatus } from "sdxc/jobs";
+import type { AnyJobContext, JobStatus } from "@sdxc/jobs";
 
-import { SlackWebhook } from "sdxc/messaging/slack";
-import { isFailure } from "sdxc/result";
+import { SlackWebhook } from "@sdxc/messaging/slack";
+import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 const LAST_ATTEMPT = 4;
@@ -342,13 +343,13 @@ builds.
 
 ## Run jobs in a test
 
-`sdxc/jobs/memory` is a queue held in an array. Build the dispatcher over one and over a test
+`@sdxc/jobs/memory` is a queue held in an array. Build the dispatcher over one and over a test
 database, such as the in-memory D1 from
 [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), enqueue, and drain
 the queue through the dispatcher:
 
 ```typescript {% title="app/jobs/expire-postings.test.ts" %}
-import * as memory from "sdxc/jobs/memory";
+import * as memory from "@sdxc/jobs/memory";
 import { expect, test } from "vitest";
 
 import { createDispatcher } from "~/app/initializers/dispatcher";
@@ -377,8 +378,8 @@ expression is input. `Schedule.parse` returns a `Result` whose failure names the
 character position to point at, so the form can say exactly what is wrong:
 
 ```typescript {% title="app/services/report-schedule.ts" %}
-import { Schedule } from "sdxc/cron";
-import { isFailure, success } from "sdxc/result";
+import { Schedule } from "@sdxc/cron";
+import { isFailure, success } from "@sdxc/result";
 
 export interface ScheduleInput {
 	expression: string;

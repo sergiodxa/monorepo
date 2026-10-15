@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 8
 order: 2
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 An agent that can call your app over the Model Context Protocol can search it, read from it
@@ -13,27 +13,28 @@ and cite it, without scraping HTML. This guide adds an MCP endpoint to a Remix v
 Workers: a tool that searches open job postings, a resource that reads one in full, a cache
 in front of the search, and a route that serves it all.
 
-[`sdxc/mcp`](/api/mcp) implements the stateless Streamable HTTP revision of MCP, where a call
+[`@sdxc/mcp`](/api/mcp) implements the stateless Streamable HTTP revision of MCP, where a call
 is one `POST` answered by one response. That makes the server an ordinary route: tools and
 resources are declared like routes, answered like actions, and run behind the same middleware
-as every page. [`sdxc/cache`](/api/cache) keeps repeated searches off the database, and
-[`sdxc/authz`](/api/authz) decides which tools a credential may call.
+as every page. [`@sdxc/cache`](/api/cache) keeps repeated searches off the database, and
+[`@sdxc/authz`](/api/authz) decides which tools a credential may call.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/authz @sdxc/cache @sdxc/get-client-ip @sdxc/json-schema @sdxc/lazy-route \
+	@sdxc/logger @sdxc/mcp @sdxc/rate-limit @sdxc/result remix
 ```
 
 ## Declare the tools
 
 A tool declaration is a route table for a model: the name a client calls, the description
-the model chooses it by, and the [`sdxc/json-schema`](/api/json-schema) schema its arguments
+the model chooses it by, and the [`@sdxc/json-schema`](/api/json-schema) schema its arguments
 satisfy, which `tools/list` publishes as JSON Schema. Keep declarations in the folder's
 `index.ts`, apart from the files that answer them.
 
 ```typescript {% title="app/mcp/tools/index.ts" %}
-import * as s from "sdxc/json-schema";
-import * as checks from "sdxc/json-schema/checks";
-import { tool, tools } from "sdxc/mcp";
+import * as s from "@sdxc/json-schema";
+import * as checks from "@sdxc/json-schema/checks";
+import { tool, tools } from "@sdxc/mcp";
 
 export default tools({
 	searchJobs: tool("search_jobs", {
@@ -65,7 +66,7 @@ client fills with `resources/list`. A resource is addressed by a URI, declared w
 pattern syntax as your routes.
 
 ```typescript {% title="app/mcp/resources/index.ts" %}
-import { resource, resources } from "sdxc/mcp";
+import { resource, resources } from "@sdxc/mcp";
 
 export default resources({
 	posting: resource("jobs://postings/:id", {
@@ -90,7 +91,7 @@ from the `map` call. Handlers receive the router's
 `RequestContext`, so `ctx.db` and everything else your middleware publishes is already there.
 
 ```typescript {% title="app/mcp/tools/search-jobs.ts" %}
-import { createTool, ToolError } from "sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp";
 
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
@@ -119,7 +120,7 @@ your app's own model.
 A resource implements `read`, and optionally a `list` that fills the client's picker:
 
 ```typescript {% title="app/mcp/resources/posting.ts" %}
-import { createResource } from "sdxc/mcp";
+import { createResource } from "@sdxc/mcp";
 
 import { toMarkdown } from "~/app/mcp/markdown";
 import resourceset from "~/app/mcp/resources";
@@ -148,7 +149,7 @@ which is the answer the protocol reserves for that case.
 reaches:
 
 ```typescript {% title="app/initializers/mcp.ts" %}
-import { createHandler, lazy } from "sdxc/mcp";
+import { createHandler, lazy } from "@sdxc/mcp";
 
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
@@ -189,8 +190,8 @@ absorbs everything the store does wrong, so a KV outage costs a database read ra
 error.
 
 ```typescript {% title="app/mcp/cache.ts" %}
-import { WorkerKVCache } from "sdxc/cache/worker-kv";
-import { isFailure } from "sdxc/result";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { isFailure } from "@sdxc/result";
 import { env, waitUntil } from "cloudflare:workers";
 
 export async function cachedSearch<T>(key: string, search: () => Promise<T>) {
@@ -208,7 +209,7 @@ itself failed, so rethrowing its cause makes the tool fail the same way with or 
 cache. Because the tool lives in its own file, caching it changes only that file:
 
 ```typescript {% title="app/mcp/tools/search-jobs.ts" %}
-import { createTool, ToolError } from "sdxc/mcp";
+import { createTool, ToolError } from "@sdxc/mcp";
 
 import { cachedSearch } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
@@ -249,11 +250,11 @@ call costs you a search.
 ```typescript {% title="app/initializers/router.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "sdxc/get-client-ip";
-import { lazy } from "sdxc/lazy-route";
-import { log } from "sdxc/logger/middleware";
-import { CloudflareAdapter } from "sdxc/rate-limit";
-import { rateLimit } from "sdxc/rate-limit/middleware";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
+import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env } from "cloudflare:workers";
 import { createRouter } from "remix/router";
 
@@ -302,8 +303,8 @@ list a caller sees can depend on the credential.
 
 Once callers bring a token, a tool's `available` predicate decides whether it exists for them:
 a tool it answers `false` for is absent from `tools/list` and reported as unknown by
-`tools/call`. With an [`sdxc/authz`](/api/authz) policy, the predicate is an ability. Bind
-the token's holder on the route with `access()` from `sdxc/authz/middleware/router`, giving
+`tools/call`. With an [`@sdxc/authz`](/api/authz) policy, the predicate is an ability. Bind
+the token's holder on the route with `access()` from `@sdxc/authz/middleware/router`, giving
 the token's scope as `within`, a ceiling of roles every check must also pass, and listing the
 claims the predicates read under `load`, since `available` answers synchronously:
 
@@ -317,14 +318,14 @@ access(policy, {
 
 That middleware goes in the `routes.mcp` mapping's `lazy()` guards after your token middleware, which publishes
 `ctx.token` and `ctx.member`; `abilities` and `policy` are your catalog and policy, with a role
-named `agent:read` and one named `agent:write`. `sdxc/authz/mcp` then guards the tool, and
+named `agent:read` and one named `agent:write`. `@sdxc/authz/mcp` then guards the tool, and
 checks the record it touches once its arguments validate:
 
 ```typescript {% title="app/mcp/tools/close-posting.ts" %}
-import type { InputOf } from "sdxc/mcp";
+import type { InputOf } from "@sdxc/mcp";
 
-import { guard, requireToolAbility } from "sdxc/authz/mcp";
-import { createTool } from "sdxc/mcp";
+import { guard, requireToolAbility } from "@sdxc/authz/mcp";
+import { createTool } from "@sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 import Posting from "~/app/models/posting";
@@ -371,5 +372,5 @@ what](/docs/identity-and-security/authorization) writes the policy and the scope
   rate limiting in more depth.
 - [Decide who can do what](/docs/identity-and-security/authorization) writes the policy a
   token's scope is checked against.
-- [`sdxc/mcp`](/api/mcp) lists where each kind of failure is reported, and the schema subset
+- [`@sdxc/mcp`](/api/mcp) lists where each kind of failure is reported, and the schema subset
   tools accept.

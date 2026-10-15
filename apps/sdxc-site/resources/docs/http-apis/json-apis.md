@@ -5,21 +5,22 @@ section:
     title: HTTP APIs
     order: 4
 order: 1
-lastUpdated: 2026-10-13
+lastUpdated: 2026-10-15
 ---
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one
 back. Every failure answers as an RFC 9457 problem document, lists page by cursor with `Link`
 headers, and every response states how much of the caller's rate limit is left.
 
-Six packages do the work. [`sdxc/validate`](/api/validate) checks the body against a
-`remix/data-schema` schema, [`sdxc/http`](/api/http) names the success statuses,
-[`sdxc/problem`](/api/problem) names the failures, [`sdxc/pagination`](/api/pagination)
-pages the list, [`sdxc/rate-limit`](/api/rate-limit) counts the calls, and
-[`sdxc/get-client-ip`](/api/get-client-ip) names the caller they are counted against.
+Six packages do the work. [`@sdxc/validate`](/api/validate) checks the body against a
+`remix/data-schema` schema, [`@sdxc/http`](/api/http) names the success statuses,
+[`@sdxc/problem`](/api/problem) names the failures, [`@sdxc/pagination`](/api/pagination)
+pages the list, [`@sdxc/rate-limit`](/api/rate-limit) counts the calls, and
+[`@sdxc/get-client-ip`](/api/get-client-ip) names the caller they are counted against.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/get-client-ip @sdxc/http @sdxc/pagination @sdxc/problem @sdxc/rate-limit \
+	@sdxc/result @sdxc/validate remix
 ```
 
 The handlers read the database as `ctx.db`, published by middleware as described in
@@ -47,7 +48,7 @@ stable URI. `defineProblems` writes each one once: the slug, the status and the 
 entry becomes a builder, so a handler supplies only what differs per occurrence.
 
 ```typescript {% title="app/services/problems.ts" %}
-import { defineProblems, ISSUES_SCHEMA } from "sdxc/problem";
+import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
 import * as s from "remix/data-schema";
 
 export const problems = defineProblems("https://books.example.com/docs/errors/", {
@@ -107,13 +108,13 @@ export const BOOK_PARAMS = s.object({
 `validate` reads a `Request` according to its `Content-Type` and answers with a `Result`, so
 a refused body is a branch rather than an exception. `issuesFrom` turns the schema's issues
 into `errors` entries whose `pointer` is a JSON Pointer into the body, encoded by
-[`sdxc/json-pointer`](/api/json-pointer) so a member named `a/b` still points at itself.
+[`@sdxc/json-pointer`](/api/json-pointer) so a member named `a/b` still points at itself.
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
-import { created } from "sdxc/http/response/json";
-import { issuesFrom } from "sdxc/problem";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { created } from "@sdxc/http/response/json";
+import { issuesFrom } from "@sdxc/problem";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
@@ -159,9 +160,9 @@ A `422` answer reads like this, which a client can map straight onto its form fi
 Path params are input too, so `show` validates them with `BOOK_PARAMS` before it queries.
 
 ```typescript {% title="app/http/controllers/api/books/show.ts" %}
-import { ok } from "sdxc/http/response/json";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { ok } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
@@ -193,10 +194,10 @@ binds the parameter names and limits once, so the names you parse are the names 
 header advertises.
 
 ```typescript {% title="app/http/controllers/api/books/index.ts" %}
-import { ok } from "sdxc/http/response/json";
-import { createPaging, InvalidCursorError, Pagination } from "sdxc/pagination";
-import { issuesFrom } from "sdxc/problem";
-import { isFailure } from "sdxc/result";
+import { ok } from "@sdxc/http/response/json";
+import { createPaging, InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { issuesFrom } from "@sdxc/problem";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { serializeBook } from "~/app/models/book";
@@ -235,7 +236,7 @@ The ordering ends in `id` because two books created in the same millisecond woul
 share a boundary and one of them would be skipped or served twice; `byKeyset` refuses a
 single non-unique sort key for that reason. The response carries `rel="next"` and
 `rel="prev"` links, and a client walks the list by following them with
-[`sdxc/link-header`](/api/link-header), as
+[`@sdxc/link-header`](/api/link-header), as
 [Paginate lists](/docs/http-apis/paginate-lists) shows.
 
 A numbered pager wants offset paging instead: `Pagination.byOffset` counts the query, and the
@@ -250,9 +251,9 @@ it either way.
 
 ```typescript {% title="app/http/middleware/api-rate-limit.ts" %}
 import { env } from "cloudflare:workers";
-import { getClientIP } from "sdxc/get-client-ip";
-import { CloudflareAdapter } from "sdxc/rate-limit";
-import { rateLimit } from "sdxc/rate-limit/middleware";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 import { problems } from "~/app/services/problems";
 

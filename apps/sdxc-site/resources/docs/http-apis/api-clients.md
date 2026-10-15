@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 4
-lastUpdated: 2026-10-13
+lastUpdated: 2026-10-15
 ---
 
 A client is where an API's contract meets code that trusts it. This guide writes one for the
@@ -13,18 +13,19 @@ books API from [Build a JSON API with problem details](/docs/http-apis/json-apis
 returns a `Result`, every success body is validated before a caller sees it, and every failure
 carries the parsed problem document, typed by the same catalog the server answers with.
 
-[`sdxc/api-client`](/api/api-client) is the base class: one origin, one method per verb, and
-two hooks every request and response pass through. [`sdxc/validate`](/api/validate) checks
-the bodies, [`sdxc/problem`](/api/problem) recognizes and parses problem responses, and
-[`sdxc/result`](/api/result) carries the outcome.
+[`@sdxc/api-client`](/api/api-client) is the base class: one origin, one method per verb, and
+two hooks every request and response pass through. [`@sdxc/validate`](/api/validate) checks
+the bodies, [`@sdxc/problem`](/api/problem) recognizes and parses problem responses, and
+[`@sdxc/result`](/api/result) carries the outcome.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/api-client @sdxc/idempotency @sdxc/json-schema @sdxc/link-header \
+	@sdxc/problem @sdxc/result @sdxc/types @sdxc/validate remix
 ```
 
-The client also reads `Link` headers with [`sdxc/link-header`](/api/link-header), keys its
-creates with [`sdxc/idempotency`](/api/idempotency), and builds response schemas with
-[`sdxc/json-schema`](/api/json-schema), the packages the server already uses. Add `sdxc` to
+The client also reads `Link` headers with [`@sdxc/link-header`](/api/link-header), keys its
+creates with [`@sdxc/idempotency`](/api/idempotency), and builds response schemas with
+[`@sdxc/json-schema`](/api/json-schema), the packages the server already uses. Add them to
 the client's own manifest too when it lives in its own package.
 
 ## Share the contract
@@ -70,12 +71,12 @@ Each call asks the same four questions of a response: did it arrive, is it a pro
 succeed, and does the body match. Answer them once, in a function every method goes through.
 
 ```typescript {% title="clients/read.ts" %}
-import type { JSONValue } from "sdxc/types";
+import type { JSONValue } from "@sdxc/types";
 import type { Schema } from "remix/data-schema";
 
-import { isProblem } from "sdxc/problem";
-import { failure, isFailure, isSuccess, success, wrap } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { isProblem } from "@sdxc/problem";
+import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 
 import { BooksError } from "~/clients/books-error";
 import { problems } from "~/contract/problems";
@@ -127,13 +128,13 @@ The subclass names the origin once, and each method is its path, its schema, and
 the body a caller wants.
 
 ```typescript {% title="clients/books.ts" %}
-import type { Result } from "sdxc/result";
+import type { Result } from "@sdxc/result";
 
-import { APIClient } from "sdxc/api-client";
-import { withIdempotencyKey } from "sdxc/idempotency/client";
-import * as s from "sdxc/json-schema";
-import { parse } from "sdxc/link-header";
-import { failure, isFailure, success } from "sdxc/result";
+import { APIClient } from "@sdxc/api-client";
+import { withIdempotencyKey } from "@sdxc/idempotency/client";
+import * as s from "@sdxc/json-schema";
+import { parse } from "@sdxc/link-header";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import { BooksError } from "~/clients/books-error";
 import { read } from "~/clients/read";
@@ -207,8 +208,8 @@ secret:
 
 ```typescript
 import { env } from "cloudflare:workers";
-import { generateIdempotencyKey } from "sdxc/idempotency/client";
-import { isFailure } from "sdxc/result";
+import { generateIdempotencyKey } from "@sdxc/idempotency/client";
+import { isFailure } from "@sdxc/result";
 
 import { BooksClient } from "~/clients/books";
 import { problems } from "~/contract/problems";
@@ -240,7 +241,7 @@ the real one. The handler can return the catalog's own builder, so the test answ
 exactly the document the server would.
 
 ```typescript {% title="clients/books.test.ts" %}
-import { isSuccess } from "sdxc/result";
+import { isSuccess } from "@sdxc/result";
 import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";

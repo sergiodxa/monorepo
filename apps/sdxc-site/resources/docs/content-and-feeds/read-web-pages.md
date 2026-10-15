@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 5
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 A "save for later" button looks like one line of work: fetch the URL, keep the article. The
@@ -14,13 +14,14 @@ byte cap and a deadline, and treat whatever comes back as hostile markup. This g
 that feature: an endpoint accepts a link, a background job reads the article out of the page,
 and your app stores a sanitized copy and a plain-text excerpt.
 
-[`sdxc/distill`](/api/distill) fetches under bounds, scores the page to find the article and
-sanitizes it. [`sdxc/html`](/api/html) parses markup and answers questions about it: the
-visible text, a meta tag, a canonical link. [`sdxc/robots`](/api/robots) lets a publisher say
-no, and [`sdxc/jobs`](/api/jobs) keeps the fetch off the request.
+[`@sdxc/distill`](/api/distill) fetches under bounds, scores the page to find the article and
+sanitizes it. [`@sdxc/html`](/api/html) parses markup and answers questions about it: the
+visible text, a meta tag, a canonical link. [`@sdxc/robots`](/api/robots) lets a publisher say
+no, and [`@sdxc/jobs`](/api/jobs) keeps the fetch off the request.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/distill @sdxc/html @sdxc/http @sdxc/jobs @sdxc/outbound @sdxc/result \
+	@sdxc/robots @sdxc/validate remix
 ```
 
 ## Declare the job
@@ -29,7 +30,7 @@ Reading a page takes up to eight seconds, and nobody should wait on that when th
 The endpoint stores the link and enqueues a job that reads it:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "sdxc/jobs";
+import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -50,10 +51,10 @@ single label, `localhost`, `.local`, `.internal` or `.test`. Running it in the e
 the job would refuse into an immediate `422`, instead of a row that fails later:
 
 ```typescript {% title="app/http/controllers/links/create.ts" %}
-import { addressable } from "sdxc/distill";
-import { accepted, unprocessableEntity } from "sdxc/http/response/json";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { addressable } from "@sdxc/distill";
+import { accepted, unprocessableEntity } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -85,7 +86,7 @@ dispatcher delivers from. [Background jobs and cron](/docs/data-and-background-w
 builds both:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "sdxc/jobs/router";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { createRouter } from "remix/router";
 
 import { queue } from "~/app/initializers/queue";
@@ -103,10 +104,10 @@ It scores the page's containers, keeps the one holding the article, and sanitize
 answering:
 
 ```typescript {% title="app/jobs/links/read.ts" %}
-import { distill } from "sdxc/distill";
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
-import { fetchRobots } from "sdxc/robots/fetch";
+import { distill } from "@sdxc/distill";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+import { fetchRobots } from "@sdxc/robots/fetch";
 
 import jobs from "~/app/jobs";
 import { excerptOf } from "~/app/services/excerpt";
@@ -168,8 +169,8 @@ A list of saved links needs a line or two under each title, and it must be text,
 block boundaries turned into spaces:
 
 ```typescript {% title="app/services/excerpt.ts" %}
-import { HTML } from "sdxc/html";
-import { isFailure } from "sdxc/result";
+import { HTML } from "@sdxc/html";
+import { isFailure } from "@sdxc/result";
 
 const EXCERPT_LENGTH = 280;
 
@@ -197,13 +198,13 @@ the reader's address when it does; closing that takes an image proxy of your own
 ## Build a preview card from the head
 
 Not every link needs its article. A URL pasted into a comment only needs a card: a title, a
-line of description, an image. `sdxc/outbound` is the bounded fetch `distill` runs on, and
-`sdxc/html` reads the head of what it returns:
+line of description, an image. `@sdxc/outbound` is the bounded fetch `distill` runs on, and
+`@sdxc/html` reads the head of what it returns:
 
 ```typescript {% title="app/services/link-preview.ts" %}
-import { HTML } from "sdxc/html";
-import { follow, readText, release } from "sdxc/outbound";
-import { isFailure, isSuccess } from "sdxc/result";
+import { HTML } from "@sdxc/html";
+import { follow, readText, release } from "@sdxc/outbound";
+import { isFailure, isSuccess } from "@sdxc/result";
 
 const USER_AGENT = "Shelf/1.0 (+https://shelf.example/about/bot)";
 
@@ -265,8 +266,8 @@ Some markup reaches you without a fetch: the `content` of a feed item, or an HTM
 hand:
 
 ```typescript {% title="app/services/feed-content.ts" %}
-import { HTML } from "sdxc/html";
-import { isFailure } from "sdxc/result";
+import { HTML } from "@sdxc/html";
+import { isFailure } from "@sdxc/result";
 
 export function cleanContent(source: string, itemUrl: string): string | null {
 	let clean = HTML.sanitize(source, { baseUrl: itemUrl });
@@ -276,7 +277,7 @@ export function cleanContent(source: string, itemUrl: string): string | null {
 
 `baseUrl` is where the markup came from, so a relative `src` points at the publisher's site
 rather than yours. When you already hold a whole page, from a test fixture or a response
-something else retrieved, `distillFrom(source, url)` from `sdxc/distill` runs the scoring and
+something else retrieved, `distillFrom(source, url)` from `@sdxc/distill` runs the scoring and
 sanitizing without a fetch, which is how to test the job's extraction without the network.
 
 ## Where to go next

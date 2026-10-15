@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 11
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 This guide builds the sign-up box at the bottom of a blog: a visitor types an address, the list
@@ -13,14 +13,16 @@ sends them a confirmation email, and your app learns when they confirm or leave.
 on a newsletter platform, and your code talks to one contract, so moving from Buttondown to Kit
 changes one file.
 
-[`sdxc/newsletter`](/api/newsletter) provides the contract, the Buttondown and Kit providers, the
+[`@sdxc/newsletter`](/api/newsletter) provides the contract, the Buttondown and Kit providers, the
 middleware, the webhook endpoint and an in-memory list for tests.
-[`sdxc/email-address`](/api/email-address) parses the address,
-[`sdxc/get-client-ip`](/api/get-client-ip) reads the visitor's IP, and
-[`sdxc/attribution`](/api/attribution) remembers the campaign that brought them.
+[`@sdxc/email-address`](/api/email-address) parses the address,
+[`@sdxc/get-client-ip`](/api/get-client-ip) reads the visitor's IP, and
+[`@sdxc/attribution`](/api/attribution) remembers the campaign that brought them.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/attribution @sdxc/email-address @sdxc/get-client-ip @sdxc/http \
+	@sdxc/lazy-route @sdxc/logger @sdxc/newsletter @sdxc/result @sdxc/validate \
+	@sdxc/webhooks remix
 ```
 
 ## Pick a provider
@@ -30,9 +32,9 @@ reaches no network, so a missing API key fails the call that needed it and the W
 boots.
 
 ```typescript {% title="app/initializers/newsletter.ts" %}
-import type { Newsletter } from "sdxc/newsletter";
+import type { Newsletter } from "@sdxc/newsletter";
 
-import { ButtondownNewsletter } from "sdxc/newsletter/buttondown";
+import { ButtondownNewsletter } from "@sdxc/newsletter/buttondown";
 import { env } from "cloudflare:workers";
 
 export const buttondown: Newsletter = new ButtondownNewsletter({
@@ -53,9 +55,9 @@ On Kit, double opt-in belongs to the form a reader is added through, so the prov
 form and repeats its setting:
 
 ```typescript {% title="app/initializers/newsletter.ts" %}
-import type { Newsletter } from "sdxc/newsletter";
+import type { Newsletter } from "@sdxc/newsletter";
 
-import { KitNewsletter } from "sdxc/newsletter/kit";
+import { KitNewsletter } from "@sdxc/newsletter/kit";
 import { env } from "cloudflare:workers";
 
 export const kit: Newsletter = new KitNewsletter({
@@ -81,13 +83,13 @@ The middleware publishes the provider as `ctx.newsletter`. Taking the list as a 
 `createWebRouter` is what lets a test hand in the memory list:
 
 ```tsx {% title="app/initializers/router.tsx" %}
-import type { Newsletter } from "sdxc/newsletter";
+import type { Newsletter } from "@sdxc/newsletter";
 
-import { attribution } from "sdxc/attribution/middleware";
-import getClientIP from "sdxc/get-client-ip/middleware";
-import { lazy } from "sdxc/lazy-route";
-import { log } from "sdxc/logger/middleware";
-import newsletter from "sdxc/newsletter/middleware";
+import { attribution } from "@sdxc/attribution/middleware";
+import getClientIP from "@sdxc/get-client-ip/middleware";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
+import newsletter from "@sdxc/newsletter/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
@@ -164,11 +166,11 @@ The action validates the post, parses the address and subscribes it. Two refusal
 visitor's to fix, so they get their own copy; anything else is the app's to log:
 
 ```tsx {% title="app/http/controllers/subscribe.tsx" %}
-import { toCampaign } from "sdxc/attribution";
-import { parseEmailAddress } from "sdxc/email-address";
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { toCampaign } from "@sdxc/attribution";
+import { parseEmailAddress } from "@sdxc/email-address";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 
 const SUBSCRIBE = s.object({ email: s.string() });
@@ -229,7 +231,7 @@ through the form the provider names.
 To keep both touches rather than one, add them as metadata:
 
 ```typescript
-import { toMetadata } from "sdxc/attribution";
+import { toMetadata } from "@sdxc/attribution";
 
 let outcome = await ctx.newsletter.subscribers.subscribe({
 	email: email.data,
@@ -248,11 +250,11 @@ the fields a touch carries. On Kit each of those keys must already exist as a cu
 Tag a reader who became a customer so the platform can segment them:
 
 ```typescript {% title="app/services/newsletter.ts" %}
-import type { EmailAddress } from "sdxc/email-address";
-import type { Newsletter, NewsletterError } from "sdxc/newsletter";
-import type { Result } from "sdxc/result";
+import type { EmailAddress } from "@sdxc/email-address";
+import type { Newsletter, NewsletterError } from "@sdxc/newsletter";
+import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 export async function tagCustomer(
 	newsletter: Newsletter,
@@ -292,10 +294,10 @@ verifies the delivery against the provider's secret, normalizes it into events a
 handler keyed by each event's type:
 
 ```typescript {% title="app/initializers/newsletter-webhook.ts" %}
-import type { Newsletter } from "sdxc/newsletter";
+import type { Newsletter } from "@sdxc/newsletter";
 
-import { NewsletterWebhook } from "sdxc/newsletter";
-import { KVReplayStore } from "sdxc/webhooks";
+import { NewsletterWebhook } from "@sdxc/newsletter";
+import { KVReplayStore } from "@sdxc/webhooks";
 import { env } from "cloudflare:workers";
 
 import { setReaderStatus } from "~/app/models/readers";
@@ -338,14 +340,14 @@ so exempt its path from `cop()` as
 
 ## Test against the memory list
 
-`MemoryNewsletter` from `sdxc/newsletter/memory` implements the whole contract in memory, so a
+`MemoryNewsletter` from `@sdxc/newsletter/memory` implements the whole contract in memory, so a
 test drives the real router and asserts on the list's state. It adds `seed`, `confirm`, `fail`
 and `heal` for setting a scene, and `attribution(email)` and `ip(email)` for reading back what a
 subscribe recorded:
 
 ```typescript {% title="app/http/controllers/subscribe.test.ts" %}
-import { MemoryNewsletter } from "sdxc/newsletter/memory";
-import { unwrap } from "sdxc/result";
+import { MemoryNewsletter } from "@sdxc/newsletter/memory";
+import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
@@ -408,8 +410,8 @@ in any status, bypassing confirmation.
 `webhookSecret` proves nothing, which is how a test holds the endpoint to failing closed:
 
 ```typescript {% title="app/http/controllers/newsletter-webhook.test.ts" %}
-import { MemoryNewsletter } from "sdxc/newsletter/memory";
-import { unwrap } from "sdxc/result";
+import { MemoryNewsletter } from "@sdxc/newsletter/memory";
+import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
@@ -436,13 +438,13 @@ Passing an `id` to `emit` and emitting it twice models a redelivery.
 ## Hold your own provider to the contract
 
 A platform the package has no provider for is one class implementing `Newsletter`.
-`sdxc/newsletter/conformance` registers the contract's rules as Vitest tests against it: one
+`@sdxc/newsletter/conformance` registers the contract's rules as Vitest tests against it: one
 subscribe per address, lookups by id and email, tags, metadata merging, idempotent unsubscribe, a
 full cursor walk and fail-closed webhooks. The memory, Buttondown and Kit providers pass the same
 suite.
 
 ```typescript {% title="app/services/mailing-list.test.ts" %}
-import { conformance } from "sdxc/newsletter/conformance";
+import { conformance } from "@sdxc/newsletter/conformance";
 
 import { MailingListNewsletter, signDelivery } from "~/app/services/mailing-list";
 

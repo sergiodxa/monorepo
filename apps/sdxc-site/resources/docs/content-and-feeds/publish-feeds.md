@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 2
-lastUpdated: 2026-10-13
+lastUpdated: 2026-10-15
 ---
 
 A feed reader asks for a document in whichever format it was built around, so a site that
@@ -14,13 +14,14 @@ wants to be followed publishes more than one. This guide serves the same posts a
 readers, tells a WebSub hub the moment they change, and publishes an OPML list a reader can
 import in one step.
 
-It combines [`sdxc/rss`](/api/rss), [`sdxc/atom`](/api/atom),
-[`sdxc/json-feed`](/api/json-feed), [`sdxc/websub`](/api/websub) and
-[`sdxc/opml`](/api/opml), served through [`sdxc/http`](/api/http). The posts come from the
+It combines [`@sdxc/rss`](/api/rss), [`@sdxc/atom`](/api/atom),
+[`@sdxc/json-feed`](/api/json-feed), [`@sdxc/websub`](/api/websub) and
+[`@sdxc/opml`](/api/opml), served through [`@sdxc/http`](/api/http). The posts come from the
 pipeline in [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline).
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/atom @sdxc/http @sdxc/jobs @sdxc/json-feed @sdxc/markdown @sdxc/opml \
+	@sdxc/result @sdxc/rss @sdxc/websub remix
 ```
 
 ## One list of entries
@@ -29,8 +30,8 @@ Each format names the same facts differently, so build the facts once and let ea
 them. A feed item's body is HTML, which is what `toHTML` gives you from a parsed post:
 
 ```typescript {% title="app/services/feeds/entries.ts" %}
-import { toHTML } from "sdxc/markdown/html";
-import { isFailure } from "sdxc/result";
+import { toHTML } from "@sdxc/markdown/html";
+import { isFailure } from "@sdxc/result";
 
 import { listPosts } from "~/app/services/content/list-posts";
 import { readPost } from "~/app/services/content/posts";
@@ -84,12 +85,12 @@ export default route({
 ## RSS 2.0
 
 `new RSS(channel)` takes the channel, `addItem` appends, and `toString` writes the XML with the
-namespaces its extensions need already declared. `xml` from `sdxc/http/response` sets the
+namespaces its extensions need already declared. `xml` from `@sdxc/http/response` sets the
 content type.
 
 ```typescript {% title="app/http/controllers/feeds/rss.ts" %}
-import { xml } from "sdxc/http/response";
-import { RSS } from "sdxc/rss";
+import { xml } from "@sdxc/http/response";
+import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
 
 import { feedEntries } from "~/app/services/feeds/entries";
@@ -138,8 +139,8 @@ constructor and `addEntry` throw when one is missing, so the fields you always s
 ones you can't forget. Dates are RFC 3339, which is `toISOString()`.
 
 ```typescript {% title="app/http/controllers/feeds/atom.ts" %}
-import { Atom } from "sdxc/atom";
-import { xml } from "sdxc/http/response";
+import { Atom } from "@sdxc/atom";
+import { xml } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import { feedEntries } from "~/app/services/feeds/entries";
@@ -177,7 +178,7 @@ export default createAction(routes.feeds.atom, async (ctx) => {
 });
 ```
 
-The imports match the RSS action, with `Atom` from `sdxc/atom` in place of `RSS`. An entry's
+The imports match the RSS action, with `Atom` from `@sdxc/atom` in place of `RSS`. An entry's
 `id` must never change, so use the permalink only if permalinks never change on your site; a
 `tag:` URI minted from the post's creation date is the alternative when they might.
 
@@ -188,7 +189,7 @@ Fields are camelCase here and written under the format's own names, so `homePage
 `application/feed+json`:
 
 ```typescript {% title="app/http/controllers/feeds/json.ts" %}
-import { JSONFeed } from "sdxc/json-feed";
+import { JSONFeed } from "@sdxc/json-feed";
 import { createAction } from "remix/router";
 
 import { feedEntries } from "~/app/services/feeds/entries";
@@ -259,7 +260,7 @@ export function FeedLinks() {
 }
 ```
 
-Place `<FeedLinks />` in your document layout's `<head>`. This is the markup `Feed.discover` from [`sdxc/feed`](/api/feed) follows, so someone can paste
+Place `<FeedLinks />` in your document layout's `<head>`. This is the markup `Feed.discover` from [`@sdxc/feed`](/api/feed) follows, so someone can paste
 your homepage into a reader built on it instead of hunting for `/feed.xml`.
 
 ## Push updates with WebSub
@@ -301,12 +302,12 @@ sequenceDiagram
 A subscriber may look for the hub in the response's `Link` header or in the document, so
 advertise it in both. One helper builds the two for any feed: the `rel="self"` and `rel="hub"`
 links for the document, and the header value that `links` writes through
-[`sdxc/link-header`](/api/link-header). `Feed.discover` from `sdxc/feed` reads that header
+[`@sdxc/link-header`](/api/link-header). `Feed.discover` from `@sdxc/feed` reads that header
 the same way, and prefers it over the document, which is how a publisher who cannot edit
 the feed can still name a hub.
 
 ```typescript {% title="app/services/feeds/hub.ts" %}
-import { links } from "sdxc/websub/publisher";
+import { links } from "@sdxc/websub/publisher";
 import { env } from "cloudflare:workers";
 
 export function advertiseHub(self: string, type: string) {
@@ -332,7 +333,7 @@ forgotten. Declare it beside your other jobs (see
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) for the dispatcher):
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "sdxc/jobs";
+import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -343,9 +344,9 @@ export default jobs({
 ```
 
 ```typescript {% title="app/jobs/feeds/ping.ts" %}
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
-import { publish } from "sdxc/websub/publisher";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+import { publish } from "@sdxc/websub/publisher";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
@@ -383,7 +384,7 @@ export function feedTopics(base: URL): string[] {
 
 Enqueue the job from whatever action publishes a post, after the post is stored, with
 `await ctx.jobs.enqueue(jobs.feeds.ping, { topics: feedTopics(ctx.url) })`. `ctx.jobs` is
-published by `jobEnqueuer(queue)` from `sdxc/jobs/router`, given the same queue your
+published by `jobEnqueuer(queue)` from `@sdxc/jobs/router`, given the same queue your
 dispatcher delivers from, so the action writes the message without loading the job's code
 (see [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)).
 
@@ -396,10 +397,10 @@ OPML is how a subscription list moves between readers. Publishing one with your 
 the sites you read, lets someone follow all of it in a single import:
 
 ```typescript {% title="app/http/controllers/feeds/opml.ts" %}
-import type { OPML } from "sdxc/opml";
+import type { OPML } from "@sdxc/opml";
 
-import { xml } from "sdxc/http/response";
-import { stringify } from "sdxc/opml";
+import { xml } from "@sdxc/http/response";
+import { stringify } from "@sdxc/opml";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
@@ -437,4 +438,4 @@ string is safe.
   cheap to serve without delaying a hub's fetch.
 - [Parse and write Link headers](/docs/http-apis/link-header) — `rel="hub"` and `rel="self"`
   on their own.
-- [`sdxc/feed`](/api/feed) — read RSS, Atom and JSON Feed through one normalized shape.
+- [`@sdxc/feed`](/api/feed) — read RSS, Atom and JSON Feed through one normalized shape.

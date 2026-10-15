@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 9
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-15
 ---
 
 A customer who types `shop.example.com` into your settings page is making a claim. Before your
@@ -13,14 +13,15 @@ app serves their site on that name, or asks Cloudflare for a certificate for it,
 be proven, and the proof that works for any domain is DNS: you show them a TXT record, they
 publish it, and you look it up.
 
-This guide builds that flow end to end. [`sdxc/doh`](/api/doh) does the lookups over DNS over
-HTTPS, since a Worker has no DNS socket. [`sdxc/hostname`](/api/hostname) registers the proven
+This guide builds that flow end to end. [`@sdxc/doh`](/api/doh) does the lookups over DNS over
+HTTPS, since a Worker has no DNS socket. [`@sdxc/hostname`](/api/hostname) registers the proven
 domain as a Cloudflare for SaaS custom hostname and reports when its certificate is live.
-[`sdxc/jobs`](/api/jobs) runs both checks in the background and retries them until DNS catches
-up, on a schedule from [`sdxc/backoff`](/api/backoff).
+[`@sdxc/jobs`](/api/jobs) runs both checks in the background and retries them until DNS catches
+up, on a schedule from [`@sdxc/backoff`](/api/backoff).
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/backoff @sdxc/crypto @sdxc/doh @sdxc/hostname @sdxc/http @sdxc/jobs \
+	@sdxc/result @sdxc/validate remix
 ```
 
 ## Declare the two jobs
@@ -30,7 +31,7 @@ customer to publish a record, and the second waits on Cloudflare to validate and
 certificate. Each gets its own job, keyed by your own domain row:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "sdxc/jobs";
+import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -41,12 +42,12 @@ export default jobs({
 });
 ```
 
-Route handlers enqueue through `ctx.jobs`, which `jobEnqueuer(queue)` from `sdxc/jobs/router`
+Route handlers enqueue through `ctx.jobs`, which `jobEnqueuer(queue)` from `@sdxc/jobs/router`
 publishes when it runs in the router's middleware. The queue is the one module both the router
 and the dispatcher import:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "sdxc/jobs/router";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { createRouter } from "remix/router";
 
 import { queue } from "~/app/initializers/queue";
@@ -79,15 +80,15 @@ export function challengeFor(hostname: string, token: string): Challenge {
 }
 ```
 
-The action that adds a domain validates the form with [`sdxc/validate`](/api/validate),
-stores the row with a fresh token from [`sdxc/crypto`](/api/crypto), and enqueues the first
+The action that adds a domain validates the form with [`@sdxc/validate`](/api/validate),
+stores the row with a fresh token from [`@sdxc/crypto`](/api/crypto), and enqueues the first
 check at once:
 
 ```tsx {% title="app/http/controllers/domains/add.tsx" %}
-import { randomToken } from "sdxc/crypto";
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { randomToken } from "@sdxc/crypto";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -146,10 +147,10 @@ name that does not exist yet is `success(false)`, because a record not yet publi
 ordinary state of a verification, while a resolver that failed to answer stays a failure:
 
 ```typescript {% title="app/jobs/domains/verify.ts" %}
-import { createBackoff } from "sdxc/backoff";
-import { verifyTxtRecord } from "sdxc/doh";
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
+import { createBackoff } from "@sdxc/backoff";
+import { verifyTxtRecord } from "@sdxc/doh";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import { Domains } from "~/app/models/domains";
 import { challengeFor } from "~/app/services/domains/challenge";
@@ -202,7 +203,7 @@ The client is bound to one zone and holds only configuration, so building one pe
 nothing:
 
 ```typescript {% title="app/initializers/hostnames.ts" %}
-import { HostnameClient } from "sdxc/hostname";
+import { HostnameClient } from "@sdxc/hostname";
 import { env } from "cloudflare:workers";
 
 export const FALLBACK_ORIGIN = "customers.yourapp.example";
@@ -226,8 +227,8 @@ The activate job registers the hostname on its first run and polls it on every r
 retrying until Cloudflare reports both the hostname and its certificate as active:
 
 ```typescript {% title="app/jobs/domains/activate.ts" %}
-import { HostnameClient } from "sdxc/hostname";
-import { createJobHandler } from "sdxc/jobs";
+import { HostnameClient } from "@sdxc/hostname";
+import { createJobHandler } from "@sdxc/jobs";
 
 import { Domains } from "~/app/models/domains";
 import { setupMessage } from "~/app/services/domains/status";
@@ -274,14 +275,14 @@ outage costs a delay, not a lost domain.
 
 `getStatusMessage` turns Cloudflare's two status fields into one sentence, such as "Pending DNS
 validation". The most common thing a customer has left to do is point their domain at you,
-and `checkCname` from `sdxc/doh` can check that directly:
+and `checkCname` from `@sdxc/doh` can check that directly:
 
 ```typescript {% title="app/services/domains/status.ts" %}
-import type { HostnameResult } from "sdxc/hostname";
+import type { HostnameResult } from "@sdxc/hostname";
 
-import { checkCname } from "sdxc/doh";
-import { HostnameClient } from "sdxc/hostname";
-import { isSuccess } from "sdxc/result";
+import { checkCname } from "@sdxc/doh";
+import { HostnameClient } from "@sdxc/hostname";
+import { isSuccess } from "@sdxc/result";
 
 import { FALLBACK_ORIGIN } from "~/app/initializers/hostnames";
 
@@ -309,9 +310,9 @@ fails, the row is still there to retry from, and a hostname that is already gone
 which counts as done:
 
 ```typescript {% title="app/http/controllers/domains/remove.ts" %}
-import { HostnameApiError } from "sdxc/hostname";
-import { redirect } from "sdxc/http/response";
-import { notFound } from "sdxc/http/response/html";
+import { HostnameApiError } from "@sdxc/hostname";
+import { redirect } from "@sdxc/http/response";
+import { notFound } from "@sdxc/http/response/html";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -351,6 +352,6 @@ no row and exits for good.
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — rendering the
   issues the add-domain form returns.
 - [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — the token
-  generator and the rest of `sdxc/crypto`.
-- [`sdxc/doh`](/api/doh) — `resolve` for any record type, and the error classes that tell a
+  generator and the rest of `@sdxc/crypto`.
+- [`@sdxc/doh`](/api/doh) — `resolve` for any record type, and the error classes that tell a
   missing name from a failing resolver.

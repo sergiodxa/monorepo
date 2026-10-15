@@ -13,8 +13,8 @@ confirmation, in the language they posted in, delivered through Cloudflare's ema
 email is a class with a `remix/component` body, the copy comes from your message bundles, and the send
 happens in a background job so a slow provider never delays the page the poster lands on.
 
-[`sdxc/mail`](/api/mail) provides the mailer, the layout components and the transports,
-[`sdxc/i18n`](/api/i18n) the translated copy, and [`sdxc/jobs`](/api/jobs) the job it runs in.
+[`@sdxc/mail`](/api/mail) provides the mailer, the layout components and the transports,
+[`@sdxc/i18n`](/api/i18n) the translated copy, and [`@sdxc/jobs`](/api/jobs) the job it runs in.
 
 Each message here goes to one person because of something they did. Mail to a list of readers
 belongs on a newsletter platform, which keeps their consent, their unsubscribe links and the
@@ -22,7 +22,7 @@ sending reputation; [Run a newsletter list](/docs/data-and-background-work/newsl
 readers on one.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/i18n @sdxc/jobs @sdxc/logger @sdxc/mail @sdxc/result remix
 ```
 
 ## Build the mailer
@@ -32,10 +32,10 @@ transport is the only part that knows about a provider, so it is the one argumen
 replaceable:
 
 ```typescript {% title="app/initializers/mail.ts" %}
-import type { Transport } from "sdxc/mail";
+import type { Transport } from "@sdxc/mail";
 
-import { Mailer } from "sdxc/mail";
-import { CloudflareTransport } from "sdxc/mail/cloudflare";
+import { Mailer } from "@sdxc/mail";
+import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { env } from "cloudflare:workers";
 
 export const MAIL_FROM = { email: "jobs@example.com", name: "Example Jobs" };
@@ -60,10 +60,10 @@ class that implements the `Email` contract keeps the data an email needs in its 
 the markup beside it:
 
 ```tsx {% title="app/emails/posting-published.tsx" %}
-import type { Email as EmailContract } from "sdxc/mail";
+import type { Email as EmailContract } from "@sdxc/mail";
 import type { Handle } from "remix/component";
 
-import { Email } from "sdxc/mail";
+import { Email } from "@sdxc/mail";
 
 export interface PostingPublishedCopy {
 	subject: string;
@@ -122,9 +122,9 @@ that caused the email. The package resolves no locale; you hand it strings you a
 translated. Store the locale on the job's payload and build a translator for it:
 
 ```typescript {% title="app/initializers/i18n.ts" %}
-import type { I18n, Messages } from "sdxc/i18n";
+import type { I18n, Messages } from "@sdxc/i18n";
 
-import { createI18n } from "sdxc/i18n";
+import { createI18n } from "@sdxc/i18n";
 
 import en from "~/resources/locales/en.json";
 import es from "~/resources/locales/es.json";
@@ -156,8 +156,8 @@ A job reads its mailer off the context, the way it reads `ctx.database`. Job mid
 publishes it:
 
 ```typescript {% title="app/jobs/middleware/mailer.ts" %}
-import type { JobMiddleware } from "sdxc/jobs";
-import type { Mailer as MailerService } from "sdxc/mail";
+import type { JobMiddleware } from "@sdxc/jobs";
+import type { Mailer as MailerService } from "@sdxc/mail";
 
 import { createContextKey } from "remix/router";
 
@@ -182,11 +182,11 @@ Add it to the chain of the dispatcher factory from
 option beside its database source:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import type { JobQueue } from "sdxc/jobs/queue";
-import type { Mailer } from "sdxc/mail";
+import type { JobQueue } from "@sdxc/jobs/queue";
+import type { Mailer } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
-import { createJobDispatcher } from "sdxc/jobs";
+import { createJobDispatcher } from "@sdxc/jobs";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
@@ -233,8 +233,8 @@ The job carries only ids and the locale. The handler loads the rest, so the emai
 posting as it is when the message runs:
 
 ```typescript {% title="app/jobs/send-confirmation.tsx" %}
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 import { PostingPublishedEmail } from "~/app/emails/posting-published";
 import { translatorFor } from "~/app/initializers/i18n";
@@ -268,7 +268,7 @@ minutes, bounded by the queue's retry limit. A posting that was deleted in the m
 `exit`, because redelivering the message would find the same nothing.
 
 `findPosting` is your own model function. The request that published the posting only enqueues
-the job, through the `ctx.jobs` that `jobEnqueuer` from `sdxc/jobs/router` publishes over the
+the job, through the `ctx.jobs` that `jobEnqueuer` from `@sdxc/jobs/router` publishes over the
 same shared queue, as
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) sets up under "Enqueue
 from a request".
@@ -276,11 +276,11 @@ from a request".
 ## Send from a request when you have to
 
 Some mail has no reason to be a job, such as a password-changed notice after a form succeeds.
-`sdxc/mail/middleware` publishes a request-scoped mailer as `ctx.email`:
+`@sdxc/mail/middleware` publishes a request-scoped mailer as `ctx.email`:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { log } from "sdxc/logger/middleware";
-import mail from "sdxc/mail/middleware";
+import { log } from "@sdxc/logger/middleware";
+import mail from "@sdxc/mail/middleware";
 import { createRouter } from "remix/router";
 
 import { logger } from "~/app/initializers/logger";
@@ -300,7 +300,7 @@ export function createWebRouter() {
 queues a message that is sent once the response has been produced:
 
 ```typescript {% title="app/http/controllers/change-password.ts" %}
-import { redirect } from "sdxc/http/response";
+import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
@@ -326,15 +326,15 @@ on whether the email went out.
 
 ## Test with the memory transport
 
-`MemoryTransport` from `sdxc/mail/memory` records every message instead of sending it. What it
+`MemoryTransport` from `@sdxc/mail/memory` records every message instead of sending it. What it
 records is the normalized message a provider would have received, with defaults applied and the
 text part derived, so a test asserts on the real output. `createTestDatabase` is the in-memory D1
 from [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), and
 `insertPosting` your own model function:
 
 ```typescript {% title="app/jobs/send-confirmation.test.ts" %}
-import * as memory from "sdxc/jobs/memory";
-import { MemoryTransport } from "sdxc/mail/memory";
+import * as memory from "@sdxc/jobs/memory";
+import { MemoryTransport } from "@sdxc/mail/memory";
 import { expect, test } from "vitest";
 
 import { createDispatcher } from "~/app/initializers/dispatcher";
@@ -371,7 +371,7 @@ test("mails the contact in the language they posted in", async () => {
 `transport.messages` lists everything sent, oldest first, and `transport.clear()` resets it
 between tests. The same transport makes a useful development outbox: point the mailer at one
 locally and render its messages on a page. To read messages in a terminal instead,
-`PrintTransport` from `sdxc/mail/print` writes each one to a function you give it, which is how
+`PrintTransport` from `@sdxc/mail/print` writes each one to a function you give it, which is how
 [Your app's command line](/docs/operations-and-testing/your-apps-command-line) resends an email
 from a laptop without reaching a real inbox.
 

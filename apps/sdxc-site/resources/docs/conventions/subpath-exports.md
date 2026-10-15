@@ -5,7 +5,7 @@ section:
     title: Conventions
     order: 2
 order: 3
-lastUpdated: 2026-09-21
+lastUpdated: 2026-10-15
 ---
 
 Most packages here publish one entry point and nothing else — reach for the name and you have
@@ -13,9 +13,9 @@ the whole thing. Where a package covers several concerns, each concern is its ow
 importing one leaves the rest out of your bundle entirely.
 
 ```typescript
-import { Policies } from "sdxc/http/cache";
-import { toRemix } from "sdxc/markdown/remix";
-import { p } from "sdxc/u/size";
+import { Policies } from "@sdxc/http/cache";
+import { toRemix } from "@sdxc/markdown/remix";
+import { p } from "@sdxc/u/size";
 ```
 
 Every package page lists the subpaths it publishes, under **Imports**.
@@ -30,13 +30,13 @@ consumer using the core alone never pulls the router in.
 contract with swappable implementations publishes the suite that proves an implementation
 satisfies it, so a driver you write yourself is held to the same standard as the ones that ship.
 
-**A vendor name** is an adapter for that vendor. `sdxc/cache/worker-kv` and
-`sdxc/cache/memory` are two implementations of the same contract; the vendor-neutral core sits
+**A vendor name** is an adapter for that vendor. `@sdxc/cache/worker-kv` and
+`@sdxc/cache/memory` are two implementations of the same contract; the vendor-neutral core sits
 at the root, and the one you import decides what you deploy against.
 
 **`/remix`** is a framework binding, on the packages that are framework-free at the root.
 
-Three of those shapes sit side by side in [`sdxc/cache`](/api/cache), and its source
+Three of those shapes sit side by side in [`@sdxc/cache`](/api/cache), and its source
 tree reads as the entry points it publishes:
 
 <files title="packages/cache/src">
@@ -63,15 +63,15 @@ the four the manifest names.
 
 ## A package with no root
 
-Some packages publish no root entry point at all — [`sdxc/http`](/api/http) is the
+Some packages publish no root entry point at all — [`@sdxc/http`](/api/http) is the
 clearest case:
 
 ```typescript
-import { Policies } from "sdxc/http/cache";
-import { ok } from "sdxc/http/response/json";
+import { Policies } from "@sdxc/http/cache";
+import { ok } from "@sdxc/http/response/json";
 ```
 
-There is no `sdxc/http` to import, on purpose. The package is four unrelated concerns that
+There is no `@sdxc/http` to import, on purpose. The package is four unrelated concerns that
 happen to be about HTTP, and a root that re-exported all of them would make importing the
 status codes drag in the caching layer. The subpath is the unit, so the import names what you
 actually wanted.

@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 8
 order: 3
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 A Remix v3 app on Workers has three kinds of behavior worth testing: what the router answers,
@@ -14,7 +14,7 @@ test suite that covers all three without a hand-written fake in sight. Vitest ru
 Vite+ (`vp test`), tests that need a real binding run inside workerd,
 [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks) supplies in-memory bindings that really
 store and really run SQL, MSW answers outbound HTTP, and the memory adapters of
-[`sdxc/mail`](/api/mail) and [`sdxc/jobs`](/api/jobs) record what the app sent. On top,
+[`@sdxc/mail`](/api/mail) and [`@sdxc/jobs`](/api/jobs) record what the app sent. On top,
 [`@sdxc/spec`](/api/spec) runs executable `.spec` suites against the app as a client sees it.
 
 ```bash
@@ -79,8 +79,8 @@ parameters, and write one helper that opens a database and fetches through the r
 import { readFileSync } from "node:fs";
 
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { createD1DatabaseAdapter } from "sdxc/data-table-d1";
-import * as memory from "sdxc/jobs/memory";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import * as memory from "@sdxc/jobs/memory";
 import { Database } from "remix/data-table";
 
 import { createWebRouter } from "~/app/initializers/router";
@@ -111,7 +111,7 @@ export async function fetchApp(db: Database, path: string, init: RequestInit = {
 `createD1Database()` is a D1 binding over an in-memory SQLite database, so a malformed
 statement or a constraint violation fails in the test rather than in production, and
 `exec()` takes the migration file as it stands. `createWebRouter` hands `queue` to
-`jobEnqueuer(queue)` from `sdxc/jobs/router`, so whatever a handler enqueues through
+`jobEnqueuer(queue)` from `@sdxc/jobs/router`, so whatever a handler enqueues through
 `ctx.jobs` lands in a memory queue the test can drain (see
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)). Setting `origin` on writes keeps
 cross-origin protection in the chain under test instead of turning it off. A test is then a
@@ -147,8 +147,8 @@ A file named `*.workers.test.ts` runs inside workerd, and its `env` holds the bi
 Wrangler config declares, implemented by Cloudflare's own code.
 
 ```typescript {% title="app/initializers/cache.workers.test.ts" %}
-import { WorkerKVCache } from "sdxc/cache/worker-kv";
-import { unwrap } from "sdxc/result";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeEach, expect, test } from "vitest";
 
@@ -244,8 +244,8 @@ real call. `server.use(...)` inside one test overrides a handler for that test o
 provider receives it, and the memory queue holds jobs until the test drains them.
 
 ```typescript {% title="app/test/mail.ts" %}
-import { Mailer } from "sdxc/mail";
-import { MemoryTransport } from "sdxc/mail/memory";
+import { Mailer } from "@sdxc/mail";
+import { MemoryTransport } from "@sdxc/mail/memory";
 
 export const outbox = new MemoryTransport();
 
@@ -295,7 +295,7 @@ MCP tools are routes too, so the same `fetchApp` drives them. A call carries the
 version, the method and the tool name in headers as well as in its body:
 
 ```typescript {% title="app/mcp/server.test.ts" %}
-import { LATEST_PROTOCOL_VERSION, MetaKey } from "sdxc/mcp";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { expect, test } from "vitest";
 
 import { createTestDatabase, fetchApp } from "~/app/test/router";

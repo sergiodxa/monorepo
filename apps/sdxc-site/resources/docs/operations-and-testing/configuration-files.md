@@ -13,12 +13,12 @@ and it forgives the trailing comma left behind when a line is deleted. That is J
 format of `tsconfig.json`, editor settings and many tools' own files: JSON plus `//` and
 `/* */` comments and trailing commas in objects and arrays.
 
-This guide reads a `deploy.jsonc` for a deploy tool with [`sdxc/jsonc`](/api/jsonc), which
+This guide reads a `deploy.jsonc` for a deploy tool with [`@sdxc/jsonc`](/api/jsonc), which
 parses JSONC into exactly what `JSON.parse` would produce and answers a mistake with its line
 and column, in a `Result`.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/cli @sdxc/jsonc @sdxc/result remix
 ```
 
 ## The file
@@ -47,8 +47,8 @@ agrees on.
 ```typescript {% title="src/config.ts" %}
 import { readFile } from "node:fs/promises";
 
-import { parse } from "sdxc/jsonc";
-import { failure, isFailure, success, wrap } from "sdxc/result";
+import { parse } from "@sdxc/jsonc";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 export async function readConfigText(path: string) {
 	let text = await wrap(() => readFile(path, "utf8"));
@@ -68,7 +68,7 @@ character. `reason` is the message without the position, `line` and `column` cou
 `offset` is the character's index in the text, for drawing the line with a marker under it:
 
 ```typescript {% title="src/config.ts" %}
-import type { JSONCParseError } from "sdxc/jsonc";
+import type { JSONCParseError } from "@sdxc/jsonc";
 
 export function frame(text: string, error: JSONCParseError): string {
 	let source = text.split(/\r\n|\r|\n/)[error.line - 1] ?? "";
@@ -120,11 +120,11 @@ A command line reads its configuration once per run, in middleware, and every ha
 it typed:
 
 ```typescript {% title="src/middleware/config.ts" %}
-import type { CommandMiddleware } from "sdxc/cli";
+import type { CommandMiddleware } from "@sdxc/cli";
 
 import { join } from "node:path";
 
-import { isFailure } from "sdxc/result";
+import { isFailure } from "@sdxc/result";
 import { createContextKey } from "remix/router";
 
 import type { DeployConfig } from "../config.js";
@@ -159,7 +159,7 @@ spaces, and line breaks inside block comments stay. A tool that only reads JSON 
 the file, and any offset it reports is an offset into the original:
 
 ```typescript {% title="src/config.ts" %}
-import { strip } from "sdxc/jsonc";
+import { strip } from "@sdxc/jsonc";
 
 let json = strip('{ "bucket": "assets", /* staging */ }');
 // '{ "bucket": "assets"                }'
@@ -176,4 +176,4 @@ reads the text.
   `loadConfig` answer.
 - [Standard Schema validation](/docs/conventions/standard-schema-validation) — the schemas
   that check the parsed value.
-- [`sdxc/jsonc`](/api/jsonc) — every field of the parse error.
+- [`@sdxc/jsonc`](/api/jsonc) — every field of the parse error.

@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 15
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 DNS will not list the names in a zone from outside it. A resolver answers questions about names
@@ -14,13 +14,13 @@ names some other way. The usual way is the zone file: every DNS provider exports
 holds every record, subdomains included.
 
 This guide imports a pasted zone file into an app and exports it back.
-[`sdxc/zone-file`](/api/zone-file) reads and writes the RFC 1035 format and reports every line
-it could not use. [`sdxc/doh`](/api/doh) looks the records up over DNS over HTTPS, since a
-Worker has no DNS socket. [`sdxc/validate`](/api/validate) checks the form, and
-[`sdxc/http`](/api/http) sends the export as a download.
+[`@sdxc/zone-file`](/api/zone-file) reads and writes the RFC 1035 format and reports every line
+it could not use. [`@sdxc/doh`](/api/doh) looks the records up over DNS over HTTPS, since a
+Worker has no DNS socket. [`@sdxc/validate`](/api/validate) checks the form, and
+[`@sdxc/http`](/api/http) sends the export as a download.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/doh @sdxc/http @sdxc/result @sdxc/validate @sdxc/zone-file remix
 ```
 
 ## Read the paste
@@ -32,7 +32,7 @@ RFC 1035 reads as relative: `example.com` written in the `example.com` zone mean
 name it was meant to be:
 
 ```typescript {% title="app/services/zones/read-zone.ts" %}
-import * as ZoneFile from "sdxc/zone-file";
+import * as ZoneFile from "@sdxc/zone-file";
 
 export const MAX_ZONE_BYTES = 256 * 1024;
 
@@ -64,9 +64,9 @@ other than `IN` and types you may not handle. Deciding what to keep is a policy,
 filter over the records:
 
 ```typescript {% title="app/services/zones/tracked-records.ts" %}
-import type { ZoneFile } from "sdxc/zone-file";
+import type { ZoneFile } from "@sdxc/zone-file";
 
-import { formatRecordData } from "sdxc/zone-file";
+import { formatRecordData } from "@sdxc/zone-file";
 
 export const TRACKED_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "CAA"] as const;
 
@@ -118,8 +118,8 @@ reasons it cannot. The review screen should show the skipped and rejected lines 
 records, so the person importing sees what the import covers and what it does not:
 
 ```tsx {% title="app/http/controllers/zones/import.tsx" %}
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { maxLength, minLength } from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
@@ -176,9 +176,9 @@ returns records with the same typed fields `parse` gives, so the same `formatRec
 lines them up:
 
 ```typescript {% title="app/services/zones/compare.ts" %}
-import { resolve } from "sdxc/doh";
-import { isFailure } from "sdxc/result";
-import { formatRecordData } from "sdxc/zone-file";
+import { resolve } from "@sdxc/doh";
+import { isFailure } from "@sdxc/result";
+import { formatRecordData } from "@sdxc/zone-file";
 
 import type { TrackedRecord } from "~/app/services/zones/tracked-records";
 
@@ -219,8 +219,8 @@ written relative to it and the apex as `@`, the form people keep in git and past
 provider:
 
 ```typescript {% title="app/http/controllers/zones/export.ts" %}
-import { attachment, text } from "sdxc/http/response";
-import * as ZoneFile from "sdxc/zone-file";
+import { attachment, text } from "@sdxc/http/response";
+import * as ZoneFile from "@sdxc/zone-file";
 import { createAction } from "remix/router";
 
 import { Zones } from "~/app/models/zones";
@@ -258,8 +258,8 @@ option, every `$INCLUDE` is rejected with the `include` reason:
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { isFailure } from "sdxc/result";
-import * as ZoneFile from "sdxc/zone-file";
+import { isFailure } from "@sdxc/result";
+import * as ZoneFile from "@sdxc/zone-file";
 
 let directory = "zones";
 let parsed = ZoneFile.parse(
@@ -293,4 +293,4 @@ CI and a typo in a zone fails the build with its file and line, before a provide
   date that takes every record in the zone down with it.
 - [Import and export CSV](/docs/data-and-background-work/csv): the same import shape for
   spreadsheets.
-- [`sdxc/zone-file`](/api/zone-file): every option, record field and rejection reason.
+- [`@sdxc/zone-file`](/api/zone-file): every option, record field and rejection reason.

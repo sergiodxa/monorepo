@@ -12,8 +12,8 @@ lastUpdated: 2026-10-15
 you tables, typed queries and write helpers, and leaves the connection to a driver. Cloudflare
 has two SQLite databases a Worker can reach: D1, a database bound to the Worker, and the SQL
 storage inside a SQLite-backed Durable Object. There is a driver for each:
-[`sdxc/data-table-d1`](/api/data-table-d1) and
-[`sdxc/data-table-sqlstorage`](/api/data-table-sqlstorage).
+[`@sdxc/data-table-d1`](/api/data-table-d1) and
+[`@sdxc/data-table-sqlstorage`](/api/data-table-sqlstorage).
 
 This guide opens a database over D1, publishes it on the request context, covers the writes D1
 can commit safely, moves the same models into a Durable Object, and tests all of it against real
@@ -22,7 +22,7 @@ queries is `remix/data-table`'s own API, and its documentation covers it; everyt
 with whatever tables you already have.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/data-table-d1 @sdxc/data-table-sqlstorage remix
 npm add -D @sdxc/cloudflare-mocks
 ```
 
@@ -38,7 +38,7 @@ the way in and parsed on the way out, on a plain read and on a `RETURNING` row a
 `createD1DatabaseAdapter` takes the D1 binding and returns the driver `new Database(...)` expects:
 
 ```typescript {% title="app/initializers/database.ts" %}
-import { createD1DatabaseAdapter } from "sdxc/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
@@ -117,7 +117,7 @@ A SQLite-backed Durable Object exposes its database as `ctx.storage.sql`. Build 
 per instance, since the handle outlives every request the object serves:
 
 ```typescript {% title="bootstrap/do/tenant.ts" %}
-import { createSQLStorageDatabaseAdapter } from "sdxc/data-table-sqlstorage";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
@@ -154,7 +154,7 @@ ship and hand the database to the router through the same `source` the middlewar
 import { readFileSync } from "node:fs";
 
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { createD1DatabaseAdapter } from "sdxc/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { Database } from "remix/data-table";
 
 const MIGRATION = readFileSync(

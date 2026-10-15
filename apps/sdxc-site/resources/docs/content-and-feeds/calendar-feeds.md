@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 4
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 A calendar feed is the lowest-effort way to keep people coming to your events. They subscribe
@@ -15,12 +15,12 @@ guide serves your app's meetups as an iCalendar feed and as single-event downloa
 weekly series that stays at 19:00 local time across daylight saving changes, and reads an
 uploaded `.ics` file back into your database.
 
-It uses [`sdxc/icalendar`](/api/icalendar) for the format, [`sdxc/http`](/api/http) for
-the cache and error responses, and [`sdxc/result`](/api/result) for the parts that can fail.
+It uses [`@sdxc/icalendar`](/api/icalendar) for the format, [`@sdxc/http`](/api/http) for
+the cache and error responses, and [`@sdxc/result`](/api/result) for the parts that can fail.
 The meetups come from your own `Meetups` model.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/icalendar @sdxc/result remix
 ```
 
 ## Give the feed a route
@@ -52,9 +52,9 @@ never change for the same meetup, and `SEQUENCE` says which revision is newer, s
 grow. Derive both from the row:
 
 ```typescript {% title="app/services/calendar/events.ts" %}
-import type { ICalendar } from "sdxc/icalendar";
+import type { ICalendar } from "@sdxc/icalendar";
 
-import { utc } from "sdxc/icalendar";
+import { utc } from "@sdxc/icalendar";
 
 import type { Meetup } from "~/app/models/meetup";
 
@@ -89,8 +89,8 @@ and is empty here.
 subscription:
 
 ```typescript {% title="app/http/controllers/events/feed.ts" %}
-import { policy } from "sdxc/http/cache";
-import { calendarResponse } from "sdxc/icalendar";
+import { policy } from "@sdxc/http/cache";
+import { calendarResponse } from "@sdxc/icalendar";
 import { createAction } from "remix/router";
 
 import { calendarEvent } from "~/app/services/calendar/events";
@@ -142,10 +142,10 @@ Thursday at 19:00 in Madrid" is a wall-clock time, and the UTC instant under it 
 hour twice a year. Write that start in its zone, and ship the zone's rules with it:
 
 ```typescript {% title="app/services/calendar/series.ts" %}
-import type { ICalendar } from "sdxc/icalendar";
+import type { ICalendar } from "@sdxc/icalendar";
 
-import { vtimezone } from "sdxc/icalendar/timezone";
-import { isFailure, success } from "sdxc/result";
+import { vtimezone } from "@sdxc/icalendar/timezone";
+import { isFailure, success } from "@sdxc/result";
 
 const TIME_ZONE = "Europe/Madrid";
 const YEAR_MS = 365 * 86_400_000;
@@ -203,9 +203,9 @@ Your own pages need the dates too, and computing them separately is how a page a
 end up disagreeing. `occurrences` expands the same event the feed publishes:
 
 ```typescript {% title="app/services/calendar/next-sessions.ts" %}
-import type { ICalendar } from "sdxc/icalendar";
+import type { ICalendar } from "@sdxc/icalendar";
 
-import { occurrences } from "sdxc/icalendar/rrule";
+import { occurrences } from "@sdxc/icalendar/rrule";
 
 const LOOKAHEAD_MS = 60 * 86_400_000;
 
@@ -226,8 +226,8 @@ calendar's own `VTIMEZONE`s first, which matters for files you did not write.
 An "Add to calendar" button is the same calendar with one event, served as an attachment:
 
 ```typescript {% title="app/http/controllers/events/download.ts" %}
-import { notFound } from "sdxc/http/response/html";
-import { calendarResponse } from "sdxc/icalendar";
+import { notFound } from "@sdxc/http/response/html";
+import { calendarResponse } from "@sdxc/icalendar";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -264,10 +264,10 @@ Importing goes the other way: a person uploads an `.ics` file exported from some
 `parse` reads it leniently and fails only on structure:
 
 ```typescript {% title="app/http/controllers/events/import.ts" %}
-import { redirect } from "sdxc/http/response";
-import { badRequest } from "sdxc/http/response/html";
-import { parse, toInstant } from "sdxc/icalendar";
-import { isFailure } from "sdxc/result";
+import { redirect } from "@sdxc/http/response";
+import { badRequest } from "@sdxc/http/response/html";
+import { parse, toInstant } from "@sdxc/icalendar";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import Meetups from "~/app/models/meetup";
@@ -295,7 +295,7 @@ export default createAction(routes.events.import, async (ctx) => {
 });
 ```
 
-`ctx.formData` and `ctx.log` come from the form-data and [`sdxc/logger`](/api/logger)
+`ctx.formData` and `ctx.log` come from the form-data and [`@sdxc/logger`](/api/logger)
 middleware your router already runs. A structural failure, such as an unmatched `BEGIN` or a
 line with no `:`, is an `ICalendarParseError` whose message starts with the line number, so it
 is worth showing as it is. Everything recoverable becomes a warning instead, like a missing `UID`
@@ -312,10 +312,10 @@ import of the same file updates rows instead of duplicating them.
 
 ## Invite people by email
 
-A feed publishes; an invitation asks for an answer. `sdxc/icalendar/itip` builds the RFC 5546
+A feed publishes; an invitation asks for an answer. `@sdxc/icalendar/itip` builds the RFC 5546
 messages for one event: `request` to invite or send a revision, `cancel` to call it off, and
 `readReply` to read what an attendee answered. `calendarPart` turns one into the shape
-[`sdxc/mail`](/api/mail) accepts as its `calendar` option, and `nextSequence` decides whether
+[`@sdxc/mail`](/api/mail) accepts as its `calendar` option, and `nextSequence` decides whether
 a change is significant enough to bump `SEQUENCE`.
 
 ## Where to go next

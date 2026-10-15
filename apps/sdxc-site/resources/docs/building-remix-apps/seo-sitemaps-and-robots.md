@@ -5,18 +5,18 @@ section:
     title: Building Remix apps
     order: 3
 order: 5
-lastUpdated: 2026-10-13
+lastUpdated: 2026-10-15
 ---
 
 A crawler learns about your site from four places: the head of each page, the sitemap, the
 robots file, and the documents under `/.well-known/`. This guide sets up all four from one
-source of truth. [`sdxc/seo`](/api/seo) resolves canonical URLs, head tags and structured
-data; [`sdxc/sitemap`](/api/sitemap) and [`sdxc/robots`](/api/robots) write the two crawl
-files; and [`sdxc/well-known`](/api/well-known) serves `security.txt`. Each file is an
-ordinary route answered through `sdxc/http/response`.
+source of truth. [`@sdxc/seo`](/api/seo) resolves canonical URLs, head tags and structured
+data; [`@sdxc/sitemap`](/api/sitemap) and [`@sdxc/robots`](/api/robots) write the two crawl
+files; and [`@sdxc/well-known`](/api/well-known) serves `security.txt`. Each file is an
+ordinary route answered through `@sdxc/http/response`.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/robots @sdxc/seo @sdxc/sitemap @sdxc/well-known remix
 ```
 
 ## One instance for the site
@@ -27,7 +27,7 @@ the preview. `createSeo` takes the site's identity and builds every URL from tha
 whichever host served the request. Build it once, at module scope, and import it everywhere.
 
 ```typescript {% title="app/initializers/seo.ts" %}
-import { createSeo } from "sdxc/seo";
+import { createSeo } from "@sdxc/seo";
 
 export const seo = createSeo({
 	baseUrl: "https://example.com",
@@ -49,7 +49,7 @@ component, so each page decides its own copy and the tag set stays identical eve
 ```tsx {% title="resources/layouts/document.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import { Seo } from "sdxc/seo";
+import { Seo } from "@sdxc/seo";
 
 interface Props {
 	children: RemixNode;
@@ -85,7 +85,7 @@ middleware publishes, and `ctx.locale` comes from the middleware in
 [Translate your app](/docs/building-remix-apps/translate-your-app).
 
 ```tsx {% title="app/http/controllers/post.tsx" %}
-import type { Seo } from "sdxc/seo";
+import type { Seo } from "@sdxc/seo";
 
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -160,8 +160,8 @@ still points a crawler at production, and every URL in it agrees with the canoni
 the page it names.
 
 ```typescript {% title="app/http/controllers/sitemap.ts" %}
-import { xml } from "sdxc/http/response";
-import { Sitemap } from "sdxc/sitemap";
+import { xml } from "@sdxc/http/response";
+import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 
 import Post from "~/app/models/post";
@@ -194,12 +194,12 @@ date is what gets a crawler to revisit a page, so give it one whenever your data
 
 ## Serve robots.txt
 
-`stringify` from `sdxc/robots` writes the file from a document of groups, sitemaps and other
+`stringify` from `@sdxc/robots` writes the file from a document of groups, sitemaps and other
 records, and what it writes parses back to the same document. Serve it with `text()`.
 
 ```typescript {% title="app/http/controllers/robots.ts" %}
-import { text } from "sdxc/http/response";
-import { stringify } from "sdxc/robots";
+import { text } from "@sdxc/http/response";
+import { stringify } from "@sdxc/robots";
 import { createAction } from "remix/router";
 
 import { seo } from "~/app/initializers/seo";
@@ -237,11 +237,11 @@ A researcher who finds a vulnerability looks for `/.well-known/security.txt` bef
 else. The `wellKnown()` middleware answers `GET` and `HEAD` on the names you give it, with an
 `ETag`, a `Cache-Control` and a `304` when the client's copy is current, and passes every
 other path on to the router. JSON well-known documents, such as OAuth metadata, name a
-refused member with a JSON Pointer from [`sdxc/json-pointer`](/api/json-pointer); a text
+refused member with a JSON Pointer from [`@sdxc/json-pointer`](/api/json-pointer); a text
 file such as `security.txt` names a 1-based line instead.
 
 ```typescript {% title="config/security-txt.ts" %}
-import type { SecurityTxt } from "sdxc/well-known/security-txt";
+import type { SecurityTxt } from "@sdxc/well-known/security-txt";
 
 export const SECURITY_TXT: SecurityTxt = {
 	contact: [new URL("mailto:security@example.com")],
@@ -257,9 +257,9 @@ export const SECURITY_TXT: SecurityTxt = {
 ```
 
 ```typescript {% title="app/initializers/router.tsx" %}
-import { headRequests } from "sdxc/http/middleware/head-requests";
-import { serve, wellKnown } from "sdxc/well-known/middleware";
-import { securityTxt } from "sdxc/well-known/security-txt";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { securityTxt } from "@sdxc/well-known/security-txt";
 import { createRouter } from "remix/router";
 
 import { SECURITY_TXT } from "~/config/security-txt";

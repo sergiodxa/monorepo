@@ -14,7 +14,7 @@ and moves the project to a newer release with a prompt that tells an AI agent wh
 the code you have.
 
 It ships in [`@sdxc/kit`](/api/kit). Install it globally so you can type the commands as
-written here; your app keeps importing packages through `sdxc/*`:
+written here; your app imports each package it uses by its own name, such as `@sdxc/result`:
 
 ```bash
 npm add -g @sdxc/kit
@@ -140,7 +140,7 @@ change; every other kind keeps the built-in stub.
 
 ## Copy a UI component to edit it
 
-[`sdxc/ui`](/api/ui) components are imported from the package, so a release updates them for
+[`@sdxc/ui`](/api/ui) components are imported from the package, so a release updates them for
 you. When a design needs a component changed, copy it into the project:
 
 ```bash
@@ -148,7 +148,7 @@ sdxc ui add dialog
 ```
 
 The copy lands in `ui.directory`, and every file in the project that imported
-`sdxc/ui/dialog`, or `Dialog` from `sdxc/ui`, now imports the copy. A component that reaches
+`@sdxc/ui/dialog`, or `Dialog` from `@sdxc/ui`, now imports the copy. A component that reaches
 others keeps importing them from the package; `--with-deps` copies those as well.
 
 The command records each copy, the release it came from and a hash of each file in
@@ -159,7 +159,7 @@ to tell an edited copy from an untouched one:
 sdxc ui list            # every component, marking copies that are edited or behind
 sdxc ui diff dialog     # how the copy differs from the installed version
 sdxc ui update dialog   # take the installed version where the copy is untouched
-sdxc ui remove dialog   # delete the copy and point imports back at sdxc/ui/dialog
+sdxc ui remove dialog   # delete the copy and point imports back at @sdxc/ui/dialog
 ```
 
 `update` replaces only the files you have not edited and names the rest; `--force` replaces
@@ -211,7 +211,7 @@ writes those commands.
 
 - [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — the
   commands `sdxc make command` adds, and the services they read.
-- [Build a command line](/docs/operations-and-testing/build-a-command-line) — `sdxc/cli`, the
+- [Build a command line](/docs/operations-and-testing/build-a-command-line) — `@sdxc/cli`, the
   package this command line is built on.
 - [Wire the router](/docs/building-remix-apps/wire-the-router) — what the controllers `make`
   maps are mapped into.

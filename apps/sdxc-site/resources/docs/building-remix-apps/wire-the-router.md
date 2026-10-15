@@ -5,19 +5,20 @@ section:
     title: Building Remix apps
     order: 3
 order: 1
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 Every request your Worker serves passes through one router, and the router's global middleware
 decides what a handler can count on before it runs: a log, a trace, the user agent, and your
-own services. This guide adds [`sdxc/http`](/api/http), [`sdxc/logger`](/api/logger),
-[`sdxc/trace-context`](/api/trace-context) and [`sdxc/user-agent`](/api/user-agent) to that
+own services. This guide adds [`@sdxc/http`](/api/http), [`@sdxc/logger`](/api/logger),
+[`@sdxc/trace-context`](/api/trace-context) and [`@sdxc/user-agent`](/api/user-agent) to that
 chain in a single composition root, then publishes a database opened through
-[`sdxc/data-table-d1`](/api/data-table-d1) as `ctx.db`, so handlers read it and a test
+[`@sdxc/data-table-d1`](/api/data-table-d1) as `ctx.db`, so handlers read it and a test
 replaces it without touching a handler.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/data-table-d1 @sdxc/http @sdxc/lazy-route @sdxc/logger @sdxc/trace-context \
+	@sdxc/user-agent remix
 ```
 
 The logger, the trace and `asyncContext()` all keep per-request state in `AsyncLocalStorage`,
@@ -30,7 +31,7 @@ router and anything else that opens a log (a job dispatcher, a cron handler) wri
 under the same `service` name and a query can group them.
 
 ```typescript {% title="app/initializers/logger.ts" %}
-import { createLogger } from "sdxc/logger";
+import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({ service: "my-app" });
 ```
@@ -43,16 +44,16 @@ to the one already open.
 
 Build the router in a function rather than at module scope. The Worker calls it per request,
 and a test calls the same function, so what the test drives is the chain production runs.
-Each route is mapped through `lazy()` from [`sdxc/lazy-route`](/api/lazy-route), so a request
+Each route is mapped through `lazy()` from [`@sdxc/lazy-route`](/api/lazy-route), so a request
 imports only the controller it reaches; [Canonical URLs, lazy routes and header
 fields](/docs/building-remix-apps/router-utilities) covers it in full.
 
 ```tsx {% title="app/initializers/router.tsx" %}
-import { headRequests } from "sdxc/http/middleware/head-requests";
-import { lazy } from "sdxc/lazy-route";
-import { log } from "sdxc/logger/middleware";
-import { trace } from "sdxc/trace-context/middleware";
-import { userAgent } from "sdxc/user-agent/middleware";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
+import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
@@ -88,7 +89,7 @@ The order carries meaning:
   probe from a monitor falls through to the 404 handler. It dispatches the `HEAD` as a `GET`
   and strips the body, and because it leads the chain, a `HEAD` runs through every guard a
   `GET` does.
-- **`asyncContext()` is there for `sdxc/user-agent/helpers`.** Predicates such as
+- **`asyncContext()` is there for `@sdxc/user-agent/helpers`.** Predicates such as
   `isTouch()` read the current request through it when called with no argument, so a
   component deep inside a render asks without being handed anything.
 - **`trace()` after `log()`.** It continues the caller's `traceparent` or starts a trace,
@@ -138,7 +139,7 @@ production source reads the D1 binding at request time, so each request uses the
 was served with:
 
 ```typescript {% title="app/initializers/database.ts" %}
-import { createD1DatabaseAdapter } from "sdxc/data-table-d1";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
@@ -153,11 +154,11 @@ production one:
 ```tsx {% title="app/initializers/router.tsx" %}
 import type { Database as DataTable } from "remix/data-table";
 
-import { headRequests } from "sdxc/http/middleware/head-requests";
-import { lazy } from "sdxc/lazy-route";
-import { log } from "sdxc/logger/middleware";
-import { trace } from "sdxc/trace-context/middleware";
-import { userAgent } from "sdxc/user-agent/middleware";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
+import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
@@ -220,7 +221,7 @@ export default createAction(routes.project, async (ctx) => {
 
 `ctx.log.time("db", …)` adds `db.count` and `db.duration_ms` to the request's single record,
 and `project.id` becomes a field you can filter on. Code with no `ctx` in reach calls
-`currentLog()` from `sdxc/logger`, which returns the same log.
+`currentLog()` from `@sdxc/logger`, which returns the same log.
 
 ## Swapping it in a test
 

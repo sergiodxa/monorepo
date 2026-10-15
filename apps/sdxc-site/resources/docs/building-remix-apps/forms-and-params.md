@@ -5,18 +5,18 @@ section:
     title: Building Remix apps
     order: 3
 order: 2
-lastUpdated: 2026-10-13
+lastUpdated: 2026-10-15
 ---
 
 Everything a request carries is a string until something says otherwise: form fields, the
 query string, the segments the router matched. This guide validates each of them with
-`remix/data-schema` schemas, runs them through [`sdxc/validate`](/api/validate) so a refusal
+`remix/data-schema` schemas, runs them through [`@sdxc/validate`](/api/validate) so a refusal
 comes back as a `Result` value, and answers every failure with the response that fits the
 caller: the same page with its errors for a browser form, a 404 for a URL that names nothing,
 and a problem document for an API client.
 
 ```bash
-npm add sdxc remix
+npm add @sdxc/http @sdxc/problem @sdxc/result @sdxc/ui @sdxc/validate remix
 ```
 
 The examples assume the router from
@@ -69,9 +69,9 @@ schema's `issues` on failure. It never throws for bad input, so the handler is a
 line with an early return.
 
 ```tsx {% title="app/http/controllers/teams-new.tsx" %}
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import Team from "~/app/models/team";
@@ -121,14 +121,14 @@ The two outcomes answer differently on purpose:
 
 ## Render the issues
 
-`ValidationError.issues` already has the shape [`sdxc/ui`](/api/ui)'s `Form` takes. Each
+`ValidationError.issues` already has the shape [`@sdxc/ui`](/api/ui)'s `Form` takes. Each
 field finds its own messages by `name`, marks itself `aria-invalid`, and the first invalid
 field takes focus, with no client JavaScript.
 
 ```tsx {% title="resources/views/new-team.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Button, Form, TextField } from "sdxc/ui";
+import { Button, Form, TextField } from "@sdxc/ui";
 
 interface Props {
 	issues?: ReadonlyArray<Form.Issue>;
@@ -171,8 +171,8 @@ too. When a param is input, a value the URL can carry but your app does not know
 and answer a failure with the 404 page:
 
 ```tsx {% title="app/http/controllers/plans-show.tsx" %}
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -201,8 +201,8 @@ cannot be missing once the route matched, so reading it with
 `s.defaulted` fills a value the link left out:
 
 ```tsx {% title="app/http/controllers/search.tsx" %}
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { min } from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
@@ -230,14 +230,14 @@ export default createAction(routes.search, async (ctx) => {
 
 A JSON endpoint validates the `Request` itself. `validate` reads the body by its
 `Content-Type`: JSON, `+json` types, multipart or URL-encoded. A client reading JSON wants the
-failure as data, and [`sdxc/problem`](/api/problem) writes it as an RFC 9457 problem
+failure as data, and [`@sdxc/problem`](/api/problem) writes it as an RFC 9457 problem
 document with one entry per invalid field.
 
 ```typescript {% title="app/http/controllers/api/teams.ts" %}
-import { created } from "sdxc/http/response/json";
-import { issuesFrom, validationProblem } from "sdxc/problem";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { created } from "@sdxc/http/response/json";
+import { issuesFrom, validationProblem } from "@sdxc/problem";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
 import { createAction } from "remix/router";
@@ -261,9 +261,9 @@ export default createAction(routes.api.teams.create, async (ctx) => {
 
 `validationProblem` answers `422` with `Content-Type: application/problem+json`, and
 `issuesFrom` turns each issue's path into a JSON Pointer such as `/billingEmail`, through
-[`sdxc/json-pointer`](/api/json-pointer). Where an
+[`@sdxc/json-pointer`](/api/json-pointer). Where an
 API prefers plain JSON, `badRequest({ errors: body.error.issues })` from
-`sdxc/http/response/json` is the one-line alternative.
+`@sdxc/http/response/json` is the one-line alternative.
 
 ## Where to go next
 
