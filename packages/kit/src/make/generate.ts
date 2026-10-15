@@ -156,7 +156,7 @@ async function placeholders(
 		model: `~/app/models/${name.segments.join("/")}`,
 		command: name.segments.join(" "),
 		member: memberAccess(name.segments),
-		words: name.segments.map((segment) => JSON.stringify(segment)).join(", "),
+		words: name.segments.map((segment) => literal(segment)).join(", "),
 	};
 	let values: Record<string, string> = {};
 	for (let key of [...COMMON_PLACEHOLDERS, ...KINDS[request.kind].placeholders]) {
@@ -164,6 +164,26 @@ async function placeholders(
 		if (value !== undefined) values[key] = value;
 	}
 	return values;
+}
+
+/** Each character that ends a `<script>` element or a line inside an otherwise valid literal. */
+const UNSAFE_LITERAL_CHARACTERS: Record<string, string> = {
+	"<": "\\u003C",
+	">": "\\u003E",
+	"\u2028": "\\u2028",
+	"\u2029": "\\u2029",
+};
+
+/**
+ * `value` as a JavaScript string literal that is safe to splice into generated source: quotes,
+ * backslashes and control characters are escaped, and so are `<`, `>` and the two Unicode line
+ * separators, so a name or path can never close a script element or break the line it sits on.
+ */
+export function literal(value: string): string {
+	return JSON.stringify(value).replace(
+		/[<>\u2028\u2029]/g,
+		(character) => UNSAFE_LITERAL_CHARACTERS[character] ?? character,
+	);
 }
 
 /**
@@ -174,7 +194,7 @@ async function placeholders(
 export function memberAccess(segments: readonly string[]): string {
 	return segments
 		.map((segment) =>
-			/^[A-Za-z_$][\w$]*$/.test(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`,
+			/^[A-Za-z_$][\w$]*$/.test(segment) ? `.${segment}` : `[${literal(segment)}]`,
 		)
 		.join("");
 }

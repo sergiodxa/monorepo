@@ -16,6 +16,8 @@ import type { Result } from "@sdxc/result";
 import { findModuleReferences } from "@sdxc/codemod";
 import { isFailure, success } from "@sdxc/result";
 
+import { literal } from "./generate.js";
+
 /** A source with an import ensured, and the local name that import binds. */
 export interface Imported {
 	source: string;
@@ -70,7 +72,7 @@ export function ensureImport(
 				? preferred
 				: `{ ${what.name} }`;
 	let local = what.kind === "named" ? what.name : preferred;
-	let statement = `import ${clause} from ${JSON.stringify(specifier)};`;
+	let statement = `import ${clause} from ${literal(specifier)};`;
 	return success({ source: insertImport(source, references.data, statement), local });
 }
 

@@ -53,7 +53,7 @@ export async function fetchPackument(
 	name: string,
 	signal?: AbortSignal,
 ): Promise<Result<Packument, Error>> {
-	let url = `${REGISTRY}/${name.replace("/", "%2f")}`;
+	let url = `${REGISTRY}/${name.replaceAll("/", "%2f")}`;
 	let response = await wrap(() => fetch(url, { headers: { accept: "application/json" }, signal }));
 	if (isFailure(response)) {
 		return failure(new Error(`Could not reach the npm registry: ${response.error.message}`));

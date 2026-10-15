@@ -20,7 +20,7 @@ import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import type { Name } from "./names.js";
 
-import { memberAccess } from "./generate.js";
+import { literal, memberAccess } from "./generate.js";
 import { ensureImport, resolvesTo, specifierFor } from "./imports.js";
 import { camel } from "./names.js";
 
@@ -108,11 +108,11 @@ async function declareJob(request: DeclarationRequest, root: string): Promise<De
 	let path = [...(groups ?? name.segments.slice(0, -1).map(camel)), name.key];
 	let value =
 		request.variant === "cron"
-			? `job({ cron: ${JSON.stringify(request.cron ?? "")} })`
+			? `job({ cron: ${literal(request.cron ?? "")} })`
 			: "job({ input: s.object({}) })";
 	let handler =
 		initializer === null ? `~/${request.handler}` : handlerSpecifier(initializer, request.handler);
-	let statement = `${instance}.map(${local}.${path.join(".")}, () => import(${JSON.stringify(handler)}));`;
+	let statement = `${instance}.map(${local}.${path.join(".")}, () => import(${literal(handler)}));`;
 	let manual = (reason: string): Declared => ({
 		kind: "manual",
 		path: path.join("."),
@@ -197,12 +197,12 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 	let path = [...name.segments.slice(0, -1).map(camel), name.key];
 	let helper = ROUTE_HELPERS[request.method] ?? "get";
 	let pattern = request.pattern ?? `/${name.segments.join("/")}`;
-	let value = `${helper}(${JSON.stringify(pattern)})`;
+	let value = `${helper}(${literal(pattern)})`;
 	let handler =
 		initializer === null ? `~/${request.handler}` : handlerSpecifier(initializer, request.handler);
 	let lazyLocal = "lazy";
 	let statement = (lazy: string) =>
-		`${instance}.map(${local}.${path.join(".")}, ${lazy}(() => import(${JSON.stringify(handler)})));`;
+		`${instance}.map(${local}.${path.join(".")}, ${lazy}(() => import(${literal(handler)})));`;
 	let manual = (reason: string): Declared => ({
 		kind: "manual",
 		path: path.join("."),
@@ -228,7 +228,7 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 		helper,
 	);
 	if (isFailure(imported)) return manual(imported.error.message);
-	value = `${imported.data.local}(${JSON.stringify(pattern)})`;
+	value = `${imported.data.local}(${literal(pattern)})`;
 	let added = addProperty(contract, imported.data.source, {
 		call: "route",
 		path: path.slice(0, -1),
@@ -281,16 +281,16 @@ async function declareMcp(request: DeclarationRequest, root: string): Promise<De
 	let path = [...name.segments.slice(0, -1).map(camel), name.key];
 	let builder = resource ? "resource" : "tool";
 	let body = resource
-		? [`name: ${JSON.stringify(request.title)},`, 'mimeType: "text/markdown",']
-		: [`description: ${JSON.stringify(`${request.title}.`)},`, "input: s.object({}),"];
+		? [`name: ${literal(request.title)},`, 'mimeType: "text/markdown",']
+		: [`description: ${literal(`${request.title}.`)},`, "input: s.object({}),"];
 	let first = resource ? request.uri : request.tool;
 	let valueWith = (callee: string, lines: string[]) =>
-		`${callee}(${JSON.stringify(first)}, {\n${lines.map((line) => `\t${line}`).join("\n")}\n})`;
+		`${callee}(${literal(first)}, {\n${lines.map((line) => `\t${line}`).join("\n")}\n})`;
 	let value = valueWith(builder, body);
 	let handler =
 		initializer === null ? `~/${request.handler}` : handlerSpecifier(initializer, request.handler);
 	let statement = (lazy: string) =>
-		`${instance}.${group}.map(${local}.${path.join(".")}, ${lazy}(() => import(${JSON.stringify(handler)})));`;
+		`${instance}.${group}.map(${local}.${path.join(".")}, ${lazy}(() => import(${literal(handler)})));`;
 	let manual = (reason: string): Declared => ({
 		kind: "manual",
 		path: path.join("."),
@@ -395,11 +395,11 @@ async function declareCommand(request: DeclarationRequest, root: string): Promis
 	let instance = initializer === null ? "cli" : instanceOf(initializer, "createCLI");
 	let local =
 		initializer === null ? "commandset" : (defaultLocal(initializer, module) ?? "commandset");
-	let description = JSON.stringify(request.title);
+	let description = literal(request.title);
 	let handler =
 		initializer === null ? `~/${request.handler}` : handlerSpecifier(initializer, request.handler);
 	let statement = (lazy: string) =>
-		`${instance}.map(${local}${memberAccess(segments)}, ${lazy}(() => import(${JSON.stringify(handler)})));`;
+		`${instance}.map(${local}${memberAccess(segments)}, ${lazy}(() => import(${literal(handler)})));`;
 	let manual = (reason: string): Declared => ({
 		kind: "manual",
 		path: segments.join("."),
@@ -518,7 +518,7 @@ function groupValue(call: string, levels: readonly string[], entry: string): str
 
 /** A command's key as an identifier when it is one, quoted otherwise. */
 function keyText(key: string): string {
-	return /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key);
+	return /^[A-Za-z_$][\w$]*$/.test(key) ? key : literal(key);
 }
 
 /** Every line of `text` indented by one tab. */
