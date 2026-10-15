@@ -18,6 +18,8 @@ import { findModuleReferences } from "@sdxc/codemod";
 import { unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { readRegistry } from "../../packages/sdxc/src/cli/ui/registry.js";
+
 import {
 	UI_REGISTRY_DIR,
 	buildUIRegistry,
@@ -233,7 +235,7 @@ describe("the @sdxc/ui registry", () => {
 		expect(unserved).toEqual([]);
 	});
 
-	test("writes one JSON file per component into the staged package", async () => {
+	test("writes one JSON file per component, each one the sdxc CLI reads", async () => {
 		let staging = await mkdtemp(join(tmpdir(), "sdxc-ui-registry-stage-"));
 		CREATED.push(staging);
 
@@ -241,7 +243,10 @@ describe("the @sdxc/ui registry", () => {
 
 		let files = await readdir(join(staging, UI_REGISTRY_DIR));
 		let button = JSON.parse(await readFile(join(staging, UI_REGISTRY_DIR, "button.json"), "utf8"));
+		await writeFile(join(staging, "package.json"), JSON.stringify({ version: "2026.10.14" }));
+		let read = unwrap(await readRegistry(staging));
 		expect(files).toContain("dialog.json");
+		expect(read.entries.size).toBe(files.length);
 		expect(Object.keys(button)).toEqual([
 			"name",
 			"changedIn",
