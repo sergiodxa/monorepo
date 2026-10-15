@@ -9,14 +9,17 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Vocabulary } from "./casing.js";
+
+import { recase, toVocabulary } from "./casing.js";
 import { upperFirst } from "./segment.js";
 
 /** Options for {@link titleize}. */
 export interface TitleizeOptions {
 	/**
-	 * Words rendered exactly as written whenever they appear, matched
-	 * case-insensitively. Entries extend the built-in set and override it, and
-	 * they beat every other rule including the small-word list.
+	 * Words and multi-word names rendered exactly as written whenever they appear,
+	 * matched case-insensitively. Entries extend the built-in set and override it,
+	 * and they beat every other rule including the small-word list.
 	 */
 	special?: ReadonlyArray<string>;
 }
@@ -160,128 +163,12 @@ const SMALL_WORDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Names whose casing cannot be derived from the word itself. Deliberately kept
- * small: product and technology vocabulary belongs to the app that publishes it,
- * declared once through {@link createTitleizer}.
- */
-const DEFAULT_SPECIAL: ReadonlyArray<string> = [
-	"API",
-	"APIs",
-	"CDN",
-	"CLI",
-	"CSS",
-	"CSV",
-	"DNS",
-	"GitHub",
-	"GitLab",
-	"HTML",
-	"HTTP",
-	"HTTPS",
-	"iMac",
-	"iOS",
-	"iPad",
-	"iPadOS",
-	"iPhone",
-	"JavaScript",
-	"JSON",
-	"JWT",
-	"macOS",
-	"MySQL",
-	"Node.js",
-	"npm",
-	"OAuth",
-	"OpenID",
-	"PDF",
-	"PostgreSQL",
-	"RSS",
-	"SDK",
-	"SQL",
-	"SQLite",
-	"SVG",
-	"TypeScript",
-	"UI",
-	"URL",
-	"URLs",
-	"UX",
-	"XML",
-	"YAML",
-];
-
-/** Characters that are neither a letter nor a number, anchored at the start. */
-const LEADING_SYMBOLS = /^[^\p{L}\p{N}]*/u;
-
-/** Characters that are neither a letter nor a number, anchored at the end. */
-const TRAILING_SYMBOLS = /[^\p{L}\p{N}]*$/u;
-
-/** A run of whitespace, used to tell separators from words. */
-const WHITESPACE = /^\s+$/u;
-
-/**
- * Marks a word whose exact form carries meaning: an uppercase letter past the first
- * (`GraphQL`, `useEffect`), a digit (`v3`, `i18next`), or code and path punctuation
- * inside it (`entry.client`, `client_id`, `text/markdown`).
- */
-const VERBATIM_WORD = /^.+\p{Lu}|\p{N}|[._/#@()[\]{}<>=$\\]/su;
-
-/** A whitespace-delimited chunk of a title, split from its punctuation shell. */
-interface TitlePart {
-	/** The chunk exactly as it appeared in the input. */
-	raw: string;
-	/** Punctuation before the word, such as an opening quote or bracket. */
-	leading: string;
-	/** The word itself, which may still contain hyphens and apostrophes. */
-	core: string;
-	/** Punctuation after the word, such as a comma or the subtitle colon. */
-	trailing: string;
-	/** False for whitespace runs and for chunks that are punctuation only. */
-	isWord: boolean;
-}
-
-/**
- * Splits a title into words and separators, keeping punctuation out of the word
- * so `"v3:"` matches the small-word and `special` lists as `"v3"` while its
- * colon still marks the start of a subtitle.
- */
-function toParts(value: string): TitlePart[] {
-	let parts: TitlePart[] = [];
-
-	for (let raw of value.split(/(\s+)/u)) {
-		if (raw.length === 0) continue;
-
-		if (WHITESPACE.test(raw)) {
-			parts.push({ raw, leading: "", core: "", trailing: "", isWord: false });
-			continue;
-		}
-
-		let leading = LEADING_SYMBOLS.exec(raw)?.[0] ?? "";
-		let rest = raw.slice(leading.length);
-		let trailing = TRAILING_SYMBOLS.exec(rest)?.[0] ?? "";
-		let core = rest.slice(0, rest.length - trailing.length);
-
-		parts.push({ raw, leading, core, trailing, isWord: core.length > 0 });
-	}
-
-	return parts;
-}
-
-/**
- * Builds the `special` lookup, keyed by the lowercased word so matching ignores
- * how the author typed it. Caller entries are added last so they override the
- * built-in set.
- */
-function toSpecialMap(special: ReadonlyArray<string>): Map<string, string> {
-	let map = new Map<string, string>();
-	for (let entry of [...DEFAULT_SPECIAL, ...special]) map.set(entry.toLowerCase(), entry);
-	return map;
-}
-
-/**
  * Capitalizes one word unless it is a small word, with `force` used for the
  * positions Chicago always capitalizes: the first word, the last word, and the
  * word right after a colon. A `special` entry short-circuits both.
  */
-function renderWord(word: string, special: Map<string, string>, force: boolean): string {
-	let match = special.get(word.toLowerCase());
+function renderWord(word: string, vocabulary: Vocabulary, force: boolean): string {
+	let match = vocabulary.word(word);
 	if (match !== undefined) return match;
 	if (force) return upperFirst(word);
 	if (SMALL_WORDS.has(word.toLowerCase())) return word.toLowerCase();
@@ -293,64 +180,28 @@ function renderWord(word: string, special: Map<string, string>, force: boolean):
  * always capitalized, later elements follow the small-word rule, and the final
  * element is capitalized when the compound closes the title.
  */
-function renderCompound(core: string, special: Map<string, string>, last: boolean): string {
+function renderCompound(core: string, vocabulary: Vocabulary, last: boolean): string {
 	let elements = core.split("-");
 
 	return elements
 		.map((element, index) => {
 			if (element.length === 0) return element;
 			let force = index === 0 || (last && index === elements.length - 1);
-			return renderWord(element, special, force);
+			return renderWord(element, vocabulary, force);
 		})
 		.join("-");
 }
 
 /**
- * Applies the Chicago rules across a title, capitalizing the word after a subtitle
- * colon even when it is a small word. A `special` entry wins over every rule, and
- * inline code between backticks and words matching `VERBATIM_WORD` keep their form.
+ * Applies the Chicago rules across a title, capitalizing the first and last word
+ * and the word after a subtitle colon even when it is a small word.
  */
-function applyRules(value: string, special: Map<string, string>): string {
-	let parts = toParts(value);
-	let wordIndexes: number[] = [];
-
-	for (let [index, part] of parts.entries()) {
-		if (part.isWord) wordIndexes.push(index);
-	}
-
-	let firstIndex = wordIndexes.at(0);
-	let lastIndex = wordIndexes.at(-1);
-	let afterColon = false;
-	let inCode = false;
-	let result: string[] = [];
-
-	for (let [index, part] of parts.entries()) {
-		let backticks = part.raw.split("`").length - 1;
-		let code = inCode || backticks > 0;
-		if (backticks % 2 === 1) inCode = !inCode;
-
-		if (!part.isWord) {
-			result.push(part.raw);
-			if (!code && part.raw.includes(":")) afterColon = true;
-			continue;
-		}
-
-		let first = index === firstIndex;
-		let last = index === lastIndex;
-		let force = first || last || afterColon;
-		let core =
-			special.get(part.core.toLowerCase()) ??
-			(code || VERBATIM_WORD.test(part.core)
-				? part.core
-				: part.core.includes("-")
-					? renderCompound(part.core, special, last)
-					: renderWord(part.core, special, force));
-
-		result.push(part.leading + core + part.trailing);
-		afterColon = part.trailing.includes(":");
-	}
-
-	return result.join("");
+function applyRules(value: string, vocabulary: Vocabulary): string {
+	return recase(value, vocabulary, (core, { first, last, afterColon }) =>
+		core.includes("-")
+			? renderCompound(core, vocabulary, last)
+			: renderWord(core, vocabulary, first || last || afterColon),
+	);
 }
 
 /**
@@ -362,8 +213,8 @@ function applyRules(value: string, special: Map<string, string>): string {
  * @example createTitleizer({ special: ["Remix"] })("getting started with remix")
  */
 export function createTitleizer(options: TitleizeOptions = {}): Titleizer {
-	let special = toSpecialMap(options.special ?? []);
-	return (value: string) => applyRules(value, special);
+	let vocabulary = toVocabulary(options.special ?? []);
+	return (value: string) => applyRules(value, vocabulary);
 }
 
 /** The titleizer backing {@link titleize} when no `special` list is passed. */

@@ -33,9 +33,10 @@ ordinalize(3); // "3rd"
 ### Title-case headings and build slugs
 
 ```typescript
-import { slugify, titleize } from "@sdxc/strings";
+import { sentenceCase, slugify, titleize } from "@sdxc/strings";
 
 titleize("the state of javascript in 2026"); // "The State of JavaScript in 2026"
+sentenceCase("Testing React Router Loaders", { special: ["React Router"] }); // "Testing React Router loaders"
 slugify("Cómo usar Remix v3"); // "como-usar-remix-v3"
 ```
 
@@ -130,6 +131,13 @@ your entries extend and override it.
 ### `createTitleizer(options?: TitleizeOptions): Titleizer`
 
 A `titleize` bound to a `special` vocabulary, so the names a product publishes are declared once.
+
+### `sentenceCase(value: string, options?: SentenceCaseOptions): string`
+
+Capitalizes the first word and lowercases the rest, for a title read inside running text.
+Words and phrases in `special` (`"Remix"`, `"React Router"`) render as written, possessives
+included, alongside the built-in set and the pronoun `I`; identifiers and inline code keep
+their form, as in `titleize`. `createSentenceCaser(options)` binds the list once.
 
 ### `slugify(value: string, options?: SlugifyOptions): string`
 

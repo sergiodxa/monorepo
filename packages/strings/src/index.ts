@@ -26,6 +26,10 @@ export {
 	underscore,
 } from "./inflect.js";
 
+export type { SentenceCaseOptions, SentenceCaser } from "./sentence-case.js";
+
+export { createSentenceCaser, sentenceCase } from "./sentence-case.js";
+
 export type { SlugifyOptions } from "./slugify.js";
 
 export { slugify } from "./slugify.js";
