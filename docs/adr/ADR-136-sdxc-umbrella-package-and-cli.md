@@ -114,7 +114,7 @@ instead of nesting a second copy. `sdxc create` (ADR-142) pins `remix` beside `s
 
 ### 3. CLI
 
-`sdxc` declares `"bin": { "sdxc": "./src/cli.ts" }`, built to `dist/` like `@sdxc/spec`'s. It
+`sdxc` declares `"bin": { "sdxc": "./src/sdxc.ts" }`, built to `dist/` like `@sdxc/spec`'s. It
 runs on Node and Bun.
 
 - **Offline and version-matched.** What a command writes (components, templates, stubs) ships in

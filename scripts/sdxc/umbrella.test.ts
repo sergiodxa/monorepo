@@ -230,18 +230,17 @@ describe("generateUmbrella", () => {
 		expect(schema.required).toEqual(["kind", "name"]);
 	});
 
-	test("refuses a package directory that would write over the command line", async () => {
+	test("forwards a package named cli beside the handwritten command line", async () => {
 		let root = await workspace({
 			...UMBRELLA,
 			"packages/cli/package.json": manifest("cli", { exports: { ".": "./src/index.ts" } }),
 			"packages/cli/src/index.ts": "export let a = 1;\n",
 		});
 
-		let result = await generateUmbrella(root);
+		let umbrella = unwrap(await generateUmbrella(root));
 
-		expect(isFailure(result) && result.error.message).toBe(
-			"@sdxc/cli would write over the handwritten src/cli; rename one",
-		);
+		expect(umbrella.exports["./cli"]).toBe("./src/cli.ts");
+		expect([...umbrella.files.keys()]).not.toContain("src/sdxc.ts");
 	});
 
 	test("refuses a target that is neither TypeScript nor CSS, and a fallback array", async () => {
@@ -280,7 +279,7 @@ describe("umbrellaManifest", () => {
 		let next = umbrellaManifest(
 			{
 				name: "sdxc",
-				bin: { sdxc: "./src/cli.ts" },
+				bin: { sdxc: "./src/sdxc.ts" },
 				dependencies: { "@sdxc/gone": "workspace:*", left: "1.0.0" },
 				peerDependencies: { remix: "3.0.0" },
 			},
@@ -289,7 +288,7 @@ describe("umbrellaManifest", () => {
 
 		expect(next).toEqual({
 			name: "sdxc",
-			bin: { sdxc: "./src/cli.ts" },
+			bin: { sdxc: "./src/sdxc.ts" },
 			exports: {
 				"./result": "./src/result.ts",
 				"./config.schema.json": "./config.schema.json",
@@ -309,7 +308,7 @@ describe("umbrellaDrift", () => {
 				exports: {},
 				dependencies: {},
 			}),
-			"packages/sdxc/src/cli.ts": "",
+			"packages/sdxc/src/sdxc.ts": "",
 			"packages/sdxc/src/gone/index.ts": "",
 			"packages/sdxc/src/result.ts": "stale\n",
 			"packages/result/package.json": manifest("result", {

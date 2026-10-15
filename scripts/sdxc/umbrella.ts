@@ -19,8 +19,8 @@ import ts from "typescript";
 
 import type { ExportTarget, Package, PackageManifest } from "../release/workspace.js";
 
-import { configJSONSchema } from "../../packages/sdxc/src/cli/config.js";
-import { lockJSONSchema } from "../../packages/sdxc/src/cli/lock.js";
+import { configJSONSchema } from "../../packages/sdxc/src/sdxc/config.js";
+import { lockJSONSchema } from "../../packages/sdxc/src/sdxc/lock.js";
 import { WORKSPACE_SCOPE, readPackages } from "../release/workspace.js";
 
 /** The umbrella's directory under `packages/`, which is also its unscoped name. */
@@ -38,11 +38,14 @@ export const EXCLUDED_PACKAGES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Entries directly under the umbrella's `src/` that hold its handwritten command line. The
- * generator owns everything else there, and a package whose directory takes one of these names
- * is refused.
+ * Entries directly under the umbrella's `src/` that hold its handwritten command line. They take
+ * the umbrella's own name, which no exposed package can have, so every package directory name
+ * stays free for a generated subpath; the generator owns everything else there.
  */
-export const HANDWRITTEN_SOURCES: ReadonlySet<string> = new Set(["cli", "cli.ts"]);
+export const HANDWRITTEN_SOURCES: ReadonlySet<string> = new Set([
+	UMBRELLA_DIR,
+	`${UMBRELLA_DIR}.ts`,
+]);
 
 /** The command that rewrites the umbrella, as every generated header and failure names it. */
 export const GENERATE_COMMAND = "bun run sdxc:generate";
@@ -72,8 +75,7 @@ export interface Umbrella {
 }
 
 /**
- * The umbrella for the workspace at `root`. Fails on a package directory that collides with the
- * handwritten sources, a target the generator cannot forward (a fallback array, a wildcard under
+ * The umbrella for the workspace at `root`. Fails on a target the generator cannot forward (a fallback array, a wildcard under
  * conditions, a file that is neither TypeScript nor CSS), and two subpaths that would write
  * different content to one file.
  */
@@ -84,11 +86,6 @@ export async function generateUmbrella(root: string): Promise<Result<Umbrella, E
 	let files = new Map<string, string>();
 	let exports: Record<string, ExportTarget> = {};
 	for (let pkg of exposed) {
-		if (HANDWRITTEN_SOURCES.has(pkg.dir)) {
-			return failure(
-				new Error(`${pkg.name} would write over the handwritten src/${pkg.dir}; rename one`),
-			);
-		}
 		let entries = await packageEntries(root, pkg);
 		if (isFailure(entries)) return entries;
 		for (let entry of entries.data) {

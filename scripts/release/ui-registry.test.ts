@@ -18,7 +18,7 @@ import { findModuleReferences } from "@sdxc/codemod";
 import { unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { readRegistry } from "../../packages/sdxc/src/cli/ui/registry.js";
+import { readRegistry } from "../../packages/sdxc/src/sdxc/ui/registry.js";
 
 import {
 	UI_REGISTRY_DIR,

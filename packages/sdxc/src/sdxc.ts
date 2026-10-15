@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { run } from "./cli/run.js";
+import { run } from "./sdxc/run.js";
 
 process.exitCode = await run(process.argv.slice(2), {
 	cwd: process.cwd(),

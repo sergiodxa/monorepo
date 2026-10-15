@@ -4,7 +4,7 @@
 	"description": "Every @sdxc package under one install and one version, with the sdxc command line",
 	"license": "MIT",
 	"bin": {
-		"sdxc": "./src/cli.ts"
+		"sdxc": "./src/sdxc.ts"
 	},
 	"type": "module",
 	"exports": {
