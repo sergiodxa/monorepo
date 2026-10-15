@@ -1,7 +1,7 @@
 /**
  * The component registry `sdxc ui` copies from: one `registry/ui/<name>.json` per `@sdxc/ui`
- * component in the `@sdxc/kit` tarball, its source and test with every import already pointed at
- * `sdxc/*`, so a copy matches the release installed beside it and needs no network.
+ * component in the `@sdxc/kit` tarball, its source and test with every relative import already
+ * pointed at `@sdxc/ui/*`, so a copy imports only what `@sdxc/ui` publishes and needs no network.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,7 +19,6 @@ import ts from "typescript";
 
 import { run } from "./command.js";
 import { HISTORY_PACKAGE } from "./plan.js";
-import { WORKSPACE_SCOPE } from "./workspace.js";
 
 /** The package whose tarball carries the registry, beside the CLI that reads it. */
 export const UI_REGISTRY_PACKAGE = HISTORY_PACKAGE;
@@ -30,7 +29,7 @@ export const UI_REGISTRY_DIR = "registry/ui";
 /** The components' package directory, relative to the repo root. */
 export const UI_PACKAGE_DIR = "packages/ui";
 
-/** Helper folders a component imports from; each is published as `sdxc/ui/<folder>`. */
+/** Helper folders a component imports from; each is published as `@sdxc/ui/<folder>`. */
 const HELPER_FOLDERS: ReadonlySet<string> = new Set([
 	"animations",
 	"behaviors",
@@ -53,7 +52,7 @@ export interface UIRegistryFile {
 
 /** One `registry/ui/<name>.json`; keys are written in this order. */
 export interface UIRegistryEntry {
-	/** The component's file name without its extension, as `sdxc/ui/<name>` imports it. */
+	/** The component's file name without its extension, as `@sdxc/ui/<name>` imports it. */
 	name: string;
 	/** The latest release whose commits touched the component or its test. */
 	changedIn: string;
@@ -106,7 +105,7 @@ export async function readComponents(
 
 /**
  * The modules each helper folder's barrel re-exports, as `<folder>/<file>.js`, so a component
- * import that its folder's `sdxc/ui/<folder>` would not provide is caught at build time.
+ * import that its folder's `@sdxc/ui/<folder>` would not provide is caught at build time.
  */
 export async function readBarrels(packageDir: string): Promise<Result<Set<string>, Error>> {
 	let exported = new Set<string>();
@@ -126,9 +125,9 @@ export async function readBarrels(packageDir: string): Promise<Result<Set<string
 }
 
 /**
- * The registry entry for `component`: its source and test with `@sdxc/*` pointed at `sdxc/*`,
- * a sibling component at `sdxc/ui/<name>` and a helper at its folder's `sdxc/ui/<folder>`. A
- * relative import that none of those covers is a failure naming the file and specifier.
+ * The registry entry for `component`: its source and test with a sibling component pointed at
+ * `@sdxc/ui/<name>` and a helper at its folder's `@sdxc/ui/<folder>`, package imports kept. A
+ * relative import that neither covers is a failure naming the file and specifier.
  *
  * @param barrels - What {@link readBarrels} found, to prove each helper is importable.
  * @param components - Every component name, to tell a sibling component from anything else.
@@ -333,7 +332,7 @@ export async function writeUIRegistry(
 	});
 }
 
-/** One file with its imports pointed at `sdxc/*`, collecting the sibling components it reaches. */
+/** One file with its relative imports pointed at `@sdxc/ui/*`, collecting the sibling components it reaches. */
 function rewriteFile(
 	file: UIRegistryFile,
 	options: { barrels: Set<string>; components: Set<string> },
@@ -350,7 +349,7 @@ function rewriteFile(
 	if (unmapped.length > 0) {
 		return failure(
 			new Error(
-				`${file.path} imports what sdxc/ui does not publish: ${unmapped.join(", ")}; export it from its folder's index.ts`,
+				`${file.path} imports what @sdxc/ui does not publish: ${unmapped.join(", ")}; export it from its folder's index.ts`,
 			),
 		);
 	}
@@ -359,25 +358,22 @@ function rewriteFile(
 
 /**
  * Where a specifier in a component points once copied: `null` keeps it, `undefined` means
- * nothing `sdxc` publishes provides it.
+ * nothing `@sdxc/ui` publishes provides it.
  */
 function publishedSpecifier(
 	specifier: string,
 	options: { barrels: Set<string>; components: Set<string> },
 ): { specifier: string; component: string | null } | null | undefined {
-	if (specifier.startsWith(WORKSPACE_SCOPE)) {
-		return { specifier: `sdxc/${specifier.slice(WORKSPACE_SCOPE.length)}`, component: null };
-	}
 	if (!specifier.startsWith(".")) return null;
 	let sibling = /^\.\/([a-z0-9-]+)\.js$/.exec(specifier)?.[1];
 	if (sibling !== undefined && options.components.has(sibling)) {
-		return { specifier: `sdxc/ui/${sibling}`, component: sibling };
+		return { specifier: `@sdxc/ui/${sibling}`, component: sibling };
 	}
 	let helper = /^\.\.\/([a-z]+)\/([a-z0-9-]+\.js)$/.exec(specifier);
 	if (helper !== null) {
 		let [, folder = "", module = ""] = helper;
 		if (HELPER_FOLDERS.has(folder) && options.barrels.has(`${folder}/${module}`)) {
-			return { specifier: `sdxc/ui/${folder}`, component: null };
+			return { specifier: `@sdxc/ui/${folder}`, component: null };
 		}
 	}
 	return undefined;

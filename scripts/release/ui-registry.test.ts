@@ -118,20 +118,21 @@ describe("registryEntry", () => {
 			exports: ["Button", "BUTTON_SIZES", "other"],
 			source: {
 				path: "button.tsx",
-				content: (FIXTURE["packages/ui/src/components/button.tsx"] ?? "")
-					.replace('"@sdxc/u/color"', '"sdxc/u/color"')
-					.replace('"../utils/glyph-edges.js"', '"sdxc/ui/utils"'),
+				content: (FIXTURE["packages/ui/src/components/button.tsx"] ?? "").replace(
+					'"../utils/glyph-edges.js"',
+					'"@sdxc/ui/utils"',
+				),
 			},
 			test: {
 				path: "button.test.tsx",
-				content: 'import { test } from "vitest";\nimport { Button } from "sdxc/ui/button";\n',
+				content: 'import { test } from "vitest";\nimport { Button } from "@sdxc/ui/button";\n',
 			},
 		});
 		expect(dialog?.dependencies).toEqual(["button"]);
 		expect(dialog?.exports).toEqual(["DialogProps", "Dialog"]);
 		expect(dialog?.test).toBeNull();
-		expect(dialog?.source.content).toContain('from "sdxc/ui/button"');
-		expect(dialog?.source.content).toContain('from "sdxc/ui/styles"');
+		expect(dialog?.source.content).toContain('from "@sdxc/ui/button"');
+		expect(dialog?.source.content).toContain('from "@sdxc/ui/styles"');
 	});
 
 	test("fails on a helper its folder's barrel does not re-export", async () => {
@@ -148,7 +149,7 @@ describe("registryEntry", () => {
 
 		expect(entry.status).toBe("failure");
 		expect(entry.status === "failure" && entry.error.message).toContain(
-			"button.tsx imports what sdxc/ui does not publish: ../utils/glyph-edges.js",
+			"button.tsx imports what @sdxc/ui does not publish: ../utils/glyph-edges.js",
 		);
 	});
 });
@@ -209,10 +210,10 @@ describe("releasesTouching", () => {
 });
 
 describe("the @sdxc/ui registry", () => {
-	test("rewrites every component to specifiers the sdxc export map serves", async () => {
+	test("rewrites every component to specifiers the @sdxc/ui export map serves", async () => {
 		let entries = unwrap(await buildUIRegistry(REPO_ROOT, "2026.10.14"));
 		let manifest = JSON.parse(
-			await readFile(join(REPO_ROOT, "packages/sdxc/package.json"), "utf8"),
+			await readFile(join(REPO_ROOT, "packages/ui/package.json"), "utf8"),
 		) as { exports: Record<string, string> };
 		let names = new Set(entries.map((entry) => entry.name));
 		let unserved: string[] = [];
@@ -221,9 +222,12 @@ describe("the @sdxc/ui registry", () => {
 			for (let file of [entry.source, entry.test]) {
 				if (file === null) continue;
 				for (let { specifier } of unwrap(findModuleReferences(file.path, file.content))) {
-					if (specifier.startsWith(".") || specifier.startsWith("@sdxc/")) {
+					if (specifier.startsWith(".")) {
 						unserved.push(`${entry.name}: ${specifier}`);
-					} else if (specifier.startsWith("sdxc/") && !served(specifier, manifest.exports)) {
+					} else if (
+						(specifier === "@sdxc/ui" || specifier.startsWith("@sdxc/ui/")) &&
+						!served(specifier, manifest.exports)
+					) {
 						unserved.push(`${entry.name}: ${specifier}`);
 					}
 				}
@@ -259,11 +263,11 @@ describe("the @sdxc/ui registry", () => {
 });
 
 /**
- * Whether `sdxc`'s exports resolve `specifier`: an exact key, or a `*` pattern whose target file
- * exists for the matched part.
+ * Whether `@sdxc/ui`'s exports resolve `specifier`: an exact key, or a `*` pattern whose target
+ * file exists for the matched part.
  */
 function served(specifier: string, exports: Record<string, string>): boolean {
-	let subpath = `.${specifier.slice("sdxc".length)}`;
+	let subpath = `.${specifier.slice("@sdxc/ui".length)}`;
 	if (subpath in exports) return true;
 	return Object.entries(exports).some(([key, target]) => {
 		let [prefix = "", suffix = ""] = key.split("*");
@@ -271,6 +275,6 @@ function served(specifier: string, exports: Record<string, string>): boolean {
 			return false;
 		}
 		let matched = subpath.slice(prefix.length, subpath.length - suffix.length);
-		return existsSync(join(REPO_ROOT, "packages/sdxc", target.replace("*", matched)));
+		return existsSync(join(REPO_ROOT, "packages/ui", target.replace("*", matched)));
 	});
 }
