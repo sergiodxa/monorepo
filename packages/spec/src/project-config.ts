@@ -24,8 +24,10 @@ import type { Base, Connection } from "./bases.js";
 import type { ConfigPermissionEntry } from "./permissions.js";
 import type { Plugin } from "./plugin.js";
 import type { LoadedSuite } from "./sources.js";
+import type { StdioPluginOptions } from "./transport-stdio.js";
 
 import { LoadError, SpecError, ToolError } from "./errors.js";
+import { hostEnv } from "./host.js";
 import { connectStdioPlugin } from "./transport-stdio.js";
 
 /** The permission families a `spec/config.jsonc` `permissions.allow` may name. */
@@ -127,10 +129,12 @@ export interface LaunchPlan {
  * `config.json`. A missing file simply declares no plugins.
  *
  * @param suiteRoot - The suite directory `spec run` was pointed at.
+ * @param env - The variables a base or connection's `env` reads; omit for the host process's.
  * @returns The parsed config, or the failure that made it unreadable.
  */
 export async function loadProjectConfig(
 	suiteRoot: string,
+	env: Readonly<Record<string, string | undefined>> = hostEnv(),
 ): Promise<Result<ProjectConfig, SpecError>> {
 	let directory = resolve(suiteRoot);
 	for (let name of CONFIG_NAMES) {
@@ -149,7 +153,7 @@ export async function loadProjectConfig(
 		}
 		let parsed = parseJsonc(text, path);
 		if (isFailure(parsed)) return parsed;
-		return validateConfig(parsed.data, directory, path);
+		return validateConfig(parsed.data, directory, path, env);
 	}
 	return success({ plugins: [], permissions: { allow: [] }, bases: [], databases: [] });
 }
@@ -223,14 +227,16 @@ export function launchDeniedError(namespaces: string[]): SpecError {
  * failure disposes every plugin already connected, so a launch never leaks a child.
  *
  * @param launch - The declarations {@link planPluginLaunch} authorized.
+ * @param options - The environment and directory each plugin process starts with.
  * @returns The connected plugins, ready to pass to `runSuite`, or the failure.
  */
 export async function connectDeclaredPlugins(
 	launch: PluginDeclaration[],
+	options: StdioPluginOptions = {},
 ): Promise<Result<Plugin[], SpecError>> {
 	let connected: Plugin[] = [];
 	for (let declaration of launch) {
-		let result = await connectStdioPlugin(declaration.command, declaration.namespace);
+		let result = await connectStdioPlugin(declaration.command, declaration.namespace, options);
 		if (isFailure(result)) {
 			await disposeAll(connected);
 			return failure(
@@ -300,15 +306,16 @@ function validateConfig(
 	parsed: unknown,
 	directory: string,
 	path: string,
+	env: Readonly<Record<string, string | undefined>>,
 ): Result<ProjectConfig, SpecError> {
 	if (!isRecord(parsed)) {
 		return failure(new LoadError("load-error", `spec/config.jsonc ${path} must be a JSON object.`));
 	}
 	let permissions = validatePermissions(parsed.permissions, path);
 	if (isFailure(permissions)) return permissions;
-	let bases = validateAddressBook(parsed.bases, "bases", path);
+	let bases = validateAddressBook(parsed.bases, "bases", path, env);
 	if (isFailure(bases)) return bases;
-	let databases = validateAddressBook(parsed.databases, "databases", path);
+	let databases = validateAddressBook(parsed.databases, "databases", path, env);
 	if (isFailure(databases)) return databases;
 	let addresses = { bases: bases.data, databases: databases.data };
 	let pluginsField = parsed.plugins;
@@ -339,12 +346,14 @@ function validateConfig(
  * @param field - The raw value from the parsed config.
  * @param key - Which address book this is, deciding the messages and the checks.
  * @param path - The config file path, for diagnostics.
+ * @param env - The variables an entry's `env` reads.
  * @returns The resolved entries in file order, or the first one that failed.
  */
 function validateAddressBook(
 	field: unknown,
 	key: "bases" | "databases",
 	path: string,
+	env: Readonly<Record<string, string | undefined>>,
 ): Result<{ name: string; url: string }[], SpecError> {
 	if (field === undefined) return success([]);
 	if (!isRecord(field)) {
@@ -357,7 +366,7 @@ function validateAddressBook(
 	}
 	let entries: { name: string; url: string }[] = [];
 	for (let [name, declaration] of Object.entries(field)) {
-		let resolved = resolveAddress(name, declaration, key, path);
+		let resolved = resolveAddress(name, declaration, key, path, env);
 		if (isFailure(resolved)) return resolved;
 		entries.push({ name, url: resolved.data });
 	}
@@ -374,6 +383,7 @@ function validateAddressBook(
  * @param declaration - The raw `{ env, default }` value.
  * @param key - Which address book this entry belongs to.
  * @param path - The config file path, for diagnostics.
+ * @param env - The variables the declaration's `env` reads.
  * @returns The address the name points at, or why it could not be resolved.
  */
 function resolveAddress(
@@ -381,6 +391,7 @@ function resolveAddress(
 	declaration: unknown,
 	key: "bases" | "databases",
 	path: string,
+	env: Readonly<Record<string, string | undefined>>,
 ): Result<string, SpecError> {
 	let kind = key === "bases" ? "base" : "database connection";
 	if (!isRecord(declaration)) {
@@ -403,7 +414,7 @@ function resolveAddress(
 			addressError(`The ${kind} "${name}" in ${path} declares neither "env" nor "default"`, key),
 		);
 	}
-	let fromEnvironment = variable === undefined ? undefined : process.env[variable];
+	let fromEnvironment = variable === undefined ? undefined : env[variable];
 	let value = fromEnvironment === undefined || fromEnvironment === "" ? fallback : fromEnvironment;
 	if (value === undefined || value === "") {
 		let unset =

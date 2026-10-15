@@ -33,6 +33,7 @@ import type { Workspace } from "./workspace.js";
 import { createArtifactStore } from "./artifacts.js";
 import { createBaseSet, createConnectionSet } from "./bases.js";
 import { PermissionDeniedError, SpecError, ToolError, WorkspaceEscapeError } from "./errors.js";
+import { hostCwd, hostEnv } from "./host.js";
 import { createPermissionSet } from "./permissions.js";
 
 /** How long `connectStdioPlugin` waits for the describe reply. */
@@ -51,6 +52,14 @@ const WIRE_CODES: ReadonlySet<string> = new Set<DiagnosticCode>([
 	"workspace-escape",
 	"usage-error",
 ]);
+
+/** Where a connected plugin process starts; each part defaults to the host process's. */
+export interface StdioPluginOptions {
+	/** The environment the child's PATH is taken from, its only inherited variable. */
+	env?: Readonly<Record<string, string | undefined>>;
+	/** The directory the child starts in. */
+	cwd?: string;
+}
 
 /** The slice of a spawned child the transport needs, kept structural. */
 interface PluginProcess {
@@ -164,18 +173,20 @@ interface WireConnection {
  *
  * @param command - The argv to spawn, e.g. `["bun", "plugins/demo.ts"]`.
  * @param namespace - The namespace the connected plugin's tools live under.
+ * @param options - The environment whose PATH the child gets, and the directory it starts in.
  * @returns The connected plugin, or the failure that prevented the handshake.
  */
 export async function connectStdioPlugin(
 	command: string[],
 	namespace: string,
+	options: StdioPluginOptions = {},
 ): Promise<Result<Plugin, SpecError>> {
 	if (command.length === 0) {
 		return failure(new ToolError("Cannot connect a stdio plugin: the command is empty"));
 	}
 	let child: PluginProcess;
 	try {
-		child = await spawnChild(command);
+		child = await spawnChild(command, options.env ?? hostEnv(), options.cwd ?? hostCwd());
 	} catch (error) {
 		return failure(
 			new ToolError(
@@ -266,13 +277,20 @@ export async function servePlugin(plugin: Plugin): Promise<undefined> {
  * PATH; a mid-call exit's broken stdin pipe surfaces via the pending request.
  *
  * @param command - The argv to spawn, first element being the executable.
+ * @param env - The environment the child's PATH comes from.
+ * @param cwd - The directory the child starts in.
  * @returns The started child, narrowed to what the transport reads and writes.
  * @throws When the executable cannot be started.
  */
-async function spawnChild(command: string[]): Promise<PluginProcess> {
+async function spawnChild(
+	command: string[],
+	env: Readonly<Record<string, string | undefined>>,
+	cwd: string,
+): Promise<PluginProcess> {
 	let child = spawn(command[0] ?? "", command.slice(1), {
 		stdio: ["pipe", "pipe", "ignore"],
-		env: { PATH: process.env.PATH ?? "" },
+		env: { PATH: env.PATH ?? "" },
+		cwd,
 	});
 	child.stdin?.on("error", () => {});
 	let failed = await new Promise<Error | undefined>((settle) => {
@@ -440,7 +458,8 @@ function grantedConnections(context: ToolContext): Grant {
  * The instant crosses the wire, so a plugin here reads the same time the test
  * started. The stream does not: it opens on a fixed seed, giving a served
  * plugin values that repeat run to run. Carrying the host's stream position
- * across a process boundary waits for a plugin that generates data.
+ * across a process boundary waits for a plugin that generates data. The
+ * environment and directory are this process's own, started with PATH alone.
  */
 function createWireContext(wire: WireContext): ToolContext {
 	let workspaceRoot = wire.workspaceRoot;
@@ -468,6 +487,8 @@ function createWireContext(wire: WireContext): ToolContext {
 		permissions: createPermissionSet(wire.grants),
 		random: createRandom(WIRE_SEED),
 		now: new Date(wire.now),
+		env: hostEnv(),
+		cwd: hostCwd(),
 		run: wire.run,
 		bases: createBaseSet(wire.bases),
 		connections: createConnectionSet(wire.connections),

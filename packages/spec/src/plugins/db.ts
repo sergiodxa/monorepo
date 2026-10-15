@@ -185,7 +185,7 @@ async function runFileTool(
 	if (isFailure(parsed)) return parsed;
 	let chosen = context.connections.resolve(parsed.data.connection);
 	if (isFailure(chosen)) return chosen;
-	let path = resolvePath(process.cwd(), parsed.data.path);
+	let path = resolvePath(context.cwd, parsed.data.path);
 	let allowed = checkFileGrants(context, chosen.data.name, path);
 	if (isFailure(allowed)) return allowed;
 	let text: string;

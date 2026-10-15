@@ -92,6 +92,7 @@ export type { Token, TokenKind } from "./tokens.js";
 export { createToolContext } from "./tool-context.js";
 export { KEYWORDS } from "./tokens.js";
 export { connectStdioPlugin, servePlugin } from "./transport-stdio.js";
+export type { StdioPluginOptions } from "./transport-stdio.js";
 export { formatValue, valueEquals } from "./values.js";
 export type { ToolArg, Value, ValueObject } from "./values.js";
 export { createWorkspace } from "./workspace.js";

@@ -8,6 +8,7 @@
  */
 
 import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
 
 import type { Seed } from "@sdxc/random";
 
@@ -89,8 +90,8 @@ function seedOf(value: string | undefined): Seed {
 
 /**
  * Runs the suite and reports it on stdout. Exits 0 when every test passed, 1 when one failed,
- * and 2 when the suite, its config or a declared plugin could not be loaded; the reporter has
- * already printed why, so the exit carries no message of its own.
+ * and 2 when the suite, its config or a declared plugin could not be loaded. The run reads the
+ * command's own `env` and resolves relative paths against its `cwd`, never the host process's.
  */
 export default createCommand(SPEC_COMMANDS.run, async (ctx) => {
 	let sink: Sink = { write: (text) => ctx.stdout(text) };
@@ -99,20 +100,26 @@ export default createCommand(SPEC_COMMANDS.run, async (ctx) => {
 		return exit(2);
 	};
 	let { flags } = ctx;
-	let root = ctx.arguments.directory;
+	let { env, cwd } = ctx;
+	let root = resolve(cwd, ctx.arguments.directory);
 	let seed = seedOf(flags.seed);
 	let runId = flags.runId ?? createRunId();
-	let artifacts = flags.artifacts === undefined ? undefined : createArtifactStore(flags.artifacts);
+	let artifacts =
+		flags.artifacts === undefined ? undefined : createArtifactStore(resolve(cwd, flags.artifacts));
 	let cliGrants = {
 		run: grantOf(flags.allowRun),
 		net: grantOf(flags.allowNet),
 		env: grantOf(flags.allowEnv),
-		hostFs: grantOf(flags.allowHostFs),
+		hostFs: grantOf(
+			flags.allowHostFs === true
+				? true
+				: flags.allowHostFs.map((directory) => resolve(cwd, directory)),
+		),
 		db: grantOf(flags.allowDb),
 	};
 	let cliPluginGrant = pluginGrantOf(flags.allowPlugins);
 
-	let config = await loadProjectConfig(root);
+	let config = await loadProjectConfig(root, env);
 	if (isFailure(config)) return fatal(config.error);
 
 	let configEntries = config.data.permissions.allow;
@@ -142,7 +149,7 @@ export default createCommand(SPEC_COMMANDS.run, async (ctx) => {
 
 	let externalPlugins: Plugin[] = [];
 	if (launch.length > 0) {
-		let connected = await connectDeclaredPlugins(launch);
+		let connected = await connectDeclaredPlugins(launch, { env, cwd });
 		if (isFailure(connected)) return fatal(connected.error);
 		externalPlugins = connected.data;
 	}
@@ -162,6 +169,8 @@ export default createCommand(SPEC_COMMANDS.run, async (ctx) => {
 		bases,
 		connections,
 		artifacts,
+		env,
+		cwd,
 	});
 	if (isFailure(run)) {
 		await disposeAll(externalPlugins);

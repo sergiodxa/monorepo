@@ -15,6 +15,7 @@ import type { ToolContext } from "./plugin.js";
 
 import { createBaseSet, createConnectionSet } from "./bases.js";
 import { ToolError } from "./errors.js";
+import { hostCwd, hostEnv } from "./host.js";
 import { createPermissionSet } from "./permissions.js";
 
 /** The grant set a context defaults to: nothing granted, as `spec run` starts. */
@@ -28,7 +29,8 @@ const NOTHING_GRANTED = {
 
 /**
  * Build a tool context, filling anything the caller left out with the inert
- * defaults of a run that granted nothing and configured nothing.
+ * defaults of a run that granted nothing and configured nothing; the
+ * environment and working directory default to the host process's.
  *
  * @param overrides - The parts of the context this call is about.
  * @returns A complete context to hand a plugin.
@@ -48,9 +50,12 @@ export function createToolContext(overrides: Partial<ToolContext> = {}): ToolCon
 				return undefined;
 			},
 		},
-		permissions: overrides.permissions ?? createPermissionSet({ ...NOTHING_GRANTED }),
+		permissions:
+			overrides.permissions ?? createPermissionSet({ ...NOTHING_GRANTED }, overrides.env),
 		random: overrides.random ?? createRandom("spec"),
 		now: overrides.now ?? new Date("2026-01-01T00:00:00.000Z"),
+		env: overrides.env ?? hostEnv(),
+		cwd: overrides.cwd ?? hostCwd(),
 		run: overrides.run ?? { id: "run", attempt: 1, nonce: "run-1" },
 		bases: overrides.bases ?? createBaseSet([]),
 		connections: overrides.connections ?? createConnectionSet([]),

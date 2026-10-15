@@ -105,6 +105,13 @@ export interface RunTestsOptions {
 	 * disk. Omit when the sources came from strings rather than a directory.
 	 */
 	root?: string;
+	/**
+	 * The environment variables every tool reads and a bare `--allow-env`
+	 * grants. Omit for the host process's.
+	 */
+	env?: Readonly<Record<string, string | undefined>>;
+	/** The directory a spec's relative host paths resolve against; omit for the host process's. */
+	cwd?: string;
 }
 
 /** The run seed used when a caller names none, so a bare run repeats exactly. */
@@ -162,7 +169,7 @@ export async function runTests(options: RunTestsOptions): Promise<Result<SuiteRe
 	let suite = options.suite;
 	let plugins = options.plugins;
 	let registry = createRegistry(plugins, suite);
-	let permissions = createPermissionSet(options.grants);
+	let permissions = createPermissionSet(options.grants, options.env);
 	let runId = options.runId ?? createRunId();
 	let attempts = 1 + Math.max(0, Math.trunc(options.retries ?? 0));
 	let bases = options.bases ?? createBaseSet([]);
@@ -193,6 +200,8 @@ export async function runTests(options: RunTestsOptions): Promise<Result<SuiteRe
 		bases,
 		connections,
 		artifacts: options.artifacts,
+		env: options.env,
+		cwd: options.cwd,
 	};
 
 	/**

@@ -88,6 +88,13 @@ export interface ToolContext {
 	 * reports or generates a time answers consistently within one test.
 	 */
 	now: Date;
+	/**
+	 * The run's environment variables, which a tool reads in place of the host
+	 * process's so whoever starts the run decides what a spec can observe.
+	 */
+	env: Readonly<Record<string, string | undefined>>;
+	/** The directory a host path a spec names relative resolves against. */
+	cwd: string;
 	/** What this run and this attempt are called; see {@link RunIdentity}. */
 	run: RunIdentity;
 	/** The run's named bases, which every relative target resolves through. */

@@ -9,17 +9,18 @@
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+
+import type { InvokeOptions } from "@sdxc/cli/test";
 
 import { invoke } from "@sdxc/cli/test";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { cli } from "./cli.js";
 
 const CREATED_DIRS: string[] = [];
 
 afterEach(async () => {
-	vi.unstubAllEnvs();
 	for (let dir of CREATED_DIRS.splice(0)) {
 		await rm(dir, { recursive: true, force: true });
 	}
@@ -36,9 +37,15 @@ async function makeSuiteDir(files: Record<string, string>): Promise<string> {
 	return root;
 }
 
-/** Runs `spec` with `argv`, answering its exit code and what it printed on each stream. */
-async function spec(argv: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
-	return invoke(cli, argv);
+/**
+ * Runs `spec` with `argv`, answering its exit code and what it printed on each stream. The run
+ * sees the host's PATH unless `options.env` replaces the whole environment.
+ */
+async function spec(
+	argv: string[],
+	options: InvokeOptions = {},
+): Promise<{ code: number; stdout: string; stderr: string }> {
+	return invoke(cli, argv, { env: { PATH: process.env.PATH }, ...options });
 }
 
 describe("spec run", () => {
@@ -173,6 +180,23 @@ command broken {
 		}
 	});
 
+	test("run --help groups its flags under headings", async () => {
+		let { stdout } = await spec(["run", "--help"]);
+
+		let headings = stdout.split("\n").filter((line) => /^\S.*:$/.test(line));
+		expect(headings).toEqual([
+			"Arguments:",
+			"Options:",
+			"Scheduling:",
+			"Generated data:",
+			"Diagnostics:",
+			"Permissions (denied unless granted):",
+			"Examples:",
+		]);
+		expect(stdout).toMatch(/Scheduling:\n {2}--concurrency, --jobs <N>/);
+		expect(stdout).not.toContain("--no-progress");
+	});
+
 	test("no command exits 2 and prints usage on stderr", async () => {
 		let { code, stderr } = await spec([]);
 
@@ -277,14 +301,12 @@ test "reports the address it drew" {
 		expect(stderr).toContain("--seed needs a value");
 	});
 
-	test("an empty seed is a usage error naming both forms", async () => {
+	test("an empty seed is the same usage error as a missing one", async () => {
 		let root = await probeSuite();
 		let { code, stderr } = await spec(["run", root, "--seed="]);
 
 		expect(code).toBe(2);
-		expect(stderr).toContain(
-			"--seed: expects a value, e.g. --seed=checkout or --seed=random to draw one.",
-		);
+		expect(stderr).toContain("--seed needs a value\n");
 	});
 
 	test("takes its value as the next argument too", async () => {
@@ -358,7 +380,7 @@ describe("--run-id", () => {
 		let { code, stderr } = await spec(["run", root, "--artifacts="]);
 
 		expect(code).toBe(2);
-		expect(stderr).toContain("--artifacts: expects a value");
+		expect(stderr).toContain("--artifacts needs a value");
 	});
 });
 
@@ -379,9 +401,9 @@ describe("bases", () => {
 }
 `,
 		});
-		vi.stubEnv("SPEC_CLI_BASE_FIXTURE", "https://staging.example.com");
-
-		let { code, stdout } = await spec(["run", root]);
+		let { code, stdout } = await spec(["run", root], {
+			env: { SPEC_CLI_BASE_FIXTURE: "https://staging.example.com" },
+		});
 
 		expect(code).toBe(0);
 		expect(stdout).toContain(`base "web" → https://staging.example.com`);
@@ -405,6 +427,50 @@ describe("bases", () => {
 
 		expect(code).toBe(2);
 		expect(stdout).toContain("SPEC_CLI_MISSING_BASE");
+	});
+});
+
+describe("isolation from the host process", () => {
+	test("a relative suite directory resolves against the invocation's cwd", async () => {
+		let root = await makeSuiteDir({
+			"trivial.spec": `test "holds" {
+	then {
+		expect 1 1
+	}
+}
+`,
+		});
+
+		let { code, stdout } = await spec(["run", basename(root)], { cwd: dirname(root) });
+
+		expect(code).toBe(0);
+		expect(stdout).toContain("1 passed, 0 failed");
+	});
+
+	test("env.get reads the invocation's env, not the host process's", async () => {
+		let root = await makeSuiteDir({
+			"read.spec": `use env
+
+test "reads the invocation's variables" {
+	when {
+		let isolated = env.get "SPEC_CLI_ISOLATED"
+		let home = env.get "HOME" "unset"
+	}
+	then {
+		expect isolated "from-invoke"
+		expect home "unset"
+	}
+}
+`,
+		});
+
+		let { code, stdout } = await spec(["run", root, "--allow-env=SPEC_CLI_ISOLATED,HOME"], {
+			env: { SPEC_CLI_ISOLATED: "from-invoke" },
+		});
+
+		expect(process.env.HOME).toBeDefined();
+		expect(code).toBe(0);
+		expect(stdout).toContain("1 passed, 0 failed");
 	});
 });
 
@@ -435,16 +501,24 @@ describe("scheduling flags", () => {
 		expect(stdout).toContain("1 passed, 0 failed");
 	});
 
-	test.each(["0", "-1", "+4", "1.5", "0x4", " 4", "four", ""])(
-		"--jobs=%j is a usage error naming the flag",
+	test.each(["0", "-1", "+4", "1.5", "0x4", " 4", "four"])(
+		"--jobs=%j is a usage error naming the flag as typed",
 		async (value) => {
 			let root = await trivialSuite();
 			let { code, stderr } = await spec(["run", root, `--jobs=${value}`]);
 
 			expect(code).toBe(2);
-			expect(stderr).toContain("--concurrency: expects a positive integer");
+			expect(stderr).toContain(`--jobs: expects a positive integer; got ${JSON.stringify(value)}`);
 		},
 	);
+
+	test("an empty --jobs is a usage error naming the flag as typed", async () => {
+		let root = await trivialSuite();
+		let { code, stderr } = await spec(["run", root, "--jobs="]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("--jobs needs a value\n");
+	});
 
 	test("a negative --retries is a usage error", async () => {
 		let root = await trivialSuite();
@@ -519,7 +593,7 @@ test "echo runs" {
 		let { code, stderr } = await spec(["run", root, "--allow-net="]);
 
 		expect(code).toBe(2);
-		expect(stderr).toContain("--allow-net= needs at least one value");
+		expect(stderr).toContain("--allow-net needs a value");
 	});
 
 	test("an unknown permission family is a usage error", async () => {

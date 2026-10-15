@@ -10,6 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { resolve } from "node:path";
+
 import type { Seed } from "@sdxc/random";
 import type { Result } from "@sdxc/result";
 
@@ -65,6 +67,16 @@ export interface RunOptions {
 	connections?: ConnectionSet;
 	/** Where a failing test writes its diagnostics; omit to leave them text. */
 	artifacts?: ArtifactStore;
+	/**
+	 * The environment variables every tool reads and a bare `--allow-env`
+	 * grants. Omit for the host process's.
+	 */
+	env?: Readonly<Record<string, string | undefined>>;
+	/**
+	 * The directory `root` and a spec's relative host paths resolve against;
+	 * omit for the host process's.
+	 */
+	cwd?: string;
 }
 
 /**
@@ -76,7 +88,8 @@ export interface RunOptions {
  * @returns Per-test outcomes, or the error that prevented the run entirely.
  */
 export async function runSuite(options: RunOptions): Promise<Result<SuiteResult, SpecError>> {
-	let loaded = await loadSuite(options.root);
+	let root = options.cwd === undefined ? options.root : resolve(options.cwd, options.root);
+	let loaded = await loadSuite(root);
 	if (isFailure(loaded)) return loaded;
 
 	return runTests({
@@ -91,6 +104,8 @@ export async function runSuite(options: RunOptions): Promise<Result<SuiteResult,
 		bases: options.bases,
 		connections: options.connections,
 		artifacts: options.artifacts,
-		root: options.root,
+		root,
+		env: options.env,
+		cwd: options.cwd,
 	});
 }

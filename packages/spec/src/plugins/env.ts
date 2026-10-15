@@ -76,7 +76,7 @@ function get(args: ToolArg[], context: ToolContext): Result<Value, SpecError> {
 	if (isFailure(name)) return name;
 	let allowed = context.permissions.checkEnv(name.data);
 	if (isFailure(allowed)) return allowed;
-	let value = process.env[name.data];
+	let value = context.env[name.data];
 	if (value !== undefined) return success(value);
 	let fallback = args[1];
 	if (fallback !== undefined) {

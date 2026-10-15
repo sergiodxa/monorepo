@@ -354,7 +354,7 @@ function readCommand(
 	if (isFailure(allowed)) return allowed;
 	let cwd = context.workspace.root;
 	if (directory !== undefined) {
-		cwd = resolvePath(process.cwd(), directory);
+		cwd = resolvePath(context.cwd, directory);
 		let reachable = context.permissions.checkHostFs(cwd);
 		if (isFailure(reachable)) return reachable;
 	}
@@ -394,14 +394,14 @@ async function capture(
 }
 
 /**
- * Build the child's environment: PATH/HOME/TMPDIR from the host plus exactly
- * the variables the caller granted with `--allow-env`, skipping any granted
- * name the host does not actually define.
+ * Build the child's environment: PATH/HOME/TMPDIR from the run's environment plus
+ * exactly the variables the caller granted with `--allow-env`, skipping any
+ * granted name the run's environment does not define.
  */
 function childEnvironment(context: ToolContext): Record<string, string> {
 	let env: Record<string, string> = {};
 	for (let name of [...BASE_ENV_NAMES, ...context.permissions.grantedEnvNames()]) {
-		let value = process.env[name];
+		let value = context.env[name];
 		if (value !== undefined) env[name] = value;
 	}
 	return env;

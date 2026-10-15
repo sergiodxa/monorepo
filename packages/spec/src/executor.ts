@@ -96,6 +96,10 @@ export interface ExecutionContext {
 	connections?: ConnectionSet;
 	/** Where a failing tool writes what a person needs to see the failure. */
 	artifacts?: ArtifactStore;
+	/** The run's environment variables, handed to every tool call; omit for the host process's. */
+	env?: Readonly<Record<string, string | undefined>>;
+	/** The directory relative host paths resolve against; omit for the host process's. */
+	cwd?: string;
 }
 
 /** The per-test execution services plus the current call depth. */
@@ -435,6 +439,8 @@ function toolContextOverrides(environment: Environment): Parameters<typeof creat
 	if (environment.bases) overrides.bases = environment.bases;
 	if (environment.connections) overrides.connections = environment.connections;
 	if (environment.artifacts) overrides.artifacts = environment.artifacts;
+	if (environment.env) overrides.env = environment.env;
+	if (environment.cwd !== undefined) overrides.cwd = environment.cwd;
 	return overrides;
 }
 

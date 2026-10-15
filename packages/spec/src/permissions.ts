@@ -16,6 +16,7 @@ import type { Result } from "@sdxc/result";
 import { failure, isSuccess, success } from "@sdxc/result";
 
 import { PermissionDeniedError, SpecError } from "./errors.js";
+import { hostEnv } from "./host.js";
 
 /** The permission families v1 knows about. */
 export type PermissionKind = "run" | "net" | "env" | "host-fs" | "db";
@@ -156,9 +157,14 @@ export function parseGrants(
  * `spec run --allow-*` flag that would grant the attempted resource.
  *
  * @param grants - The caller's grants, from {@link parseGrants}.
+ * @param env - The run's environment, whose names a bare `--allow-env` grants; omit for the
+ *   host process's.
  * @returns The permission set every capability check flows through.
  */
-export function createPermissionSet(grants: Grants): PermissionSet {
+export function createPermissionSet(
+	grants: Grants,
+	env?: Readonly<Record<string, string | undefined>>,
+): PermissionSet {
 	return {
 		checkRun(executable) {
 			let name = basename(executable);
@@ -215,7 +221,7 @@ export function createPermissionSet(grants: Grants): PermissionSet {
 			);
 		},
 		grantedEnvNames() {
-			if (grants.env.mode === "all") return Object.keys(process.env);
+			if (grants.env.mode === "all") return Object.keys(env ?? hostEnv());
 			if (grants.env.mode === "scoped") return [...grants.env.scopes];
 			return [];
 		},
