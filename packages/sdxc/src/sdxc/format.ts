@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { spawn } from "node:child_process";
-
 import type { AnyCommandContext } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
@@ -57,39 +55,4 @@ export async function formatFiles(
 	return failure(
 		new Error(`format command \`${display}\` was stopped by a signal; the files stay as written`),
 	);
-}
-
-/**
- * Runs `command` in `root` with `paths` appended as arguments, its output passed through to the
- * terminal. Without a command or a path nothing runs. A command that cannot start or exits
- * non-zero is a failure that says the files stay as the CLI wrote them.
- *
- * @param command - The configured `format` value: the program, then its arguments.
- * @param paths - The written and edited files, relative to `root`.
- * @param root - The project root, which the command runs in.
- */
-export function runFormat(
-	command: readonly string[] | undefined,
-	paths: readonly string[],
-	root: string,
-): Promise<Result<void, Error>> {
-	let [program, ...args] = command ?? [];
-	if (program === undefined || paths.length === 0) return Promise.resolve(success(undefined));
-	let display = [program, ...args].join(" ");
-	return new Promise((settle) => {
-		let child = spawn(program, [...args, ...paths], { cwd: root, stdio: "inherit", shell: false });
-		child.once("error", (error) => {
-			settle(failure(new Error(`format command \`${display}\` could not start: ${error.message}`)));
-		});
-		child.once("close", (code, signal) => {
-			if (code === 0) {
-				settle(success(undefined));
-				return;
-			}
-			let status = code === null ? `was stopped by ${signal ?? "a signal"}` : `exited with ${code}`;
-			settle(
-				failure(new Error(`format command \`${display}\` ${status}; the files stay as written`)),
-			);
-		});
-	});
 }

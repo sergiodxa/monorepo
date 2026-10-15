@@ -11,12 +11,14 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { InvokeOptions } from "@sdxc/cli/test";
+
+import { invoke as invokeCLI } from "@sdxc/cli/test";
 import { unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
+import { createSDXC } from "../cli.js";
 import { materialize, typecheck } from "../testing.js";
-
-import { MAKE_USAGE, make } from "./index.js";
 
 /** Fixture directories created by the current test, removed after it. */
 const DIRECTORIES: string[] = [];
@@ -38,20 +40,9 @@ async function project(config?: string): Promise<string> {
 	return root;
 }
 
-/** Runs `make` with `argv` in `cwd` and answers the exit code and both streams. */
-async function invoke(argv: string[], cwd: string) {
-	let stdout = "";
-	let stderr = "";
-	let code = await make(argv, {
-		cwd,
-		stdout: (text) => {
-			stdout += text;
-		},
-		stderr: (text) => {
-			stderr += text;
-		},
-	});
-	return { code, stdout, stderr };
+/** Runs `sdxc make <argv>` in `cwd`, without a terminal unless `options` scripts answers. */
+function invoke(argv: string[], cwd: string, options: InvokeOptions = {}) {
+	return invokeCLI(createSDXC(), ["make", ...argv], { cwd, interactive: false, ...options });
 }
 
 /** Every file under `root`, relative to it, sorted, leaving out `package.json`. */
@@ -144,7 +135,7 @@ describe("make", () => {
 
 		expect(await files(root)).toContain("database/migrations/0008_AddTags.sql");
 		expect(await files(root)).toContain("database/tenant/0001_AddTags.sql");
-		expect(unknown).toEqual({
+		expect(unknown).toMatchObject({
 			code: 1,
 			stdout: "",
 			stderr: 'No migration chain "audit" in make.migrations; configured: default, tenant\n',
@@ -158,7 +149,7 @@ describe("make", () => {
 
 		let result = await invoke(["service", "charge"], root);
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			code: 1,
 			stdout: "",
 			stderr: "app/services/charge.test.ts already exists; sdxc make leaves it as it is\n",
@@ -220,11 +211,53 @@ describe("make", () => {
 		let kind = await invoke(["widget", "x"], root);
 		let name = await invoke(["job"], root);
 		let flag = await invoke(["service", "x", "--cron", "* * * * *"], root);
+		let dryStubs = await invoke(["stubs", "--dry-run"], root);
 
-		expect(none).toEqual({ code: 2, stdout: "", stderr: MAKE_USAGE });
-		expect(kind.stderr).toBe(`Unknown kind: widget\n\n${MAKE_USAGE}`);
+		expect(none).toMatchObject({ code: 2, stdout: "" });
+		expect(none.stderr).toMatch(/^Name a kind to make\n\nUsage: sdxc make <command> \[options\]/);
+		expect(none.stderr).toContain("  controller   A route handler in app/http/controllers");
+		expect(kind.stderr).toMatch(/^Unknown command "widget" for sdxc make\n/);
 		expect(name.code).toBe(2);
-		expect(flag.stderr).toBe(`--cron applies to sdxc make job\n\n${MAKE_USAGE}`);
+		expect(name.stderr).toMatch(/^<name> is required when stdin is not a terminal\n/);
+		expect(flag.stderr).toMatch(
+			/^--cron is not a flag of sdxc make service; sdxc make job takes it\n/,
+		);
+		expect(dryStubs.code).toBe(2);
+		expect(await files(root)).toEqual([]);
+	});
+
+	test("on a terminal, asks for the kind, the name and a controller's method", async () => {
+		let root = await project();
+
+		let asked = await invoke([], root, {
+			interactive: true,
+			answers: { kind: "controller", name: "ping", method: "post" },
+		});
+		let named = await invoke(["job"], root, { interactive: true, answers: { name: "digest" } });
+		let method = await invoke(["controller", "admin/users", "--no-test"], root, {
+			interactive: true,
+			answers: { method: "form" },
+		});
+
+		expect(asked.code).toBe(0);
+		expect(asked.stderr).toBe(
+			[
+				"✓ What should sdxc make? controller",
+				"✓ What should the controller be called? ping",
+				"✓ Which method? post",
+				"",
+			].join("\n"),
+		);
+		expect(asked.stdout).toContain('  ping: post("/ping"),');
+		expect(named.stderr).toBe("✓ What should the job be called? digest\n");
+		expect(method.stdout).toContain('form("/admin/users")');
+		expect(await files(root)).toEqual([
+			"app/http/controllers/admin/users.tsx",
+			"app/http/controllers/ping.test.tsx",
+			"app/http/controllers/ping.tsx",
+			"app/jobs/digest.test.ts",
+			"app/jobs/digest.ts",
+		]);
 	});
 });
 

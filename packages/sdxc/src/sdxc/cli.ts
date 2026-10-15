@@ -49,6 +49,62 @@ export function createSDXC(
 		lazy(() => import("./commands/init.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.make,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.group }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.controller,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.controller }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.middleware,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.middleware }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.validator,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.validator }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.job,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.job }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.model,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.model }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.migration,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.migration }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.factory,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.factory }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.service,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.service }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.policy,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.policy }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.initializer,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.initializer }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.email,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.email }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.mcp,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.mcp }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.stubs,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.stubs }))),
+	);
+	cli.map(
 		SDXC_COMMANDS.ui.list,
 		lazy(() => import("./commands/ui/list.js")),
 	);

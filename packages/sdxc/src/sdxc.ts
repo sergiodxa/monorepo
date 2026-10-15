@@ -10,7 +10,6 @@
 import { readFileSync } from "node:fs";
 
 import { createSDXC } from "./sdxc/cli.js";
-import { run } from "./sdxc/run.js";
 
 /** The version in this package's `package.json`, which sits beside both `src/` and `dist/`. */
 function ownVersion(): string | undefined {
@@ -20,10 +19,4 @@ function ownVersion(): string | undefined {
 	return typeof manifest.version === "string" ? manifest.version : undefined;
 }
 
-let argv = process.argv.slice(2);
-let handled = await run(argv, {
-	cwd: process.cwd(),
-	stdout: (text) => process.stdout.write(text),
-	stderr: (text) => process.stderr.write(text),
-});
-process.exitCode = handled ?? (await createSDXC({ version: ownVersion() }).run(argv));
+process.exitCode = await createSDXC({ version: ownVersion() }).run(process.argv.slice(2));
