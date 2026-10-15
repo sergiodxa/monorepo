@@ -9,7 +9,6 @@
 
 import { make } from "./make/index.js";
 import { ui } from "./ui/index.js";
-import { upgrade } from "./upgrade/index.js";
 
 /** Where a hand-parsed command runs and writes; the binary passes the process's own. */
 export interface CommandIO {
@@ -26,7 +25,6 @@ export interface CommandIO {
  * @param io - The working directory and the two output streams.
  */
 export async function run(argv: readonly string[], io: CommandIO): Promise<number | null> {
-	if (argv[0] === "upgrade") return upgrade(argv.slice(1), io);
 	if (argv[0] === "make") return make(argv.slice(1), io);
 	if (argv[0] === "ui") return ui(argv.slice(1), io);
 	return null;

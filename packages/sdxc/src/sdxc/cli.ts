@@ -48,5 +48,9 @@ export function createSDXC(
 		SDXC_COMMANDS.init,
 		lazy(() => import("./commands/init.js")),
 	);
+	cli.map(
+		SDXC_COMMANDS.upgrade,
+		lazy(() => import("./commands/upgrade.js")),
+	);
 	return cli;
 }

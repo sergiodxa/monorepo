@@ -11,13 +11,14 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { invoke as invokeCLI } from "@sdxc/cli/test";
 import { afterEach, describe, expect, test } from "vitest";
+
+import { createSDXC } from "../cli.js";
 
 import type { ChangelogEntry } from "./changelog.js";
 
 import { packageOf } from "./prompt.js";
-
-import { upgrade } from "./index.js";
 
 /** Fixture directories created by the current test, removed after it. */
 const DIRECTORIES: string[] = [];
@@ -83,24 +84,10 @@ async function fixtureProject(): Promise<string> {
 	});
 }
 
-/** Runs `sdxc upgrade` with `argv` and answers the exit code and both streams. */
+/** Runs `sdxc upgrade` with `argv` against the `sdxc` package at `packageRoot`. */
 async function invoke(argv: string[], cwd: string, packageRoot: string) {
-	let stdout = "";
-	let stderr = "";
-	let code = await upgrade(
-		argv,
-		{
-			cwd,
-			stdout: (text) => {
-				stdout += text;
-			},
-			stderr: (text) => {
-				stderr += text;
-			},
-		},
-		{ packageRoot },
-	);
-	return { code, stdout, stderr };
+	let run = await invokeCLI(createSDXC({ packageRoot }), ["upgrade", ...argv], { cwd });
+	return { code: run.code, stdout: run.stdout, stderr: run.stderr };
 }
 
 /** The prompt for the fixture project moving from 2026.9.4 to 2026.10.14 with remix 3.0.0 to 3.1.0. */

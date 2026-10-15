@@ -43,13 +43,23 @@ export async function readChangelog(packageRoot: string): Promise<Result<Changel
 	if (isFailure(text)) {
 		return failure(new Error(`This sdxc carries no ${CHANGELOG_FILE} (${path})`));
 	}
-	let values = JSONL.parse(text.data);
-	if (isFailure(values)) return failure(new Error(`${path}: ${values.error.message}`));
+	return parseChangelog(text.data, path);
+}
+
+/**
+ * The entries of a changelog's text. A line that is not JSON, or one without the entry fields,
+ * is a failure naming `source` and the line.
+ *
+ * @param source - Where the text came from, for messages
+ */
+export function parseChangelog(text: string, source: string): Result<ChangelogEntry[], Error> {
+	let values = JSONL.parse(text);
+	if (isFailure(values)) return failure(new Error(`${source}: ${values.error.message}`));
 	let entries: ChangelogEntry[] = [];
 	for (let [index, value] of values.data.entries()) {
 		let checked = s.parseSafe(ENTRY_SCHEMA, value);
 		if (!checked.success) {
-			return failure(new Error(`${path}: entry ${index + 1} is not a changelog entry`));
+			return failure(new Error(`${source}: entry ${index + 1} is not a changelog entry`));
 		}
 		entries.push(checked.value);
 	}

@@ -1,6 +1,7 @@
 /**
- * The npm registry as `sdxc upgrade` reads it: one published `sdxc` version and the `remix`
- * version it declares as its peer, so the bump knows both before anything is installed.
+ * The npm registry as `sdxc upgrade` reads it: one published `sdxc` version, the `remix` version
+ * it declares as its peer, and the changelog it ships, so the bump knows all three before
+ * anything is installed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,8 +12,15 @@ import type { Result } from "@sdxc/result";
 import * as s from "@sdxc/json-schema";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
+import type { ChangelogEntry } from "./changelog.js";
+
+import { CHANGELOG_FILE, parseChangelog } from "./changelog.js";
+
 /** Where npm serves one version's manifest, `<REGISTRY>/sdxc/<version or dist-tag>`. */
 export const REGISTRY = "https://registry.npmjs.org";
+
+/** Where one published file of a version is served, `<PACKAGE_FILES>/sdxc@<version>/<file>`. */
+export const PACKAGE_FILES = "https://cdn.jsdelivr.net/npm";
 
 /** The fields of a version manifest the upgrade reads. */
 const VERSION_SCHEMA = s.object({
@@ -31,9 +39,12 @@ export interface Release {
  * The `sdxc` release `version` names, or the one the `latest` dist-tag points at when it is
  * `null`. A version npm does not have is a failure naming it.
  */
-export async function fetchRelease(version: string | null): Promise<Result<Release, Error>> {
+export async function fetchRelease(
+	version: string | null,
+	signal?: AbortSignal,
+): Promise<Result<Release, Error>> {
 	let url = `${REGISTRY}/sdxc/${encodeURIComponent(version ?? "latest")}`;
-	let response = await wrap(() => fetch(url, { headers: { accept: "application/json" } }));
+	let response = await wrap(() => fetch(url, { headers: { accept: "application/json" }, signal }));
 	if (isFailure(response)) {
 		return failure(new Error(`Could not reach the npm registry: ${response.error.message}`));
 	}
@@ -51,4 +62,23 @@ export async function fetchRelease(version: string | null): Promise<Result<Relea
 		version: checked.value.version,
 		remix: checked.value.peerDependencies?.remix ?? null,
 	});
+}
+
+/**
+ * The changelog the published `sdxc` release `version` ships, read before it is installed so
+ * the upgrade can say what breaks on the way.
+ */
+export async function fetchChangelog(
+	version: string,
+	signal?: AbortSignal,
+): Promise<Result<ChangelogEntry[], Error>> {
+	let url = `${PACKAGE_FILES}/sdxc@${encodeURIComponent(version)}/${CHANGELOG_FILE}`;
+	let response = await wrap(() => fetch(url, { signal }));
+	if (isFailure(response)) return response;
+	if (!response.data.ok) {
+		return failure(new Error(`${url} answered ${response.data.status}`));
+	}
+	let text = await wrap(() => response.data.text());
+	if (isFailure(text)) return text;
+	return parseChangelog(text.data, url);
 }
