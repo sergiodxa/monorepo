@@ -207,38 +207,43 @@ create: command({
 
 ### 6. Tasks and styling
 
-A task is async work the user waits on. `ctx.task(label?, options?, fn)` runs `fn` while a spinner
-shows the label, and answers what `fn` returned; the callback comes last so options (`total`,
-`timeout`, `done`) sit beside the label:
+A task is async work the user waits on. `ctx.task(label?, fn)` runs `fn` while a spinner shows the
+label, and answers what `fn` returned. Everything that shapes a task happens through the `task`
+its callback receives, so the call takes nothing else:
 
 ```typescript
 let posts = await ctx.task("Fetching posts", async (task) => {
 	let response = await fetch(url, { signal: task.signal });
 	task.update("Parsing posts…");
-	return PostsSchema.parse(await response.json());
+	let parsed = PostsSchema.parse(await response.json());
+	task.update(`Fetched ${parsed.length} posts`);
+	return parsed;
 });
-if (isFailure(posts)) return posts; // the task already printed ✗ Parsing posts…
+if (isFailure(posts)) return posts; // the task already printed ✗ and its label
 posts.data; // what the callback returned
 ```
 
 - **It answers a `Result`.** A returned value is `success(value)`, a thrown error is
   `failure(error)`, so `fetch`, `response.json()` and `Schema.parse` need no `try`, and a returned
   `Result` (from `ctx.exec`, from another task) passes through unwrapped.
-- **It ends with one line:** ✓ or ✗, the last label, and the time it took. A `done` option
-  writes the success line from the value: ``done: (posts) => `Fetched ${posts.length} posts` ``.
-- **`task.signal` aborts the work.** Ctrl+C aborts it, and so does a `timeout` option, so `fetch`
-  and child processes stop with the task instead of outliving the CLI; the task then answers a
-  `cancelled` failure, which exits 130 when the handler returns it.
+- **It ends with one line:** ✓ or ✗, the last label, and the time it took, so a final
+  `task.update` writes the success line.
+- **`task.signal` aborts the work on Ctrl+C**, so `fetch` and child processes stop with the task
+  instead of outliving the CLI; the task then answers a `cancelled` failure, which exits 130 when
+  the handler returns it. Nested tasks share it. A deadline is the work's own:
+  `AbortSignal.any([task.signal, AbortSignal.timeout(5_000)])` fails with the `TimeoutError` of the
+  operation that ran out of time.
 - **`task.update(label)`** changes what the spinner says.
-- **Counted work shows a bar.** A `total` option, or `task.setTotal(n)` once the size is known
-  (it may grow, as when `ui add --with-deps` finds more components), turns the spinner into a bar,
-  and `task.advance(by = 1)` counts finished work. Parallel steps each call `advance()` when they
+- **Counted work shows a bar.** `task.total(n)` turns the spinner into a bar, and may be called
+  again as the size grows (as when `ui add --with-deps` finds more components);
+  `task.advance(by = 1)` counts finished work. Parallel steps each call `advance()` when they
   finish, so none needs to know how far the others got; the count never passes the total. The
   final line carries the count: `✓ Copying components 10/10 (240 ms)`, or `✗ … 7/10` when the task
   stops early.
 
   ```typescript
-  await ctx.task("Copying components", { total: files.length }, async (task) => {
+  await ctx.task("Copying components", async (task) => {
+  	task.total(files.length);
   	await Promise.all(
   		files.map(async (file) => {
   			await writeFile(file.path, file.source);
@@ -456,7 +461,7 @@ routes, jobs and MCP tools are.
 4. Process context (`exec`, `style`) and `@sdxc/cli/test` with scripted answers.
 5. Prompts: the seven kinds, binding to flags and arguments, the non-terminal rules,
    cancellation, and the virtual-terminal harness with a test per kind.
-6. `task` with `signal`, `timeout`, `update`, `total`/`setTotal`/`advance`, nesting, terminal ownership with
+6. `task` with `signal`, `update`, `total`, `advance`, nesting, terminal ownership with
    `exec` and writes, and the
    non-animated fallback.
 7. README, `LICENSE.md`, root README row, docs-site group; bootstrap on npm with its trusted
