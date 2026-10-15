@@ -11,6 +11,10 @@ import type { Middleware, RequestContext } from "remix/router";
 
 import type { Newsletter } from "./contract.js";
 
+import { CurrentNewsletter } from "./context.js";
+
+export { CurrentNewsletter } from "./context.js";
+
 /**
  * Declared here, in an imported module rather than an ambient .d.ts, so the
  * augmentation is applied in consuming projects that import the middleware.
@@ -32,8 +36,8 @@ export interface NewsletterMiddlewareOptions {
 }
 
 /**
- * Creates a middleware that publishes the request's newsletter as
- * `context.newsletter`.
+ * Creates a middleware that publishes the request's newsletter as `context.newsletter`, under
+ * the {@link CurrentNewsletter} key the command-line entry shares.
  *
  * @param options - The provider, or a per-request factory.
  * @returns A middleware that populates `context.newsletter`.
@@ -42,8 +46,9 @@ export interface NewsletterMiddlewareOptions {
  */
 export default function newsletter(options: NewsletterMiddlewareOptions): Middleware {
 	return async (context, next) => {
-		context.newsletter =
+		let provider =
 			typeof options.provider === "function" ? options.provider(context) : options.provider;
+		context.set(CurrentNewsletter, provider, { property: "newsletter" });
 
 		return next();
 	};

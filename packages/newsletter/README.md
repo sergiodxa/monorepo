@@ -138,7 +138,20 @@ A webhook endpoint whose `handler` mounts as a route handler. It answers `401` t
 
 #### `newsletter(options: NewsletterMiddlewareOptions): Middleware`
 
-The default export. Publishes `options.provider`, or a per-request factory's answer, as `context.newsletter` on a `remix/router` router.
+The default export. Publishes `options.provider`, or a per-request factory's answer, as `context.newsletter` on a `remix/router` router, under the `CurrentNewsletter` context key it shares with `./middleware/cli`.
+
+### `@sdxc/newsletter/middleware/cli`
+
+#### `newsletter(options: NewsletterCommandOptions): CommandMiddleware`
+
+The default export. Publishes `options.provider`, or `(ctx) => Newsletter` resolved once per run, as `ctx.newsletter` on an [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) command, for subscribing or removing an address by hand.
+
+```typescript
+import { createCLI } from "@sdxc/cli";
+import newsletter from "@sdxc/newsletter/middleware/cli";
+
+let cli = createCLI({ name: "app", commands, middleware: [newsletter({ provider })] });
+```
 
 ### `@sdxc/newsletter/buttondown`
 
@@ -221,7 +234,7 @@ Handlers keyed by event type, so a misspelled key is a type error, and the endpo
 
 The normalized codes and what a provider passes to `new NewsletterError(message, options)`.
 
-#### `NewsletterMiddlewareOptions`, `ButtondownNewsletterOptions`, `KitNewsletterOptions`, `KitForm`
+#### `NewsletterMiddlewareOptions`, `NewsletterCommandOptions`, `ButtondownNewsletterOptions`, `KitNewsletterOptions`, `KitForm`
 
 Provider and middleware options listed above.
 

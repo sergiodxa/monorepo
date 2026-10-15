@@ -10,7 +10,8 @@
 		"./conformance": "./src/conformance.ts",
 		"./kit": "./src/kit/index.ts",
 		"./memory": "./src/memory.ts",
-		"./middleware": "./src/middleware.ts"
+		"./middleware": "./src/middleware.ts",
+		"./middleware/cli": "./src/cli.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -27,9 +28,16 @@
 		"@sdxc/webhooks": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		}
 	}
 }
