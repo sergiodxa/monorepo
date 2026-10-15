@@ -147,7 +147,7 @@ describe("make", () => {
 		await invoke(["migration", "add-tags", "--chain", "tenant"], root);
 		let unknown = await invoke(["migration", "x", "--chain", "audit"], root);
 
-		expect(await files(root)).toContain("database/migrations/0008_AddTags.sql");
+		expect(await files(root)).toContain("database/migrations/0008-add-tags.sql");
 		expect(await files(root)).toContain("database/tenant/0001_AddTags.sql");
 		expect(unknown).toMatchObject({
 			code: 1,

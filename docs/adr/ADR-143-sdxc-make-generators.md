@@ -35,20 +35,20 @@ test beside it is the layout ADR-129 expects.
 
 ### `sdxc make <kind> <name>`
 
-| Kind          | File                                         |
-| ------------- | -------------------------------------------- |
-| `controller`  | `app/http/controllers/<name>.tsx`            |
-| `middleware`  | `app/http/middleware/<name>.ts`              |
-| `validator`   | `app/http/validators/<name>.ts`              |
-| `job`         | `app/jobs/<name>.ts`                         |
-| `model`       | `app/models/<name>.ts`                       |
-| `migration`   | `<chain folder>/<NNNN>_<PascalCaseName>.sql` |
-| `factory`     | `database/factories/<name>.ts`               |
-| `service`     | `app/services/<name>.ts`                     |
-| `policy`      | `app/policies/<name>.ts`                     |
-| `initializer` | `app/initializers/<name>.ts`                 |
-| `email`       | `app/emails/<name>.tsx`                      |
-| `mcp`         | `app/mcp/tools/<name>.ts`                    |
+| Kind          | File                                           |
+| ------------- | ---------------------------------------------- |
+| `controller`  | `app/http/controllers/<name>.tsx`              |
+| `middleware`  | `app/http/middleware/<name>.ts`                |
+| `validator`   | `app/http/validators/<name>.ts`                |
+| `job`         | `app/jobs/<name>.ts`                           |
+| `model`       | `app/models/<name>.ts`                         |
+| `migration`   | `<chain folder>/<number><separator><name>.sql` |
+| `factory`     | `database/factories/<name>.ts`                 |
+| `service`     | `app/services/<name>.ts`                       |
+| `policy`      | `app/policies/<name>.ts`                       |
+| `initializer` | `app/initializers/<name>.ts`                   |
+| `email`       | `app/emails/<name>.tsx`                        |
+| `mcp`         | `app/mcp/tools/<name>.ts`                      |
 
 Every kind is one word. A slash in the name argument means a folder inside the kind's folder
 (`make job trials/expire` writes `app/jobs/trials/expire.ts`), which keeps the feature grouping
@@ -57,8 +57,11 @@ ADR-129 recommends, so a kind never contains one.
 - **MCP.** `make mcp <name>` writes a tool, the handler most MCP servers have; `--resource`
   writes a resource to `app/mcp/resources/<name>.ts` instead.
 - **Migrations by chain.** `make migration <name> [--chain <chain>]` writes into the folder
-  `make.migrations` names for the chain, taking the next number after the highest in that folder.
-  An unknown chain is an error listing the configured ones.
+  `make.migrations` names for the chain, spelled like the files already there: a zero-padded
+  sequence keeps its width, a 14-digit UTC timestamp (`YYYYMMDDHHmmss`) takes the current time,
+  and the separator and case (kebab, snake, Pascal or camel) follow the newest file, so the new
+  file sorts last under both wrangler's numeric order and a plain lexical one. An empty chain
+  starts at `0001_PascalCaseName.sql`. An unknown chain is an error listing the configured ones.
 - **Tests beside the file.** With `make.tests` on, every kind except `migration` and `factory`
   also writes `<name>.test.ts` (`.test.tsx` beside a `.tsx` file) from that kind's test stub.
   `--test` and `--no-test` override the setting for one run.

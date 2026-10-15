@@ -20,7 +20,7 @@ import type { KindName } from "./kinds.js";
 import type { Name } from "./names.js";
 
 import { COMMON_PLACEHOLDERS, KINDS, MCP_RESOURCES_FOLDER } from "./kinds.js";
-import { chainFolder, nextMigrationNumber } from "./migrations.js";
+import { chainFolder, nextMigrationFile } from "./migrations.js";
 import { camel } from "./names.js";
 import { loadStub, renderStub, stubName } from "./stubs.js";
 
@@ -77,9 +77,9 @@ export async function plan(
 		let chain = chainFolder(config.make.migrations, request.chain);
 		if (isFailure(chain)) return chain;
 		folder = chain.data;
-		let number = await nextMigrationNumber(root, folder);
-		if (isFailure(number)) return number;
-		file = `${number.data}_${name.pascal}`;
+		let next = await nextMigrationFile(root, folder, name);
+		if (isFailure(next)) return next;
+		file = next.data;
 	}
 	let path = `${folder}/${file}${kind.extension}`;
 	let testPath = `${folder}/${file}.test${kind.extension}`;
