@@ -10,8 +10,8 @@
 
 import type { RequestContext } from "remix/router";
 
-import { vstack } from "@sdxc/u/layout";
-import { LinkButton } from "@sdxc/ui";
+import { vstack } from "sdxc/u/layout";
+import { LinkButton } from "sdxc/ui";
 
 import type { NavTree } from "~/app/services/navigation";
 

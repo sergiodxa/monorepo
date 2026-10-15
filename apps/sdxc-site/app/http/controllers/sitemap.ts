@@ -12,9 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { xml } from "@sdxc/http/response";
-import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
+import { xml } from "sdxc/http/response";
+import { Sitemap } from "sdxc/sitemap";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listCataloguePages } from "~/app/services/catalogue-pages";

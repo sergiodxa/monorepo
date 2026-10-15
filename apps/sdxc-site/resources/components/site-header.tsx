@@ -9,14 +9,14 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { hidden, hstack, inline, insBs, sticky } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { bs, is, maxIs, mi, p } from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
-import { text, tracking, weight } from "@sdxc/u/typography";
-import { NavLink } from "@sdxc/ui";
-import { isApplePlatform } from "@sdxc/user-agent/helpers";
+import { bg, borderEdge, fg } from "sdxc/u/color";
+import { hidden, hstack, inline, insBs, sticky } from "sdxc/u/layout";
+import { media } from "sdxc/u/responsive";
+import { bs, is, maxIs, mi, p } from "sdxc/u/size";
+import { z } from "sdxc/u/stacking";
+import { text, tracking, weight } from "sdxc/u/typography";
+import { NavLink } from "sdxc/ui";
+import { isApplePlatform } from "sdxc/user-agent/helpers";
 
 import { SearchPalette } from "~/resources/components/search-palette";
 import routes from "~/routes/web";

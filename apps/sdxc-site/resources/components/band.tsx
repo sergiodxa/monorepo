@@ -10,13 +10,13 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { borderEdge } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
-import { relative, vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { is, maxIs, p } from "@sdxc/u/size";
-import { after, before } from "@sdxc/u/state";
-import { text } from "@sdxc/u/typography";
+import { borderEdge } from "sdxc/u/color";
+import { raw } from "sdxc/u/general";
+import { relative, vstack } from "sdxc/u/layout";
+import { media } from "sdxc/u/responsive";
+import { is, maxIs, p } from "sdxc/u/size";
+import { after, before } from "sdxc/u/state";
+import { text } from "sdxc/u/typography";
 
 namespace Band {
 	/** What sits behind the band: nothing, a brand glow from one corner, or a faded grid. */

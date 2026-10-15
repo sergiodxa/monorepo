@@ -10,13 +10,13 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, items, vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { minIs } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { leading, text } from "@sdxc/u/typography";
+import { fg } from "sdxc/u/color";
+import { raw } from "sdxc/u/general";
+import { gap, grid, gridTemplate, items, vstack } from "sdxc/u/layout";
+import { media } from "sdxc/u/responsive";
+import { minIs } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
+import { leading, text } from "sdxc/u/typography";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

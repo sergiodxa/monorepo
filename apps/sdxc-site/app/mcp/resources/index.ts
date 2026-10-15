@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resource, resources } from "@sdxc/mcp";
+import { resource, resources } from "sdxc/mcp";
 
 import { SITE_URL } from "~/config/site";
 

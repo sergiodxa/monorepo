@@ -27,8 +27,8 @@ import {
 	ScissorsIcon,
 	ThumbsUpIcon,
 	VolumeXIcon,
-} from "@sdxc/icons";
-import { bs, is } from "@sdxc/u/size";
+} from "sdxc/icons";
+import { bs, is } from "sdxc/u/size";
 import {
 	Accordion,
 	Alert,
@@ -130,7 +130,7 @@ import {
 	Tooltip,
 	Tree,
 	Typeset,
-} from "@sdxc/ui";
+} from "sdxc/ui";
 
 import { RESIZABLE_CODE, ResizablePreview } from "~/resources/components/previews/resizable";
 

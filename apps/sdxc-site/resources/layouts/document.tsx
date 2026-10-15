@@ -7,17 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
+import type { DocumentAssets } from "sdxc/assets-middleware";
 
-import { Seo } from "@sdxc/seo";
-import { bg, colorScheme, fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { m, minBs } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
+import { Seo } from "sdxc/seo";
+import { bg, colorScheme, fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { overflow } from "sdxc/u/overflow";
+import { m, minBs } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
+import { font } from "sdxc/u/typography";
 
 import type { OptionSelections } from "~/app/services/option-groups";
 
@@ -26,10 +26,10 @@ import { SITE_URL } from "~/config/site";
 import OptionGroupScope from "~/resources/components/option-groups";
 import SiteFooter from "~/resources/components/site-footer";
 
-import "@sdxc/ui/reset.css";
+import "sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
-import "@sdxc/ui/theme.css";
-import "@sdxc/highlight/styles.css";
+import "sdxc/ui/theme.css";
+import "sdxc/highlight/styles.css";
 
 namespace DocumentLayout {
 	export interface Props {

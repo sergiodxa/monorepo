@@ -1,3 +1,5 @@
+import { css } from "remix/component";
+import { renderToString } from "remix/component/server";
 /**
  * Type-level checks that `<select>` accepts the same `mix` values as other elements under
  * the Workers runtime types; `bun typecheck` fails here if the `Element` merge regresses.
@@ -5,9 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { p } from "@sdxc/u/size";
-import { css } from "remix/component";
-import { renderToString } from "remix/component/server";
+import { p } from "sdxc/u/size";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 describe("HTMLSelectElement under the Workers runtime types", () => {

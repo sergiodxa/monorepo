@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { xml } from "@sdxc/http/response";
-import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
+import { xml } from "sdxc/http/response";
+import { RSS } from "sdxc/rss";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listGuides } from "~/app/services/docs";

@@ -15,18 +15,18 @@
 
 import type { Handle } from "remix/component";
 
-import { SearchIcon } from "@sdxc/icons";
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { is, p, width } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { font, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
-import { Button, Command, Keyboard } from "@sdxc/ui";
-import { FilterModel } from "@sdxc/ui/behaviors";
-import { commandKeys, hotkey } from "@sdxc/ui/mixins";
-import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
+import { SearchIcon } from "sdxc/icons";
+import { bg, border, fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { hstack, vstack } from "sdxc/u/layout";
+import { is, p, width } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
+import { font, text, textDecoration, truncate, weight } from "sdxc/u/typography";
+import { Button, Command, Keyboard } from "sdxc/ui";
+import { FilterModel } from "sdxc/ui/behaviors";
+import { commandKeys, hotkey } from "sdxc/ui/mixins";
+import { keyComboGlyphs } from "sdxc/ui/utils";
 
 import type { SearchDocument } from "~/app/services/search-query";
 

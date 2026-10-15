@@ -7,17 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { assets } from "@sdxc/assets-middleware";
-import { headRequests } from "@sdxc/http/middleware/head-requests";
-import { lazy } from "@sdxc/lazy-route";
-import { log } from "@sdxc/logger/middleware";
-import { trace } from "@sdxc/trace-context/middleware";
-import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
+import { assets } from "sdxc/assets-middleware";
+import { headRequests } from "sdxc/http/middleware/head-requests";
+import { lazy } from "sdxc/lazy-route";
+import { log } from "sdxc/logger/middleware";
+import { trace } from "sdxc/trace-context/middleware";
+import { userAgent } from "sdxc/user-agent/middleware";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { assetResolver } from "~/app/initializers/assets";

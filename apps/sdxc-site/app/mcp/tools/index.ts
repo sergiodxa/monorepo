@@ -11,9 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "@sdxc/json-schema";
-import * as checks from "@sdxc/json-schema/checks";
-import { tool, tools } from "@sdxc/mcp";
+import * as s from "sdxc/json-schema";
+import * as checks from "sdxc/json-schema/checks";
+import { tool, tools } from "sdxc/mcp";
 
 /** Nothing here writes, and nothing reaches past the content in this deployment. */
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;

@@ -9,11 +9,11 @@
 
 import type { RequestContext } from "remix/router";
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { LinkButton } from "@sdxc/ui";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { m, p } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { LinkButton } from "sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";

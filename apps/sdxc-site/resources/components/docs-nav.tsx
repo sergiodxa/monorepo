@@ -9,16 +9,16 @@
 
 import type { Handle } from "remix/component";
 
-import { ChevronDownIcon } from "@sdxc/icons";
-import { border } from "@sdxc/u/color";
-import { rounded, transition, transitionDuration } from "@sdxc/u/effects";
-import { justify, shrink } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { is, minBs, minIs, pb, pi } from "@sdxc/u/size";
-import { open, when } from "@sdxc/u/state";
-import { rotate } from "@sdxc/u/transform";
-import { text } from "@sdxc/u/typography";
-import { Disclosure, Sidebar } from "@sdxc/ui";
+import { ChevronDownIcon } from "sdxc/icons";
+import { border } from "sdxc/u/color";
+import { rounded, transition, transitionDuration } from "sdxc/u/effects";
+import { justify, shrink } from "sdxc/u/layout";
+import { media } from "sdxc/u/responsive";
+import { is, minBs, minIs, pb, pi } from "sdxc/u/size";
+import { open, when } from "sdxc/u/state";
+import { rotate } from "sdxc/u/transform";
+import { text } from "sdxc/u/typography";
+import { Disclosure, Sidebar } from "sdxc/ui";
 
 import type { NavGroup, NavTree } from "~/app/services/navigation-tree";
 

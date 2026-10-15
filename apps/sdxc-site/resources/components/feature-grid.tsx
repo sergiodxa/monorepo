@@ -9,13 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import { border } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, repeat } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { media } from "@sdxc/u/responsive";
-import { when } from "@sdxc/u/state";
+import { border } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { raw } from "sdxc/u/general";
+import { gap, grid, gridTemplate, repeat } from "sdxc/u/layout";
+import { overflow } from "sdxc/u/overflow";
+import { media } from "sdxc/u/responsive";
+import { when } from "sdxc/u/state";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

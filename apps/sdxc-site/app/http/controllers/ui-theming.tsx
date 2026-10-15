@@ -10,10 +10,10 @@
 
 import type { RequestContext } from "remix/router";
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
-import { font, nowrap, text, tracking, weight } from "@sdxc/u/typography";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { m } from "sdxc/u/size";
+import { font, nowrap, text, tracking, weight } from "sdxc/u/typography";
 
 import type { Anchor } from "~/app/services/article";
 import type { NavTree } from "~/app/services/navigation";

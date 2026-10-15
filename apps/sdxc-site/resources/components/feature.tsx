@@ -18,14 +18,14 @@ import {
 	PackageIcon,
 	ShieldCheckIcon,
 	ZapIcon,
-} from "@sdxc/icons";
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { center, hstack, inlineFlex, vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { bs, is, m, mbs, p } from "@sdxc/u/size";
-import { leading, text, tracking, weight } from "@sdxc/u/typography";
-import { Badge, LinkButton } from "@sdxc/ui";
+} from "sdxc/icons";
+import { bg, border, fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { center, hstack, inlineFlex, vstack } from "sdxc/u/layout";
+import { media } from "sdxc/u/responsive";
+import { bs, is, m, mbs, p } from "sdxc/u/size";
+import { leading, text, tracking, weight } from "sdxc/u/typography";
+import { Badge, LinkButton } from "sdxc/ui";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
 

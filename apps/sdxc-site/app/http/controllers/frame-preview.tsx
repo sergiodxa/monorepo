@@ -10,9 +10,9 @@
 
 import type { RequestContext } from "remix/router";
 
-import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
+import { isApplePlatform } from "sdxc/user-agent/helpers";
 
 import type { ComponentPreview as Preview } from "~/resources/components/ui-previews.server";
 
