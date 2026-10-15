@@ -7,9 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CommandMiddleware } from "@sdxc/cli";
+import type { CommandMiddleware, CommandResult } from "@sdxc/cli";
 
-import { CancelledError, EXIT_CODES, ExitError, UsageError } from "@sdxc/cli";
+import { exitCodeOf } from "@sdxc/cli";
+import { isFailure } from "@sdxc/result";
 
 import type { Logger } from "./create-logger.js";
 
@@ -21,15 +22,18 @@ export { CurrentLog } from "./middleware.js";
 
 const LOG_PROPERTY = { property: "log" } as const;
 
+/** The exit code a thrown value maps to, so the record names the code the shell saw. */
+function thrownExitCode(error: unknown): number {
+	return exitCodeOf(error instanceof Error ? error : new Error(String(error)));
+}
+
 /**
- * The exit code `@sdxc/cli` answers for a run whose chain threw `error`, so the record names
- * the code the shell saw.
+ * Fails `log` with the error a run answered, recording the exit code it maps to; a successful
+ * run leaves the log as the handler left it.
  */
-function exitCodeOf(error: unknown): number {
-	if (error instanceof ExitError) return error.code;
-	if (error instanceof UsageError) return EXIT_CODES.usage;
-	if (error instanceof CancelledError) return EXIT_CODES.cancelled;
-	return EXIT_CODES.failure;
+function recordResult(log: Log, result: CommandResult): void {
+	if (!isFailure(result)) return;
+	log.fail(result.error, { command: { exit_code: exitCodeOf(result.error) } });
 }
 
 /**
@@ -39,7 +43,8 @@ function exitCodeOf(error: unknown): number {
  * When a log is already current it is joined, so a command run inside a host's log produces
  * one record, and the run's own `command.duration_ms` is recorded on it. Otherwise a `command`
  * log opens — carrying `logger`'s configuration when one is given — and is written once the
- * handler settles. A run that throws records `command.exit_code` as the code its error maps to.
+ * handler settles. A run that throws or answers a failure fails the log and records
+ * `command.exit_code` as the code the shell saw.
  *
  * @param logger The app's configuration. Omitted, the log carries none.
  * @example createCLI({ name: "app", commands, middleware: [log(logger)] });
@@ -56,9 +61,9 @@ export function log(
 			ctx.set(CurrentLog, current, LOG_PROPERTY);
 			current.set({ command: { path } });
 			try {
-				await next();
+				recordResult(current, await next());
 			} catch (error) {
-				current.set({ command: { exit_code: exitCodeOf(error) } });
+				current.set({ command: { exit_code: thrownExitCode(error) } });
 				throw error;
 			} finally {
 				current.set({
@@ -75,9 +80,9 @@ export function log(
 		await opened.run(async (self) => {
 			ctx.set(CurrentLog, self, LOG_PROPERTY);
 			try {
-				await next();
+				recordResult(self, await next());
 			} catch (error) {
-				self.set({ command: { exit_code: exitCodeOf(error) } });
+				self.set({ command: { exit_code: thrownExitCode(error) } });
 				throw error;
 			}
 		});

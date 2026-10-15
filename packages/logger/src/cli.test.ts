@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { command, commands, createCLI, ExitError, success } from "@sdxc/cli";
+import { command, commands, createCLI, ExitError, success, usage } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
 import { describe, expect, test } from "vitest";
 
@@ -68,6 +68,21 @@ describe("log()", () => {
 			"command.path": "users find",
 			"command.exit_code": 3,
 			"error.type": "ExitError",
+			outcome: "error",
+		});
+	});
+
+	test("fails the log and records the exit code of a run that answers a failure", async () => {
+		let { logger, records } = collectingLogger();
+		let cli = createCLI({ name: "app", commands: CONTRACT, middleware: [log(logger)] });
+		cli.map(CONTRACT.users.find, () => usage("Name a user"));
+
+		let run = await invoke(cli, ["users", "find"]);
+
+		expect(run.code).toBe(2);
+		expect(records[0]).toMatchObject({
+			"command.exit_code": 2,
+			"error.type": "UsageError",
 			outcome: "error",
 		});
 	});
