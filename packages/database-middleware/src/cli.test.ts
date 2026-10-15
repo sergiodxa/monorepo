@@ -153,6 +153,15 @@ describe("db command", () => {
 		let run = await invoke(cli, ["db", "-e", "select 1"]);
 
 		expect(run.code).toBe(1);
-		expect(run.stderr).toContain("database()");
+		expect(run.stderr).toBe("db read a context key that no middleware published\n");
+	});
+
+	test("runs SQL piped into it", async () => {
+		let { cli } = setup();
+
+		let run = await invoke(cli, ["db"], { stdin: "select count(*) as n from users;\n" });
+
+		expect(run.code).toBe(0);
+		expect(run.stdout).toBe("n\n-\n2\n(1 row)\n");
 	});
 });

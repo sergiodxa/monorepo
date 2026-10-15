@@ -117,7 +117,7 @@ Returns command middleware that sets the database as `ctx.db` and under the `Dat
 
 ### `DB_COMMAND` and `dbHandler` from `./cli`
 
-The `db` command's declaration, to place in a contract under any name, and the action to `map()` onto it. With `--execute <sql>` (`-e`) it runs that one statement and exits, failing with the database's error; without it, a `sql>` prompt runs each statement until `.exit`, `.quit` or Ctrl+C, printing errors and carrying on. A read prints its rows as aligned columns with a row count, and a write prints its affected count. Without a terminal and without `--execute`, it ends at once. It reads the database `database()` published and fails naming it when none was.
+The `db` command's declaration, to place in a contract under any name, and the action to `map()` onto it. With `--execute <sql>` (`-e`) it runs that one statement and exits, failing with the database's error; without it, a `sql>` prompt runs each statement until `.exit`, `.quit` or Ctrl+C, printing errors and carrying on. A read prints its rows as aligned columns with a row count, and a write prints its affected count. Without a terminal, it runs the SQL piped into it (`app db < query.sql`) the same way, and ends at once when nothing was piped. It reads the database `database()` published and fails when none was.
 
 ### `Database`
 

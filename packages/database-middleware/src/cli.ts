@@ -49,8 +49,8 @@ const EXIT_WORDS: ReadonlySet<string> = new Set([".exit", ".quit"]);
 
 /**
  * The `db` command's declaration, for an app to place in its contract under any name. A run
- * with `--execute` executes that one statement; without it, a prompt reads statements until
- * `.exit`, `.quit` or Ctrl+C, and a run without a terminal ends at once.
+ * with `--execute` executes that one statement, and SQL piped in (`cat query.sql | app db`) runs
+ * the same way; at a terminal, a prompt reads statements until `.exit`, `.quit` or Ctrl+C.
  *
  * @example let contract = commands({ db: DB_COMMAND, users: commands({ … }) });
  */
@@ -63,7 +63,7 @@ export const DB_COMMAND = command({
 			description: "Run one statement and exit",
 		}),
 	},
-	examples: ["db", 'db --execute "SELECT count(*) FROM users"'],
+	examples: ["db", 'db --execute "SELECT count(*) FROM users"', "db < query.sql"],
 });
 
 /**
@@ -74,12 +74,13 @@ export const DB_COMMAND = command({
  * @example cli.map(contract.db, dbHandler);
  */
 export const dbHandler = createCommand(DB_COMMAND, async (ctx) => {
-	let db = ctx.get(Database);
-	if (db === undefined) {
-		return failure(new Error("The db command needs database() in the CLI's middleware"));
-	}
+	let db = ctx.require(Database);
 
 	if (ctx.flags.execute !== undefined) return execute(ctx, db, ctx.flags.execute);
+	if (!ctx.stdin.isTTY) {
+		let piped = (await ctx.stdin.text()).trim();
+		return piped === "" ? success() : execute(ctx, db, piped);
+	}
 
 	while (true) {
 		let answer = await ctx.prompt.text({
