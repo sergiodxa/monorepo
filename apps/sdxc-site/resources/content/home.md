@@ -9,28 +9,20 @@ Cloudflare Workers: `Request` and `Response` in, typed values out.
 
 <actions cta-href="/docs" cta-label="Read the docs" alt-href="/api" alt-label="Browse the API" />
 
-<install-command command="npm add @sdxc/markdown @sdxc/response @sdxc/result remix" />
+<install-command command="npm add -g @sdxc/kit" />
 
 </split-copy>
 <split-media>
 
-```typescript {% title="app/routes/frontmatter.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { badRequest, ok } from "@sdxc/response";
-import { isFailure } from "@sdxc/result";
+```bash {% title="Terminal" %}
+sdxc create blog
+cd blog && bun install
 
-export async function handler(request: Request) {
-	let result = Markdown.parse(await request.text(), {
-		frontmatter: Frontmatter,
-	});
+sdxc make controller posts/show
+sdxc make job digests/send --cron "0 8 * * *"
+sdxc ui add dialog
 
-	if (isFailure(result)) {
-		let line = result.error.position?.start.line;
-		return badRequest({ line });
-	}
-
-	return ok(result.data.frontmatter);
-}
+sdxc run about
 ```
 
 </split-media>
@@ -59,7 +51,7 @@ already agree on how to fail, so the tenth one you install reads like the first.
 ## Packages that agree with each other
 
 Every package answers the same way, so the second one you pick up already reads like the
-first. The handler above composes three of them and never throws.
+first. Each example here composes a few of them and never throws.
 
 - `Request` and `Response` in and out, never a framework's own objects
 - Every fallible entry point answers with a `Result`

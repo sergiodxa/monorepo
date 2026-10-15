@@ -35,6 +35,18 @@ describe("installVariants", () => {
 		);
 	});
 
+	test("spells a global install the way each manager does", () => {
+		expect(installVariants("npm add -g @sdxc/kit")).toEqual({
+			npm: "npm add -g @sdxc/kit",
+			pnpm: "pnpm add -g @sdxc/kit",
+			yarn: "yarn global add @sdxc/kit",
+			bun: "bun add -g @sdxc/kit",
+		});
+		expect(installVariants("npm install --global @sdxc/kit").yarn).toBe(
+			"yarn global add @sdxc/kit",
+		);
+	});
+
 	test("passes a verb that is not an install through", () => {
 		expect(installVariants("npm run build").yarn).toBe("yarn run build");
 	});

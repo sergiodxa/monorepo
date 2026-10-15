@@ -17,6 +17,9 @@ const INSTALL_VERBS = new Set(["install", "i", "add"]);
 /** The npm spellings of "as a dev dependency", which every other manager spells `-D`. */
 const DEV_FLAGS = new Set(["-D", "--dev", "--save-dev"]);
 
+/** The npm spellings of "install globally", which Yarn spells as its own `global add` verb. */
+const GLOBAL_FLAGS = new Set(["-g", "--global"]);
+
 /**
  * Rewrites one authored npm command into each manager's dialect, keeping the authored
  * text verbatim for npm so the source of truth stays the string the page was written
@@ -32,12 +35,19 @@ export function installVariants(command: string): Record<PackageManager, string>
 	let [verb, ...operands] = rest;
 	let words = verb !== undefined && INSTALL_VERBS.has(verb) ? ["add", ...operands] : rest;
 
+	let global = words[0] === "add" && words.some((word) => GLOBAL_FLAGS.has(word));
 	let variants = {} as Record<PackageManager, string>;
 	for (let manager of MANAGERS) {
-		variants[manager] =
-			manager === "npm"
-				? authored
-				: [manager, ...words.map((word) => (DEV_FLAGS.has(word) ? "-D" : word))].join(" ");
+		if (manager === "npm") variants[manager] = authored;
+		else if (manager === "yarn" && global) {
+			let packages = words.slice(1).filter((word) => !GLOBAL_FLAGS.has(word));
+			variants[manager] = ["yarn", "global", "add", ...packages].join(" ");
+		} else {
+			variants[manager] = [
+				manager,
+				...words.map((word) => (DEV_FLAGS.has(word) ? "-D" : GLOBAL_FLAGS.has(word) ? "-g" : word)),
+			].join(" ");
+		}
 	}
 
 	return variants;
