@@ -48,6 +48,7 @@ The JSON Schema 2020-12 document for the CLI configuration, which the `$schema` 
 Every command works from the project root: the nearest directory at or above the current one that holds a `package.json`.
 
 - `sdxc init [--dry-run]`: writes `.config/sdxc.jsonc`; `--dry-run` prints it instead.
+- `sdxc upgrade [version] [--no-install] [--output <file>]`: moves `sdxc`, and `remix` with it, to `version` (the latest when omitted), installs it, and prints the prompt an AI agent follows to update the code; `sdxc upgrade --prompt --from <version>` prints that prompt again without changing anything.
 
 ### Configuration
 

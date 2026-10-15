@@ -13,6 +13,7 @@ import { isFailure, wrap } from "@sdxc/result";
 
 import { init } from "./init.js";
 import { findProjectRoot } from "./project.js";
+import { upgrade } from "./upgrade/index.js";
 
 /** Where the CLI runs and writes; the binary passes the process's own. */
 export interface CommandIO {
@@ -27,6 +28,7 @@ export const USAGE = [
 	"",
 	"Commands:",
 	"  init        Write .config/sdxc.jsonc with every default spelled out",
+	"  upgrade     Move to another sdxc release and print the prompt for the code",
 	"",
 	"Options:",
 	"  --dry-run   Print what the command would write and change nothing",
@@ -41,6 +43,7 @@ export const USAGE = [
  * @param io - The working directory and the two output streams.
  */
 export async function run(argv: readonly string[], io: CommandIO): Promise<number> {
+	if (argv[0] === "upgrade") return upgrade(argv.slice(1), io);
 	let args = wrap(() =>
 		parseArgs({
 			args: [...argv],
