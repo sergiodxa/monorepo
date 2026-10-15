@@ -41,6 +41,10 @@ export function createSDXC(
 		middleware: [packageRoot(options.packageRoot)],
 	});
 	cli.map(
+		SDXC_COMMANDS.create,
+		lazy(() => import("./commands/create.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.init,
 		lazy(() => import("./commands/init.js")),
 	);

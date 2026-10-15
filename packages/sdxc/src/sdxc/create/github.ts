@@ -44,6 +44,23 @@ export const LIMITS = {
 	maxEntries: 10_000,
 };
 
+/** GitHub refused the download; `status` says why, so a caller can ask for a token and retry. */
+export class GitHubRefusal extends Error {
+	override name = "GitHubRefusal";
+
+	/** The HTTP status GitHub answered. */
+	status: number;
+
+	/**
+	 * @param message - What went wrong, worded for what the user can do about it
+	 * @param status - The HTTP status GitHub answered
+	 */
+	constructor(message: string, status: number) {
+		super(message);
+		this.status = status;
+	}
+}
+
 /** The API host the tarball is requested from. */
 const GITHUB_API = "https://api.github.com";
 
@@ -53,14 +70,16 @@ const GITHUB_API = "https://api.github.com";
  * holds nothing in the archive is a failure naming it.
  *
  * @param env - The variables the token is read from.
+ * @param signal - Stops the download, as Ctrl+C does.
  */
 export async function downloadTemplate(
 	template: GitHubTemplate,
-	env: Record<string, string | undefined> = process.env,
+	env: Readonly<Record<string, string | undefined>>,
+	signal?: AbortSignal,
 ): Promise<Result<Extracted, Error>> {
 	let label = describe(template);
 	let response = await wrap(() =>
-		fetch(tarballURL(template), { headers: headers(env.GITHUB_TOKEN ?? env.GH_TOKEN) }),
+		fetch(tarballURL(template), { headers: headers(githubToken(env)), signal }),
 	);
 	if (isFailure(response)) {
 		return failure(new Error(`Could not reach GitHub for ${label}: ${response.error.message}`));
@@ -119,6 +138,12 @@ export async function extract(
 	return success({ tree, commit });
 }
 
+/** The token `downloadTemplate` sends: `GITHUB_TOKEN`, else `GH_TOKEN`, when either is set. */
+export function githubToken(env: Readonly<Record<string, string | undefined>>): string | undefined {
+	let token = env.GITHUB_TOKEN ?? env.GH_TOKEN;
+	return token === "" ? undefined : token;
+}
+
 /** `org/repo`, with its folder and ref when given, as messages name a template. */
 export function describe(template: GitHubTemplate): string {
 	let path = template.path === null ? "" : `/${template.path}`;
@@ -145,24 +170,31 @@ function headers(token: string | undefined): Headers {
 }
 
 /** Why GitHub refused the download, worded for what the user can do about it. */
-function refusal(response: Response, template: GitHubTemplate, label: string): Error {
+function refusal(response: Response, template: GitHubTemplate, label: string): GitHubRefusal {
 	let tokenHint = "set GITHUB_TOKEN or GH_TOKEN";
 	if (response.status === 404) {
 		let ref = template.ref === null ? "" : ` or no ref ${template.ref}`;
-		return new Error(
+		return new GitHubRefusal(
 			`GitHub has no repository ${template.owner}/${template.repo}${ref}; for a private repository, ${tokenHint}`,
+			404,
 		);
 	}
 	if (response.status === 401) {
-		return new Error(`GitHub rejected the token sent for ${label}; check GITHUB_TOKEN or GH_TOKEN`);
+		return new GitHubRefusal(
+			`GitHub rejected the token sent for ${label}; check GITHUB_TOKEN or GH_TOKEN`,
+			401,
+		);
 	}
 	let limited =
 		response.status === 429 ||
 		(response.status === 403 && response.headers.get("x-ratelimit-remaining") === "0");
 	if (limited) {
-		return new Error(`GitHub's rate limit refused ${label}; wait for it to reset or ${tokenHint}`);
+		return new GitHubRefusal(
+			`GitHub's rate limit refused ${label}; wait for it to reset or ${tokenHint}`,
+			response.status,
+		);
 	}
-	return new Error(`GitHub answered ${response.status} for ${label}`);
+	return new GitHubRefusal(`GitHub answered ${response.status} for ${label}`, response.status);
 }
 
 /** An extraction failure, naming the limit when one was exceeded. */

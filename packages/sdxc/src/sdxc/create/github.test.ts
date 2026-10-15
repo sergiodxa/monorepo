@@ -11,16 +11,17 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { isFailure, success, unwrap } from "@sdxc/result";
+import { invoke } from "@sdxc/cli/test";
+import { isFailure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import { createSDXC } from "../cli.js";
+
 import type { GitHubTemplate } from "./github.js";
 
 import { downloadTemplate, extract, LIMITS } from "./github.js";
-
-import { create } from "./index.js";
 
 /** One archive entry: a file with its content, a directory, or a symbolic link. */
 type Entry =
@@ -248,32 +249,21 @@ describe("extract", () => {
 });
 
 describe("create --template org/repo", () => {
-	test("writes the extracted project, names it and reports the commit", async () => {
+	test("downloads as a task, names the project and reports the commit", async () => {
 		serve(STARTER);
 		let cwd = await mkdtemp(join(tmpdir(), "sdxc-github-"));
 		DIRECTORIES.push(cwd);
-		let stdout = "";
 
-		let code = await create(
-			["blog", "--template", "acme/starters"],
-			{
-				cwd,
-				stdout: (text) => {
-					stdout += text;
-				},
-				stderr: (text) => {
-					stdout += text;
-				},
-			},
-			{
-				userAgent: "pnpm/9.0.0",
-				confirm: async () => null,
-				git: { available: async () => true, init: async () => success(undefined) },
-			},
-		);
+		let result = await invoke(createSDXC(), ["create", "blog", "--template", "acme/starters"], {
+			cwd,
+			env: { npm_config_user_agent: "pnpm/9.0.0" },
+			interactive: false,
+			exec: { "git --version": {} },
+		});
 
-		expect(code).toBe(0);
-		expect(stdout).toBe(
+		expect(result.code).toBe(0);
+		expect(result.stderr).toBe("Downloading acme/starters\n✓ Downloading acme/starters\n");
+		expect(result.stdout).toBe(
 			[
 				"Created blog from acme/starters at 0a1b2c3",
 				"",
@@ -292,5 +282,53 @@ describe("create --template org/repo", () => {
 			"src",
 			"workers",
 		]);
+	});
+
+	test("asks for a token after a 404 when none is set, and sends it on the retry", async () => {
+		let tokens: (string | null)[] = [];
+		let archive = await tarball(STARTER);
+		SERVER.use(
+			http.get("https://api.github.com/repos/acme/private/tarball*", ({ request }) => {
+				let token = request.headers.get("authorization");
+				tokens.push(token);
+				if (token === null) return new HttpResponse(null, { status: 404 });
+				return new HttpResponse(archive, { headers: { "content-type": "application/x-gzip" } });
+			}),
+		);
+		let cwd = await mkdtemp(join(tmpdir(), "sdxc-github-"));
+		DIRECTORIES.push(cwd);
+		let argv = ["create", "blog", "--template", "acme/private", "--no-git"];
+
+		let answered = await invoke(createSDXC(), argv, {
+			cwd,
+			answers: { token: "ghp_secret" },
+		});
+		let unattended = await invoke(createSDXC(), ["create", "other", ...argv.slice(2)], {
+			cwd,
+			interactive: false,
+		});
+
+		expect(answered.code).toBe(0);
+		expect(tokens.slice(0, 2)).toEqual([null, "Bearer ghp_secret"]);
+		expect(answered.stderr).toBe(
+			[
+				"Downloading acme/private",
+				"✗ Downloading acme/private",
+				"✓ GitHub token for acme/private ••••••••••",
+				"Downloading acme/private",
+				"✓ Downloading acme/private",
+				"",
+			].join("\n"),
+		);
+		expect(unattended.code).toBe(1);
+		expect(tokens.slice(2)).toEqual([null]);
+		expect(unattended.stderr).toBe(
+			[
+				"Downloading acme/private",
+				"✗ Downloading acme/private",
+				"GitHub has no repository acme/private; for a private repository, set GITHUB_TOKEN or GH_TOKEN",
+				"",
+			].join("\n"),
+		);
 	});
 });

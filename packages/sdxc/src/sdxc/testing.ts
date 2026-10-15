@@ -14,9 +14,10 @@ import { dirname, join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import { invoke } from "@sdxc/cli/test";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
-import { create } from "./create/index.js";
+import { createSDXC } from "./cli.js";
 import { defaultPackageRoot } from "./create/templates.js";
 
 /** What a spawned command printed and how it exited. */
@@ -33,15 +34,13 @@ export interface Spawned {
 export async function materialize(template: string, name = "app"): Promise<Result<string, Error>> {
 	let parent = await mkdtemp(join(tmpdir(), "sdxc-template-"));
 	let packageRoot = defaultPackageRoot();
-	let output = "";
-	let code = await create([name, "--template", template, "--no-git"], {
+	let created = await invoke(createSDXC(), ["create", name, "--template", template, "--no-git"], {
 		cwd: parent,
-		stdout: () => undefined,
-		stderr: (text) => {
-			output += text;
-		},
+		interactive: false,
 	});
-	if (code !== 0) return failure(new Error(`sdxc create exited with ${code}: ${output}`));
+	if (created.code !== 0) {
+		return failure(new Error(`sdxc create exited with ${created.code}: ${created.stderr}`));
+	}
 	let project = join(parent, name);
 	let manifest = JSON.parse(await readFile(join(project, "package.json"), "utf8")) as {
 		dependencies?: Record<string, string>;
