@@ -43,6 +43,11 @@ export interface CommandDefinition<
 	hidden?: boolean;
 	/** Its handler runs `ctx.task`, so the help lists `--no-progress`. */
 	tasks?: boolean;
+	/**
+	 * Every token after the command's name, `--help` and flags included, reaches its one variadic
+	 * argument as typed, for a command that hands its arguments to another program.
+	 */
+	passthrough?: boolean;
 }
 
 /** A declared command. */
@@ -57,6 +62,7 @@ export interface Command<
 	readonly examples: readonly string[];
 	readonly hidden: boolean;
 	readonly tasks: boolean;
+	readonly passthrough: boolean;
 }
 
 /** What a group holds besides its members. */
@@ -140,6 +146,7 @@ export function command<
 		examples: definition.examples ?? [],
 		hidden: definition.hidden === true,
 		tasks: definition.tasks === true,
+		passthrough: definition.passthrough === true,
 	};
 }
 

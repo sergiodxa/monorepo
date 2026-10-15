@@ -50,6 +50,8 @@ export interface Entry {
 	shorts: ReadonlyMap<string, FlagEntry>;
 	/** Its handler runs tasks, so the help lists `--no-progress`. */
 	tasks: boolean;
+	/** Every token after its name reaches its variadic argument unparsed. */
+	passthrough: boolean;
 }
 
 /** The whole indexed contract. */
@@ -65,8 +67,9 @@ export interface Tree {
  *
  * @throws Error When a command or group appears twice in the tree, a flag takes a reserved name
  * (`help`, `version`, `progress`, `-h`) or a name starting with `no-`, two flags of one command
- * share a name, or a variadic argument is not the last one. Each is a contract mistake that
- * would make a command unreachable or ambiguous.
+ * share a name, a variadic argument is not the last one, or a passthrough command declares
+ * flags or anything but one variadic argument. Each is a contract mistake that would make a
+ * command unreachable or ambiguous.
  */
 export function buildTree(name: string, root: Group): Tree {
 	let entries = new Map<Node, Entry>();
@@ -111,6 +114,10 @@ export function buildTree(name: string, root: Group): Tree {
 			}
 			args.push({ key, spec });
 		});
+		let passthrough = !isGroup(node) && node.passthrough;
+		if (passthrough && (flags.length > 0 || args.length !== 1 || !args[0]?.spec.variadic)) {
+			throw new Error(`${title}: a passthrough command takes one variadic argument and no flags`);
+		}
 		let entry: Entry = {
 			node,
 			path,
@@ -122,6 +129,7 @@ export function buildTree(name: string, root: Group): Tree {
 			longs,
 			shorts,
 			tasks: declaration.tasks,
+			passthrough,
 		};
 		entries.set(node, entry);
 		for (let long of longs.keys()) owners.set(long, [...(owners.get(long) ?? []), entry]);

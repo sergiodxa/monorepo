@@ -123,6 +123,13 @@ A group of commands keyed by name, with an optional `description` and `hidden`; 
 
 One command: `description`, `arguments`, `flags`, `examples` for its help, `hidden`, and `tasks: true` when its handler runs `ctx.task`, which lists `--no-progress` in its help. Its arguments and flags type the handler's `ctx.arguments` and `ctx.flags`.
 
+`passthrough: true` hands every token after the command's name, `--help` and flags included, to its one variadic argument as typed, for a command that runs another program with them:
+
+```typescript
+let run = command({ arguments: { args: argument.variadic(s.string()) }, passthrough: true });
+// prog run users find --limit 5  →  ctx.arguments.args: ["users", "find", "--limit", "5"]
+```
+
 ### `argument(schema: StandardSchemaV1, options?: SingleArgumentOptions): Argument`
 
 A positional argument parsed through `schema`; `options` take `optional`, `default`, `prompt`, `description` and `valueName`. Arguments are read in declaration order.

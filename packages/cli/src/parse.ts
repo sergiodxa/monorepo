@@ -111,6 +111,7 @@ export function parseArgv(tree: Tree, argv: readonly string[], withVersion: bool
 			parsed.issues.length = groupIssues;
 			replay(tree, parsed, atGroup);
 			groupIssues = parsed.issues.length;
+			if (child.passthrough) rest = true;
 			continue;
 		}
 		parsed.positionals.push(token);

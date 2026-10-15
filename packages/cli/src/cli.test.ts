@@ -483,6 +483,60 @@ describe("stdin", () => {
 	});
 });
 
+describe("passthrough", () => {
+	/** A program whose `run` hands every token after its name to another program. */
+	let program = commands({
+		run: command({
+			description: "Run the app's own command line",
+			arguments: { args: argument.variadic(s.string()) },
+			passthrough: true,
+		}),
+	});
+
+	/** The CLI under test, printing the tokens `run` received. */
+	function forwarding() {
+		let cli = createCLI({ name: "prog", commands: program });
+		cli.map(program.run, (ctx) => {
+			ctx.stdout(`${JSON.stringify(ctx.arguments.args)}\n`);
+			return success();
+		});
+		return cli;
+	}
+
+	test("hands flags and --help after the command's name through unparsed", async () => {
+		let run = await invoke(forwarding(), ["run", "users", "find", "--limit", "5", "-x", "--help"]);
+
+		expect(run.code).toBe(0);
+		expect(run.stdout).toBe('["users","find","--limit","5","-x","--help"]\n');
+	});
+
+	test("hands nothing through when nothing follows the command's name", async () => {
+		let run = await invoke(forwarding(), ["run"]);
+
+		expect(run.stdout).toBe("[]\n");
+	});
+
+	test("still answers --help written before the command's name", async () => {
+		let run = await invoke(forwarding(), ["--help"]);
+
+		expect(run.stdout).toContain("run  Run the app's own command line");
+	});
+
+	test("refuses a passthrough command with flags", () => {
+		let invalid = commands({
+			run: command({
+				arguments: { args: argument.variadic(s.string()) },
+				flags: { quiet: flag.boolean("quiet") },
+				passthrough: true,
+			}),
+		});
+
+		expect(() => createCLI({ name: "prog", commands: invalid })).toThrow(
+			"a passthrough command takes one variadic argument and no flags",
+		);
+	});
+});
+
 describe("types", () => {
 	test("types arguments and flags from the contract", () => {
 		createCommand(CONTRACT.ui.add, (ctx) => {
