@@ -138,8 +138,8 @@ Run these after editing and fix what they report:
 
 ## Documentation
 
-- \`@sdxc/auth\`: https://sdxc.sergiodxa.com/api/auth.md
-- \`@sdxc/jwt\`: https://sdxc.sergiodxa.com/api/jwt.md
+- \`@sdxc/auth\`: https://sdxc.dev/api/auth.md
+- \`@sdxc/jwt\`: https://sdxc.dev/api/jwt.md
 `;
 
 describe("sdxc upgrade --prompt", () => {

@@ -29,7 +29,7 @@ import { projectImports, readManifest } from "./project.js";
 const RELEASES = "https://github.com/sergiodxa/monorepo/releases";
 
 /** Each package's reference page, as Markdown an agent reads directly. */
-const DOCUMENTATION = "https://sdxc.sergiodxa.com/api";
+const DOCUMENTATION = "https://sdxc.dev/api";
 
 /** Remix's release notes, `<REMIX_RELEASES>/tag/remix@<version>`. */
 const REMIX_RELEASES = "https://github.com/remix-run/remix/releases";
