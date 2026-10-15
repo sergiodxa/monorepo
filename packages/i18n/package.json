@@ -7,6 +7,7 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./middleware": "./src/middleware.ts",
+		"./middleware/cli": "./src/cli.ts",
 		"./ui": "./src/ui/index.ts"
 	},
 	"scripts": {
@@ -17,9 +18,16 @@
 		"@sdxc/messageformat": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		}
 	}
 }

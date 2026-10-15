@@ -14,6 +14,7 @@ The package has three entry points:
 
 - `@sdxc/i18n`: translators, the language detector and `getClientLocales`; runs in the browser too.
 - `@sdxc/i18n/middleware`: the `i18n` middleware for `remix/router`.
+- `@sdxc/i18n/middleware/cli`: the `i18n` middleware for an [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) command line, which installs alongside.
 - `@sdxc/i18n/ui`: `IntlProvider`, `intl`, `setIntl` and `Trans` for `remix/component`.
 
 ## Usage
@@ -157,6 +158,17 @@ Default export of `@sdxc/i18n/middleware`. Sets `context.locale` and `context.in
 - `options.detection`: A `LanguageDetectorOptions`; its `fallbackLanguage` also answers missing keys
 - `options.resources`: Bundles keyed by language
 
+Both middleware entries publish under the same context keys, `CurrentLocale` and `CurrentIntl`, exported from each, so code reading `ctx.get(CurrentIntl)` works in a route or a command.
+
+### `i18n(options: TranslatorOptions): CommandMiddleware`
+
+Default export of `@sdxc/i18n/middleware/cli`, taking the same options as `createTranslator`. It installs three properties on an `@sdxc/cli` command's context:
+
+- `ctx.translate`: the `createTranslator` factory (key `Translators`), for text the command writes to someone else: `ctx.translate(user.language)` answers a `Translation` whose `locale` is the language it bound to
+- `ctx.locale` and `ctx.intl`: the command's own output in the language of whoever runs it, from the first of `LC_ALL`, `LC_MESSAGES` and `LANG` that is set (`es_AR.UTF-8` matches `es-AR`, then `es`); `C`, `POSIX`, an unsupported language or no variable binds `fallbackLanguage`
+
+Message errors become `i18n.error` warnings on the run's `@sdxc/logger` log unless `options.onError` is given.
+
 ### `IntlProvider`
 
 From `@sdxc/i18n/ui`. Publishes its `intl` prop to every descendant and renders `children`; render it with a new `I18n` to switch language.
@@ -220,6 +232,10 @@ Setting `findLocale` puts `custom` first in the default order; returning `null` 
 #### `Translate`, `TranslateParts`, `I18nErrorHandler`, `I18nOptions`, `I18nMiddlewareOptions`, `TranslatorOptions`, `Translation`, `Translator`
 
 The function and option types used above. `I18nMiddlewareOptions` comes from `@sdxc/i18n/middleware`; the rest from `@sdxc/i18n`.
+
+#### `CurrentLocale`, `CurrentIntl` and `Translators`
+
+The context keys, from `@sdxc/i18n/middleware` (`CurrentLocale`, `CurrentIntl`) and `@sdxc/i18n/middleware/cli` (all three), for code that reads by key: `ctx.get(CurrentIntl)`. Importing the command-line entry adds `locale: string` and `intl: I18n` to `@sdxc/cli`'s `CommandContext`.
 
 ## Pattern: Reading The Language From The Session
 
@@ -330,6 +346,46 @@ export async function sendDigest(user: { email: string; language: string; unread
 	});
 }
 ```
+
+## Pattern: Sending A Translated Email From A Command
+
+An admin command writes its own output in the developer's language and the email in the recipient's, using the same bundles the routes use.
+
+```typescript
+import { argument, command, commands, createCLI, failure, success } from "@sdxc/cli";
+import i18n from "@sdxc/i18n/middleware/cli";
+import * as s from "remix/data-schema";
+
+import en from "./locales/en.js";
+import es from "./locales/es.js";
+
+let contract = commands({
+	invites: commands({ resend: command({ arguments: { email: argument(s.string()) } }) }),
+});
+
+let cli = createCLI({
+	name: "app",
+	commands: contract,
+	middleware: [
+		i18n({ resources: { en, es }, supportedLanguages: ["en", "es"], fallbackLanguage: "en" }),
+	],
+});
+
+cli.map(contract.invites.resend, async (ctx) => {
+	let user = await findUserByEmail(ctx.arguments.email);
+	if (user === null) return failure(new Error(ctx.intl.t("cli.userNotFound")));
+
+	let { locale, t } = ctx.translate(user.language);
+	await sendEmail({ to: user.email, language: locale, subject: t("invite.subject") });
+
+	ctx.stdout(`${ctx.intl.t("cli.inviteSent", { email: user.email })}\n`);
+	return success();
+});
+
+process.exitCode = await cli.run(process.argv.slice(2));
+```
+
+With `LANG=es_AR.UTF-8` the command reports in Spanish, whatever language the email went out in.
 
 ## Pattern: Hydrating Islands In The Browser
 
