@@ -211,6 +211,13 @@ export const SDXC_COMMANDS = commands({
 				dryRun: DRY_RUN_FLAG,
 			},
 		}),
+		command: command({
+			description: "A command-line command in app/commands, declared and mapped",
+			tasks: true,
+			arguments: { name: nameArgument("command", "users/grant") },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			examples: ["make command users/grant"],
+		}),
 		stubs: command({
 			description: "Copy the built-in stubs into make.stubs to edit",
 			arguments: {

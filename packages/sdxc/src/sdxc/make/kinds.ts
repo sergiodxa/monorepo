@@ -20,7 +20,8 @@ export type KindName =
 	| "policy"
 	| "initializer"
 	| "email"
-	| "mcp";
+	| "mcp"
+	| "command";
 
 /** Where one kind's files go and which placeholders their stubs may use. */
 export interface Kind {
@@ -44,7 +45,9 @@ export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "sp
 /**
  * Every kind, in the order `sdxc make --help` lists them. `path` is the declaration's key path
  * in its map (`trials.expire`), `routes` the route contract's specifier, `tool` the MCP tool
- * name, `uri` an MCP resource's pattern, `model` the factory's model specifier.
+ * name, `uri` an MCP resource's pattern, `model` the factory's model specifier. A command's
+ * `command` is the words typed to run it (`users grant`), `member` the property access that
+ * reaches its declaration (`.users.grant`), and `words` those words as string literals.
  */
 export const KINDS: Readonly<Record<KindName, Kind>> = {
 	controller: {
@@ -106,6 +109,13 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		tests: true,
 		nested: true,
 		placeholders: ["path", "tool", "uri"],
+	},
+	command: {
+		folder: "app/commands",
+		extension: ".ts",
+		tests: true,
+		nested: true,
+		placeholders: ["command", "member", "words"],
 	},
 };
 

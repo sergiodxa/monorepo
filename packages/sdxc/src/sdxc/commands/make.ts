@@ -108,7 +108,8 @@ function plain<
 		| "service"
 		| "policy"
 		| "initializer"
-		| "email",
+		| "email"
+		| "command",
 >(kind: Kind) {
 	return createCommand(SDXC_COMMANDS.make[kind], {
 		middleware: MAKE_MIDDLEWARE,
@@ -143,6 +144,9 @@ export const initializer = plain("initializer");
 
 /** `sdxc make email`. */
 export const email = plain("email");
+
+/** `sdxc make command`, which declares the command and maps its handler on the command line. */
+export const command = plain("command");
 
 /** `sdxc make stubs`, which copies the built-in stubs of the named kinds, or every kind. */
 export const stubs = createCommand(SDXC_COMMANDS.make.stubs, {

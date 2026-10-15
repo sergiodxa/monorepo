@@ -568,11 +568,14 @@ routes, jobs and MCP tools are.
         the `USAGE` string are gone, and the tests run on `invoke()`
   - [x] Its help sections return as flag `heading`s, its schemas stop naming the flag, and the
         run reads `ctx.env` and `ctx.cwd`, so `invoke()` isolates it from the process
-- [ ] Phase 4: App command lines
+- [x] Phase 4: App command lines
   - [x] `sdxc run`, running the project's `bootstrap/cli.ts` with its runtime
   - [x] The `app/commands/` row and rule in the app layout; the `app` template ships
         `app/commands/index.ts` with an `about` command and its test, `app/initializers/cli.ts`
         building the command line with `log()` and mapping each handler through `lazy()`, the
         two-line `bootstrap/cli.ts` that runs it, the `cli` script and `packageManager: bun`, so
         `sdxc run` picks Bun before the first install
-  - [ ] `sdxc make command`
+  - [x] `sdxc make command`, writing `app/commands/<name>.ts` and its `invoke()` test, declaring
+        it in `app/commands/index.ts` (each folder a `commands({ … })` group, the key the word
+        typed) and mapping it in the initializer that calls `createCLI`; verified by the
+        declare-and-map test, which also runs a generated command under Bun

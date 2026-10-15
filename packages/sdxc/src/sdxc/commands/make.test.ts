@@ -18,7 +18,7 @@ import { unwrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
-import { materialize, typecheck } from "../testing.js";
+import { materialize, runCommandLine, typecheck } from "../testing.js";
 
 /** Fixture directories created by the current test, removed after it. */
 const DIRECTORIES: string[] = [];
@@ -67,6 +67,7 @@ describe("make", () => {
 		["initializer", "cache", "app/initializers/cache.ts"],
 		["email", "welcome", "app/emails/welcome.tsx"],
 		["mcp", "get-post", "app/mcp/tools/get-post.ts"],
+		["command", "users/grant", "app/commands/users/grant.ts"],
 	])("%s writes %s and its test", async (kind, name, path) => {
 		let root = await project();
 
@@ -283,7 +284,7 @@ describe("make", () => {
 
 describe("declaring and mapping", () => {
 	test(
-		"a job, controller, tool and resource are declared, mapped and type check in the app template",
+		"a job, controller, tool, resource and command are declared, mapped and type check in the app template",
 		{ timeout: 120_000 },
 		async () => {
 			let root = unwrap(await materialize("app"));
@@ -305,6 +306,9 @@ describe("declaring and mapping", () => {
 				["policy", "can-edit"],
 				["initializer", "cache"],
 				["email", "welcome"],
+				["command", "users/grant"],
+				["command", "users/send-digest"],
+				["command", "reports/daily/send"],
 			];
 			for (let argv of runs) {
 				let result = await invoke(argv, root);
@@ -345,12 +349,58 @@ describe("declaring and mapping", () => {
 				'mcp.resources.map(resourceset.article, lazy(() => import("~/app/mcp/resources/article")));',
 			);
 
+			let commands = await read("app/commands/index.ts");
+			let cli = await read("app/initializers/cli.ts");
+			expect(commands).toContain(
+				'\tusers: commands({\n\t\tgrant: command({ description: "Grant" }),\n\t\t"send-digest": command({ description: "Send digest" }),\n\t}),',
+			);
+			expect(commands).toContain(
+				'\treports: commands({\n\t\tdaily: commands({\n\t\t\tsend: command({ description: "Send" }),\n\t\t}),\n\t}),',
+			);
+			expect(cli).toContain(
+				'cli.map(commandset.users["send-digest"], lazy(() => import("~/app/commands/users/send-digest")));',
+			);
+			expect(await read("app/commands/users/send-digest.ts")).toContain(
+				'createCommand(commandset.users["send-digest"],',
+			);
+			let ran = await runCommandLine(root, ["users", "send-digest"]);
+			expect(ran.output).toMatch(/^Send digest\n/);
+			expect(ran.code).toBe(0);
+
 			let checked = await typecheck(root);
 
 			expect(checked.output).toBe("");
 			expect(checked.code).toBe(0);
 		},
 	);
+
+	test("a command name whose folder is already a command prints both edits", async () => {
+		let root = await project();
+		await mkdir(join(root, "app/commands"), { recursive: true });
+		await mkdir(join(root, "app/initializers"), { recursive: true });
+		await writeFile(
+			join(root, "app/commands/index.ts"),
+			'import { command, commands } from "sdxc/cli";\n\nexport default commands({\n\tabout: command({}),\n});\n',
+		);
+		let initializer =
+			'import { createCLI, lazy } from "sdxc/cli";\n\nimport commandset from "~/app/commands";\n\nexport const cli = createCLI({ name: "blog", commands: commandset });\n';
+		await writeFile(join(root, "app/initializers/cli.ts"), initializer);
+
+		let result = await invoke(["command", "about/more", "--no-test"], root);
+
+		expect(result.stdout).toBe(
+			[
+				"Wrote app/commands/about/more.ts",
+				"Declare and map it by hand, since `about` is a command, not a group:",
+				"In app/commands/index.ts, in commands({ … }), inside a commands({ … }) group for each of about:",
+				'  more: command({ description: "More" }),',
+				"In app/initializers/cli.ts:",
+				'  cli.map(commandset.about.more, lazy(() => import("~/app/commands/about/more")));',
+				"",
+			].join("\n"),
+		);
+		expect(await readFile(join(root, "app/initializers/cli.ts"), "utf8")).toBe(initializer);
+	});
 
 	test("reuses the group whose handlers already live in the folder", async () => {
 		let root = await project();

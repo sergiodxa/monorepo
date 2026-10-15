@@ -1,7 +1,7 @@
 /**
- * Declares and maps what `make job`, `make controller` and `make mcp` generate: the entry in
- * the job map, route contract or MCP declaration module, and the mapping in the initializer
- * that serves it, so the new handler answers as soon as the command finishes. Both edits are
+ * Declares and maps what `make job`, `make controller`, `make mcp` and `make command` generate:
+ * the entry in the job map, route contract, MCP or command declaration module, and the mapping
+ * in the initializer that serves it, so the new handler answers as soon as the command finishes. Both edits are
  * computed before anything is written; when either cannot be placed, neither is made and the
  * command prints them for the user instead, so a declaration never ships without its mapping.
  *
@@ -20,12 +20,13 @@ import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import type { Name } from "./names.js";
 
+import { memberAccess } from "./generate.js";
 import { ensureImport, resolvesTo, specifierFor } from "./imports.js";
 import { camel } from "./names.js";
 
 /** What to declare and map, as the command line asked for it. */
 export interface DeclarationRequest {
-	kind: "job" | "controller" | "mcp";
+	kind: "job" | "controller" | "mcp" | "command";
 	name: Name;
 	/** `cron` for a scheduled job, `resource` for an MCP resource, `null` otherwise. */
 	variant: string | null;
@@ -79,10 +80,18 @@ const ROUTE_HELPERS: Readonly<Record<string, string>> = {
 	form: "form",
 };
 
+/** The name an instance gets when the initializer that creates it cannot be read, by factory. */
+const INSTANCE_NAMES: Readonly<Record<string, string>> = {
+	createRouter: "router",
+	createHandler: "mcp",
+	createCLI: "cli",
+};
+
 /** Plans the declaration and mapping for `request` in the project at `root`. */
 export async function declare(request: DeclarationRequest, root: string): Promise<Declared> {
 	if (request.kind === "job") return declareJob(request, root);
 	if (request.kind === "controller") return declareController(request, root);
+	if (request.kind === "command") return declareCommand(request, root);
 	return declareMcp(request, root);
 }
 
@@ -372,6 +381,155 @@ async function declareMcp(request: DeclarationRequest, root: string): Promise<De
 }
 
 /**
+ * Declares a command in `app/commands/index.ts` and maps it on the command line. Each folder of
+ * the name is a `commands({ … })` group, created when missing, and the command's key is the
+ * word typed to run it, so `users/send-digest` runs as `users send-digest`.
+ */
+async function declareCommand(request: DeclarationRequest, root: string): Promise<Declared> {
+	let module = "app/commands/index";
+	let declarations = `${module}.ts`;
+	let segments = request.name.segments;
+	let groups = segments.slice(0, -1);
+	let leaf = segments.at(-1) ?? "";
+	let initializer = await findInitializer(root, module, "createCLI");
+	let instance = initializer === null ? "cli" : instanceOf(initializer, "createCLI");
+	let local =
+		initializer === null ? "commandset" : (defaultLocal(initializer, module) ?? "commandset");
+	let description = JSON.stringify(request.title);
+	let handler =
+		initializer === null ? `~/${request.handler}` : handlerSpecifier(initializer, request.handler);
+	let statement = (lazy: string) =>
+		`${instance}.map(${local}${memberAccess(segments)}, ${lazy}(() => import(${JSON.stringify(handler)})));`;
+	let manual = (reason: string): Declared => ({
+		kind: "manual",
+		path: segments.join("."),
+		reason,
+		instructions: instructions(
+			`${declarations}, in commands({ … })${groups.length > 0 ? `, inside a commands({ … }) group for each of ${groups.join(", ")}` : ""}`,
+			`${keyText(leaf)}: command({ description: ${description} }),`,
+			initializer?.path ?? "the command line's initializer",
+			statement("lazy"),
+		),
+	});
+	if (initializer === null)
+		return manual("no initializer in app/initializers/ creates the command line");
+	let file = await readSource(root, declarations);
+	if (isFailure(file)) return manual(`${declarations} could not be read`);
+
+	let group = file.data.references.find(
+		(reference) =>
+			reference.kind === "import" && reference.names.some((bound) => bound.imported === "commands"),
+	);
+	let groupLocal = group?.names.find((bound) => bound.imported === "commands")?.local;
+	if (group === undefined || groupLocal === undefined)
+		return manual(`${declarations} does not import commands()`);
+	let builder = ensureImport(
+		declarations,
+		file.data.source,
+		{ kind: "named", name: "command" },
+		(specifier) => specifier === group.specifier,
+		group.specifier,
+		"command",
+	);
+	if (isFailure(builder)) return manual(builder.error.message);
+	let source = builder.data.source;
+
+	let depth = 0;
+	for (; depth < groups.length; depth += 1) {
+		let level = groups[depth] ?? "";
+		let probe = addProperty(declarations, source, {
+			call: groupLocal,
+			path: groups.slice(0, depth),
+			key: level,
+			value: "0",
+		});
+		if (isSuccess(probe)) break;
+		if (probe.error.code !== "duplicate-key") return manual(probe.error.message);
+		let isGroup = new RegExp(
+			`(?:^|[\\s{,])["']?${escape(level)}["']?\\s*:\\s*${escape(groupLocal)}\\(`,
+		);
+		if (!isGroup.test(source)) {
+			return manual(`\`${groups.slice(0, depth + 1).join(".")}\` is a command, not a group`);
+		}
+	}
+	let entry = `${keyText(leaf)}: ${builder.data.local}({ description: ${description} })`;
+	let added =
+		depth === groups.length
+			? addProperty(declarations, source, {
+					call: groupLocal,
+					path: groups,
+					key: leaf,
+					value: `${builder.data.local}({ description: ${description} })`,
+				})
+			: addProperty(declarations, source, {
+					call: groupLocal,
+					path: groups.slice(0, depth),
+					key: groups[depth] ?? "",
+					value: groupValue(groupLocal, groups.slice(depth + 1), entry),
+				});
+	if (isFailure(added)) return manual(added.error.message);
+
+	let cliSource = initializer.references.find(
+		(reference) =>
+			reference.kind === "import" &&
+			reference.names.some((bound) => bound.imported === "createCLI"),
+	)?.specifier;
+	if (cliSource === undefined) return manual(`${initializer.path} does not import createCLI`);
+	let lazy = ensureImport(
+		initializer.path,
+		initializer.source,
+		{ kind: "named", name: "lazy" },
+		(specifier) => specifier === cliSource,
+		cliSource,
+		"lazy",
+	);
+	if (isFailure(lazy)) return manual(lazy.error.message);
+	let withLazy = { ...initializer, source: lazy.data.source };
+	let mapped = mapAfter(
+		withLazy,
+		module,
+		local,
+		statement(lazy.data.local),
+		`${instance}.map`,
+		"createCLI",
+	);
+	if (isFailure(mapped)) return manual(mapped.error.message);
+	return {
+		kind: "edits",
+		path: segments.join("."),
+		edits: [
+			{ path: declarations, before: file.data.source, after: added.data.source },
+			{ path: initializer.path, before: initializer.source, after: mapped.data },
+		],
+	};
+}
+
+/**
+ * A `commands({ … })` group holding `entry`, wrapped in one more group for each of `levels`,
+ * outermost first, for the folders of a command name that have no group yet.
+ */
+function groupValue(call: string, levels: readonly string[], entry: string): string {
+	let inner = entry;
+	for (let level of [...levels].reverse()) {
+		inner = `${keyText(level)}: ${call}({\n${indentTab(inner)},\n})`;
+	}
+	return `${call}({\n${indentTab(inner)},\n})`;
+}
+
+/** A command's key as an identifier when it is one, quoted otherwise. */
+function keyText(key: string): string {
+	return /^[A-Za-z_$][\w$]*$/.test(key) ? key : JSON.stringify(key);
+}
+
+/** Every line of `text` indented by one tab. */
+function indentTab(text: string): string {
+	return text
+		.split("\n")
+		.map((line) => `\t${line}`)
+		.join("\n");
+}
+
+/**
  * `file` with the declarations module imported as `local` (added when missing) and `statement`
  * after the last call to `call`, or after the instance `factory` creates when there is none.
  */
@@ -460,10 +618,7 @@ function instanceOf(file: SourceFile, factory: string): string {
 	let match = new RegExp(`(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*=\\s*${factory}\\(`).exec(
 		file.source,
 	);
-	return (
-		match?.[1] ??
-		(factory === "createRouter" ? "router" : factory === "createHandler" ? "mcp" : "dispatcher")
-	);
+	return match?.[1] ?? INSTANCE_NAMES[factory] ?? "dispatcher";
 }
 
 /** The local name `file` binds the default export of `module` to, or `null`. */

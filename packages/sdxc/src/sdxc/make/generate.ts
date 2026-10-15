@@ -154,6 +154,9 @@ async function placeholders(
 		tool: name.segments.map((segment) => segment.replaceAll("-", "_")).join("_"),
 		uri: `${await resourceScheme(root)}://${name.segments.join("/")}`,
 		model: `~/app/models/${name.segments.join("/")}`,
+		command: name.segments.join(" "),
+		member: memberAccess(name.segments),
+		words: name.segments.map((segment) => JSON.stringify(segment)).join(", "),
 	};
 	let values: Record<string, string> = {};
 	for (let key of [...COMMON_PLACEHOLDERS, ...KINDS[request.kind].placeholders]) {
@@ -161,6 +164,19 @@ async function placeholders(
 		if (value !== undefined) values[key] = value;
 	}
 	return values;
+}
+
+/**
+ * The property access that reaches a command's declaration from its contract: `.users.grant`,
+ * with a segment that is no identifier read by its quoted key (`["send-digest"]`), since a
+ * command's key is the word typed to run it.
+ */
+export function memberAccess(segments: readonly string[]): string {
+	return segments
+		.map((segment) =>
+			/^[A-Za-z_$][\w$]*$/.test(segment) ? `.${segment}` : `[${JSON.stringify(segment)}]`,
+		)
+		.join("");
 }
 
 /**

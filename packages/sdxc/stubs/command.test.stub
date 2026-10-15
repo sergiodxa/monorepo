@@ -1,0 +1,18 @@
+/**
+ * The `{{command}}` command, run through the app's command line.
+ */
+
+import { invoke } from "sdxc/cli/test";
+import { describe, expect, test } from "vitest";
+
+import { cli } from "~/app/initializers/cli";
+
+describe("{{command}}", () => {
+	test("runs and exits 0", async () => {
+		let run = await invoke(cli, [{{words}}]);
+
+		expect(run.code).toBe(0);
+	});
+
+	test.todo("does the {{title}} work");
+});

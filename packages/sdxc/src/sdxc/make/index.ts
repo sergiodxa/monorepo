@@ -79,7 +79,7 @@ export async function make(
 		routes: input.routes ?? config.make.routes,
 	};
 	let declared: Declared | null = null;
-	if (kind === "job" || kind === "controller" || kind === "mcp") {
+	if (kind === "job" || kind === "controller" || kind === "mcp" || kind === "command") {
 		let segments = request.name.segments;
 		declared = await declare(
 			{
