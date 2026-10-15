@@ -1,0 +1,29 @@
+{
+	"name": "@sdxc/cli",
+	"version": "0.0.1",
+	"description": "Build command-line tools with generated help, prompts bound to flags, tasks and a test harness",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./test": "./src/test.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"remix": {
+			"optional": true
+		}
+	}
+}

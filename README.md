@@ -308,6 +308,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
 | Package                                                   | Description                                                                                       |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| [@sdxc/cli](packages/cli)                                 | Build command-line tools with generated help, prompts bound to flags, tasks and a test harness    |
 | [@sdxc/data-model](packages/data-model)                   | Models over remix/data-table tables with scopes, async callbacks and typed meta fields            |
 | [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request or a job             |
 | [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                              |

@@ -660,6 +660,23 @@
         "remix": "3.0.0",
       },
     },
+    "packages/cli": {
+      "name": "@sdxc/cli",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
+      },
+      "optionalPeers": [
+        "remix",
+      ],
+    },
     "packages/cloudflare-mocks": {
       "name": "@sdxc/cloudflare-mocks",
       "version": "0.0.1",
@@ -2713,6 +2730,8 @@
     "@sdxc/captcha": ["@sdxc/captcha@workspace:packages/captcha"],
 
     "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
+
+    "@sdxc/cli": ["@sdxc/cli@workspace:packages/cli"],
 
     "@sdxc/cloudflare-mocks": ["@sdxc/cloudflare-mocks@workspace:packages/cloudflare-mocks"],
 
