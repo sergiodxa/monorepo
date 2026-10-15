@@ -6,6 +6,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./cli": "./src/cli.ts",
 		"./jobs": "./src/jobs.ts",
 		"./router": "./src/router.ts",
 		"./testing": "./src/testing.ts"
@@ -20,6 +21,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20261011.1",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
@@ -31,11 +33,15 @@
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/sample": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		},
 		"@sdxc/jobs": {
 			"optional": true
 		},

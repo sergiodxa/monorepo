@@ -16,8 +16,9 @@ npm add @sdxc/data-model
 Tables come from `remix/data-table` in [`remix`](https://www.npmjs.com/package/remix); writes
 answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and fail
 with the `ValidationError` from [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate).
-The `./jobs` entry point needs [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs) and
-`./testing` needs [`@sdxc/sample`](https://www.npmjs.com/package/@sdxc/sample).
+The `./jobs` entry point needs [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs), `./cli`
+needs [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) and `./testing` needs
+[`@sdxc/sample`](https://www.npmjs.com/package/@sdxc/sample).
 
 ## Usage
 
@@ -101,6 +102,28 @@ router.get(routes.users.show, async (ctx) => {
 
 The context function runs once per request, on the first model access, so it reads whatever
 earlier middleware published. An entry written as an import loads on its first call.
+
+`./jobs` and `./cli` export the same `models()` for a job dispatcher and an `@sdxc/cli` command
+line, publishing under the same `Models` key:
+
+```typescript
+import { createCLI, failure, success } from "@sdxc/cli";
+import { models } from "@sdxc/data-model/cli";
+import { database } from "@sdxc/database-middleware/cli";
+
+let cli = createCLI({
+	name: "app",
+	commands: contract,
+	middleware: [database(db), models(registry, (ctx) => ({ db: ctx.db }))],
+});
+
+cli.map(contract.users.find, async (ctx) => {
+	let user = await ctx.models.users.findByEmail(ctx.arguments.email);
+	if (user === null) return failure(new Error(`No user ${ctx.arguments.email}`));
+	ctx.stdout(`${user.id}\t${user.name}\n`);
+	return success();
+});
+```
 
 ### Reach services and defer side effects
 
@@ -258,11 +281,11 @@ Meta field codecs: `text`, `integer`, `number`, `boolean`, `timestamp`, `url` (`
 `list(field)`. Every field reads as `T | undefined` unless it declares `.default(value)`;
 `.required()` makes `create` refuse a write without it.
 
-### `models(registry, context, options?)` from `./router` and `./jobs`
+### `models(registry, context, options?)` from `./router`, `./jobs` and `./cli`
 
-Middleware publishing the registry bound to each request or job run as `ctx.models` (or
-`options.property`) and under the `Models` context key. `options.transactions` is passed to
-the binding.
+Middleware publishing the registry bound to each request, job run or command run as
+`ctx.models` (or `options.property`) and under the `Models` context key. `options.transactions`
+is passed to the binding.
 
 ### `NotFound`
 
