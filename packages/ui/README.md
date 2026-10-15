@@ -121,6 +121,7 @@ A page that sticks to baseline behavior ships no library JavaScript at all.
 | Import                | Contains                                                            |
 | --------------------- | ------------------------------------------------------------------- |
 | `@sdxc/ui`            | Every component and its compound parts.                             |
+| `@sdxc/ui/<name>`     | One component, by its file name: `@sdxc/ui/youtube-embed`.          |
 | `@sdxc/ui/mixins`     | Opt-in DOM behaviors applied through `mix`.                         |
 | `@sdxc/ui/behaviors`  | Headless state classes built on `TypedEventTarget`.                 |
 | `@sdxc/ui/animations` | CSS-only motion factories and the `durations`/`easings` tokens.     |
@@ -362,7 +363,7 @@ Recipes for a `mix` array: `floatingSurface()`, `surfaceInset()`, `hitArea()`, `
   `"?"`); `mod` is Command on Apple keyboards and Control elsewhere.
 - **Fields** — `resolveFieldWiring(id, options)`, `findPairedRangeInputs`.
 - **DOM** — `asCommandEvent`, `dispatchChange`, `isNewPrimaryPress`, `isPrintableKey`, `focusItem`,
-  `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`, `mergeStyle`, `prefersReducedMotion`, `writeCookie(name, value, maxAgeSeconds?)`,
+  `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`, `glyphEdges`, `mergeStyle`, `prefersReducedMotion`, `writeCookie(name, value, maxAgeSeconds?)`,
   `DISABLED_SELECTOR`, `DEFAULT_ICON_ARIA_HIDDEN`, `ONE_YEAR_SECONDS`.
 - **Accessibility checks** — `warnIfNoAccessibleName(props, children, message)` and
   `warnIfNoAccessibleLabel(props, message)`, development-only warnings.

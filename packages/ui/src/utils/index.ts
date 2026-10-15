@@ -19,6 +19,7 @@ export * from "./dispatch-change.js";
 export * from "./field-parts.js";
 export * from "./full-turn-radians.js";
 export * from "./geometry.js";
+export * from "./glyph-edges.js";
 export * from "./has-accessible-text.js";
 export * from "./hue-spectrum.js";
 export * from "./is-new-primary-press.js";
