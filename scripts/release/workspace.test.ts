@@ -292,7 +292,18 @@ describe("packageFromManifest", () => {
 		expect(umbrella.name).toBe("sdxc");
 		expect(umbrella.dependencies).toEqual(["@sdxc/result"]);
 		expect(umbrella.shippedPaths).toContain("packages/sdxc/package.json");
-		expect(umbrella.shippedPaths).toContain("packages/sdxc/templates");
+	});
+
+	test("ships the command line's templates and stubs folders as release inputs", () => {
+		let kit = packageFromManifest("kit", {
+			name: "@sdxc/kit",
+			bin: { sdxc: "./src/bin.ts" },
+			exports: { ".": "./src/cli.ts", "./config.schema.json": "./config.schema.json" },
+		});
+
+		expect(kit.shippedPaths).toContain("packages/kit/templates");
+		expect(kit.shippedPaths).toContain("packages/kit/stubs");
+		expect(kit.shippedPaths).toContain("packages/kit/config.schema.json");
 	});
 
 	test("counts a dependency on an unscoped workspace package as internal", () => {

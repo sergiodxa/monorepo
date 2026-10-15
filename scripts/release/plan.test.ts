@@ -128,6 +128,34 @@ describe("planRelease", () => {
 		});
 	});
 
+	test("ships the history package and its dependents in every release that ships anything", () => {
+		let packages = [...PACKAGES, pkg("kit", ["result"]), pkg("umbrella", ["kit", "jwt"])];
+		let published = new Map<string, Published | null>();
+		for (let member of packages) {
+			published.set(member.name, { version: "2026.9.1", gitHead: "a".repeat(40) });
+		}
+		let run = (touched: string[]) =>
+			unwrap(
+				planRelease({
+					packages,
+					touched: new Set(touched),
+					published,
+					force: false,
+					version: "2026.9.3",
+				}),
+			);
+
+		expect(reasons(run(["@sdxc/crypto"]))).toEqual({
+			"@sdxc/crypto": "changed",
+			"@sdxc/kit": "history",
+			"@sdxc/sample": "dependency",
+			"@sdxc/spec": "dependency",
+			"@sdxc/umbrella": "dependency",
+		});
+		expect(reasons(run(["@sdxc/result"]))["@sdxc/kit"]).toBe("dependency");
+		expect(run([]).members).toEqual([]);
+	});
+
 	test("cascades through dependencies only, so a devDependency-only dependent stays out", () => {
 		expect(plan(["@sdxc/result"]).order).not.toContain("@sdxc/tool");
 	});

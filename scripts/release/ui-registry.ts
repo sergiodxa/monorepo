@@ -1,6 +1,6 @@
 /**
  * The component registry `sdxc ui` copies from: one `registry/ui/<name>.json` per `@sdxc/ui`
- * component in the `sdxc` tarball, its source and test with every import already pointed at
+ * component in the `@sdxc/kit` tarball, its source and test with every import already pointed at
  * `sdxc/*`, so a copy matches the release installed beside it and needs no network.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -18,10 +18,11 @@ import { failure, isFailure, success, wrap } from "@sdxc/result";
 import ts from "typescript";
 
 import { run } from "./command.js";
+import { HISTORY_PACKAGE } from "./plan.js";
 import { WORKSPACE_SCOPE } from "./workspace.js";
 
 /** The package whose tarball carries the registry, beside the CLI that reads it. */
-export const UI_REGISTRY_PACKAGE = "sdxc";
+export const UI_REGISTRY_PACKAGE = HISTORY_PACKAGE;
 
 /** Where the entries go inside the staged package. */
 export const UI_REGISTRY_DIR = "registry/ui";

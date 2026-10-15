@@ -56,6 +56,8 @@ function renderSection(
 		lines.push("First release.");
 	} else if (member.reason === "dependency") {
 		lines.push(republishedBecause(member.name, memberNames, packages));
+	} else if (member.reason === "history") {
+		lines.push("Republished with this release's changelog and component registry.");
 	} else {
 		lines.push("Republished.");
 	}

@@ -14,6 +14,13 @@ import type { Package } from "./workspace.js";
 
 import { closeOverDependents, topologicalOrder } from "./workspace.js";
 
+/**
+ * The package carrying each release's changelog and component registry. It joins every release
+ * that ships anything, so those files always describe the release they ship in, and the `sdxc`
+ * umbrella, which depends on it, always ships at the same version.
+ */
+export const HISTORY_PACKAGE = "@sdxc/kit";
+
 /** The placeholder the bootstrap script publishes so a trusted publisher can be configured. */
 const BOOTSTRAP_VERSION = /^0\.0\.0-pre\.\d+$/;
 
@@ -25,9 +32,10 @@ export interface Published {
 
 /**
  * Why a package is in a release: `new` for its first dated version, `changed` when a commit
- * touched what it ships, `dependency` when only an internal pin moves. In precedence order.
+ * touched what it ships, `dependency` when only an internal pin moves, `history` when only the
+ * release's changelog and registry it carries move. In precedence order.
  */
-export type MemberReason = "new" | "changed" | "dependency";
+export type MemberReason = "new" | "changed" | "dependency" | "history";
 
 export interface Member {
 	name: string;
@@ -66,8 +74,9 @@ export function isNew(latest: string | null): boolean {
 
 /**
  * The public packages to release: the touched and new ones (every public one under `force`),
- * closed over their public dependents through runtime dependencies so every internal pin can
- * move to `version`, ordered dependencies first. A dependency cycle among them is the failure.
+ * plus {@link HISTORY_PACKAGE} whenever any ships, closed over their public dependents through
+ * runtime dependencies so every internal pin can move to `version`, ordered dependencies first.
+ * A dependency cycle among them is the failure.
  */
 export function planRelease({
 	packages,
@@ -83,11 +92,20 @@ export function planRelease({
 				(force || touched.has(pkg.name) || isNew(latestVersion(published, pkg.name))),
 		)
 		.map((pkg) => pkg.name);
-	let order = topologicalOrder(closeOverDependents(seeds, packages), packages);
+	let reached = closeOverDependents(seeds, packages);
+	let carrier = packages.find((pkg) => pkg.name === HISTORY_PACKAGE && !pkg.isPrivate);
+	let closed =
+		reached.size > 0 && carrier !== undefined && !reached.has(carrier.name)
+			? closeOverDependents([...reached, carrier.name], packages)
+			: reached;
+	let order = topologicalOrder(closed, packages);
 	if (isFailure(order)) return order;
 	let members = order.data.map((name) => ({
 		name,
-		reason: reasonFor(name, touched, published, force),
+		reason:
+			name === HISTORY_PACKAGE && !reached.has(name)
+				? ("history" as const)
+				: reasonFor(name, touched, published, force),
 	}));
 	return success({ version, members, order: order.data });
 }

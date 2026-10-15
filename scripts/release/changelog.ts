@@ -1,5 +1,5 @@
 /**
- * `changelog.jsonl`, the release history `sdxc upgrade` reads offline from the `sdxc` tarball:
+ * `changelog.jsonl`, the release history `sdxc upgrade` reads from the `@sdxc/kit` tarball:
  * one line per commit, per package, per release, from the same commit parsing as the GitHub
  * Release notes, with corrections folded into the notes they replace and a twelve-month window.
  *
@@ -21,10 +21,11 @@ import type { Package } from "./workspace.js";
 import { run } from "./command.js";
 import { attributeCommits, attributeCorrections, parseCommits } from "./commits.js";
 import { commitFiles, commitLog } from "./git.js";
+import { HISTORY_PACKAGE } from "./plan.js";
 import { REPO_ROOT } from "./workspace.js";
 
 /** The package whose tarball carries the changelog, beside the CLI that reads it. */
-export const CHANGELOG_PACKAGE = "sdxc";
+export const CHANGELOG_PACKAGE = HISTORY_PACKAGE;
 
 /** The file name inside the staged package, at its root. */
 export const CHANGELOG_FILE = "changelog.jsonl";
@@ -92,7 +93,7 @@ export function buildChangelog(releases: ReleaseCommits[], built: string): Chang
 }
 
 /**
- * Writes `changelog.jsonl` into the staged `sdxc` package for the release `version`: the
+ * Writes `changelog.jsonl` into the staged `@sdxc/kit` package for the release `version`: the
  * history of every earlier release tag, read from git, plus `current`, the commits this run
  * ships. The first release tag shipped no commits, as its GitHub Release did.
  */
