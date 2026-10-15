@@ -23,6 +23,7 @@ import { dirname, join, relative, resolve } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import { findModuleReferences } from "@sdxc/codemod";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import ts from "typescript";
 
@@ -36,13 +37,6 @@ const TEST_FILE = /\.(?:workers\.)?test\.tsx?$/;
 
 /** The emitted files whose specifiers a consumer's loader resolves. */
 const EMITTED_FILE = /\.(?:js|d\.ts)$/;
-
-/** Every position a module specifier takes in emitted output: imports, re-exports, `import()`. */
-const SPECIFIER_PATTERNS = [
-	/\bfrom\s+["']([^"']+)["']/g,
-	/^\s*import\s+["']([^"']+)["']/gm,
-	/\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
-];
 
 /** Documents npm renders on the package page, copied when the package has them. */
 const DOCUMENTS = ["README.md", "LICENSE.md"];
@@ -100,7 +94,7 @@ export async function createStagingRoot(): Promise<Result<string, Error>> {
 /**
  * Fails when an emitted `.js` or `.d.ts` file imports through `/src/` or resolves outside
  * `dist/`, either of which means the build reached into the workspace for what a dependency
- * should provide.
+ * should provide. Import types count, since a declaration file names dependencies through them.
  */
 export async function checkDistSpecifiers(stagingDir: string): Promise<Result<void, Error>> {
 	let distDir = join(stagingDir, "dist");
@@ -108,7 +102,9 @@ export async function checkDistSpecifiers(stagingDir: string): Promise<Result<vo
 	if (isFailure(sources)) return sources;
 	let offenders: string[] = [];
 	for (let [file, source] of sources.data) {
-		for (let specifier of specifiersIn(source)) {
+		let references = findModuleReferences(file, source, { importTypes: true });
+		if (isFailure(references)) return references;
+		for (let { specifier } of references.data) {
 			if (escapesDist(specifier, file, distDir)) {
 				offenders.push(`${relative(stagingDir, file)}: ${specifier}`);
 			}
@@ -233,17 +229,6 @@ async function walk(dir: string): Promise<string[]> {
 		),
 	);
 	return nested.flat();
-}
-
-function specifiersIn(source: string): string[] {
-	let specifiers: string[] = [];
-	for (let pattern of SPECIFIER_PATTERNS) {
-		for (let match of source.matchAll(pattern)) {
-			let specifier = match[1];
-			if (specifier !== undefined) specifiers.push(specifier);
-		}
-	}
-	return specifiers;
 }
 
 /** A specifier that names a source tree, or a relative one that resolves above `dist/`. */

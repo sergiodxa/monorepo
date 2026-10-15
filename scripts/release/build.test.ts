@@ -144,6 +144,25 @@ describe("checkDistSpecifiers", () => {
 			);
 		}
 	});
+
+	test("reads import types in declarations and skips specifiers in comments and strings", async () => {
+		let declarationDir = join(stagingRoot, "declarations");
+		await mkdir(join(declarationDir, "dist"), { recursive: true });
+		await writeFile(
+			join(declarationDir, "dist/index.d.ts"),
+			[
+				'/** @example import { a } from "../src/a.js"; */',
+				"export declare const note = \"from '../src/b.js'\";",
+				'export declare let value: import("../../types/src/index.js").Value;',
+			].join("\n"),
+		);
+
+		let result = await checkDistSpecifiers(declarationDir);
+
+		expect(isFailure(result) && result.error.message).toBe(
+			"Emitted files reach outside dist/:\ndist/index.d.ts: ../../types/src/index.js",
+		);
+	});
 });
 
 describe("checkExportTargets", () => {
