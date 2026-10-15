@@ -1,6 +1,7 @@
 {
 	"name": "sdxc",
 	"version": "0.0.1",
+	"private": true,
 	"description": "Every @sdxc package under one install and one version, with the sdxc command line from @sdxc/kit",
 	"license": "MIT",
 	"bin": {
