@@ -24,7 +24,7 @@ export default createCommand(SDXC_COMMANDS.ui.diff, {
 		let diff = await diffComponent(context.data, name);
 		if (isFailure(diff)) return diff;
 		ctx.stdout(
-			diff.data === "" ? `${name} matches sdxc ${context.data.registry.release}\n` : diff.data,
+			diff.data === "" ? `${name} matches release ${context.data.registry.release}\n` : diff.data,
 		);
 		return success();
 	},

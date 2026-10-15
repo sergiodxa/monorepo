@@ -1,7 +1,7 @@
 /**
  * The `sdxc` command line: its contract with every handler mapped through `lazy()`, so a run
- * imports only the command it reaches and `--help` imports none. Both binaries, the kit's and
- * the `sdxc` umbrella's, run it against the process; a test builds its own with a fixture kit.
+ * imports only the command it reaches and `--help` imports none. The `sdxc` binary runs it
+ * against the process; a test builds its own with a fixture kit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -37,8 +37,8 @@ function entry(name: string, dependencies: string[] = []): RegistryEntry {
 	};
 }
 
-/** An `sdxc` package root at `version` whose registry holds `files`. */
-async function sdxcPackage(version: string | null, files: Record<string, string>) {
+/** An `@sdxc/kit` package root at `version` whose registry holds `files`. */
+async function kitPackage(version: string | null, files: Record<string, string>) {
 	let root = await mkdtemp(join(tmpdir(), "sdxc-ui-registry-"));
 	PACKAGES.push(root);
 	await writeFile(join(root, "package.json"), JSON.stringify(version === null ? {} : { version }));
@@ -51,7 +51,7 @@ async function sdxcPackage(version: string | null, files: Record<string, string>
 
 describe("readRegistry", () => {
 	test("reads every entry with the release the package declares", async () => {
-		let root = await sdxcPackage("2026.10.14", {
+		let root = await kitPackage("2026.10.14", {
 			"button.json": JSON.stringify(entry("button")),
 			"dialog.json": JSON.stringify(entry("dialog", ["button"])),
 		});
@@ -66,7 +66,7 @@ describe("readRegistry", () => {
 		let empty = await mkdtemp(join(tmpdir(), "sdxc-ui-registry-"));
 		PACKAGES.push(empty);
 		await writeFile(join(empty, "package.json"), '{"version":"0.0.1"}');
-		let misnamed = await sdxcPackage("1", { "tabs.json": JSON.stringify(entry("button")) });
+		let misnamed = await kitPackage("1", { "tabs.json": JSON.stringify(entry("button")) });
 
 		let missing = await readRegistry(empty);
 		let invalid = await readRegistry(misnamed);
@@ -82,7 +82,7 @@ describe("readRegistry", () => {
 
 describe("withDependencies", () => {
 	test("reaches components through other components, each once", async () => {
-		let root = await sdxcPackage("1", {
+		let root = await kitPackage("1", {
 			"a.json": JSON.stringify(entry("a", ["b"])),
 			"b.json": JSON.stringify(entry("b", ["c", "a"])),
 			"c.json": JSON.stringify(entry("c")),

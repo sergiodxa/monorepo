@@ -50,7 +50,7 @@ describe("help", () => {
 				"  make     Write a controller, job, model or other file where the app layout puts it",
 				"  run      Run the project's own command line, bootstrap/cli.ts, with its runtime",
 				"  ui       Copy @sdxc/ui components into the project and keep imports on the copies",
-				"  upgrade  Move to another sdxc release and print the prompt for the code",
+				"  upgrade  Move the @sdxc packages to another release and print the prompt for the code",
 				"",
 				"Options:",
 				"  --version   Print the version",

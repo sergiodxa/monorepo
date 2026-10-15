@@ -8,7 +8,7 @@ The sdxc command line: start a Remix v3 app, generate its files, copy UI compone
 npm add -g @sdxc/kit
 ```
 
-The package installs a command named `sdxc`. A project created with `sdxc create` depends on the `sdxc` package, which provides the same command, so `npx sdxc` works inside it without a global install.
+The package installs a command named `sdxc`. It works on projects that depend on the `@sdxc/*` packages, and every command that writes code lists the packages that code imports in `package.json`.
 
 ## Usage
 
@@ -22,6 +22,14 @@ sdxc run users find ada@example.com  # run the app's own command line, bootstrap
 
 On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
 
+### Releases
+
+Every `@sdxc/*` package versions as the UTC date it was published, and a daily release republishes only the packages that changed, so a project's packages carry different dates from the same release. The kit reads a project's release as the newest date among its `@sdxc/*` pins, and pins a package "at a release" to its newest version on or before that date:
+
+- `sdxc create` pins each package the template lists to its `latest` version.
+- `sdxc make` and `sdxc ui add` add a package the written code imports at the project's release, and print the install command to run.
+- `sdxc upgrade [release]` moves every `@sdxc/*` package the project lists to the target release, latest when left out, and `remix` to the version that release requires, then installs and prints a prompt for an AI agent from that release's changelog.
+
 ## API
 
 ### Commands
@@ -33,7 +41,7 @@ On a terminal each command asks for what you left out; every question has a flag
 | `sdxc run`     | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime |
 | `sdxc make`    | Writes a controller, job, model, migration or other file, declared and mapped   |
 | `sdxc ui`      | Copies `@sdxc/ui` components into the project and points imports at the copies  |
-| `sdxc upgrade` | Moves `sdxc` and `remix` to a release and prints the prompt to update the code  |
+| `sdxc upgrade` | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt     |
 
 `sdxc <command> --help` lists each command's arguments and flags. Commands run from the project root, the nearest directory with a `package.json`.
 
@@ -57,7 +65,7 @@ The CLI reads `.config/sdxc.jsonc` (or `sdxc.jsonc` at the project root). Every 
 
 ### `@sdxc/kit/config.schema.json`
 
-The JSON Schema 2020-12 document for `.config/sdxc.jsonc`. `sdxc init` points the file's `$schema` at the copy the `sdxc` package ships, `../node_modules/sdxc/src/kit/config.schema.json`.
+The JSON Schema 2020-12 document for `.config/sdxc.jsonc`. `sdxc init` points the file's `$schema` at `https://unpkg.com/@sdxc/kit/config.schema.json`.
 
 ### `@sdxc/kit/lock.schema.json`
 
@@ -71,7 +79,7 @@ Builds the command line the `sdxc` binary runs, for a program that embeds it: `a
 
 Releases are dated rather than semantic. A version is the UTC date it was published,
 written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
-release goes out per day, and every release ships `@sdxc/kit` and `sdxc` at the same version.
+release goes out per day, and every release ships `@sdxc/kit`.
 
 Those numbers say when, not what: a later date means a later release and carries no
 compatibility promise. Any release may change or remove a command or flag.

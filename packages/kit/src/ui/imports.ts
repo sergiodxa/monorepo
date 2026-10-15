@@ -1,6 +1,6 @@
 /**
  * The app-wide import rewrite behind `sdxc ui`: every TypeScript and JavaScript file in the
- * project imports a copied component from its copy, and from `sdxc/ui/<name>` again once the
+ * project imports a copied component from its copy, and from `@sdxc/ui/<name>` again once the
  * copy is removed. Edits go through `@sdxc/codemod`, so only the import declarations change.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -21,7 +21,7 @@ import type { CopyLayout } from "./layout.js";
 import { copySpecifier, namesCopy } from "./layout.js";
 
 /** The specifier that exports every component. */
-export const UI_ROOT = "sdxc/ui";
+export const UI_ROOT = "@sdxc/ui";
 
 /** Extensions of the files the rewrite reads. */
 const SOURCE_FILE = /\.(?:[cm]?[jt]s|[jt]sx)$/;
@@ -51,7 +51,7 @@ export interface CopiedComponent {
 /** A file's text after the rewrite, with the imports it could not split by name. */
 export interface Rewritten {
 	source: string;
-	/** `<file>:<line>` of each default or namespace import of `sdxc/ui` left as it was. */
+	/** `<file>:<line>` of each default or namespace import of `@sdxc/ui` left as it was. */
 	unhandled: string[];
 }
 
@@ -85,9 +85,9 @@ export async function readProjectFile(root: string, path: string): Promise<strin
 }
 
 /**
- * `source` importing each of `copies` from its copy: `sdxc/ui/<name>` is replaced, and the
- * names a copy exports move off `sdxc/ui` into an import of the copy. A default or namespace
- * import of `sdxc/ui` stays and is reported, since it cannot be split by name.
+ * `source` importing each of `copies` from its copy: `@sdxc/ui/<name>` is replaced, and the
+ * names a copy exports move off `@sdxc/ui` into an import of the copy. A default or namespace
+ * import of `@sdxc/ui` stays and is reported, since it cannot be split by name.
  *
  * @param file - The file's path relative to the project root, which decides relative specifiers.
  */
@@ -124,7 +124,7 @@ export function pointAtCopies(
 
 /**
  * `source` importing each of `removed` from the package again: an import of a copy is folded
- * into the file's `sdxc/ui` declaration when it has one, and points at `sdxc/ui/<name>`
+ * into the file's `@sdxc/ui` declaration when it has one, and points at `@sdxc/ui/<name>`
  * otherwise.
  */
 export function pointBack(

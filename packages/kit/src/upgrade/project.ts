@@ -1,19 +1,21 @@
 /**
- * What `sdxc upgrade` reads from and changes in the project: the installed `sdxc` version, the
- * dependency pins in `package.json`, and the files that import `sdxc` or an `@sdxc/*` package.
+ * What `sdxc upgrade` reads from and changes in the project: the release its `@sdxc/*` pins are
+ * on, the dependency pins in `package.json`, and the files that import an `@sdxc/*` package.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { readdir, readFile } from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { join, relative } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
 import { findModuleReferences } from "@sdxc/codemod";
 import * as s from "@sdxc/json-schema";
-import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
+
+import { projectRelease, scopedPackageOf } from "../releases.js";
 
 /** The `package.json` sections a project's installed versions come from. */
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies"] as const;
@@ -57,25 +59,11 @@ export async function readManifest(
 }
 
 /**
- * The version of `sdxc` installed for the project at `root`, found as Node resolves it: in the
- * nearest `node_modules/sdxc` at or above the root. Without one the project must install first.
+ * The release the project is on: the newest date among the exact `@sdxc/*` pins its dependency
+ * sections list, or `null` when it pins none.
  */
-export async function installedVersion(root: string): Promise<Result<string, Error>> {
-	let directory = root;
-	while (true) {
-		let text = await wrap(() =>
-			readFile(join(directory, "node_modules", "sdxc", "package.json"), "utf8"),
-		);
-		if (isSuccess(text)) {
-			let version = wrap(() => (JSON.parse(text.data) as { version?: unknown }).version);
-			if (isSuccess(version) && typeof version.data === "string") return success(version.data);
-		}
-		let parent = dirname(directory);
-		if (parent === directory) {
-			return failure(new Error("sdxc is not installed; install the project's dependencies first"));
-		}
-		directory = parent;
-	}
+export function currentRelease(manifest: Manifest): string | null {
+	return projectRelease(DEPENDENCY_FIELDS.map((field) => manifest[field]));
 }
 
 /**
@@ -114,14 +102,14 @@ export function lists(manifest: Manifest, name: string): boolean {
 	return DEPENDENCY_FIELDS.some((field) => manifest[field]?.[name] !== undefined);
 }
 
-/** Every `@sdxc/*` package the manifest lists, which `sdxc` now ships under one install. */
+/** Every `@sdxc/*` package the manifest lists, which the upgrade moves together. */
 export function listedScopedPackages(manifest: Manifest): string[] {
 	let names = DEPENDENCY_FIELDS.flatMap((field) => Object.keys(manifest[field] ?? {}));
 	return [...new Set(names.filter((name) => name.startsWith("@sdxc/")))].sort();
 }
 
 /**
- * Every `sdxc`, `sdxc/*` and `@sdxc/*` specifier the project's source files import, with the
+ * Every `@sdxc/*` specifier the project's source files import, with the
  * files (relative to `root`) that import it. Installed and generated folders and dot-folders
  * are skipped; a file the scanner cannot read is skipped too.
  */
@@ -134,17 +122,13 @@ export async function projectImports(root: string): Promise<Map<string, string[]
 		if (isFailure(references)) continue;
 		let path = relative(root, file);
 		for (let { specifier } of references.data) {
-			if (!isSdxcSpecifier(specifier)) continue;
+			if (scopedPackageOf(specifier) === null) continue;
 			let files = imports.get(specifier) ?? [];
 			if (!files.includes(path)) files.push(path);
 			imports.set(specifier, files);
 		}
 	}
 	return imports;
-}
-
-function isSdxcSpecifier(specifier: string): boolean {
-	return specifier === "sdxc" || specifier.startsWith("sdxc/") || specifier.startsWith("@sdxc/");
 }
 
 async function sourceFiles(directory: string): Promise<string[]> {

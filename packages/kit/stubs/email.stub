@@ -3,9 +3,9 @@
  */
 
 import type { Handle } from "remix/component";
-import type { Email as EmailContract } from "sdxc/mail";
+import type { Email as EmailContract } from "@sdxc/mail";
 
-import { Email } from "sdxc/mail";
+import { Email } from "@sdxc/mail";
 
 /** What the {{title}} email says. */
 export interface {{Name}}Copy {

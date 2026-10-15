@@ -4,14 +4,14 @@
  * that carries an island.
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
-import type { DocumentAssets } from "sdxc/assets-middleware";
 
 import { css } from "remix/component";
 import { ImportMap } from "remix/component/server";
 
-import "sdxc/ui/reset.css";
-import "sdxc/ui/theme.css";
+import "@sdxc/ui/reset.css";
+import "@sdxc/ui/theme.css";
 
 namespace DocumentLayout {
 	export interface Props {

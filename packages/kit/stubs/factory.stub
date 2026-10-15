@@ -2,7 +2,7 @@
  * The {{title}} factory tests seed rows with, through the same model the app writes with.
  */
 
-import { defineFactory } from "sdxc/data-model/testing";
+import { defineFactory } from "@sdxc/data-model/testing";
 
 import { {{Name}} } from "{{model}}";
 

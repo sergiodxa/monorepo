@@ -2,8 +2,8 @@
  * The {{title}} form's validation.
  */
 
-import { isFailure, isSuccess } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { describe, expect, test } from "vitest";
 
 import { {{Name}}Schema } from "{{specifier}}";

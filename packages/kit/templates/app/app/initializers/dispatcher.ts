@@ -4,9 +4,9 @@
  * loader, so a module is imported only once a message for its job arrives.
  */
 
+import { createJobDispatcher } from "@sdxc/jobs";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
-import { createJobDispatcher } from "sdxc/jobs";
-import * as cloudflare from "sdxc/jobs/cloudflare";
 
 import { logger } from "~/app/initializers/logger";
 

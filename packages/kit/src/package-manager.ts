@@ -16,8 +16,8 @@ import { isSuccess, wrap } from "@sdxc/result";
 export interface PackageManager {
 	name: "bun" | "npm" | "pnpm" | "yarn";
 	install: string[];
-	/** The command prefix that runs `sdxc` from the project's own `node_modules`. */
-	exec: string[];
+	/** The command prefix that downloads a package and runs its binary, the package spec appended. */
+	dlx: string[];
 	/** The command prefix that runs a `package.json` script. */
 	run: string[];
 }
@@ -34,18 +34,18 @@ export interface PackageManagerSources {
 
 /** The package managers by name, with the commands each one spells. */
 const PACKAGE_MANAGERS: Readonly<Record<PackageManager["name"], PackageManager>> = {
-	bun: { name: "bun", install: ["bun", "install"], exec: ["bunx", "sdxc"], run: ["bun", "run"] },
-	npm: { name: "npm", install: ["npm", "install"], exec: ["npx", "sdxc"], run: ["npm", "run"] },
+	bun: { name: "bun", install: ["bun", "install"], dlx: ["bunx"], run: ["bun", "run"] },
+	npm: { name: "npm", install: ["npm", "install"], dlx: ["npx", "--yes"], run: ["npm", "run"] },
 	pnpm: {
 		name: "pnpm",
 		install: ["pnpm", "install"],
-		exec: ["pnpm", "exec", "sdxc"],
+		dlx: ["pnpm", "dlx"],
 		run: ["pnpm", "run"],
 	},
 	yarn: {
 		name: "yarn",
 		install: ["yarn", "install"],
-		exec: ["yarn", "sdxc"],
+		dlx: ["yarn", "dlx"],
 		run: ["yarn", "run"],
 	},
 };

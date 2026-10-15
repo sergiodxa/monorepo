@@ -4,7 +4,7 @@
  * a job without loading the handler that runs it.
  */
 
-import { jobs } from "sdxc/jobs";
+import { jobs } from "@sdxc/jobs";
 
 /** The app's jobs; `sdxc make job <name>` declares one here and maps its handler. */
 export default jobs({});

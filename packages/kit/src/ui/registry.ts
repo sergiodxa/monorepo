@@ -1,6 +1,6 @@
 /**
  * The component registry the installed `@sdxc/kit` carries in `registry/ui/`, written by its release
- * build: every `@sdxc/ui` component with its source already importing `sdxc/*`. Reading it from
+ * build: every `@sdxc/ui` component with its source already importing `@sdxc/ui/*`. Reading it from
  * the package itself keeps each copy matched to the helpers installed beside it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

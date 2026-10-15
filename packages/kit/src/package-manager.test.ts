@@ -53,7 +53,7 @@ describe("packageManager", () => {
 			"bun",
 			"npm",
 		]);
-		expect(locked.exec).toEqual(["pnpm", "exec", "sdxc"]);
+		expect(locked.dlx).toEqual(["pnpm", "dlx"]);
 	});
 
 	test("the nearest directory holding a lock file decides", async () => {

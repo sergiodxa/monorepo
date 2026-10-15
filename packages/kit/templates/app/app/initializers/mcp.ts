@@ -4,7 +4,7 @@
  * `lazy()`, so a request imports only the handlers it reaches.
  */
 
-import { createHandler } from "sdxc/mcp";
+import { createHandler } from "@sdxc/mcp";
 
 /** The handler the `/mcp` route forwards to. */
 const mcp = createHandler({

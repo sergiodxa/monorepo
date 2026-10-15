@@ -4,7 +4,7 @@
  * reaches the app through the initializers that configure it.
  */
 
-import * as cloudflare from "sdxc/jobs/cloudflare";
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 
 import { dispatcher } from "~/app/initializers/dispatcher";
 import { createWebRouter } from "~/app/initializers/router";

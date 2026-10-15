@@ -242,7 +242,7 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 		initializer.source,
 		{ kind: "named", name: "lazy" },
 		(specifier) => specifier.endsWith("lazy-route"),
-		packageSpecifier(initializer.source, "lazy-route"),
+		"@sdxc/lazy-route",
 		"lazy",
 	);
 	if (isFailure(lazy)) return manual(lazy.error.message);
@@ -682,14 +682,6 @@ function staticSpecifiers(file: SourceFile): string[] {
 	return file.references
 		.filter((reference) => reference.kind === "import")
 		.map((reference) => reference.specifier);
-}
-
-/**
- * The specifier of the package `name` in the form the file already imports packages: through
- * `sdxc/<name>` when it imports from `sdxc/`, through `@sdxc/<name>` otherwise.
- */
-function packageSpecifier(source: string, name: string): string {
-	return /["']sdxc\//.test(source) ? `sdxc/${name}` : `@sdxc/${name}`;
 }
 
 /** Where a nested declaration goes, for the printed instructions. */

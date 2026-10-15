@@ -18,6 +18,7 @@ import { compare } from "@sdxc/semver";
 import { loadConfig } from "../config.js";
 import { readLock, uiEntries } from "../lock.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
+import { scopedPackageOf } from "../releases.js";
 
 import type { ChangelogEntry } from "./changelog.js";
 
@@ -54,7 +55,7 @@ export interface PromptInput {
 	to: string;
 	/** The whole changelog of the target release. */
 	entries: readonly ChangelogEntry[];
-	/** The npm names of the packages the project imports, `sdxc` included. */
+	/** The npm names of the `@sdxc/*` packages the project imports. */
 	packages: readonly string[];
 	remix: { from: string; to: string } | null;
 	components: readonly ChangedComponent[];
@@ -77,8 +78,8 @@ export function renderPrompt(input: PromptInput): string {
 	let fixes = relevant.filter((entry) => !entry.breaking && FIX_TYPES.has(entry.type));
 	let sections = [
 		[
-			`# Upgrade sdxc from ${input.from} to ${input.to}`,
-			`This project now depends on sdxc ${input.to}, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after ${input.from}. Apply each breaking change's migration wherever the code uses what it changed, adopt the features and fixes where they apply, then run the verification commands and fix what they report.`,
+			`# Upgrade the @sdxc packages from ${input.from} to ${input.to}`,
+			`This project now depends on the @sdxc packages of release ${input.to}, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after ${input.from}. Apply each breaking change's migration wherever the code uses what it changed, adopt the features and fixes where they apply, then run the verification commands and fix what they report.`,
 			`Packages this project imports: ${[...input.packages].sort(compareText).map(code).join(", ")}.`,
 		].join("\n\n"),
 	];
@@ -86,7 +87,7 @@ export function renderPrompt(input: PromptInput): string {
 		sections.push(
 			[
 				"## Remix",
-				`\`remix\` moved from ${input.remix.from} to ${input.remix.to}, the version sdxc ${input.to} requires. Read its release notes for changes the code needs: ${REMIX_RELEASES}/tag/remix%40${input.remix.to}`,
+				`\`remix\` moved from ${input.remix.from} to ${input.remix.to}, the version release ${input.to} requires. Read its release notes for changes the code needs: ${REMIX_RELEASES}/tag/remix%40${input.remix.to}`,
 			].join("\n\n"),
 		);
 	}
@@ -134,8 +135,8 @@ export function renderPrompt(input: PromptInput): string {
 }
 
 /**
- * Gathers the prompt for the project at `root` from the `@sdxc/kit` installed at `packageRoot`,
- * which the target `sdxc` release pins: its version, its changelog, its component registry and its
+ * Gathers the prompt for the project at `root` from the `@sdxc/kit` at `packageRoot`, which is
+ * the target release: its version, its changelog, its component registry and its
  * `remix` peer, compared with `remixFrom` when the bump changed `remix`.
  */
 export async function buildPrompt(options: {
@@ -160,8 +161,11 @@ export async function buildPrompt(options: {
 	});
 	let scripts = project.data.manifest.scripts ?? {};
 	let imports = await projectImports(options.root);
-	let packages = new Set(["sdxc"]);
-	for (let specifier of imports.keys()) packages.add(packageOf(specifier));
+	let packages = new Set<string>();
+	for (let specifier of imports.keys()) {
+		let name = scopedPackageOf(specifier);
+		if (name !== null) packages.add(name);
+	}
 	let components = await changedComponents(options.root, options.packageRoot);
 	if (isFailure(components)) return components;
 	let remixTo = own.data.remix;
@@ -184,14 +188,7 @@ export async function buildPrompt(options: {
 	);
 }
 
-/** The npm package an import specifier comes from: `sdxc/auth/issuer` is `@sdxc/auth`. */
-export function packageOf(specifier: string): string {
-	if (specifier.startsWith("@sdxc/")) return specifier.split("/").slice(0, 2).join("/");
-	let [, first] = specifier.split("/");
-	return first === undefined ? "sdxc" : `@sdxc/${first}`;
-}
-
-/** The version and `remix` peer of the running kit, which match the `sdxc` it shipped with. */
+/** The version and `remix` peer of the running kit, which are its release's. */
 async function readOwnManifest(
 	packageRoot: string,
 ): Promise<Result<{ version: string; remix: string | null }, Error>> {
@@ -275,7 +272,7 @@ function entrySection(heading: string, entries: ChangelogEntry[]): string {
 	return [`## ${heading}`, ...blocks].join("\n\n");
 }
 
-/** The reference page slug: a scoped package by its bare name, `sdxc` as itself. */
+/** The reference page slug: a scoped package by its bare name. */
 function documentationSlug(name: string): string {
 	return name.startsWith("@sdxc/") ? name.slice("@sdxc/".length) : name;
 }

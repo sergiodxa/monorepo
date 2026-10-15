@@ -10,9 +10,23 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { renderConfig } from "../init.js";
+import { REGISTRY } from "../releases.js";
+import { registryDocument } from "../testing.js";
+
+/** The npm registry `create` and `make` pin `@sdxc/*` packages from: every one at 2026.10.14. */
+const SERVER = setupServer(
+	http.get(`${REGISTRY}/*`, ({ request }) =>
+		HttpResponse.json(registryDocument(new URL(request.url).pathname.slice(1), ["2026.10.14"])),
+	),
+);
+
+beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
+afterAll(() => SERVER.close());
 
 import {
 	completeBuiltin,
@@ -30,7 +44,7 @@ interface Manifest {
 	peerDependencies?: Record<string, string>;
 }
 
-/** The `sdxc` package directory these tests read templates from. */
+/** The `@sdxc/kit` package directory these tests read templates from. */
 const PACKAGE_ROOT = defaultPackageRoot();
 
 /** A file of `tree` as text. */
@@ -84,7 +98,7 @@ describe("built-in templates", () => {
 		);
 	});
 
-	test("app is named, pinned to this release and configured as sdxc init writes it", async () => {
+	test("app is named, pinned to the latest @sdxc packages and configured as sdxc init writes it", async () => {
 		let tree = unwrap(await readBuiltinTemplate(PACKAGE_ROOT, "app"));
 		let own = JSON.parse(await readFile(join(PACKAGE_ROOT, "package.json"), "utf8")) as Manifest;
 
@@ -93,7 +107,9 @@ describe("built-in templates", () => {
 		let manifest = JSON.parse(text(tree.files, "package.json")) as Manifest;
 		expect(Object.keys(manifest)[0]).toBe("name");
 		expect(manifest.name).toBe("blog");
-		expect(manifest.dependencies?.sdxc).toBe(own.version);
+		expect(manifest.dependencies?.["@sdxc/cli"]).toBe("2026.10.14");
+		expect(manifest.dependencies?.["@sdxc/ui"]).toBe("2026.10.14");
+		expect(manifest.dependencies?.sdxc).toBeUndefined();
 		expect(manifest.dependencies?.remix).toBe(own.peerDependencies?.remix);
 		expect(text(tree.files, ".config/sdxc.jsonc")).toBe(unwrap(renderConfig()));
 		expect(tree.files.has(".gitignore")).toBe(true);

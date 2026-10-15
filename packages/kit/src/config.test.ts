@@ -77,7 +77,7 @@ describe("loadConfig", () => {
 		let root = await project({
 			".config/sdxc.jsonc": [
 				"{",
-				'\t"$schema": "../node_modules/sdxc/src/kit/config.schema.json",',
+				'\t"$schema": "https://unpkg.com/@sdxc/kit/config.schema.json",',
 				"\t// components live elsewhere here",
 				'\t"ui": { "directory": "app/ui", },',
 				'\t"format": ["bunx", "vp", "fmt"],',
@@ -90,7 +90,7 @@ describe("loadConfig", () => {
 		expect(loaded.path).toBe(".config/sdxc.jsonc");
 		expect(loaded.config).toEqual({
 			...DEFAULTS,
-			$schema: "../node_modules/sdxc/src/kit/config.schema.json",
+			$schema: "https://unpkg.com/@sdxc/kit/config.schema.json",
 			ui: { directory: "app/ui", tests: false },
 			format: ["bunx", "vp", "fmt"],
 		});

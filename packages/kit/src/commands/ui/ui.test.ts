@@ -16,13 +16,29 @@ import type { InvokeOptions } from "@sdxc/cli/test";
 import { spawnExec } from "@sdxc/cli";
 import { invoke as invokeCLI } from "@sdxc/cli/test";
 import { isSuccess, wrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import type { RegistryEntry } from "../../ui/registry.js";
 
 import { createSDXC } from "../../cli.js";
+import { REGISTRY } from "../../releases.js";
+import { registryDocument } from "../../testing.js";
 import { hashContent } from "../../ui/commands.js";
 import { REGISTRY_DIR } from "../../ui/registry.js";
+
+/** The npm registry a copy's missing `@sdxc/*` packages are pinned from. */
+const SERVER = setupServer(
+	http.get(`${REGISTRY}/*`, ({ request }) =>
+		HttpResponse.json(
+			registryDocument(new URL(request.url).pathname.slice(1), ["2026.10.1", "2026.10.14"]),
+		),
+	),
+);
+
+beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
+afterAll(() => SERVER.close());
 
 /** Directories created by the current test, removed after it. */
 const CREATED: string[] = [];
@@ -39,12 +55,12 @@ const BUTTON: RegistryEntry = {
 	exports: ["Button"],
 	source: {
 		path: "button.tsx",
-		content: 'import { bg } from "sdxc/u/color";\n\nexport function Button() {\n\treturn bg;\n}\n',
+		content: 'import { bg } from "@sdxc/u/color";\n\nexport function Button() {\n\treturn bg;\n}\n',
 	},
 	test: {
 		path: "button.test.tsx",
 		content:
-			'import { test } from "vitest";\nimport { Button } from "sdxc/ui/button";\n\ntest("renders", () => Button);\n',
+			'import { test } from "vitest";\nimport { Button } from "@sdxc/ui/button";\n\ntest("renders", () => Button);\n',
 	},
 };
 
@@ -56,7 +72,7 @@ const DIALOG: RegistryEntry = {
 	source: {
 		path: "dialog.tsx",
 		content:
-			'import { Button } from "sdxc/ui/button";\n\nexport function Dialog() {\n\treturn Button;\n}\n',
+			'import { Button } from "@sdxc/ui/button";\n\nexport function Dialog() {\n\treturn Button;\n}\n',
 	},
 	test: null,
 };
@@ -70,18 +86,21 @@ const TABS: RegistryEntry = {
 };
 
 const PAGE = [
-	'import { Button, Dialog, Tabs } from "sdxc/ui";',
-	'import { Dialog as Modal } from "sdxc/ui/dialog";',
+	'import { Button, Dialog, Tabs } from "@sdxc/ui";',
+	'import { Dialog as Modal } from "@sdxc/ui/dialog";',
 	"",
 	"export let page = [Button, Dialog, Tabs, Modal];",
 	"",
 ].join("\n");
 
-/** An `sdxc` package at `release` whose registry holds `entries`. */
-async function sdxcPackage(release: string, entries: RegistryEntry[]): Promise<string> {
+/** An `@sdxc/kit` package at `release` whose registry holds `entries`. */
+async function kitPackage(release: string, entries: RegistryEntry[]): Promise<string> {
 	let root = await mkdtemp(join(tmpdir(), "sdxc-ui-package-"));
 	CREATED.push(root);
-	await writeFile(join(root, "package.json"), JSON.stringify({ name: "sdxc", version: release }));
+	await writeFile(
+		join(root, "package.json"),
+		JSON.stringify({ name: "@sdxc/kit", version: release }),
+	);
 	await mkdir(join(root, REGISTRY_DIR), { recursive: true });
 	for (let entry of entries) {
 		await writeFile(join(root, REGISTRY_DIR, `${entry.name}.json`), JSON.stringify(entry));
@@ -89,12 +108,17 @@ async function sdxcPackage(release: string, entries: RegistryEntry[]): Promise<s
 	return root;
 }
 
-/** A project with a `~/*` path alias, a page importing components, and `files`. */
+/**
+ * A project listing `@sdxc/u` and `@sdxc/ui`, with a `~/*` path alias, a page importing
+ * components, and `files`.
+ */
 async function project(files: Record<string, string> = {}): Promise<string> {
 	let root = await mkdtemp(join(tmpdir(), "sdxc-ui-project-"));
 	CREATED.push(root);
 	let all = {
-		"package.json": "{}",
+		"package.json": JSON.stringify({
+			dependencies: { "@sdxc/u": "2026.10.14", "@sdxc/ui": "2026.10.14" },
+		}),
 		"tsconfig.json": JSON.stringify({ compilerOptions: { paths: { "~/*": ["./*"] } } }),
 		"app/routes/home.tsx": PAGE,
 		...files,
@@ -127,8 +151,24 @@ async function exists(root: string, path: string): Promise<boolean> {
 }
 
 describe("sdxc ui add", () => {
+	test("lists the @sdxc packages a copy imports at the project's release", async () => {
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+		let root = await project({
+			"package.json": JSON.stringify({ dependencies: { "@sdxc/ui": "2026.10.12" } }),
+			"bun.lock": "",
+		});
+
+		let result = await invoke(["add", "button"], root, sdxc);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Added @sdxc/u@2026.10.1 to package.json; run bun install\n");
+		expect(JSON.parse(await read(root, "package.json"))).toEqual({
+			dependencies: { "@sdxc/u": "2026.10.1", "@sdxc/ui": "2026.10.12" },
+		});
+	});
+
 	test("copies a component, records it, and points every import of it at the copy", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
 		let root = await project();
 
 		let result = await invoke(["add", "dialog"], join(root, "app"), sdxc);
@@ -141,7 +181,7 @@ describe("sdxc ui add", () => {
 		expect(await read(root, "resources/components/ui/dialog.tsx")).toBe(DIALOG.source.content);
 		expect(await read(root, "app/routes/home.tsx")).toBe(
 			[
-				'import { Button, Tabs } from "sdxc/ui";',
+				'import { Button, Tabs } from "@sdxc/ui";',
 				'import { Dialog as Modal, Dialog } from "~/resources/components/ui/dialog";',
 				"",
 				"export let page = [Button, Dialog, Tabs, Modal];",
@@ -159,7 +199,7 @@ describe("sdxc ui add", () => {
 	});
 
 	test("with --with-deps and ui.tests, copies what a component reaches and points copies at copies", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
 		let root = await project({ ".config/sdxc.jsonc": '{ "ui": { "tests": true } }' });
 
 		let result = await invoke(["add", "dialog", "--with-deps"], root, sdxc);
@@ -181,7 +221,7 @@ describe("sdxc ui add", () => {
 	});
 
 	test("hashes each copy after the project's format command has run", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON]);
 		let formatter = join(await project(), "format.mjs");
 		await writeFile(
 			formatter,
@@ -207,7 +247,7 @@ describe("sdxc ui add", () => {
 	});
 
 	test("refuses an unknown component and a file the lock does not list", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON]);
 		let root = await project({ "resources/components/ui/button.tsx": "mine\n" });
 
 		let unknown = await invoke(["add", "carousel"], root, sdxc);
@@ -216,7 +256,8 @@ describe("sdxc ui add", () => {
 		expect(unknown).toMatchObject({
 			code: 1,
 			stdout: "",
-			stderr: "sdxc 2026.10.14 ships no component named carousel; sdxc ui list shows every one\n",
+			stderr:
+				"Release 2026.10.14 ships no component named carousel; sdxc ui list shows every one\n",
 		});
 		expect(blocked.stderr).toBe(
 			"resources/components/ui/button.tsx already exists and the lock file does not list it; move it first\n",
@@ -225,14 +266,14 @@ describe("sdxc ui add", () => {
 	});
 
 	test("--dry-run prints the diff, lock file included, and writes nothing", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG]);
 		let root = await project();
 
 		let result = await invoke(["add", "dialog", "--dry-run"], root, sdxc);
 
 		expect(result.code).toBe(0);
 		expect(result.stdout).toContain(
-			'--- a/app/routes/home.tsx\n+++ b/app/routes/home.tsx\n@@ -1,4 +1,4 @@\n-import { Button, Dialog, Tabs } from "sdxc/ui";\n',
+			'--- a/app/routes/home.tsx\n+++ b/app/routes/home.tsx\n@@ -1,4 +1,4 @@\n-import { Button, Dialog, Tabs } from "@sdxc/ui";\n',
 		);
 		expect(result.stdout).toContain("--- /dev/null\n+++ b/resources/components/ui/dialog.tsx\n");
 		expect(result.stdout).toContain("--- /dev/null\n+++ b/.config/sdxc.lock.jsonl\n");
@@ -243,8 +284,8 @@ describe("sdxc ui add", () => {
 
 describe("sdxc ui list, diff and update", () => {
 	test("marks copies that are edited or behind, and updates only untouched files", async () => {
-		let older = await sdxcPackage("2026.10.10", [BUTTON, DIALOG]);
-		let newer = await sdxcPackage("2026.10.20", [
+		let older = await kitPackage("2026.10.10", [BUTTON, DIALOG]);
+		let newer = await kitPackage("2026.10.20", [
 			{
 				...BUTTON,
 				changedIn: "2026.10.20",
@@ -305,21 +346,21 @@ describe("sdxc ui list, diff and update", () => {
 	});
 
 	test("diff reports a copy that matches the installed version", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON]);
 		let root = await project();
 		await invoke(["add", "button"], root, sdxc);
 
 		expect(await invoke(["diff", "button"], root, sdxc)).toMatchObject({
 			code: 0,
-			stdout: "button matches sdxc 2026.10.14\n",
+			stdout: "button matches release 2026.10.14\n",
 			stderr: "",
 		});
 	});
 });
 
 describe("sdxc ui remove", () => {
-	test("deletes the copies, drops the lock line and points imports back at sdxc/ui", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+	test("deletes the copies, drops the lock line and points imports back at @sdxc/ui", async () => {
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
 		let root = await project();
 		await invoke(["add", "dialog", "button"], root, sdxc);
 
@@ -333,7 +374,7 @@ describe("sdxc ui remove", () => {
 		expect(await exists(root, "resources/components/ui/dialog.tsx")).toBe(false);
 		expect(await read(root, "app/routes/home.tsx")).toBe(
 			[
-				'import { Tabs, Dialog as Modal, Dialog } from "sdxc/ui";',
+				'import { Tabs, Dialog as Modal, Dialog } from "@sdxc/ui";',
 				'import { Button } from "~/resources/components/ui/button";',
 				"",
 				"export let page = [Button, Dialog, Tabs, Modal];",
@@ -346,7 +387,7 @@ describe("sdxc ui remove", () => {
 
 describe("prompts", () => {
 	test("add with no names searches the registry on a terminal, and is a usage error without one", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
 		let root = await project();
 
 		let picked = await invoke(["add"], root, sdxc, {
@@ -363,7 +404,7 @@ describe("prompts", () => {
 	});
 
 	test("remove with no names picks from the copies on a terminal, and is a usage error without one", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG]);
 		let root = await project();
 		let none = await invoke(["remove"], root, sdxc, { interactive: true });
 		await invoke(["add", "button", "dialog"], root, sdxc);
@@ -386,8 +427,8 @@ describe("prompts", () => {
 	});
 
 	test("update asks before replacing each edited file, and leaves it without a terminal", async () => {
-		let older = await sdxcPackage("2026.10.10", [BUTTON]);
-		let newer = await sdxcPackage("2026.10.20", [
+		let older = await kitPackage("2026.10.10", [BUTTON]);
+		let newer = await kitPackage("2026.10.20", [
 			{
 				...BUTTON,
 				changedIn: "2026.10.20",
@@ -423,7 +464,7 @@ describe("prompts", () => {
 
 describe("usage", () => {
 	test("exits 2 with the help for a missing command, an unknown one, or a misplaced flag", async () => {
-		let sdxc = await sdxcPackage("2026.10.14", [BUTTON]);
+		let sdxc = await kitPackage("2026.10.14", [BUTTON]);
 		let root = await project();
 
 		let none = await invoke([], root, sdxc);

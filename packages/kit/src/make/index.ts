@@ -1,8 +1,8 @@
 /**
  * What one `sdxc make <kind>` run does: writes a file of the kind from its stub at the folder
  * the app layout gives it, with a test beside it, declares and maps it where the kind needs it,
- * and runs the project's `format`. Every file is planned before any is written, and none is
- * ever overwritten.
+ * lists any `@sdxc/*` package it imports in `package.json`, and runs the project's `format`.
+ * Every file is planned before any is written, and none is ever overwritten.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,8 +18,11 @@ import { isFailure, success, wrap } from "@sdxc/result";
 
 import type { Project } from "../middleware.js";
 
+import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
+import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
+import { readManifest } from "../upgrade/project.js";
 
 import type { Declared } from "./declare.js";
 import type { MakeRequest, PlannedFile } from "./generate.js";
@@ -55,7 +58,8 @@ export type MakeContext = Pick<AnyCommandContext, "stdout" | "exec" | "task">;
 
 /**
  * Plans, writes, declares and formats one file of `input.kind`, printing each path written and
- * edited; under `dryRun` it prints the files and the diff of each edit instead.
+ * edited and each package added with the install command; under `dryRun` it prints the files
+ * and the diff of each edit, `package.json` included, instead.
  *
  * @param packageRoot - The `@sdxc/kit` package, whose `stubs/` holds the built-in stubs.
  */
@@ -101,7 +105,13 @@ export async function make(
 	let overrides: Record<string, string> = declared === null ? {} : { path: declared.path };
 	let planned = await plan(request, root, config, packageRoot, overrides);
 	if (isFailure(planned)) return planned;
-	let edits = declared?.kind === "edits" ? declared.edits : [];
+	let edits = declared?.kind === "edits" ? [...declared.edits] : [];
+	let dependencies = await missingDependencies(root, [
+		...planned.data.files,
+		...edits.map((edit) => ({ path: edit.path, content: edit.after })),
+	]);
+	if (isFailure(dependencies)) return dependencies;
+	if (dependencies.data !== null) edits.push(dependencies.data);
 
 	if (input.dryRun) {
 		for (let file of planned.data.files) {
@@ -119,7 +129,18 @@ export async function make(
 		for (let edit of edits) await writeFile(join(root, edit.path), edit.after);
 	});
 	if (isFailure(edited)) return edited;
-	for (let edit of edits) ctx.stdout(`Edited ${edit.path}\n`);
+	for (let edit of edits) {
+		if (edit !== dependencies.data) ctx.stdout(`Edited ${edit.path}\n`);
+	}
+	if (dependencies.data !== null) {
+		let read = await readManifest(root);
+		let manager = await packageManager({
+			declared: isFailure(read) ? undefined : read.data.manifest.packageManager,
+			findLockFile: lockFileAtOrAbove(root),
+		});
+		let added = dependencies.data.added.map(({ name, version }) => `${name}@${version}`);
+		ctx.stdout(`Added ${added.join(", ")} to package.json; run ${manager.install.join(" ")}\n`);
+	}
 	if (declared?.kind === "manual") ctx.stdout(manualNote(declared));
 	let changed = [...paths, ...edits.map((edit) => edit.path)];
 	return formatFiles(ctx, config.format, changed, root);

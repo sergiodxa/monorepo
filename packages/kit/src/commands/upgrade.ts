@@ -1,7 +1,7 @@
 /**
- * The `sdxc upgrade` handler: moves the project to another `sdxc` release, with `remix`
- * following the peer the release pins, installs it, and hands off to the newly installed
- * `sdxc` for the prompt, so the prompt comes from the target release's own code and changelog.
+ * The `sdxc upgrade` handler: moves every `@sdxc/*` package the project lists to another
+ * release, `remix` following the peer it pins, installs, and hands off to that release's
+ * `@sdxc/kit` for the prompt, so the prompt comes from the target's own changelog and registry.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,17 +23,18 @@ import type { Release } from "../upgrade/registry.js";
 import { SDXC_COMMANDS } from "../contract.js";
 import { packageRoot, project } from "../middleware.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
+import { resolveRelease, scopedPackageOf } from "../releases.js";
 import { entriesBetween } from "../upgrade/changelog.js";
 import {
 	bumpManifest,
-	installedVersion,
+	currentRelease,
 	listedScopedPackages,
 	lists,
 	projectImports,
 	readManifest,
 } from "../upgrade/project.js";
-import { buildPrompt, packageOf } from "../upgrade/prompt.js";
-import { fetchChangelog, fetchRelease } from "../upgrade/registry.js";
+import { buildPrompt } from "../upgrade/prompt.js";
+import { fetchChangelog, fetchRelease, RELEASE_PACKAGE } from "../upgrade/registry.js";
 
 /** The middleware `upgrade` runs behind. */
 const UPGRADE_MIDDLEWARE = [project(), packageRoot()] as const;
@@ -66,50 +67,51 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 		let read = await readManifest(root);
 		if (isFailure(read)) return read;
 		let { manifest, text } = read.data;
-		if (!lists(manifest, "sdxc")) return failure(new Error("package.json does not list sdxc"));
-		let current = await installedVersion(root);
-		if (isFailure(current)) return current;
-		let found = await lookUp(ctx, ctx.arguments.version ?? null, current.data);
+		let scoped = listedScopedPackages(manifest);
+		if (scoped.length === 0) {
+			return failure(new Error("package.json lists no @sdxc/* package to upgrade"));
+		}
+		let current = currentRelease(manifest);
+		if (current === null) {
+			return failure(new Error("package.json pins no @sdxc/* package to an exact release"));
+		}
+		let found = await lookUp(ctx, ctx.arguments.version ?? null, current);
 		if (isFailure(found)) return found;
 		let { release, changelog } = found.data;
-		let order = compare(release.version, current.data);
+		let order = compare(release.version, current);
 		if (order < 0) {
 			return failure(
 				new Error(
-					`sdxc ${release.version} is older than the installed ${current.data}; upgrade only moves forward`,
+					`Release ${release.version} is older than the project's ${current}; upgrade only moves forward`,
 				),
 			);
 		}
 		if (order === 0) {
-			ctx.stderr(`sdxc is up to date at ${current.data}\n`);
+			ctx.stderr(`The @sdxc packages are up to date at ${current}\n`);
 			return success();
 		}
 		let imports = await projectImports(root);
 		if (changelog !== null) {
-			let proceed = await confirmBreaking(ctx, changelog, current.data, release.version, imports);
+			let proceed = await confirmBreaking(ctx, changelog, current, release.version, imports);
 			if (isFailure(proceed)) return proceed;
 			if (!proceed.data) {
-				ctx.stderr(`Kept sdxc at ${current.data}; package.json is unchanged\n`);
+				ctx.stderr(`Kept the @sdxc packages at ${current}; package.json is unchanged\n`);
 				return success();
 			}
 		}
 
-		let versions: Record<string, string> = { sdxc: release.version };
+		let pins = await ctx.task(
+			`Resolving ${scoped.length} @sdxc packages at ${release.version}`,
+			(task) => resolveRelease(scoped, release.version, task.signal),
+		);
+		if (isFailure(pins)) return pins;
+		let versions: Record<string, string> = Object.fromEntries(pins.data);
 		if (release.remix !== null && lists(manifest, "remix")) versions.remix = release.remix;
 		let bumped = bumpManifest(text, versions);
 		let written = await wrap(() => writeFile(resolve(root, "package.json"), bumped.text));
 		if (isFailure(written)) return written;
 		for (let bump of bumped.bumps) {
 			ctx.stderr(`package.json: ${bump.name} ${bump.from} -> ${bump.to}\n`);
-		}
-		for (let name of listedScopedPackages(manifest)) {
-			let files = [...imports]
-				.filter(([specifier]) => specifier === name || specifier.startsWith(`${name}/`))
-				.flatMap(([, importers]) => importers);
-			let where = files.length > 0 ? `; imported by ${[...new Set(files)].sort().join(", ")}` : "";
-			ctx.stderr(
-				`${name} is listed beside sdxc, which does not support it: import ${name.replace("@sdxc/", "sdxc/")} instead and remove it${where}\n`,
-			);
 		}
 
 		let manager = await packageManager({
@@ -118,11 +120,12 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 		});
 		let remixFrom = bumped.bumps.find((bump) => bump.name === "remix")?.from ?? null;
 		let promptCommand = [
-			...manager.exec,
+			...manager.dlx,
+			`${RELEASE_PACKAGE}@${release.version}`,
 			"upgrade",
 			"--prompt",
 			"--from",
-			current.data,
+			current,
 			...(remixFrom === null ? [] : ["--remix-from", remixFrom]),
 			...(output === null ? [] : ["--output", output]),
 		];
@@ -148,7 +151,7 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 	},
 });
 
-/** Prints the prompt for the installed `sdxc`, or writes it to `output`. */
+/** Prints the prompt for this kit's release, or writes it to `output`. */
 async function printPrompt(
 	ctx: UpgradeContext,
 	from: string,
@@ -179,11 +182,11 @@ async function printPrompt(
  */
 async function lookUp(ctx: UpgradeContext, version: string | null, current: string) {
 	return ctx.task(
-		`Looking up sdxc@${version ?? "latest"}`,
+		`Looking up release ${version ?? "latest"}`,
 		async (task): Promise<Result<Target, Error>> => {
 			let release = await fetchRelease(version, task.signal);
 			if (isFailure(release)) return release;
-			task.update(`Found sdxc ${release.data.version}`);
+			task.update(`Found release ${release.data.version}`);
 			if (compare(release.data.version, current) <= 0) {
 				return success({ release: release.data, changelog: null });
 			}
@@ -209,19 +212,22 @@ async function confirmBreaking(
 	to: string,
 	imports: ReadonlyMap<string, string[]>,
 ): Promise<Result<boolean, Error>> {
-	let imported = new Set(["sdxc"]);
-	for (let specifier of imports.keys()) imported.add(packageOf(specifier));
+	let imported = new Set<string>();
+	for (let specifier of imports.keys()) {
+		let name = scopedPackageOf(specifier);
+		if (name !== null) imported.add(name);
+	}
 	let breaking = entriesBetween(changelog, from, to).filter(
 		(entry) => entry.breaking && imported.has(entry.package),
 	);
 	if (breaking.length === 0) return success(true);
 	let count = breaking.length === 1 ? "1 breaking change" : `${breaking.length} breaking changes`;
-	ctx.stderr(`sdxc ${to} brings ${count} to packages this project imports:\n`);
+	ctx.stderr(`Release ${to} brings ${count} to packages this project imports:\n`);
 	for (let entry of breaking) {
 		ctx.stderr(`  ${entry.release} ${entry.package}: ${entry.title}\n`);
 	}
 	return ctx.prompt.confirm({
-		message: `Upgrade to sdxc ${to}?`,
+		message: `Upgrade to release ${to}?`,
 		default: true,
 		name: "breaking",
 	});

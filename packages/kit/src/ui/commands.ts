@@ -20,6 +20,7 @@ import { compare } from "@sdxc/semver";
 import type { Config } from "../config.js";
 import type { Lock, UILockEntry } from "../lock.js";
 
+import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
 import {
@@ -31,6 +32,7 @@ import {
 	uiEntry,
 	writeLock,
 } from "../lock.js";
+import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 
 import type { CopiedComponent } from "./imports.js";
 import type { CopyLayout } from "./layout.js";
@@ -198,7 +200,7 @@ export async function diffComponent(
 	if (copied === undefined) return failure(new Error(`${name} is not copied; sdxc ui add ${name}`));
 	let entry = context.registry.entries.get(name);
 	if (entry === undefined) {
-		return failure(new Error(`sdxc ${context.registry.release} no longer ships ${name}`));
+		return failure(new Error(`Release ${context.registry.release} no longer ships ${name}`));
 	}
 	let copies = copiedComponents(context, []);
 	let output = "";
@@ -231,7 +233,9 @@ export async function planUpdate(
 		let entry = context.registry.entries.get(name);
 		if (copied === undefined) continue;
 		if (entry === undefined) {
-			plan.report.push(`sdxc ${context.registry.release} no longer ships ${name}; left as it is`);
+			plan.report.push(
+				`Release ${context.registry.release} no longer ships ${name}; left as it is`,
+			);
 			continue;
 		}
 		let withTest =
@@ -267,7 +271,7 @@ export async function planUpdate(
 		plan.record.push({ name, release, files });
 		plan.report.push(
 			replaced === 0 && skipped === 0
-				? `${name} already matches sdxc ${context.registry.release}`
+				? `${name} already matches release ${context.registry.release}`
 				: `Updated ${replaced} file${replaced === 1 ? "" : "s"} of ${name}`,
 		);
 	}
@@ -276,7 +280,7 @@ export async function planUpdate(
 
 /**
  * Deletes the copies of `names`, drops their lock entries and points every project file's
- * imports of them back at `sdxc/ui/<name>`, folded into an existing `sdxc/ui` import.
+ * imports of them back at `@sdxc/ui/<name>`, folded into an existing `@sdxc/ui` import.
  */
 export async function planRemove(
 	context: UIContext,
@@ -348,8 +352,8 @@ export async function applyPlan(
 }
 
 /**
- * Prints the plan's diff on stdout and its report on stderr under `--dry-run`; otherwise applies
- * it and prints its report on stdout.
+ * Lists the `@sdxc/*` packages the plan's files import in `package.json`, then prints the plan's
+ * diff on stdout and its report on stderr under `--dry-run`, or applies it and prints its report.
  */
 export async function finishPlan(
 	ctx: UICommandContext,
@@ -357,6 +361,8 @@ export async function finishPlan(
 	plan: Plan,
 	dryRun: boolean,
 ): Promise<Result<void, Error>> {
+	let listed = await listImportedPackages(context.root, plan);
+	if (isFailure(listed)) return listed;
 	if (dryRun) {
 		let diff = await renderPlan(context, plan);
 		if (isFailure(diff)) return diff;
@@ -367,6 +373,28 @@ export async function finishPlan(
 	let report = await applyPlan(ctx, context, plan);
 	if (isFailure(report)) return report;
 	for (let line of report.data) ctx.stdout(`${line}\n`);
+	return success(undefined);
+}
+
+/**
+ * Adds to `plan` the `package.json` edit listing every `@sdxc/*` package the files it writes
+ * import and the project lacks, at the project's release, with a report line naming them and
+ * the install to run.
+ */
+async function listImportedPackages(root: string, plan: Plan): Promise<Result<void, Error>> {
+	let files = [...plan.files].flatMap(([path, change]) =>
+		change.after === null ? [] : [{ path, content: change.after }],
+	);
+	let edit = await missingDependencies(root, files);
+	if (isFailure(edit)) return edit;
+	if (edit.data === null) return success(undefined);
+	plan.files.set(edit.data.path, { before: edit.data.before, after: edit.data.after });
+	let manager = await packageManager({
+		declared: undefined,
+		findLockFile: lockFileAtOrAbove(root),
+	});
+	let added = edit.data.added.map(({ name, version }) => `${name}@${version}`).join(", ");
+	plan.report.push(`Added ${added} to package.json; run ${manager.install.join(" ")}`);
 	return success(undefined);
 }
 
@@ -446,7 +474,7 @@ async function rewriteProject(
 		}
 		for (let location of rewritten.data.unhandled) {
 			plan.report.push(
-				`${location} imports sdxc/ui as a whole; import the copied components' names from their copies by hand`,
+				`${location} imports @sdxc/ui as a whole; import the copied components' names from their copies by hand`,
 			);
 		}
 	}
@@ -489,7 +517,7 @@ function unknownNames(context: UIContext, names: readonly string[]): Error | nul
 	let unknown = names.filter((name) => !context.registry.entries.has(name));
 	if (unknown.length === 0) return null;
 	return new Error(
-		`sdxc ${context.registry.release} ships no component named ${unknown.join(", ")}; sdxc ui list shows every one`,
+		`Release ${context.registry.release} ships no component named ${unknown.join(", ")}; sdxc ui list shows every one`,
 	);
 }
 

@@ -2,7 +2,7 @@
  * The {{title}} service.
  */
 
-import { isSuccess } from "sdxc/result";
+import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { {{key}} } from "{{specifier}}";

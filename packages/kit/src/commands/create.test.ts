@@ -15,11 +15,30 @@ import type { InvokeOptions } from "@sdxc/cli/test";
 
 import { invoke } from "@sdxc/cli/test";
 import { unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
 import { builtinTemplates, defaultPackageRoot } from "../create/templates.js";
-import { materialize, runCommandLine, testProject, typecheck } from "../testing.js";
+import { REGISTRY } from "../releases.js";
+import {
+	materialize,
+	registryDocument,
+	runCommandLine,
+	testProject,
+	typecheck,
+} from "../testing.js";
+
+/** The npm registry `create` and `make` pin `@sdxc/*` packages from: every one at 2026.10.14. */
+const SERVER = setupServer(
+	http.get(`${REGISTRY}/*`, ({ request }) =>
+		HttpResponse.json(registryDocument(new URL(request.url).pathname.slice(1), ["2026.10.14"])),
+	),
+);
+
+beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
+afterAll(() => SERVER.close());
 
 /** Every built-in template, each type checked once materialized. */
 const TEMPLATES = unwrap(await builtinTemplates(defaultPackageRoot()));
@@ -231,7 +250,9 @@ describe("the app template's command line", () => {
 		let tested = await testProject(project);
 
 		expect(about.code).toBe(0);
-		expect(about.output).toMatch(/^blog\n {2}sdxc {5}\S+\n {2}remix {4}\S+\n {2}runtime {2}Bun /);
+		expect(about.output).toMatch(
+			/^blog\n {2}@sdxc\/cli {2}2026\.10\.14\n {2}remix {6}\S+\n {2}runtime {4}Bun /,
+		);
 		expect(about.output).toContain('"command.path":"about","outcome":"ok"');
 		expect(unknown.code).toBe(2);
 		expect(unknown.output).toContain('Unknown command "abuot" for blog; did you mean "about"?');

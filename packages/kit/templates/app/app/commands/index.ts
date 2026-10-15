@@ -4,12 +4,12 @@
  * and a folder of handlers is a `commands({ … })` group here.
  */
 
-import { command, commands, flag } from "sdxc/cli";
+import { command, commands, flag } from "@sdxc/cli";
 
 /** The app's commands; `sdxc make command <name>` declares one here and maps its handler. */
 export default commands({
 	about: command({
-		description: "Print the app's name, its sdxc and remix versions, and the runtime",
+		description: "Print the app's name, its @sdxc/cli and remix versions, and the runtime",
 		flags: { json: flag.boolean("json", { description: "Print it as JSON" }) },
 	}),
 });

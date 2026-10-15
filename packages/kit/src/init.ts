@@ -21,11 +21,10 @@ import { CONFIG_LOCATIONS, configJSONSchema, findConfigFile } from "./config.js"
 export const INIT_LOCATION = CONFIG_LOCATIONS[0];
 
 /**
- * The `$schema` reference, relative to {@link INIT_LOCATION}, that brings editor completion: the
- * file behind the umbrella's `sdxc/kit/config.schema.json`, since `sdxc` is the dependency every
- * project lists and every package manager installs at `node_modules/sdxc`.
+ * The `$schema` reference that brings editor completion: the schema the latest `@sdxc/kit`
+ * publishes, which reaches a project whether or not the kit is installed in it.
  */
-export const SCHEMA_REFERENCE = "../node_modules/sdxc/src/kit/config.schema.json";
+export const SCHEMA_REFERENCE = "https://unpkg.com/@sdxc/kit/config.schema.json";
 
 /** What `init` did, for the CLI to report. */
 export interface InitOutcome {

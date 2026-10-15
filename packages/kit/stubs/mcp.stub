@@ -3,7 +3,7 @@
  * finds nothing.
  */
 
-import { createTool } from "sdxc/mcp";
+import { createTool } from "@sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 

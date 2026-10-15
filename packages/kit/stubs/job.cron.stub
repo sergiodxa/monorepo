@@ -3,7 +3,7 @@
  * schedule.
  */
 
-import { createJobHandler } from "sdxc/jobs";
+import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 

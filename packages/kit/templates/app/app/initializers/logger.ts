@@ -4,7 +4,7 @@
  * the work a request started.
  */
 
-import { createLogger } from "sdxc/logger";
+import { createLogger } from "@sdxc/logger";
 
 /** The Worker's one logger; read the invocation's log through `ctx.log`. */
 export const logger = createLogger({ service: "worker" });

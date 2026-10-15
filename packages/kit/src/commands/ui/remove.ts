@@ -1,5 +1,5 @@
 /**
- * The `sdxc ui remove` handler: deletes copies and points imports back at `sdxc/ui/<name>`.
+ * The `sdxc ui remove` handler: deletes copies and points imports back at `@sdxc/ui/<name>`.
  * Without names, a terminal picks from the copies the lock file lists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

@@ -3,9 +3,9 @@
  * rely on when it succeeds.
  */
 
-import type { Result } from "sdxc/result";
+import type { Result } from "@sdxc/result";
 
-import { success } from "sdxc/result";
+import { success } from "@sdxc/result";
 
 /** Carries out {{title}}; a failure says why nothing changed. */
 export function {{key}}(): Result<void, Error> {

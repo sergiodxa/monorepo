@@ -1,6 +1,6 @@
 # App
 
-A Remix v3 Worker on Cloudflare, built on [`sdxc`](https://www.npmjs.com/package/sdxc).
+A Remix v3 Worker on Cloudflare, built on the `@sdxc/*` packages.
 
 ## Develop
 
@@ -15,7 +15,9 @@ changing a binding.
 
 ## Add code
 
-`sdxc make <kind> <name>` writes a file of that kind where it belongs, with a test beside it:
+`sdxc make <kind> <name>` writes a file of that kind where it belongs, with a test beside it,
+and adds any `@sdxc/*` package the file imports to `package.json`. The `sdxc` command comes
+from `npm add -g @sdxc/kit`:
 
 ```sh
 sdxc make controller about
@@ -36,8 +38,8 @@ bun run cli about
 bun run cli --help
 ```
 
-With `sdxc` installed globally (`npm add -g sdxc`), `sdxc run about` does the same from any
-folder in the project.
+With `@sdxc/kit` installed globally, `sdxc run about` does the same from any folder in the
+project.
 
 `app/commands/index.ts` declares each command, and `sdxc make command users/grant` writes a
 new one with its test, declared and mapped.

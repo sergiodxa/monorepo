@@ -1,6 +1,6 @@
 /**
  * The upgrade prompt rendered end to end for a fixture project between two fixture releases:
- * a target `sdxc` package with its changelog and component registry, and a project that
+ * a target `@sdxc/kit` package with its changelog and component registry, and a project that
  * imports some of its packages and vendors two components.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -17,8 +17,6 @@ import { afterEach, describe, expect, test } from "vitest";
 import { createSDXC } from "../cli.js";
 
 import type { ChangelogEntry } from "./changelog.js";
-
-import { packageOf } from "./prompt.js";
 
 /** Fixture directories created by the current test, removed after it. */
 const DIRECTORIES: string[] = [];
@@ -54,7 +52,7 @@ function entry(
 async function targetRelease(entries: ChangelogEntry[]): Promise<string> {
 	return directory({
 		"package.json": JSON.stringify({
-			name: "sdxc",
+			name: "@sdxc/kit",
 			version: "2026.10.14",
 			peerDependencies: { remix: "3.1.0" },
 		}),
@@ -64,17 +62,17 @@ async function targetRelease(entries: ChangelogEntry[]): Promise<string> {
 	});
 }
 
-/** A project on bun that imports `sdxc/jwt` and `sdxc/auth/issuer` and vendors two components. */
+/** A project on bun that imports `@sdxc/jwt` and `@sdxc/auth/issuer` and vendors two components. */
 async function fixtureProject(): Promise<string> {
 	return directory({
 		"package.json": JSON.stringify({
 			scripts: { check: "vp check", test: "vitest", dev: "vite" },
-			dependencies: { sdxc: "2026.10.14", remix: "3.1.0" },
+			dependencies: { "@sdxc/auth": "2026.10.14", "@sdxc/jwt": "2026.10.1", remix: "3.1.0" },
 		}),
 		"bun.lock": "",
 		"src/app.ts":
-			'import { sign } from "sdxc/jwt";\nimport type { Issuer } from "sdxc/auth/issuer";\n',
-		"node_modules/ignored/index.ts": 'import "sdxc/markdown";\n',
+			'import { sign } from "@sdxc/jwt";\nimport type { Issuer } from "@sdxc/auth/issuer";\n',
+		"node_modules/ignored/index.ts": 'import "@sdxc/markdown";\n',
 		".config/sdxc.lock.jsonl": [
 			'{"kind":"ui","name":"button","release":"2026.9.4","files":{"button.tsx":"sha256-a"}}',
 			'{"kind":"ui","name":"dialog","release":"2026.10.1","files":{"dialog.tsx":"sha256-b"}}',
@@ -84,22 +82,22 @@ async function fixtureProject(): Promise<string> {
 	});
 }
 
-/** Runs `sdxc upgrade` with `argv` against the `sdxc` package at `packageRoot`. */
+/** Runs `sdxc upgrade` with `argv` against the `@sdxc/kit` package at `packageRoot`. */
 async function invoke(argv: string[], cwd: string, packageRoot: string) {
 	let run = await invokeCLI(createSDXC({ packageRoot }), ["upgrade", ...argv], { cwd });
 	return { code: run.code, stdout: run.stdout, stderr: run.stderr };
 }
 
 /** The prompt for the fixture project moving from 2026.9.4 to 2026.10.14 with remix 3.0.0 to 3.1.0. */
-const EXPECTED = `# Upgrade sdxc from 2026.9.4 to 2026.10.14
+const EXPECTED = `# Upgrade the @sdxc packages from 2026.9.4 to 2026.10.14
 
-This project now depends on sdxc 2026.10.14, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after 2026.9.4. Apply each breaking change's migration wherever the code uses what it changed, adopt the features and fixes where they apply, then run the verification commands and fix what they report.
+This project now depends on the @sdxc packages of release 2026.10.14, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after 2026.9.4. Apply each breaking change's migration wherever the code uses what it changed, adopt the features and fixes where they apply, then run the verification commands and fix what they report.
 
-Packages this project imports: \`@sdxc/auth\`, \`@sdxc/jwt\`, \`sdxc\`.
+Packages this project imports: \`@sdxc/auth\`, \`@sdxc/jwt\`.
 
 ## Remix
 
-\`remix\` moved from 3.0.0 to 3.1.0, the version sdxc 2026.10.14 requires. Read its release notes for changes the code needs: https://github.com/remix-run/remix/releases/tag/remix%403.1.0
+\`remix\` moved from 3.0.0 to 3.1.0, the version release 2026.10.14 requires. Read its release notes for changes the code needs: https://github.com/remix-run/remix/releases/tag/remix%403.1.0
 
 ## Breaking changes
 
@@ -116,12 +114,6 @@ Body of rename verify to check.
 Released in 2026.9.5.
 
 Body of expose the issuer.
-
-### sdxc: add sdxc upgrade
-
-Released in 2026.10.14.
-
-Body of add sdxc upgrade.
 
 ## Fixes
 
@@ -148,7 +140,6 @@ Run these after editing and fix what they report:
 
 - \`@sdxc/auth\`: https://sdxc.sergiodxa.com/api/auth.md
 - \`@sdxc/jwt\`: https://sdxc.sergiodxa.com/api/jwt.md
-- \`sdxc\`: https://sdxc.sergiodxa.com/api/sdxc.md
 `;
 
 describe("sdxc upgrade --prompt", () => {
@@ -160,7 +151,7 @@ describe("sdxc upgrade --prompt", () => {
 			entry("2026.10.1", "@sdxc/jwt", "refactor", "rename verify to check", true),
 			entry("2026.10.1", "@sdxc/jwt", "docs", "reword the README"),
 			entry("2026.10.14", "@sdxc/jwt", "fix", "reject expired tokens"),
-			entry("2026.10.14", "sdxc", "feat", "add sdxc upgrade"),
+			entry("2026.10.14", "@sdxc/kit", "feat", "add sdxc upgrade"),
 		]);
 		let root = await fixtureProject();
 		let result = await invoke(
@@ -234,16 +225,5 @@ describe("sdxc upgrade --prompt", () => {
 		let result = await invoke(["--prompt", "--from", "2026.9.4"], root, packageRoot);
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(".config/sdxc.lock.jsonl:2: repeats the ui entry button");
-	});
-});
-
-describe("packageOf", () => {
-	test.each([
-		["sdxc", "sdxc"],
-		["sdxc/jwt", "@sdxc/jwt"],
-		["sdxc/auth/remix/context", "@sdxc/auth"],
-		["@sdxc/markdown/plugin/lint", "@sdxc/markdown"],
-	])("%s comes from %s", (specifier, expected) => {
-		expect(packageOf(specifier)).toBe(expected);
 	});
 });

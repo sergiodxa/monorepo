@@ -4,9 +4,9 @@
  * command` adds the mapping. It runs on Bun, outside the Worker, started by `bootstrap/cli.ts`.
  */
 
-import { createCLI, lazy } from "sdxc/cli";
-import { createLogger } from "sdxc/logger";
-import { log } from "sdxc/logger/middleware/cli";
+import { createCLI, lazy } from "@sdxc/cli";
+import { createLogger } from "@sdxc/logger";
+import { log } from "@sdxc/logger/middleware/cli";
 
 import commandset from "~/app/commands";
 import { logger } from "~/app/initializers/logger";

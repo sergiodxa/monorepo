@@ -17,6 +17,7 @@ import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import { renderConfig } from "../init.js";
 import { resolveInside } from "../project.js";
+import { resolveRelease, scopedPackageOf } from "../releases.js";
 
 /** The template `create` uses without `--template`. */
 export const DEFAULT_TEMPLATE = "app";
@@ -47,9 +48,8 @@ export interface TemplateTree {
 	directories: Set<string>;
 }
 
-/** The kit's own manifest fields a built-in template pins. */
+/** The kit's own manifest field a built-in template pins `remix` from. */
 interface OwnManifest {
-	version?: string;
 	peerDependencies?: Record<string, string>;
 }
 
@@ -145,27 +145,40 @@ async function readInto(directory: string, prefix: string, tree: TemplateTree): 
 }
 
 /**
- * Completes a built-in template for the project `name`: names it, pins `sdxc` to the kit's own
- * version, the release both ship in, and `remix` to the peer the kit declares, and writes `.config/sdxc.jsonc` as
- * `sdxc init` renders it, so a new configuration key reaches new projects on its own.
+ * Completes a built-in template for the project `name`: names it, pins every `@sdxc/*` package it
+ * lists to the version npm calls `latest` and `remix` to the peer the kit declares, and writes
+ * `.config/sdxc.jsonc` as `sdxc init` renders it, so a new configuration key reaches new projects.
  */
 export async function completeBuiltin(
 	tree: TemplateTree,
 	name: string,
 	packageRoot: string,
+	signal?: AbortSignal,
 ): Promise<Result<void, Error>> {
 	let text = await wrap(() => readFile(join(packageRoot, "package.json"), "utf8"));
 	if (isFailure(text)) return text;
 	let own = wrap(() => JSON.parse(text.data) as OwnManifest);
 	if (isFailure(own)) return own;
-	let { version, peerDependencies } = own.data;
+	let remix = own.data.peerDependencies?.remix;
+	let listed = treeDependencies(tree);
+	if (isFailure(listed)) return listed;
+	let pins = await resolveRelease(
+		listed.data.filter((dependency) => scopedPackageOf(dependency) === dependency),
+		null,
+		signal,
+	);
+	if (isFailure(pins)) return pins;
 	let renamed = editManifest(tree, (manifest) => {
 		manifest.name = name;
-		let dependencies = record(manifest.dependencies);
-		if (version !== undefined) dependencies.sdxc = version;
-		let remix = peerDependencies?.remix;
-		if (remix !== undefined) dependencies.remix = remix;
-		manifest.dependencies = dependencies;
+		for (let field of ["dependencies", "devDependencies"] as const) {
+			let section = record(manifest[field]);
+			for (let dependency of Object.keys(section)) {
+				let pin = pins.data.get(dependency);
+				if (pin !== undefined) section[dependency] = pin;
+			}
+			if (field === "dependencies" && remix !== undefined) section.remix = remix;
+			if (Object.keys(section).length > 0) manifest[field] = section;
+		}
 	});
 	if (isFailure(renamed)) return renamed;
 	if (!tree.files.has(".config/sdxc.jsonc")) {
@@ -174,6 +187,20 @@ export async function completeBuiltin(
 		tree.files.set(".config/sdxc.jsonc", new TextEncoder().encode(config.data));
 	}
 	return success(undefined);
+}
+
+/** Every package the tree's `package.json` lists under `dependencies` or `devDependencies`. */
+function treeDependencies(tree: TemplateTree): Result<string[], Error> {
+	let bytes = tree.files.get("package.json");
+	if (bytes === undefined) return success([]);
+	let parsed = wrap(() => JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>);
+	if (isFailure(parsed)) {
+		return failure(new Error(`The template's package.json is not JSON: ${parsed.error.message}`));
+	}
+	return success([
+		...Object.keys(record(parsed.data.dependencies)),
+		...Object.keys(record(parsed.data.devDependencies)),
+	]);
 }
 
 /** Names the project in a template's `package.json`, when the template has one. */

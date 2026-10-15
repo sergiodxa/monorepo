@@ -20,7 +20,7 @@ import type { KindName } from "./kinds.js";
 export interface Stub {
 	name: string;
 	text: string;
-	/** Relative to the project root for a project stub, `sdxc/stubs/<name>` for a built-in one. */
+	/** Relative to the project root for a project stub, `@sdxc/kit/stubs/<name>` for a built-in one. */
 	source: string;
 }
 
@@ -59,14 +59,14 @@ export async function loadStub(
 	for (let name of names) {
 		let candidates: Array<[string, string]> = [
 			[join(root, stubsDir, name), `${stubsDir}/${name}`],
-			[join(builtinStubsDir(packageRoot), name), `sdxc/stubs/${name}`],
+			[join(builtinStubsDir(packageRoot), name), `@sdxc/kit/stubs/${name}`],
 		];
 		for (let [path, source] of candidates) {
 			let text = await wrap(() => readFile(path, "utf8"));
 			if (isSuccess(text)) return success({ name, text: text.data, source });
 		}
 	}
-	return failure(new Error(`No stub ${names.join(" or ")} in ${stubsDir} or sdxc`));
+	return failure(new Error(`No stub ${names.join(" or ")} in ${stubsDir} or @sdxc/kit`));
 }
 
 /**

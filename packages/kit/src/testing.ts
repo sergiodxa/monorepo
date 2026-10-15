@@ -8,7 +8,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { access, mkdir, mkdtemp, readFile, symlink } from "node:fs/promises";
+import { access, lstat, mkdir, mkdtemp, readFile, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
@@ -28,13 +28,13 @@ export interface Spawned {
 
 /**
  * Creates `template` as the project `name` inside a fresh temporary directory and links every
- * dependency its `package.json` lists: `sdxc` to the umbrella beside this package in the
- * workspace, anything else to the copy this workspace installed. Answers the project directory;
- * the caller removes its parent.
+ * dependency its `package.json` lists: an `@sdxc/*` package to its workspace directory, anything
+ * else to the copy this workspace installed. `sdxc create` reads the npm registry, so the caller
+ * answers it, as {@link registryDocument} does. Answers the project directory; the caller removes
+ * its parent.
  */
 export async function materialize(template: string, name = "app"): Promise<Result<string, Error>> {
 	let parent = await mkdtemp(join(tmpdir(), "sdxc-template-"));
-	let packageRoot = defaultPackageRoot();
 	let created = await invoke(createSDXC(), ["create", name, "--template", template, "--no-git"], {
 		cwd: parent,
 		interactive: false,
@@ -43,29 +43,62 @@ export async function materialize(template: string, name = "app"): Promise<Resul
 		return failure(new Error(`sdxc create exited with ${created.code}: ${created.stderr}`));
 	}
 	let project = join(parent, name);
+	let linked = await linkDependencies(project);
+	if (isFailure(linked)) return linked;
+	return success(project);
+}
+
+/**
+ * Links every dependency the project's `package.json` lists and `node_modules` lacks: an
+ * `@sdxc/*` package to its workspace directory, anything else to the copy this workspace
+ * installed, so a package `sdxc make` added resolves as an install would make it.
+ */
+export async function linkDependencies(project: string): Promise<Result<void, Error>> {
+	let packageRoot = defaultPackageRoot();
 	let manifest = JSON.parse(await readFile(join(project, "package.json"), "utf8")) as {
 		dependencies?: Record<string, string>;
 		devDependencies?: Record<string, string>;
 	};
 	let names = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
 	for (let dependency of names) {
-		let source =
-			dependency === "sdxc"
-				? success(join(packageRoot, "..", "sdxc"))
-				: await installed(packageRoot, dependency);
-		if (isFailure(source)) return source;
 		let link = join(project, "node_modules", dependency);
+		if (isSuccess(await wrap(() => lstat(link)))) continue;
+		let source = dependency.startsWith("@sdxc/")
+			? success(join(packageRoot, "..", dependency.slice("@sdxc/".length)))
+			: await installed(packageRoot, dependency);
+		if (isFailure(source)) return source;
 		await mkdir(dirname(link), { recursive: true });
 		await symlink(source.data, link, "dir");
 	}
-	return success(project);
+	return success(undefined);
 }
 
 /**
- * Generates the Worker's types with the project's own `cf`, then type checks the project with
- * the workspace's TypeScript, answering what the compiler printed.
+ * The npm registry document a test answers for `name` (`/@sdxc%2fjobs`, say): `versions` each
+ * published with `remix` 3.0.0 as a peer, and `latest` the newest of them.
+ *
+ * @example http.get(`${REGISTRY}/*`, ({ request }) => HttpResponse.json(registryDocument(new URL(request.url).pathname.slice(1))))
+ */
+export function registryDocument(
+	name: string,
+	versions: readonly string[] = ["0.0.1"],
+): Record<string, unknown> {
+	return {
+		name: decodeURIComponent(name),
+		"dist-tags": { latest: versions.at(-1) },
+		versions: Object.fromEntries(
+			versions.map((version) => [version, { version, peerDependencies: { remix: "3.0.0" } }]),
+		),
+	};
+}
+
+/**
+ * Links what `package.json` gained since, generates the Worker's types with the project's own
+ * `cf`, then type checks the project with the workspace's TypeScript, answering what it printed.
  */
 export async function typecheck(project: string): Promise<Spawned> {
+	let linked = await linkDependencies(project);
+	if (isFailure(linked)) return { code: null, output: linked.error.message };
 	let types = await run([join(project, "node_modules/cf/bin/cf"), "workers", "types"], project);
 	if (types.code !== 0) return types;
 	return run(

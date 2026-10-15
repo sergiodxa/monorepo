@@ -44,8 +44,8 @@ export const UI_LOCK_ENTRY = s.object(
 		name: s
 			.string()
 			.pipe(checks.pattern(NAME))
-			.meta({ description: "The component, as `sdxc/ui/<name>` imports it" }),
-		release: s.string().meta({ description: "The `sdxc` release the copy came from" }),
+			.meta({ description: "The component, as `@sdxc/ui/<name>` imports it" }),
+		release: s.string().meta({ description: "The release the copy came from" }),
 		files: s
 			.record(s.string().pipe(checks.pattern(FILE_NAME)), s.string().pipe(checks.pattern(HASH)))
 			.meta({

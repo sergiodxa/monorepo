@@ -273,7 +273,7 @@ export const SDXC_COMMANDS = commands({
 			},
 		}),
 		remove: command({
-			description: "Delete copies and point imports back at sdxc/ui/<name>",
+			description: "Delete copies and point imports back at @sdxc/ui/<name>",
 			tasks: true,
 			arguments: {
 				components: argument.variadic(s.string(), {
@@ -285,12 +285,12 @@ export const SDXC_COMMANDS = commands({
 		}),
 	}),
 	upgrade: command({
-		description: "Move to another sdxc release and print the prompt for the code",
+		description: "Move the @sdxc packages to another release and print the prompt for the code",
 		tasks: true,
 		arguments: {
 			version: argument(s.string(), {
 				optional: true,
-				description: "The sdxc release to move to; the latest when left out",
+				description: "The release to move to, a date such as 2026.10.14; the latest when left out",
 			}),
 		},
 		flags: {
@@ -303,11 +303,11 @@ export const SDXC_COMMANDS = commands({
 				description: "Write the prompt to a file instead of stdout",
 			}),
 			prompt: flag.boolean("prompt", {
-				description: "Print the prompt for the installed sdxc only; needs --from",
+				description: "Print the prompt for this release of @sdxc/kit only; needs --from",
 			}),
 			from: flag.string("from", {
 				valueName: "version",
-				description: "The sdxc release the project moved from, with --prompt",
+				description: "The release the project moved from, with --prompt",
 			}),
 			remixFrom: flag.string("remix-from", {
 				valueName: "version",

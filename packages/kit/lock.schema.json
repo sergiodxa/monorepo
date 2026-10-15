@@ -25,11 +25,11 @@
 				"name": {
 					"type": "string",
 					"pattern": "^[a-z0-9][a-z0-9-]*$",
-					"description": "The component, as `sdxc/ui/<name>` imports it"
+					"description": "The component, as `@sdxc/ui/<name>` imports it"
 				},
 				"release": {
 					"type": "string",
-					"description": "The `sdxc` release the copy came from"
+					"description": "The release the copy came from"
 				},
 				"files": {
 					"type": "object",

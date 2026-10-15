@@ -6,7 +6,7 @@
 import type { TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
-import { createModel } from "sdxc/data-model";
+import { createModel } from "@sdxc/data-model";
 
 /** The `{{snake}}` table, as its migration creates it. */
 export const {{key}}Table = table({

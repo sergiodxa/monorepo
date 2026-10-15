@@ -6,14 +6,14 @@
 
 import type { RouterContext } from "remix/router";
 
+import { assets } from "@sdxc/assets-middleware";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { assets } from "sdxc/assets-middleware";
-import { lazy } from "sdxc/lazy-route";
-import { log } from "sdxc/logger/middleware";
 
 import notFound from "~/app/http/controllers/not-found";
 import { assetResolver } from "~/app/initializers/assets";

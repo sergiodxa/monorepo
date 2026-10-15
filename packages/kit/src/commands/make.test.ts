@@ -15,10 +15,23 @@ import type { InvokeOptions } from "@sdxc/cli/test";
 
 import { invoke as invokeCLI } from "@sdxc/cli/test";
 import { unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
-import { materialize, runCommandLine, typecheck } from "../testing.js";
+import { REGISTRY } from "../releases.js";
+import { materialize, registryDocument, runCommandLine, typecheck } from "../testing.js";
+
+/** The npm registry `create` and `make` pin `@sdxc/*` packages from: every one at 2026.10.14. */
+const SERVER = setupServer(
+	http.get(`${REGISTRY}/*`, ({ request }) =>
+		HttpResponse.json(registryDocument(new URL(request.url).pathname.slice(1), ["2026.10.14"])),
+	),
+);
+
+beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
+afterAll(() => SERVER.close());
 
 /** Fixture directories created by the current test, removed after it. */
 const DIRECTORIES: string[] = [];
@@ -340,7 +353,7 @@ describe("declaring and mapping", () => {
 			);
 			expect(tools).toContain('getPost: tool("get_post", {');
 			expect(mcp).toContain('article: resource("app://article", {');
-			expect(handler).toContain('import { createHandler, lazy } from "sdxc/mcp";');
+			expect(handler).toContain('import { createHandler, lazy } from "@sdxc/mcp";');
 			expect(handler).toContain('import toolset from "~/app/mcp/tools";');
 			expect(handler).toContain(
 				'mcp.tools.map(toolset.getPost, lazy(() => import("~/app/mcp/tools/get-post")));',
@@ -380,10 +393,10 @@ describe("declaring and mapping", () => {
 		await mkdir(join(root, "app/initializers"), { recursive: true });
 		await writeFile(
 			join(root, "app/commands/index.ts"),
-			'import { command, commands } from "sdxc/cli";\n\nexport default commands({\n\tabout: command({}),\n});\n',
+			'import { command, commands } from "@sdxc/cli";\n\nexport default commands({\n\tabout: command({}),\n});\n',
 		);
 		let initializer =
-			'import { createCLI, lazy } from "sdxc/cli";\n\nimport commandset from "~/app/commands";\n\nexport const cli = createCLI({ name: "blog", commands: commandset });\n';
+			'import { createCLI, lazy } from "@sdxc/cli";\n\nimport commandset from "~/app/commands";\n\nexport const cli = createCLI({ name: "blog", commands: commandset });\n';
 		await writeFile(join(root, "app/initializers/cli.ts"), initializer);
 
 		let result = await invoke(["command", "about/more", "--no-test"], root);
@@ -391,6 +404,7 @@ describe("declaring and mapping", () => {
 		expect(result.stdout).toBe(
 			[
 				"Wrote app/commands/about/more.ts",
+				"Added @sdxc/cli@2026.10.14 to package.json; run npm install",
 				"Declare and map it by hand, since `about` is a command, not a group:",
 				"In app/commands/index.ts, in commands({ … }), inside a commands({ … }) group for each of about:",
 				'  more: command({ description: "More" }),',
@@ -402,17 +416,46 @@ describe("declaring and mapping", () => {
 		expect(await readFile(join(root, "app/initializers/cli.ts"), "utf8")).toBe(initializer);
 	});
 
+	test("lists an imported @sdxc package at the project's release, in the dry run too", async () => {
+		SERVER.use(
+			http.get(`${REGISTRY}/*`, ({ request }) =>
+				HttpResponse.json(
+					registryDocument(new URL(request.url).pathname.slice(1), [
+						"2026.9.4",
+						"2026.10.1",
+						"2026.10.14",
+					]),
+				),
+			),
+		);
+		let root = await project();
+		let manifest =
+			'{\n\t"name": "blog",\n\t"dependencies": {\n\t\t"@sdxc/cli": "2026.10.12"\n\t}\n}\n';
+		await writeFile(join(root, "package.json"), manifest);
+		await writeFile(join(root, "bun.lock"), "");
+
+		let dry = await invoke(["job", "digest", "--no-test", "--dry-run"], root);
+		let made = await invoke(["job", "digest", "--no-test"], root);
+
+		expect(dry.stdout).toContain('+\t\t"@sdxc/jobs": "2026.10.1"');
+		expect(made.stdout).toContain("Added @sdxc/jobs@2026.10.1 to package.json; run bun install\n");
+		expect(JSON.parse(await readFile(join(root, "package.json"), "utf8"))).toEqual({
+			name: "blog",
+			dependencies: { "@sdxc/cli": "2026.10.12", "@sdxc/jobs": "2026.10.1" },
+		});
+	});
+
 	test("reuses the group whose handlers already live in the folder", async () => {
 		let root = await project();
 		await mkdir(join(root, "app/jobs"), { recursive: true });
 		await mkdir(join(root, "app/initializers"), { recursive: true });
 		await writeFile(
 			join(root, "app/jobs/index.ts"),
-			'import { job, jobs } from "sdxc/jobs";\n\nexport default jobs({\n\tactivityPub: {\n\t\tsend: job({ cron: "* * * * *" }),\n\t},\n});\n',
+			'import { job, jobs } from "@sdxc/jobs";\n\nexport default jobs({\n\tactivityPub: {\n\t\tsend: job({ cron: "* * * * *" }),\n\t},\n});\n',
 		);
 		await writeFile(
 			join(root, "app/initializers/dispatcher.ts"),
-			'import { createJobDispatcher } from "sdxc/jobs";\n\nimport jobs from "../jobs/index.js";\n\nexport const dispatcher = createJobDispatcher({});\n\ndispatcher.map(jobs.activityPub.send, () => import("../jobs/activitypub/send.js"));\n',
+			'import { createJobDispatcher } from "@sdxc/jobs";\n\nimport jobs from "../jobs/index.js";\n\nexport const dispatcher = createJobDispatcher({});\n\ndispatcher.map(jobs.activityPub.send, () => import("../jobs/activitypub/send.js"));\n',
 		);
 
 		let result = await invoke(
@@ -421,7 +464,7 @@ describe("declaring and mapping", () => {
 		);
 
 		expect(result.stdout).toBe(
-			"Wrote app/jobs/activitypub/receive.ts\nEdited app/jobs/index.ts\nEdited app/initializers/dispatcher.ts\n",
+			"Wrote app/jobs/activitypub/receive.ts\nEdited app/jobs/index.ts\nEdited app/initializers/dispatcher.ts\nAdded @sdxc/jobs@2026.10.14 to package.json; run npm install\n",
 		);
 		expect(await readFile(join(root, "app/jobs/index.ts"), "utf8")).toContain(
 			'\t\tsend: job({ cron: "* * * * *" }),\n\t\treceive: job({ cron: "0 * * * *" }),\n',
