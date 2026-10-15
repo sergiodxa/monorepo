@@ -1,6 +1,6 @@
 # @sdxc/database-middleware
 
-Middleware that publishes a [`remix/data-table`](https://www.npmjs.com/package/remix) database as `ctx.db` on a request or a job.
+Middleware that publishes a [`remix/data-table`](https://www.npmjs.com/package/remix) database as `ctx.db` on a request, a job or a command.
 
 ## Installation
 
@@ -8,7 +8,7 @@ Middleware that publishes a [`remix/data-table`](https://www.npmjs.com/package/r
 npm add @sdxc/database-middleware
 ```
 
-It runs on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com/package/remix) installs alongside it. The `./jobs` entry point runs on an [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs) dispatcher; install that package when you use it.
+It runs on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com/package/remix) installs alongside it. The `./jobs` entry point runs on an [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs) dispatcher; install that package when you use it. The `./cli` entry point runs on an [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) command line; install that package when you use it.
 
 ## Usage
 
@@ -72,6 +72,35 @@ import { createJobDispatcher } from "@sdxc/jobs";
 let dispatcher = createJobDispatcher({ middleware: [database(db)] as const });
 ```
 
+### Publish it on a command line, with a SQL prompt
+
+`@sdxc/database-middleware/cli` exports a `database()` for an `@sdxc/cli` command line, under the same key, and a `db` command to mount in your own contract under any name:
+
+```typescript
+import { commands, createCLI } from "@sdxc/cli";
+import { DB_COMMAND, database, dbHandler } from "@sdxc/database-middleware/cli";
+
+let contract = commands({ db: DB_COMMAND, users: USERS_COMMANDS });
+
+let cli = createCLI({
+	name: "app",
+	commands: contract,
+	middleware: [database(() => openDatabase())],
+});
+cli.map(contract.db, dbHandler);
+
+process.exitCode = await cli.run(process.argv.slice(2));
+```
+
+```sh
+app db                                  # sql> prompt until .exit, .quit or Ctrl+C
+app db --execute "SELECT id, email FROM users"
+# id  email
+# --  ---------------
+# 1   ada@example.com
+# (1 row)
+```
+
 ## API
 
 ### `database(db: Database): Middleware`
@@ -82,9 +111,17 @@ Returns router middleware that sets `db` as `ctx.db` and under the `Database` ke
 
 Returns job middleware that sets the database as `ctx.db` and under the `Database` key on every job run. A function is called once per run, so each run reads the instance it returns.
 
+### `database(db: Database | (() => Database)): CommandMiddleware` from `./cli`
+
+Returns command middleware that sets the database as `ctx.db` and under the `Database` key on every command run. A function is called once per run that reaches a handler, so `--help` opens nothing. Importing the entry adds `db` to `@sdxc/cli`'s `CommandContext`, so a later middleware's callback reads `ctx.db`.
+
+### `DB_COMMAND` and `dbHandler` from `./cli`
+
+The `db` command's declaration, to place in a contract under any name, and the action to `map()` onto it. With `--execute <sql>` (`-e`) it runs that one statement and exits, failing with the database's error; without it, a `sql>` prompt runs each statement until `.exit`, `.quit` or Ctrl+C, printing errors and carrying on. A read prints its rows as aligned columns with a row count, and a write prints its affected count. Without a terminal and without `--execute`, it ends at once. It reads the database `database()` published and fails naming it when none was.
+
 ### `Database`
 
-The context key both middlewares publish under; `ctx.get(Database)` returns the same object as `ctx.db`. Both entry points export it.
+The context key every middleware publishes under; `ctx.get(Database)` returns the same object as `ctx.db`. Every entry point exports it.
 
 ## Pattern: In-memory database in tests
 

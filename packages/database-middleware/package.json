@@ -1,25 +1,34 @@
 {
 	"name": "@sdxc/database-middleware",
 	"version": "0.0.1",
-	"description": "Middleware that publishes a remix/data-table database as ctx.db on a request or a job",
+	"description": "Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./cli": "./src/cli.ts",
 		"./jobs": "./src/jobs.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	},
 	"devDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		},
 		"@sdxc/jobs": {
 			"optional": true
 		}

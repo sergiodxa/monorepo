@@ -310,7 +310,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | [@sdxc/cli](packages/cli)                                 | Build command-line tools with generated help, prompts bound to flags, tasks and a test harness    |
 | [@sdxc/data-model](packages/data-model)                   | Models over remix/data-table tables with scopes, async callbacks and typed meta fields            |
-| [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request or a job             |
+| [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command  |
 | [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                              |
 | [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                       |
 | [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state |
