@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DownloadIcon } from "sdxc/icons";
-import { flexWrap, hstack } from "sdxc/u/layout";
-import { LinkButton } from "sdxc/ui";
+import { DownloadIcon } from "@sdxc/icons";
+import { flexWrap, hstack } from "@sdxc/u/layout";
+import { LinkButton } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>

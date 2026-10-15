@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BoldIcon, ItalicIcon, UnderlineIcon } from "sdxc/icons";
-import { Button, Toolbar } from "sdxc/ui";
+import { BoldIcon, ItalicIcon, UnderlineIcon } from "@sdxc/icons";
+import { Button, Toolbar } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Toolbar aria-label="Text style" aria-orientation="vertical">

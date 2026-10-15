@@ -6,13 +6,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "sdxc/u/color";
-import { cursor } from "sdxc/u/general";
-import { container, hstack, resize } from "sdxc/u/layout";
-import { hidden } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { atMax } from "sdxc/u/responsive";
-import { minIs } from "sdxc/u/size";
+import { bg, fg } from "@sdxc/u/color";
+import { cursor } from "@sdxc/u/general";
+import { container, hstack, resize } from "@sdxc/u/layout";
+import { hidden } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { atMax } from "@sdxc/u/responsive";
+import { minIs } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

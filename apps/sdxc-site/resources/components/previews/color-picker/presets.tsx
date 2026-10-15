@@ -10,10 +10,10 @@
 
 import type { Handle } from "remix/component";
 
+import { font } from "@sdxc/u/typography";
+import { ColorPicker, ColorSwatchPicker, Input, Label } from "@sdxc/ui";
+import { parseColor } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
-import { font } from "sdxc/u/typography";
-import { ColorPicker, ColorSwatchPicker, Input, Label } from "sdxc/ui";
-import { parseColor } from "sdxc/ui/utils";
 
 /** The brand colors an Acme workspace keeps saved, offered as one-click picks. */
 const PRESETS = [

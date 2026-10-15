@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ImagePlaceholder } from "sdxc/ui";
+import { ImagePlaceholder } from "@sdxc/ui";
 
 /** An organization mark drawn as a data URI, so the example fetches nothing to render. */
 const MARK =

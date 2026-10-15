@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "sdxc/u/color";
-import { cursor } from "sdxc/u/general";
-import { dark } from "sdxc/u/responsive";
-import { hover } from "sdxc/u/state";
+import { bg, fg } from "@sdxc/u/color";
+import { cursor } from "@sdxc/u/general";
+import { dark } from "@sdxc/u/responsive";
+import { hover } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

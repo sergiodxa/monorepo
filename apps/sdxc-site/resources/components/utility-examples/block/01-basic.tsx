@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { block } from "sdxc/u/layout";
-import { maxIs } from "sdxc/u/size";
+import { block } from "@sdxc/u/layout";
+import { maxIs } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

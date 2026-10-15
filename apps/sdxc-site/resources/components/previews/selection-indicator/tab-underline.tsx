@@ -9,11 +9,11 @@
 
 import type { Handle } from "remix/component";
 
+import { bg } from "@sdxc/u/color";
+import { absolute, insBe, insIe, insIs, relative } from "@sdxc/u/layout";
+import { bs, is } from "@sdxc/u/size";
+import { SelectionIndicator, Tabs } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { bg } from "sdxc/u/color";
-import { absolute, insBe, insIe, insIs, relative } from "sdxc/u/layout";
-import { bs, is } from "sdxc/u/size";
-import { SelectionIndicator, Tabs } from "sdxc/ui";
 
 /** The tabs the strip offers, so the bar has somewhere to move between. */
 const SECTIONS = [

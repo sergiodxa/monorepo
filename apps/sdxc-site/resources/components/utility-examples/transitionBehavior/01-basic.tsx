@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { opacity, transition, transitionBehavior } from "sdxc/u/effects";
-import { startingStyle } from "sdxc/u/responsive";
-import { open } from "sdxc/u/state";
+import { opacity, transition, transitionBehavior } from "@sdxc/u/effects";
+import { startingStyle } from "@sdxc/u/responsive";
+import { open } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

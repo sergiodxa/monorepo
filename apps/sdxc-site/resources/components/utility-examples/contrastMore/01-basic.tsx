@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { contrastMore } from "sdxc/u/responsive";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { contrastMore } from "@sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

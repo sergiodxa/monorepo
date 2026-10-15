@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "sdxc/u/color";
-import { blur } from "sdxc/u/effects";
-import { absolute, inset, relative } from "sdxc/u/layout";
-import { isolate, z } from "sdxc/u/stacking";
+import { bg } from "@sdxc/u/color";
+import { blur } from "@sdxc/u/effects";
+import { absolute, inset, relative } from "@sdxc/u/layout";
+import { isolate, z } from "@sdxc/u/stacking";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

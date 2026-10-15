@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ImageIcon } from "sdxc/icons";
-import { DropZone } from "sdxc/ui";
+import { ImageIcon } from "@sdxc/icons";
+import { DropZone } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<DropZone name="avatar" accept="image/png, image/jpeg" aria-label="Choose a profile photo">

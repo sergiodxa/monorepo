@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { TriangleAlertIcon } from "sdxc/icons";
-import { is } from "sdxc/u/size";
-import { Marker } from "sdxc/ui";
+import { TriangleAlertIcon } from "@sdxc/icons";
+import { is } from "@sdxc/u/size";
+import { Marker } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[is("26rem")]}>

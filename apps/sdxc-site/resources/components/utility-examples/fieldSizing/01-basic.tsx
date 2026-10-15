@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fieldSizing } from "sdxc/u/layout";
-import { minIs } from "sdxc/u/size";
+import { fieldSizing } from "@sdxc/u/layout";
+import { minIs } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

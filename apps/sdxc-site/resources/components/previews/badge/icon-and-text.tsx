@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CheckIcon } from "sdxc/icons";
-import { Badge } from "sdxc/ui";
+import { CheckIcon } from "@sdxc/icons";
+import { Badge } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Badge color="success" variant="secondary">

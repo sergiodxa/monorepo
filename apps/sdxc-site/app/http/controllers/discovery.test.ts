@@ -96,7 +96,7 @@ describe("GET /api/u/:utility.md", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("text/markdown");
 		expect(body.startsWith("# padding\n")).toBe(true);
-		expect(body).toContain('import { p } from "sdxc/u/');
+		expect(body).toContain('import { p } from "@sdxc/u/');
 		expect(body).toContain("## Quick reference");
 		expect(body).toContain("u.hover(");
 	});
@@ -122,7 +122,7 @@ describe("GET /api/ui/:component.md and /api/ui/:subpath/:slug.md", () => {
 		let copy = await (await fetchApp("/api/ui/mixins/copy-to-clipboard.md")).text();
 
 		expect(theming).toContain("--ui-brand-bg-solid");
-		expect(copy).toContain('from "sdxc/ui/mixins"');
+		expect(copy).toContain('from "@sdxc/ui/mixins"');
 		expect(copy).toContain("### CopyEvent");
 	});
 

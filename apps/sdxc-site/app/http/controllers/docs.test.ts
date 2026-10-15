@@ -77,11 +77,11 @@ describe("GET /api/:name", () => {
 		expect(body).toContain("uptime");
 	});
 
-	test("installs a package with the peers it needs, and names its sdxc subpath", async () => {
+	test("installs a package by its own name with the peers it needs", async () => {
 		let body = await (await fetchApp("/api/http")).text();
 
 		expect(body).toContain("npm add @sdxc/http remix");
-		expect(body).toContain("sdxc/http</a>");
+		expect(body).not.toContain("Through sdxc");
 	});
 
 	test("links the package list from the sdxc page in place of naming every dependency", async () => {
@@ -136,7 +136,7 @@ describe("GET /api/ui/:subpath/:slug", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(body).toContain("sdxc/ui/mixins");
+		expect(body).toContain("@sdxc/ui/mixins");
 		expect(body).toContain('id="export-copyevent"');
 	});
 

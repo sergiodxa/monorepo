@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { is, maxIs } from "sdxc/u/size";
-import { Typeset } from "sdxc/ui";
+import { is, maxIs } from "@sdxc/u/size";
+import { Typeset } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Typeset preset="chat" mix={[is("100%"), maxIs("28rem")]}>

@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { Button, Card, TimeField } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { Button, Card, TimeField } from "sdxc/ui";
 
 /** Quarter-hour steps, in seconds, which is the granularity the rota is planned at. */
 const QUARTER_HOUR = 900;

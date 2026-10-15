@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { forcedColorAdjust } from "sdxc/u/a11y";
-import { bg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { forcedColors } from "sdxc/u/responsive";
-import { bs, is } from "sdxc/u/size";
+import { forcedColorAdjust } from "@sdxc/u/a11y";
+import { bg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { forcedColors } from "@sdxc/u/responsive";
+import { bs, is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animation } from "sdxc/u/animation";
+import { animation } from "@sdxc/u/animation";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -11,13 +11,13 @@
 
 import type { Handle } from "remix/component";
 
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
+import { bs, is, p } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Button, SharedElement, Text } from "@sdxc/ui";
 import { clientEntry, css, on } from "remix/component";
-import { bg, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { gap, grid, gridTemplate, hstack, vstack } from "sdxc/u/layout";
-import { bs, is, p } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { Button, SharedElement, Text } from "sdxc/ui";
 
 /** The covers the grid lays out, one of which the detail view opens. */
 const COVERS = [

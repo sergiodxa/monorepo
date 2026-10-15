@@ -12,7 +12,6 @@
 
 import type { Handle } from "remix/component";
 
-import { clientEntry, on } from "remix/component";
 import {
 	ExternalLinkIcon,
 	FilePlusIcon,
@@ -22,14 +21,15 @@ import {
 	SettingsIcon,
 	TerminalIcon,
 	UsersIcon,
-} from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is, maxIs } from "sdxc/u/size";
-import { text, textAlign } from "sdxc/u/typography";
-import { Command, Keyboard } from "sdxc/ui";
-import { FilterModel } from "sdxc/ui/behaviors";
-import { commandFilter, commandKeys } from "sdxc/ui/mixins";
+} from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is, maxIs } from "@sdxc/u/size";
+import { text, textAlign } from "@sdxc/u/typography";
+import { Command, Keyboard } from "@sdxc/ui";
+import { FilterModel } from "@sdxc/ui/behaviors";
+import { commandFilter, commandKeys } from "@sdxc/ui/mixins";
+import { clientEntry, on } from "remix/component";
 
 /** Every action the palette offers, in the order a workspace lists them. */
 const ACTIONS = [

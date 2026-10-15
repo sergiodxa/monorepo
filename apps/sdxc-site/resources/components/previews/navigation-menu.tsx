@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { NavigationMenu } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
-import { NavigationMenu } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<NavigationMenu aria-label="Primary">

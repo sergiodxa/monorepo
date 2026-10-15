@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { borderEdge } from "sdxc/u/color";
-import { p } from "sdxc/u/size";
-import { where } from "sdxc/u/state";
-import { textAlign } from "sdxc/u/typography";
+import { borderEdge } from "@sdxc/u/color";
+import { p } from "@sdxc/u/size";
+import { where } from "@sdxc/u/state";
+import { textAlign } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 
@@ -36,11 +36,11 @@ export default {
 			</thead>
 			<tbody>
 				<tr>
-					<td>sdxc/u</td>
+					<td>@sdxc/u</td>
 					<td>12 kB</td>
 				</tr>
 				<tr>
-					<td>sdxc/ui</td>
+					<td>@sdxc/ui</td>
 					<td>48 kB</td>
 				</tr>
 			</tbody>

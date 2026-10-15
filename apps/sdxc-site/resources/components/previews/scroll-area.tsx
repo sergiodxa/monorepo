@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { bg, fg } from "@sdxc/u/color";
+import { hstack, sticky, vstack } from "@sdxc/u/layout";
+import { bs, is, p } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Badge, ScrollArea, Separator, Text } from "@sdxc/ui";
+import { scrollFade, scrollShadow } from "@sdxc/ui/animations";
 import { clientEntry, css } from "remix/component";
-import { bg, fg } from "sdxc/u/color";
-import { hstack, sticky, vstack } from "sdxc/u/layout";
-import { bs, is, p } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { Badge, ScrollArea, Separator, Text } from "sdxc/ui";
-import { scrollFade, scrollShadow } from "sdxc/ui/animations";
 
 /** One row of the log the viewport scrolls, so the example reads as a real deploy history. */
 interface Deploy {

@@ -17,19 +17,19 @@
 
 import type { Handle } from "remix/component";
 
-import { clientEntry, on } from "remix/component";
-import { ShoppingCartIcon } from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { grow, hstack, vstack } from "sdxc/u/layout";
-import { overflowY } from "sdxc/u/overflow";
-import { is, mbs, minBs } from "sdxc/u/size";
-import { tabularNums, text, weight } from "sdxc/u/typography";
-import { Button, Drawer, Item, NumberField, Separator, Text } from "sdxc/ui";
+import { ShoppingCartIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { grow, hstack, vstack } from "@sdxc/u/layout";
+import { overflowY } from "@sdxc/u/overflow";
+import { is, mbs, minBs } from "@sdxc/u/size";
+import { tabularNums, text, weight } from "@sdxc/u/typography";
+import { Button, Drawer, Item, NumberField, Separator, Text } from "@sdxc/ui";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
-} from "sdxc/ui/mixins";
+} from "@sdxc/ui/mixins";
+import { clientEntry, on } from "remix/component";
 
 import type { CartLine } from "~/app/services/preview-cart";
 

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Confirm } from "sdxc/ui";
+import { Button, Confirm } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from element ids. */
 const CODE = `<Button commandfor="revoke-session" command="show-modal" variant="outline" color="neutral">

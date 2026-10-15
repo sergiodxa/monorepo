@@ -9,8 +9,8 @@
 
 import type { Handle } from "remix/component";
 
+import { Slider } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { Slider } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let gain = 6;

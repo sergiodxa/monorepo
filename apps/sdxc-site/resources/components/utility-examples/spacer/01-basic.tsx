@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack, spacer } from "sdxc/u/layout";
-import { weight } from "sdxc/u/typography";
+import { hstack, spacer } from "@sdxc/u/layout";
+import { weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

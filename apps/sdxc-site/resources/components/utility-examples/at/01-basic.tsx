@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { rounded } from "sdxc/u/effects";
-import { container, gap, grid, gridTemplate, resize } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { at } from "sdxc/u/responsive";
-import { bs, fit, is, minIs } from "sdxc/u/size";
-import { weight } from "sdxc/u/typography";
+import { rounded } from "@sdxc/u/effects";
+import { container, gap, grid, gridTemplate, resize } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { at } from "@sdxc/u/responsive";
+import { bs, fit, is, minIs } from "@sdxc/u/size";
+import { weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

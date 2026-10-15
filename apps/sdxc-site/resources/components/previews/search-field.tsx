@@ -9,18 +9,18 @@
 
 import type { Handle } from "remix/component";
 
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Empty, Item, Label, SearchField, Text } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Empty, Item, Label, SearchField, Text } from "sdxc/ui";
 
 /** What the field searches, so the example narrows real rows rather than a placeholder. */
 const PACKAGES = [
-	{ name: "sdxc/result", summary: "A Result type for fallible calls" },
-	{ name: "sdxc/dates", summary: "Plain date and time helpers" },
-	{ name: "sdxc/highlight", summary: "Server-side syntax highlighting" },
-	{ name: "sdxc/icons", summary: "Lucide icons as components" },
+	{ name: "@sdxc/result", summary: "A Result type for fallible calls" },
+	{ name: "@sdxc/dates", summary: "Plain date and time helpers" },
+	{ name: "@sdxc/highlight", summary: "Server-side syntax highlighting" },
+	{ name: "@sdxc/icons", summary: "Lucide icons as components" },
 	{ name: "@sdxc/spec", summary: "Executable specifications" },
 ];
 

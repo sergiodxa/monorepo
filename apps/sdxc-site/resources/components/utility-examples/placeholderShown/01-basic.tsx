@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border } from "sdxc/u/color";
-import { transition } from "sdxc/u/effects";
-import { placeholderShown } from "sdxc/u/state";
+import { bg, border } from "@sdxc/u/color";
+import { transition } from "@sdxc/u/effects";
+import { placeholderShown } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

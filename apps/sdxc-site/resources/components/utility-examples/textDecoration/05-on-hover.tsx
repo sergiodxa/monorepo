@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hover } from "sdxc/u/state";
-import { textDecoration } from "sdxc/u/typography";
+import { hover } from "@sdxc/u/state";
+import { textDecoration } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

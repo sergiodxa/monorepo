@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { transition } from "sdxc/u/effects";
-import { active } from "sdxc/u/state";
-import { scaleProperty } from "sdxc/u/transform";
+import { transition } from "@sdxc/u/effects";
+import { active } from "@sdxc/u/state";
+import { scaleProperty } from "@sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

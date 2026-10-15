@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, colorMix, fg } from "sdxc/u/color";
+import { border, colorMix, fg } from "@sdxc/u/color";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

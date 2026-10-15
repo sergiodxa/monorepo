@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animationHost, keyframes } from "sdxc/u/animation";
+import { animationHost, keyframes } from "@sdxc/u/animation";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

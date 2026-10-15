@@ -11,12 +11,12 @@
 
 import type { Handle } from "remix/component";
 
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Badge, Tabs, Text } from "@sdxc/ui";
+import { whileLive } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { Badge, Tabs, Text } from "sdxc/ui";
-import { whileLive } from "sdxc/ui/mixins";
 
 /** Each tab's own page, so the panel changes with the URL rather than with state. */
 const SECTIONS = [

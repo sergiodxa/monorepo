@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg, linearGradient } from "sdxc/u/color";
+import { bg, fg, linearGradient } from "@sdxc/u/color";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

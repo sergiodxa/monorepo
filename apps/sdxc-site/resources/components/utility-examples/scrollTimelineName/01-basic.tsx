@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animation, scrollTimelineName } from "sdxc/u/animation";
-import { bg } from "sdxc/u/color";
-import { insTop, sticky } from "sdxc/u/layout";
-import { scroll } from "sdxc/u/overflow";
-import { bs } from "sdxc/u/size";
-import { transformOrigin } from "sdxc/u/transform";
+import { animation, scrollTimelineName } from "@sdxc/u/animation";
+import { bg } from "@sdxc/u/color";
+import { insTop, sticky } from "@sdxc/u/layout";
+import { scroll } from "@sdxc/u/overflow";
+import { bs } from "@sdxc/u/size";
+import { transformOrigin } from "@sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

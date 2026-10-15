@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { opacity } from "sdxc/u/effects";
-import { cursor } from "sdxc/u/general";
-import { aria } from "sdxc/u/state";
+import { opacity } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { aria } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { bg, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { m, pb, pi } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
+import { Header, NavLink } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
-import { bg, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { hstack, vstack } from "sdxc/u/layout";
-import { m, pb, pi } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { text } from "sdxc/u/typography";
-import { Header, NavLink } from "sdxc/ui";
 
 /** The page the sidebar is rendered for, which is what decides `aria-current`. */
 const ACTIVE_PATH = "/examples/settings/billing";

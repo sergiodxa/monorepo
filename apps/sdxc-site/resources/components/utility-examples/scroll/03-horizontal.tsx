@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack, shrink } from "sdxc/u/layout";
-import { scroll } from "sdxc/u/overflow";
-import { is, maxIs, p } from "sdxc/u/size";
+import { hstack, shrink } from "@sdxc/u/layout";
+import { scroll } from "@sdxc/u/overflow";
+import { is, maxIs, p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

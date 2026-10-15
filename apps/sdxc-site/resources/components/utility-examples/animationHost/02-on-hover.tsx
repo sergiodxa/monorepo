@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animationHost, keyframes } from "sdxc/u/animation";
-import { hover } from "sdxc/u/state";
+import { animationHost, keyframes } from "@sdxc/u/animation";
+import { hover } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

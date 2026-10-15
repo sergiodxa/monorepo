@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Skeleton } from "sdxc/ui";
+import { Skeleton } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Skeleton style={{ blockSize: "2.5rem", inlineSize: "2.5rem", borderRadius: "9999px" }} />`;

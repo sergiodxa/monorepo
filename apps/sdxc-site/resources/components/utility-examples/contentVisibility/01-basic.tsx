@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { contentVisibility } from "sdxc/u/layout";
-import { overflowY } from "sdxc/u/overflow";
-import { bs } from "sdxc/u/size";
+import { contentVisibility } from "@sdxc/u/layout";
+import { overflowY } from "@sdxc/u/overflow";
+import { bs } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

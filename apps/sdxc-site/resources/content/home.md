@@ -9,15 +9,15 @@ Cloudflare Workers: `Request` and `Response` in, typed values out.
 
 <actions cta-href="/docs" cta-label="Read the docs" alt-href="/api" alt-label="Browse the API" />
 
-<install-command command="npm add sdxc remix" />
+<install-command command="npm add @sdxc/markdown @sdxc/response @sdxc/result remix" />
 
 </split-copy>
 <split-media>
 
 ```typescript {% title="app/routes/frontmatter.ts" %}
-import { Markdown } from "sdxc/markdown";
-import { badRequest, ok } from "sdxc/response";
-import { isFailure } from "sdxc/result";
+import { Markdown } from "@sdxc/markdown";
+import { badRequest, ok } from "@sdxc/response";
+import { isFailure } from "@sdxc/result";
 
 export async function handler(request: Request) {
 	let result = Markdown.parse(await request.text(), {
@@ -40,8 +40,8 @@ export async function handler(request: Request) {
 <stats>
 <stat label="packages under one scope">{% $packageCount %}</stat>
 <stat label="RFCs the packages follow">{% $rfcCount %}</stat>
-<stat label="components in sdxc/ui">{% $componentCount %}</stat>
-<stat label="styling utilities in sdxc/u">{% $utilityCount %}</stat>
+<stat label="components in @sdxc/ui">{% $componentCount %}</stat>
+<stat label="styling utilities in @sdxc/u">{% $utilityCount %}</stat>
 <stat label="apps running on them">{% $applicationCount %}</stat>
 </stats>
 
@@ -75,9 +75,9 @@ first. The handler above composes three of them and never throws.
 <code-tab label="Forms" selected>
 
 ```typescript {% title="app/controllers/board.ts" %}
-import { redirect } from "sdxc/http/response";
-import { isFailure } from "sdxc/result";
-import { validate } from "sdxc/validate";
+import { redirect } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 export default createAction(routes.board.create, async (ctx) => {
@@ -98,10 +98,10 @@ export default createAction(routes.board.create, async (ctx) => {
 <code-tab label="Cache">
 
 ```typescript {% title="app/mcp/cache.ts" %}
-import type { ToolMiddleware } from "sdxc/mcp";
+import type { ToolMiddleware } from "@sdxc/mcp";
 
-import { WorkerKVCache } from "sdxc/cache/worker-kv";
-import { isSuccess } from "sdxc/result";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { isSuccess } from "@sdxc/result";
 
 export function cacheToolResults(): ToolMiddleware {
 	return async (ctx, next) => {
@@ -126,8 +126,8 @@ export function cacheToolResults(): ToolMiddleware {
 <code-tab label="Jobs">
 
 ```typescript {% title="app/jobs/send-confirmation.ts" %}
-import { createJobHandler } from "sdxc/jobs";
-import { isFailure } from "sdxc/result";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
 
 export default createJobHandler(jobs.confirm, async (ctx) => {
 	let posting = await Job.find(ctx.db, ctx.input.id);
@@ -151,10 +151,10 @@ export default createJobHandler(jobs.confirm, async (ctx) => {
 <code-tab label="Auth">
 
 ```tsx {% title="app/controllers/auth.tsx" %}
-import { contextOf } from "sdxc/auth/remix/context";
-import { redirect } from "sdxc/http/response";
-import { Location } from "sdxc/location";
-import { isFailure, wrap } from "sdxc/result";
+import { contextOf } from "@sdxc/auth/remix/context";
+import { redirect } from "@sdxc/http/response";
+import { Location } from "@sdxc/location";
+import { isFailure, wrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 export default createAction(routes.auth.callback, async (ctx) => {
@@ -179,9 +179,9 @@ export default createAction(routes.auth.callback, async (ctx) => {
 <code-tab label="Webhooks">
 
 ```typescript {% title="app/webhooks/invoices.ts" %}
-import { ok, unauthorized } from "sdxc/http/response/json";
-import { isFailure } from "sdxc/result";
-import * as Webhooks from "sdxc/webhooks";
+import { ok, unauthorized } from "@sdxc/http/response/json";
+import { isFailure } from "@sdxc/result";
+import * as Webhooks from "@sdxc/webhooks";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -210,9 +210,9 @@ export default createAction(routes.webhook, async (ctx) => {
 <code-tab label="Feeds">
 
 ```typescript {% title="app/controllers/rss.ts" %}
-import { xml } from "sdxc/http/response";
-import { RSS } from "sdxc/rss";
-import { links } from "sdxc/websub/publisher";
+import { xml } from "@sdxc/http/response";
+import { RSS } from "@sdxc/rss";
+import { links } from "@sdxc/websub/publisher";
 import { createAction } from "remix/router";
 
 export default createAction(routes.rss, async (ctx) => {
@@ -247,11 +247,11 @@ export default createAction(routes.rss, async (ctx) => {
 <code-tab label="Rate limits">
 
 ```typescript {% title="app/services/rate-limit.ts" %}
-import type { Adapter } from "sdxc/rate-limit";
+import type { Adapter } from "@sdxc/rate-limit";
 
-import { currentLog } from "sdxc/logger";
-import { tooManyRequests } from "sdxc/rate-limit";
-import { isFailure } from "sdxc/result";
+import { currentLog } from "@sdxc/logger";
+import { tooManyRequests } from "@sdxc/rate-limit";
+import { isFailure } from "@sdxc/result";
 
 export async function spend(adapter: Adapter, key: string) {
 	let result = await adapter.consume(key);
@@ -314,8 +314,8 @@ run, components that work before any JavaScript loads, and a markdown parser thi
 is rendered through.
 
 - `@sdxc/spec` runs specifications under permissions you grant by name
-- `sdxc/ui` builds on `<dialog>`, the Popover API and Invoker Commands
-- `sdxc/markdown` gives you a typed tree to walk, transform and write back
+- `@sdxc/ui` builds on `<dialog>`, the Popover API and Invoker Commands
+- `@sdxc/markdown` gives you a typed tree to walk, transform and write back
 
 <actions cta-href="/api/ui" cta-label="Browse the components" size="sm" />
 
@@ -345,10 +345,10 @@ test "the script prints its greeting" {
 
 </code-tab>
 
-<code-tab label="sdxc/ui">
+<code-tab label="@sdxc/ui">
 
 ```tsx {% title="invite-teammate.tsx" %}
-import { Button, Dialog, TextField } from "sdxc/ui";
+import { Button, Dialog, TextField } from "@sdxc/ui";
 
 <Button commandfor="invite" command="show-modal">
 	Invite a teammate
@@ -389,13 +389,13 @@ import { Button, Dialog, TextField } from "sdxc/ui";
 
 </code-tab>
 
-<code-tab label="sdxc/markdown">
+<code-tab label="@sdxc/markdown">
 
 ```typescript {% title="app/posts/render.ts" %}
-import { highlight } from "sdxc/highlight/markdown";
-import { Markdown } from "sdxc/markdown";
-import { toHTML } from "sdxc/markdown/html";
-import { isFailure } from "sdxc/result";
+import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
+import { toHTML } from "@sdxc/markdown/html";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
 
@@ -446,8 +446,7 @@ So pin exactly, and move when you are ready to read what changed.
 ```json {% title="package.json" %}
 {
 	"dependencies": {
-		"remix": "3.0.0",
-		"sdxc": "2026.9.21"
+		"@sdxc/result": "2026.9.21"
 	}
 }
 ```

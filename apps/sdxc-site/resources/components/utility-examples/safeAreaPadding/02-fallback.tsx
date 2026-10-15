@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { is, p, pbe, pi, safeAreaPadding } from "sdxc/u/size";
+import { is, p, pbe, pi, safeAreaPadding } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

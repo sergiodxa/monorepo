@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Dialog } from "sdxc/ui";
-import { durations, zoom } from "sdxc/ui/animations";
+import { Button, Dialog } from "@sdxc/ui";
+import { durations, zoom } from "@sdxc/ui/animations";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button commandfor="welcome" command="show-modal">Show welcome</Button>

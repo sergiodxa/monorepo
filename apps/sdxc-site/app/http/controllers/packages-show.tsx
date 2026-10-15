@@ -54,8 +54,8 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
- * The package that re-exports the collection under `sdxc/*`. Its page links the package list
- * in place of naming each dependency, and every package it exposes links back to it.
+ * The package that re-exports the whole collection, whose page links the package list in
+ * place of naming each dependency.
  */
 const UMBRELLA = "sdxc";
 
@@ -72,8 +72,6 @@ export default createAction(routes.api.show, async (ctx) => {
 	let selections = await readOptionSelections(ctx.request);
 
 	let users = listApplicationsUsing(entry.name);
-	let umbrella = findPackage(UMBRELLA);
-	let throughUmbrella = umbrella?.internalDependencies.includes(name) ?? false;
 	let group = listPackageGroups().find((candidate) =>
 		candidate.packages.some((member) => member.directory === name),
 	)?.title;
@@ -108,17 +106,6 @@ export default createAction(routes.api.show, async (ctx) => {
 						</InstallCommand>
 
 						<dl mix={[vstack({ gap: 2 }), m(0)]}>
-							{throughUmbrella ? (
-								<PackageFact label="Through sdxc">
-									<a
-										href={routes.api.show.href({ name: UMBRELLA })}
-										mix={[font("mono"), text("sm"), fg("brand")]}
-									>
-										sdxc/{name}
-									</a>
-								</PackageFact>
-							) : null}
-
 							{name === UMBRELLA ? (
 								<PackageFact label="Installs with">
 									<a href={routes.api.index.href()} mix={[text("sm"), fg("brand")]}>

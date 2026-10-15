@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { grayscale } from "sdxc/u/effects";
+import { grayscale } from "@sdxc/u/effects";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

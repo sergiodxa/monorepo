@@ -8,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { clientEntry } from "remix/component";
 import {
 	ChevronDownIcon,
 	CopyIcon,
@@ -17,10 +16,11 @@ import {
 	ShareIcon,
 	Trash2Icon,
 	UserPlusIcon,
-} from "sdxc/icons";
-import { grow } from "sdxc/u/layout";
-import { Button, Header, Keyboard, Menu, Section } from "sdxc/ui";
-import { menuKeys } from "sdxc/ui/mixins";
+} from "@sdxc/icons";
+import { grow } from "@sdxc/u/layout";
+import { Button, Header, Keyboard, Menu, Section } from "@sdxc/ui";
+import { menuKeys } from "@sdxc/ui/mixins";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button commandfor="issue-menu" command="toggle-popover" variant="outline">

@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "sdxc/u/color";
-import { backdropBlur } from "sdxc/u/effects";
-import { transparencyReduce } from "sdxc/u/responsive";
+import { bg } from "@sdxc/u/color";
+import { backdropBlur } from "@sdxc/u/effects";
+import { transparencyReduce } from "@sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

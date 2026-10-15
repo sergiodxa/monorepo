@@ -11,14 +11,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ColorChannelChangeEvent } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
-import type { ColorChannelChangeEvent } from "sdxc/ui/mixins";
 
-import { clientEntry, on } from "remix/component";
-import { fg } from "sdxc/u/color";
-import { basis, grow, hstack, vstack } from "sdxc/u/layout";
-import { bs, is, minIs } from "sdxc/u/size";
-import { font, text } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { basis, grow, hstack, vstack } from "@sdxc/u/layout";
+import { bs, is, minIs } from "@sdxc/u/size";
+import { font, text } from "@sdxc/u/typography";
 import {
 	ColorArea,
 	ColorPicker,
@@ -28,9 +27,10 @@ import {
 	Input,
 	Label,
 	Separator,
-} from "sdxc/ui";
-import { channelSync, colorAreaDrag, colorWheelDrag } from "sdxc/ui/mixins";
-import { formatHex, hsvToRgb, parseColor, rgbToHsv } from "sdxc/ui/utils";
+} from "@sdxc/ui";
+import { channelSync, colorAreaDrag, colorWheelDrag } from "@sdxc/ui/mixins";
+import { formatHex, hsvToRgb, parseColor, rgbToHsv } from "@sdxc/ui/utils";
+import { clientEntry, on } from "remix/component";
 
 /** The starting brand color, kept as the three channels every surface in the panel edits. */
 const OPENING_COLOR = { hue: 210, saturation: 80, brightness: 70 };

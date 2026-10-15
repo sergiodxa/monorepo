@@ -8,15 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { vstack } from "@sdxc/u/layout";
+import { is, m, p } from "@sdxc/u/size";
+import { has } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
+import { Header, RadioGroup } from "@sdxc/ui";
+import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { vstack } from "sdxc/u/layout";
-import { is, m, p } from "sdxc/u/size";
-import { has } from "sdxc/u/state";
-import { text, weight } from "sdxc/u/typography";
-import { Header, RadioGroup } from "sdxc/ui";
-import { ariaChecked } from "sdxc/ui/mixins";
 
 /** The shipping options the checkout offers, in the order it lists them. */
 const METHODS = [

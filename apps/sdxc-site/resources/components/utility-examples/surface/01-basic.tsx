@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, surface } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { p } from "sdxc/u/size";
+import { border, surface } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

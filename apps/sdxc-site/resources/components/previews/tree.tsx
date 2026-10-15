@@ -12,13 +12,13 @@
 
 import type { Handle } from "remix/component";
 
+import { FileBracesIcon, FileCodeIcon, FolderIcon } from "@sdxc/icons";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { Text, Tree } from "@sdxc/ui";
+import { SelectionModel } from "@sdxc/ui/behaviors";
+import { treeKeys, whileLive } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
-import { FileBracesIcon, FileCodeIcon, FolderIcon } from "sdxc/icons";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { Text, Tree } from "sdxc/ui";
-import { SelectionModel } from "sdxc/ui/behaviors";
-import { treeKeys, whileLive } from "sdxc/ui/mixins";
 
 /** Every row the tree renders, so the keyboard pattern has real depth to walk. */
 const KEYS = [

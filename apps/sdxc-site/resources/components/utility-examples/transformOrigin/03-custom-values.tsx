@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { rotate, transformOrigin } from "sdxc/u/transform";
+import { rotate, transformOrigin } from "@sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

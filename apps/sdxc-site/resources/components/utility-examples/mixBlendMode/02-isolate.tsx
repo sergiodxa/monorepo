@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "sdxc/u/color";
-import { mixBlendMode } from "sdxc/u/effects";
-import { hstack } from "sdxc/u/layout";
-import { circle, is, mis } from "sdxc/u/size";
-import { isolate } from "sdxc/u/stacking";
+import { bg } from "@sdxc/u/color";
+import { mixBlendMode } from "@sdxc/u/effects";
+import { hstack } from "@sdxc/u/layout";
+import { circle, is, mis } from "@sdxc/u/size";
+import { isolate } from "@sdxc/u/stacking";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

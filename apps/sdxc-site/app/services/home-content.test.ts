@@ -1,6 +1,6 @@
 /**
  * Holds the landing page examples to the package APIs they advertise: a job
- * reads `ctx.db`, and a rate-limit denial comes from `sdxc/rate-limit`.
+ * reads `ctx.db`, and a rate-limit denial comes from `@sdxc/rate-limit`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,8 +30,8 @@ describe("landing home.md", () => {
 		expect(HOME).not.toMatch(/ctx\.database/);
 	});
 
-	test("rate limit example uses sdxc/rate-limit tooManyRequests", () => {
-		expect(HOME).toMatch(/import \{ tooManyRequests \} from "sdxc\/rate-limit"/);
+	test("rate limit example uses @sdxc/rate-limit tooManyRequests", () => {
+		expect(HOME).toMatch(/import \{ tooManyRequests \} from "@sdxc\/rate-limit"/);
 		expect(HOME).not.toMatch(/toSeconds\(adapter\.window\)/);
 	});
 });

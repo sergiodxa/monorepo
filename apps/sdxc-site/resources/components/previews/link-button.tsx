@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { DownloadIcon, PlusIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { LinkButton } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
-import { DownloadIcon, PlusIcon } from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { flexWrap, hstack, vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { LinkButton } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 5, align: "center" })]}>

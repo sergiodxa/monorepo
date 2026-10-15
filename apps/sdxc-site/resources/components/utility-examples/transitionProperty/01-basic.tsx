@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { shadow, transitionDuration, transitionProperty } from "sdxc/u/effects";
-import { hover } from "sdxc/u/state";
-import { scale } from "sdxc/u/transform";
+import { shadow, transitionDuration, transitionProperty } from "@sdxc/u/effects";
+import { hover } from "@sdxc/u/state";
+import { scale } from "@sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

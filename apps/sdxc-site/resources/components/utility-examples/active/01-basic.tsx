@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "sdxc/u/color";
-import { transition } from "sdxc/u/effects";
-import { cursor } from "sdxc/u/general";
-import { active } from "sdxc/u/state";
-import { scale } from "sdxc/u/transform";
+import { bg, fg } from "@sdxc/u/color";
+import { transition } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { active } from "@sdxc/u/state";
+import { scale } from "@sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

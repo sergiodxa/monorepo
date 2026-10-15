@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { shrink, vstack } from "sdxc/u/layout";
-import { scroll, scrollSnapAlign, scrollSnapType } from "sdxc/u/overflow";
-import { bs, is, maxIs, p } from "sdxc/u/size";
+import { shrink, vstack } from "@sdxc/u/layout";
+import { scroll, scrollSnapAlign, scrollSnapType } from "@sdxc/u/overflow";
+import { bs, is, maxIs, p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

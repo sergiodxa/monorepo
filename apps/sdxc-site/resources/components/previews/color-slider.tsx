@@ -12,14 +12,14 @@
 
 import type { Handle } from "remix/component";
 
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is, maxIs } from "@sdxc/u/size";
+import { font, text, weight } from "@sdxc/u/typography";
+import { ColorSlider, ColorSwatch, Label } from "@sdxc/ui";
+import { channelSync } from "@sdxc/ui/mixins";
+import { formatHsl, hslToRgb } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
-import { fg } from "sdxc/u/color";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is, maxIs } from "sdxc/u/size";
-import { font, text, weight } from "sdxc/u/typography";
-import { ColorSlider, ColorSwatch, Label } from "sdxc/ui";
-import { channelSync } from "sdxc/ui/mixins";
-import { formatHsl, hslToRgb } from "sdxc/ui/utils";
 
 /** Where the four channels start, the color a theme editor opens on. */
 const OPENING = { hue: 210, saturation: 84, lightness: 56, alpha: 100 };

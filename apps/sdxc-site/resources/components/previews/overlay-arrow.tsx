@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { bg, border, fg, fill } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { flexWrap, hstack, relative, vstack } from "@sdxc/u/layout";
+import { bs, is, p } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { OverlayArrow } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
-import { bg, border, fg, fill } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { flexWrap, hstack, relative, vstack } from "sdxc/u/layout";
-import { bs, is, p } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { OverlayArrow } from "sdxc/ui";
 
 /**
  * Every side a surface takes, with the stacking that puts the trigger on the side the

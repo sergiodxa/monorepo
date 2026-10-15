@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { center } from "@sdxc/u/layout";
+import { bs, is, maxIs } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Resizable } from "@sdxc/ui";
+import { ResizeSession } from "@sdxc/ui/behaviors";
+import { resizeHandle } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
-import { center } from "sdxc/u/layout";
-import { bs, is, maxIs } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { Resizable } from "sdxc/ui";
-import { ResizeSession } from "sdxc/ui/behaviors";
-import { resizeHandle } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 export const RESIZABLE_CODE = `// A session per group, since each one drags along its own axis.

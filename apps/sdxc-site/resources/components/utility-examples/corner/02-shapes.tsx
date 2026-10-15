@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { rounded } from "sdxc/u/effects";
-import { aspect, corner, is } from "sdxc/u/size";
+import { rounded } from "@sdxc/u/effects";
+import { aspect, corner, is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { container, gap, grid, gridTemplate } from "sdxc/u/layout";
-import { at } from "sdxc/u/responsive";
-import { bs, is, m } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
+import { container, gap, grid, gridTemplate } from "@sdxc/u/layout";
+import { at } from "@sdxc/u/responsive";
+import { bs, is, m } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

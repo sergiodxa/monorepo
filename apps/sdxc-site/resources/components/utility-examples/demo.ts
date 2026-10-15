@@ -1,5 +1,5 @@
 /**
- * Decoration for the `sdxc/u` examples: the boxes, stripes and placeholders an example
+ * Decoration for the `@sdxc/u` examples: the boxes, stripes and placeholders an example
  * draws so the utility it documents has something to act on. The code a page prints
  * shows every `demo.*` call as `...`, so the reader sees only the utility being taught.
  *
@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded, shadow } from "sdxc/u/effects";
-import { combine, raw } from "sdxc/u/general";
-import { flexWrap, hstack, vstack } from "sdxc/u/layout";
-import { is, p } from "sdxc/u/size";
-import { font, leading, text, textAlign, weight } from "sdxc/u/typography";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded, shadow } from "@sdxc/u/effects";
+import { combine, raw } from "@sdxc/u/general";
+import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
+import { is, p } from "@sdxc/u/size";
+import { font, leading, text, textAlign, weight } from "@sdxc/u/typography";
 
 /**
  * The solid brand block most examples act on, with its label set in the mono face.

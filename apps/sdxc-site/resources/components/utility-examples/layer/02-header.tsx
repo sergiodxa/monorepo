@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, borderEdge } from "sdxc/u/color";
-import { sticky, insTop } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { maxBs, p } from "sdxc/u/size";
-import { layer } from "sdxc/u/stacking";
+import { bg, borderEdge } from "@sdxc/u/color";
+import { sticky, insTop } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { maxBs, p } from "@sdxc/u/size";
+import { layer } from "@sdxc/u/stacking";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

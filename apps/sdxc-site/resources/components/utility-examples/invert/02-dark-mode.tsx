@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { invert } from "sdxc/u/effects";
-import { dark } from "sdxc/u/responsive";
+import { invert } from "@sdxc/u/effects";
+import { dark } from "@sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

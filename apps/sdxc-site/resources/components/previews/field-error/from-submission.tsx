@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "sdxc/u/layout";
-import { FieldError, Input, Label } from "sdxc/ui";
+import { vstack } from "@sdxc/u/layout";
+import { FieldError, Input, Label } from "@sdxc/ui";
 
 /** The errors a rejected submission came back with, which decide what the slot shows. */
 const ERRORS: { email?: string } = { email: "Enter a full address, like sergio@acme.com." };

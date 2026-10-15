@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { divide } from "sdxc/u/overflow";
-import { p } from "sdxc/u/size";
+import { divide } from "@sdxc/u/overflow";
+import { p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

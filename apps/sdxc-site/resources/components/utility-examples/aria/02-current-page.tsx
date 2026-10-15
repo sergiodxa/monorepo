@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { borderEdge, fg } from "sdxc/u/color";
-import { pb } from "sdxc/u/size";
-import { aria } from "sdxc/u/state";
-import { text, weight } from "sdxc/u/typography";
+import { borderEdge, fg } from "@sdxc/u/color";
+import { pb } from "@sdxc/u/size";
+import { aria } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

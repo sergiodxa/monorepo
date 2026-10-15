@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { visuallyHidden } from "sdxc/u/a11y";
-import { bg, border, fg, outline } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { cursor } from "sdxc/u/general";
-import { hstack } from "sdxc/u/layout";
-import { p } from "sdxc/u/size";
-import { precededBy } from "sdxc/u/state";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { bg, border, fg, outline } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { hstack } from "@sdxc/u/layout";
+import { p } from "@sdxc/u/size";
+import { precededBy } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -6,13 +6,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { pseudoContent } from "sdxc/u/general";
-import { vstack } from "sdxc/u/layout";
-import { maxIs, p } from "sdxc/u/size";
-import { after } from "sdxc/u/state";
-import { weight } from "sdxc/u/typography";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { pseudoContent } from "@sdxc/u/general";
+import { vstack } from "@sdxc/u/layout";
+import { maxIs, p } from "@sdxc/u/size";
+import { after } from "@sdxc/u/state";
+import { weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

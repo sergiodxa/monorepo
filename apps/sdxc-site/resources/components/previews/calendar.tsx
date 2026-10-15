@@ -12,14 +12,14 @@
 
 import type { Handle } from "remix/component";
 
+import { monthGrid, systemTimeZone, toDayKey } from "@sdxc/dates";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { text } from "@sdxc/u/typography";
+import { Calendar } from "@sdxc/ui";
+import { CalendarModel } from "@sdxc/ui/behaviors";
+import { calendarKeys } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
-import { monthGrid, systemTimeZone, toDayKey } from "sdxc/dates";
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { text } from "sdxc/u/typography";
-import { Calendar } from "sdxc/ui";
-import { CalendarModel } from "sdxc/ui/behaviors";
-import { calendarKeys } from "sdxc/ui/mixins";
 
 /** Column headings, in the order `monthGrid` lays a week out. */
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

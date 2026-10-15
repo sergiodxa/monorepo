@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Avatar } from "sdxc/ui";
+import { Avatar } from "@sdxc/ui";
 
 /** A portrait drawn as a data URI, so the example fetches nothing to render. */
 const PORTRAIT =

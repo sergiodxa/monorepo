@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ringShadow } from "sdxc/u/effects";
-import { has } from "sdxc/u/state";
+import { ringShadow } from "@sdxc/u/effects";
+import { has } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

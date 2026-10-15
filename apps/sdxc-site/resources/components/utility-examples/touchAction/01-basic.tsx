@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { rounded } from "sdxc/u/effects";
-import { touchAction } from "sdxc/u/general";
-import { overflow } from "sdxc/u/overflow";
-import { bs, is } from "sdxc/u/size";
+import { rounded } from "@sdxc/u/effects";
+import { touchAction } from "@sdxc/u/general";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

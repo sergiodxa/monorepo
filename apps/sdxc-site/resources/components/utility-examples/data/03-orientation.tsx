@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { flexCol, hstack } from "sdxc/u/layout";
-import { data } from "sdxc/u/state";
+import { flexCol, hstack } from "@sdxc/u/layout";
+import { data } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

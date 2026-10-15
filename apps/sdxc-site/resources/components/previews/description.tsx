@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/component";
 
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { Description, Input, Label, Select } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { Description, Input, Label, Select } from "sdxc/ui";
 
 /** The plans the picker offers, in the order it lists them. */
 const PLANS = [

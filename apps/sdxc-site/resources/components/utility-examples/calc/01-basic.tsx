@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { calc } from "sdxc/u/general";
-import { is } from "sdxc/u/size";
+import { calc } from "@sdxc/u/general";
+import { is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -59,7 +59,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 	if (reference === null) return notFound(ctx, tree);
 
 	let { symbol, companions } = reference;
-	let module = `sdxc/ui/${reference.subpath}`;
+	let module = `@sdxc/ui/${reference.subpath}`;
 	let markdownHref = routes.markdown.uiExport.href({ subpath: reference.subpath, slug });
 	/** A description of one sentence is already the headline, so it is not printed twice. */
 	let usage =

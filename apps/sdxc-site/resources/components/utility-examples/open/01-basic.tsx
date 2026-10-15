@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { cursor } from "sdxc/u/general";
-import { p } from "sdxc/u/size";
-import { open } from "sdxc/u/state";
-import { weight } from "sdxc/u/typography";
+import { bg, border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { p } from "@sdxc/u/size";
+import { open } from "@sdxc/u/state";
+import { weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

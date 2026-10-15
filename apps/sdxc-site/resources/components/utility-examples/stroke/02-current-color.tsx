@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg, fill, stroke, strokeWidth } from "sdxc/u/color";
-import { gap, inlineFlex } from "sdxc/u/layout";
+import { fg, fill, stroke, strokeWidth } from "@sdxc/u/color";
+import { gap, inlineFlex } from "@sdxc/u/layout";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack } from "sdxc/u/layout";
-import { Checkbox, Text } from "sdxc/ui";
+import { hstack } from "@sdxc/u/layout";
+import { Checkbox, Text } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[hstack({ gap: 3, align: "center" })]}>

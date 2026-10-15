@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Empty } from "sdxc/ui";
+import { Empty } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Empty color="danger">

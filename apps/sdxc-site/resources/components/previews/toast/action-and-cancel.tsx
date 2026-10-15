@@ -9,9 +9,9 @@
 
 import type { Handle } from "remix/component";
 
+import { Button, Toast } from "@sdxc/ui";
+import { dismiss } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
-import { Button, Toast } from "sdxc/ui";
-import { dismiss } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let open = true;

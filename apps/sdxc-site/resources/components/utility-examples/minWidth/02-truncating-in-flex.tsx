@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack, shrink } from "sdxc/u/layout";
-import { circle, is, minWidth } from "sdxc/u/size";
-import { truncate } from "sdxc/u/typography";
+import { hstack, shrink } from "@sdxc/u/layout";
+import { circle, is, minWidth } from "@sdxc/u/size";
+import { truncate } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

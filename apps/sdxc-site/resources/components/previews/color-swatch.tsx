@@ -9,11 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { font, text, weight } from "@sdxc/u/typography";
+import { ColorSwatch } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
-import { fg } from "sdxc/u/color";
-import { hstack, vstack } from "sdxc/u/layout";
-import { font, text, weight } from "sdxc/u/typography";
-import { ColorSwatch } from "sdxc/ui";
 
 /** The brand ramp a theme ships, from the lightest tint to the darkest shade. */
 const RAMP = [

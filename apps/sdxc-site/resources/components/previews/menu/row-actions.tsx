@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { EllipsisIcon } from "sdxc/icons";
-import { Button, Header, Menu, Modal, Section } from "sdxc/ui";
+import { EllipsisIcon } from "@sdxc/icons";
+import { Button, Header, Menu, Modal, Section } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button

@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg, radialGradient } from "sdxc/u/color";
-import { bs, is } from "sdxc/u/size";
+import { bg, fg, radialGradient } from "@sdxc/u/color";
+import { bs, is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

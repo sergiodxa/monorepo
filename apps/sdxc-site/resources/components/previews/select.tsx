@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/component";
 
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { Label, Select, Text } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { Label, Select, Text } from "sdxc/ui";
 
 /** Every region the picker offers, grouped the way the field groups them. */
 const REGIONS: Record<string, { code: string; city: string; latency: string }[]> = {

@@ -11,11 +11,11 @@
 
 import type { Handle } from "remix/component";
 
+import { systemTimeZone, toDayKey } from "@sdxc/dates";
+import { vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { DatePicker, Description, Input, Label } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { systemTimeZone, toDayKey } from "sdxc/dates";
-import { vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { DatePicker, Description, Input, Label } from "sdxc/ui";
 
 import { parseDayValue, relativeDayHint } from "~/app/services/calendar-labels";
 

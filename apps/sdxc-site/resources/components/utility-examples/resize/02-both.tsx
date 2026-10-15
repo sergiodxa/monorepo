@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { resize } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { bs, is } from "sdxc/u/size";
+import { resize } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

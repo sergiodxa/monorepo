@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { cursor } from "sdxc/u/general";
+import { cursor } from "@sdxc/u/general";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

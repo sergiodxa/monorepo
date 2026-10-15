@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { scroll, scrollbarGutter } from "sdxc/u/overflow";
-import { bs, is } from "sdxc/u/size";
+import { scroll, scrollbarGutter } from "@sdxc/u/overflow";
+import { bs, is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

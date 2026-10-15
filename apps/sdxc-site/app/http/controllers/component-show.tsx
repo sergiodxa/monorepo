@@ -40,11 +40,11 @@ import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** The install line every component page carries: `sdxc` brings the components, `remix` renders them. */
-const INSTALL = `npm add sdxc remix`;
+/** The install line every component page carries: `@sdxc/ui` brings the components, `remix` renders them. */
+const INSTALL = `npm add @sdxc/ui remix`;
 
 /** The stylesheet an app imports once, which every component reads its colors from. */
-const THEME_IMPORT = `import "sdxc/ui/theme.css";`;
+const THEME_IMPORT = `import "@sdxc/ui/theme.css";`;
 
 export default createAction(routes.api.component, async (ctx) => {
 	let { component } = s.parse(s.object({ component: s.string() }), ctx.params);
@@ -115,7 +115,7 @@ export default createAction(routes.api.component, async (ctx) => {
 					<ReferenceSection id="usage" title="Usage">
 						<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 							<Snippet
-								code={`import { ${reference.name} } from "sdxc/ui";`}
+								code={`import { ${reference.name} } from "@sdxc/ui";`}
 								language="typescript"
 							/>
 							<p mix={[m(0), text("base"), fg("neutral")]}>

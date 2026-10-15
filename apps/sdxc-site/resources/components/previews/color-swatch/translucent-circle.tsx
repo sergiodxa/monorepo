@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ColorSwatch } from "sdxc/ui";
+import { ColorSwatch } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<ColorSwatch value="rgb(16 185 129 / 0.4)" shape="circle" size="lg" />`;

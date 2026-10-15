@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { is } from "sdxc/u/size";
-import { Header, ListBox, Section } from "sdxc/ui";
+import { is } from "@sdxc/u/size";
+import { Header, ListBox, Section } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<ListBox aria-label="Notifications" multiple>

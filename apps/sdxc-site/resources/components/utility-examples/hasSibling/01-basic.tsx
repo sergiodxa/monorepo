@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { accent, bg } from "sdxc/u/color";
-import { transition } from "sdxc/u/effects";
-import { hstack } from "sdxc/u/layout";
-import { circle, is } from "sdxc/u/size";
-import { hasSibling } from "sdxc/u/state";
-import { text } from "sdxc/u/typography";
+import { accent, bg } from "@sdxc/u/color";
+import { transition } from "@sdxc/u/effects";
+import { hstack } from "@sdxc/u/layout";
+import { circle, is } from "@sdxc/u/size";
+import { hasSibling } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

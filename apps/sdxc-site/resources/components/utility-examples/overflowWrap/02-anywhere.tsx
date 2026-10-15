@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack } from "sdxc/u/layout";
-import { maxIs } from "sdxc/u/size";
-import { font, overflowWrap, weight } from "sdxc/u/typography";
+import { hstack } from "@sdxc/u/layout";
+import { maxIs } from "@sdxc/u/size";
+import { font, overflowWrap, weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

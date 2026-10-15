@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { flex, flexRow, gap } from "sdxc/u/layout";
+import { flex, flexRow, gap } from "@sdxc/u/layout";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

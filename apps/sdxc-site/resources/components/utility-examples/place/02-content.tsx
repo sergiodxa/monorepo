@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { grid, gridTemplate, place, repeat } from "sdxc/u/layout";
-import { bs } from "sdxc/u/size";
+import { grid, gridTemplate, place, repeat } from "@sdxc/u/layout";
+import { bs } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

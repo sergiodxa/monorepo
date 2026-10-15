@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { backdropDropShadow } from "sdxc/u/effects";
-import { willChange } from "sdxc/u/general";
-import { zstack } from "sdxc/u/layout";
+import { backdropDropShadow } from "@sdxc/u/effects";
+import { willChange } from "@sdxc/u/general";
+import { zstack } from "@sdxc/u/layout";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

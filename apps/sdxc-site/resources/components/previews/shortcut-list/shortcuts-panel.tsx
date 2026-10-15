@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { is } from "sdxc/u/size";
-import { ShortcutList } from "sdxc/ui";
-import { keyComboGlyphs } from "sdxc/ui/utils";
+import { is } from "@sdxc/u/size";
+import { ShortcutList } from "@sdxc/ui";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 
 import type { PreviewRequest } from "~/resources/components/ui-previews.server";
 

@@ -13,16 +13,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded, transition } from "@sdxc/u/effects";
+import { cursor } from "@sdxc/u/general";
+import { hstack, justify, vstack } from "@sdxc/u/layout";
+import { bs, fit, is, m, maxIs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
+import { text, weight } from "@sdxc/u/typography";
+import { Carousel } from "@sdxc/ui";
+import { carouselControls } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
-import { bg, border, fg } from "sdxc/u/color";
-import { rounded, transition } from "sdxc/u/effects";
-import { cursor } from "sdxc/u/general";
-import { hstack, justify, vstack } from "sdxc/u/layout";
-import { bs, fit, is, m, maxIs } from "sdxc/u/size";
-import { when } from "sdxc/u/state";
-import { text, weight } from "sdxc/u/typography";
-import { Carousel } from "sdxc/ui";
-import { carouselControls } from "sdxc/ui/mixins";
 
 /** One screenshot in the tour: its poster, its heading and the line under it. */
 const SLIDES = [

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "sdxc/u/layout";
-import { FieldError, Input, Label } from "sdxc/ui";
+import { vstack } from "@sdxc/u/layout";
+import { FieldError, Input, Label } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from element ids. */
 const CODE = `<div mix={[vstack({ gap: 2, align: "stretch" })]}>

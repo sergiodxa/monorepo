@@ -12,12 +12,12 @@
 
 import type { Handle } from "remix/component";
 
+import { hstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { Badge, Checkbox, Table, Text } from "@sdxc/ui";
+import { SelectionModel } from "@sdxc/ui/behaviors";
+import { whileLive } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
-import { hstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { Badge, Checkbox, Table, Text } from "sdxc/ui";
-import { SelectionModel } from "sdxc/ui/behaviors";
-import { whileLive } from "sdxc/ui/mixins";
 
 import { readSort, sortHref, sortInvoices } from "~/app/services/invoice-sort";
 

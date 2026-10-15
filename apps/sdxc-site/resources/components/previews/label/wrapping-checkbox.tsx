@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack } from "sdxc/u/layout";
-import { Label } from "sdxc/ui";
+import { hstack } from "@sdxc/u/layout";
+import { Label } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Label mix={[hstack({ gap: 2, align: "center" })]}>

@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "sdxc/u/color";
-import { cursor, listStyle } from "sdxc/u/general";
-import { pis } from "sdxc/u/size";
-import { marker } from "sdxc/u/state";
-import { weight } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { cursor, listStyle } from "@sdxc/u/general";
+import { pis } from "@sdxc/u/size";
+import { marker } from "@sdxc/u/state";
+import { weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

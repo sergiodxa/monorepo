@@ -10,13 +10,13 @@
 
 import type { Handle } from "remix/component";
 
+import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
+import { fg } from "@sdxc/u/color";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Pagination } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { ChevronLeftIcon, ChevronRightIcon } from "sdxc/icons";
-import { fg } from "sdxc/u/color";
-import { vstack } from "sdxc/u/layout";
-import { m } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Pagination } from "sdxc/ui";
 
 import { pageWindow } from "~/app/services/page-window";
 

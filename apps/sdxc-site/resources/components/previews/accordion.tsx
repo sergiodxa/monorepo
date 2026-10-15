@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { ChevronDownIcon } from "@sdxc/icons";
+import { maxIs } from "@sdxc/u/size";
+import { Accordion } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
-import { ChevronDownIcon } from "sdxc/icons";
-import { maxIs } from "sdxc/u/size";
-import { Accordion } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Accordion mix={[maxIs("34rem")]}>

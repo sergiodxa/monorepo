@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, fg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { pointerEvents } from "sdxc/u/general";
-import { absolute, hstack, insBe, insBs, insIs, relative } from "sdxc/u/layout";
-import { is, maxIs, p } from "sdxc/u/size";
+import { border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { pointerEvents } from "@sdxc/u/general";
+import { absolute, hstack, insBe, insBs, insIs, relative } from "@sdxc/u/layout";
+import { is, maxIs, p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

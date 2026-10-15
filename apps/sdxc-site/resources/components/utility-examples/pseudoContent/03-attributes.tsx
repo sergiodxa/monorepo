@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "sdxc/u/color";
-import { pseudoContent } from "sdxc/u/general";
-import { after } from "sdxc/u/state";
-import { text } from "sdxc/u/typography";
+import { fg } from "@sdxc/u/color";
+import { pseudoContent } from "@sdxc/u/general";
+import { after } from "@sdxc/u/state";
+import { text } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

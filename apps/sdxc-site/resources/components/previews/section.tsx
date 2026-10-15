@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { CreditCardIcon, LogOutIcon, SettingsIcon, UserIcon, UsersIcon } from "@sdxc/icons";
+import { Button, Header, Menu, Section } from "@sdxc/ui";
+import { menuKeys } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
-import { CreditCardIcon, LogOutIcon, SettingsIcon, UserIcon, UsersIcon } from "sdxc/icons";
-import { Button, Header, Menu, Section } from "sdxc/ui";
-import { menuKeys } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const SECTION_CODE = `<Button commandfor="preview-account-menu" command="toggle-popover" variant="outline">

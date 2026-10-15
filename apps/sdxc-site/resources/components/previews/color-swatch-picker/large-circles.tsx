@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ColorSwatchPicker } from "sdxc/ui";
+import { ColorSwatchPicker } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<ColorSwatchPicker aria-label="Brand color">

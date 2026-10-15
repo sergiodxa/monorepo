@@ -13,13 +13,13 @@
 
 import type { Handle } from "remix/component";
 
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Header, Keyboard, Separator } from "@sdxc/ui";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry } from "remix/component";
-import { fg } from "sdxc/u/color";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
-import { Header, Keyboard, Separator } from "sdxc/ui";
-import { keyComboGlyphs } from "sdxc/ui/utils";
 
 import type { PreviewRequest } from "~/resources/components/ui-previews.server";
 

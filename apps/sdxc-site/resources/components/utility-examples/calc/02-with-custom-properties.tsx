@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as u from "sdxc/u/general";
-import { hstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
+import * as u from "@sdxc/u/general";
+import { hstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

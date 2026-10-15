@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { borderEdge } from "sdxc/u/color";
-import { cursor } from "sdxc/u/general";
-import { mbs, pis } from "sdxc/u/size";
-import { detailsContent } from "sdxc/u/state";
-import { weight } from "sdxc/u/typography";
+import { borderEdge } from "@sdxc/u/color";
+import { cursor } from "@sdxc/u/general";
+import { mbs, pis } from "@sdxc/u/size";
+import { detailsContent } from "@sdxc/u/state";
+import { weight } from "@sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

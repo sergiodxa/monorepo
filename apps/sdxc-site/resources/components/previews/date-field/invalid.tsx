@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DateField } from "sdxc/ui";
+import { DateField } from "@sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<DateField

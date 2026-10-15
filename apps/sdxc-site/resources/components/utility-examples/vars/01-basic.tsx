@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import * as u from "sdxc/u/general";
-import { bs, is, maxIs } from "sdxc/u/size";
+import { bg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import * as u from "@sdxc/u/general";
+import { bs, is, maxIs } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

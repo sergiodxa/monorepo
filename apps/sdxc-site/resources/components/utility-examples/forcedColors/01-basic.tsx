@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "sdxc/u/color";
-import { forcedColors } from "sdxc/u/responsive";
+import { bg, border, fg } from "@sdxc/u/color";
+import { forcedColors } from "@sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

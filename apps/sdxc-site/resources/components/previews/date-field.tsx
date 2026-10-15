@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/component";
 
+import { systemTimeZone, toDayKey } from "@sdxc/dates";
+import { is } from "@sdxc/u/size";
+import { DateField } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-import { systemTimeZone, toDayKey } from "sdxc/dates";
-import { is } from "sdxc/u/size";
-import { DateField } from "sdxc/ui";
 
 import { parseDayValue, quarterBounds, relativeDayHint } from "~/app/services/calendar-labels";
 

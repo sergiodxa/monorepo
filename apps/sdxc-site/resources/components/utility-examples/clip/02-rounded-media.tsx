@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border } from "sdxc/u/color";
-import { rounded } from "sdxc/u/effects";
-import { clip } from "sdxc/u/overflow";
-import { bs, fit, is, p } from "sdxc/u/size";
+import { border } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { clip } from "@sdxc/u/overflow";
+import { bs, fit, is, p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

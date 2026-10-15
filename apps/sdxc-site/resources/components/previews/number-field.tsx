@@ -10,17 +10,17 @@
 
 import type { Handle } from "remix/component";
 
-import { clientEntry, on } from "remix/component";
-import { fg } from "sdxc/u/color";
-import { hstack, vstack } from "sdxc/u/layout";
-import { is } from "sdxc/u/size";
-import { text, weight } from "sdxc/u/typography";
-import { Description, Label, NumberField } from "sdxc/ui";
+import { fg } from "@sdxc/u/color";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { is } from "@sdxc/u/size";
+import { text, weight } from "@sdxc/u/typography";
+import { Description, Label, NumberField } from "@sdxc/ui";
 import {
 	NUMBER_FIELD_STEP_DOWN_COMMAND,
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
-} from "sdxc/ui/mixins";
+} from "@sdxc/ui/mixins";
+import { clientEntry, on } from "remix/component";
 
 /** What one seat costs a month, so the subtotal is worth reading. */
 const PRICE_PER_SEAT = 12;

@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { transition, transitionBehavior } from "sdxc/u/effects";
-import { combine } from "sdxc/u/general";
-import { interpolateSize } from "sdxc/u/layout";
-import { overflow } from "sdxc/u/overflow";
-import { bs, is, pbs } from "sdxc/u/size";
-import { detailsContent, open } from "sdxc/u/state";
+import { transition, transitionBehavior } from "@sdxc/u/effects";
+import { combine } from "@sdxc/u/general";
+import { interpolateSize } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
+import { bs, is, pbs } from "@sdxc/u/size";
+import { detailsContent, open } from "@sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 
