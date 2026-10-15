@@ -115,146 +115,105 @@ run.stdout; // "Hello, Ada!\n"
 
 ## API
 
-### `commands(definition: GroupDefinition): Group`
+### Declaring commands
 
-A group of commands keyed by name, with an optional `description` and `hidden`; groups nest, so `app users find` is `contract.users.find`. A group may declare its own `arguments`, `flags` and `tasks`, read by a handler mapped onto the group when no member is named: `app make` with a `kind` argument whose prompt asks which member to run. A flag written before a member's name moves to that member.
+#### `commands(members)`
 
-### `command(definition: CommandDefinition): Command`
+A group of commands; groups nest, so `app users find` is `contract.users.find`.
 
-One command: `description`, `arguments`, `flags`, `examples` for its help, `hidden`, and `tasks: true` when its handler runs `ctx.task`, which lists `--no-progress` in its help. Its arguments and flags type the handler's `ctx.arguments` and `ctx.flags`.
+#### `command({ description, arguments, flags, examples })`
 
-### `argument(schema: StandardSchemaV1, options?: SingleArgumentOptions): Argument`
+One command. Its `arguments` and `flags` type the handler's `ctx.arguments` and `ctx.flags`.
 
-A positional argument parsed through `schema`; `options` take `optional`, `default`, `prompt`, `description` and `valueName`. Arguments are read in declaration order.
+#### `argument(schema, options?)`
 
-### `argument.variadic(schema: StandardSchemaV1, options?: VariadicArgumentOptions): Argument`
+A positional value checked by `schema`, with `optional`, `default` or a `prompt`.
 
-The remaining positionals as an array, with `min`, `max` and `default`; `min: 1` types the value as a non-empty tuple.
+#### `argument.variadic(schema, { min?, max? })`
 
-### `argument.rest(options?: RestArgumentOptions): Argument<string[]>`
+Every remaining value, as an array.
 
-Every token after the command's name exactly as typed, flags and `--help` included, for a command that runs another program with them. It is the command's only argument and the command declares no flags; `options` take `description` and `valueName`.
+#### `argument.rest()`
 
-```typescript
-let run = command({ arguments: { args: argument.rest() } });
-// prog run users find --limit 5  →  ctx.arguments.args: ["users", "find", "--limit", "5"]
-```
-
-### `flag.boolean(name: string, options?: BooleanFlagOptions): Flag<boolean>`
-
-`--name` and the generated `--no-name`; passing both is a usage error. With `default: undefined` the flag is `boolean | undefined`, unset when neither is passed, so a configuration or a later question decides; the help shows `--[no-]name`.
-
-### `flag.string(name: string, options?: ValueFlagOptions): ValueFlag<string>` and `flag.number(name, options?)`
-
-A flag with a value, as `--name value` or `--name=value`, checked by `options.schema` when given. `options` also take `default`, `required`, `prompt`, `short` (`-n`), `aliases`, `valueName`, `description` and `hidden`. Every flag kind takes `heading`, the help section it is listed under: `{ heading: "Permissions" }`.
-
-- `.multiple()`: the flag may repeat, and its value is an array.
-- `.list()`: a comma list, `--env=HOME,PATH`.
-- `.optionalValue()`: the flag may stand alone, `--allow-net` or `--allow-net=api.example.com`; alone it is `true`.
-
-A flag belongs to the command that declares it: passing it to another command is a usage error naming the commands that take it, and the value written after it is read as its value. A value that fails is reported under the name typed (`--jobs`, not `--concurrency`), and an empty `--name=` is the same usage error as a missing value.
-
-### `prompt.text | password | number | confirm | select | multiselect | search(options)`
-
-A prompt declaration for a flag's or an argument's `prompt`. Every kind takes `message` and `ask` (`"missing"`, the default, or `"always"` to show it even when a `default` exists); list kinds take `options` as values or `{ value, label, hint, disabled }`. `password` takes `mask`, `number` takes `min`, `max` and `step`, `confirm` takes `active` and `inactive` (the words for yes and no), `multiselect` and `search` take `min` and `max`, and `search` takes `multiple`. A failed schema check keeps the prompt open with the issue under it.
-
-### `createCLI(options: CLIOptions): CLI`
-
-A program from `name`, `version`, `description`, `commands` and `middleware`, the chain that runs before every handler. `--help`, `--no-progress` and, with a `version`, `--version` are reserved.
-
-#### `cli.map(target: Command | Group, binding)`
-
-Binds a handler, a `createCommand(...)` action or a `lazy(...)` import to a declared command. A mapped group runs when no member is named; an unmapped one prints its help.
-
-#### `cli.run(argv: readonly string[], io?: RunIO): Promise<number>`
-
-Runs the command `argv` names and answers its exit code. `io` replaces any of `cwd`, `env`, `stdin`, `stdout`, `stderr`, `exec` and `signal`, which default to the process's own.
-
-### `createCommand(target, handler | { middleware, handler }): CommandAction`
-
-A handler typed from its command, for a module of its own; `middleware` runs before this command alone.
-
-### `lazy(load: () => Promise<{ default: CommandAction }>): Lazy`
-
-A handler loaded when its command runs, so `--help` and other commands import nothing of it.
-
-### `CommandContext`
-
-What a handler receives.
-
-- `arguments`, `flags`: the parsed input.
-- `argv`: the arguments the run was given, before parsing, for logging a run or starting it again.
-- `path`: the command's name as typed, `["users", "find"]`.
-- `cwd`, `env`, `signal`: the run's directory, environment, and the signal Ctrl+C aborts.
-- `stdout(text)`, `stderr(text)`: write output; a running task redraws around them.
-- `style`: colours for stdout, and `style.stderr` for stderr, off without a terminal or with `NO_COLOR`.
-- `prompt.text | password | number | confirm | select | multiselect | search(options)`: ask from a handler. Each takes a `default` used without a terminal, `initial` when a terminal should start elsewhere (`default: false, initial: true` answers no in CI and yes on Enter), plus `name` for scripted answers and `schema`. A list prompt's value type comes from its `options`.
-- `task(label?, fn)`: runs `fn` under a spinner and answers a `Result`; `fn` receives a `Task`.
-- `exec(command, options?)`: runs a program with no shell. `options.stdio` is `"inherit"`, `"ignore"`, `"collect"` or `"stderr"` (its stdout to the CLI's stderr), and `"inherit"` and `"stderr"` pause any spinner. Answers the exit code and collected output, or an `ExecError`.
-- `stdin`: `isTTY`, and `text()`, which reads everything piped in (`cat query.sql | app db`).
-- `setExecEnv(variables)`: adds variables every child `exec` starts with, under each call's own `options.env`, for a middleware that hands children what it knows.
-- `get(key)`, `has(key)`, `set(key, value, { property }?)`: read and publish values under context keys; `property` installs the value as `ctx.<property>`.
-- `require(key)`: `get` for a value an earlier middleware must have published; a missing one fails the run naming the command.
-
-### `success(data?)`, `failure(error)`, `usage(message)`, `cancelled()`, `exit(code, message?)`
-
-What a handler or middleware answers: `failure` exits 1 with the error's message, `usage` exits 2 with the command's help, `cancelled` exits 130, and `exit` exits with `code`, printing `message` when given. `exitCodeOf(error)` answers the code a failure exits with.
-
-### `UsageError`, `CancelledError`, `ExitError`, `ExecError`, `EXIT_CODES`
-
-The errors behind those results, and the codes `{ success: 0, failure: 1, usage: 2, cancelled: 130 }`. An `ExecError` carries the `command`, its `code` and its output.
-
-### `spawnExec`
-
-The default `Exec`, spawning with `node:child_process`; replace it through `RunIO.exec`.
-
-### `createStyle(enabled: boolean): Style`
-
-The colour functions `ctx.style` uses, for output written outside a handler.
-
-### `invoke(cli, argv, options?): Promise<Invocation>` from `./test`
-
-Runs `argv` and answers `{ code, stdout, stderr, exec, screens }`.
-
-- `options.cwd`, `options.env`: the run's directory and environment.
-- `options.answers`: prompt answers keyed by the flag or argument they fill, or an array answered in order; a prompt with no answer fails the run naming it.
-- `options.exec`: replies keyed by command (`{ "git init": { code: 0 } }`), recorded in `exec`; an unlisted command fails naming itself. Or an `Exec` function.
-- `options.interactive: false`: applies the no-terminal rules instead of the answers.
-- `options.stdin`: text piped into the run, read by `ctx.stdin.text()`; it makes `interactive` default to `false`.
-- `options.tty` and `options.keys`: draw prompts on a virtual terminal (`{ columns: 80 }`) and press `keys` (`"down"`, `"space"`, `"enter"`, …), collecting each screen in `screens`.
-
-Without a terminal, task lines carry no durations, so output compares exactly.
-
-### Types
-
-#### `CommandMiddleware<Effect>`
-
-`(ctx, next) => void | CommandResult`. `next()` resolves to what the rest of the chain answered, so a middleware can log the outcome. A middleware that answers a failure ends the run; `Effect` (`{ key, value, property }`) names what it publishes, so the handler's `ctx` gains that property, typed. A middleware publishing several values declares a union of effects, one per property.
-
-A middleware's own `ctx` is `AnyCommandContext`, without the properties earlier middleware installed, since one middleware can run in many chains. It reads them with `ctx.require(Key)`; a package whose middleware is always installed may instead augment `CommandContext` with its property.
-
-#### `Task`
-
-A task's `signal`, `update(label)`, `total(count)` and `advance(by = 1)`.
-
-#### `RunIO`, `Exec`, `ExecOptions`, `ExecOutput`, `Stdio`
-
-What `cli.run` and `ctx.exec` take and answer.
-
-#### `HandlerContext<Target, Chain>`, `ArgumentsOf<Target>`, `FlagsOf<Target>`
-
-The context, arguments and flags a command's handler receives, for typing helpers.
-
-#### `ChainContext<Chain>`
-
-The context of any command behind `Chain`, whatever it parsed, for a helper several commands share:
+Every token after the command's name, unparsed, to hand to another program.
 
 ```typescript
-const MIDDLEWARE = [database("app.db")] as const;
-function findUser(ctx: ChainContext<typeof MIDDLEWARE>, email: string) {
-	return ctx.db.prepare("SELECT id FROM users WHERE email = ?").get(email);
-}
+command({ arguments: { args: argument.rest() } }); // prog run users --help → ["users", "--help"]
 ```
+
+#### `flag.boolean(name, options?)`
+
+`--name`, and `--no-name` to turn it off.
+
+#### `flag.string(name, options?)` and `flag.number(name, options?)`
+
+`--name value` or `--name=value`, with `default`, `required`, `short`, `schema` or a `prompt`. Chain `.multiple()` to repeat it, `.list()` for `--env=HOME,PATH`, or `.optionalValue()` to allow a bare `--name`.
+
+#### `prompt.text`, `password`, `number`, `confirm`, `select`, `multiselect`, `search`
+
+What to ask when a flag or argument is missing on a terminal: `prompt.select({ message: "Which?", options: ["a", "b"] })`.
+
+### Running commands
+
+#### `createCLI({ name, version?, commands, middleware? })`
+
+The program. `--help` and `--version` come for free.
+
+#### `cli.map(command, handler)`
+
+Binds a handler, a `createCommand(...)` or a `lazy(...)` import to a command.
+
+#### `cli.run(argv, io?)`
+
+Runs the command and answers its exit code; `io` replaces the process's `cwd`, `env`, streams or `exec`.
+
+#### `createCommand(command, handler)`
+
+A handler typed from its command, for a module of its own; pass `{ middleware, handler }` for middleware this command alone runs.
+
+#### `lazy(() => import("./command.js"))`
+
+A handler loaded only when its command runs.
+
+### The handler's context
+
+| Member                                                                  | What it is                                                      |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `ctx.arguments`, `ctx.flags`                                            | The parsed input                                                |
+| `ctx.argv`, `ctx.path`                                                  | The raw arguments, and the command's name (`["users", "find"]`) |
+| `ctx.cwd`, `ctx.env`, `ctx.signal`                                      | The run's directory, environment, and the signal Ctrl+C aborts  |
+| `ctx.stdout(text)`, `ctx.stderr(text)`                                  | Write output                                                    |
+| `ctx.stdin`                                                             | `isTTY`, and `text()` for piped input                           |
+| `ctx.style`                                                             | Colours, off without a terminal or with `NO_COLOR`              |
+| `ctx.prompt.text(…)` and the other kinds                                | Ask from a handler; `default` answers without a terminal        |
+| `ctx.task(label?, fn)`                                                  | Run `fn` under a spinner, answering a `Result`                  |
+| `ctx.exec(command, options?)`                                           | Run a program without a shell                                   |
+| `ctx.get(key)`, `ctx.set(key, value, { property })`, `ctx.require(key)` | Values middleware publishes                                     |
+| `ctx.setExecEnv(variables)`                                             | Variables every `ctx.exec` child starts with                    |
+
+### Results
+
+| A handler answers      | The run exits                   |
+| ---------------------- | ------------------------------- |
+| `success()`            | 0                               |
+| `failure(error)`       | 1, printing the error's message |
+| `usage(message)`       | 2, printing the command's help  |
+| `cancelled()`          | 130                             |
+| `exit(code, message?)` | `code`                          |
+
+`UsageError`, `CancelledError`, `ExitError` and `ExecError` are the errors behind them, `EXIT_CODES` holds the codes, and `exitCodeOf(error)` maps an error to its code.
+
+### Testing
+
+#### `invoke(cli, argv, options?)` from `@sdxc/cli/test`
+
+Runs a command without a terminal and answers `{ code, stdout, stderr, exec }`. `options.answers` answers prompts by flag or argument name, `options.exec` replies to commands by their text (`{ "git init": { code: 0 } }`), and `options.stdin` is piped input.
+
+### Other exports
+
+- `spawnExec`: the default `exec`, over `node:child_process`.
+- `createStyle(enabled)`: the colours `ctx.style` uses, for output outside a handler.
+- Types: `CommandMiddleware<Effect>` (a middleware publishing `Effect`'s `property`), `Task`, `RunIO`, `Exec`, `ExecOptions`, `ExecOutput`, `HandlerContext`, `ChainContext` (the context a helper shared by several commands takes), `ArgumentsOf`, `FlagsOf`.
 
 ## Patterns
 
