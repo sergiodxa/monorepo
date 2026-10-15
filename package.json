@@ -17,6 +17,7 @@
 		"release": "bun scripts/release/main.ts",
 		"release:bootstrap": "bun scripts/release/bootstrap.ts",
 		"sdxc:generate": "bun scripts/sdxc/generate.ts",
+		"kit:registry": "bun scripts/sdxc/kit-registry.ts",
 		"test": "vp test run",
 		"typecheck": "vp check --no-fmt --no-lint",
 		"upgrade": "bun scripts/upgrade-dependencies.ts",

@@ -29,6 +29,9 @@ vp test run <path>              # Scope Vitest to a path while iterating. A rela
                                  # `uuid`…); `"$PWD/packages/u/"` runs exactly that workspace
 vp test watch                   # Watch mode
 vp lint <path>                  # Scope a static check to one workspace while iterating
+bun run kit:registry            # Write sdxc ui's component registry into packages/kit, so a
+                                 # kit run from this checkout (a global `sdxc` linked to
+                                 # packages/kit/src/bin.ts) can list and copy components
 ```
 
 Tests run under Vitest, configured as one project per app plus one covering every package
@@ -147,6 +150,7 @@ the rest convert one app at a time, completely, before the next starts.
 | is generic, with no knowledge of the app                                                                                 | a package                                                                                                                                              |
 
 - MUST keep `bootstrap/` to entry points, and never import from it outside `bootstrap/`; a Durable Object class lives where its role puts it and `bootstrap/worker.ts` re-exports it in one line, with no pass-through file; no tsconfig declares a `~/bootstrap/*` alias
+- MUST start a new app with `sdxc create <directory>` run from `apps/`, and MUST write the files a feature needs with `sdxc make <kind> <name>` (controller, middleware, validator, job, model, migration, factory, service, policy, initializer, email, mcp, command) and then fill them in, instead of writing those files by hand: `make` puts each file where the layout says, writes its test, and declares and maps jobs, controllers, MCP tools and commands. `sdxc` is the `@sdxc/kit` command line in `packages/kit`; where it is not on PATH, run `bun packages/kit/src/bin.ts <command>`
 - MUST NOT create `app/lib/`, `app/repositories/`, `app/data/` or any folder outside the table; an instance of a package is an initializer, a store is a model, generic code is a package (proposed to the user before it is created)
 - MUST lay `app/mcp/` out like routes: declarations in `tools/index.ts` and `resources/index.ts`, one handler file per tool or resource beside them (`tools/search-jobs.ts`, `resources/posting.ts`, each a default-exported `createTool(toolset.x, …)` / `createResource(resourceset.x, …)`), and the wiring in `app/initializers/mcp.ts`, which only creates the handler and calls `mcp.tools.map` / `mcp.resources.map` once per handler file; a handler never lives inline in the initializer, and shaping shared by several handlers goes in a module beside the folders (`app/mcp/postings.ts`)
 - MUST lay `app/commands/` out like `app/mcp/`: the contract in `app/commands/index.ts` (a default-exported `commands({ … })`, nesting a `commands({ … })` group per folder), one handler file per command beside it (`users/grant.ts`, a default-exported `createCommand(commandset.users.grant, …)`), and the wiring in `app/initializers/cli.ts`, which creates the command line with `createCLI` and maps each handler through `lazy()`; `bootstrap/cli.ts` only runs it, so a command never ships in the Worker build and a test calls `invoke()` on the initializer's instance
