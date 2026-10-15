@@ -12,7 +12,11 @@
 		// Route contract `sdxc make controller` adds to, a module in routes/
 		"routes": "web",
 		// Migration chains by name; `--chain <name>` picks one
-		"migrations": { "default": "database/migrations" },
+		"migrations": {
+			"default": "database/migrations",
+			"catalog": "database/catalog-migrations",
+			"feed": "database/feed-migrations",
+		},
 		// Write a test beside every generated file except migrations and factories
 		"tests": true,
 		// Stubs here replace the built-in ones; `sdxc make stubs` copies them out
