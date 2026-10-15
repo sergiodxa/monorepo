@@ -19,7 +19,7 @@ import { afterEach, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
 import { builtinTemplates, defaultPackageRoot } from "../create/templates.js";
-import { materialize, typecheck } from "../testing.js";
+import { materialize, runCommandLine, testProject, typecheck } from "../testing.js";
 
 /** Every built-in template, each type checked once materialized. */
 const TEMPLATES = unwrap(await builtinTemplates(defaultPackageRoot()));
@@ -218,5 +218,24 @@ describe("built-in templates type check as a consumer's project", () => {
 
 		expect(result.output).toBe("");
 		expect(result.code).toBe(0);
+	});
+});
+
+describe("the app template's command line", () => {
+	test("runs its example command under Bun, and its test passes", { timeout: 60_000 }, async () => {
+		let project = unwrap(await materialize("app", "blog"));
+		DIRECTORIES.push(dirname(project));
+
+		let about = await runCommandLine(project, ["about"]);
+		let unknown = await runCommandLine(project, ["abuot"]);
+		let tested = await testProject(project);
+
+		expect(about.code).toBe(0);
+		expect(about.output).toMatch(/^blog\n {2}sdxc {5}\S+\n {2}remix {4}\S+\n {2}runtime {2}Bun /);
+		expect(about.output).toContain('"command.path":"about","outcome":"ok"');
+		expect(unknown.code).toBe(2);
+		expect(unknown.output).toContain('Unknown command "abuot" for blog; did you mean "about"?');
+		expect(tested.output).toContain("Tests  2 passed (2)");
+		expect(tested.code).toBe(0);
 	});
 });

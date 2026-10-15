@@ -16,6 +16,12 @@
 const PACKAGE_SRC_TEST = /^packages\/[^/]+\/src\//;
 
 /**
+ * A file of a project template under `packages/<name>/templates/`: it runs in the project the
+ * template creates, under that project's own Vitest, and the package's tests run it there.
+ */
+const TEMPLATE_FILE = /^packages\/[^/]+\/templates\//;
+
+/**
  * Apps that ship at least one test file but have no Vitest project rooted
  * at them, so none of their tests run. Arguments are repo-relative
  * directory paths (`apps/uptime`), returned sorted for a stable message.
@@ -27,9 +33,9 @@ export function findUnregisteredApps(appsWithTests: string[], projectRoots: stri
 
 /**
  * Package test files the packages project cannot collect, because its glob
- * is anchored at the `src` folder of every package and these sit outside it. Returned in
- * the order given, matching how the caller enumerated the filesystem.
+ * is anchored at the `src` folder of every package and these sit outside it; a template's
+ * tests belong to the project it creates. Returned in the order given.
  */
 export function findUncollectablePackageTests(testFiles: string[]): string[] {
-	return testFiles.filter((file) => !PACKAGE_SRC_TEST.test(file));
+	return testFiles.filter((file) => !PACKAGE_SRC_TEST.test(file) && !TEMPLATE_FILE.test(file));
 }

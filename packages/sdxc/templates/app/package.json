@@ -7,6 +7,7 @@
 		"cf:deploy": "cf deploy --prebuilt",
 		"cf:typegen": "cf workers types",
 		"check": "vp check",
+		"cli": "bun ./bootstrap/cli.ts",
 		"dev": "vite dev",
 		"start": "vite preview",
 		"test": "vp test run",
@@ -26,5 +27,6 @@
 		"vite": "^8.3.4",
 		"vite-plus": "0.3.3",
 		"vitest": "4.1.11"
-	}
+	},
+	"packageManager": "bun@1.4.2"
 }

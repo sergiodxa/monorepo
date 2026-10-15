@@ -71,6 +71,19 @@ export async function typecheck(project: string): Promise<Spawned> {
 	);
 }
 
+/**
+ * Runs the project's own command line, `bootstrap/cli.ts`, under Bun with `argv`, as
+ * `bun run cli` and `sdxc run` start it, answering both output streams together.
+ */
+export function runCommandLine(project: string, argv: string[]): Promise<Spawned> {
+	return run(["bootstrap/cli.ts", ...argv], project, "bun");
+}
+
+/** Runs the project's own tests with its own Vite+, as `vp test run` inside it does. */
+export function testProject(project: string): Promise<Spawned> {
+	return run([join(project, "node_modules/vite-plus/bin/vp"), "test", "run"], project);
+}
+
 /** The directory `dependency` is installed at for this package or, failing that, the workspace. */
 async function installed(packageRoot: string, dependency: string): Promise<Result<string, Error>> {
 	let candidates = [
@@ -87,11 +100,11 @@ async function installed(packageRoot: string, dependency: string): Promise<Resul
 	);
 }
 
-/** Runs a Node script with `args` in `cwd`, collecting both output streams. */
-function run(args: string[], cwd: string): Promise<Spawned> {
+/** Runs a script with `args` in `cwd` under `runtime`, Node by default, collecting both output streams. */
+function run(args: string[], cwd: string, runtime = process.execPath): Promise<Spawned> {
 	return new Promise((settle) => {
 		let output = "";
-		let child = spawn(process.execPath, args, { cwd, shell: false });
+		let child = spawn(runtime, args, { cwd, shell: false });
 		child.stdout.on("data", (chunk: Buffer) => {
 			output += chunk.toString();
 		});

@@ -66,6 +66,7 @@ describe("every test file is collected by a project", () => {
 			]);
 			expect(findUncollectablePackageTests(["packages/one/src/a.test.ts"])).toEqual([]);
 			expect(findUncollectablePackageTests(["packages/one/src/deep/a.test.tsx"])).toEqual([]);
+			expect(findUncollectablePackageTests(["packages/one/templates/app/a.test.ts"])).toEqual([]);
 		});
 	});
 
