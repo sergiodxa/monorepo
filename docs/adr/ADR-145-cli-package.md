@@ -148,8 +148,8 @@ export default createCommand(sdxc.ui.add, async (ctx) => {
 
 ### 4. The context carries the process
 
-`ctx` holds `cwd`, `env`, `stdout(text)`, `stderr(text)`, `prompt` (section 5), `spinner` and
-`task` (section 6), `style` (section 6) and `exec(command, options)`: a `spawn` with no shell,
+`ctx` holds `cwd`, `env`, `stdout(text)`, `stderr(text)`, `prompt` (section 5), `task` and
+`style` (section 6) and `exec(command, options)`: a `spawn` with no shell,
 whose `stdio` option takes `"inherit"`, `"ignore"`, `"collect"` or `"stderr"` (child stdout to the
 CLI's stderr), answering a `Result` with the exit code and collected output. `cli.run(argv)`
 defaults all of them to the process's own; `cli.run(argv, io)` replaces any of them.
@@ -205,29 +205,47 @@ create: command({
 - Prompts render on stderr, so `sdxc upgrade --prompt | pbcopy` stays clean, and are erased once
   answered, leaving one summary line (`✓ Which template? app`).
 
-### 6. Progress and styling
+### 6. Tasks and styling
+
+A task is async work the user waits on. `ctx.task(label, fn)` runs `fn` while a spinner shows the
+label, and answers what `fn` returned:
 
 ```typescript
-let spinner = ctx.spinner("Downloading sergiodxa/starter");
-spinner.update("Extracting 128 files");
-spinner.succeed("Downloaded sergiodxa/starter"); // or .fail(message), .stop()
-
-let installed = await ctx.task("Installing dependencies", () =>
-	ctx.exec(manager.install, { stdio: "stderr" }),
-); // spinner while it runs, ✓ or ✗ line with the duration after
+let posts = await ctx.task("Fetching posts", async (task) => {
+	let response = await fetch(url, { signal: task.signal });
+	task.update("Parsing posts…");
+	return PostsSchema.parse(await response.json());
+});
+if (isFailure(posts)) return posts; // the task already printed ✗ Parsing posts…
+posts.data; // what the callback returned
 ```
 
-- `ctx.spinner(label)` animates on stderr. `ctx.task(label, fn)` runs a `Result`-returning
-  function under a spinner and ends it with `succeed` or `fail` from the result, so a handler
-  rarely drives a spinner by hand.
-- `ctx.progress({ label, total })` draws a bar with a count (`advance(n)`), for work with a known
-  size: files copied by `ui add`, entries read from a changelog.
-- The terminal has one owner at a time. Writing through `ctx.stdout`/`ctx.stderr` while a spinner
-  runs clears its line, writes, and redraws it; `ctx.exec` with `"inherit"` or `"stderr"` pauses
-  the spinner and resumes it when the child exits, so child output is never interleaved with
-  frames.
-- Without a terminal on stderr, or with `CI`, `TERM=dumb` or `--no-progress`, nothing animates: a
-  spinner prints its label once and its final line once, and a bar prints only its final count.
+- **It answers a `Result`.** A returned value is `success(value)`, a thrown error is
+  `failure(error)`, so `fetch`, `response.json()` and `Schema.parse` need no `try`, and a returned
+  `Result` (from `ctx.exec`, from another task) passes through unwrapped.
+- **It ends with one line:** ✓ or ✗, the last label, and the time it took. A `done` option
+  writes the success line from the value: ``done: (posts) => `Fetched ${posts.length} posts` ``.
+- **`task.signal` aborts the work.** Ctrl+C aborts it, and so does a `timeout` option, so `fetch`
+  and child processes stop with the task instead of outliving the CLI; the task then answers a
+  `cancelled` failure, which exits 130 when the handler returns it.
+- **`task.update(label)`** changes what the spinner says. **`task.progress(done, total)`** turns
+  the spinner into a bar with a count, for work with a known size: files copied by `ui add`,
+  entries read from a changelog.
+- **The label is optional.** `ctx.task(fn)` shows only the spinner while it runs and erases it
+  when it ends, leaving no line behind, for short waits the next output explains (`ui list`
+  reading the registry before printing its table). Without a terminal it prints nothing. A
+  `task.update(label)` gives it a label, and from then on it ends like a labelled task. A failed
+  unlabelled task also prints nothing; the error reaches the user once, when the handler returns
+  it.
+- **Tasks nest.** `ctx.task` called inside a task's callback draws an indented step under it, so
+  `create`'s download, extraction and install read as one task with three steps.
+- **The terminal has one owner at a time.** Writing through `ctx.stdout`/`ctx.stderr` while a
+  task runs clears its line, writes, and redraws it; `ctx.exec` with `"inherit"` or `"stderr"`
+  pauses the spinner and resumes it when the child exits, so child output is never interleaved
+  with frames.
+- **Without a terminal** on stderr, or with `CI`, `TERM=dumb` or `--no-progress`, nothing
+  animates: a task prints its label once and its final line once, and `update` and `progress`
+  print nothing.
 - `ctx.style` colours and weights text (`style.bold`, `style.dim`, `style.green`, …), off when the
   stream is not a terminal or `NO_COLOR` is set and forced on by `FORCE_COLOR`. Help output uses
   it for headings and flag names.
@@ -245,7 +263,7 @@ test installs its own the way an app test installs `ctx.db`.
   they fill, and `answers: ["a", true]` answers handler-called prompts in order. A prompt with no
   scripted answer fails the test naming it, so a new question never passes silently on its
   default.
-- **Rendering.** By default `invoke` renders as a non-terminal, so `stderr` holds each spinner's
+- **Rendering.** By default `invoke` renders as a non-terminal, so `stderr` holds each task's
   label and final line and nothing time-dependent. `tty: { columns: 80 }` with
   `keys: ["down", "space", "enter"]` drives the real renderer through a virtual terminal and
   answers the screen after each key, for testing a prompt's own drawing.
@@ -316,7 +334,7 @@ export default createCLI({ name: "app", commands: commandset, middleware: [datab
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | `create`  | `directory` (text), `--template` (select of built-ins, `ask: "always"`), `--git` (confirm); a GitHub token (password) after a 401/404 when no `GITHUB_TOKEN` is set, used for that download only | download and extraction (task), install (task)                |
 | `make`    | `<kind>` (select) and `<name>` (text) when missing, `--method` (select) for a controller                                                                                                         | none; it writes a few files                                   |
-| `ui`      | `add` with no names (search, multiple), `remove` with no names (multiselect of copies), `update` asking per edited file whether to overwrite                                                     | files copied (bar), `format` (task)                           |
+| `ui`      | `add` with no names (search, multiple), `remove` with no names (multiselect of copies), `update` asking per edited file whether to overwrite                                                     | files copied (task with progress), `format` (task)            |
 | `upgrade` | confirm before bumping across a breaking release, `default: true` without a terminal                                                                                                             | registry lookup (task), install (task with `"stderr"` output) |
 | `init`    | none                                                                                                                                                                                             | none                                                          |
 
@@ -338,7 +356,7 @@ the duplicates above, and `@sdxc/cli` stays free of anything about JavaScript pr
   every command, `spec` included.
 - **Interactive and scriptable at once.** Every prompt is a flag, so a person is guided through
   `sdxc create` and an agent or CI job runs it in one line with no question left to block on.
-- **Long steps show they are alive.** Downloads and installs run under a spinner that never
+- **Long steps show they are alive.** Downloads and installs run as tasks whose spinner never
   garbles the child's own output.
 - **Apps get a command line.** One-off work against an app's data is a typed, tested command
   that imports the app, run locally or with `--remote`, instead of a hand-written SQL file passed
@@ -421,7 +439,8 @@ routes, jobs and MCP tools are.
 4. Process context (`exec`, `style`) and `@sdxc/cli/test` with scripted answers.
 5. Prompts: the seven kinds, binding to flags and arguments, the non-terminal rules,
    cancellation, and the virtual-terminal harness with a test per kind.
-6. `spinner`, `task`, `progress`, terminal ownership with `exec` and writes, and the
+6. `task` with `signal`, `timeout`, `update`, `progress`, nesting, terminal ownership with
+   `exec` and writes, and the
    non-animated fallback.
 7. README, `LICENSE.md`, root README row, docs-site group; bootstrap on npm with its trusted
    publisher; regenerate the `sdxc` export map.
