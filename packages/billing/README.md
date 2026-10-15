@@ -113,6 +113,7 @@ handler keyed by the event's type.
 | -------------------------------------- | ------------------------------------------------------------------------------ |
 | `@sdxc/billing`                        | `Billing`, the models, `BillingError`, `supports()`, `BillingWebhook`, helpers |
 | `@sdxc/billing/middleware`             | `billing()` (default), `requireEntitlement()`, `readEntitlements()`            |
+| `@sdxc/billing/middleware/cli`         | `billing()` (default) for an `@sdxc/cli` command line                          |
 | `@sdxc/billing/providers/polar`        | `PolarBilling`                                                                 |
 | `@sdxc/billing/providers/stripe`       | `StripeBilling`                                                                |
 | `@sdxc/billing/providers/mercado-pago` | `MercadoPagoBilling`                                                           |
@@ -245,6 +246,22 @@ The default export; publishes the provider as `context.billing`, typed on `Reque
 the module is imported. `options.provider` is a `Billing` or `(context) => Billing`, resolved once
 per request. `options.entitlements` is an `EntitlementSource`: a function of the context
 answering an `EntitlementSnapshot`, `null` or a promise of either, read from your own projection.
+The provider is published under the `CurrentBilling` context key, exported here and from
+`./middleware/cli`, so `ctx.get(CurrentBilling)` reads it in a route or a command.
+
+### `billing(options)` from `./middleware/cli`
+
+The default export; publishes the provider as `ctx.billing` on an
+[`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) command, for granting an entitlement or
+looking up a customer by hand. `options.provider` is a `Billing` or `(ctx) => Billing`, resolved
+once per run.
+
+```typescript
+import billing from "@sdxc/billing/middleware/cli";
+import { createCLI } from "@sdxc/cli";
+
+let cli = createCLI({ name: "app", commands, middleware: [billing({ provider: polar })] });
+```
 
 ### `requireEntitlement(feature, options?)` from `./middleware`
 

@@ -15,6 +15,10 @@ import { createContextKey } from "remix/router";
 
 import type { Billing } from "../core/contract.js";
 
+import { CurrentBilling } from "./context.js";
+
+export { CurrentBilling } from "./context.js";
+
 /**
  * Declared here, in an imported module rather than an ambient .d.ts, so the
  * augmentation is applied in consuming projects that import the middleware.
@@ -93,8 +97,8 @@ const EntitlementRead = createContextKey<Promise<Result<EntitlementSnapshot | nu
 const FORBIDDEN = 403;
 
 /**
- * Creates a middleware that publishes the request's billing platform as
- * `context.billing`, resolving a per-request provider once per request.
+ * Creates a middleware that publishes the request's billing platform as `context.billing`, under
+ * the {@link CurrentBilling} key the command-line entry shares.
  *
  * @param options - Provider and entitlement configuration; see {@link BillingMiddlewareOptions}.
  * @returns A middleware that populates `context.billing`.
@@ -103,8 +107,9 @@ const FORBIDDEN = 403;
  */
 export default function billing(options: BillingMiddlewareOptions): Middleware {
 	return async (context, next) => {
-		context.billing =
+		let provider =
 			typeof options.provider === "function" ? options.provider(context) : options.provider;
+		context.set(CurrentBilling, provider, { property: "billing" });
 
 		if (options.entitlements) context.set(EntitlementReader, options.entitlements);
 
