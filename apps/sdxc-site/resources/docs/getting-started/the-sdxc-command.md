@@ -82,21 +82,21 @@ projects set: a generated file and a copied component then come out in your proj
 `sdxc make <kind> <name>` writes one file of that kind where the layout puts it, with a test
 beside it:
 
-| Kind          | File                                    |
-| ------------- | --------------------------------------- |
-| `controller`  | `app/http/controllers/<name>.tsx`       |
-| `middleware`  | `app/http/middleware/<name>.ts`         |
-| `validator`   | `app/http/validators/<name>.ts`         |
-| `job`         | `app/jobs/<name>.ts`                    |
-| `model`       | `app/models/<name>.ts`                  |
-| `migration`   | `database/migrations/<NNNN>_<Name>.sql` |
-| `factory`     | `database/factories/<name>.ts`          |
-| `service`     | `app/services/<name>.ts`                |
-| `policy`      | `app/policies/<name>.ts`                |
-| `initializer` | `app/initializers/<name>.ts`            |
-| `email`       | `app/emails/<name>.tsx`                 |
-| `mcp`         | `app/mcp/tools/<name>.ts`               |
-| `command`     | `app/commands/<name>.ts`                |
+| Kind          | File                                      |
+| ------------- | ----------------------------------------- |
+| `controller`  | `app/http/controllers/<name>.tsx`         |
+| `middleware`  | `app/http/middleware/<name>.ts`           |
+| `validator`   | `app/http/validators/<name>.ts`           |
+| `job`         | `app/jobs/<name>.ts`                      |
+| `model`       | `app/models/<name>.ts`                    |
+| `migration`   | `database/migrations/<number>_<Name>.sql` |
+| `factory`     | `database/factories/<name>.ts`            |
+| `service`     | `app/services/<name>.ts`                  |
+| `policy`      | `app/policies/<name>.ts`                  |
+| `initializer` | `app/initializers/<name>.ts`              |
+| `email`       | `app/emails/<name>.tsx`                   |
+| `mcp`         | `app/mcp/tools/<name>.ts`                 |
+| `command`     | `app/commands/<name>.ts`                  |
 
 A slash in the name is a folder inside the kind's folder, so features stay together:
 `sdxc make job trials/expire` writes `app/jobs/trials/expire.ts`.
@@ -123,7 +123,10 @@ whose initializer is laid out differently, `make` writes the handler, leaves the
 as they are, and prints both edits for you to make, so a declaration never lands without its
 mapping.
 
-A migration takes the next number in its chain, and `--chain` picks a chain from
+A migration is named like the files already in its chain and sorts after all of them. A chain
+of `0004-add-feeds.sql` files gets `0005-add-index.sql`, a chain of
+`20261008100000_add_feeds.sql` files gets the current UTC time as `20261015090807_add_index.sql`,
+and an empty chain starts at `0001_AddIndex.sql`. `--chain` picks a chain from
 `make.migrations` for an app with more than one database. `--no-test` skips the test for one
 run, `make.tests: false` skips it everywhere, and `--dry-run` prints what would be written.
 
