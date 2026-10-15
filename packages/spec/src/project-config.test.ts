@@ -29,7 +29,6 @@ import {
 	launchDeniedError,
 	loadProjectConfig,
 	mergePluginGrants,
-	parsePluginGrant,
 	planPluginLaunch,
 	pluginGrantFromConfig,
 } from "./project-config.js";
@@ -84,39 +83,6 @@ async function runCli(args: string[]): Promise<{ stdout: string; exitCode: numbe
 	});
 	return { stdout: `${stdout}${stderr}`, exitCode };
 }
-
-test("parsePluginGrant reads bare, scoped, and absent forms", () => {
-	let absent = parsePluginGrant(["run", "spec"]);
-	expect(isSuccess(absent) && absent.data.grant.mode).toBe("denied");
-	expect(isSuccess(absent) && absent.data.remaining).toEqual(["run", "spec"]);
-
-	let bare = parsePluginGrant(["spec", "--allow-plugins"]);
-	expect(isSuccess(bare) && bare.data.grant.mode).toBe("all");
-	expect(isSuccess(bare) && bare.data.remaining).toEqual(["spec"]);
-
-	let scoped = parsePluginGrant(["spec", "--allow-plugins=demo,other"]);
-	expect(isSuccess(scoped) && scoped.data.grant).toEqual({
-		mode: "scoped",
-		namespaces: ["demo", "other"],
-	});
-});
-
-test("parsePluginGrant unions repeats and lets a bare flag absorb scopes", () => {
-	let unioned = parsePluginGrant(["--allow-plugins=a", "--allow-plugins=b,a"]);
-	expect(isSuccess(unioned) && unioned.data.grant).toEqual({
-		mode: "scoped",
-		namespaces: ["a", "b"],
-	});
-
-	let absorbed = parsePluginGrant(["--allow-plugins=a", "--allow-plugins"]);
-	expect(isSuccess(absorbed) && absorbed.data.grant.mode).toBe("all");
-});
-
-test("parsePluginGrant rejects an empty scope list", () => {
-	let empty = parsePluginGrant(["--allow-plugins="]);
-	expect(isFailure(empty)).toBe(true);
-	expect(isFailure(empty) && empty.error.code).toBe("usage-error");
-});
 
 test("loadProjectConfig returns no plugins when no config exists", async () => {
 	let dir = makeTempDir();

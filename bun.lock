@@ -1865,6 +1865,7 @@
         "spec": "./src/cli.ts",
       },
       "dependencies": {
+        "@sdxc/cli": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/html": "workspace:*",
         "@sdxc/jsonc": "workspace:*",
@@ -1872,6 +1873,7 @@
         "@sdxc/random": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/sample": "workspace:*",
+        "remix": "3.0.0",
       },
     },
     "packages/strings": {

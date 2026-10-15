@@ -1,7 +1,7 @@
 /**
- * Tests for the `spec` CLI entry point: exit codes and human output for
+ * Tests for the `spec` command line: exit codes and human output for
  * passing suites, failing expectations, permission denials, usage errors, and
- * unreadable suite directories — driven through `main` with a buffer sink.
+ * unreadable suite directories — driven through `invoke()` with both streams captured.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,11 +11,10 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import { invoke } from "@sdxc/cli/test";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import type { Sink } from "./diagnostics.js";
-
-import { main } from "./cli.js";
+import { cli } from "./cli.js";
 
 const CREATED_DIRS: string[] = [];
 
@@ -37,20 +36,12 @@ async function makeSuiteDir(files: Record<string, string>): Promise<string> {
 	return root;
 }
 
-/** A sink that buffers everything the CLI writes, for output assertions. */
-function makeSink(): { sink: Sink; output: () => string } {
-	let buffer = "";
-	return {
-		sink: {
-			write(text) {
-				buffer += text;
-			},
-		},
-		output: () => buffer,
-	};
+/** Runs `spec` with `argv`, answering its exit code and what it printed on each stream. */
+async function spec(argv: string[]): Promise<{ code: number; stdout: string; stderr: string }> {
+	return invoke(cli, argv);
 }
 
-describe("main", () => {
+describe("spec run", () => {
 	test("a passing suite exits 0 and reports the summary", async () => {
 		let root = await makeSuiteDir({
 			"pass.spec": `use fs
@@ -65,13 +56,11 @@ test "writes are visible" {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(0);
-		expect(output()).toContain("✓ writes are visible");
-		expect(output()).toContain("1 passed, 0 failed");
+		expect(stdout).toContain("✓ writes are visible");
+		expect(stdout).toContain("1 passed, 0 failed");
 	});
 
 	test("a failing expectation exits 1 and names the failing test", async () => {
@@ -83,13 +72,11 @@ test "writes are visible" {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(1);
-		expect(output()).toContain("✗ the answer is wrong");
-		expect(output()).toContain("0 passed, 1 failed");
+		expect(stdout).toContain("✗ the answer is wrong");
+		expect(stdout).toContain("0 passed, 1 failed");
 	});
 
 	test("an ungranted cli.run is denied, naming --allow-run, before any spawn", async () => {
@@ -103,14 +90,12 @@ test "running a program needs a grant" {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(1);
-		expect(output()).toContain("Permission denied: run");
-		expect(output()).toContain("--allow-run");
-		expect(output()).not.toContain("failed to start");
+		expect(stdout).toContain("Permission denied: run");
+		expect(stdout).toContain("--allow-run");
+		expect(stdout).not.toContain("failed to start");
 	});
 
 	test("the cross-file use scoping holds through the real CLI", async () => {
@@ -131,12 +116,10 @@ command touch_marker {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(0);
-		expect(output()).toContain("1 passed, 0 failed");
+		expect(stdout).toContain("1 passed, 0 failed");
 	});
 
 	test("a failure inside a cross-file command reports the defining file and line", async () => {
@@ -153,22 +136,56 @@ command broken {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(1);
-		expect(output()).toContain("commands/helper.spec:3");
+		expect(stdout).toContain("commands/helper.spec:3");
 	});
 
 	test("--help exits 0 and prints usage", async () => {
-		let { sink, output } = makeSink();
-
-		let code = await main(["--help"], sink);
+		let { code, stdout } = await spec(["--help"]);
 
 		expect(code).toBe(0);
-		expect(output()).toContain("Usage:");
-		expect(output()).toContain("--allow-run");
+		expect(stdout).toContain("Usage:");
+		expect(stdout).toContain("run");
+	});
+
+	test("run --help exits 0 and lists every flag", async () => {
+		let { code, stdout } = await spec(["run", "--help"]);
+
+		expect(code).toBe(0);
+		expect(stdout).toContain("Usage: spec run [directory]");
+		for (let name of [
+			"--concurrency, --jobs <N>",
+			"--retries <N>",
+			"--seed <value>",
+			"--run-id <value>",
+			"--artifacts <dir>",
+			"--allow-run[=",
+			"--allow-net[=<host[:port],...>]",
+			"--allow-env[=",
+			"--allow-host-fs[=",
+			"--allow-db[=",
+			"--allow-plugins[=",
+			"--allow-config",
+		]) {
+			expect(stdout).toContain(name);
+		}
+	});
+
+	test("no command exits 2 and prints usage on stderr", async () => {
+		let { code, stderr } = await spec([]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("Usage: spec <command>");
+	});
+
+	test("an unknown command exits 2 and names it", async () => {
+		let { code, stderr } = await spec(["rnu"]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain('Unknown command "rnu"');
+		expect(stderr).toContain('did you mean "run"?');
 	});
 
 	test("an unknown flag exits 2", async () => {
@@ -180,22 +197,18 @@ command broken {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root, "--frobnicate"], sink);
+		let { code, stderr } = await spec(["run", root, "--frobnicate"]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("--frobnicate");
+		expect(stderr).toContain("Unknown flag --frobnicate");
 	});
 
 	test("a nonexistent suite directory exits 2", async () => {
 		let root = await makeSuiteDir({});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", join(root, "missing")], sink);
+		let { code, stdout } = await spec(["run", join(root, "missing")]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("load-error");
+		expect(stdout).toContain("load-error");
 	});
 });
 
@@ -226,59 +239,66 @@ test "reports the address it drew" {
 
 	test("repeats a run's data when no seed is given", async () => {
 		let root = await probeSuite();
-		let first = makeSink();
-		let second = makeSink();
 
-		await main(["run", root], first.sink);
-		await main(["run", root], second.sink);
+		let first = await spec(["run", root]);
+		let second = await spec(["run", root]);
 
-		expect(drawnValue(first.output())).toBe(drawnValue(second.output()));
+		expect(drawnValue(first.stdout)).toBe(drawnValue(second.stdout));
 	});
 
 	test("changes the data when the seed changes", async () => {
 		let root = await probeSuite();
-		let one = makeSink();
-		let two = makeSink();
 
-		await main(["run", root, "--seed=one"], one.sink);
-		await main(["run", root, "--seed=two"], two.sink);
+		let one = await spec(["run", root, "--seed=one"]);
+		let two = await spec(["run", root, "--seed=two"]);
 
-		expect(drawnValue(one.output())).not.toBe(drawnValue(two.output()));
+		expect(drawnValue(one.stdout)).not.toBe(drawnValue(two.stdout));
 	});
 
 	test("prints a drawn seed, and replaying it reproduces the run", async () => {
 		let root = await probeSuite();
-		let drawn = makeSink();
 
-		await main(["run", root, "--seed=random"], drawn.sink);
+		let drawn = await spec(["run", root, "--seed=random"]);
 
-		let printed = /seed (\d+) \(replay with --seed=(\d+)\)/.exec(drawn.output());
+		let printed = /seed (\d+) \(replay with --seed=(\d+)\)/.exec(drawn.stdout);
 		expect(printed).not.toBeNull();
 		expect(printed?.[1]).toBe(printed?.[2]);
 
-		let replay = makeSink();
-		await main(["run", root, `--seed=${printed?.[1]}`], replay.sink);
+		let replay = await spec(["run", root, `--seed=${printed?.[1]}`]);
 
-		expect(drawnValue(replay.output())).toBe(drawnValue(drawn.output()));
+		expect(drawnValue(replay.stdout)).toBe(drawnValue(drawn.stdout));
 	});
 
 	test("a seed with no value is a usage error", async () => {
 		let root = await probeSuite();
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root, "--seed"], sink);
+		let { code, stderr } = await spec(["run", root, "--seed"]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("--seed expects a value");
+		expect(stderr).toContain("--seed needs a value");
+	});
+
+	test("an empty seed is a usage error naming both forms", async () => {
+		let root = await probeSuite();
+		let { code, stderr } = await spec(["run", root, "--seed="]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain(
+			"--seed: expects a value, e.g. --seed=checkout or --seed=random to draw one.",
+		);
+	});
+
+	test("takes its value as the next argument too", async () => {
+		let root = await probeSuite();
+		let { stdout } = await spec(["run", "--seed", "42", root]);
+
+		expect(stdout).toContain("seed 42 (replay with --seed=42)");
 	});
 
 	test("prints the given seed too, so any run's header replays it", async () => {
 		let root = await probeSuite();
-		let { sink, output } = makeSink();
+		let { stdout } = await spec(["run", root, "--seed=fixed"]);
 
-		await main(["run", root, "--seed=fixed"], sink);
-
-		expect(output()).toContain("seed fixed (replay with --seed=fixed)");
+		expect(stdout).toContain("seed fixed (replay with --seed=fixed)");
 	});
 });
 
@@ -297,15 +317,13 @@ describe("--run-id", () => {
 
 	test("the header prints a drawn run id as a replay flag", async () => {
 		let root = await trivialSuite();
-		let first = makeSink();
-		let second = makeSink();
 
-		await main(["run", root], first.sink);
-		await main(["run", root], second.sink);
+		let first = await spec(["run", root]);
+		let second = await spec(["run", root]);
 
 		let pattern = /run ([a-z0-9]+) \(replay with --run-id=([a-z0-9]+)\)/;
-		let one = pattern.exec(first.output());
-		let two = pattern.exec(second.output());
+		let one = pattern.exec(first.stdout);
+		let two = pattern.exec(second.stdout);
 		expect(one?.[1]).toBe(one?.[2]);
 		/** The one value in the runtime that must not reproduce across runs. */
 		expect(one?.[1]).not.toBe(two?.[1]);
@@ -313,42 +331,34 @@ describe("--run-id", () => {
 
 	test("replays the given run id verbatim", async () => {
 		let root = await trivialSuite();
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root, "--run-id=nightly-42"], sink);
+		let { code, stdout } = await spec(["run", root, "--run-id=nightly-42"]);
 
 		expect(code).toBe(0);
-		expect(output()).toContain("run nightly-42 (replay with --run-id=nightly-42)");
+		expect(stdout).toContain("run nightly-42 (replay with --run-id=nightly-42)");
 	});
 
 	test("a run id with no value is a usage error", async () => {
 		let root = await trivialSuite();
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root, "--run-id"], sink);
+		let { code, stderr } = await spec(["run", root, "--run-id"]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("--run-id expects a value");
+		expect(stderr).toContain("--run-id needs a value");
 	});
 
 	test("a malformed --retries is a usage error", async () => {
 		let root = await trivialSuite();
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root, "--retries=two"], sink);
+		let { code, stderr } = await spec(["run", root, "--retries=two"]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("--retries expects a non-negative integer");
+		expect(stderr).toContain("--retries: expects a non-negative integer");
 	});
 
 	test("an --artifacts directory with no value is a usage error", async () => {
 		let root = await trivialSuite();
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root, "--artifacts="], sink);
+		let { code, stderr } = await spec(["run", root, "--artifacts="]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("--artifacts expects a value");
+		expect(stderr).toContain("--artifacts: expects a value");
 	});
 });
 
@@ -369,14 +379,13 @@ describe("bases", () => {
 }
 `,
 		});
-		let { sink, output } = makeSink();
 		vi.stubEnv("SPEC_CLI_BASE_FIXTURE", "https://staging.example.com");
 
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(0);
-		expect(output()).toContain(`base "web" → https://staging.example.com`);
-		expect(output()).toContain(`base "work" → http://localhost:4020`);
+		expect(stdout).toContain(`base "web" → https://staging.example.com`);
+		expect(stdout).toContain(`base "work" → http://localhost:4020`);
 	});
 
 	test("a base that resolves to nothing is a load error naming its variable", async () => {
@@ -392,11 +401,157 @@ describe("bases", () => {
 }
 `,
 		});
-		let { sink, output } = makeSink();
-
-		let code = await main(["run", root], sink);
+		let { code, stdout } = await spec(["run", root]);
 
 		expect(code).toBe(2);
-		expect(output()).toContain("SPEC_CLI_MISSING_BASE");
+		expect(stdout).toContain("SPEC_CLI_MISSING_BASE");
+	});
+});
+
+describe("scheduling flags", () => {
+	/** A suite whose only test passes, for flags that change how a run is scheduled. */
+	async function trivialSuite(): Promise<string> {
+		return makeSuiteDir({
+			"trivial.spec": `test "holds" {
+	then {
+		expect 1 1
+	}
+}
+`,
+		});
+	}
+
+	test.each([
+		["--concurrency=4"],
+		["--jobs=4"],
+		["--jobs", "4"],
+		["--retries=0"],
+		["--retries", "2"],
+	])("%j is accepted", async (...flags) => {
+		let root = await trivialSuite();
+		let { code, stdout } = await spec(["run", root, ...flags]);
+
+		expect(code).toBe(0);
+		expect(stdout).toContain("1 passed, 0 failed");
+	});
+
+	test.each(["0", "-1", "+4", "1.5", "0x4", " 4", "four", ""])(
+		"--jobs=%j is a usage error naming the flag",
+		async (value) => {
+			let root = await trivialSuite();
+			let { code, stderr } = await spec(["run", root, `--jobs=${value}`]);
+
+			expect(code).toBe(2);
+			expect(stderr).toContain("--concurrency: expects a positive integer");
+		},
+	);
+
+	test("a negative --retries is a usage error", async () => {
+		let root = await trivialSuite();
+		let { code, stderr } = await spec(["run", root, "--retries=-1"]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("--retries: expects a non-negative integer");
+	});
+
+	test("two suite directories are a usage error", async () => {
+		let root = await trivialSuite();
+		let { code, stderr } = await spec(["run", root, root]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("Unexpected argument");
+	});
+});
+
+describe("permission flags", () => {
+	/** A suite whose only test runs `echo`, which needs a run grant naming it. */
+	async function echoSuite(): Promise<string> {
+		return makeSuiteDir({
+			"echo.spec": `use cli
+
+test "echo runs" {
+	when {
+		let result = run "echo" "hi"
+	}
+	then {
+		expect result.exit_code 0
+	}
+}
+`,
+		});
+	}
+
+	test.each([
+		[["--allow-run"]],
+		[["--allow-run=echo"]],
+		[["--allow-run=sh,echo"]],
+		[["--allow-run= sh , echo ,"]],
+		[["--allow-run=sh", "--allow-run=echo"]],
+		[["--allow-run=sh", "--allow-run"]],
+		[["--allow-run", "--allow-run=sh"]],
+	])("%j grants echo", async (flags) => {
+		let root = await echoSuite();
+		let { code, stdout } = await spec(["run", root, ...flags]);
+
+		expect(code, stdout).toBe(0);
+	});
+
+	test.each([[[]], [["--allow-run=sh"]], [["--allow-net"]]])(
+		"%j leaves echo denied",
+		async (flags) => {
+			let root = await echoSuite();
+			let { code, stdout } = await spec(["run", root, ...flags]);
+
+			expect(code).toBe(1);
+			expect(stdout).toContain("Permission denied: run");
+		},
+	);
+
+	test("a bare --allow-run before the directory leaves the directory a positional", async () => {
+		let root = await echoSuite();
+		let { code, stdout } = await spec(["run", "--allow-run", root]);
+
+		expect(code, stdout).toBe(0);
+	});
+
+	test("an empty scope list is a usage error", async () => {
+		let root = await echoSuite();
+		let { code, stderr } = await spec(["run", root, "--allow-net="]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("--allow-net= needs at least one value");
+	});
+
+	test("an unknown permission family is a usage error", async () => {
+		let root = await echoSuite();
+		let { code, stderr } = await spec(["run", root, "--allow-device=camera"]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("Unknown flag --allow-device");
+	});
+
+	test("--allow-config takes no value", async () => {
+		let root = await echoSuite();
+		let { code, stderr } = await spec(["run", root, "--allow-config=yes"]);
+
+		expect(code).toBe(2);
+		expect(stderr).toContain("--allow-config takes no value");
+	});
+
+	test("config grants apply only with --allow-config, and the denial hints at it", async () => {
+		let root = await echoSuite();
+		await writeFile(
+			join(root, "config.jsonc"),
+			`{ "permissions": { "allow": [["run", "echo"]] } }\n`,
+			"utf8",
+		);
+
+		let denied = await spec(["run", root]);
+		expect(denied.code).toBe(1);
+		expect(denied.stdout).toContain("Permission denied: run");
+		expect(denied.stdout).toContain("re-run with --allow-config");
+
+		let granted = await spec(["run", root, "--allow-config"]);
+		expect(granted.code, granted.stdout).toBe(0);
 	});
 });

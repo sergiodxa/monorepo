@@ -122,46 +122,6 @@ export interface LaunchPlan {
 }
 
 /**
- * Extract the `--allow-plugins` grant from a raw argument list, leaving the
- * remaining arguments for the permission parser to handle. Plugin launch sits
- * outside the four `--allow-*` capability families, so it gets its own parse here.
- *
- * @param args - The raw CLI arguments after `run`.
- * @returns The launch grant plus the arguments that were not `--allow-plugins`.
- */
-export function parsePluginGrant(
-	args: string[],
-): Result<{ grant: PluginLaunchGrant; remaining: string[] }, SpecError> {
-	let grant: PluginLaunchGrant = { mode: "denied" };
-	let remaining: string[] = [];
-	for (let argument of args) {
-		if (argument === ALLOW_PLUGINS_FLAG) {
-			grant = grant.mode === "all" ? grant : { mode: "all" };
-			continue;
-		}
-		if (!argument.startsWith(`${ALLOW_PLUGINS_FLAG}=`)) {
-			remaining.push(argument);
-			continue;
-		}
-		let namespaces = argument
-			.slice(ALLOW_PLUGINS_FLAG.length + 1)
-			.split(",")
-			.map((namespace) => namespace.trim())
-			.filter((namespace) => namespace.length > 0);
-		if (namespaces.length === 0) {
-			return failure(
-				new SpecError(
-					"usage-error",
-					`${ALLOW_PLUGINS_FLAG}= expects a comma-separated namespace list, e.g. ${ALLOW_PLUGINS_FLAG}=demo.`,
-				),
-			);
-		}
-		grant = widenLaunchGrant(grant, namespaces);
-	}
-	return success({ grant, remaining });
-}
-
-/**
  * Read the `spec/config.jsonc` that governs a suite directory (JSONC, so
  * comments and trailing commas are tolerated), trying `config.jsonc` before
  * `config.json`. A missing file simply declares no plugins.

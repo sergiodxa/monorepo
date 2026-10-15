@@ -17,12 +17,14 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/html": "workspace:*",
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/sample": "workspace:*"
+		"@sdxc/sample": "workspace:*",
+		"remix": "3.0.0"
 	}
 }

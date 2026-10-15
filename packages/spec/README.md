@@ -400,7 +400,9 @@ spec run [directory] [flags]     Run every .spec file under directory (default .
 ```
 
 A bare `--allow-*` grants the whole family, a scoped one only what it lists, and repeated flags
-union. Exit codes: `0` everything passed, `1` a test failed, `2` a usage or load error. Results
+union. `--concurrency`, `--retries`, `--seed`, `--run-id` and `--artifacts` also take their value
+as the next argument, and `spec run --help` prints this list. Exit codes: `0` everything passed,
+`1` a test failed, `2` a usage or load error. Results
 print in source order at any concurrency; a test that passes only on a retry is counted `flaky`
 with the failed attempt's diagnostics.
 

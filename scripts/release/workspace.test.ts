@@ -350,6 +350,7 @@ describe("readPackages", () => {
 		expect(packages.length).toBeGreaterThan(40);
 		expect(spec?.dir).toBe("spec");
 		expect(spec?.dependencies).toEqual([
+			"@sdxc/cli",
 			"@sdxc/duration",
 			"@sdxc/html",
 			"@sdxc/jsonc",
