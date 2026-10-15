@@ -20,6 +20,7 @@ import type { RunTask } from "./task.js";
 
 /** Everything a context is built from. */
 export interface CommandContextInit<Arguments, Flags> {
+	argv: readonly string[];
 	path: readonly string[];
 	arguments: Arguments;
 	flags: Flags;
@@ -34,6 +35,11 @@ export interface CommandContextInit<Arguments, Flags> {
  * @example ctx.set(Database, connect(ctx.env.DATABASE_URL), { property: "db" });
  */
 export class CommandContext<Arguments = unknown, Flags = unknown> {
+	/**
+	 * The arguments the run was given, exactly as `cli.run` received them: the command's names,
+	 * flags and values before parsing, for logging a run or starting it again.
+	 */
+	readonly argv: readonly string[];
 	/** The command's names after the program, `["ui", "add"]` for `sdxc ui add`. */
 	readonly path: readonly string[];
 	/** The positional arguments, parsed, prompted for, or defaulted. */
@@ -72,6 +78,7 @@ export class CommandContext<Arguments = unknown, Flags = unknown> {
 
 	/** @param init - The parsed command and the run it belongs to */
 	constructor(init: CommandContextInit<Arguments, Flags>) {
+		this.argv = init.argv;
 		this.path = init.path;
 		this.arguments = init.arguments;
 		this.flags = init.flags;

@@ -11,6 +11,7 @@ export type {
 	Argument,
 	ArgumentOptions,
 	ArgumentValue,
+	RestArgumentOptions,
 	SingleArgumentOptions,
 	VariadicArgumentOptions,
 } from "./argument.js";

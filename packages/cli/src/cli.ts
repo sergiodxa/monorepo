@@ -202,6 +202,7 @@ async function execute(
 			return report(asError(error), entry, session, program);
 		}
 		let context = new CommandContext({
+			argv: [...argv],
 			path: entry.path,
 			arguments: inputs.data.arguments,
 			flags: inputs.data.flags,

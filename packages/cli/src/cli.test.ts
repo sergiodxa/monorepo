@@ -483,13 +483,12 @@ describe("stdin", () => {
 	});
 });
 
-describe("passthrough", () => {
+describe("argument.rest", () => {
 	/** A program whose `run` hands every token after its name to another program. */
 	let program = commands({
 		run: command({
 			description: "Run the app's own command line",
-			arguments: { args: argument.variadic(s.string()) },
-			passthrough: true,
+			arguments: { args: argument.rest() },
 		}),
 	});
 
@@ -497,43 +496,69 @@ describe("passthrough", () => {
 	function forwarding() {
 		let cli = createCLI({ name: "prog", commands: program });
 		cli.map(program.run, (ctx) => {
+			expectTypeOf(ctx.arguments.args).toEqualTypeOf<string[]>();
 			ctx.stdout(`${JSON.stringify(ctx.arguments.args)}\n`);
 			return success();
 		});
 		return cli;
 	}
 
-	test("hands flags and --help after the command's name through unparsed", async () => {
+	test("receives flags and --help after the command's name unparsed", async () => {
 		let run = await invoke(forwarding(), ["run", "users", "find", "--limit", "5", "-x", "--help"]);
 
 		expect(run.code).toBe(0);
 		expect(run.stdout).toBe('["users","find","--limit","5","-x","--help"]\n');
 	});
 
-	test("hands nothing through when nothing follows the command's name", async () => {
+	test("receives nothing when nothing follows the command's name", async () => {
 		let run = await invoke(forwarding(), ["run"]);
 
 		expect(run.stdout).toBe("[]\n");
 	});
 
-	test("still answers --help written before the command's name", async () => {
+	test("leaves --help before the command's name to the program", async () => {
 		let run = await invoke(forwarding(), ["--help"]);
 
 		expect(run.stdout).toContain("run  Run the app's own command line");
 	});
 
-	test("refuses a passthrough command with flags", () => {
-		let invalid = commands({
+	test("refuses a rest argument beside flags or another argument", () => {
+		let withFlag = commands({
 			run: command({
-				arguments: { args: argument.variadic(s.string()) },
+				arguments: { args: argument.rest() },
 				flags: { quiet: flag.boolean("quiet") },
-				passthrough: true,
 			}),
 		});
+		let withArgument = commands({
+			run: command({ arguments: { name: argument(s.string()), args: argument.rest() } }),
+		});
 
-		expect(() => createCLI({ name: "prog", commands: invalid })).toThrow(
-			"a passthrough command takes one variadic argument and no flags",
+		expect(() => createCLI({ name: "prog", commands: withFlag })).toThrow(
+			"argument.rest() is a command's only argument, with no flags",
 		);
+		expect(() => createCLI({ name: "prog", commands: withArgument })).toThrow(
+			"argument.rest() is a command's only argument, with no flags",
+		);
+	});
+});
+
+describe("ctx.argv", () => {
+	test("holds the arguments the run was given, before parsing", async () => {
+		let program = commands({
+			greet: command({
+				arguments: { name: argument(s.string()) },
+				flags: { shout: flag.boolean("shout") },
+			}),
+		});
+		let cli = createCLI({ name: "prog", commands: program });
+		cli.map(program.greet, (ctx) => {
+			ctx.stdout(`${JSON.stringify(ctx.argv)}\n`);
+			return success();
+		});
+
+		let run = await invoke(cli, ["greet", "--shout", "Ada"]);
+
+		expect(run.stdout).toBe('["greet","--shout","Ada"]\n');
 	});
 });
 

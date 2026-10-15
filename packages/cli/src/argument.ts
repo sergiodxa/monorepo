@@ -1,7 +1,7 @@
 /**
- * Positional argument declarations: one value, or every remaining value with
- * `argument.variadic`, each checked by a Standard Schema. A command's `arguments` object fills in
- * the order its keys are written, so the declaration is also the usage line.
+ * Positional argument declarations: one value, every remaining value with `argument.variadic`,
+ * each checked by a Standard Schema, or every token after the command's name as typed with
+ * `argument.rest`. A command's `arguments` fill in key order, so the declaration is the usage line.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,6 +24,8 @@ export interface ArgumentSpec {
 	/** Checks each value, every one of a variadic argument; it receives the text as typed. */
 	schema: StandardSchemaV1;
 	variadic: boolean;
+	/** Takes every token after the command's name unparsed, flags and `--help` included. */
+	rest: boolean;
 	/** Fewest values a variadic argument takes. */
 	min: number;
 	/** Most values a variadic argument takes. */
@@ -78,6 +80,22 @@ export interface VariadicArgumentOptions extends ArgumentOptions {
 	default?: readonly unknown[];
 }
 
+/** Options a rest argument takes; its values arrive as typed, so it has no schema or prompt. */
+export interface RestArgumentOptions {
+	description?: string;
+	/** What the help shows in `[…]`. @default the argument's key */
+	valueName?: string;
+}
+
+/** Accepts every token as it is, since a rest argument's values belong to another program. */
+const AS_TYPED: StandardSchemaV1<string, string> = {
+	"~standard": {
+		version: 1,
+		vendor: "@sdxc/cli",
+		validate: (value) => ({ value: value as string }),
+	},
+};
+
 /** The handler's type for a single argument declared with `options`. */
 type SingleValue<Output, Options> = Options extends { default: unknown }
 	? Output
@@ -119,6 +137,7 @@ function single<
 		[ARGUMENT]: {
 			schema,
 			variadic: false,
+			rest: false,
 			min: given.optional === true || "default" in given ? 0 : 1,
 			max: 1,
 			optional: given.optional === true,
@@ -146,6 +165,7 @@ function variadic<
 		[ARGUMENT]: {
 			schema,
 			variadic: true,
+			rest: false,
 			min: given.min ?? 0,
 			max: given.max ?? Infinity,
 			optional: false,
@@ -159,9 +179,34 @@ function variadic<
 }
 
 /**
- * Argument declarations: `argument(schema, options)` for one value and
- * `argument.variadic(schema, options)` for the rest.
+ * Every token after the command's name exactly as typed, flags and `--help` included, for a
+ * command that runs another program with them. It is the command's only argument, and the
+ * command declares no flags.
+ *
+ * @example arguments: { args: argument.rest() } // prog run users find --limit 5 → ["users", "find", "--limit", "5"]
  */
-export const argument: typeof single & { variadic: typeof variadic } = Object.assign(single, {
-	variadic,
-});
+function rest(options: RestArgumentOptions = {}): Argument<string[]> {
+	return {
+		[ARGUMENT]: {
+			schema: AS_TYPED,
+			variadic: true,
+			rest: true,
+			min: 0,
+			max: Infinity,
+			optional: false,
+			hasDefault: false,
+			default: undefined,
+			description: options.description,
+			valueName: options.valueName,
+			prompt: undefined,
+		},
+	};
+}
+
+/**
+ * Argument declarations: `argument(schema, options)` for one value,
+ * `argument.variadic(schema, options)` for every remaining one, and `argument.rest()` for the
+ * tokens another program receives.
+ */
+export const argument: typeof single & { variadic: typeof variadic; rest: typeof rest } =
+	Object.assign(single, { variadic, rest });

@@ -123,13 +123,6 @@ A group of commands keyed by name, with an optional `description` and `hidden`; 
 
 One command: `description`, `arguments`, `flags`, `examples` for its help, `hidden`, and `tasks: true` when its handler runs `ctx.task`, which lists `--no-progress` in its help. Its arguments and flags type the handler's `ctx.arguments` and `ctx.flags`.
 
-`passthrough: true` hands every token after the command's name, `--help` and flags included, to its one variadic argument as typed, for a command that runs another program with them:
-
-```typescript
-let run = command({ arguments: { args: argument.variadic(s.string()) }, passthrough: true });
-// prog run users find --limit 5  →  ctx.arguments.args: ["users", "find", "--limit", "5"]
-```
-
 ### `argument(schema: StandardSchemaV1, options?: SingleArgumentOptions): Argument`
 
 A positional argument parsed through `schema`; `options` take `optional`, `default`, `prompt`, `description` and `valueName`. Arguments are read in declaration order.
@@ -137,6 +130,15 @@ A positional argument parsed through `schema`; `options` take `optional`, `defau
 ### `argument.variadic(schema: StandardSchemaV1, options?: VariadicArgumentOptions): Argument`
 
 The remaining positionals as an array, with `min`, `max` and `default`; `min: 1` types the value as a non-empty tuple.
+
+### `argument.rest(options?: RestArgumentOptions): Argument<string[]>`
+
+Every token after the command's name exactly as typed, flags and `--help` included, for a command that runs another program with them. It is the command's only argument and the command declares no flags; `options` take `description` and `valueName`.
+
+```typescript
+let run = command({ arguments: { args: argument.rest() } });
+// prog run users find --limit 5  →  ctx.arguments.args: ["users", "find", "--limit", "5"]
+```
 
 ### `flag.boolean(name: string, options?: BooleanFlagOptions): Flag<boolean>`
 
@@ -181,6 +183,7 @@ A handler loaded when its command runs, so `--help` and other commands import no
 What a handler receives.
 
 - `arguments`, `flags`: the parsed input.
+- `argv`: the arguments the run was given, before parsing, for logging a run or starting it again.
 - `path`: the command's name as typed, `["users", "find"]`.
 - `cwd`, `env`, `signal`: the run's directory, environment, and the signal Ctrl+C aborts.
 - `stdout(text)`, `stderr(text)`: write output; a running task redraws around them.
