@@ -113,6 +113,19 @@ The `cloudflare` npm package wraps the whole REST API.
 consumer written for a binding would need its own translation; an adapter would still sit on top
 of it, and a thin `fetch` per endpoint is smaller than the SDK.
 
+### 3. Run the `cf` CLI for each call
+
+`cf` (ADR-100) is generated over the same REST API: `cf d1 query`, `cf queues messages push` and
+`cf email-sending send` map one to one onto the endpoints above (`cf schema d1 query` prints
+`POST /accounts/{account_id}/d1/database/{database_id}/query`), and it signs in through the
+developer's own `cf auth login` profile, so no API token would need handling.
+
+**Rejected because**: `cf` 1.0.0-beta.5's package entry exports only its command runner, with no
+typed client, so an adapter would spawn a process per call; that costs about 0.6 s each, and a
+data-table query is many calls. Its `--local` flag does not cover `d1 query` ("This command has
+no local equivalent"). Revisit when `cf` exposes a programmatic client, or a way to read the
+signed-in profile's credentials, which would let the adapters skip API tokens.
+
 ## Implementation Plan
 
 ### Phase 1: D1
