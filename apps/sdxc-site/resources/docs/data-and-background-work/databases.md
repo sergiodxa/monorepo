@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) gives
@@ -186,5 +186,7 @@ whichever built-in SQLite module the runtime has.
   query out of D1 entirely.
 - [Test Workers apps](/docs/operations-and-testing/testing) — drive the whole router against the
   test database.
+- [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — the same
+  `ctx.db` in commands, and a SQL prompt over it.
 - [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) — declaring tables, queries, upserts and
   migrations.

@@ -5,7 +5,7 @@ section:
     title: Getting started
     order: 1
 order: 1
-lastUpdated: 2026-09-21
+lastUpdated: 2026-10-15
 ---
 
 `@sdxc` is {% $packageCount %} packages published under one npm scope. They were written for
@@ -36,9 +36,11 @@ own subpath, so the core stays importable on its own.
 
 ## What they are not
 
-They are not a framework. There is no CLI that scaffolds a project, no plugin system, no
-convention about where your files live. Each package solves one problem and composes with the
-others because they share vocabulary, not because they share a runtime.
+They are not a framework. Each package solves one problem and composes with the others
+because they share vocabulary, not because they share a runtime. The
+[`sdxc` command](/docs/getting-started/the-sdxc-command) starts a project in one folder layout
+and generates files where that layout puts them, and every package works the same in a project
+laid out any other way.
 
 They are not a compatibility promise. Versions are dates, and a later date says only that it is
 later — see [Install and pin](/docs/getting-started/install-and-pin) before you write a range

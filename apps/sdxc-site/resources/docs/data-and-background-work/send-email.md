@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 5
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 This guide sends the message a job board owes someone who just published a position: a short
@@ -370,7 +370,10 @@ test("mails the contact in the language they posted in", async () => {
 
 `transport.messages` lists everything sent, oldest first, and `transport.clear()` resets it
 between tests. The same transport makes a useful development outbox: point the mailer at one
-locally and render its messages on a page.
+locally and render its messages on a page. To read messages in a terminal instead,
+`PrintTransport` from `sdxc/mail/print` writes each one to a function you give it, which is how
+[Your app's command line](/docs/operations-and-testing/your-apps-command-line) resends an email
+from a laptop without reaching a real inbox.
 
 ## Where to go next
 

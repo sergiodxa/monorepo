@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 4
-lastUpdated: 2026-10-08
+lastUpdated: 2026-10-15
 ---
 
 Some work should not happen while a visitor waits: sending an email, calling a slow API, sweeping
@@ -419,3 +419,5 @@ calls to find the user schedules that are due.
   every run emits.
 - [Feature flags](/docs/data-and-background-work/feature-flags) — gate a job's behavior per
   subject.
+- [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — enqueue jobs
+  from a command and watch them run in your terminal.

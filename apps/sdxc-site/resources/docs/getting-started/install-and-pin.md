@@ -5,7 +5,7 @@ section:
     title: Getting started
     order: 1
 order: 2
-lastUpdated: 2026-10-14
+lastUpdated: 2026-10-15
 ---
 
 Install the whole collection as one package, beside the `remix` your app already uses:
@@ -27,6 +27,11 @@ published. Write that date into your manifest exactly rather than as a range —
 `sdxc` pins every package at the version it was built and tested with, so one date moves the
 whole set and no package ever arrives twice. `remix` is a peer: your app installs it once, and
 every package reads that same copy.
+
+The `sdxc` command, installed globally from `@sdxc/kit`, starts a project from a template,
+writes controllers, jobs and models where the app layout puts them, and moves a project to a
+newer release with a prompt for your agent.
+[The sdxc command](/docs/getting-started/the-sdxc-command) covers it.
 
 Three packages stay outside `sdxc` because they run at build or test time:
 [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks), [`@sdxc/jsdoc`](/api/jsdoc) and
@@ -71,3 +76,5 @@ shared dependency: `@sdxc/spec@2026.9.4` beside `@sdxc/jwt@2026.9.1` yields two 
 There are no changelog files. The day's release is recorded as a git tag, `v2026.9.4`, and a
 GitHub Release whose notes are the commits that went into it, with a compare link to the
 previous release. That is the whole record, and it is the thing to read before a pin moves.
+`sdxc upgrade` reads the same record for you: it moves the pin and prints the entries that touch
+the packages your code imports, as a prompt for an AI agent to apply.
