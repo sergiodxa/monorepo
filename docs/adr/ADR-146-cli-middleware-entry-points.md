@@ -11,8 +11,7 @@ router and an `@sdxc/jobs` dispatcher do. An app's command line wants the same s
 routes and jobs read: `ctx.db`, `ctx.models`, `ctx.log`. Several packages already publish one
 service for two hosts, a router and a job dispatcher, through thin entry points over a shared
 core. This ADR adds the command line as a third host, starting with `@sdxc/data-model/cli`,
-decides which other middleware gets a `./cli` entry, and proposes the package that reaches
-Cloudflare's services from outside a Worker, which those entries need against production.
+and decides which other middleware gets a `./cli` entry.
 
 ## Context
 
@@ -75,6 +74,9 @@ existing entry stays the router one.
 - Every entry is an adapter over the core the other entries share, and publishes under the same
   context key, so a model method or a service reads the same value in a route, a job
   or a command.
+- An entry depends on nothing platform-specific. It publishes the service the app passes, so a
+  Node or Bun app passes its own connection and a Cloudflare app passes one over its bindings,
+  locally or, with `--remote`, through ADR-147's adapters.
 - `@sdxc/cli` is an optional peer dependency, as `remix` is for packages that serve both hosts.
   An app without a command line installs nothing new.
 - Each entry has a test that runs a command through `@sdxc/cli/test`'s `invoke()`.
@@ -85,7 +87,9 @@ existing entry stays the router one.
   to the job entry's contract.
 - **`@sdxc/database-middleware/cli`:** `database(db)` publishes `ctx.db` under the `Database`
   key. Where the database comes from (a local file, a remote API) is the app's middleware's
-  decision, as it is for routes.
+  decision, as it is for routes. The entry also exports a `db` command an app mounts in its own
+  contract: an interactive SQL prompt over `ctx.db`'s `exec`, or one statement with
+  `--execute "SELECT …"`, working on whatever database the middleware connected.
 - **`@sdxc/logger/middleware/cli`:** `log(logger)` opens a `command` log for the run, joining the
   current one when a host already opened it, and records the command path (`users find`), its
   duration and exit code once the handler returns, as the router entry records route and method.
@@ -101,19 +105,20 @@ existing entry stays the router one.
   - **Locally,** `@sdxc/jobs/memory`'s queue, drained through the app's own dispatcher in the
     command's process once the handler returns. The job runs where the developer is watching:
     its logs, errors and retries show in the terminal, against the same local database.
-  - **Against production (`--remote`),** a Cloudflare queue reached through the Queues HTTP API
-    (section 4), so the deployed consumer runs the job exactly as if a request had enqueued it.
-    A backfill command enqueues one job per batch and returns; the Worker does the work.
+  - **Against production (`--remote`),** the production queue, so the deployed consumer runs the
+    job exactly as if a request had enqueued it; on Cloudflare that queue is reached through
+    ADR-147's Queues adapter. A backfill command enqueues one job per batch and returns, and the
+    deployed app does the work.
 - **`@sdxc/i18n/middleware/cli`:** `i18n(options)` takes the router entry's resources and
   supported languages and publishes `ctx.translate`, the `createTranslator` factory, for text a
   command writes to users: `ctx.translate(user.language).t("invite.subject")`, recording the
   `locale` it bound to. It also publishes `ctx.intl` for the command's own output, in the
   developer's language from `LC_ALL`, `LC_MESSAGES` or `LANG` (`es_AR.UTF-8` is `es-AR`).
 - **`@sdxc/mail/middleware/cli`:** publishes the mailer the app configures, so a command resends
-  an invitation or a receipt with the same templates a route uses. `@sdxc/mail`'s
-  `CloudflareTransport` already takes a `SendEmailBinding`; given the Email Service adapter from
-  section 4 it sends from a command unchanged. Locally the app passes `MemoryTransport` or one that
-  prints each message, so a command run on a laptop never emails a real user.
+  an invitation or a receipt with the same templates a route uses, through the production
+  transport with `--remote` (on Cloudflare, `CloudflareTransport` over ADR-147's Email Service
+  adapter). Locally the app passes `MemoryTransport` or one that prints each message, so a command
+  run on a laptop never emails a real user.
 - **`@sdxc/billing/middleware/cli`, `@sdxc/newsletter/middleware/cli`:** publish the configured
   provider, for granting an entitlement or subscribing an address by hand. Both providers are
   already HTTP APIs, so they work from a command as they are, with the same secrets.
@@ -123,45 +128,7 @@ developer running it already has every permission those packages would check.
 
 The HTTP-only middleware in the table gets no entry.
 
-### 4. Cloudflare's services from outside a Worker
-
-Add `packages/cloudflare-api`, published as `@sdxc/cloudflare-api` (the package still needs the
-user's approval before it is created): the Workers binding interfaces implemented over
-Cloudflare's REST API, so code written against a binding runs unchanged in a command.
-
-```typescript
-import { d1, emailSender, queue } from "@sdxc/cloudflare-api";
-
-let api = { accountId: env.CLOUDFLARE_ACCOUNT_ID, token: env.CLOUDFLARE_API_TOKEN };
-
-let db = d1(api, { databaseId }); // D1Database, for @sdxc/data-table-d1
-let jobs = queue(api, { queueId }); // Queue, for @sdxc/jobs/cloudflare
-let email = emailSender(api); // SendEmailBinding, for @sdxc/mail/cloudflare
-```
-
-| Binding            | Endpoint                                                | Status                      |
-| ------------------ | ------------------------------------------------------- | --------------------------- |
-| `D1Database`       | `/accounts/<account>/d1/database/<id>/query`            | general availability        |
-| `Queue`            | `/accounts/<account>/queues/<id>/messages` (and batch)  | general availability        |
-| `SendEmailBinding` | `/accounts/<account>/email/sending/send`                | public beta, Workers Paid   |
-| `KVNamespace`      | `/accounts/<account>/storage/kv/namespaces/<id>/values` | later, when a command needs |
-| `R2Bucket`         | R2's S3-compatible API                                  | later, when a command needs |
-
-- Each implements the interface `@cloudflare/workers-types` declares, with the binding's own
-  semantics: a failed call rejects as the binding's does, so callers written for the binding
-  handle it the same way.
-- Account and resource ids come from the app's `cloudflare.config.ts`; the token comes from
-  `CLOUDFLARE_API_TOKEN` and is never read from a file in the project.
-- Where the REST API differs from the binding, the difference is the adapter's documented
-  contract: Email Service answers per-recipient status where the binding answers one message
-  id, and D1's `batch()` atomicity over HTTP is checked in a spike before the adapter claims it.
-- Durable Objects, service bindings and other bindings without a public API stay out; a command
-  that needs one calls the deployed Worker over HTTP.
-
-The local half needs no adapter: D1 is Miniflare's SQLite file (ADR-145, section 8), jobs run
-through the memory queue, and mail goes to a memory or printing transport.
-
-### 5. What an app's command line looks like
+### 4. What an app's command line looks like
 
 ```typescript
 let cli = createCLI({
@@ -184,12 +151,10 @@ The order matches a router's: the log first, the trace stamping it, then service
 
 ### Negative
 
-- **Nine new entry points** and a new package to document, test and keep in step with their siblings.
+- **Nine new entry points** to document, test and keep in step with their siblings.
 - **`@sdxc/cli`'s context is constrained** to the job context's shape before the package ships.
-- **A second implementation of each binding** to keep in step with Cloudflare's, over APIs some
-  of which (Email Service) are still in beta.
-- **Commands against production hold an API token** with write access to the account's D1,
-  Queues and email; ADR-145's confirmation before a `--remote` run is the guard.
+- **Production is the app's wiring.** Each entry publishes what it is given; choosing and
+  guarding the production connection stays in the app's middleware.
 
 ### Neutral
 
@@ -212,15 +177,6 @@ Build a `Request` per command and reuse the router middleware unchanged.
 **Rejected because**: middleware that reads URLs, headers or cookies would see a fabricated
 request, and the router's response types say nothing a command line can use.
 
-### 3. Wrangler's platform proxy for remote bindings
-
-Wrangler can hand a Node process binding objects that proxy to their remote resources, which
-covers every binding type with one mechanism.
-
-**Rejected because**: it ties every command to Wrangler and a proxy Worker it deploys, where the
-repo runs Workers through its own `cf` CLI, and its behaviour is Wrangler's rather than a
-documented API's. Revisit if a command needs a binding with no REST API.
-
 ## Implementation Plan
 
 ### Phase 1: Context
@@ -240,18 +196,11 @@ documented API's. Revisit if a command needs a binding with no REST API.
    `@sdxc/newsletter/middleware/cli`.
 3. Regenerate the `sdxc` export map.
 
-### Phase 4: `@sdxc/cloudflare-api`
-
-1. With the user's approval of the package: `d1`, after a spike against a real database
-   (statements, `batch()`, errors), then `queue` and `emailSender`.
-2. README, `LICENSE.md`, root README row, docs-site group.
-
 ## References
 
 - [ADR-145: `@sdxc/cli` Package](./ADR-145-cli-package.md)
 - [OpenTelemetry: Environment Variables as Context Propagation Carriers](https://opentelemetry.io/docs/specs/otel/context/env-carriers/)
-- [Cloudflare Queues: publish via HTTP](https://developers.cloudflare.com/queues/examples/publish-to-a-queue-via-http/)
-- [Cloudflare Email Service REST API](https://developers.cloudflare.com/email-service/api/send-emails/rest-api/)
+- [ADR-147: Cloudflare API Adapters](./ADR-147-cloudflare-api-adapters.md)
 - [POSIX locale environment variables](https://pubs.opengroup.org/onlinepubs/9799919799/basedefs/V1_chap08.html)
 
 ## Current Progress
@@ -259,4 +208,3 @@ documented API's. Revisit if a command needs a binding with no REST API.
 - [ ] Phase 1: Context
 - [ ] Phase 2: Services an app command reads first
 - [ ] Phase 3: The rest
-- [ ] Phase 4: `@sdxc/cloudflare-api`
