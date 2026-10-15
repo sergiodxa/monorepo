@@ -336,8 +336,8 @@ async function wildcardEntry(
 		if (match === "") continue;
 		let hasDefault = await hasDefaultExport(file);
 		if (isFailure(hasDefault)) return hasDefault;
-		let specifier = `${pkg.name}${subpath.slice(1).replace("*", match)}`;
-		files.set(`${pattern.replace("*", match)}.ts`, reexport(specifier, hasDefault.data));
+		let specifier = `${pkg.name}${subpath.slice(1).replaceAll("*", match)}`;
+		files.set(`${pattern.replaceAll("*", match)}.ts`, reexport(specifier, hasDefault.data));
 	}
 	if (files.size === 0) return success(null);
 	return success({ key: `./${pkg.dir}${subpath.slice(1)}`, target: `./${pattern}.ts`, files });
