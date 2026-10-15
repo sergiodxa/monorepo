@@ -186,6 +186,7 @@
 		"./mail/cloudflare": "./src/mail/cloudflare.ts",
 		"./mail/markdown": "./src/mail/markdown.ts",
 		"./mail/memory": "./src/mail/memory.ts",
+		"./mail/print": "./src/mail/print.ts",
 		"./mail/middleware": "./src/mail/middleware.ts",
 		"./mail/middleware/cli": "./src/mail/middleware/cli.ts",
 		"./mail/unsubscribe": "./src/mail/unsubscribe.ts",
