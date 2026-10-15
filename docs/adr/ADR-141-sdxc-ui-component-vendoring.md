@@ -195,7 +195,10 @@ the same object; a line per entry keeps each change to one line.
 
 ## Current Progress
 
-- [ ] `@sdxc/ui` component subpaths
-- [ ] Lock file
-- [ ] Registry in the release build
-- [ ] `sdxc ui` commands and the import rewrite
+- [x] `@sdxc/ui` component subpaths: `./*` and `glyphEdges` in `@sdxc/ui/utils`; the umbrella
+      exposes `sdxc/ui/<name>`
+- [x] Lock file: `packages/sdxc/src/cli/lock.ts`, `sdxc/lock.schema.json` generated with the
+      umbrella
+- [x] Registry in the release build: `scripts/release/ui-registry.ts`, written into the staged
+      `sdxc` package, `changedIn` from the earliest release tag containing the latest commit
+- [x] `sdxc ui` commands and the import rewrite: `packages/sdxc/src/cli/ui/`
