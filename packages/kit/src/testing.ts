@@ -115,9 +115,15 @@ export function runCommandLine(project: string, argv: string[]): Promise<Spawned
 	return run(["bootstrap/cli.ts", ...argv], project, "bun");
 }
 
-/** Runs the project's own tests with its own Vite+, as `vp test run` inside it does. */
+/**
+ * Runs the project's own tests with its own Vite+, as `vp test run` inside it does, with
+ * `--no-color` so the summary reads as plain text on CI too, where Vite+ colors it otherwise.
+ */
 export function testProject(project: string): Promise<Spawned> {
-	return run([join(project, "node_modules/vite-plus/bin/vp"), "test", "run"], project);
+	return run(
+		[join(project, "node_modules/vite-plus/bin/vp"), "test", "run", "--no-color"],
+		project,
+	);
 }
 
 /** The directory `dependency` is installed at for this package or, failing that, the workspace. */
