@@ -90,6 +90,29 @@ describe("titleize", () => {
 		expect(titleize("the rise of GraphQL")).toBe("The Rise of GraphQL");
 	});
 
+	test("keeps identifiers as typed, even in a forced position", () => {
+		expect(titleize("use waitUntil for cache writes")).toBe("Use waitUntil for Cache Writes");
+		expect(titleize("name your useEffect")).toBe("Name Your useEffect");
+		expect(titleize("add an MCP server to a remix v3 app")).toBe(
+			"Add an MCP Server to a Remix v3 App",
+		);
+		expect(titleize("persist with remix-i18next")).toBe("Persist with remix-i18next");
+		expect(titleize("use client_id and client_secret")).toBe("Use client_id and client_secret");
+		expect(titleize("data in entry.client")).toBe("Data in entry.client");
+		expect(titleize("sergiodxa/agent-skills on github")).toBe("sergiodxa/agent-skills on GitHub");
+	});
+
+	test("keeps inline code between backticks as typed", () => {
+		expect(titleize("use an `iife` helper")).toBe("Use an `iife` Helper");
+		expect(titleize("cancel `fetcher.load ()` on unmount")).toBe(
+			"Cancel `fetcher.load ()` on Unmount",
+		);
+	});
+
+	test("lowercases vs. in the middle of a title", () => {
+		expect(titleize("remix vs. next")).toBe("Remix vs. Next");
+	});
+
 	test("preserves the original spacing", () => {
 		expect(titleize("  padded   title  ")).toBe("  Padded   Title  ");
 	});

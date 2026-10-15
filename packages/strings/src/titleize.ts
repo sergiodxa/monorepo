@@ -3,7 +3,8 @@
  * word is capitalized except articles, coordinating conjunctions, prepositions
  * of any length, `as`, and infinitive `to`, with the first and last word and the
  * word after a colon always capitalized. A `special` list renders names whose
- * casing cannot be derived (`iOS`, `npm`, a lowercase brand) exactly as written.
+ * casing cannot be derived (`iOS`, `npm`, a lowercase brand) exactly as written,
+ * and identifiers and inline code keep the form the author typed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -140,6 +141,7 @@ const PREPOSITIONS: ReadonlyArray<string> = [
 	"upon",
 	"versus",
 	"via",
+	"vs",
 	"vice",
 	"with",
 	"within",
@@ -213,6 +215,13 @@ const TRAILING_SYMBOLS = /[^\p{L}\p{N}]*$/u;
 
 /** A run of whitespace, used to tell separators from words. */
 const WHITESPACE = /^\s+$/u;
+
+/**
+ * Marks a word whose exact form carries meaning: an uppercase letter past the first
+ * (`GraphQL`, `useEffect`), a digit (`v3`, `i18next`), or code and path punctuation
+ * inside it (`entry.client`, `client_id`, `text/markdown`).
+ */
+const VERBATIM_WORD = /^.+\p{Lu}|\p{N}|[._/#@()[\]{}<>=$\\]/su;
 
 /** A whitespace-delimited chunk of a title, split from its punctuation shell. */
 interface TitlePart {
@@ -297,9 +306,9 @@ function renderCompound(core: string, special: Map<string, string>, last: boolea
 }
 
 /**
- * Applies the Chicago rules across a title, capitalizing the word after a
- * subtitle colon even when it is a small word, and matching `special` against
- * the whole word before splitting a hyphenated compound so it survives intact.
+ * Applies the Chicago rules across a title, capitalizing the word after a subtitle
+ * colon even when it is a small word. A `special` entry wins over every rule, and
+ * inline code between backticks and words matching `VERBATIM_WORD` keep their form.
  */
 function applyRules(value: string, special: Map<string, string>): string {
 	let parts = toParts(value);
@@ -312,12 +321,17 @@ function applyRules(value: string, special: Map<string, string>): string {
 	let firstIndex = wordIndexes.at(0);
 	let lastIndex = wordIndexes.at(-1);
 	let afterColon = false;
+	let inCode = false;
 	let result: string[] = [];
 
 	for (let [index, part] of parts.entries()) {
+		let backticks = part.raw.split("`").length - 1;
+		let code = inCode || backticks > 0;
+		if (backticks % 2 === 1) inCode = !inCode;
+
 		if (!part.isWord) {
 			result.push(part.raw);
-			if (part.raw.includes(":")) afterColon = true;
+			if (!code && part.raw.includes(":")) afterColon = true;
 			continue;
 		}
 
@@ -326,9 +340,11 @@ function applyRules(value: string, special: Map<string, string>): string {
 		let force = first || last || afterColon;
 		let core =
 			special.get(part.core.toLowerCase()) ??
-			(part.core.includes("-")
-				? renderCompound(part.core, special, last)
-				: renderWord(part.core, special, force));
+			(code || VERBATIM_WORD.test(part.core)
+				? part.core
+				: part.core.includes("-")
+					? renderCompound(part.core, special, last)
+					: renderWord(part.core, special, force));
 
 		result.push(part.leading + core + part.trailing);
 		afterColon = part.trailing.includes(":");

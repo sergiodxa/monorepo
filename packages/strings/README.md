@@ -122,8 +122,9 @@ Headline-style capitalization following the
 | Articles and coordinating conjunctions lowercase  | a, an, the, and, but, or, nor, for, so, yet |
 | Prepositions of any length, `as`, infinitive `to` | `"how to write"` → `"How to Write"`         |
 
-Only a word's first letter is adjusted, so `GraphQL` survives as typed. A built-in `special`
-set covers names such as `API`, `GitHub`, `iOS`, `JavaScript`, `macOS`, `npm` and `TypeScript`;
+Only a word's first letter is adjusted, and a word that reads as an identifier keeps its form:
+inline code between backticks, a capital past the first letter, a digit, or code punctuation, so
+`GraphQL`, `useEffect`, `v3` and `client_id` survive as typed. A built-in `special` set covers names such as `API`, `GitHub`, `iOS`, `JavaScript`, `macOS`, `npm` and `TypeScript`;
 your entries extend and override it.
 
 ### `createTitleizer(options?: TitleizeOptions): Titleizer`
