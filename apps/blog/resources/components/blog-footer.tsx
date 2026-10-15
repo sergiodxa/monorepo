@@ -91,7 +91,7 @@ export const FOOTER_TRACKS: Array<Array<BlogFooter.Column>> = [
 			links: [
 				{ label: "X", href: PROFILE.x.profile },
 				{ label: "GitHub", href: PROFILE.github.profile },
-				{ label: "sdxc.sergiodxa.com", href: "https://sdxc.sergiodxa.com" },
+				{ label: "sdxc.dev", href: "https://sdxc.dev" },
 			],
 		},
 	],

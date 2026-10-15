@@ -220,7 +220,7 @@ A blog-only footer component, rendered by the blog layout, in labeled columns:
 | Topics    | `/topics`, plus the topics with the most posts                 |
 | Follow    | RSS, Atom, JSON Feed, the Fediverse handle                     |
 | Support   | Sponsors                                                       |
-| Elsewhere | X, GitHub, sdxc.sergiodxa.com                                  |
+| Elsewhere | X, GitHub, sdxc.dev                                            |
 
 The header navigation keeps the kind links; the CMS dashboard link moves to the footer.
 

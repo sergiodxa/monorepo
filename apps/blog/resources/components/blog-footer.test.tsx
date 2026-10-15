@@ -74,7 +74,7 @@ describe("BlogFooter", () => {
 		expect(rels).toEqual([
 			"https://x.com/sergiodxa",
 			"https://github.com/sergiodxa",
-			"https://sdxc.sergiodxa.com",
+			"https://sdxc.dev",
 		]);
 	});
 
