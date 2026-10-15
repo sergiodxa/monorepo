@@ -4,6 +4,9 @@
 
 **Accepted** - 2026-10-15
 
+> The command line moved to its own package, `@sdxc/kit`, because npm refused the unscoped
+> `sdxc` name; see [ADR-148](./ADR-148-sdxc-kit-cli-package.md). The umbrella stays `sdxc`.
+
 ## Background
 
 The monorepo publishes 116 packages under the `@sdxc` scope (ADR-007). A consumer building an app
