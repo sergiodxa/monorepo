@@ -33,8 +33,9 @@ sdxc create my-app
 
 `create` writes the built-in `app` template into `my-app`: a Remix v3 Worker on Cloudflare in
 the folder layout the generators below expect, with `cloudflare.config.ts`, a Vite+
-configuration, a test runner, its own command line in `bootstrap/cli.ts`, and `sdxc` and
-`remix` pinned to the versions that release was built with. The target folder must be missing
+configuration, a test runner, its own command line in `bootstrap/cli.ts`, each `@sdxc`
+package it uses pinned to its latest release, and `remix` pinned to the version those releases
+need. The target folder must be missing
 or empty apart from a `.git` folder, so `git init` before `create` works too; without a
 directory, it writes into the current one.
 
@@ -126,6 +127,14 @@ A migration takes the next number in its chain, and `--chain` picks a chain from
 `make.migrations` for an app with more than one database. `--no-test` skips the test for one
 run, `make.tests: false` skips it everywhere, and `--dry-run` prints what would be written.
 
+When the generated code imports an `@sdxc` package your `package.json` does not list yet, `make`
+adds it at the same release as the packages you have, the newest version published on or
+before that date, and prints the install command to run:
+
+```text
+Added @sdxc/jobs@2026.10.12 to package.json; run bun install
+```
+
 ### Make the generated files your own
 
 Each kind is written from a stub, and a stub in `make.stubs` replaces the built-in one of the
@@ -171,8 +180,10 @@ those too.
 sdxc upgrade
 ```
 
-`upgrade` moves `sdxc` in `package.json` to the latest release, or to the version you name,
-moves `remix` along with it when that release needs a different one, and installs. Then it
+`upgrade` moves every `@sdxc` package in `package.json` to the latest release, or to the
+release you name, each to its newest version published on or before that date. It asks first
+when the release has breaking changes in packages your code imports, moves `remix` along when
+that release needs a different one, and installs. Then it
 prints a prompt for an AI agent: the changes between the two releases to the packages your code
 imports, breaking ones first with their migration steps, the components you copied whose
 source changed since, and your project's own `check`, `typecheck` and `test` scripts to run
@@ -187,7 +198,8 @@ moved from:
 sdxc upgrade --prompt --from 2026.9.4
 ```
 
-The prompt is built from the installed release's own changelog, so it works offline.
+The prompt comes from the new release's own changelog: `upgrade` runs that release of
+`@sdxc/kit` to write it, so the notes match what you installed.
 [Install and pin](/docs/getting-started/install-and-pin) covers why a release is one exact
 date.
 
