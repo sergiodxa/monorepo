@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Button, Modal } from "@sdxc/ui";
+import { Button, Modal } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button commandfor="confirm-delete" command="show-modal" color="danger" variant="outline">

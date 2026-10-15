@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Heading } from "@sdxc/ui";
+import { Heading } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Heading>Billing settings</Heading>`;

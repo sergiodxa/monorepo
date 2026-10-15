@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Checkbox, CheckboxGroup, FieldError, Label } from "@sdxc/ui";
+import { Checkbox, CheckboxGroup, FieldError, Label } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from element ids. */
 const CODE = `<CheckboxGroup aria-labelledby="terms-label" aria-invalid="true" aria-describedby="terms-error">

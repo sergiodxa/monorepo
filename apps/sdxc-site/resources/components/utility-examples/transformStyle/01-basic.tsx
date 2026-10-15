@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { backfaceVisibility, transition } from "@sdxc/u/effects";
-import { zstack } from "@sdxc/u/layout";
-import { hover } from "@sdxc/u/state";
-import { perspective, rotateY, transformStyle } from "@sdxc/u/transform";
+import { backfaceVisibility, transition } from "sdxc/u/effects";
+import { zstack } from "sdxc/u/layout";
+import { hover } from "sdxc/u/state";
+import { perspective, rotateY, transformStyle } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

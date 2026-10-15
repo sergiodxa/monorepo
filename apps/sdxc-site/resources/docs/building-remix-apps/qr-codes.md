@@ -12,12 +12,12 @@ This guide puts a QR code on a meetup ticket: the attendee shows it at the door,
 phone scans it, and the check-in page opens. The same code appears inline on the ticket page and
 as an SVG file a printable badge links to.
 
-[`@sdxc/qr`](/api/qr) encodes text or bytes into a QR symbol and turns it into SVG path data.
+[`sdxc/qr`](/api/qr) encodes text or bytes into a QR symbol and turns it into SVG path data.
 Its `./ui` entry draws that path as a `remix/component` element. Encoding runs anywhere
 `TextEncoder` does, so it needs no binding and no Node built-in on Workers.
 
 ```bash
-npm add @sdxc/qr @sdxc/result @sdxc/http @sdxc/logger remix
+npm add sdxc remix
 ```
 
 ## Encode the link
@@ -25,7 +25,7 @@ npm add @sdxc/qr @sdxc/result @sdxc/http @sdxc/logger remix
 `QR.encode` picks the smallest symbol that holds the data and answers a `Result`:
 
 ```typescript {% title="app/tickets/qr.ts" %}
-import { QR } from "@sdxc/qr";
+import { QR } from "sdxc/qr";
 
 const CHECK_IN_ORIGIN = "HTTPS://EXAMPLE.COM/C/";
 
@@ -55,9 +55,9 @@ A code drawn at a fixed size gets harder to scan as its version grows, because e
 smaller. `maxVersion` caps it, and data that needs more fails with `too-long` instead:
 
 ```typescript {% title="app/tickets/badge-code.ts" %}
-import { QR } from "@sdxc/qr";
-import { currentLog } from "@sdxc/logger";
-import { isFailure } from "@sdxc/result";
+import { QR } from "sdxc/qr";
+import { currentLog } from "sdxc/logger";
+import { isFailure } from "sdxc/result";
 
 export function badgeCode(url: string) {
 	let encoded = QR.encode(url, { level: "M", maxVersion: 6 });
@@ -80,8 +80,8 @@ shorten. The other failure, `invalid-options`, is a version outside 1 to 40, a m
 Encode in the handler, which can log a failure and decide what the page shows without the code:
 
 ```tsx {% title="app/http/controllers/tickets/show.tsx" %}
-import { notFound } from "@sdxc/http/response/html";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { notFound } from "sdxc/http/response/html";
+import { isFailure, isSuccess } from "sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -109,13 +109,13 @@ export default createAction(routes.tickets.show, async (ctx) => {
 horizontal run of dark modules as one rectangle and the standard four-module quiet zone
 included. Because it is JSON, the same value also works as a prop of a hydrated component.
 
-`QrCode` from `@sdxc/qr/ui` draws it as an inline `<svg role="img">`:
+`QrCode` from `sdxc/qr/ui` draws it as an inline `<svg role="img">`:
 
 ```tsx {% title="resources/views/ticket.tsx" %}
-import type { SvgPath } from "@sdxc/qr";
+import type { SvgPath } from "sdxc/qr";
 import type { Handle } from "remix/component";
 
-import { QrCode } from "@sdxc/qr/ui";
+import { QrCode } from "sdxc/qr/ui";
 
 import type { Ticket } from "~/app/models/ticket";
 
@@ -162,9 +162,9 @@ A printable badge wants the code at a URL of its own. Render the path into a
 standalone SVG document with `renderToString`, and answer it with the SVG content type:
 
 ```tsx {% title="app/http/controllers/tickets/qr.tsx" %}
-import { SVG } from "@sdxc/http/content-type";
-import { notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { SVG } from "sdxc/http/content-type";
+import { notFound } from "sdxc/http/response/html";
+import { isFailure } from "sdxc/result";
 import { renderToString } from "remix/component/server";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -214,4 +214,4 @@ its holder.
   — the component model `QrCode` renders in.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — the Content Security
   Policy an inline SVG fits.
-- [`@sdxc/qr`](/api/qr) — every option, and `isDark` for drawing modules yourself.
+- [`sdxc/qr`](/api/qr) — every option, and `isDark` for drawing modules yourself.

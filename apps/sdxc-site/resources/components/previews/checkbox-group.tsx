@@ -12,13 +12,13 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { maxIs } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { Checkbox, CheckboxGroup, Description, FieldError, Label } from "@sdxc/ui";
-import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { maxIs } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { Checkbox, CheckboxGroup, Description, FieldError, Label } from "sdxc/ui";
+import { ariaChecked } from "sdxc/ui/mixins";
 
 /** Where an incident notification can be delivered, in the order the form lists them. */
 const CHANNELS = [

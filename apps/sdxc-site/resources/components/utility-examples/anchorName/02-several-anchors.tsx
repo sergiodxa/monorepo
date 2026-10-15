@@ -14,8 +14,8 @@ import {
 	positionAnchor,
 	positionArea,
 	relative,
-} from "@sdxc/u/layout";
-import { bs, is, mbs } from "@sdxc/u/size";
+} from "sdxc/u/layout";
+import { bs, is, mbs } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

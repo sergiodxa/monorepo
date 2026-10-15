@@ -11,11 +11,11 @@ lastUpdated: 2026-10-08
 A diagram written as text lives beside the prose it explains: it diffs, it reviews, and it
 changes in the same commit as the code it describes. This guide draws those diagrams as SVG
 on the server, wherever one appears: in a markdown post, in a string you render for a feed,
-and directly in a `remix/component` view. It uses [`@sdxc/diagram`](/api/diagram) together
-with [`@sdxc/markdown`](/api/markdown).
+and directly in a `remix/component` view. It uses [`sdxc/diagram`](/api/diagram) together
+with [`sdxc/markdown`](/api/markdown).
 
 ```bash
-npm add @sdxc/diagram @sdxc/markdown @sdxc/result remix
+npm add sdxc remix
 ```
 
 The page carries finished SVG: no script runs to draw it, and no stylesheet or font loads for
@@ -107,8 +107,8 @@ lists every statement each kind reads.
 `toSVG` takes the source and answers with a `Result` holding the markup:
 
 ```typescript {% title="app/services/content/architecture.ts" %}
-import { toSVG } from "@sdxc/diagram";
-import { isFailure } from "@sdxc/result";
+import { toSVG } from "sdxc/diagram";
+import { isFailure } from "sdxc/result";
 
 export function architecture(): string {
 	let result = toSVG("flowchart LR\n  Browser --> Worker --> D1[(D1)]");
@@ -130,14 +130,14 @@ SVG elements rooted at `svg`, which a build can store and a renderer can draw la
 
 ## Find the diagrams in markdown
 
-`diagram` from `@sdxc/diagram/markdown` is a walk visitor. It turns each fenced block
+`diagram` from `sdxc/diagram/markdown` is a walk visitor. It turns each fenced block
 marked `mermaid` into a `diagram` tag carrying a `source` attribute and leaves every other
 code block alone, so it composes with a highlighter in one walk:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
-import { diagram } from "@sdxc/diagram/markdown";
-import { highlight } from "@sdxc/highlight/markdown";
-import { Markdown } from "@sdxc/markdown";
+import { diagram } from "sdxc/diagram/markdown";
+import { highlight } from "sdxc/highlight/markdown";
+import { Markdown } from "sdxc/markdown";
 
 export function preparePost(document: Markdown.Document) {
 	return Markdown.walk(document, Markdown.compose(diagram, highlight));
@@ -152,10 +152,10 @@ sits in the document, and its `cause` is the `DiagramError` with the place insid
 diagram, so a broken post fails the build with both:
 
 ```typescript {% title="scripts/check-posts.ts" %}
-import { DiagramError } from "@sdxc/diagram";
-import { diagram } from "@sdxc/diagram/markdown";
-import { Markdown } from "@sdxc/markdown";
-import { isFailure } from "@sdxc/result";
+import { DiagramError } from "sdxc/diagram";
+import { diagram } from "sdxc/diagram/markdown";
+import { Markdown } from "sdxc/markdown";
+import { isFailure } from "sdxc/result";
 
 export function checkDiagrams(path: string, source: string): string | null {
 	let parsed = Markdown.parse(source);
@@ -181,14 +181,14 @@ parse then stays the code block its author wrote, and the walk succeeds.
 
 ## Draw the tags in a route
 
-`DiagramTag` from `@sdxc/diagram/ui` is a `remix/component` component whose props are the
+`DiagramTag` from `sdxc/diagram/ui` is a `remix/component` component whose props are the
 attributes the visitor writes, so it goes straight into the `components` map of `toRemix`:
 
 ```tsx {% title="app/services/content/render-post.tsx" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { DiagramTag } from "@sdxc/diagram/ui";
-import { toRemix } from "@sdxc/markdown/remix";
+import { DiagramTag } from "sdxc/diagram/ui";
+import { toRemix } from "sdxc/markdown/remix";
 
 export function renderPost(document: Markdown.Document) {
 	return toRemix(document, { components: { diagram: DiagramTag } });
@@ -200,7 +200,7 @@ export function renderPost(document: Markdown.Document) {
 ```tsx {% title="resources/components/request-flow.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Diagram } from "@sdxc/diagram/ui";
+import { Diagram } from "sdxc/diagram/ui";
 
 export function RequestFlow(handle: Handle) {
 	return () => (
@@ -240,10 +240,10 @@ A feed item or an email body wants a string. `renderDiagram` is the tag renderer
 `toHTML`, turning each `diagram` tag into the markup `toSVG` writes:
 
 ```typescript {% title="app/services/content/render.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { renderDiagram } from "@sdxc/diagram/markdown";
-import { toHTML } from "@sdxc/markdown/html";
+import { renderDiagram } from "sdxc/diagram/markdown";
+import { toHTML } from "sdxc/markdown/html";
 
 export function renderHTML(document: Markdown.Document): string {
 	return toHTML(document, { tags: { diagram: renderDiagram } });
@@ -259,4 +259,4 @@ that read the text.
   and render this guide plugs diagrams into.
 - [Render TeX math](/docs/content-and-feeds/math) — the same tag-and-renderer approach for
   formulas.
-- [`@sdxc/diagram`](/api/diagram) — every statement each diagram kind reads.
+- [`sdxc/diagram`](/api/diagram) — every statement each diagram kind reads.

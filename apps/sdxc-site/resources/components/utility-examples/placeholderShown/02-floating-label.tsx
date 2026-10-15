@@ -6,14 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { transition } from "@sdxc/u/effects";
-import { pointerEvents } from "@sdxc/u/general";
-import { absolute, insIs, insTop, relative } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { placeholderShown, precededBy } from "@sdxc/u/state";
-import { scale, transformOrigin, translateY } from "@sdxc/u/transform";
-import { text } from "@sdxc/u/typography";
+import { bg, border, fg } from "sdxc/u/color";
+import { transition } from "sdxc/u/effects";
+import { pointerEvents } from "sdxc/u/general";
+import { absolute, insIs, insTop, relative } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { placeholderShown, precededBy } from "sdxc/u/state";
+import { scale, transformOrigin, translateY } from "sdxc/u/transform";
+import { text } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

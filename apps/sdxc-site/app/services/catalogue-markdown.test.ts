@@ -97,6 +97,6 @@ describe("uiExportMarkdown", () => {
 		let body = uiExportMarkdown(reference);
 
 		expect(body).toContain("````tsx\nlet doc");
-		expect(body).toContain('import { copy } from "@sdxc/ui/mixins";');
+		expect(body).toContain('import { copy } from "sdxc/ui/mixins";');
 	});
 });

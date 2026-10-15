@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/component";
 
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { Button, Label, TagGroup, Text } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { Button, Label, TagGroup, Text } from "sdxc/ui";
 
 /** One applied filter, with the color its pill reads in. */
 interface Filter {

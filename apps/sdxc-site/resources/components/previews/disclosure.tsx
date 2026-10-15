@@ -17,11 +17,11 @@
 
 import type { Handle } from "remix/component";
 
-import { ChevronDownIcon } from "@sdxc/icons";
-import { grow, hstack, vstack } from "@sdxc/u/layout";
-import { is, minBs } from "@sdxc/u/size";
-import { Button, Description, Disclosure, Input, Label, Switch } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { ChevronDownIcon } from "sdxc/icons";
+import { grow, hstack, vstack } from "sdxc/u/layout";
+import { is, minBs } from "sdxc/u/size";
+import { Button, Description, Disclosure, Input, Label, Switch } from "sdxc/ui";
 
 /** What the build runs with when nothing in the section has been overridden. */
 const BUILD_DEFAULTS = { command: "npm run build", output: "dist", install: "npm ci" };

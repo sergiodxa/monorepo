@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ImageIcon } from "@sdxc/icons";
-import { is } from "@sdxc/u/size";
-import { GridList } from "@sdxc/ui";
+import { ImageIcon } from "sdxc/icons";
+import { is } from "sdxc/u/size";
+import { GridList } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from ids and the preview's sizing. */
 const CODE = `<GridList aria-label="Gallery" layout="grid">

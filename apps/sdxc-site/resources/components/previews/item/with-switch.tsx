@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Item, Switch } from "@sdxc/ui";
+import { Item, Switch } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Item>

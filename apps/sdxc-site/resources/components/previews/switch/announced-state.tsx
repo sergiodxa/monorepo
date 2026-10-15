@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Switch } from "@sdxc/ui";
-import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { Switch } from "sdxc/ui";
+import { ariaChecked } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Switch aria-label="Push notifications" name="push" mix={[ariaChecked()]} />`;

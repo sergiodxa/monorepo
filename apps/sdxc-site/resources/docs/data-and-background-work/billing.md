@@ -10,17 +10,17 @@ lastUpdated: 2026-10-08
 
 Charging for an app is mostly bookkeeping around a payment platform: linking your accounts to its
 customers, sending buyers to its checkout, learning when a subscription starts or lapses, and
-deciding on every request what the account may use. [`@sdxc/billing`](/api/billing) puts one
+deciding on every request what the account may use. [`sdxc/billing`](/api/billing) puts one
 contract in front of the platform, so the rest of your code reads `Customer`, `Subscription` and
 `EntitlementState` and the vendor's name appears in a single module.
 
 This guide sells a `pro` plan through a hosted checkout, keeps a local projection of what each
 customer holds in sync from webhooks and a nightly job, and gates a feature on that projection.
-[`@sdxc/jobs`](/api/jobs) runs the nightly job, and [`@sdxc/authz`](/api/authz) folds the
+[`sdxc/jobs`](/api/jobs) runs the nightly job, and [`sdxc/authz`](/api/authz) folds the
 plan into the same checks as roles and ownership.
 
 ```bash
-npm add @sdxc/billing @sdxc/jobs @sdxc/result @sdxc/http remix @sdxc/authz
+npm add sdxc remix
 ```
 
 ## Configure the provider
@@ -29,9 +29,9 @@ A provider is a class built once at module scope. Its constructor reaches nothin
 it costs no startup work, and a route and a job share the same instance:
 
 ```typescript {% title="app/initializers/billing.ts" %}
-import type { Billing } from "@sdxc/billing";
+import type { Billing } from "sdxc/billing";
 
-import { PolarBilling } from "@sdxc/billing/providers/polar";
+import { PolarBilling } from "sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
 export const billing: Billing = new PolarBilling({
@@ -49,9 +49,9 @@ call that needs them, and a signing secret that is unset or unreadable makes ver
 rather than throw.
 
 Annotating the export as `Billing` keeps every caller on the contract. The same file is the only
-one that changes to move platforms: `StripeBilling` from `@sdxc/billing/providers/stripe` and
-`MercadoPagoBilling` from `@sdxc/billing/providers/mercado-pago` answer the same groups, and
-`MemoryBilling` from `@sdxc/billing/providers/memory` is a full in-memory platform for tests.
+one that changes to move platforms: `StripeBilling` from `sdxc/billing/providers/stripe` and
+`MercadoPagoBilling` from `sdxc/billing/providers/mercado-pago` answer the same groups, and
+`MemoryBilling` from `sdxc/billing/providers/memory` is a full in-memory platform for tests.
 Groups only some platforms offer, such as `portal` and `usage`, are optional on the contract,
 and `supports(billing, "portal")` narrows one to present before you call it.
 
@@ -61,7 +61,7 @@ The billing middleware publishes the provider as `ctx.billing`. Importing it is 
 property, and its `entitlements` option is the reader the feature gate calls further down:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import billingMiddleware from "@sdxc/billing/middleware";
+import billingMiddleware from "sdxc/billing/middleware";
 import { createRouter } from "remix/router";
 
 import { billing } from "~/app/initializers/billing";
@@ -90,10 +90,10 @@ checkout, a snapshot and a webhook name the same person. Resolve it when an acco
 creating the customer only when the platform holds none:
 
 ```typescript {% title="app/services/billing-customer.ts" %}
-import type { Billing, BillingError, Customer } from "@sdxc/billing";
-import type { Result } from "@sdxc/result";
+import type { Billing, BillingError, Customer } from "sdxc/billing";
+import type { Result } from "sdxc/result";
 
-import { isSuccess } from "@sdxc/result";
+import { isSuccess } from "sdxc/result";
 
 import type { Account } from "~/app/models/accounts";
 
@@ -123,9 +123,9 @@ A purchase is a link. `checkouts.create` answers a session whose `url` is the pl
 payment page, and the route owns the redirect:
 
 ```typescript {% title="app/http/controllers/billing/checkout.ts" %}
-import { redirect } from "@sdxc/http/response";
-import { badGateway } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { redirect } from "sdxc/http/response";
+import { badGateway } from "sdxc/http/response/html";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
@@ -162,11 +162,11 @@ snapshot into your own table, and have every request read the table, so the plat
 the request path:
 
 ```typescript {% title="app/services/entitlements.ts" %}
-import type { Billing, BillingError, CustomerRef } from "@sdxc/billing";
-import type { Result } from "@sdxc/result";
+import type { Billing, BillingError, CustomerRef } from "sdxc/billing";
+import type { Result } from "sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { isFailure, success } from "@sdxc/result";
+import { isFailure, success } from "sdxc/result";
 
 import { Entitlements } from "~/app/models/entitlements";
 
@@ -226,8 +226,8 @@ on purpose:
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { BillingWebhook } from "@sdxc/billing";
-import { isFailure } from "@sdxc/result";
+import { BillingWebhook } from "sdxc/billing";
+import { isFailure } from "sdxc/result";
 
 import { billing } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
@@ -277,7 +277,7 @@ The store is how a redelivery is recognized after the request that first saw it 
 implements `WebhookStore`, three calls over a table of your own:
 
 ```typescript {% title="app/models/webhook-deliveries.ts" %}
-import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
+import type { WebhookDelivery, WebhookStore } from "sdxc/billing";
 import type { Database } from "remix/data-table";
 
 import { webhookDeliveries } from "~/database/schema";
@@ -319,8 +319,8 @@ interface in memory for tests.
 option reads grants the feature, so the decision comes from your table:
 
 ```tsx {% title="app/http/controllers/reports.tsx" %}
-import { requireEntitlement } from "@sdxc/billing/middleware";
-import { redirect } from "@sdxc/http/response";
+import { requireEntitlement } from "sdxc/billing/middleware";
+import { redirect } from "sdxc/http/response";
 import { createAction } from "remix/router";
 
 import { ReportsPage } from "~/resources/views/reports";
@@ -347,14 +347,14 @@ routes that guard, once per request.
 ### Gate inside an authorization policy
 
 When the same feature also depends on who is asking, a role that may export or an owner of the
-record, keep the plan in the policy that decides the rest. `@sdxc/authz/facts/billing` binds
+record, keep the plan in the policy that decides the rest. `sdxc/authz/facts/billing` binds
 the snapshot as a fact, `{ products, features }`, read through the same `entitlements` reader,
 so the request still reads the projection once:
 
 ```typescript {% title="app/policies/policy.ts" %}
-import type { BillingFacts } from "@sdxc/authz/facts/billing";
+import type { BillingFacts } from "sdxc/authz/facts/billing";
 
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
+import { allow, definePolicy, deny, fact } from "sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
@@ -390,8 +390,8 @@ customer, which repairs a lapse nobody announced and finds a customer whose firs
 arrived:
 
 ```typescript {% title="app/jobs/reconcile-billing.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
 
 import { billing } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
@@ -450,5 +450,5 @@ announced, is one more loop over those rows calling the same `syncEntitlements` 
   sold.
 - [Decide who can do what](/docs/identity-and-security/authorization) — the plan as one fact
   among roles, ownership and flags.
-- [`@sdxc/billing`](/api/billing) — every resource group, the error codes, and the conformance
+- [`sdxc/billing`](/api/billing) — every resource group, the error codes, and the conformance
   suite for writing a provider of your own.

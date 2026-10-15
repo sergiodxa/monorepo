@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { RadioGroup } from "@sdxc/ui";
+import { RadioGroup } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<RadioGroup aria-label="Instance size" orientation="horizontal">

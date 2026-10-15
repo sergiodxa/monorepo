@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { absolute, anchorName, positionAnchor, positionArea } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
+import { absolute, anchorName, positionAnchor, positionArea } from "sdxc/u/layout";
+import { m } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

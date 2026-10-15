@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { borderEdge } from "@sdxc/u/color";
-import { pb } from "@sdxc/u/size";
-import { not } from "@sdxc/u/state";
+import { borderEdge } from "sdxc/u/color";
+import { pb } from "sdxc/u/size";
+import { not } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -19,18 +19,17 @@ verifies each request it receives, refuses a replay, and tells an unsigned calle
 Then it attaches body digests on their own, for downloads and uploads whose integrity matters
 without a signature.
 
-[`@sdxc/http-signatures`](/api/http-signatures) signs and verifies with
+[`sdxc/http-signatures`](/api/http-signatures) signs and verifies with
 [RFC 9421](https://www.rfc-editor.org/rfc/rfc9421) and with
 [draft-cavage-12](https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12), the
 older scheme much of the fediverse still speaks.
-[`@sdxc/digest-fields`](/api/digest-fields) reads, writes and checks the
+[`sdxc/digest-fields`](/api/digest-fields) reads, writes and checks the
 [RFC 9530](https://www.rfc-editor.org/rfc/rfc9530) `Content-Digest` and `Repr-Digest` and the
-legacy `Digest`. [`@sdxc/crypto`](/api/crypto) reads PEM keys, and every call answers a
-`Result` from [`@sdxc/result`](/api/result).
+legacy `Digest`. [`sdxc/crypto`](/api/crypto) reads PEM keys, and every call answers a
+`Result` from [`sdxc/result`](/api/result).
 
 ```bash
-npm add @sdxc/http-signatures @sdxc/digest-fields @sdxc/crypto @sdxc/result \
-	@sdxc/uuid @sdxc/validate @sdxc/http remix
+npm add sdxc remix
 ```
 
 ## Make a key pair
@@ -54,11 +53,11 @@ stores it beside the key id the sender will name, such as `https://api.example.c
 so the sender reads it per request rather than holding it in module state:
 
 ```typescript {% title="app/services/signing-key.ts" %}
-import type { SigningKey } from "@sdxc/http-signatures";
-import type { Result } from "@sdxc/result";
+import type { SigningKey } from "sdxc/http-signatures";
+import type { Result } from "sdxc/result";
 
-import { Pem } from "@sdxc/crypto";
-import { isFailure, success, wrap } from "@sdxc/result";
+import { Pem } from "sdxc/crypto";
+import { isFailure, success, wrap } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 const KEY_ID = "https://api.example.com/keys/1";
@@ -82,9 +81,9 @@ export async function signingKey(): Promise<Result<SigningKey, Error>> {
 body without hashing a stream it cannot read twice:
 
 ```typescript {% title="app/services/partner-orders.ts" %}
-import { sign } from "@sdxc/http-signatures";
-import { isFailure, success } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { sign } from "sdxc/http-signatures";
+import { isFailure, success } from "sdxc/result";
+import { generateUUID } from "sdxc/uuid/v4";
 
 import { signingKey } from "~/app/services/signing-key";
 
@@ -152,11 +151,11 @@ costs a key lookup:
 The key lookup is yours. Here it reads the PEM a partner registered under its key id:
 
 ```typescript {% title="app/services/partner-keys.ts" %}
-import type { Result } from "@sdxc/result";
+import type { Result } from "sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { Pem } from "@sdxc/crypto";
-import { isFailure, success, wrap } from "@sdxc/result";
+import { Pem } from "sdxc/crypto";
+import { isFailure, success, wrap } from "sdxc/result";
 
 import { findPartnerKey } from "~/app/models/partners";
 
@@ -183,10 +182,10 @@ endpoint verifies first and only then reads the body. Left without a `body` opti
 reads a clone, so the original stream is still there for the schema:
 
 ```typescript {% title="app/http/controllers/orders.ts" %}
-import { accepted, unprocessableEntity } from "@sdxc/http/response/json";
-import { verify } from "@sdxc/http-signatures";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { accepted, unprocessableEntity } from "sdxc/http/response/json";
+import { verify } from "sdxc/http-signatures";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -231,12 +230,12 @@ caller. `Accept-Signature` (RFC 9421 §5.1) says which signature you would accep
 that signed too little learns what to cover:
 
 ```typescript {% title="app/http/refuse-signature.ts" %}
-import type { HttpSignatureError } from "@sdxc/http-signatures";
-import type { Log } from "@sdxc/logger";
+import type { HttpSignatureError } from "sdxc/http-signatures";
+import type { Log } from "sdxc/logger";
 
-import { unauthorized } from "@sdxc/http/response/json";
-import { stringifyAcceptSignature } from "@sdxc/http-signatures";
-import { isFailure } from "@sdxc/result";
+import { unauthorized } from "sdxc/http/response/json";
+import { stringifyAcceptSignature } from "sdxc/http-signatures";
+import { isFailure } from "sdxc/result";
 
 export function refuseSignature(log: Log, error: HttpSignatureError): Response {
 	log.warn("signature.rejected", { code: error.code });
@@ -287,10 +286,10 @@ and refuse one seen before. `verify` reports the verified label, and `parseSigna
 that signature's parameters, `nonce` and `tag` among them:
 
 ```typescript {% title="app/services/signature-nonce.ts" %}
-import type { Verified } from "@sdxc/http-signatures";
+import type { Verified } from "sdxc/http-signatures";
 
-import { parseSignatureInput } from "@sdxc/http-signatures";
-import { isFailure } from "@sdxc/result";
+import { parseSignatureInput } from "sdxc/http-signatures";
+import { isFailure } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 const NONCE_TTL_SECONDS = 15 * 60;
@@ -326,10 +325,10 @@ with RFC 9421 first and, on a refusal, sign the same request again with
 legacy `Digest` instead of `Content-Digest`:
 
 ```typescript {% title="app/services/deliver.ts" %}
-import type { Scheme, SigningKey } from "@sdxc/http-signatures";
+import type { Scheme, SigningKey } from "sdxc/http-signatures";
 
-import { sign } from "@sdxc/http-signatures";
-import { isFailure, success } from "@sdxc/result";
+import { sign } from "sdxc/http-signatures";
+import { isFailure, success } from "sdxc/result";
 
 const REFUSED = [400, 401, 403];
 
@@ -391,8 +390,8 @@ which algorithms it prefers, as weights from 0 to 10.
 A download that answers in the algorithm the client weighs highest:
 
 ```typescript {% title="app/http/controllers/exports.ts" %}
-import { DIGEST_ALGORITHMS, digest, parse, stringify } from "@sdxc/digest-fields";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { DIGEST_ALGORITHMS, digest, parse, stringify } from "sdxc/digest-fields";
+import { isFailure, isSuccess } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { buildExport } from "~/app/models/exports";
@@ -437,9 +436,9 @@ the same call.
 Checking a body someone sent is one call. `verify` takes the headers, the bytes and the field:
 
 ```typescript {% title="app/http/controllers/uploads.ts" %}
-import { verify } from "@sdxc/digest-fields";
-import { badRequest, created } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
+import { verify } from "sdxc/digest-fields";
+import { badRequest, created } from "sdxc/http/response/json";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { storeUpload } from "~/app/models/uploads";
@@ -478,4 +477,4 @@ value is not base64.
   shared-secret signature most webhook senders use.
 - [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — the
   primitives under `Pem` and the digests.
-- [`@sdxc/http-signatures`](/api/http-signatures) — every type, option and error code.
+- [`sdxc/http-signatures`](/api/http-signatures) — every type, option and error code.

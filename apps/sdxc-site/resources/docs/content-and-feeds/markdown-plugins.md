@@ -8,45 +8,45 @@ order: 8
 lastUpdated: 2026-10-08
 ---
 
-A parsed document is a tree, and [`@sdxc/markdown`](/api/markdown) ships the passes most sites
+A parsed document is a tree, and [`sdxc/markdown`](/api/markdown) ships the passes most sites
 run over that tree as plugins: anchors and a table of contents for headings, link rewriting,
 typographic punctuation, embeds made from pasted URLs, and a linter that reports what an
 author got wrong with the line to fix. Each one is a visitor for `Markdown.walk`, built by a
 function you call with its options, so a plugin composes with the visitors you write yourself
-and with [`@sdxc/highlight`](/api/highlight).
+and with [`sdxc/highlight`](/api/highlight).
 
 This guide picks up where [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline)
 leaves off: posts are parsed per request with a shared `MARKDOWN_OPTIONS`, and a
 `preparePost` function walks the tree before a route renders it.
 
 ```bash
-npm add @sdxc/markdown @sdxc/highlight @sdxc/result
+npm add sdxc remix
 ```
 
 ## Run the plugins in order
 
 Every plugin lives at its own subpath, so a page imports only the passes it runs:
 
-| Plugin         | Import                             | Handles                                               |
-| -------------- | ---------------------------------- | ----------------------------------------------------- |
-| `embeds()`     | `@sdxc/markdown/plugin/embeds`     | `paragraph`                                           |
-| `headings()`   | `@sdxc/markdown/plugin/headings`   | `document`, `heading`                                 |
-| `links()`      | `@sdxc/markdown/plugin/links`      | `link`, `image`, `element`                            |
-| `typography()` | `@sdxc/markdown/plugin/typography` | `paragraph`, `heading`, `tableCell`, `tag`, `element` |
-| `lint()`       | `@sdxc/markdown/plugin/lint`       | reads a document and returns its problems             |
+| Plugin         | Import                            | Handles                                               |
+| -------------- | --------------------------------- | ----------------------------------------------------- |
+| `embeds()`     | `sdxc/markdown/plugin/embeds`     | `paragraph`                                           |
+| `headings()`   | `sdxc/markdown/plugin/headings`   | `document`, `heading`                                 |
+| `links()`      | `sdxc/markdown/plugin/links`      | `link`, `image`, `element`                            |
+| `typography()` | `sdxc/markdown/plugin/typography` | `paragraph`, `heading`, `tableCell`, `tag`, `element` |
+| `lint()`       | `sdxc/markdown/plugin/lint`       | reads a document and returns its problems             |
 
 Visitors whose node types are disjoint spread into one object and run as a single pass. Two
 visitors that handle the same type take a walk each, because a spread keeps only the last
 handler for a key. That gives a post three walks, in this order:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
-import { highlight } from "@sdxc/highlight/markdown";
-import { Markdown } from "@sdxc/markdown";
-import { embeds, gist, vimeo, youtube } from "@sdxc/markdown/plugin/embeds";
-import { headings } from "@sdxc/markdown/plugin/headings";
-import { links } from "@sdxc/markdown/plugin/links";
-import { typography } from "@sdxc/markdown/plugin/typography";
-import { isFailure } from "@sdxc/result";
+import { highlight } from "sdxc/highlight/markdown";
+import { Markdown } from "sdxc/markdown";
+import { embeds, gist, vimeo, youtube } from "sdxc/markdown/plugin/embeds";
+import { headings } from "sdxc/markdown/plugin/headings";
+import { links } from "sdxc/markdown/plugin/links";
+import { typography } from "sdxc/markdown/plugin/typography";
+import { isFailure } from "sdxc/result";
 
 const SITE_ORIGIN = "https://example.com/";
 
@@ -93,7 +93,7 @@ ids: `levels` limits which headings get a generated one, and `slug` replaces Git
 your own function, still numbered when two results repeat.
 
 ```typescript {% title="app/services/content/anchors.ts" %}
-import { headings } from "@sdxc/markdown/plugin/headings";
+import { headings } from "sdxc/markdown/plugin/headings";
 
 export const ANCHORS = headings({
 	levels: [2, 3, 4],
@@ -111,9 +111,9 @@ heading at the same level or shallower, so a skipped level (`##` then `####`) ne
 nearest shallower heading:
 
 ```typescript {% title="app/services/content/outline.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { tableOfContents } from "@sdxc/markdown/plugin/headings";
+import { tableOfContents } from "sdxc/markdown/plugin/headings";
 
 export function outline(document: Markdown.Document) {
 	return tableOfContents(document, { levels: [2, 3, 4] });
@@ -138,7 +138,7 @@ the links work on GitHub as written, and the rewrite maps each one to the route 
 it, while images move to a CDN.
 
 ```typescript {% title="app/services/content/docs-links.ts" %}
-import { links } from "@sdxc/markdown/plugin/links";
+import { links } from "sdxc/markdown/plugin/links";
 
 const DOCS_ORIGIN = "https://example.com";
 const CDN_ORIGIN = "https://cdn.example.com";
@@ -176,7 +176,7 @@ A locale that writes other marks passes them as pairs, and each of the three rul
 off on its own:
 
 ```typescript {% title="app/services/content/typography.ts" %}
-import { typography } from "@sdxc/markdown/plugin/typography";
+import { typography } from "sdxc/markdown/plugin/typography";
 
 export const SPANISH = typography({
 	quotes: { double: ["«", "»"], single: ["“", "”"] },
@@ -218,7 +218,7 @@ For YouTube, a small component hands the tag's attributes to
 ```tsx {% title="resources/components/youtube-tag.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import { YouTubeEmbed } from "@sdxc/ui";
+import { YouTubeEmbed } from "sdxc/ui";
 
 export function YouTubeTag(
 	handle: Handle<{ id: string; start?: number; url: string; children: RemixNode }>,
@@ -244,7 +244,7 @@ tag's `name` and a `match` function that returns the tag's attributes, or `null`
 is someone else's:
 
 ```typescript {% title="app/services/content/codepen.ts" %}
-import type { EmbedProvider } from "@sdxc/markdown/plugin/embeds";
+import type { EmbedProvider } from "sdxc/markdown/plugin/embeds";
 
 export const CODEPEN: EmbedProvider = {
 	name: "codepen",
@@ -283,9 +283,9 @@ A Vitest test over every post makes the check part of CI, and the failure lists 
 the file and line to open:
 
 ```typescript {% title="app/services/content/posts.test.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { lint } from "@sdxc/markdown/plugin/lint";
-import { unwrap } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { lint } from "sdxc/markdown/plugin/lint";
+import { unwrap } from "sdxc/result";
 import { expect, test } from "vitest";
 
 import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
@@ -328,4 +328,4 @@ so a note an author left for editors passes the `no-todo` rule while one in the 
   loader and route these passes slot into.
 - [Fill markdown templates with variables](/docs/content-and-feeds/markdown-variables) — fill
   per-render values before the other plugins run.
-- [`@sdxc/markdown`](/api/markdown) — every option of each plugin and the full AST.
+- [`sdxc/markdown`](/api/markdown) — every option of each plugin and the full AST.

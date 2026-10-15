@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, fg } from "@sdxc/u/color";
-import { pseudoContent } from "@sdxc/u/general";
-import { vstack } from "@sdxc/u/layout";
-import { after } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
+import { border, fg } from "sdxc/u/color";
+import { pseudoContent } from "sdxc/u/general";
+import { vstack } from "sdxc/u/layout";
+import { after } from "sdxc/u/state";
+import { text, weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

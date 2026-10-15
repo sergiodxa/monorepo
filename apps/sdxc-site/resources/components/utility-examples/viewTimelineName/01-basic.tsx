@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animation, viewTimelineName } from "@sdxc/u/animation";
-import { hstack } from "@sdxc/u/layout";
-import { scroll } from "@sdxc/u/overflow";
-import { bs } from "@sdxc/u/size";
+import { animation, viewTimelineName } from "sdxc/u/animation";
+import { hstack } from "sdxc/u/layout";
+import { scroll } from "sdxc/u/overflow";
+import { bs } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

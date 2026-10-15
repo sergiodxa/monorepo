@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CheckIcon, TriangleAlertIcon, UserPlusIcon } from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { Marker, Spinner } from "@sdxc/ui";
-import { textShimmer } from "@sdxc/ui/animations";
 import { clientEntry } from "remix/component";
+import { CheckIcon, TriangleAlertIcon, UserPlusIcon } from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { Marker, Spinner } from "sdxc/ui";
+import { textShimmer } from "sdxc/ui/animations";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<div mix={[vstack({ gap: 4, align: "stretch" })]}>

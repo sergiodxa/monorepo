@@ -20,7 +20,7 @@ import {
 	RESPONSIVE_FAMILY,
 	STATE_FAMILY,
 } from "~/app/services/utility-calls";
-import { themeScales } from "~/app/services/utility-theme";
+import { AUGMENTATION_LEAD, themeScales } from "~/app/services/utility-theme";
 
 /** The theme page's heading and lead, which its HTML page states too. */
 export const THEMING_TITLE = "Theming";
@@ -47,7 +47,7 @@ export function utilityMarkdown(
 	let blocks = [
 		`# ${reference.property}`,
 		`> ${oneLine(reference.summary)}`,
-		fence(`import { ${reference.name} } from "@sdxc/u/${reference.family}";`, "ts"),
+		fence(`import { ${reference.name} } from "sdxc/u/${reference.family}";`, "ts"),
 		reference.description,
 		reference.see.map((link) => `- [${link.label}](${link.href})`).join("\n"),
 	];
@@ -104,6 +104,7 @@ export function utilityMarkdown(
 	if (scales.length > 0) {
 		blocks.push(
 			"## Customizing your theme",
+			...(scales.some((scale) => scale.declaration !== null) ? [AUGMENTATION_LEAD] : []),
 			...scales
 				.flatMap((scale) => [
 					`### ${scale.title}`,
@@ -132,7 +133,7 @@ export function componentMarkdown(reference: ComponentReference): string {
 	let blocks = [
 		`# ${reference.name}`,
 		`> ${oneLine(reference.summary)}`,
-		fence(`import { ${reference.name} } from "@sdxc/ui";`, "ts"),
+		fence(`import { ${reference.name} } from "sdxc/ui";`, "ts"),
 		reference.description,
 	];
 
@@ -180,7 +181,7 @@ export function componentMarkdown(reference: ComponentReference): string {
  */
 export function uiExportMarkdown(reference: UiExportReference): string {
 	let { companions, symbol } = reference;
-	let module = `@sdxc/ui/${reference.subpath}`;
+	let module = `sdxc/ui/${reference.subpath}`;
 	let blocks = [
 		`# ${reference.name}`,
 		`> ${oneLine(reference.summary)}`,
@@ -215,7 +216,7 @@ export function themeMarkdown(theme: ThemeReference): string {
 	let blocks = [
 		`# ${THEMING_TITLE}`,
 		`> ${THEMING_SUMMARY}`,
-		fence(`import "@sdxc/ui/theme.css";`, "ts"),
+		fence(`import "sdxc/ui/theme.css";`, "ts"),
 		"A component picks a role — brand, neutral, success, warning, danger — and the role resolves to a fill, the text on that fill, a border and a focus ring. Redefine the variables and the whole catalogue moves with them.",
 	];
 

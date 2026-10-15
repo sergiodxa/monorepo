@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg, fill } from "@sdxc/u/color";
-import { hstack } from "@sdxc/u/layout";
+import { bg, fg, fill } from "sdxc/u/color";
+import { hstack } from "sdxc/u/layout";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

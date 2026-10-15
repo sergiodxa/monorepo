@@ -14,6 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { clientEntry } from "remix/component";
 import {
 	BookOpenIcon,
 	ChartLineIcon,
@@ -21,12 +22,11 @@ import {
 	LayoutDashboardIcon,
 	SettingsIcon,
 	UserIcon,
-} from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { bs, is, minBs, p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, Heading, HeadingScope, Sidebar, Text } from "@sdxc/ui";
-import { clientEntry } from "remix/component";
+} from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { bs, is, minBs, p } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Button, Heading, HeadingScope, Sidebar, Text } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const SIDEBAR_CODE = `<Sidebar.Provider>

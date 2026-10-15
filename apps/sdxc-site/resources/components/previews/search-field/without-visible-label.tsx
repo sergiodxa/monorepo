@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { SearchField } from "@sdxc/ui";
+import { SearchField } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<SearchField aria-label="Search the Acme docs">

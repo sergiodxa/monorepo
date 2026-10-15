@@ -15,13 +15,13 @@ of them open, and an `.epub` beside each post costs a reader one click.
 An EPUB is a ZIP of XHTML documents, a package document that lists every file, and a navigation
 document for the table of contents. Reading systems are strict about it: a chapter that is not
 well-formed XML, an image the package does not carry, or a missing modification date makes a
-book that some apps refuse and others open broken. [`@sdxc/epub`](/api/epub) writes the whole
+book that some apps refuse and others open broken. [`sdxc/epub`](/api/epub) writes the whole
 container and refuses at build time what epubcheck reports as an error, so a successful
-`Result` is a file that opens. [`@sdxc/markdown`](/api/markdown) renders the chapters as XHTML,
-and [`@sdxc/http`](/api/http) names the download.
+`Result` is a file that opens. [`sdxc/markdown`](/api/markdown) renders the chapters as XHTML,
+and [`sdxc/http`](/api/http) names the download.
 
 ```bash
-npm add @sdxc/epub @sdxc/markdown @sdxc/result @sdxc/http remix
+npm add sdxc remix
 ```
 
 The posts here are parsed the way
@@ -43,15 +43,15 @@ a file that leaves your site:
   loaded from the web fails the build with `remote-resource`.
 
 ```typescript {% title="app/services/books/chapter.ts" %}
-import type { EPUB } from "@sdxc/epub";
-import type { TableOfContentsEntry } from "@sdxc/markdown/plugin/headings";
+import type { EPUB } from "sdxc/epub";
+import type { TableOfContentsEntry } from "sdxc/markdown/plugin/headings";
 
-import { Markdown } from "@sdxc/markdown";
-import { toHTML } from "@sdxc/markdown/html";
-import { toPlainText } from "@sdxc/markdown/plain";
-import { headings, tableOfContents } from "@sdxc/markdown/plugin/headings";
-import { links } from "@sdxc/markdown/plugin/links";
-import { isFailure, success } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { toHTML } from "sdxc/markdown/html";
+import { toPlainText } from "sdxc/markdown/plain";
+import { headings, tableOfContents } from "sdxc/markdown/plugin/headings";
+import { links } from "sdxc/markdown/plugin/links";
+import { isFailure, success } from "sdxc/result";
 
 export function chapterBody(document: Markdown.Document, permalink: string) {
 	let walked = Markdown.walk(document, {
@@ -102,10 +102,10 @@ the same chapter, because the `id` it names is in the body. A heading that alrea
 publication or the first rule the input breaks:
 
 ```typescript {% title="app/services/books/post-epub.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { EPUB } from "@sdxc/epub";
-import { isFailure } from "@sdxc/result";
+import { EPUB } from "sdxc/epub";
+import { isFailure } from "sdxc/result";
 
 import bookCss from "~/resources/styles/book.css?raw";
 import { chapterBody } from "~/app/services/books/chapter";
@@ -186,9 +186,9 @@ The action reads the post, builds the book and streams it. `attachment()` writes
 `Content-Disposition` value, with a non-ASCII slug carried exactly:
 
 ```typescript {% title="app/http/controllers/posts/epub.ts" %}
-import { attachment } from "@sdxc/http/response";
-import { notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { attachment } from "sdxc/http/response";
+import { notFound } from "sdxc/http/response/html";
+import { isFailure } from "sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -264,7 +264,7 @@ carried at `images/diagram.svg` is `../images/diagram.svg`, and another chapter 
 `<id>.xhtml`, with a fragment when it points inside it.
 
 ```typescript {% title="app/services/books/series-epub.ts" %}
-import { EPUB } from "@sdxc/epub";
+import { EPUB } from "sdxc/epub";
 
 import bookCss from "~/resources/styles/book.css?raw";
 
@@ -341,4 +341,4 @@ it opens inside the book. For a book in another language, `labels` sets the `con
   feed readers.
 - [Stream several files as a ZIP](/docs/data-and-background-work/zip-downloads) — the
   container format an EPUB is written in, for downloads of your own.
-- [`@sdxc/epub`](/api/epub) — every field of the input and every error subclass.
+- [`sdxc/epub`](/api/epub) — every field of the input and every error subclass.

@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { gap, grid, gridTemplate } from "@sdxc/u/layout";
-import { text } from "@sdxc/u/typography";
+import { gap, grid, gridTemplate } from "sdxc/u/layout";
+import { text } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

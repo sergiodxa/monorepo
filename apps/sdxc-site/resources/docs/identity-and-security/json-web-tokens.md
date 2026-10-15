@@ -13,13 +13,13 @@ This guide has your app sign short-lived tokens for requests it makes to a secon
 reports API, then publish its public keys so that service verifies each token on its own. It
 ends with rotating the signing key without breaking a single token in flight.
 
-[`@sdxc/jwt`](/api/jwt) models tokens as classes and manages the ES256, RS256 and EdDSA keys
-that sign them. [`@sdxc/well-known`](/api/well-known) serves the key set at
-`/.well-known/jwks.json`, [`@sdxc/http`](/api/http) answers the refusals, and
-[`@sdxc/result`](/api/result) turns a failed verification into a value.
+[`sdxc/jwt`](/api/jwt) models tokens as classes and manages the ES256, RS256 and EdDSA keys
+that sign them. [`sdxc/well-known`](/api/well-known) serves the key set at
+`/.well-known/jwks.json`, [`sdxc/http`](/api/http) answers the refusals, and
+[`sdxc/result`](/api/result) turns a failed verification into a value.
 
 ```bash
-npm add @sdxc/jwt @sdxc/well-known @sdxc/http @sdxc/result @sdxc/uuid
+npm add sdxc remix
 ```
 
 ## Describe the token
@@ -28,7 +28,7 @@ A verified token is a bag of claims until you say what it carries. Subclass `JWT
 each claim your token guarantees a typed accessor, read through `this.parser`:
 
 ```typescript {% title="app/services/auth/service-token.ts" %}
-import { JWT } from "@sdxc/jwt";
+import { JWT } from "sdxc/jwt";
 
 export class ServiceToken extends JWT {
 	override get subject() {
@@ -53,10 +53,10 @@ class you call them on, so `ServiceToken.verify(…)` hands back these accessors
 
 Every isolate that signs must use the same keys, and they must outlive any one deploy, so they
 live in storage. `JWK.signingKeys` reads them through the three-method `KeyStorage` contract,
-and `createR2KeyStorage` from `@sdxc/jwt/r2` implements it over an R2 bucket binding:
+and `createR2KeyStorage` from `sdxc/jwt/r2` implements it over an R2 bucket binding:
 
 ```typescript {% title="app/services/key-storage.ts" %}
-import { createR2KeyStorage } from "@sdxc/jwt/r2";
+import { createR2KeyStorage } from "sdxc/jwt/r2";
 import { env } from "cloudflare:workers";
 
 export function keyStorage() {
@@ -74,7 +74,7 @@ Reading the keys is a listing, a read per key and two imports per key, so hold t
 few minutes rather than repeating that on every request:
 
 ```typescript {% title="app/services/signing-keys.ts" %}
-import { JWK } from "@sdxc/jwt";
+import { JWK } from "sdxc/jwt";
 
 import { keyStorage } from "~/app/services/key-storage";
 
@@ -106,8 +106,8 @@ stops being valid. `exp`, `iat` and `nbf` take a duration measured from the mome
 built, so the lifetime reads as what it is:
 
 ```typescript {% title="app/services/reports.ts" %}
-import { JWK } from "@sdxc/jwt";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { JWK } from "sdxc/jwt";
+import { generateUUID } from "sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 
 import { ServiceToken } from "~/app/services/auth/service-token";
@@ -148,12 +148,12 @@ you mint per call never needs to outlive the call. Signing a fresh one each time
 
 The reports API verifies with your public keys, so serve them where it expects them.
 `JWK.toJSON` renders the key pairs as a JWKS document with only the public parameters of each
-key, and `@sdxc/well-known` answers `/.well-known/jwks.json` with it:
+key, and `sdxc/well-known` answers `/.well-known/jwks.json` with it:
 
 ```typescript {% title="app/http/middleware/publish-keys.ts" %}
-import { JWK } from "@sdxc/jwt";
-import { jwks } from "@sdxc/well-known/jwks";
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { JWK } from "sdxc/jwt";
+import { jwks } from "sdxc/well-known/jwks";
+import { serve, wellKnown } from "sdxc/well-known/middleware";
 
 import { signingKeys } from "~/app/services/signing-keys";
 
@@ -177,8 +177,8 @@ it again, at most once per cooldown, when a token names a `kid` it has not seen,
 carries it across your key rotations:
 
 ```typescript {% title="app/services/auth/authenticate.ts" %}
-import { JWK } from "@sdxc/jwt";
-import { failure, wrap } from "@sdxc/result";
+import { JWK } from "sdxc/jwt";
+import { failure, wrap } from "sdxc/result";
 
 import { ServiceToken } from "~/app/services/auth/service-token";
 
@@ -213,8 +213,8 @@ drift between the two services.
 The handler then decides what the verified token may do:
 
 ```typescript {% title="app/http/controllers/api/reports/create.ts" %}
-import { accepted, forbidden, unauthorized } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
+import { accepted, forbidden, unauthorized } from "sdxc/http/response/json";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { authenticate } from "~/app/services/auth/authenticate";
@@ -262,7 +262,7 @@ Rotating adds a key rather than replacing one. Write a new pair into the bucket,
 while the old key stays in the published set:
 
 ```typescript {% title="app/services/rotate-signing-key.ts" %}
-import { JWK } from "@sdxc/jwt";
+import { JWK } from "sdxc/jwt";
 
 import { keyStorage } from "~/app/services/key-storage";
 
@@ -292,7 +292,7 @@ first time you publish more than one key, make sure every verifier resolves keys
 An OpenID Connect ID token is a JWT too, but trusting one takes more than a signature and an
 audience: the nonce from your login request, the authorized party and, for some flows, the
 access token hash. [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc)
-does those checks through [`@sdxc/auth`](/api/auth), with `JWK.Algorithm` pinning what the
+does those checks through [`sdxc/auth`](/api/auth), with `JWK.Algorithm` pinning what the
 provider may sign with, so reach for it instead of `JWT.verify` whenever the token comes from a
 login.
 
@@ -304,5 +304,5 @@ login.
   tokens and HMAC signatures, for when the receiver shares a secret with you.
 - [Build a JSON API with problem details](/docs/http-apis/json-apis): answer the refusals as
   problem documents.
-- [`@sdxc/jwt`](/api/jwt): every accessor, the `KeyStorage` contract and keys kept in a
+- [`sdxc/jwt`](/api/jwt): every accessor, the `KeyStorage` contract and keys kept in a
   database.

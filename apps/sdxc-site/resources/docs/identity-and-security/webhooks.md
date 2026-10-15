@@ -13,15 +13,14 @@ its whole authentication: get it wrong and anyone can post an event. This guide 
 receiver that verifies each delivery, rejects replays and answers fast by handing the work to a
 background job, then turns around and signs deliveries of its own.
 
-[`@sdxc/webhooks`](/api/webhooks) implements [Standard Webhooks](https://www.standardwebhooks.com/)
-on WebCrypto, [`@sdxc/jobs`](/api/jobs) runs the work off the request, and
-[`@sdxc/billing`](/api/billing) shows the same shape for a billing platform's deliveries.
-Sending your own, [`@sdxc/outbound`](/api/outbound) keeps each delivery on the public internet
-and [`@sdxc/backoff`](/api/backoff) spaces out the retries.
+[`sdxc/webhooks`](/api/webhooks) implements [Standard Webhooks](https://www.standardwebhooks.com/)
+on WebCrypto, [`sdxc/jobs`](/api/jobs) runs the work off the request, and
+[`sdxc/billing`](/api/billing) shows the same shape for a billing platform's deliveries.
+Sending your own, [`sdxc/outbound`](/api/outbound) keeps each delivery on the public internet
+and [`sdxc/backoff`](/api/backoff) spaces out the retries.
 
 ```bash
-npm add @sdxc/webhooks @sdxc/jobs @sdxc/result @sdxc/http @sdxc/logger \
-	@sdxc/crypto @sdxc/billing @sdxc/outbound @sdxc/backoff
+npm add sdxc remix
 ```
 
 ## Declare the job a delivery becomes
@@ -31,7 +30,7 @@ your app runs in a job, so a slow database or a third-party call never makes the
 out and retry.
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "@sdxc/jobs";
+import { job, jobs } from "sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -51,18 +50,18 @@ dispatcher and the router import, so the router writes to the same backend the d
 delivers from:
 
 ```typescript {% title="app/initializers/queue.ts" %}
-import * as cloudflare from "@sdxc/jobs/cloudflare";
+import * as cloudflare from "sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 export const queue = cloudflare.queue(() => env.QUEUE);
 ```
 
-`jobEnqueuer(queue)` from `@sdxc/jobs/router` goes in the router's middleware and publishes
+`jobEnqueuer(queue)` from `sdxc/jobs/router` goes in the router's middleware and publishes
 `ctx.jobs`, which is how a route handler enqueues. Only the queue enters the request path; the
 dispatcher and every job handler stay out of it:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { jobEnqueuer } from "@sdxc/jobs/router";
+import { jobEnqueuer } from "sdxc/jobs/router";
 import { createRouter } from "remix/router";
 
 import { queue } from "~/app/initializers/queue";
@@ -83,9 +82,9 @@ compares the signature in constant time, consults the replay store, and only the
 payload with your schema.
 
 ```typescript {% title="app/http/controllers/webhooks/orders.ts" %}
-import { accepted } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
-import * as Webhooks from "@sdxc/webhooks";
+import { accepted } from "sdxc/http/response/json";
+import { isFailure } from "sdxc/result";
+import * as Webhooks from "sdxc/webhooks";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -136,15 +135,15 @@ choosing the status for each failure, because the status is what tells the sende
 retry. That is the `refuse` helper the endpoint imports:
 
 ```typescript {% title="app/http/controllers/webhooks/refuse.ts" %}
-import type { Log } from "@sdxc/logger";
+import type { Log } from "sdxc/logger";
 
 import {
 	accepted,
 	ok,
 	serviceUnavailable,
 	unauthorized,
-} from "@sdxc/http/response/json";
-import * as Webhooks from "@sdxc/webhooks";
+} from "sdxc/http/response/json";
+import * as Webhooks from "sdxc/webhooks";
 
 export function refuse(log: Log, error: Webhooks.WebhookError): Response {
 	if (error instanceof Webhooks.DuplicateDeliveryError)
@@ -180,7 +179,7 @@ when any configured secret matches it.
 The job runs whenever the queue delivers the message, as many times as it takes to succeed.
 
 ```typescript {% title="app/jobs/orders/fulfil.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
+import { createJobHandler } from "sdxc/jobs";
 
 import jobs from "~/app/jobs";
 import { Orders } from "~/app/models/orders";
@@ -207,11 +206,11 @@ and a failed attempt is retried by the queue. Enqueue one for each subscriber wi
 happens, or with `dispatcher.enqueueMany` when it happens inside another job.
 
 ```typescript {% title="app/jobs/webhooks/deliver.ts" %}
-import { createBackoff } from "@sdxc/backoff";
-import { createJobHandler } from "@sdxc/jobs";
-import { checkUrl, release } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
-import * as Webhooks from "@sdxc/webhooks";
+import { createBackoff } from "sdxc/backoff";
+import { createJobHandler } from "sdxc/jobs";
+import { checkUrl, release } from "sdxc/outbound";
+import { isFailure } from "sdxc/result";
+import * as Webhooks from "sdxc/webhooks";
 
 import jobs from "~/app/jobs";
 import { Endpoints } from "~/app/models/endpoints";
@@ -277,18 +276,18 @@ covers. `sign()` sets only the three signature headers, which is why the content
 here.
 
 Each subscriber gets its own secret, in the format receivers expect: `whsec_` followed by
-base64. Mint one with [`@sdxc/crypto`](/api/crypto) as
+base64. Mint one with [`sdxc/crypto`](/api/crypto) as
 `` `whsec_${Base64.encode(randomBytes(32))}` ``, show it once, and store it sealed with `seal`
 rather than in plain text.
 
 ## Receive a billing platform's deliveries
 
-Billing platforms sign their webhooks in their own ways, so [`@sdxc/billing`](/api/billing)
+Billing platforms sign their webhooks in their own ways, so [`sdxc/billing`](/api/billing)
 wraps the whole receiver in one class: the provider verifies the signature, a store records
 each delivery before anything trusts it, and a handler per event type does the work.
 
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
-import { BillingWebhook } from "@sdxc/billing";
+import { BillingWebhook } from "sdxc/billing";
 
 import jobs from "~/app/jobs";
 import { polar } from "~/app/initializers/billing";
@@ -309,7 +308,7 @@ Mount it with `router.map(routes.webhooks.billing, billingWebhook)`: its bound `
 satisfies the router's action form. Each handler is called with the event and the request's
 own context, so it reaches the same `ctx.jobs` the orders endpoint enqueues through. `polar` is
 your `PolarBilling` provider from
-`@sdxc/billing/providers/polar`. An unproven delivery is the one `401`; a duplicate already
+`sdxc/billing/providers/polar`. An unproven delivery is the one `401`; a duplicate already
 processed answers `200` at once, an event type with no handler is logged and acknowledged, and a
 handler that throws a retryable error answers `503` so the platform delivers again. The provider
 reads its secret through a function such as `webhookSecret: () => env.POLAR_WEBHOOK_SECRET`, and
@@ -329,4 +328,4 @@ an unreadable secret fails verification, so this receiver fails closed too.
   store against real KV bindings, with deliveries signed by `Webhooks.sign`.
 - [Sign and verify HTTP requests](/docs/identity-and-security/http-message-signatures) — for a
   sender that signs with an HTTP message signature and a key pair, rather than a shared secret.
-- [`@sdxc/webhooks`](/api/webhooks) — every error class and the replay store contract.
+- [`sdxc/webhooks`](/api/webhooks) — every error class and the replay store contract.

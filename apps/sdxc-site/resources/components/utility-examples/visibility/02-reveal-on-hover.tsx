@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { visibility } from "@sdxc/u/effects";
-import { hstack } from "@sdxc/u/layout";
-import { when } from "@sdxc/u/state";
+import { visibility } from "sdxc/u/effects";
+import { hstack } from "sdxc/u/layout";
+import { when } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

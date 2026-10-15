@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Checkbox, CheckboxGroup } from "@sdxc/ui";
+import { Checkbox, CheckboxGroup } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<CheckboxGroup aria-label="Notify me by" orientation="horizontal">

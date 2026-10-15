@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { HouseIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
-import { hstack } from "@sdxc/u/layout";
-import { text } from "@sdxc/u/typography";
-import { Breadcrumbs } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
+import { HouseIcon } from "sdxc/icons";
+import { fg } from "sdxc/u/color";
+import { hstack } from "sdxc/u/layout";
+import { text } from "sdxc/u/typography";
+import { Breadcrumbs } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Breadcrumbs aria-label="Breadcrumb">

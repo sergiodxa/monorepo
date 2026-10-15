@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { BoldIcon } from "@sdxc/icons";
-import { ToggleButton } from "@sdxc/ui";
-import { pressToggle } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { BoldIcon } from "sdxc/icons";
+import { ToggleButton } from "sdxc/ui";
+import { pressToggle } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<ToggleButton

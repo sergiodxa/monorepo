@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { marginRight } from "@sdxc/u/size";
+import { marginRight } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

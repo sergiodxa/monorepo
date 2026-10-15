@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack, anchorName, inset, positionAnchor, positionArea } from "@sdxc/u/layout";
-import { m, mbs } from "@sdxc/u/size";
-import { open } from "@sdxc/u/state";
+import { vstack, anchorName, inset, positionAnchor, positionArea } from "sdxc/u/layout";
+import { m, mbs } from "sdxc/u/size";
+import { open } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

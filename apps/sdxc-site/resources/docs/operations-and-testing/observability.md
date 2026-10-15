@@ -11,13 +11,13 @@ lastUpdated: 2026-10-08
 When a request misbehaves in production you want to answer three questions quickly: what
 happened on this request, which other work did it cause, and which part of it was slow. This
 guide wires one answer to each into a Remix v3 app on Workers.
-[`@sdxc/logger`](/api/logger) writes one wide event per invocation,
-[`@sdxc/trace-context`](/api/trace-context) gives every invocation a W3C trace that travels
-into jobs and outbound requests, and [`@sdxc/server-timing`](/api/server-timing) reports
+[`sdxc/logger`](/api/logger) writes one wide event per invocation,
+[`sdxc/trace-context`](/api/trace-context) gives every invocation a W3C trace that travels
+into jobs and outbound requests, and [`sdxc/server-timing`](/api/server-timing) reports
 per-request timings in a header every browser's network panel reads.
 
 ```bash
-npm add @sdxc/logger @sdxc/trace-context @sdxc/server-timing
+npm add sdxc remix
 ```
 
 The logger and the trace are bound through `AsyncLocalStorage`, so enable `nodejs_compat` in
@@ -30,7 +30,7 @@ entry point of the Worker — the router, the job dispatcher, a Durable Object �
 with the same `service`, and a query across workers has something to group by.
 
 ```typescript {% title="app/initializers/logger.ts" %}
-import { createLogger } from "@sdxc/logger";
+import { createLogger } from "sdxc/logger";
 import { env } from "cloudflare:workers";
 
 export const logger = createLogger({
@@ -49,14 +49,14 @@ volume makes you, which is covered below.
 `log(logger)` opens the request's log and publishes it as `ctx.log`. Put it near the top of
 the middleware chain so everything after it writes into the same record, and put `trace()`
 directly after it, so the trace ids land on the request's log. `jobEnqueuer(queue)` from
-`@sdxc/jobs/router` publishes `ctx.jobs` for enqueuing background work, over the queue shown
+`sdxc/jobs/router` publishes `ctx.jobs` for enqueuing background work, over the queue shown
 in the jobs section below. The Remix middleware your app already runs (`formData()`, `cop()`,
 …) follows them.
 
 ```tsx {% title="app/initializers/router.tsx" %}
-import { jobEnqueuer } from "@sdxc/jobs/router";
-import { log } from "@sdxc/logger/middleware";
-import { trace } from "@sdxc/trace-context/middleware";
+import { jobEnqueuer } from "sdxc/jobs/router";
+import { log } from "sdxc/logger/middleware";
+import { trace } from "sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
 
 import { logger } from "~/app/initializers/logger";
@@ -83,9 +83,9 @@ by, `time` measures anything with a duration, `note` leaves a breadcrumb for whe
 found the record, and `warn` and `fail` change its outcome.
 
 ```typescript {% title="app/http/controllers/postings.ts" %}
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import { createAction } from "remix/router";
 
 import Posting from "~/app/models/posting";
@@ -115,7 +115,7 @@ export const create = createAction(routes.postings.create, async (ctx) => {
 
 `Posting`, `PostingSchema` and `renderForm` are your app's own model, form schema and form
 view, and `ctx.db` comes from the middleware that publishes your database. `ctx.jobs` is
-`jobEnqueuer` from `@sdxc/jobs/router`, covered in
+`jobEnqueuer` from `sdxc/jobs/router`, covered in
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron). `{ posting: { id } }` is stored as `posting.id`, one flat key you can filter on. Keep a
 namespace meaning the same thing everywhere (`user`, `team`, `db`, `cache`, `job`) and never
 build a key out of a value: `set({ team: { id } })` is one field, while a key per id grows the
@@ -134,8 +134,8 @@ optional chain is all the guarding it needs. Here `loadFlags` is your call to a 
 returning a `Result`, and `DEFAULT_FLAGS` what the app runs with when it fails.
 
 ```typescript {% title="app/initializers/flags.ts" %}
-import { currentLog } from "@sdxc/logger";
-import { isFailure } from "@sdxc/result";
+import { currentLog } from "sdxc/logger";
+import { isFailure } from "sdxc/result";
 
 import { DEFAULT_FLAGS, loadFlags } from "~/app/services/flag-provider";
 
@@ -155,13 +155,13 @@ and the invocation's own log is the whole model.
 ## Hand the same logger to the job dispatcher
 
 Jobs are their own invocations, so they get their own records. Pass the same `logger` to
-[`@sdxc/jobs`](/api/jobs) and each cron tick, queue batch and job run emits one, with
+[`sdxc/jobs`](/api/jobs) and each cron tick, queue batch and job run emits one, with
 `ctx.log` in the handler working exactly like the request's. Build the queue once, in a
 module the router and the dispatcher both import, so `jobEnqueuer` writes to the backend the
 dispatcher delivers from:
 
 ```typescript {% title="app/initializers/queue.ts" %}
-import * as cloudflare from "@sdxc/jobs/cloudflare";
+import * as cloudflare from "sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
 export const queue = cloudflare.queue(() => env.QUEUE);
@@ -170,7 +170,7 @@ export const queue = cloudflare.queue(() => env.QUEUE);
 `database()` stands for the job middleware that publishes your database to handlers.
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import { createJobDispatcher } from "@sdxc/jobs";
+import { createJobDispatcher } from "sdxc/jobs";
 
 import { database } from "~/app/jobs/middleware/database";
 import { queue } from "~/app/initializers/queue";
@@ -197,7 +197,7 @@ the current trace into a `Headers`, and `withTrace` copies a request you are for
 service binding or a Durable Object stub.
 
 ```typescript {% title="app/services/billing.ts" %}
-import { inject, withTrace } from "@sdxc/trace-context";
+import { inject, withTrace } from "sdxc/trace-context";
 import { env } from "cloudflare:workers";
 
 export async function listInvoices(): Promise<Response> {
@@ -215,7 +215,7 @@ export async function forwardToBilling(request: Request): Promise<Response> {
 forwarded request the same way.
 
 Both do nothing outside a trace, so they are safe to call anywhere. A client built on
-[`@sdxc/api-client`](/api/api-client) injects the trace on every request without this step.
+[`sdxc/api-client`](/api/api-client) injects the trace on every request without this step.
 On a public endpoint where you do not want callers to pick your trace ids, pass
 `trace({ accept })` a predicate; a rejected header starts a fresh trace and is noted on the
 log as `trace.rejected`.
@@ -229,7 +229,7 @@ answered.
 ```typescript {% title="app/http/middleware/server-timing.ts" %}
 import type { Middleware } from "remix/router";
 
-import { TimingCollector } from "@sdxc/server-timing";
+import { TimingCollector } from "sdxc/server-timing";
 import { createContextKey } from "remix/router";
 
 export const Timing = createContextKey<TimingCollector>();
@@ -262,7 +262,7 @@ volume gets close to your allotment, sample the successful background runs, whic
 the events are:
 
 ```typescript {% title="app/initializers/logger.ts" %}
-import { createLogger } from "@sdxc/logger";
+import { createLogger } from "sdxc/logger";
 
 export const logger = createLogger({
 	service: "jobs-board",
@@ -273,12 +273,12 @@ export const logger = createLogger({
 A `degraded` or `error` record is always written, `keep` exempts every request, and one in
 twenty successful job runs is kept. `slowerThanMs` keeps slow successes too.
 
-`keep` also takes a condition in the JSON form of [`@sdxc/expression`](/api/expression), which
+`keep` also takes a condition in the JSON form of [`sdxc/expression`](/api/expression), which
 is data rather than code, so the exemption can come from configuration. While you chase a
 problem for one customer, keep every one of their events and sample everyone else's:
 
 ```typescript {% title="app/initializers/logger.ts" %}
-import { createLogger } from "@sdxc/logger";
+import { createLogger } from "sdxc/logger";
 
 export const logger = createLogger({
 	service: "jobs-board",
@@ -310,5 +310,5 @@ looking for.
   Slack, Discord or PagerDuty when something fails, and notes every send on the run's log.
 - [Test Workers apps](/docs/operations-and-testing/testing) shows how to hand a handler a log
   and assert on the record it wrote.
-- [`@sdxc/logger`](/api/logger) and [`@sdxc/trace-context`](/api/trace-context) list every
+- [`sdxc/logger`](/api/logger) and [`sdxc/trace-context`](/api/trace-context) list every
   field and option.

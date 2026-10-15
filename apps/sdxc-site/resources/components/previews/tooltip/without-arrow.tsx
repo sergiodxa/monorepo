@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { SettingsIcon } from "@sdxc/icons";
-import { anchorName, hstack, positionAnchor } from "@sdxc/u/layout";
-import { LinkButton, Tooltip } from "@sdxc/ui";
+import { SettingsIcon } from "sdxc/icons";
+import { anchorName, hstack, positionAnchor } from "sdxc/u/layout";
+import { LinkButton, Tooltip } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<span mix={[hstack({ gap: 0, align: "center" })]}>

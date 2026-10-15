@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { dropShadow } from "@sdxc/u/effects";
+import { dropShadow } from "sdxc/u/effects";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

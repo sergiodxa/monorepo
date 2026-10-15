@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { FolderIcon } from "@sdxc/icons";
-import { FileTrigger } from "@sdxc/ui";
+import { FolderIcon } from "sdxc/icons";
+import { FileTrigger } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<FileTrigger name="folder" acceptDirectory variant="outline" aria-label="Choose a folder to import">

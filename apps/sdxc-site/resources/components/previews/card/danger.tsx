@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Card } from "@sdxc/ui";
+import { Card } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Card color="danger">

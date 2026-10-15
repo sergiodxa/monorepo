@@ -11,10 +11,10 @@ lastUpdated: 2026-10-08
 Three date screens come up in almost every app: a month calendar with events on it, a report
 whose period someone picks, and a settings form where a person says which time zone they
 live in. Each one needs the calendar as the viewer reads it, not as the server's clock does,
-and [`@sdxc/dates`](/api/dates) answers every calendar question in a zone you pass.
+and [`sdxc/dates`](/api/dates) answers every calendar question in a zone you pass.
 
 ```bash
-npm add @sdxc/dates @sdxc/result @sdxc/validate @sdxc/u @sdxc/ui remix
+npm add sdxc remix
 ```
 
 The examples take the viewer's locale and zone from a `Viewer` resolved once per request, as
@@ -32,10 +32,10 @@ Read the month from the query string, falling back to the current one, and work 
 neighbours the pager links to:
 
 ```typescript {% title="app/calendar/month.ts" %}
-import type { MonthGridDay, TimeZone, Weekday } from "@sdxc/dates";
+import type { MonthGridDay, TimeZone, Weekday } from "sdxc/dates";
 
-import { addMonths, endOfDay, fromDayKey, monthGrid, toDayKey } from "@sdxc/dates";
-import { isSuccess } from "@sdxc/result";
+import { addMonths, endOfDay, fromDayKey, monthGrid, toDayKey } from "sdxc/dates";
+import { isSuccess } from "sdxc/result";
 
 export interface CalendarMonth {
 	date: Date;
@@ -109,10 +109,10 @@ export default createAction(routes.calendar, async (ctx) => {
 ```tsx {% title="resources/views/calendar.tsx" %}
 import type { Handle } from "remix/component";
 
-import { formatParts, formatWeekday, toDayKey } from "@sdxc/dates";
-import { fg } from "@sdxc/u/color";
-import { grid, gridTemplate, vstack } from "@sdxc/u/layout";
-import { LinkButton } from "@sdxc/ui";
+import { formatParts, formatWeekday, toDayKey } from "sdxc/dates";
+import { fg } from "sdxc/u/color";
+import { grid, gridTemplate, vstack } from "sdxc/u/layout";
+import { LinkButton } from "sdxc/ui";
 
 import type { CalendarMonth } from "~/app/calendar/month";
 import type { Event } from "~/app/models/events";
@@ -200,7 +200,7 @@ column in the viewer's locale. `formatParts` builds the "June 2026" heading from
 locale's own month name and order.
 
 For a date picker rather than an events calendar, `Calendar` and `DatePicker` in
-[`@sdxc/ui`](/api/ui) draw the grid and own the keyboard.
+[`sdxc/ui`](/api/ui) draw the grid and own the keyboard.
 
 ## Read a report's day range
 
@@ -209,7 +209,7 @@ included, so it travels through a URL and a form as written, and it reads the sa
 zone. Offer presets, and hold a hand-picked range to the same rules:
 
 ```typescript {% title="app/reports/range.ts" %}
-import type { DayRange, TimeZone } from "@sdxc/dates";
+import type { DayRange, TimeZone } from "sdxc/dates";
 
 import {
 	addMonths,
@@ -220,8 +220,8 @@ import {
 	toDayKey,
 	validateDayRange,
 	yearToDateRange,
-} from "@sdxc/dates";
-import { success } from "@sdxc/result";
+} from "sdxc/dates";
+import { success } from "sdxc/result";
 
 export type Preset = "lastMonth" | "last30Days" | "lastQuarter" | "yearToDate";
 
@@ -260,7 +260,7 @@ day, and `lastNDaysRange(30, …)` is the thirty days ending on `from`, that day
 `problem` names the first rule the range breaks, which maps straight to a message:
 
 ```typescript {% title="app/reports/messages.ts" %}
-import type { DayRangeProblem } from "@sdxc/dates";
+import type { DayRangeProblem } from "sdxc/dates";
 
 export const RANGE_PROBLEMS: Record<DayRangeProblem, string> = {
 	invalid: "Pick a start and an end date.",
@@ -286,8 +286,8 @@ has no area, gets its own option at the top:
 ```tsx {% title="resources/components/time-zone-select.tsx" %}
 import type { Handle } from "remix/component";
 
-import { timeZonesByRegion } from "@sdxc/dates";
-import { Select } from "@sdxc/ui";
+import { timeZonesByRegion } from "sdxc/dates";
+import { Select } from "sdxc/ui";
 
 export function TimeZoneSelect(handle: Handle<{ selected: string }>) {
 	return () => {
@@ -321,7 +321,7 @@ The action checks the submitted value against the same list with `isSupportedTim
 the form and the check never disagree:
 
 ```typescript {% title="app/http/validators/settings.ts" %}
-import { isSupportedTimeZone } from "@sdxc/dates";
+import { isSupportedTimeZone } from "sdxc/dates";
 import * as s from "remix/data-schema";
 
 export const SETTINGS = s.object({
@@ -348,5 +348,5 @@ a server it is usually `"UTC"`.
   zone and formatting a date in it.
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — running
   the settings schema in an action and showing its issues.
-- [`@sdxc/dates`](/api/dates) — every boundary, grid and range helper, and the zone math
+- [`sdxc/dates`](/api/dates) — every boundary, grid and range helper, and the zone math
   underneath.

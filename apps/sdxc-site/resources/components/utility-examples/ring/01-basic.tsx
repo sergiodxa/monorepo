@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ring } from "@sdxc/u/color";
+import { ring } from "sdxc/u/color";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

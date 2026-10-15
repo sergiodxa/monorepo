@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { clientEntry } from "remix/component";
 import {
 	BoldIcon,
 	CodeIcon,
@@ -19,10 +20,9 @@ import {
 	ListOrderedIcon,
 	Trash2Icon,
 	UnderlineIcon,
-} from "@sdxc/icons";
-import { Button, Menu, Select, Separator, ToggleButton, Toolbar } from "@sdxc/ui";
-import { menuKeys, pressToggle } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/component";
+} from "sdxc/icons";
+import { Button, Menu, Select, Separator, ToggleButton, Toolbar } from "sdxc/ui";
+import { menuKeys, pressToggle } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const TOOLBAR_CODE = `<Toolbar aria-label="Formatting">

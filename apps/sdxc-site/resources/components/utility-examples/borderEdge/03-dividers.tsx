@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, borderEdge } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { inlineFlex } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
+import { border, borderEdge } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { inlineFlex } from "sdxc/u/layout";
+import { overflow } from "sdxc/u/overflow";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

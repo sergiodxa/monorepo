@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "@sdxc/u/layout";
-import { is, minBs } from "@sdxc/u/size";
+import { vstack } from "sdxc/u/layout";
+import { is, minBs } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

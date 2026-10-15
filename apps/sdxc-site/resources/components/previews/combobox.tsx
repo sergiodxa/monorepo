@@ -15,17 +15,17 @@
 import type { Handle } from "remix/component";
 
 import * as combobox from "@remix-run/ui/combobox";
-import { fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
-import { vstack } from "@sdxc/u/layout";
-import { overflowY } from "@sdxc/u/overflow";
-import { is, maxBs, maxIs } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { ComboBox, Description, Item, Label } from "@sdxc/ui";
-import { comboboxFilter } from "@sdxc/ui/mixins";
-import { floatingSurface, surfaceInset } from "@sdxc/ui/styles";
 import { clientEntry } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { cursor } from "sdxc/u/general";
+import { vstack } from "sdxc/u/layout";
+import { overflowY } from "sdxc/u/overflow";
+import { is, maxBs, maxIs } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { ComboBox, Description, Item, Label } from "sdxc/ui";
+import { comboboxFilter } from "sdxc/ui/mixins";
+import { floatingSurface, surfaceInset } from "sdxc/ui/styles";
 
 /** The zones a scheduling form offers, each searchable by city, country or offset. */
 const ZONES = [

@@ -12,13 +12,13 @@ A JSON Pointer names a value inside a JSON document as a `/`-separated path. A m
 named `a/b` is written `/a~1b`, and a `~` in a name is written `~0`, so the pointer still
 points at that member. The empty string is the whole document.
 
-[`@sdxc/json-pointer`](/api/json-pointer) is that encoding. Fallible calls return a
-[`@sdxc/result`](/api/result), so a missing path is a branch rather than `undefined`.
-[`@sdxc/problem`](/api/problem) writes the same pointers onto validation issues, and
-[`@sdxc/merge-patch`](/api/merge-patch) names the member a patch cannot express.
+[`sdxc/json-pointer`](/api/json-pointer) is that encoding. Fallible calls return a
+[`sdxc/result`](/api/result), so a missing path is a branch rather than `undefined`.
+[`sdxc/problem`](/api/problem) writes the same pointers onto validation issues, and
+[`sdxc/merge-patch`](/api/merge-patch) names the member a patch cannot express.
 
 ```bash
-npm add @sdxc/json-pointer @sdxc/result
+npm add sdxc remix
 ```
 
 ## Parse and stringify
@@ -27,8 +27,8 @@ npm add @sdxc/json-pointer @sdxc/result
 are stringified, so `0` and `"0"` select the same array index.
 
 ```typescript {% title="app/services/pointers.ts" %}
-import { parse, stringify } from "@sdxc/json-pointer";
-import { unwrap } from "@sdxc/result";
+import { parse, stringify } from "sdxc/json-pointer";
+import { unwrap } from "sdxc/result";
 
 stringify(["users", 0, "a/b"]); // "/users/0/a~1b"
 unwrap(parse("/users/0/a~1b")); // ["users", "0", "a/b"]
@@ -45,8 +45,8 @@ fails. Callers that already hold segments skip `parse` and pass them to `stringi
 walk through a scalar fails, so a `null` at that path and an absent path stay distinct.
 
 ```typescript {% title="app/services/read-field.ts" %}
-import { get } from "@sdxc/json-pointer";
-import { isFailure } from "@sdxc/result";
+import { get } from "sdxc/json-pointer";
+import { isFailure } from "sdxc/result";
 
 let document = { foo: ["bar", "baz"], "a/b": 1 };
 
@@ -72,8 +72,8 @@ parents is JSON Patch `add`, not this assignment. The empty pointer replaces the
 `undefined` is not a JSON value and fails.
 
 ```typescript {% title="app/services/write-field.ts" %}
-import { set } from "@sdxc/json-pointer";
-import { isFailure } from "@sdxc/result";
+import { set } from "sdxc/json-pointer";
+import { isFailure } from "sdxc/result";
 
 let next = set({ a: { b: 1 } }, "/a/b", 2);
 if (isFailure(next)) throw next.error;
@@ -93,11 +93,11 @@ A key named `__proto__` is stored as data. The original document is left unchang
 
 Flatten a schema path to keys, then `stringify`, so a member named `a/b` still points at
 itself in a problem's `errors` list.
-[`issuesFrom`](/docs/http-apis/json-apis) in `@sdxc/problem` does this for Standard Schema
+[`issuesFrom`](/docs/http-apis/json-apis) in `sdxc/problem` does this for Standard Schema
 issues. Reach for `stringify` when the path is yours:
 
 ```typescript {% title="app/services/to-pointer.ts" %}
-import { stringify } from "@sdxc/json-pointer";
+import { stringify } from "sdxc/json-pointer";
 
 export function toPointer(
 	path: readonly (string | number | { key: string | number })[],
@@ -111,8 +111,8 @@ toPointer([{ key: "users" }, { key: 0 }, "a/b"]); // "/users/0/a~1b"
 ```
 
 A merge-patch `diff` that would set a member to a literal `null` fails with that member's
-pointer on `UnrepresentableChangeError`. `@sdxc/json-schema` conversion errors and
-`@sdxc/well-known` JSON document issues name the same locations.
+pointer on `UnrepresentableChangeError`. `sdxc/json-schema` conversion errors and
+`sdxc/well-known` JSON document issues name the same locations.
 
 ## Where to go next
 
@@ -122,4 +122,4 @@ pointer on `UnrepresentableChangeError`. `@sdxc/json-schema` conversion errors a
   express a `null` names the member with a pointer.
 - [Describe your API with OpenAPI](/docs/http-apis/openapi) — schema conversion failures
   point at the combinator that has no JSON Schema form.
-- [`@sdxc/json-pointer`](/api/json-pointer) — every error type and the empty-pointer cases.
+- [`sdxc/json-pointer`](/api/json-pointer) — every error type and the empty-pointer cases.

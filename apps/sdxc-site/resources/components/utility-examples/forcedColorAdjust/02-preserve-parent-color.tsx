@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { forcedColorAdjust } from "@sdxc/u/a11y";
-import { fg, fill } from "@sdxc/u/color";
-import { gap, inlineFlex } from "@sdxc/u/layout";
-import { forcedColors } from "@sdxc/u/responsive";
+import { forcedColorAdjust } from "sdxc/u/a11y";
+import { fg, fill } from "sdxc/u/color";
+import { gap, inlineFlex } from "sdxc/u/layout";
+import { forcedColors } from "sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { stroke, strokeLinecap, strokeWidth } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
+import { stroke, strokeLinecap, strokeWidth } from "sdxc/u/color";
+import { raw } from "sdxc/u/general";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

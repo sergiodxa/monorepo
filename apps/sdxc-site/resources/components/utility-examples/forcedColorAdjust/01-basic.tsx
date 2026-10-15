@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { forcedColorAdjust } from "@sdxc/u/a11y";
-import { bg, fg } from "@sdxc/u/color";
-import { forcedColors } from "@sdxc/u/responsive";
+import { forcedColorAdjust } from "sdxc/u/a11y";
+import { bg, fg } from "sdxc/u/color";
+import { forcedColors } from "sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

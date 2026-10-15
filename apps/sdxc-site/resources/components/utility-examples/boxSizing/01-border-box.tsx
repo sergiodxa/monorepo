@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border } from "@sdxc/u/color";
-import { boxSizing } from "@sdxc/u/layout";
-import { bs, is, p } from "@sdxc/u/size";
+import { border } from "sdxc/u/color";
+import { boxSizing } from "sdxc/u/layout";
+import { bs, is, p } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

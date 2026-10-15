@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { container, flex, flexCol, flexRow, gap } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
-import { is } from "@sdxc/u/size";
+import { container, flex, flexCol, flexRow, gap } from "sdxc/u/layout";
+import { at } from "sdxc/u/responsive";
+import { is } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

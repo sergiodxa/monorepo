@@ -15,12 +15,12 @@
 
 import type { Handle } from "remix/component";
 
-import { BellIcon, MailIcon, SmartphoneIcon } from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { Description, Header, Item, Switch } from "@sdxc/ui";
-import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { BellIcon, MailIcon, SmartphoneIcon } from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { Description, Header, Item, Switch } from "sdxc/ui";
+import { ariaChecked } from "sdxc/ui/mixins";
 
 /** The rows the list holds, each with the channel it governs. */
 const CHANNELS = [

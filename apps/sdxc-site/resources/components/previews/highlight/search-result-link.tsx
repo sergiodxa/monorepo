@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Highlight, Link } from "@sdxc/ui";
+import { Highlight, Link } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Link href="/examples/guides/routing">

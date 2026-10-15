@@ -12,13 +12,13 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { pis } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Checkbox, Separator } from "@sdxc/ui";
-import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { pis } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Checkbox, Separator } from "sdxc/ui";
+import { ariaChecked } from "sdxc/ui/mixins";
 
 /** The scopes a deploy token can be granted, in the order the form lists them. */
 const SCOPES = [

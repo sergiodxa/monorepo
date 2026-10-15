@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, conicGradient } from "@sdxc/u/color";
-import { bs, circle, is } from "@sdxc/u/size";
+import { bg, conicGradient } from "sdxc/u/color";
+import { bs, circle, is } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

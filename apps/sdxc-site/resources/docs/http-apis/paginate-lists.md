@@ -14,14 +14,14 @@ and when by keyset, what the page parameters accept, what the `Link` header carr
 client walks it, and how the same pages render as HTML with a numbered pager or older and
 newer links.
 
-[`@sdxc/pagination`](/api/pagination) does the paging and writes the headers,
-[`@sdxc/link-header`](/api/link-header) reads them,
-[`@sdxc/ui`](/api/ui) draws the pager, [`@sdxc/problem`](/api/problem) and
-[`@sdxc/http`](/api/http) answer the failures, and [`@sdxc/result`](/api/result) carries
+[`sdxc/pagination`](/api/pagination) does the paging and writes the headers,
+[`sdxc/link-header`](/api/link-header) reads them,
+[`sdxc/ui`](/api/ui) draws the pager, [`sdxc/problem`](/api/problem) and
+[`sdxc/http`](/api/http) answer the failures, and [`sdxc/result`](/api/result) carries
 them.
 
 ```bash
-npm add @sdxc/pagination @sdxc/link-header @sdxc/ui @sdxc/problem @sdxc/http @sdxc/result
+npm add sdxc remix
 ```
 
 ## Offset or keyset
@@ -52,7 +52,7 @@ The parameters arrive as untrusted text, and the names you parse must be the nam
 page size, so every list in the app agrees:
 
 ```typescript {% title="app/http/paging.ts" %}
-import { createPaging } from "@sdxc/pagination";
+import { createPaging } from "sdxc/pagination";
 
 export const paging = createPaging({
 	names: { perPage: "per_page" },
@@ -76,10 +76,10 @@ Two invoices created in the same second would otherwise trade places between the
 page 2 and the one for page 3, and one of them would show twice.
 
 ```typescript {% title="app/http/controllers/api/invoices/index.ts" %}
-import { ok } from "@sdxc/http/response/json";
-import { Pagination } from "@sdxc/pagination";
-import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { ok } from "sdxc/http/response/json";
+import { Pagination } from "sdxc/pagination";
+import { issuesFrom } from "sdxc/problem";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { serializeInvoice } from "~/app/models/invoice";
@@ -142,10 +142,10 @@ your internal hostname.
 
 A client should follow `rel="next"` instead of building URLs itself. The server can then
 change strategies, rename a parameter or add a filter without breaking anyone. `parse` from
-`@sdxc/link-header` reads the header, from this API or any other:
+`sdxc/link-header` reads the header, from this API or any other:
 
 ```typescript {% title="app/services/walk-pages.ts" %}
-import { parse } from "@sdxc/link-header";
+import { parse } from "sdxc/link-header";
 
 export async function* walkPages(start: URL, init?: RequestInit) {
 	let next: string | null = start.toString();
@@ -171,14 +171,14 @@ For a typed client with schemas on each response, see
 
 `pagination.series()` computes the pager: the first and last pages, a window around the
 current one, and a gap marker only where numbers are left out. Each item says what it is, so
-rendering it takes a branch per item and no arithmetic. `@sdxc/ui`'s `Pagination` is the
+rendering it takes a branch per item and no arithmetic. `sdxc/ui`'s `Pagination` is the
 `<nav>` landmark, list and links the items render into:
 
 ```tsx {% title="resources/views/pager.tsx" %}
-import type { Pagination as Page } from "@sdxc/pagination";
+import type { Pagination as Page } from "sdxc/pagination";
 import type { Handle } from "remix/component";
 
-import { Pagination } from "@sdxc/ui";
+import { Pagination } from "sdxc/ui";
 
 interface PagerProps {
 	label: string;
@@ -235,10 +235,10 @@ The page's handler parses the same way the API's does, but a visitor cannot act 
 validation error, so a bad parameter redirects to the first page instead:
 
 ```tsx {% title="app/http/controllers/invoices/index.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { internalServerError } from "@sdxc/http/response/html";
-import { Pagination } from "@sdxc/pagination";
-import { isFailure } from "@sdxc/result";
+import { redirect } from "sdxc/http/response";
+import { internalServerError } from "sdxc/http/response/html";
+import { Pagination } from "sdxc/pagination";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { paging } from "~/app/http/paging";
@@ -287,11 +287,11 @@ points back. A single `cursor` parameter carries both, because the direction rid
 opaque value:
 
 ```tsx {% title="app/http/controllers/activity/index.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { internalServerError } from "@sdxc/http/response/html";
-import { InvalidCursorError, Pagination as Paging } from "@sdxc/pagination";
-import { isFailure } from "@sdxc/result";
-import { Pagination } from "@sdxc/ui";
+import { redirect } from "sdxc/http/response";
+import { internalServerError } from "sdxc/http/response/html";
+import { InvalidCursorError, Pagination as Paging } from "sdxc/pagination";
+import { isFailure } from "sdxc/result";
+import { Pagination } from "sdxc/ui";
 import { createAction } from "remix/router";
 
 import { paging } from "~/app/http/paging";
@@ -370,5 +370,5 @@ which is how `cursors.next` comes back `null` on the last page without a count.
   the layout and components the HTML lists render into.
 - [Parse and write Link headers](/docs/http-apis/link-header): merge, `raw`, and a header
   that is not a pager.
-- [`@sdxc/pagination`](/api/pagination): every option, `toJSON()` for an envelope, and the
+- [`sdxc/pagination`](/api/pagination): every option, `toJSON()` for an envelope, and the
   cursor functions.

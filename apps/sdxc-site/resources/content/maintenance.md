@@ -35,7 +35,8 @@ same as being maintained.
 ```json {% title="package.json" %}
 {
 	"dependencies": {
-		"@sdxc/result": "2026.9.21"
+		"remix": "3.0.0",
+		"sdxc": "2026.9.21"
 	}
 }
 ```

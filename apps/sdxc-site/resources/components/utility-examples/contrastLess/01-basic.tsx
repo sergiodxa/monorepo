@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border } from "@sdxc/u/color";
-import { contrastLess } from "@sdxc/u/responsive";
+import { border } from "sdxc/u/color";
+import { contrastLess } from "sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

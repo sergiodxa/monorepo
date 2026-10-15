@@ -77,6 +77,22 @@ describe("GET /api/:name", () => {
 		expect(body).toContain("uptime");
 	});
 
+	test("installs a package with the peers it needs, and names its sdxc subpath", async () => {
+		let body = await (await fetchApp("/api/http")).text();
+
+		expect(body).toContain("npm add @sdxc/http remix");
+		expect(body).toContain("sdxc/http</a>");
+	});
+
+	test("links the package list from the sdxc page in place of naming every dependency", async () => {
+		let body = await (await fetchApp("/api/sdxc")).text();
+
+		expect(body).toContain("npm add sdxc remix");
+		expect(body).toMatch(
+			/Installs with<\/dt><dd[^>]*><a[^>]*href="\/api"[^>]*>\d+ packages<\/a><\/dd>/,
+		);
+	});
+
 	test("rewrites a sibling's npm link to its page here", async () => {
 		let body = await (await fetchApp("/api/markdown")).text();
 
@@ -120,7 +136,7 @@ describe("GET /api/ui/:subpath/:slug", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(body).toContain("@sdxc/ui/mixins");
+		expect(body).toContain("sdxc/ui/mixins");
 		expect(body).toContain('id="export-copyevent"');
 	});
 

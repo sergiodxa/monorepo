@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { transition, transitionDelay } from "@sdxc/u/effects";
-import { when } from "@sdxc/u/state";
-import { translateY } from "@sdxc/u/transform";
+import { transition, transitionDelay } from "sdxc/u/effects";
+import { when } from "sdxc/u/state";
+import { translateY } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

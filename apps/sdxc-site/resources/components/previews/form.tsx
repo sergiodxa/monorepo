@@ -13,8 +13,9 @@
 import type { Handle } from "remix/component";
 import type { Issue } from "remix/data-schema";
 
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
+import { clientEntry, on } from "remix/component";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
 import {
 	Alert,
 	Button,
@@ -25,8 +26,7 @@ import {
 	NumberField,
 	Select,
 	TextField,
-} from "@sdxc/ui";
-import { clientEntry, on } from "remix/component";
+} from "sdxc/ui";
 
 import { checkNewWorkspace, issueFor } from "~/app/services/preview-form-schemas";
 

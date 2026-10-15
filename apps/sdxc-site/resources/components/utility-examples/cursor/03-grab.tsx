@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { cursor } from "@sdxc/u/general";
-import { active } from "@sdxc/u/state";
+import { cursor } from "sdxc/u/general";
+import { active } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ChevronDownIcon } from "@sdxc/icons";
-import { Accordion } from "@sdxc/ui";
+import { ChevronDownIcon } from "sdxc/icons";
+import { Accordion } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Accordion>

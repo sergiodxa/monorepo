@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { m, maxIs } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { Link } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { m, maxIs } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { Link } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<div mix={[vstack({ gap: 3, align: "stretch" })]}>

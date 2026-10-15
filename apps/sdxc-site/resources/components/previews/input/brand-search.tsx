@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Input } from "@sdxc/ui";
+import { Input } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Input

@@ -13,13 +13,13 @@ was created, so it retries and creates a second one. Two clients read the same b
 edit it, and the second write erases the first without anyone noticing. This guide closes
 both gaps in the books API from [Build a JSON API with problem details](/docs/http-apis/json-apis).
 
-[`@sdxc/idempotency`](/api/idempotency) replays the first outcome of a request sent again with
-the same `Idempotency-Key`. [`@sdxc/merge-patch`](/api/merge-patch) reads and applies RFC 7396
-patches, so an update sends only what changes. The `@sdxc/http/cache` subpath of
-[`@sdxc/http`](/api/http) hands out an `ETag` and checks it back on the write.
+[`sdxc/idempotency`](/api/idempotency) replays the first outcome of a request sent again with
+the same `Idempotency-Key`. [`sdxc/merge-patch`](/api/merge-patch) reads and applies RFC 7396
+patches, so an update sends only what changes. The `sdxc/http/cache` subpath of
+[`sdxc/http`](/api/http) hands out an `ETag` and checks it back on the write.
 
 ```bash
-npm add @sdxc/idempotency @sdxc/merge-patch @sdxc/http
+npm add sdxc remix
 ```
 
 ## Extend the problem catalog
@@ -29,8 +29,8 @@ every other failure. `IDEMPOTENCY_PROBLEM_ENTRIES` holds the four entries the mi
 answers with, keyed by the builder names it calls.
 
 ```typescript {% title="app/services/problems.ts" %}
-import { IDEMPOTENCY_PROBLEM_ENTRIES } from "@sdxc/idempotency";
-import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
+import { IDEMPOTENCY_PROBLEM_ENTRIES } from "sdxc/idempotency";
+import { defineProblems, ISSUES_SCHEMA } from "sdxc/problem";
 import * as s from "remix/data-schema";
 
 export const problems = defineProblems("https://books.example.com/docs/errors/", {
@@ -81,8 +81,8 @@ claim, and `DataTableStore` provides it with a single conditional upsert, which 
 well as Durable Object SQLite.
 
 ```typescript {% title="app/http/middleware/idempotency.ts" %}
-import { DataTableStore } from "@sdxc/idempotency/data-table";
-import { idempotency } from "@sdxc/idempotency/middleware";
+import { DataTableStore } from "sdxc/idempotency/data-table";
+import { idempotency } from "sdxc/idempotency/middleware";
 
 import { problems } from "~/app/services/problems";
 
@@ -109,10 +109,10 @@ Mount it on the create action only. The handler is the one from the first guide,
 into `handler` so the action can take `middleware`:
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
-import { created } from "@sdxc/http/response/json";
-import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { created } from "sdxc/http/response/json";
+import { issuesFrom } from "sdxc/problem";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
@@ -167,8 +167,8 @@ flowchart TD
 A client mints the key once per operation and reuses it on every attempt:
 
 ```typescript
-import { generateIdempotencyKey, withIdempotencyKey } from "@sdxc/idempotency/client";
-import { unwrap } from "@sdxc/result";
+import { generateIdempotencyKey, withIdempotencyKey } from "sdxc/idempotency/client";
+import { unwrap } from "sdxc/result";
 
 let body = JSON.stringify({
 	title: "Kindred",
@@ -195,9 +195,9 @@ A conditional write needs a validator from the read. `etag` hashes the body into
 tag, and `conditional` turns the response into a `304` when the client already holds it.
 
 ```typescript {% title="app/http/controllers/api/books/show.ts" %}
-import { conditional, etag, Policies } from "@sdxc/http/cache";
-import { ok } from "@sdxc/http/response/json";
-import { isSuccess } from "@sdxc/result";
+import { conditional, etag, Policies } from "sdxc/http/cache";
+import { ok } from "sdxc/http/response/json";
+import { isSuccess } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
@@ -230,7 +230,7 @@ The patch applies to the book's writable members as the API spells them, with un
 left out, since absence is how a merge patch represents them:
 
 ```typescript {% title="app/http/controllers/api/books/writable-book.ts" %}
-import type { JSONObject } from "@sdxc/merge-patch";
+import type { JSONObject } from "sdxc/merge-patch";
 
 import type { BookRow } from "~/app/models/book";
 
@@ -249,12 +249,12 @@ The update action checks the client's tag, reads the patch, applies it to that t
 validates the result:
 
 ```typescript {% title="app/http/controllers/api/books/update.ts" %}
-import { etag, precondition } from "@sdxc/http/cache";
-import { ok } from "@sdxc/http/response/json";
-import { applyValidated, MEDIA_TYPE } from "@sdxc/merge-patch";
-import { readMergePatch } from "@sdxc/merge-patch/request";
-import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { etag, precondition } from "sdxc/http/cache";
+import { ok } from "sdxc/http/response/json";
+import { applyValidated, MEDIA_TYPE } from "sdxc/merge-patch";
+import { readMergePatch } from "sdxc/merge-patch/request";
+import { issuesFrom } from "sdxc/problem";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
@@ -307,7 +307,7 @@ schema, so create and update share one set of limits. A patch removing `title` f
 log only what changed, `diff(writableBook(book), next.data)` answers the smallest patch between
 the two. A `diff` that would set a member to a literal `null` fails with that member's
 JSON Pointer on `UnrepresentableChangeError`, encoded by
-[`@sdxc/json-pointer`](/api/json-pointer).
+[`sdxc/json-pointer`](/api/json-pointer).
 
 ## Send a patch
 
@@ -316,9 +316,9 @@ where the member itself is optional, so a patch that would remove a required fie
 compile.
 
 ```typescript
-import type { MergePatchOf } from "@sdxc/merge-patch";
+import type { MergePatchOf } from "sdxc/merge-patch";
 
-import { MEDIA_TYPE, stringify } from "@sdxc/merge-patch";
+import { MEDIA_TYPE, stringify } from "sdxc/merge-patch";
 
 interface Book {
 	title: string;

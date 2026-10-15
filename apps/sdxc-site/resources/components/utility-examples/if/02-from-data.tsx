@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import * as u from "@sdxc/u/general";
-import { hstack } from "@sdxc/u/layout";
-import { maxIs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { fg } from "sdxc/u/color";
+import * as u from "sdxc/u/general";
+import { hstack } from "sdxc/u/layout";
+import { maxIs } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

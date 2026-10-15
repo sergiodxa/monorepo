@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { borderSpacing } from "@sdxc/u/layout";
-import { p } from "@sdxc/u/size";
-import { where } from "@sdxc/u/state";
-import { text } from "@sdxc/u/typography";
+import { border } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { borderSpacing } from "sdxc/u/layout";
+import { p } from "sdxc/u/size";
+import { where } from "sdxc/u/state";
+import { text } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 
@@ -40,11 +40,11 @@ export default {
 			</thead>
 			<tbody>
 				<tr>
-					<td>@sdxc/u</td>
+					<td>sdxc/u</td>
 					<td>layout</td>
 				</tr>
 				<tr>
-					<td>@sdxc/u</td>
+					<td>sdxc/u</td>
 					<td>color</td>
 				</tr>
 			</tbody>

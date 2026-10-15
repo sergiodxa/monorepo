@@ -13,13 +13,13 @@ either the frontmatter or the line the document went wrong on. It uses three pac
 no `try` in it.
 
 ```bash
-npm add @sdxc/markdown @sdxc/response @sdxc/result
+npm add sdxc remix
 ```
 
 ```typescript
-import { Markdown } from "@sdxc/markdown";
-import { badRequest, methodNotAllowed, ok } from "@sdxc/response";
-import { isFailure } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { badRequest, methodNotAllowed, ok } from "sdxc/response";
+import { isFailure } from "sdxc/result";
 import * as s from "remix/data-schema";
 
 let Frontmatter = s.object({
@@ -65,7 +65,7 @@ parse gave up, so the response tells the client which line to fix instead of tha
 somewhere, was wrong.
 
 **The response helpers name the status.** `ok`, `badRequest` and `methodNotAllowed` are
-[`@sdxc/response`](/api/response): each writes its status, its status text and its
+[`sdxc/response`](/api/response): each writes its status, its status text and its
 JSON content type, and merges an `ok` field into the body so a client has one field to branch
 on.
 

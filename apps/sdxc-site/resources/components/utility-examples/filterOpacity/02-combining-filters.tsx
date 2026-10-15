@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { blur, filterOpacity, grayscale } from "@sdxc/u/effects";
+import { blur, filterOpacity, grayscale } from "sdxc/u/effects";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

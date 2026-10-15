@@ -10,7 +10,7 @@ lastUpdated: 2026-10-11
 
 Once an app has more than a few tables, the code around them settles into a pattern: a module
 per table with `findBy…` and `listBy…` functions that all take the database first, plus some
-place where a write enqueues a job or sends a mail. [`@sdxc/data-model`](/api/data-model)
+place where a write enqueues a job or sends a mail. [`sdxc/data-model`](/api/data-model)
 is that layer, written once. A model is a `remix/data-table` table plus named scopes, custom
 methods and async callbacks. It is bound to a database once per request, job or test, and every
 member runs there.
@@ -22,8 +22,7 @@ them; the database setup is the one from
 [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
 
 ```bash
-npm add @sdxc/data-model @sdxc/result @sdxc/validate remix
-npm add -D @sdxc/sample
+npm add sdxc remix
 ```
 
 ## Define a model
@@ -33,8 +32,8 @@ a default scope is one every read applies; methods run with `this` bound to the 
 compose its scopes and each other; callbacks run around every write made through the model:
 
 ```typescript {% title="app/models/users.ts" %}
-import { createModel } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid/v7";
+import { createModel } from "sdxc/data-model";
+import { generateUUID } from "sdxc/uuid/v7";
 import { fail } from "remix/data-table";
 
 import { users } from "~/database/schema";
@@ -81,7 +80,7 @@ does a method or scope named like a member the model already has, such as `exist
 Bind the definition to a database and use it:
 
 ```typescript
-import { isFailure } from "@sdxc/result";
+import { isFailure } from "sdxc/result";
 
 let users = Users.bind({ db });
 
@@ -94,7 +93,7 @@ await users.unscoped().where({ id }).first(); // including a deleted one
 ```
 
 Reads answer `null` for a missing row. Writes answer a `Result`: a `ValidationError` from
-[`@sdxc/validate`](/api/validate) when a callback, the table's own hooks or a database
+[`sdxc/validate`](/api/validate) when a callback, the table's own hooks or a database
 constraint refuses the write, and `NotFound` when an update or delete names a key the model has
 no row for. A constraint the database enforces comes back as a `ConstraintViolation`, a
 `ValidationError` with its issue at the indexed column, so a form renders the duplicate email
@@ -104,11 +103,11 @@ the same way it renders a failed schema, and code that treats a duplicate differ
 A table that declares its key as `primaryKey: ["id"]` still takes the key as a plain value:
 `users.find(id)`, `users.update(id, values)`.
 
-Every scope returns a real data-table query, so [`@sdxc/pagination`](/api/pagination) pages it
+Every scope returns a real data-table query, so [`sdxc/pagination`](/api/pagination) pages it
 unchanged:
 
 ```typescript
-import { Pagination } from "@sdxc/pagination";
+import { Pagination } from "sdxc/pagination";
 
 let page = await Pagination.byOffset(users.inTeam(teamId).orderBy("name", "asc"), {
 	page: 1,
@@ -126,7 +125,7 @@ which loads the module on its first call in each request, so a request evaluates
 models it touches:
 
 ```typescript {% title="app/models/index.ts" %}
-import { createModels } from "@sdxc/data-model";
+import { createModels } from "sdxc/data-model";
 
 import { Users } from "./users";
 
@@ -141,7 +140,7 @@ from the request context, once, on the first model access, so it reads whatever 
 middleware published, such as the database on `ctx.db`:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { models as modelsMiddleware } from "@sdxc/data-model/router";
+import { models as modelsMiddleware } from "sdxc/data-model/router";
 import { createRouter } from "remix/router";
 
 import database from "~/app/http/middleware/database";
@@ -167,11 +166,11 @@ export function createWebRouter() {
 
 An MCP tool mounted on the router runs on the same request context, so it reads
 `ctx.get(Models)` the same way. A job dispatcher takes the counterpart from
-`@sdxc/data-model/jobs`, given the database its own middleware published:
+`sdxc/data-model/jobs`, given the database its own middleware published:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
-import { createJobDispatcher } from "@sdxc/jobs";
+import { models as modelsMiddleware } from "sdxc/data-model/jobs";
+import { createJobDispatcher } from "sdxc/jobs";
 
 import { Database, database } from "~/app/jobs/middleware/database";
 import { models } from "~/app/models";
@@ -195,8 +194,8 @@ model is bound to, and `get(key)`, which reads what the host context published. 
 depends on, you declare on the interface, and every binding then has to supply it:
 
 ```typescript {% title="config/model-context.d.ts" %}
-import type { BoundModels } from "@sdxc/data-model";
-import type { JobEnqueuer } from "@sdxc/jobs";
+import type { BoundModels } from "sdxc/data-model";
+import type { JobEnqueuer } from "sdxc/jobs";
 
 import type { Articles } from "~/app/models/articles";
 import type { Users } from "~/app/models/users";
@@ -213,6 +212,9 @@ declare module "@sdxc/data-model" {
 	}
 }
 ```
+
+The block names `@sdxc/data-model`, the module that declares `ModelContext`, as
+[every augmentation does](/docs/getting-started/install-and-pin#augment-a-package-by-its-own-name).
 
 `models` is always there at runtime: the rest of the registry, bound to the same request and
 unit of work. The declaration types it from an interface of the entries, which resolves each
@@ -240,7 +242,7 @@ export const Users = createModel(users, {
 A callback reads `ctx.jobs` directly:
 
 ```typescript {% title="app/models/users.ts" %}
-import { createModel } from "@sdxc/data-model";
+import { createModel } from "sdxc/data-model";
 
 import jobs from "~/app/jobs";
 
@@ -271,7 +273,7 @@ waits for the whole callback, and runs only when the callback resolves with some
 a `Failure`:
 
 ```typescript
-import { isFailure } from "@sdxc/result";
+import { isFailure } from "sdxc/result";
 
 let result = await ctx.models.transaction(async (models) => {
 	let user = await models.users.create({ email, name });
@@ -322,8 +324,8 @@ registry types its models' context with `withContext`, which answers a `createMo
 callbacks and `this.context` read that context instead of the global `ModelContext`:
 
 ```typescript {% title="app/models/feed/context.ts" %}
-import type { BoundModels, ModelContext } from "@sdxc/data-model";
-import { withContext } from "@sdxc/data-model";
+import type { BoundModels, ModelContext } from "sdxc/data-model";
+import { withContext } from "sdxc/data-model";
 
 import type { Feeds } from "./feeds";
 import type { Items } from "./items";
@@ -351,7 +353,7 @@ discriminator column can be extended once per value. Every query of a sub-model 
 value, every create writes it, and a key belonging to another type answers `NotFound`:
 
 ```typescript {% title="app/models/posts.ts" %}
-import { createModel } from "@sdxc/data-model";
+import { createModel } from "sdxc/data-model";
 import { fail } from "remix/data-table";
 
 export const Posts = createModel(posts, {
@@ -381,8 +383,8 @@ live in a key/value table beside the main one. A model names that table once and
 fields over it; rows then carry a decoded `meta` object:
 
 ```typescript {% title="app/models/articles.ts" %}
-import { field } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid/v7";
+import { field } from "sdxc/data-model";
+import { generateUUID } from "sdxc/uuid/v7";
 
 import { postMeta } from "~/database/schema";
 
@@ -442,7 +444,7 @@ latest row, so a failure between the two statements on D1 still reads the new va
 once for every model, and its optional shape narrows it to models whose rows have those columns:
 
 ```typescript {% title="app/models/helpers.ts" %}
-import type { AnyModel, BoundModel, ModelRow } from "@sdxc/data-model";
+import type { AnyModel, BoundModel, ModelRow } from "sdxc/data-model";
 
 export async function findOr404<M extends AnyModel>(
 	model: BoundModel<M>,
@@ -466,12 +468,12 @@ export async function forPost<M extends AnyModel<{ post_id: string }>>(
 
 ## Build test data with factories
 
-`@sdxc/data-model/testing` defines factories whose attributes draw from
-[`@sdxc/sample`](/api/sample) and write through the model, so callbacks, constraints and meta
+`sdxc/data-model/testing` defines factories whose attributes draw from
+[`sdxc/sample`](/api/sample) and write through the model, so callbacks, constraints and meta
 run in a fixture exactly as in production:
 
 ```typescript {% title="database/factories/index.ts" %}
-import { defineFactory } from "@sdxc/data-model/testing";
+import { defineFactory } from "sdxc/data-model/testing";
 
 export const UserFactory = defineFactory(Users, {
 	name: ({ sample }) => sample.person.fullName(),
@@ -488,7 +490,7 @@ export const ArticleFactory = defineFactory(Articles, {
 ```
 
 ```typescript {% title="app/models/articles.test.ts" %}
-import { createFactories } from "@sdxc/data-model/testing";
+import { createFactories } from "sdxc/data-model/testing";
 
 test("keeps drafts out of the published list", async () => {
 	let models = createModels({ users: Users, articles: Articles }).bind({ db });
@@ -514,7 +516,7 @@ bound copy. `overrideModel` applies to every binding until it is restored, inclu
 registry the router binds per request, and hands you the original members to wrap:
 
 ```typescript
-import { overrideModel, publishModels } from "@sdxc/data-model/testing";
+import { overrideModel, publishModels } from "sdxc/data-model/testing";
 
 let restore = overrideModel(Users, (users) => ({ create: vi.fn(users.create) }));
 afterEach(() => restore());
@@ -534,4 +536,4 @@ handler with a context it built by hand.
   `afterCommit` callback enqueues.
 - [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) — wrap a search
   query with `from()` so a model's scopes apply to it.
-- [`@sdxc/data-model`](/api/data-model) — every option, member and type.
+- [`sdxc/data-model`](/api/data-model) — every option, member and type.

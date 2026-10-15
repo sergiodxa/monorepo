@@ -11,19 +11,19 @@
 
 import type { Handle } from "remix/component";
 
-import { ArrowDownIcon, ArrowUpIcon, MessageSquareDashedIcon, RotateCwIcon } from "@sdxc/icons";
-import { bg, border, borderEdge } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { center, grow, hidden, hstack, vstack } from "@sdxc/u/layout";
-import { clip } from "@sdxc/u/overflow";
-import { bs, is, m, minBs, p } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { text, textAlign, weight } from "@sdxc/u/typography";
-import { Bubble, Button, Heading, HeadingScope, Input, MessageScroller, Text } from "@sdxc/ui";
-import { scrollFade } from "@sdxc/ui/animations";
-import { ScrollFollowModel } from "@sdxc/ui/behaviors";
-import { messageFollow } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { ArrowDownIcon, ArrowUpIcon, MessageSquareDashedIcon, RotateCwIcon } from "sdxc/icons";
+import { bg, border, borderEdge } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { center, grow, hidden, hstack, vstack } from "sdxc/u/layout";
+import { clip } from "sdxc/u/overflow";
+import { bs, is, m, minBs, p } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
+import { text, textAlign, weight } from "sdxc/u/typography";
+import { Bubble, Button, Heading, HeadingScope, Input, MessageScroller, Text } from "sdxc/ui";
+import { scrollFade } from "sdxc/ui/animations";
+import { ScrollFollowModel } from "sdxc/ui/behaviors";
+import { messageFollow } from "sdxc/ui/mixins";
 
 /** One exchange the Send button plays, so every press adds a question and its answer. */
 interface Exchange {

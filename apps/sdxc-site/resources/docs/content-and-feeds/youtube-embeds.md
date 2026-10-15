@@ -11,11 +11,11 @@ lastUpdated: 2026-10-13
 An author sharing a video pastes its URL, the way they would in a chat. This guide turns that
 URL into a player when the post renders: the markdown stays a plain link that reads fine on
 GitHub and in an editor, and the page shows the video. It uses the `embeds` plugin from
-[`@sdxc/markdown`](/api/markdown) to find the URL and
-[`YouTubeEmbed`](/api/ui/youtube-embed) from [`@sdxc/ui`](/api/ui) to draw the player.
+[`sdxc/markdown`](/api/markdown) to find the URL and
+[`YouTubeEmbed`](/api/ui/youtube-embed) from [`sdxc/ui`](/api/ui) to draw the player.
 
 ```bash
-npm add @sdxc/markdown @sdxc/ui @sdxc/result remix
+npm add sdxc remix
 ```
 
 The player loads from `www.youtube-nocookie.com`, so a reader receives no YouTube cookies until
@@ -57,9 +57,9 @@ which announce it before a reader enters the frame.
 pasted YouTube URL with a `youtube` tag and leaves every other paragraph as it was:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { embeds, youtube } from "@sdxc/markdown/plugin/embeds";
-import { unwrap } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { embeds, youtube } from "sdxc/markdown/plugin/embeds";
+import { unwrap } from "sdxc/result";
 
 export function preparePost(source: string) {
 	let { document } = unwrap(Markdown.parse(source));
@@ -98,7 +98,7 @@ maps the tag's attributes onto it, and supplies a title when the author wrote no
 ```tsx {% title="resources/components/youtube-tag.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import { YouTubeEmbed } from "@sdxc/ui";
+import { YouTubeEmbed } from "sdxc/ui";
 
 export function YouTubeTag(
 	handle: Handle<{
@@ -122,9 +122,9 @@ export function YouTubeTag(
 Register it under the tag's name when you render the document:
 
 ```tsx {% title="app/services/content/render-post.tsx" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { toRemix } from "@sdxc/markdown/remix";
+import { toRemix } from "sdxc/markdown/remix";
 
 import { YouTubeTag } from "~/resources/components/youtube-tag";
 
@@ -162,7 +162,7 @@ A page with a `frame-src` directive, or a `default-src` without one, blocks fram
 it does not list. Add the player's host:
 
 ```typescript {% title="config/security-policy.ts" %}
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { SecurityHeaders } from "sdxc/security-headers";
 
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicy: {
@@ -183,10 +183,10 @@ tag without one renders its children, which an embed has none of. Register a ren
 writes the link back:
 
 ```typescript {% title="app/services/content/render-feed.ts" %}
-import type { Markdown } from "@sdxc/markdown";
-import type { HTMLTagRenderer } from "@sdxc/markdown/html";
+import type { Markdown } from "sdxc/markdown";
+import type { HTMLTagRenderer } from "sdxc/markdown/html";
 
-import { toHTML } from "@sdxc/markdown/html";
+import { toHTML } from "sdxc/markdown/html";
 
 const youtubeLink: HTMLTagRenderer = ({ attributes }) => {
 	let url = new URL("https://www.youtube.com/watch");

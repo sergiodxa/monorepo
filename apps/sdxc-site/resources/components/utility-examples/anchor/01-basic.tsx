@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { absolute, anchor, anchorName, center, insBs, insIs, relative } from "@sdxc/u/layout";
-import { bs, is, mbs, p } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
+import { bg, fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { absolute, anchor, anchorName, center, insBs, insIs, relative } from "sdxc/u/layout";
+import { bs, is, mbs, p } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

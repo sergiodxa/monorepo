@@ -14,14 +14,14 @@ the usage they apply to is something your app can count. This guide turns usage 
 an estimated bill, prices a single request so you can see which binding dominates, counts D1
 rows as they are read, and runs a daily job that warns when the month is heading past a budget.
 
-[`@sdxc/cloudflare-pricing`](/api/cloudflare-pricing) holds the Developer Platform list prices,
+[`sdxc/cloudflare-pricing`](/api/cloudflare-pricing) holds the Developer Platform list prices,
 one module per service, with the arithmetic that turns them into cents. It has no dependencies
 and does no work at import time, so it is safe anywhere in a Worker.
-[`@sdxc/data-table-d1`](/api/data-table-d1) reports what each D1 statement read and wrote, and
-[`@sdxc/jobs`](/api/jobs) runs the forecast on a schedule.
+[`sdxc/data-table-d1`](/api/data-table-d1) reports what each D1 statement read and wrote, and
+[`sdxc/jobs`](/api/jobs) runs the forecast on a schedule.
 
 ```bash
-npm add @sdxc/cloudflare-pricing @sdxc/data-table-d1 @sdxc/jobs @sdxc/logger remix
+npm add sdxc remix
 ```
 
 ## A meter is a price and an allowance
@@ -32,8 +32,8 @@ docs print it, what the Workers Paid plan `included`, and the Free plan's `freeL
 `centsPerUnit(meter)` turns the price into cents for one unit:
 
 ```typescript
-import { centsPerUnit } from "@sdxc/cloudflare-pricing";
-import * as Workers from "@sdxc/cloudflare-pricing/workers";
+import { centsPerUnit } from "sdxc/cloudflare-pricing";
+import * as Workers from "sdxc/cloudflare-pricing/workers";
 
 centsPerUnit(Workers.REQUESTS); // 0.00003
 Workers.REQUESTS.included; // { quantity: 10_000_000, period: "month" }
@@ -51,13 +51,13 @@ Pick the meters your app uses and name each one after the usage you will feed it
 month's total before the price applies:
 
 ```typescript {% title="app/services/estimate.ts" %}
-import type { Meter } from "@sdxc/cloudflare-pricing";
+import type { Meter } from "sdxc/cloudflare-pricing";
 
-import { centsPerUnit } from "@sdxc/cloudflare-pricing";
-import * as D1 from "@sdxc/cloudflare-pricing/d1";
-import * as KV from "@sdxc/cloudflare-pricing/kv";
-import * as Queues from "@sdxc/cloudflare-pricing/queues";
-import * as Workers from "@sdxc/cloudflare-pricing/workers";
+import { centsPerUnit } from "sdxc/cloudflare-pricing";
+import * as D1 from "sdxc/cloudflare-pricing/d1";
+import * as KV from "sdxc/cloudflare-pricing/kv";
+import * as Queues from "sdxc/cloudflare-pricing/queues";
+import * as Workers from "sdxc/cloudflare-pricing/workers";
 
 export const METERS = {
 	requests: Workers.REQUESTS,
@@ -115,7 +115,7 @@ at the list rate:
 ```typescript {% title="app/services/unit-cost.ts" %}
 import type { Usage } from "~/app/services/estimate";
 
-import { centsPerUnit } from "@sdxc/cloudflare-pricing";
+import { centsPerUnit } from "sdxc/cloudflare-pricing";
 
 import { METERS } from "~/app/services/estimate";
 
@@ -138,13 +138,13 @@ before you have a bill to worry about. Storage is priced per GB-day for the same
 ## Count what you can measure
 
 Some quantities your app sees directly. D1 returns the rows each statement read and wrote in
-its response `meta`, and `@sdxc/data-table-d1` hands them to an `onStatement` observer, so
+its response `meta`, and `sdxc/data-table-d1` hands them to an `onStatement` observer, so
 counting them costs no extra statement. Adding them to the current log record puts the totals
 on every request's wide event:
 
 ```typescript {% title="app/initializers/database.ts" %}
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
-import { currentLog } from "@sdxc/logger";
+import { createD1DatabaseAdapter } from "sdxc/data-table-d1";
+import { currentLog } from "sdxc/logger";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
@@ -176,7 +176,7 @@ A daily job can take the month so far, project it to the end of the billing mont
 while there is still time to act. Declare it with a cron schedule:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "@sdxc/jobs";
+import { job, jobs } from "sdxc/jobs";
 
 export default jobs({
 	costs: {
@@ -189,8 +189,8 @@ The handler scales every operation meter by the days left and leaves storage alo
 GB-month is already an average over the month:
 
 ```typescript {% title="app/jobs/costs/forecast.ts" %}
-import { DAYS_PER_BILLING_MONTH } from "@sdxc/cloudflare-pricing";
-import { createJobHandler } from "@sdxc/jobs";
+import { DAYS_PER_BILLING_MONTH } from "sdxc/cloudflare-pricing";
+import { createJobHandler } from "sdxc/jobs";
 
 import type { Usage } from "~/app/services/estimate";
 

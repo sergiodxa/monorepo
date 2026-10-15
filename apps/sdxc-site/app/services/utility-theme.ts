@@ -10,6 +10,13 @@
 
 import type { UtilityReference } from "~/app/services/utilities";
 
+/**
+ * The sentence ahead of a page's declaration merges. TypeScript merges an interface only into
+ * the module that declares it, and `sdxc/u` re-exports these from `@sdxc/u`.
+ */
+export const AUGMENTATION_LEAD =
+	"A declaration merge names `@sdxc/u`, the module that declares the theme interfaces, including in a project that imports the utilities from `sdxc/u`.";
+
 /** One scale a theme customizes, as a utility's page teaches it. */
 export interface ThemeScale {
 	/** The fragment the section is linked by, unique on the page. */

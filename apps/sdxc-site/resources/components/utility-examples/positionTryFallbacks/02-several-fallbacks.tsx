@@ -14,8 +14,8 @@ import {
 	positionTryFallbacks,
 	relative,
 	vstack,
-} from "@sdxc/u/layout";
-import { bs, is, m } from "@sdxc/u/size";
+} from "sdxc/u/layout";
+import { bs, is, m } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

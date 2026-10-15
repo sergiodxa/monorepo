@@ -10,13 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { hidden, hstack, vstack } from "@sdxc/u/layout";
-import { when } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
-import { Avatar } from "@sdxc/ui";
-import { imageFallback } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { hidden, hstack, vstack } from "sdxc/u/layout";
+import { when } from "sdxc/u/state";
+import { text, weight } from "sdxc/u/typography";
+import { Avatar } from "sdxc/ui";
+import { imageFallback } from "sdxc/ui/mixins";
 
 /** Portraits drawn as data URIs, so a reviewer row fetches nothing to render. */
 const PORTRAITS = {

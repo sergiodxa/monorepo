@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "@sdxc/u/color";
-import { hstack, insBs, shrink, sticky, vstack } from "@sdxc/u/layout";
-import { scroll, scrollPadding } from "@sdxc/u/overflow";
-import { bs, is, maxIs, p, pbe, pi } from "@sdxc/u/size";
+import { bg } from "sdxc/u/color";
+import { hstack, insBs, shrink, sticky, vstack } from "sdxc/u/layout";
+import { scroll, scrollPadding } from "sdxc/u/overflow";
+import { bs, is, maxIs, p, pbe, pi } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

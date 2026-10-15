@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { GitBranchIcon, TriangleAlertIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
-import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Badge, Button, Card, Separator } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
+import { GitBranchIcon, TriangleAlertIcon } from "sdxc/icons";
+import { fg } from "sdxc/u/color";
+import { flexWrap, hstack, vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Badge, Button, Card, Separator } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[hstack({ gap: 4, align: "stretch" }), flexWrap()]}>

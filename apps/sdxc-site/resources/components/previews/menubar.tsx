@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { grow } from "@sdxc/u/layout";
-import { Keyboard, Menu, Menubar } from "@sdxc/ui";
-import { menuKeys, menubarKeys } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { grow } from "sdxc/u/layout";
+import { Keyboard, Menu, Menubar } from "sdxc/ui";
+import { menuKeys, menubarKeys } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Menubar aria-label="Editor" mix={[menubarKeys()]}>

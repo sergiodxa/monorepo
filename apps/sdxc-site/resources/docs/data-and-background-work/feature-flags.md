@@ -10,14 +10,14 @@ lastUpdated: 2026-10-08
 
 A feature flag lets you ship code that is switched off, turn it on for one team, then for ten
 percent of everyone, and switch it off again without a deploy if it misbehaves. This guide builds
-that from two packages. [`@sdxc/flags`](/api/flags) is the evaluation API, following the
+that from two packages. [`sdxc/flags`](/api/flags) is the evaluation API, following the
 OpenFeature model: a provider resolves flags, a client evaluates them, and nothing on that path
-throws. [`@sdxc/flags-engine`](/api/flags-engine) is a provider you run yourself, with targeting
-rules, percentage splits and a store to read definitions from. [`@sdxc/authz`](/api/authz)
+throws. [`sdxc/flags-engine`](/api/flags-engine) is a provider you run yourself, with targeting
+rules, percentage splits and a store to read definitions from. [`sdxc/authz`](/api/authz)
 turns a flag into a switch that refuses an ability wherever it is checked.
 
 ```bash
-npm add @sdxc/flags @sdxc/flags-engine @sdxc/authz
+npm add sdxc remix
 ```
 
 ## Write the definitions
@@ -27,7 +27,7 @@ Start with the definitions in code: flipping a flag is then an edit and a deploy
 any other change gets.
 
 ```typescript {% title="app/initializers/flags.ts" %}
-import type { StoredFlagSet } from "@sdxc/flags-engine/store";
+import type { StoredFlagSet } from "sdxc/flags-engine/store";
 
 export const FLAG_SET: StoredFlagSet = {
 	flags: {
@@ -56,7 +56,7 @@ Call sites should not repeat a key, a type and a default. A catalog writes each 
 misspelled key is a compile error rather than a flag that is silently off:
 
 ```typescript {% title="app/initializers/flags.ts" %}
-import { defineFlags, flag } from "@sdxc/flags/catalog";
+import { defineFlags, flag } from "sdxc/flags/catalog";
 
 export const features = defineFlags({
 	newCheckout: flag.boolean("new-checkout", false),
@@ -78,10 +78,10 @@ request would initialize on every one. The provider itself is created lazily, th
 evaluation needs it, so loading the module in a Worker does no work:
 
 ```typescript {% title="app/initializers/flags.ts" %}
-import { createEngine } from "@sdxc/flags-engine";
-import { EngineProvider } from "@sdxc/flags-engine/provider";
-import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
-import { createFlags, wideEventHook } from "@sdxc/flags/client";
+import { createEngine } from "sdxc/flags-engine";
+import { EngineProvider } from "sdxc/flags-engine/provider";
+import { InMemoryFlagStore } from "sdxc/flags-engine/store/memory";
+import { createFlags, wideEventHook } from "sdxc/flags/client";
 
 export const flags = createFlags({
 	provider: () =>
@@ -96,13 +96,13 @@ duration, and evaluating a flag adds no log lines of its own.
 
 ## Publish `ctx.flags`
 
-The router middleware from `@sdxc/flags/middleware/router` reads the request's subject once and
+The router middleware from `sdxc/flags/middleware/router` reads the request's subject once and
 publishes a client as `ctx.flags`. List it after your auth middleware, so the subject is known,
 and after `log()`, so the hook has a record to write to:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import featureFlags from "@sdxc/flags/middleware/router";
-import { log } from "@sdxc/logger/middleware";
+import featureFlags from "sdxc/flags/middleware/router";
+import { log } from "sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import { auth, currentUser } from "~/app/http/middleware/auth";
@@ -129,7 +129,7 @@ read the user it published.
 Every other field on the context is a fact about that subject or the request, available to
 targeting by name.
 
-Jobs get the same client through `@sdxc/flags/middleware/dispatcher`, added to the dispatcher's
+Jobs get the same client through `sdxc/flags/middleware/dispatcher`, added to the dispatcher's
 middleware chain. There is no signed-in user in a job, so name the subject it acts for, such as
 `featureFlags(flags, { context: (ctx) => ({ targetingKey: ctx.name }) })` for the job's own name.
 
@@ -139,7 +139,7 @@ middleware chain. There is no signed-in user in a job, so name the subject it ac
 decision is not the request's subject, pass it on the evaluation:
 
 ```typescript {% title="app/http/controllers/api/ping.ts" %}
-import { serviceUnavailable } from "@sdxc/http/response/json";
+import { serviceUnavailable } from "sdxc/http/response/json";
 import { createAction } from "remix/router";
 
 import { features } from "~/app/initializers/flags";
@@ -175,7 +175,7 @@ between a flag that is off and flags that are down.
 `targeting` is a list of rules, tried in order. The first whose condition holds decides:
 
 ```typescript {% title="config/flag-rules.ts" %}
-import type { FlagSet } from "@sdxc/flags-engine";
+import type { FlagSet } from "sdxc/flags-engine";
 
 export const RULED_SET: FlagSet = {
 	segments: {
@@ -201,7 +201,7 @@ export const RULED_SET: FlagSet = {
 Typing the set as `FlagSet` rather than `StoredFlagSet` checks every rule as you write it. It is
 still a `StoredFlagSet`, so it goes into `InMemoryFlagStore` the same way.
 
-Conditions are the JSON form of [`@sdxc/expression`](/api/expression), typed so an editor
+Conditions are the JSON form of [`sdxc/expression`](/api/expression), typed so an editor
 completes `op` as you write one: `eq`, `in`, `lt`, `startsWith`, `matches`, `semver`, `exists`,
 and `all`, `any` and `not` to combine them. `field` is a dotted path into the context. A path
 that resolves to nothing makes every operator except `exists` false, so a rule about a field the
@@ -222,9 +222,9 @@ stores the whole set as one JSON value, and `maxAge` says how long a loaded snap
 current:
 
 ```typescript {% title="app/initializers/flag-provider.ts" %}
-import { createEngine } from "@sdxc/flags-engine";
-import { EngineProvider } from "@sdxc/flags-engine/provider";
-import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
+import { createEngine } from "sdxc/flags-engine";
+import { EngineProvider } from "sdxc/flags-engine/provider";
+import { WorkerKVFlagStore } from "sdxc/flags-engine/store/worker-kv";
 import { env } from "cloudflare:workers";
 
 let provider: EngineProvider | undefined;
@@ -256,10 +256,10 @@ converts between the two: `stringify` shows a stored condition as text, and `par
 was typed back into JSON, with the line and column where it broke:
 
 ```typescript {% title="app/services/flag-rule-editor.ts" %}
-import type { FlagSet } from "@sdxc/flags-engine";
+import type { FlagSet } from "sdxc/flags-engine";
 
-import { flagConditions } from "@sdxc/flags-engine";
-import { isFailure, success } from "@sdxc/result";
+import { flagConditions } from "sdxc/flags-engine";
+import { isFailure, success } from "sdxc/result";
 
 export function conditionText(set: FlagSet, flag: string, rule: number) {
 	let when = set.flags[flag]?.targeting?.[rule]?.when;
@@ -290,12 +290,12 @@ on its own, for rules that are not flags.
 
 A flag that guards a whole ability, such as exporting reports, is checked on a page that hides
 the button, on the route that answers it, in the job that builds the file and in an agent's
-tool. Written as a guard in an [`@sdxc/authz`](/api/authz) policy, it is one rule that all four
+tool. Written as a guard in an [`sdxc/authz`](/api/authz) policy, it is one rule that all four
 read. Add the flag to the catalog as `reportsExport: flag.boolean("reports-export", true)`,
 declare the catalog as a fact, and refuse while it is off:
 
 ```typescript {% title="app/policies/policy.ts" %}
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
+import { allow, definePolicy, deny, fact } from "sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
@@ -312,12 +312,12 @@ export default definePolicy(abilities, {
 });
 ```
 
-`fromFlags` from `@sdxc/authz/facts/flags` binds the catalog as that fact, in the policy's
+`fromFlags` from `sdxc/authz/facts/flags` binds the catalog as that fact, in the policy's
 `access()` middleware after `featureFlags()`:
 
 ```typescript {% title="app/http/middleware/access.ts" %}
-import { fromFlags } from "@sdxc/authz/facts/flags";
-import { access } from "@sdxc/authz/middleware/router";
+import { fromFlags } from "sdxc/authz/facts/flags";
+import { access } from "sdxc/authz/middleware/router";
 
 import { features } from "~/app/initializers/flags";
 import policy from "~/app/policies/policy";
@@ -342,9 +342,9 @@ policy, the route guard and the job binding.
 A test builds its own instance, so nothing it sets leaks into the next one:
 
 ```typescript {% title="app/initializers/flags.test.ts" %}
-import { evaluateAll, parseFlagSet } from "@sdxc/flags-engine";
-import { createFlags } from "@sdxc/flags/client";
-import { InMemoryProvider } from "@sdxc/flags/provider/memory";
+import { evaluateAll, parseFlagSet } from "sdxc/flags-engine";
+import { createFlags } from "sdxc/flags/client";
+import { InMemoryProvider } from "sdxc/flags/provider/memory";
 import { expect, test } from "vitest";
 
 import { RULED_SET } from "~/config/flag-rules";

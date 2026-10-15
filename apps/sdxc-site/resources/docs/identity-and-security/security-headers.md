@@ -11,13 +11,13 @@ lastUpdated: 2026-09-29
 A browser enforces what your response headers tell it: where scripts may load from, whether the
 page may be framed, which device APIs it may ask for, whether the site is HTTPS-only. This guide
 writes all of it as one typed policy, reviewed in one file, and applies it to every response of
-a Remix v3 app. [`@sdxc/security-headers`](/api/security-headers) models the headers and ships
-the middleware, [`@sdxc/crypto`](/api/crypto) hashes a fixed inline script, and
-[`@sdxc/well-known`](/api/well-known) publishes the `security.txt` that tells a researcher where
+a Remix v3 app. [`sdxc/security-headers`](/api/security-headers) models the headers and ships
+the middleware, [`sdxc/crypto`](/api/crypto) hashes a fixed inline script, and
+[`sdxc/well-known`](/api/well-known) publishes the `security.txt` that tells a researcher where
 to report what the headers missed.
 
 ```bash
-npm add @sdxc/security-headers @sdxc/crypto @sdxc/well-known @sdxc/result
+npm add sdxc remix
 ```
 
 ## Write the policy once
@@ -26,7 +26,7 @@ The CSP model writes keywords unquoted and quotes them on output, so a missing q
 happen. `"nonce"` is a placeholder the middleware replaces with a fresh nonce per response.
 
 ```typescript {% title="config/security-policy.ts" %}
-import type { SecurityHeaders } from "@sdxc/security-headers";
+import type { SecurityHeaders } from "sdxc/security-headers";
 
 export const BOOT_SCRIPT = `document.documentElement.classList.add("js");`;
 
@@ -77,8 +77,8 @@ response the chain returns, keeping any header the response set itself. Place it
 the renderer, so it decorates the rendered page and the renderer can read the nonce.
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { assets } from "@sdxc/assets-middleware";
-import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { assets } from "sdxc/assets-middleware";
+import { securityHeaders } from "sdxc/security-headers/middleware";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
@@ -104,7 +104,7 @@ export function createWebRouter() {
 
 The comment stands for whatever your app already runs ahead of it, from
 [Wire the router](/docs/building-remix-apps/wire-the-router), and `assets()` from
-`@sdxc/assets-middleware` publishes the stylesheets and entry script each page passes to its
+`sdxc/assets-middleware` publishes the stylesheets and entry script each page passes to its
 document as `ctx.assets`. The order among the rest does not matter to the headers.
 
 ## Nonces for the scripts you render
@@ -156,8 +156,8 @@ exports the script's text as `BOOT_SCRIPT` and lists its `sha256-…` source as 
 test fails when the two drift apart:
 
 ```typescript {% title="config/security-policy.test.ts" %}
-import { Base64, sha256 } from "@sdxc/crypto";
-import { unwrap } from "@sdxc/result";
+import { Base64, sha256 } from "sdxc/crypto";
+import { unwrap } from "sdxc/result";
 import { expect, test } from "vitest";
 
 import { SECURITY_POLICY, BOOT_SCRIPT } from "./security-policy";
@@ -179,8 +179,8 @@ format a browser sends — the Reporting API's `application/reports+json` batche
 `application/csp-report` document — into one violation shape.
 
 ```typescript {% title="app/http/controllers/csp-reports.ts" %}
-import { isFailure } from "@sdxc/result";
-import { parseReports } from "@sdxc/security-headers/reports";
+import { isFailure } from "sdxc/result";
+import { parseReports } from "sdxc/security-headers/reports";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
@@ -211,7 +211,7 @@ A route that has to differ — an embeddable widget that other sites frame — p
 response instead of weakening the policy for every page:
 
 ```tsx {% title="app/http/controllers/embed.tsx" %}
-import { securityHeadersOverride } from "@sdxc/security-headers/middleware";
+import { securityHeadersOverride } from "sdxc/security-headers/middleware";
 import { createAction } from "remix/router";
 
 import { EmbedCard } from "~/resources/views/embed-card";
@@ -235,7 +235,7 @@ RFC 9116's `/.well-known/security.txt` is where a researcher looks for your secu
 path to the next middleware.
 
 ```typescript {% title="config/security-txt.ts" %}
-import type { SecurityTxt } from "@sdxc/well-known/security-txt";
+import type { SecurityTxt } from "sdxc/well-known/security-txt";
 
 export const SECURITY_TXT: SecurityTxt = {
 	contact: [new URL("mailto:security@example.com")],
@@ -251,8 +251,8 @@ export const SECURITY_TXT: SecurityTxt = {
 ```
 
 Register `wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) })` — `wellKnown`
-and `serve` from `@sdxc/well-known/middleware`, `securityTxt` from
-`@sdxc/well-known/security-txt` — near the top of the chain, before session work, since the
+and `serve` from `sdxc/well-known/middleware`, `securityTxt` from
+`sdxc/well-known/security-txt` — near the top of the chain, before session work, since the
 document is the same for every visitor. Keep `expires` a literal date, and add a test that fails
 30 days before it with `isExpired(SECURITY_TXT, thirtyDaysFromNow)`: a date computed from the
 clock keeps the file looking fresh while the inbox behind it goes stale.
@@ -265,5 +265,5 @@ clock keeps the file looking fresh while the inbox behind it goes stale.
   documents crawlers look for at fixed paths.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — querying the
   `csp.violation` events.
-- [`@sdxc/security-headers`](/api/security-headers) — every directive, `override`, and reading a
+- [`sdxc/security-headers`](/api/security-headers) — every directive, `override`, and reading a
   policy back with `parse`.

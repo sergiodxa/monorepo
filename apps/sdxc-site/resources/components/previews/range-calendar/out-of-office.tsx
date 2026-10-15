@@ -7,18 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MonthGridDay } from "@sdxc/dates";
 import type { Handle } from "remix/component";
+import type { MonthGridDay } from "sdxc/dates";
 
-import { monthGrid, systemTimeZone, toDayKey } from "@sdxc/dates";
-import { fg } from "@sdxc/u/color";
-import { flex, vstack } from "@sdxc/u/layout";
-import { is, m } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { RangeCalendar } from "@sdxc/ui";
-import { CalendarModel } from "@sdxc/ui/behaviors";
-import { calendarKeys } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { monthGrid, systemTimeZone, toDayKey } from "sdxc/dates";
+import { fg } from "sdxc/u/color";
+import { flex, vstack } from "sdxc/u/layout";
+import { is, m } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { RangeCalendar } from "sdxc/ui";
+import { CalendarModel } from "sdxc/ui/behaviors";
+import { calendarKeys } from "sdxc/ui/mixins";
 
 /** Column headings, in the order `monthGrid` lays a week out. */
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

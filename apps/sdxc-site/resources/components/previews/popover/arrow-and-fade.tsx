@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "@sdxc/u/layout";
-import { is, m, p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, OverlayArrow, Popover } from "@sdxc/ui";
-import { durations, fade } from "@sdxc/ui/animations";
+import { vstack } from "sdxc/u/layout";
+import { is, m, p } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Button, OverlayArrow, Popover } from "sdxc/ui";
+import { durations, fade } from "sdxc/ui/animations";
 
 /** The source the page shows, matching the markup below apart from the example's own sizing. */
 const CODE = `<Button commandfor="filters" command="toggle-popover" variant="outline">

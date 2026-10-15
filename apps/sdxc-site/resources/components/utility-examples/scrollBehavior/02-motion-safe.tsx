@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack, shrink, vstack } from "@sdxc/u/layout";
-import { scroll, scrollBehavior } from "@sdxc/u/overflow";
-import { motionSafe } from "@sdxc/u/responsive";
-import { bs, is, maxIs } from "@sdxc/u/size";
+import { hstack, shrink, vstack } from "sdxc/u/layout";
+import { scroll, scrollBehavior } from "sdxc/u/overflow";
+import { motionSafe } from "sdxc/u/responsive";
+import { bs, is, maxIs } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

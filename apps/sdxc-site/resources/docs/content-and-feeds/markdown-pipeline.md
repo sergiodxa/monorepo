@@ -12,14 +12,14 @@ This guide builds the path a post takes from a `.md` file in your repository to 
 page: frontmatter validated against a schema, a small vocabulary of custom tags and HTML
 elements checked at parse time, one tree walk that highlights code, anchors headings and
 resolves links, and a Remix v3 route that renders the result through components you own.
-It combines [`@sdxc/markdown`](/api/markdown), [`@sdxc/highlight`](/api/highlight) and
-[`@sdxc/ui`](/api/ui), with `remix/data-schema` for the schema.
+It combines [`sdxc/markdown`](/api/markdown), [`sdxc/highlight`](/api/highlight) and
+[`sdxc/ui`](/api/ui), with `remix/data-schema` for the schema.
 
 Every step answers with a `Result`, so a post with a typo in its frontmatter becomes a 404 and
 a log line naming the line to fix, not an exception halfway through a render.
 
 ```bash
-npm add remix @sdxc/markdown @sdxc/highlight @sdxc/ui @sdxc/result @sdxc/http
+npm add sdxc remix
 ```
 
 ## Describe what a post may contain
@@ -29,7 +29,7 @@ carries, the tags its body may use, and the HTML elements it may write directly.
 in one options object that every read of a post shares.
 
 ```typescript {% title="app/services/content/schema.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
@@ -111,15 +111,15 @@ Starter costs $9 a month. {/* TODO: confirm the annual discount */}
 
 `Markdown.walk` is the only transform. A visitor is a plain object with one handler per node
 type, so visitors merge by spread and a whole preparation runs as a single pass. `highlight`
-from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding one `code`
+from [`sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding one `code`
 handler that attaches the painted tokens to each fence, and the plugins that ship with
-`@sdxc/markdown` are built the same way.
+`sdxc/markdown` are built the same way.
 
 ```typescript {% title="app/services/content/prepare.ts" %}
-import { highlight } from "@sdxc/highlight/markdown";
-import { Markdown } from "@sdxc/markdown";
-import { headings } from "@sdxc/markdown/plugin/headings";
-import { links } from "@sdxc/markdown/plugin/links";
+import { highlight } from "sdxc/highlight/markdown";
+import { Markdown } from "sdxc/markdown";
+import { headings } from "sdxc/markdown/plugin/headings";
+import { links } from "sdxc/markdown/plugin/links";
 
 const SITE_ORIGIN = "https://example.com/";
 
@@ -158,8 +158,8 @@ Keep the files as raw strings and parse per request. A Worker rejects an upload 
 scope does real work, and a lazy glob means a page pays for the one post it renders.
 
 ```typescript {% title="app/services/content/posts.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { isFailure, success } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { isFailure, success } from "sdxc/result";
 
 import { preparePost } from "~/app/services/content/prepare";
 import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
@@ -188,8 +188,8 @@ and stops after the block, so listing a hundred posts reads a hundred frontmatte
 parses no markdown at all. It reads the same `POSTS` glob the loader above exports:
 
 ```typescript {% title="app/services/content/list-posts.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { isFailure } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { isFailure } from "sdxc/result";
 
 import type { Frontmatter } from "~/app/services/content/schema";
 
@@ -219,7 +219,7 @@ and 3 unless you pass `{ levels }`, and leaves out a heading with no id, which i
 the prepared document:
 
 ```tsx {% title="resources/components/toc.tsx" %}
-import type { TableOfContentsEntry } from "@sdxc/markdown/plugin/headings";
+import type { TableOfContentsEntry } from "sdxc/markdown/plugin/headings";
 import type { Handle } from "remix/component";
 
 export function TocList(handle: Handle<{ entries: TableOfContentsEntry[] }>) {
@@ -246,14 +246,14 @@ blocks.
 
 ## Render it in a route
 
-`toRemix` from `@sdxc/markdown/remix` turns the tree into `remix/component` nodes, and its
+`toRemix` from `sdxc/markdown/remix` turns the tree into `remix/component` nodes, and its
 `components` map is where a tag gets its markup. A component receives the tag's attributes as
 props, already validated by the schema you registered, plus its rendered `children`:
 
 ```tsx {% title="resources/components/callout.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import { Alert } from "@sdxc/ui";
+import { Alert } from "sdxc/ui";
 
 const CALLOUT_COLORS = {
 	info: "brand",
@@ -284,14 +284,14 @@ The controller is mapped to a `posts.show` route declared as `get("/posts/:slug"
 in `Typeset`, which supplies the sizes, spacing and colours for markup it did not write:
 
 ```tsx {% title="app/http/controllers/posts/show.tsx" %}
-import { notFound } from "@sdxc/http/response/html";
-import { toRemix } from "@sdxc/markdown/remix";
-import { isFailure } from "@sdxc/result";
-import { Typeset } from "@sdxc/ui";
+import { notFound } from "sdxc/http/response/html";
+import { toRemix } from "sdxc/markdown/remix";
+import { isFailure } from "sdxc/result";
+import { Typeset } from "sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { tableOfContents } from "@sdxc/markdown/plugin/headings";
+import { tableOfContents } from "sdxc/markdown/plugin/headings";
 
 import { Callout } from "~/resources/components/callout";
 import { TocList } from "~/resources/components/toc";
@@ -336,7 +336,7 @@ ships with the highlighter. Import it from your document layout, after the theme
 build links it with the [rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
 
 ```tsx {% title="resources/components/document.tsx" %}
-import "@sdxc/highlight/styles.css";
+import "sdxc/highlight/styles.css";
 ```
 
 ## HTML and plain text for everything else
@@ -345,10 +345,10 @@ A feed body, an email or a JSON API wants a string rather than UI nodes. `toHTML
 node as static HTML, with its own `tags` map returning markup for each tag:
 
 ```typescript {% title="app/services/content/render.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { toHTML } from "@sdxc/markdown/html";
-import { toPlainText } from "@sdxc/markdown/plain";
+import { toHTML } from "sdxc/markdown/html";
+import { toPlainText } from "sdxc/markdown/plain";
 
 export function renderHTML(document: Markdown.Document): string {
 	return toHTML(document, {
@@ -372,15 +372,15 @@ through renders as itself, so neither one writes markup you did not vet. Comment
 neither.
 
 A consumer that parses the output as XML, such as an EPUB content document built with
-[`@sdxc/epub`](/api/epub), takes `syntax: "xhtml"`. Every void element is then self-closed
+[`sdxc/epub`](/api/epub), takes `syntax: "xhtml"`. Every void element is then self-closed
 (`<br />`) and every boolean attribute carries its name as its value (`open="open"`); markup a
 tag renderer returns is written as the renderer built it, so a renderer feeding XHTML writes
 XHTML itself:
 
 ```typescript {% title="app/services/content/chapter.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { toHTML } from "@sdxc/markdown/html";
+import { toHTML } from "sdxc/markdown/html";
 
 export function renderChapter(document: Markdown.Document): string {
 	return toHTML(document, { syntax: "xhtml" });
@@ -399,4 +399,4 @@ export function renderChapter(document: Markdown.Document): string {
   post links to.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) — the
   components and mixins the page around the article is built from.
-- [`@sdxc/markdown`](/api/markdown) — variables, annotations, GitHub alerts and the full AST.
+- [`sdxc/markdown`](/api/markdown) — variables, annotations, GitHub alerts and the full AST.

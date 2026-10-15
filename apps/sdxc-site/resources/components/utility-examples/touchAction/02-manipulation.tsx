@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { touchAction } from "@sdxc/u/general";
-import { hstack } from "@sdxc/u/layout";
-import { tabularNums, text } from "@sdxc/u/typography";
+import { touchAction } from "sdxc/u/general";
+import { hstack } from "sdxc/u/layout";
+import { tabularNums, text } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

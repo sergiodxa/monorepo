@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { PaperclipIcon } from "@sdxc/icons";
-import { FileTrigger } from "@sdxc/ui";
+import { PaperclipIcon } from "sdxc/icons";
+import { FileTrigger } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<FileTrigger name="attachments" multiple color="brand" variant="outline">

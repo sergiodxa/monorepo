@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg, outline } from "@sdxc/u/color";
-import { cursor } from "@sdxc/u/general";
-import { focusVisible } from "@sdxc/u/state";
+import { bg, fg, outline } from "sdxc/u/color";
+import { cursor } from "sdxc/u/general";
+import { focusVisible } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

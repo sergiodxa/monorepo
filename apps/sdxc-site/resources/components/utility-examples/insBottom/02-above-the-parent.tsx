@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { absolute, insBottom, insLeft, relative } from "@sdxc/u/layout";
-import { mbe, pbs } from "@sdxc/u/size";
-import { nowrap } from "@sdxc/u/typography";
+import { absolute, insBottom, insLeft, relative } from "sdxc/u/layout";
+import { mbe, pbs } from "sdxc/u/size";
+import { nowrap } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -11,14 +11,13 @@ lastUpdated: 2026-10-08
 This guide adds "sign in with your provider" to a Remix v3 app on Workers: a login route that
 sends the browser to the provider, a callback that verifies the ID token before believing a
 single claim, and a logout that ends the session on both sides.
-[`@sdxc/auth`](/api/auth) runs the protocol, [`@sdxc/jwt`](/api/jwt) names the signature
-algorithms you accept, [`@sdxc/session-storage-kv`](/api/session-storage-kv) keeps the session
-in Workers KV, [`@sdxc/location`](/api/location) keeps redirects on your origin, and
-[`@sdxc/result`](/api/result) turns the flow's throws into values.
+[`sdxc/auth`](/api/auth) runs the protocol, [`sdxc/jwt`](/api/jwt) names the signature
+algorithms you accept, [`sdxc/session-storage-kv`](/api/session-storage-kv) keeps the session
+in Workers KV, [`sdxc/location`](/api/location) keeps redirects on your origin, and
+[`sdxc/result`](/api/result) turns the flow's throws into values.
 
 ```bash
-npm add @sdxc/auth @sdxc/jwt @sdxc/session-storage-kv @sdxc/location \
-	@sdxc/result @sdxc/http @sdxc/cache
+npm add sdxc remix
 ```
 
 ## Declare the routes
@@ -43,13 +42,13 @@ beside the `home` and `dashboard` pages a login returns to.
 ## Keep the login in a KV session
 
 The flow writes `state`, the `nonce` and the PKCE verifier between the login and the callback,
-then the token set it received. `@sdxc/auth` reads and writes all of it through the session
+then the token set it received. `sdxc/auth` reads and writes all of it through the session
 Remix's session middleware puts on the context, so the session has to exist before any auth
 route runs. `KVSessionStorage` keeps its values in Workers KV while the cookie carries only the
 id:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { KVSessionStorage } from "@sdxc/session-storage-kv";
+import { KVSessionStorage } from "sdxc/session-storage-kv";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
@@ -83,8 +82,8 @@ the same instance to every caller in the isolate, so the documents are fetched o
 `cache` shares them across isolates so a cold start reads KV instead of the provider.
 
 ```typescript {% title="app/initializers/issuer.ts" %}
-import { Issuer } from "@sdxc/auth/issuer";
-import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { Issuer } from "sdxc/auth/issuer";
+import { WorkerKVCache } from "sdxc/cache/worker-kv";
 import { env } from "cloudflare:workers";
 
 export function issuer(): Issuer {
@@ -104,8 +103,8 @@ callback URL is derived from the origin the request arrived on, so a preview dep
 production each present the URL they are registered under.
 
 ```typescript {% title="app/initializers/relying-party.ts" %}
-import { RelyingParty } from "@sdxc/auth/relying-party";
-import { JWK } from "@sdxc/jwt";
+import { RelyingParty } from "sdxc/auth/relying-party";
+import { JWK } from "sdxc/jwt";
 import { env } from "cloudflare:workers";
 
 import { issuer } from "~/app/initializers/issuer";
@@ -158,7 +157,7 @@ The login controller renders the page on `GET` and hands off to the provider on 
 every browser-flow method takes.
 
 ```tsx {% title="app/http/controllers/auth/login.tsx" %}
-import { contextOf } from "@sdxc/auth/remix/context";
+import { contextOf } from "sdxc/auth/remix/context";
 import { createController } from "remix/router";
 
 import { relyingParty } from "~/app/initializers/relying-party";
@@ -193,11 +192,11 @@ it can refuse is a thrown `AuthError`, so `wrap` turns the call into a `Result` 
 keeps one shape.
 
 ```tsx {% title="app/http/controllers/auth/callback.tsx" %}
-import { AuthError } from "@sdxc/auth/auth-error";
-import { contextOf } from "@sdxc/auth/remix/context";
-import { redirect } from "@sdxc/http/response";
-import { Location } from "@sdxc/location";
-import { isFailure, wrap } from "@sdxc/result";
+import { AuthError } from "sdxc/auth/auth-error";
+import { contextOf } from "sdxc/auth/remix/context";
+import { redirect } from "sdxc/http/response";
+import { Location } from "sdxc/location";
+import { isFailure, wrap } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { relyingParty } from "~/app/initializers/relying-party";
@@ -242,9 +241,9 @@ session of its own and would sign them straight back in. `endSession` hands the 
 provider's logout endpoint with the `id_token_hint` that names that session.
 
 ```tsx {% title="app/http/controllers/auth/logout.tsx" %}
-import { contextOf } from "@sdxc/auth/remix/context";
-import { redirect } from "@sdxc/http/response";
-import { isFailure, wrap } from "@sdxc/result";
+import { contextOf } from "sdxc/auth/remix/context";
+import { redirect } from "sdxc/http/response";
+import { isFailure, wrap } from "sdxc/result";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
 
@@ -288,7 +287,7 @@ renews tokens that have lapsed, then asks your `verify` who the session belongs 
 ```typescript {% title="app/http/middleware/auth.ts" %}
 import type { Middleware } from "remix/router";
 
-import { sessionScheme } from "@sdxc/auth/remix/schemes";
+import { sessionScheme } from "sdxc/auth/remix/schemes";
 import { auth } from "remix/middleware/auth";
 
 import { relyingParty } from "~/app/initializers/relying-party";
@@ -314,4 +313,4 @@ resolves is Remix's
   provider in `form-action` before you enforce a policy.
 - [Wire the router](/docs/building-remix-apps/wire-the-router) — publishing `ctx.db` and
   `ctx.log`, which these handlers read.
-- [`@sdxc/auth`](/api/auth) — step-up authentication, service clients and bearer tokens.
+- [`sdxc/auth`](/api/auth) — step-up authentication, service clients and bearer tokens.

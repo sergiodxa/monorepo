@@ -8,14 +8,14 @@ order: 4
 lastUpdated: 2026-09-29
 ---
 
-This guide makes an app answer in the visitor's language. [`@sdxc/i18n`](/api/i18n) detects
+This guide makes an app answer in the visitor's language. [`sdxc/i18n`](/api/i18n) detects
 the language per request and publishes a translator on the context, and the messages it
 translates are [Unicode MessageFormat 2](https://messageformat.unicode.org), formatted by
-[`@sdxc/messageformat`](/api/messageformat). The same bundles serve a handler, a component
+[`sdxc/messageformat`](/api/messageformat). The same bundles serve a handler, a component
 deep in the tree, a background job with no request behind it, and a hydrated island.
 
 ```bash
-npm add remix @sdxc/i18n @sdxc/messageformat @sdxc/result
+npm add sdxc remix
 ```
 
 ## Write the messages
@@ -44,7 +44,7 @@ code.
 State the languages once, in a module the middleware and everything outside a request share:
 
 ```typescript {% title="app/initializers/i18n.ts" %}
-import type { Messages } from "@sdxc/i18n";
+import type { Messages } from "sdxc/i18n";
 
 import en from "~/resources/locales/en.json";
 import es from "~/resources/locales/es.json";
@@ -67,8 +67,8 @@ The `i18n` middleware detects the request's language and publishes `ctx.locale` 
 `i18n.error` warning on the request's log rather than thrown.
 
 ```typescript {% title="app/initializers/router.tsx" %}
-import i18n from "@sdxc/i18n/middleware";
-import { log } from "@sdxc/logger/middleware";
+import i18n from "sdxc/i18n/middleware";
+import { log } from "sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import {
@@ -110,7 +110,7 @@ read through the `ctx.db` your database middleware publishes, and `DocumentLayou
 layout, taking the title and the language.
 
 ```tsx {% title="app/http/controllers/projects.tsx" %}
-import { Heading, Text } from "@sdxc/ui";
+import { Heading, Text } from "sdxc/ui";
 import { createAction } from "remix/router";
 
 import Project from "~/app/models/project";
@@ -136,7 +136,7 @@ element you pass under that name, with the text between them as its children, so
 translator can move the link anywhere in the sentence.
 
 ```tsx {% title="app/http/controllers/welcome.tsx" %}
-import { Trans } from "@sdxc/i18n/ui";
+import { Trans } from "sdxc/i18n/ui";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
@@ -165,7 +165,7 @@ through context, and `intl(handle)` reads it back wherever the component sits.
 ```tsx {% title="resources/components/empty-projects.tsx" %}
 import type { Handle } from "remix/component";
 
-import { intl } from "@sdxc/i18n/ui";
+import { intl } from "sdxc/i18n/ui";
 
 export function EmptyProjects(handle: Handle) {
 	return () => <p>{intl(handle).t("projects.count", { count: 0 })}</p>;
@@ -176,7 +176,7 @@ Wrap the page once, in the handler, and every component under it reads the same 
 `ProjectsPage` is your view, with `EmptyProjects` somewhere inside it:
 
 ```tsx {% title="app/http/controllers/projects.tsx" %}
-import { IntlProvider } from "@sdxc/i18n/ui";
+import { IntlProvider } from "sdxc/i18n/ui";
 import { createAction } from "remix/router";
 
 import Project from "~/app/models/project";
@@ -201,8 +201,8 @@ Hand the detector the `remix/cookie` cookie your picker writes, exported here fr
 `app/http/cookies.ts`:
 
 ```typescript {% title="app/initializers/router.tsx" %}
-import i18n from "@sdxc/i18n/middleware";
-import { log } from "@sdxc/logger/middleware";
+import i18n from "sdxc/i18n/middleware";
+import { log } from "sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import { LOCALE_COOKIE } from "~/app/http/cookies";
@@ -246,7 +246,7 @@ same bundles, and binding it to a language is synchronous, so the job calls a pl
 like this one with the language stored in its input.
 
 ```typescript {% title="app/jobs/welcome-email.ts" %}
-import { createTranslator } from "@sdxc/i18n";
+import { createTranslator } from "sdxc/i18n";
 
 import {
 	FALLBACK_LANGUAGE,
@@ -271,21 +271,21 @@ the one you asked for. Store the request's `ctx.locale` in the job's input when 
 it, and the email arrives in the language the visitor was reading.
 
 A hydrated island is the same case in the browser. Call `setIntl(intl)` from
-`@sdxc/i18n/ui` once in the client bootstrap, with a translator built by `createTranslator`
+`sdxc/i18n/ui` once in the client bootstrap, with a translator built by `createTranslator`
 for `document.documentElement.lang`, and `intl(handle)` inside the island falls back to it.
 
 ## Catch broken messages in a test
 
 A message that fails to parse renders its key, and a placeholder that fails to format renders
 as `{$name}`. Neither throws, which keeps a page up, and also means a typo in a translation
-ships silently. `parse` from `@sdxc/messageformat` returns a `Result`, so a test can check
+ships silently. `parse` from `sdxc/messageformat` returns a `Result`, so a test can check
 every message in every bundle.
 
 ```typescript {% title="resources/locales/locales.test.ts" %}
-import type { Messages } from "@sdxc/i18n";
+import type { Messages } from "sdxc/i18n";
 
-import { parse } from "@sdxc/messageformat";
-import { isFailure } from "@sdxc/result";
+import { parse } from "sdxc/messageformat";
+import { isFailure } from "sdxc/result";
 import { expect, test } from "vitest";
 
 import { RESOURCES } from "~/app/initializers/i18n";
@@ -319,4 +319,4 @@ the same package compiles it once and formats it with `format(values)` as often 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — enqueuing the
   job that carries `ctx.locale`.
 - [Send email](/docs/data-and-background-work/send-email) — translated email from that job.
-- [`@sdxc/messageformat`](/api/messageformat) — custom functions and `formatToParts`.
+- [`sdxc/messageformat`](/api/messageformat) — custom functions and `formatToParts`.

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { skewY } from "@sdxc/u/transform";
+import { skewY } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

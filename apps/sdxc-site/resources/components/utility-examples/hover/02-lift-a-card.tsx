@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { shadow, transition } from "@sdxc/u/effects";
-import { hover } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
+import { shadow, transition } from "sdxc/u/effects";
+import { hover } from "sdxc/u/state";
+import { text, weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

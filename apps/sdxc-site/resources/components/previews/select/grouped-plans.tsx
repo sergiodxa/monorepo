@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Select } from "@sdxc/ui";
+import { Select } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Select aria-label="Plan" name="plan" color="brand">

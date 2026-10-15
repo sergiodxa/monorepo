@@ -14,16 +14,16 @@
 
 import type { Handle } from "remix/component";
 
-import { ImageIcon, XIcon } from "@sdxc/icons";
-import { visuallyHidden } from "@sdxc/u/a11y";
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, DropZone, Empty, Header, Item } from "@sdxc/ui";
-import { DragSession } from "@sdxc/ui/behaviors";
-import { dropZone } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { ImageIcon, XIcon } from "sdxc/icons";
+import { visuallyHidden } from "sdxc/u/a11y";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Button, DropZone, Empty, Header, Item } from "sdxc/ui";
+import { DragSession } from "sdxc/ui/behaviors";
+import { dropZone } from "sdxc/ui/mixins";
 
 import { formatFileSize } from "~/app/services/file-size";
 

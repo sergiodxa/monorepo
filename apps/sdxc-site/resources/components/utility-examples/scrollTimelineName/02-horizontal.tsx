@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animation, scrollTimelineName } from "@sdxc/u/animation";
-import { raw } from "@sdxc/u/general";
-import { hstack, insLeft, sticky } from "@sdxc/u/layout";
-import { scroll } from "@sdxc/u/overflow";
-import { is } from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
+import { animation, scrollTimelineName } from "sdxc/u/animation";
+import { raw } from "sdxc/u/general";
+import { hstack, insLeft, sticky } from "sdxc/u/layout";
+import { scroll } from "sdxc/u/overflow";
+import { is } from "sdxc/u/size";
+import { z } from "sdxc/u/stacking";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

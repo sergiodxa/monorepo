@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CopyIcon, ReplyIcon } from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { Avatar, Bubble, Button, Message } from "@sdxc/ui";
-import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { CopyIcon, ReplyIcon } from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { Avatar, Bubble, Button, Message } from "sdxc/ui";
+import { COPY_COMMAND, copyToClipboard } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<div mix={[vstack({ gap: 6, align: "stretch" })]}>

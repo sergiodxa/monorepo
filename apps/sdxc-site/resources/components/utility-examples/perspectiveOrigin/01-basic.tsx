@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { perspective, perspectiveOrigin, rotateY } from "@sdxc/u/transform";
+import { perspective, perspectiveOrigin, rotateY } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

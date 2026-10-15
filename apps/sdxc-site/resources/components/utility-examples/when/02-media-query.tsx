@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { cursor } from "@sdxc/u/general";
-import { hover, when } from "@sdxc/u/state";
+import { bg, fg } from "sdxc/u/color";
+import { cursor } from "sdxc/u/general";
+import { hover, when } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

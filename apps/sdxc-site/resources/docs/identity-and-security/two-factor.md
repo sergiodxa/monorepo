@@ -14,14 +14,14 @@ flow to a Remix v3 app on Workers: enrolling an app and confirming its first cod
 a code after the password step, refusing a code that has already been used, recovery codes for
 a lost phone, and turning two-factor off.
 
-[`@sdxc/crypto`](/api/crypto) generates and checks the codes (RFC 6238), seals the shared
-secret with AES-GCM and mints the recovery codes. [`@sdxc/auth`](/api/auth) reads the session
-the sign-in is held in, [`@sdxc/validate`](/api/validate) checks the submitted code, and
-[`@sdxc/result`](/api/result) and [`@sdxc/http`](/api/http) carry the outcomes.
-[`@sdxc/qr`](/api/qr) draws the code the authenticator app scans.
+[`sdxc/crypto`](/api/crypto) generates and checks the codes (RFC 6238), seals the shared
+secret with AES-GCM and mints the recovery codes. [`sdxc/auth`](/api/auth) reads the session
+the sign-in is held in, [`sdxc/validate`](/api/validate) checks the submitted code, and
+[`sdxc/result`](/api/result) and [`sdxc/http`](/api/http) carry the outcomes.
+[`sdxc/qr`](/api/qr) draws the code the authenticator app scans.
 
 ```bash
-npm add @sdxc/crypto @sdxc/auth @sdxc/validate @sdxc/result @sdxc/http @sdxc/qr
+npm add sdxc remix
 ```
 
 ## Three tables
@@ -69,8 +69,8 @@ authenticator app takes: an `otpauth://` URI to scan, and the setup key to type:
 ```typescript {% title="app/services/two-factor/enroll.ts" %}
 import type { Database } from "remix/data-table";
 
-import { totp } from "@sdxc/crypto";
-import { failure, isFailure, success } from "@sdxc/result";
+import { totp } from "sdxc/crypto";
+import { failure, isFailure, success } from "sdxc/result";
 
 import { sealSecret } from "~/app/services/sealing";
 import { totpFactors } from "~/database/two-factor";
@@ -107,9 +107,9 @@ first.
 The setup route is a `POST`, since it writes, and renders the page:
 
 ```tsx {% title="app/http/controllers/two-factor/setup.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { QR } from "@sdxc/qr";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { redirect } from "sdxc/http/response";
+import { QR } from "sdxc/qr";
+import { isFailure, isSuccess } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { currentUser } from "~/app/services/auth/current-user";
@@ -150,11 +150,11 @@ code, the setup key for anyone who cannot scan, and the URI as a link, which ope
 directly on a phone:
 
 ```tsx {% title="resources/views/enroll-two-factor.tsx" %}
-import type { QR } from "@sdxc/qr";
+import type { QR } from "sdxc/qr";
 import type { Handle } from "remix/component";
 
-import { QrCode } from "@sdxc/qr/ui";
-import { Button, TextField } from "@sdxc/ui";
+import { QrCode } from "sdxc/qr/ui";
+import { Button, TextField } from "sdxc/ui";
 
 import routes from "~/routes/web";
 
@@ -203,8 +203,8 @@ second time unless you remember it:
 ```typescript {% title="app/services/two-factor/accept-code.ts" %}
 import type { Database } from "remix/data-table";
 
-import { totp } from "@sdxc/crypto";
-import { isFailure, isSuccess, wrap } from "@sdxc/result";
+import { totp } from "sdxc/crypto";
+import { isFailure, isSuccess, wrap } from "sdxc/result";
 
 import { openSecret } from "~/app/services/sealing";
 import { usedTotpCodes } from "~/database/two-factor";
@@ -246,8 +246,8 @@ any other credential:
 ```typescript {% title="app/services/two-factor/recovery-codes.ts" %}
 import type { Database } from "remix/data-table";
 
-import { Base32, Hex, randomBytes, sha256 } from "@sdxc/crypto";
-import { failure, isFailure, success } from "@sdxc/result";
+import { Base32, Hex, randomBytes, sha256 } from "sdxc/crypto";
+import { failure, isFailure, success } from "sdxc/result";
 
 import { recoveryCodes } from "~/database/two-factor";
 
@@ -297,7 +297,7 @@ holds the secret. That same moment mints the recovery codes:
 ```typescript {% title="app/services/two-factor/confirm.ts" %}
 import type { Database } from "remix/data-table";
 
-import { failure } from "@sdxc/result";
+import { failure } from "sdxc/result";
 
 import { acceptCode } from "~/app/services/two-factor/accept-code";
 import { mintRecoveryCodes } from "~/app/services/two-factor/recovery-codes";
@@ -333,9 +333,9 @@ The confirm route shows the recovery codes on success. A wrong code sends the us
 start again, which mints a fresh secret:
 
 ```tsx {% title="app/http/controllers/two-factor/confirm.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import { createAction } from "remix/router";
 
 import { currentUser } from "~/app/services/auth/current-user";
@@ -363,7 +363,7 @@ the session for a few minutes and sends the browser to the code page:
 ```typescript {% title="app/services/auth/pending-sign-in.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { sessionOf } from "@sdxc/auth/remix/context";
+import { sessionOf } from "sdxc/auth/remix/context";
 import * as s from "remix/data-schema";
 
 const PENDING_KEY = "two-factor:pending";
@@ -412,9 +412,9 @@ export async function checkSecondFactor(db: Database, userId: string, code: stri
 ```
 
 ```tsx {% title="app/http/controllers/sign-in/two-factor.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import { createAction } from "remix/router";
 
 import { completeSignIn, pendingUserId } from "~/app/services/auth/pending-sign-in";
@@ -485,4 +485,4 @@ they can still act.
   the code page.
 - [Draw QR codes](/docs/building-remix-apps/qr-codes): error correction levels, size caps
   and serving a code as an SVG file.
-- [`@sdxc/crypto`](/api/crypto): every `totp` option, `Base32` and the error classes.
+- [`sdxc/crypto`](/api/crypto): every `totp` option, `Base32` and the error classes.

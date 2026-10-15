@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { visuallyHidden } from "@sdxc/u/a11y";
-import { fill } from "@sdxc/u/color";
+import { visuallyHidden } from "sdxc/u/a11y";
+import { fill } from "sdxc/u/color";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -13,15 +13,14 @@ provider, and will your app know when someone leaves? The first is SAML, where t
 posts a signed assertion to your app. The second is SCIM, where their directory calls your API
 to create, update and deactivate the people and groups it manages.
 
-[`@sdxc/saml`](/api/saml) is the service provider half of SAML 2.0: it builds the
+[`sdxc/saml`](/api/saml) is the service provider half of SAML 2.0: it builds the
 authentication request, verifies the signed response, and reads and writes the metadata the
-two sides exchange. [`@sdxc/scim`](/api/scim) is the standard's half of a SCIM 2.0 endpoint:
+two sides exchange. [`sdxc/scim`](/api/scim) is the standard's half of a SCIM 2.0 endpoint:
 resources, filters, PATCH and the discovery documents. Routing, storage and authentication
 stay in your app, and this guide wires both into a Remix v3 router.
 
 ```bash
-npm add @sdxc/saml @sdxc/scim @sdxc/result @sdxc/duration @sdxc/crypto \
-	@sdxc/http @sdxc/uuid remix
+npm add sdxc remix
 ```
 
 ## The routes
@@ -77,8 +76,8 @@ or an XML file. `parseIdPMetadata` reads the entity id, the sign-on endpoints an
 certificates out of it, each certificate already parsed:
 
 ```typescript {% title="app/services/sso/provider-metadata.ts" %}
-import { isFailure, success } from "@sdxc/result";
-import * as SAML from "@sdxc/saml";
+import { isFailure, success } from "sdxc/result";
+import * as SAML from "sdxc/saml";
 
 const REDIRECT = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect";
 
@@ -110,9 +109,9 @@ The other direction: the customer's administrator needs your entity id, your ACS
 certificate. Serve them as a document rather than asking anyone to copy four fields.
 
 ```typescript {% title="app/http/controllers/sso/metadata.ts" %}
-import { text, xml } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import * as SAML from "@sdxc/saml";
+import { text, xml } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import * as SAML from "sdxc/saml";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -176,10 +175,10 @@ browser to `routes.sso.start`. `createAuthnRequest` builds the request and signs
 private key:
 
 ```typescript {% title="app/http/controllers/sso/start.ts" %}
-import { redirect, text } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import * as SAML from "@sdxc/saml";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { redirect, text } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import * as SAML from "sdxc/saml";
+import { generateUUID } from "sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -234,10 +233,10 @@ returns, and checks `Destination`, `Audience`, `Recipient`, the validity window,
 compile.
 
 ```tsx {% title="app/http/controllers/sso/acs.tsx" %}
-import { Base64 } from "@sdxc/crypto";
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import * as SAML from "@sdxc/saml";
+import { Base64 } from "sdxc/crypto";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import * as SAML from "sdxc/saml";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -312,10 +311,10 @@ never fills the table and a stored row outlives exactly the period a captured on
 replayed.
 
 ```typescript {% title="app/models/replay-store.ts" %}
-import type { ReplayStore } from "@sdxc/saml";
+import type { ReplayStore } from "sdxc/saml";
 import type { Database } from "remix/data-table";
 
-import { toMs } from "@sdxc/duration";
+import { toMs } from "sdxc/duration";
 import { column as c, table } from "remix/data-table";
 
 export const assertionIds = table({
@@ -356,9 +355,9 @@ hash, and look the directory up by it:
 ```typescript {% title="app/http/middleware/scim-auth.ts" %}
 import type { Middleware } from "remix/router";
 
-import { Hex, sha256 } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
-import { errorResponse, ScimError } from "@sdxc/scim";
+import { Hex, sha256 } from "sdxc/crypto";
+import { isFailure } from "sdxc/result";
+import { errorResponse, ScimError } from "sdxc/scim";
 import { createContextKey } from "remix/router";
 
 import { Directories } from "~/app/models/directories";
@@ -389,7 +388,7 @@ export const scimAuth: Middleware = async (ctx, next) => {
 
 `errorResponse` writes the SCIM error document of RFC 7644 with the
 `application/scim+json` type, which is what a directory's client parses. Every failure
-`@sdxc/scim` reports is a `ScimError` that `errorResponse` accepts, so all the handlers below
+`sdxc/scim` reports is a `ScimError` that `errorResponse` accepts, so all the handlers below
 answer the same way.
 
 ## Describe what you serve
@@ -399,15 +398,15 @@ advertises it, and filters, PATCH and projection evaluate against it, so what th
 told and what the server does cannot disagree.
 
 ```typescript {% title="app/services/scim/definitions.ts" %}
-import type { Discovery } from "@sdxc/scim/discovery";
+import type { Discovery } from "sdxc/scim/discovery";
 
-import { ENTERPRISE_USER_SCHEMA, GROUP_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
+import { ENTERPRISE_USER_SCHEMA, GROUP_SCHEMA, USER_SCHEMA } from "sdxc/scim";
 import {
 	ENTERPRISE_USER_DEFINITION,
 	GROUP_DEFINITION,
 	pickAttributes,
 	USER_DEFINITION,
-} from "@sdxc/scim/discovery";
+} from "sdxc/scim/discovery";
 
 export const MAX_PAGE_SIZE = 200;
 
@@ -442,8 +441,8 @@ import {
 	GROUP_SCHEMA,
 	scimResponse,
 	USER_SCHEMA,
-} from "@sdxc/scim";
-import { resourceTypes, schemas, serviceProviderConfig } from "@sdxc/scim/discovery";
+} from "sdxc/scim";
+import { resourceTypes, schemas, serviceProviderConfig } from "sdxc/scim/discovery";
 import { createController } from "remix/router";
 
 import {
@@ -499,8 +498,8 @@ reads the User, matching attribute names case-insensitively and typing the Enter
 extension. `userResource` writes the wire form back.
 
 ```typescript {% title="app/http/controllers/scim/users.ts" %}
-import { isFailure } from "@sdxc/result";
-import * as Scim from "@sdxc/scim";
+import { isFailure } from "sdxc/result";
+import * as Scim from "sdxc/scim";
 import { createAction } from "remix/router";
 
 import { scimAuth } from "~/app/http/middleware/scim-auth";
@@ -549,13 +548,13 @@ and each attribute's `returned` rule. A directory's first call is usually
 filter is where the two sub-packages meet:
 
 ```typescript {% title="app/services/scim/find-users.ts" %}
-import type { Filter } from "@sdxc/scim/filter";
+import type { Filter } from "sdxc/scim/filter";
 import type { Database } from "remix/data-table";
 
-import { isFailure, isSuccess, success } from "@sdxc/result";
-import { userResource } from "@sdxc/scim";
-import { filterToWhere } from "@sdxc/scim/data-table";
-import { compileFilter } from "@sdxc/scim/filter";
+import { isFailure, isSuccess, success } from "sdxc/result";
+import { userResource } from "sdxc/scim";
+import { filterToWhere } from "sdxc/scim/data-table";
+import { compileFilter } from "sdxc/scim/filter";
 
 import { Users } from "~/app/models/users";
 import { USER_DEFINITIONS } from "~/app/services/scim/definitions";
@@ -598,9 +597,9 @@ usually send `active: false` rather than a `DELETE`. Apply the operations to the
 representation, then store the result the way a replace would:
 
 ```typescript {% title="app/http/controllers/scim/patch-user.ts" %}
-import { isFailure } from "@sdxc/result";
-import * as Scim from "@sdxc/scim";
-import { applyPatch, parsePatch } from "@sdxc/scim/patch";
+import { isFailure } from "sdxc/result";
+import * as Scim from "sdxc/scim";
+import { applyPatch, parsePatch } from "sdxc/scim/patch";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -648,8 +647,8 @@ Groups follow the same shape with `parseGroup` and `groupResource`. A member's `
 `members`, applied with `applyPatch` against `GROUP_DEFINITIONS`.
 
 ```typescript {% title="app/http/controllers/scim/groups.ts" %}
-import { isFailure } from "@sdxc/result";
-import * as Scim from "@sdxc/scim";
+import { isFailure } from "sdxc/result";
+import * as Scim from "sdxc/scim";
 import { createAction } from "remix/router";
 
 import { scimAuth } from "~/app/http/middleware/scim-auth";
@@ -677,7 +676,7 @@ Map the routes in your router initializer from
 Each controller loads through `lazy()`, so a sign-in never loads the SCIM handlers:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { lazy } from "@sdxc/lazy-route";
+import { lazy } from "sdxc/lazy-route";
 import { createRouter } from "remix/router";
 
 import routes from "~/routes/web";
@@ -742,5 +741,5 @@ eagerly, so give the SCIM routes a rate limit of their own, keyed on the token's
   the posted `SAMLResponse` and `RelayState` fields in `findPending`.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the
   database behind the replay store and the `Users` model.
-- [`@sdxc/saml`](/api/saml) and [`@sdxc/scim`](/api/scim) — every error class, and the
+- [`sdxc/saml`](/api/saml) and [`sdxc/scim`](/api/scim) — every error class, and the
   filter, PATCH and discovery reference.

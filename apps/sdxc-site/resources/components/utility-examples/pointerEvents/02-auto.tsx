@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { pointerEvents } from "@sdxc/u/general";
-import { absolute, hstack, inset, relative } from "@sdxc/u/layout";
-import { is, p } from "@sdxc/u/size";
-import { hover } from "@sdxc/u/state";
-import { textDecoration, weight } from "@sdxc/u/typography";
+import { bg, fg } from "sdxc/u/color";
+import { pointerEvents } from "sdxc/u/general";
+import { absolute, hstack, inset, relative } from "sdxc/u/layout";
+import { is, p } from "sdxc/u/size";
+import { hover } from "sdxc/u/state";
+import { textDecoration, weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

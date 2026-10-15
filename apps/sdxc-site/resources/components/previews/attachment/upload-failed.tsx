@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { FileIcon, RotateCwIcon } from "@sdxc/icons";
-import { Attachment } from "@sdxc/ui";
+import { FileIcon, RotateCwIcon } from "sdxc/icons";
+import { Attachment } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Attachment state="error">

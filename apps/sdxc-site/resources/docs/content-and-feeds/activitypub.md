@@ -18,15 +18,14 @@ verifies each activity at the inbox, processes follows and undos, delivers signe
 follower from background jobs, and serves each post as HTML to a browser and as an
 ActivityStreams `Article` to a server.
 
-[`@sdxc/activitypub`](/api/activitypub) holds the protocol: one `Federation` per actor, the
+[`sdxc/activitypub`](/api/activitypub) holds the protocol: one `Federation` per actor, the
 vocabulary, and in-memory stores for tests. Its signatures come from
-[`@sdxc/http-signatures`](/api/http-signatures), [`@sdxc/well-known`](/api/well-known) answers
-WebFinger, [`@sdxc/jobs`](/api/jobs) runs every step off the request, and
-[`@sdxc/cache`](/api/cache) holds the remote documents the federation fetches.
+[`sdxc/http-signatures`](/api/http-signatures), [`sdxc/well-known`](/api/well-known) answers
+WebFinger, [`sdxc/jobs`](/api/jobs) runs every step off the request, and
+[`sdxc/cache`](/api/cache) holds the remote documents the federation fetches.
 
 ```bash
-npm add remix @sdxc/activitypub @sdxc/jobs @sdxc/cache @sdxc/well-known @sdxc/http \
-	@sdxc/result
+npm add sdxc remix
 ```
 
 The package keeps no state of its own. Followers, the activities already processed and the
@@ -40,8 +39,8 @@ one fetches the actor document to read the public half. `ActorKeys.generate` mak
 Mastodon expects. Run it once, from a script, and store the private key as a secret:
 
 ```typescript {% title="scripts/actor-keys.ts" %}
-import { ActorKeys } from "@sdxc/activitypub";
-import { isFailure } from "@sdxc/result";
+import { ActorKeys } from "sdxc/activitypub";
+import { isFailure } from "sdxc/result";
 
 let pair = await ActorKeys.generate();
 if (isFailure(pair)) process.exitCode = 1;
@@ -60,11 +59,11 @@ Import it lazily through a `KeyProvider`, so the work happens inside the first r
 that signs, and once per isolate after that:
 
 ```typescript {% title="app/services/actor-keys.ts" %}
-import type { KeyProvider } from "@sdxc/activitypub";
-import type { Result } from "@sdxc/result";
+import type { KeyProvider } from "sdxc/activitypub";
+import type { Result } from "sdxc/result";
 
-import { ActorKeys } from "@sdxc/activitypub";
-import { isFailure, success } from "@sdxc/result";
+import { ActorKeys } from "sdxc/activitypub";
+import { isFailure, success } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 import { ACTOR_ID } from "~/config/activitypub";
@@ -124,10 +123,10 @@ leave out with `null`, `[]` or `false`, so the actor is written as the handful o
 matter:
 
 ```typescript {% title="app/services/site-actor.ts" %}
-import type { ActivityPub, ActivityPubParseError } from "@sdxc/activitypub";
-import type { Result } from "@sdxc/result";
+import type { ActivityPub, ActivityPubParseError } from "sdxc/activitypub";
+import type { Result } from "sdxc/result";
 
-import { parseActor } from "@sdxc/activitypub";
+import { parseActor } from "sdxc/activitypub";
 
 import {
 	ACTOR_ID,
@@ -166,14 +165,14 @@ holds nothing between calls, so build it wherever a database and a job enqueuer 
 a request with `ctx.db` and `ctx.jobs`, in a job with its database and the dispatcher.
 
 ```typescript {% title="app/services/federation.ts" %}
-import type { ActivityPubParseError } from "@sdxc/activitypub";
-import type { JobEnqueuer } from "@sdxc/jobs";
-import type { Result } from "@sdxc/result";
+import type { ActivityPubParseError } from "sdxc/activitypub";
+import type { JobEnqueuer } from "sdxc/jobs";
+import type { Result } from "sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
-import { WorkerKVCache } from "@sdxc/cache/worker-kv";
-import { isFailure, success } from "@sdxc/result";
+import { CacheSeenActivities, Federation } from "sdxc/activitypub";
+import { WorkerKVCache } from "sdxc/cache/worker-kv";
+import { isFailure, success } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 import { USER_AGENT } from "~/config/activitypub";
@@ -244,7 +243,7 @@ with the package:
   which is how the inbox tells a reply to one of your posts from noise. It is built further down.
 
 The cache holds remote actors and objects, the signature scheme each server accepted, and the
-servers that keep failing. Any `@sdxc/cache` `Cache` works; a failing one costs a refetch, never
+servers that keep failing. Any `sdxc/cache` `Cache` works; a failing one costs a refetch, never
 a wrong answer. `userAgent` goes out on every request, since some servers refuse requests
 without one.
 
@@ -262,11 +261,11 @@ with an `ETag`, `304` revalidation and a five-minute public cache. Every route m
 action:
 
 ```typescript {% title="app/http/controllers/activitypub.ts" %}
-import type { JobEnqueuer } from "@sdxc/jobs";
+import type { JobEnqueuer } from "sdxc/jobs";
 import type { Database } from "remix/data-table";
 
-import { notFound, serviceUnavailable } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
+import { notFound, serviceUnavailable } from "sdxc/http/response/json";
+import { isFailure } from "sdxc/result";
 import { createController } from "remix/router";
 
 import { createFederation } from "~/app/services/federation";
@@ -333,15 +332,15 @@ path from it: the signature is the stronger claim.
 Someone on Mastodon types `@hello@example.com`. Their server asks
 `https://example.com/.well-known/webfinger?resource=acct:hello@example.com` for a `self` link
 typed `application/activity+json`, then fetches the actor it points at. `actorLink` writes that
-link, and the `wellKnown` middleware from `@sdxc/well-known` answers the path. The `links`
+link, and the `wellKnown` middleware from `sdxc/well-known` answers the path. The `links`
 array on a WebFinger JRD is JSON, not an HTTP `Link` header; RFC 8288 headers are
 [Parse and write Link headers](/docs/http-apis/link-header).
 
 ```typescript {% title="app/http/middleware/webfinger.ts" %}
-import { actorLink } from "@sdxc/activitypub";
-import { isFailure } from "@sdxc/result";
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
+import { actorLink } from "sdxc/activitypub";
+import { isFailure } from "sdxc/result";
+import { serve, wellKnown } from "sdxc/well-known/middleware";
+import { readQuery, select, webFinger } from "sdxc/well-known/webfinger";
 
 import { ACTOR_ID, HANDLE } from "~/config/activitypub";
 
@@ -377,8 +376,8 @@ one message shape, `Federation.MESSAGE`, a schema from `remix/data-schema`. Decl
 it, beside the job that publishes a post:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
-import { job, jobs } from "@sdxc/jobs";
+import { CacheSeenActivities, Federation } from "sdxc/activitypub";
+import { job, jobs } from "sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -393,8 +392,8 @@ The handler hands each message back to the federation and maps its answer onto t
 verbs:
 
 ```typescript {% title="app/jobs/federation/process.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
 
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/initializers/dispatcher";
@@ -537,12 +536,12 @@ an `Article` for a long one with a title. The same object is what a server gets 
 for the post's URL, and what `LocalObjects.find` answers for it:
 
 ```typescript {% title="app/services/federated-posts.ts" %}
-import type { ActivityPub, LocalObjects } from "@sdxc/activitypub";
-import type { Result } from "@sdxc/result";
+import type { ActivityPub, LocalObjects } from "sdxc/activitypub";
+import type { Result } from "sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { parseObject, PUBLIC, stringify, tombstone } from "@sdxc/activitypub";
-import { isFailure, success, wrap } from "@sdxc/result";
+import { parseObject, PUBLIC, stringify, tombstone } from "sdxc/activitypub";
+import { isFailure, success, wrap } from "sdxc/result";
 
 import type { Post } from "~/app/models/posts";
 
@@ -615,8 +614,8 @@ Enqueue `jobs.federation.publish` with the post's id whenever a post is created,
 deleted. The job works out which activity that is and hands it to `publish`:
 
 ```typescript {% title="app/jobs/federation/publish.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
 
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/initializers/dispatcher";
@@ -665,7 +664,7 @@ A server that is down or rate-limiting fails the delivery as retryable, with a `
 `DELIVERY_BACKOFF`: five minutes, thirty minutes, two hours, six hours, then twelve, each with
 ±20% jitter, or longer when the inbox sent a `Retry-After`. That is about 21 hours over five
 retries, so give the queue at least six attempts. A queue that retries more takes its own
-schedule as `backoff: createBackoff(…)` from [`@sdxc/backoff`](/api/backoff);
+schedule as `backoff: createBackoff(…)` from [`sdxc/backoff`](/api/backoff);
 [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers the
 options.
 
@@ -677,11 +676,11 @@ and answers `null` for a browser, so the page renders as usual. Call it first in
 page's handler:
 
 ```typescript {% title="app/http/activity-response.ts" %}
-import type { JobEnqueuer } from "@sdxc/jobs";
+import type { JobEnqueuer } from "sdxc/jobs";
 import type { Database } from "remix/data-table";
 
-import { tombstone } from "@sdxc/activitypub";
-import { isFailure } from "@sdxc/result";
+import { tombstone } from "sdxc/activitypub";
+import { isFailure } from "sdxc/result";
 
 import type { Post } from "~/app/models/posts";
 
@@ -723,12 +722,12 @@ reads the page first.
 
 ## Test it in memory
 
-`@sdxc/activitypub/testing` has an in-memory implementation of every store, and conformance
+`sdxc/activitypub/testing` has an in-memory implementation of every store, and conformance
 suites that hold your own stores to the contracts the package relies on. Register a suite for
 each store you wrote:
 
 ```typescript {% title="app/models/followers.test.ts" %}
-import { followerStoreConformance } from "@sdxc/activitypub/testing";
+import { followerStoreConformance } from "sdxc/activitypub/testing";
 
 import { Followers } from "~/app/models/followers";
 import { openTestDatabase } from "~/app/test/database";
@@ -748,14 +747,14 @@ The federation itself runs on the memory stores and a `MemoryCache`, with a queu
 collects what it is handed:
 
 ```typescript {% title="app/services/federation.test.ts" %}
-import { ACTIVITY_JSON, ActorKeys, Federation, parseActor } from "@sdxc/activitypub";
+import { ACTIVITY_JSON, ActorKeys, Federation, parseActor } from "sdxc/activitypub";
 import {
 	MemoryFollowerStore,
 	MemoryLocalObjects,
 	MemorySeenActivities,
-} from "@sdxc/activitypub/testing";
-import { MemoryCache } from "@sdxc/cache/memory";
-import { isSuccess, unwrap } from "@sdxc/result";
+} from "sdxc/activitypub/testing";
+import { MemoryCache } from "sdxc/cache/memory";
+import { isSuccess, unwrap } from "sdxc/result";
 import { expect, test } from "vitest";
 
 import { ACTOR_ID, INBOX_ID } from "~/config/activitypub";
@@ -813,7 +812,7 @@ test("an unsigned activity is refused before it is queued", async () => {
 Neither test leaves the process: the actor is served from memory, and an unsigned request is
 refused before anything is fetched. A test of a signed delivery serves the remote actor and
 its inbox with [MSW](https://mswjs.io/) and signs the request with
-[`@sdxc/http-signatures`](/api/http-signatures). Every outbound request also resolves its host
+[`sdxc/http-signatures`](/api/http-signatures). Every outbound request also resolves its host
 over DNS-over-HTTPS first, so answer `https://cloudflare-dns.com/dns-query` with a public address
 as well; [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) shows
 that handler. `MemorySeenActivities` takes a `now` clock, so a test moves time to check a
@@ -827,5 +826,5 @@ claim expires.
   way independent sites talk to each other.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   the queue and the verbs every handler here uses.
-- [`@sdxc/activitypub`](/api/activitypub) — every error code, the delivery table and the quirks
+- [`sdxc/activitypub`](/api/activitypub) — every error code, the delivery table and the quirks
   of each fediverse server the package absorbs.

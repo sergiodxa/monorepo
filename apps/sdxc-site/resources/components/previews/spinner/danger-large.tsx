@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Spinner } from "@sdxc/ui";
-import { spin } from "@sdxc/ui/animations";
+import { Spinner } from "sdxc/ui";
+import { spin } from "sdxc/ui/animations";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Spinner color="danger" size="lg" mix={[spin()]} aria-label="Retrying the upload" />`;

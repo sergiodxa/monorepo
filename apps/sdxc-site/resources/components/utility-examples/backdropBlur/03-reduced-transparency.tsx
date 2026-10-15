@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { backdropBlur } from "@sdxc/u/effects";
-import { transparencySafe } from "@sdxc/u/responsive";
+import { backdropBlur } from "sdxc/u/effects";
+import { transparencySafe } from "sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

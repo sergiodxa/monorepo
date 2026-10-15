@@ -9,9 +9,9 @@
 
 import type { Handle } from "remix/component";
 
-import { hstack, vstack } from "@sdxc/u/layout";
-import { Text, ToggleButton } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { hstack, vstack } from "sdxc/u/layout";
+import { Text, ToggleButton } from "sdxc/ui";
 
 /** The filters the task list offers, with how many tasks each one shows. */
 const FILTERS = [

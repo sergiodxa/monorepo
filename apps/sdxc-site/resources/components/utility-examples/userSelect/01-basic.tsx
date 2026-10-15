@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { userSelect } from "@sdxc/u/general";
-import { maxIs } from "@sdxc/u/size";
+import { userSelect } from "sdxc/u/general";
+import { maxIs } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

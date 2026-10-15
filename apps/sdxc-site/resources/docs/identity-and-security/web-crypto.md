@@ -14,13 +14,13 @@ account features that need them: a password-reset link, password storage, a sign
 link and secrets encrypted at rest. The TOTP second factor built on the same package has a
 guide of its own.
 
-[`@sdxc/crypto`](/api/crypto) wraps the Web Crypto API with the details decided once:
+[`sdxc/crypto`](/api/crypto) wraps the Web Crypto API with the details decided once:
 encodings, constant-time comparison, a versioned encryption envelope, scrypt parameters. Every
-call that can fail returns a `Result` from [`@sdxc/result`](/api/result), so a refusal from the
+call that can fail returns a `Result` from [`sdxc/result`](/api/result), so a refusal from the
 runtime is a branch, not an exception.
 
 ```bash
-npm add @sdxc/crypto @sdxc/result @sdxc/validate @sdxc/http
+npm add sdxc remix
 ```
 
 ## Pick the primitive by what happens next
@@ -42,8 +42,8 @@ it unguessable with 32 random bytes, and store only its SHA-256 digest, so anyon
 your storage finds hashes rather than working links:
 
 ```typescript {% title="app/services/password-resets.ts" %}
-import { Hex, randomToken, sha256 } from "@sdxc/crypto";
-import { isFailure, success } from "@sdxc/result";
+import { Hex, randomToken, sha256 } from "sdxc/crypto";
+import { isFailure, success } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 const RESET_TTL_SECONDS = 30 * 60;
@@ -94,10 +94,10 @@ The reset form posts the token and the new password. Validate the form first, so
 your policy refuses does not spend the link, then consume the token and hash the password:
 
 ```tsx {% title="app/http/controllers/password/reset.tsx" %}
-import { password } from "@sdxc/crypto";
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { password } from "sdxc/crypto";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import { createAction } from "remix/router";
 
 import { NewPasswordSchema } from "~/app/http/validators/password";
@@ -140,8 +140,8 @@ records:
 ```typescript {% title="app/services/sign-in.ts" %}
 import type { Database } from "remix/data-table";
 
-import { password } from "@sdxc/crypto";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { password } from "sdxc/crypto";
+import { isFailure, isSuccess } from "sdxc/result";
 
 import { Users } from "~/app/models/users";
 
@@ -176,8 +176,8 @@ unsubscribe someone else by editing the query string. Sign what the link says wi
 only your app holds:
 
 ```typescript {% title="app/services/unsubscribe-links.ts" %}
-import { Hex, hmac } from "@sdxc/crypto";
-import { failure, isFailure, isSuccess, success } from "@sdxc/result";
+import { Hex, hmac } from "sdxc/crypto";
+import { failure, isFailure, isSuccess, success } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 export async function unsubscribeUrl(userId: string, list: string) {
@@ -214,7 +214,7 @@ This link never expires, which suits an unsubscribe. For one that should, put th
 the signed payload, or issue a [JWT](/docs/identity-and-security/json-web-tokens) when a
 different service has to verify it without your secret. Webhooks are the same idea with a
 standard around it: [Receive and send webhooks](/docs/identity-and-security/webhooks) uses
-[`@sdxc/webhooks`](/api/webhooks), which handles the timestamps, replay checks and secret
+[`sdxc/webhooks`](/api/webhooks), which handles the timestamps, replay checks and secret
 rotation.
 
 ## Seal secrets at rest
@@ -230,8 +230,8 @@ openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | npx wrangler secret put SEA
 Import it once per isolate and seal through one module:
 
 ```typescript {% title="app/services/sealing.ts" %}
-import { importKey, open, seal } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import { importKey, open, seal } from "sdxc/crypto";
+import { isFailure } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 let key: ReturnType<typeof importKey> | null = null;
@@ -279,4 +279,4 @@ and turning it off.
   or instead of passwords.
 - [Issue and verify JWTs](/docs/identity-and-security/json-web-tokens): signed tokens a
   different service verifies with your public key.
-- [`@sdxc/crypto`](/api/crypto): encodings, digests, `timingSafeEqual` and every error class.
+- [`sdxc/crypto`](/api/crypto): encodings, digests, `timingSafeEqual` and every error class.

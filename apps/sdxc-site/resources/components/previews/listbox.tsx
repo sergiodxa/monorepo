@@ -11,13 +11,13 @@
 import type { Handle } from "remix/component";
 
 import * as listbox from "@remix-run/ui/listbox";
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { is, m } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { Header, ListBox, Section } from "@sdxc/ui";
-import { listboxKeys } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { is, m } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { Header, ListBox, Section } from "sdxc/ui";
+import { listboxKeys } from "sdxc/ui/mixins";
 
 /** The projects an issue can be moved into, grouped the way the picker shows them. */
 const GROUPS = [

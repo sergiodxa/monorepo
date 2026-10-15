@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { is, maxIs } from "@sdxc/u/size";
-import { YouTubeEmbed } from "@sdxc/ui";
+import { is, maxIs } from "sdxc/u/size";
+import { YouTubeEmbed } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[is("full"), maxIs("36rem")]}>

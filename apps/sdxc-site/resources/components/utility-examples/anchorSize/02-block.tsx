@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { bg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
 import {
 	absolute,
 	anchorName,
@@ -15,8 +15,8 @@ import {
 	positionAnchor,
 	positionArea,
 	relative,
-} from "@sdxc/u/layout";
-import { bs, is, m, mis } from "@sdxc/u/size";
+} from "sdxc/u/layout";
+import { bs, is, m, mis } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

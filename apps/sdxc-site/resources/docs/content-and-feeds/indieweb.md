@@ -15,9 +15,9 @@ same vocabulary, microformats2: class names on ordinary HTML that say which part
 the entry, its author and its date.
 
 This guide adds all three to a Remix v3 app. It combines
-[`@sdxc/microformats`](/api/microformats), [`@sdxc/webmention`](/api/webmention) and
-[`@sdxc/micropub`](/api/micropub), with [`@sdxc/jobs`](/api/jobs) running every outbound
-fetch off the request and [`@sdxc/backoff`](/api/backoff) spacing out the retries.
+[`sdxc/microformats`](/api/microformats), [`sdxc/webmention`](/api/webmention) and
+[`sdxc/micropub`](/api/micropub), with [`sdxc/jobs`](/api/jobs) running every outbound
+fetch off the request and [`sdxc/backoff`](/api/backoff) spacing out the retries.
 
 Mastodon and the rest of the fediverse reach your posts through a different protocol,
 ActivityPub, which [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) adds
@@ -26,8 +26,7 @@ kind, author and content a verified Webmention carries, so both can share the ta
 moderation queue this guide builds.
 
 ```bash
-npm add remix @sdxc/microformats @sdxc/webmention @sdxc/micropub @sdxc/jobs \
-	@sdxc/backoff @sdxc/result
+npm add sdxc remix
 ```
 
 The packages hold the protocols. Storing posts and mentions, moderation, and verifying access
@@ -36,13 +35,13 @@ tokens stay yours, so the examples call a few functions from your own `~/app/mod
 ## Mark up your posts
 
 A receiver reads your page's microformats to decide what your post is, and a Webmention you
-send is only as good as the markup it points at. `mf` from `@sdxc/microformats/ui` is a mixin
+send is only as good as the markup it points at. `mf` from `sdxc/microformats/ui` is a mixin
 that adds the class names, typed so a misspelled property is a compile error:
 
 ```tsx {% title="resources/components/post-entry.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import { MicroTime, mf } from "@sdxc/microformats/ui";
+import { MicroTime, mf } from "sdxc/microformats/ui";
 
 interface PostEntryProps {
 	title: string;
@@ -97,11 +96,11 @@ export default route({
 ```
 
 Advertise the endpoint first, in both places a sender looks. `advertise` from
-`@sdxc/webmention/discover` writes the RFC 8288 `Link` header value for a post's response,
-through [`@sdxc/link-header`](/api/link-header):
+`sdxc/webmention/discover` writes the RFC 8288 `Link` header value for a post's response,
+through [`sdxc/link-header`](/api/link-header):
 
 ```typescript {% title="app/http/webmention-headers.ts" %}
-import { advertise } from "@sdxc/webmention/discover";
+import { advertise } from "sdxc/webmention/discover";
 
 import routes from "~/routes/web";
 
@@ -135,8 +134,8 @@ different, a target you accept) and fetches nothing. Verification means fetching
 URL an anonymous caller chose, so it goes on the queue:
 
 ```typescript {% title="app/http/controllers/webmention.ts" %}
-import { isFailure } from "@sdxc/result";
-import { accepted, parseRequest, rejected } from "@sdxc/webmention/receiver";
+import { isFailure } from "sdxc/result";
+import { accepted, parseRequest, rejected } from "sdxc/webmention/receiver";
 import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
@@ -163,14 +162,14 @@ The form-data middleware already read the body, so `ctx.formData` is passed in r
 again. `rejected` answers `400` with the reason as text, and `accepted` answers `202`, which is
 what tells the sender its mention is being processed rather than published.
 
-`ctx.jobs` is published by `jobEnqueuer(queue)` from `@sdxc/jobs/router`, given the same queue
+`ctx.jobs` is published by `jobEnqueuer(queue)` from `sdxc/jobs/router`, given the same queue
 your dispatcher delivers from, so the request writes the message and none of the job's code
 loads in the request path (see
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)). Declare the jobs
 this guide uses in one map:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "@sdxc/jobs";
+import { job, jobs } from "sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -223,10 +222,10 @@ five seconds by default), checks that it links to the target, and summarizes it 
 microformats. Key what you store on the pair, since a repeated pair is an update:
 
 ```typescript {% title="app/jobs/webmentions/verify.ts" %}
-import { createBackoff } from "@sdxc/backoff";
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-import { verify } from "@sdxc/webmention/receiver";
+import { createBackoff } from "sdxc/backoff";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
+import { verify } from "sdxc/webmention/receiver";
 
 import jobs from "~/app/jobs";
 import { deleteMention, saveMention } from "~/app/models/mentions";
@@ -280,11 +279,11 @@ longer links to, since the specification asks you to notify a removed link too. 
 runs inside a job, so it fans out through the dispatcher itself rather than `ctx.jobs`.
 
 ```typescript {% title="app/jobs/webmentions/send.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { Markdown } from "@sdxc/markdown";
-import { toHTML } from "@sdxc/markdown/html";
-import { isFailure } from "@sdxc/result";
-import { outboundLinks, plan } from "@sdxc/webmention/sender";
+import { createJobHandler } from "sdxc/jobs";
+import { Markdown } from "sdxc/markdown";
+import { toHTML } from "sdxc/markdown/html";
+import { isFailure } from "sdxc/result";
+import { outboundLinks, plan } from "sdxc/webmention/sender";
 
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/initializers/dispatcher";
@@ -318,11 +317,11 @@ before the job runs, and each receiver's own verification sees the deletion and 
 mention. One delivery per target means a slow endpoint delays nobody else:
 
 ```typescript {% title="app/jobs/webmentions/deliver.ts" %}
-import { createBackoff } from "@sdxc/backoff";
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-import { WebmentionFetchError } from "@sdxc/webmention";
-import { send } from "@sdxc/webmention/sender";
+import { createBackoff } from "sdxc/backoff";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
+import { WebmentionFetchError } from "sdxc/webmention";
+import { send } from "sdxc/webmention/sender";
 
 import jobs from "~/app/jobs";
 import { forgetTarget, recordTarget } from "~/app/models/mentions";
@@ -361,7 +360,7 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 
 `send` discovers the target's endpoint (the `Link` header first, then the first `<link>` or
 `<a>` in the page) and POSTs the pair. The header parse is the same `parse` from
-`@sdxc/link-header` that [Parse and write Link headers](/docs/http-apis/link-header) covers. It answers `{ status: "no-endpoint" }` for a page that
+`sdxc/link-header` that [Parse and write Link headers](/docs/http-apis/link-header) covers. It answers `{ status: "no-endpoint" }` for a page that
 takes no mentions, which is an ordinary outcome, not a failure. A failure is either a
 `WebmentionFetchError`, which says itself whether it is `retryable`, or a
 `WebmentionSendError` carrying the status the endpoint answered. A receiver is someone else's
@@ -387,8 +386,8 @@ import {
 	parseOperation,
 	requiredScopes,
 	updated,
-} from "@sdxc/micropub";
-import { isFailure } from "@sdxc/result";
+} from "sdxc/micropub";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { createPost, setDeleted, updatePost } from "~/app/models/posts";
@@ -433,10 +432,10 @@ A create arrives already reshaped: form fields become microformats2 properties, 
 `MF2.Item`, so the microformats readers work on it directly:
 
 ```typescript {% title="app/services/micropub.ts" %}
-import type { Micropub } from "@sdxc/micropub";
+import type { Micropub } from "sdxc/micropub";
 
-import { values } from "@sdxc/microformats";
-import { postType } from "@sdxc/microformats/vocabulary";
+import { values } from "sdxc/microformats";
+import { postType } from "sdxc/microformats/vocabulary";
 
 export function draftFrom(operation: Micropub.Create) {
 	return {
@@ -460,8 +459,8 @@ conversation across two sites.
 The `GET` side answers queries. `parseQuery` reads `q`, and each answer has its own builder:
 
 ```typescript {% title="app/http/controllers/micropub/query.ts" %}
-import { config, error, parseQuery, source, syndicateTo } from "@sdxc/micropub";
-import { isFailure } from "@sdxc/result";
+import { config, error, parseQuery, source, syndicateTo } from "sdxc/micropub";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { postAsItem } from "~/app/models/posts";
@@ -509,5 +508,5 @@ editor round-trips it.
   replies and likes from Mastodon and the rest of the fediverse.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   retries and the queue behind every job here.
-- [`@sdxc/microformats`](/api/microformats) — the authorship algorithm, representative
+- [`sdxc/microformats`](/api/microformats) — the authorship algorithm, representative
   `h-card` and the rest of the vocabulary.

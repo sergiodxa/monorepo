@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { borderEdge } from "@sdxc/u/color";
-import { pis } from "@sdxc/u/size";
+import { borderEdge } from "sdxc/u/color";
+import { pis } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

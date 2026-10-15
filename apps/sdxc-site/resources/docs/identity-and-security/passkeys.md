@@ -13,13 +13,13 @@ fingerprint, a face or a PIN. There is nothing to phish and nothing to leak from
 database, because what you store is a public key. This guide adds one to a Remix v3 app:
 enrollment for an account that is already signed in, and a sign-in that needs no password.
 
-[`@sdxc/passkey`](/api/passkey) covers both halves. `@sdxc/passkey/server` issues ceremony
-options and verifies what the browser signs; `@sdxc/passkey/client` runs the ceremony in the
+[`sdxc/passkey`](/api/passkey) covers both halves. `sdxc/passkey/server` issues ceremony
+options and verifies what the browser signs; `sdxc/passkey/client` runs the ceremony in the
 browser, from a `remix/component` client entry. Every failure on either side is a
-[`@sdxc/result`](/api/result) value.
+[`sdxc/result`](/api/result) value.
 
 ```bash
-npm add @sdxc/passkey @sdxc/auth @sdxc/result @sdxc/http @sdxc/ui
+npm add sdxc remix
 ```
 
 ## Declare the endpoints
@@ -74,7 +74,7 @@ The relying party holds your policy and nothing else, so one instance at module 
 every request.
 
 ```typescript {% title="app/initializers/passkeys.ts" %}
-import { RelyingParty } from "@sdxc/passkey/server";
+import { RelyingParty } from "sdxc/passkey/server";
 import { env } from "cloudflare:workers";
 
 export const RELYING_PARTY = new RelyingParty({
@@ -99,7 +99,7 @@ The session is the smallest place that holds it — the one from
 ```typescript {% title="app/services/auth/passkey-challenge.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { sessionOf } from "@sdxc/auth/remix/context";
+import { sessionOf } from "sdxc/auth/remix/context";
 
 const CHALLENGE_KEY = "passkey:challenge";
 
@@ -115,7 +115,7 @@ export function spendChallenge(ctx: RequestContext): string | null {
 }
 ```
 
-`sessionOf` from [`@sdxc/auth`](/api/auth) reads the session Remix's session middleware put on
+`sessionOf` from [`sdxc/auth`](/api/auth) reads the session Remix's session middleware put on
 the context, and throws when that middleware has not run. `spendChallenge` drops the value in
 the same call that reads it. A challenge that survives its ceremony is one an attacker can
 replay an assertion against; spent on read, it buys exactly one.
@@ -135,7 +135,7 @@ is also what makes it trustworthy: the account was authenticated when it enrolle
 was fresh, and the origin and relying party id matched.
 
 ```typescript {% title="app/http/controllers/passkeys/register-challenge.ts" %}
-import { ok } from "@sdxc/http/response/json";
+import { ok } from "sdxc/http/response/json";
 import { createAction } from "remix/router";
 
 import { currentAccount } from "~/app/services/auth/current-account";
@@ -166,8 +166,8 @@ The verify endpoint hands the request straight to the relying party, which reads
 the JSON body itself:
 
 ```typescript {% title="app/http/controllers/passkeys/register-verify.ts" %}
-import { badRequest, ok } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
+import { badRequest, ok } from "sdxc/http/response/json";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { currentAccount } from "~/app/services/auth/current-account";
@@ -198,7 +198,7 @@ Leaving `allow` out of `authenticate()` makes the ceremony usernameless: the bro
 every passkey it holds for your domain, so nobody types an identifier first.
 
 ```typescript {% title="app/http/controllers/passkeys/sign-in-challenge.ts" %}
-import { ok } from "@sdxc/http/response/json";
+import { ok } from "sdxc/http/response/json";
 import { createAction } from "remix/router";
 
 import { keepChallenge } from "~/app/services/auth/passkey-challenge";
@@ -217,10 +217,10 @@ assertion names it by id, so this endpoint reads the body itself and hands the p
 to the relying party:
 
 ```typescript {% title="app/http/controllers/passkeys/sign-in-verify.ts" %}
-import { sessionOf } from "@sdxc/auth/remix/context";
-import { badRequest, ok } from "@sdxc/http/response/json";
-import { CounterError } from "@sdxc/passkey/server";
-import { isFailure, wrap } from "@sdxc/result";
+import { sessionOf } from "sdxc/auth/remix/context";
+import { badRequest, ok } from "sdxc/http/response/json";
+import { CounterError } from "sdxc/passkey/server";
+import { isFailure, wrap } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { spendChallenge } from "~/app/services/auth/passkey-challenge";
@@ -274,8 +274,8 @@ The browser half is the one piece of the page that ships JavaScript. Keep the ce
 plain function: fetch the options, prompt, post the signed response, follow the redirect.
 
 ```typescript {% title="resources/components/passkey-ceremony.ts" %}
-import { CancelledError, Passkey } from "@sdxc/passkey/client";
-import { isFailure } from "@sdxc/result";
+import { CancelledError, Passkey } from "sdxc/passkey/client";
+import { isFailure } from "sdxc/result";
 
 export async function signInWithPasskey(challengeUrl: string, verifyUrl: string) {
 	let issued = await fetch(challengeUrl, { method: "POST" });
@@ -305,7 +305,7 @@ error message. The island wraps it in a button and shows whatever message comes 
 ```tsx {% title="resources/components/passkey-sign-in.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Button } from "@sdxc/ui";
+import { Button } from "sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
 import { signInWithPasskey } from "./passkey-ceremony";
@@ -358,4 +358,4 @@ aborts it when the island disconnects, which releases the one ceremony a browser
   client-entry import map needs under a strict policy.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   client entries and hydration.
-- [`@sdxc/passkey`](/api/passkey) — second-factor use, attestation, and every error class.
+- [`sdxc/passkey`](/api/passkey) — second-factor use, attestation, and every error class.

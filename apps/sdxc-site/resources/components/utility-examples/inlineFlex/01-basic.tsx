@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { gap, inlineFlex, items } from "@sdxc/u/layout";
-import { bs, is, pi } from "@sdxc/u/size";
+import { bg, fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { gap, inlineFlex, items } from "sdxc/u/layout";
+import { bs, is, pi } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

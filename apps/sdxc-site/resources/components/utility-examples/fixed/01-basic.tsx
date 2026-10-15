@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { contain, fixed, insLeft, insRight, insTop } from "@sdxc/u/layout";
-import { overflowY } from "@sdxc/u/overflow";
-import { bs, is, pbe, pbs, pi } from "@sdxc/u/size";
+import { contain, fixed, insLeft, insRight, insTop } from "sdxc/u/layout";
+import { overflowY } from "sdxc/u/overflow";
+import { bs, is, pbe, pbs, pi } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

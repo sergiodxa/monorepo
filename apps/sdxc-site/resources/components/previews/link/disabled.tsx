@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { m } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { Link } from "@sdxc/ui";
+import { fg } from "sdxc/u/color";
+import { m } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { Link } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<p mix={[m(0), text("sm"), fg("neutral")]}>

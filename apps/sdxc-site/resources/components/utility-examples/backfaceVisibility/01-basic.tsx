@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { backfaceVisibility } from "@sdxc/u/effects";
-import { perspective, rotateY } from "@sdxc/u/transform";
+import { backfaceVisibility } from "sdxc/u/effects";
+import { perspective, rotateY } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

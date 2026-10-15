@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border } from "@sdxc/u/color";
-import { hstack } from "@sdxc/u/layout";
-import { supports } from "@sdxc/u/responsive";
-import { has } from "@sdxc/u/state";
+import { bg, border } from "sdxc/u/color";
+import { hstack } from "sdxc/u/layout";
+import { supports } from "sdxc/u/responsive";
+import { has } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

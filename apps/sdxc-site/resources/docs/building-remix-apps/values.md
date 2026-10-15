@@ -15,14 +15,13 @@ a date that is off by a day for half your readers, or an id from the wrong table
 nothing.
 
 This guide follows one record, a blog post, through a Remix v3 app.
-[`@sdxc/uuid`](/api/uuid) and [`@sdxc/typeid`](/api/typeid) mint and check its id,
-[`@sdxc/strings`](/api/strings) derives its title, slug and summary,
-[`@sdxc/dates`](/api/dates) shows when it was published, and [`@sdxc/semver`](/api/semver)
+[`sdxc/uuid`](/api/uuid) and [`sdxc/typeid`](/api/typeid) mint and check its id,
+[`sdxc/strings`](/api/strings) derives its title, slug and summary,
+[`sdxc/dates`](/api/dates) shows when it was published, and [`sdxc/semver`](/api/semver)
 decides which API clients may still read it.
 
 ```bash
-npm add @sdxc/uuid @sdxc/typeid @sdxc/strings @sdxc/dates @sdxc/semver \
-	@sdxc/result @sdxc/validate @sdxc/http remix
+npm add sdxc remix
 ```
 
 ## Mint record ids
@@ -32,10 +31,10 @@ be tried against every table. A TypeID puts the answer in the string, `post_01h4
 and keeps the UUID recoverable. Bind each prefix once, in one module:
 
 ```typescript {% title="app/ids.ts" %}
-import type { TypeID } from "@sdxc/typeid";
+import type { TypeID } from "sdxc/typeid";
 
-import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v7";
+import { typeid } from "sdxc/typeid";
+import { generateUUID } from "sdxc/uuid/v7";
 
 export const postId = typeid("post");
 export const authorId = typeid("author");
@@ -48,9 +47,9 @@ export function newPostId(): PostId {
 ```
 
 The prefix is a literal type, so a function asking for a `TypeID<"post">` refuses an author
-id at compile time. A UUID from `@sdxc/uuid/v7` puts a millisecond timestamp in front of the
+id at compile time. A UUID from `sdxc/uuid/v7` puts a millisecond timestamp in front of the
 random bits, and a TypeID sorts the way its UUID does, so new ids arrive in creation order and
-a listing can page on the id alone. Import `generateUUID` from `@sdxc/uuid/v4` instead for an
+a listing can page on the id alone. Import `generateUUID` from `sdxc/uuid/v4` instead for an
 id you hand to someone outside the system, since a v7 value reveals when it was minted.
 
 ## Keep UUIDs typed below the edge
@@ -61,9 +60,9 @@ a plain `string` is not assignable to it, so a repository typed on `UUID` cannot
 raw path segment by mistake.
 
 ```typescript {% title="app/models/post.ts" %}
-import type { UUID } from "@sdxc/uuid";
+import type { UUID } from "sdxc/uuid";
 
-import { assertUUID } from "@sdxc/uuid";
+import { assertUUID } from "sdxc/uuid";
 
 export interface Post {
 	id: UUID;
@@ -102,7 +101,7 @@ A slug typed into a form and a slug a background job derives from the same title
 or the published URL moves. Put the derivation in one function and call it from both:
 
 ```typescript {% title="app/posts/derive.ts" %}
-import { createTitleizer, excerpt, slugify, wordCount } from "@sdxc/strings";
+import { createTitleizer, excerpt, slugify, wordCount } from "sdxc/strings";
 
 const titleize = createTitleizer({ special: ["Remix", "Cloudflare", "SQLite"] });
 
@@ -138,9 +137,9 @@ edit page addressed by the TypeID. The route table maps `admin.posts.create` to
 repository, which maps each row it reads through `toPost`.
 
 ```tsx {% title="app/http/controllers/admin/posts/create.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -176,8 +175,8 @@ question, so an author id pasted into a post URL is a `404` at the edge instead 
 quietly finds nothing:
 
 ```tsx {% title="app/http/controllers/admin/posts/edit.tsx" %}
-import { text } from "@sdxc/http/response";
-import { TypeID } from "@sdxc/typeid";
+import { text } from "sdxc/http/response";
+import { TypeID } from "sdxc/typeid";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -204,11 +203,11 @@ Going the other way, `postId(post.id)` turns a stored `UUID` back into the TypeI
 
 A post published at 02:00 UTC on the 29th was published on the 28th for a reader in New York.
 Formatting on the server with the server's zone gets that wrong for everyone who does not
-live in UTC. `@sdxc/dates` never assumes a zone: every function that answers a calendar
+live in UTC. `sdxc/dates` never assumes a zone: every function that answers a calendar
 question takes one, so resolve the viewer's once per request and pass it down.
 
 ```typescript {% title="app/http/viewer.ts" %}
-import type { TimeZone } from "@sdxc/dates";
+import type { TimeZone } from "sdxc/dates";
 
 export interface Viewer {
 	locale: string;
@@ -237,8 +236,8 @@ The page handler passes `viewerOf(ctx.request)` down to the component that rende
 ```tsx {% title="resources/components/post-meta.tsx" %}
 import type { Handle } from "remix/component";
 
-import { diffInDays, formatDate, formatRelative } from "@sdxc/dates";
-import { pluralize } from "@sdxc/strings";
+import { diffInDays, formatDate, formatRelative } from "sdxc/dates";
+import { pluralize } from "sdxc/strings";
 
 import type { Viewer } from "~/app/http/viewer";
 
@@ -291,9 +290,9 @@ person to update:
 ```typescript {% title="app/http/middleware/client-version.ts" %}
 import type { Middleware } from "remix/router";
 
-import { json } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { parse, satisfies } from "@sdxc/semver";
+import { json } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { parse, satisfies } from "sdxc/semver";
 
 const MINIMUM_CLIENT = "2.4.0";
 
@@ -337,4 +336,4 @@ range when a rule lives in data an operator edits.
   behind `Posts`.
 - [Calendars, date ranges and time zones](/docs/building-remix-apps/calendars-and-date-ranges)
   — a month grid, a report's day range, and a time-zone picker.
-- [`@sdxc/dates`](/api/dates) — day grids, week boundaries and the zone math underneath.
+- [`sdxc/dates`](/api/dates) — day grids, week boundaries and the zone math underneath.

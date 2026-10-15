@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { hstack, shrink } from "@sdxc/u/layout";
-import { circle, is, maxIs, minIs } from "@sdxc/u/size";
-import { text, truncate, weight } from "@sdxc/u/typography";
+import { bg, fg } from "sdxc/u/color";
+import { hstack, shrink } from "sdxc/u/layout";
+import { circle, is, maxIs, minIs } from "sdxc/u/size";
+import { text, truncate, weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

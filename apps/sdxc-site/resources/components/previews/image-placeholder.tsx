@@ -10,13 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Header, ImagePlaceholder, Item } from "@sdxc/ui";
-import { imageFallback } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Header, ImagePlaceholder, Item } from "sdxc/ui";
+import { imageFallback } from "sdxc/ui/mixins";
 
 /**
  * A flat portrait drawn inline, so the two avatars that load need nothing from the

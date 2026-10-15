@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { flex, flexWrap, gap } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
+import { flex, flexWrap, gap } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

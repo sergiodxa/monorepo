@@ -11,11 +11,11 @@ lastUpdated: 2026-10-08
 Browsers draw MathML Core on their own: no stylesheet to link, no web font to load and no
 script to run after the page arrives. What authors write, though, is TeX. This guide converts
 one into the other wherever a formula appears: in a markdown post, in a string you render for
-a feed, and directly in a `remix/component` view. It uses [`@sdxc/math`](/api/math) together
-with [`@sdxc/markdown`](/api/markdown).
+a feed, and directly in a `remix/component` view. It uses [`sdxc/math`](/api/math) together
+with [`sdxc/markdown`](/api/markdown).
 
 ```bash
-npm add @sdxc/math @sdxc/markdown @sdxc/result remix
+npm add sdxc remix
 ```
 
 The conversion happens on the server, so the page carries finished markup. Every formula
@@ -70,8 +70,8 @@ the markup. `display: true` makes it a block formula, which also sets the limits
 operators like `\sum` under and over the symbol instead of beside it:
 
 ```typescript {% title="app/services/content/formula.ts" %}
-import { toMathML } from "@sdxc/math";
-import { isFailure } from "@sdxc/result";
+import { toMathML } from "sdxc/math";
+import { isFailure } from "sdxc/result";
 
 export function sumFormula(): string {
 	let result = toMathML("\\sum_{i=1}^n i = \\frac{n(n+1)}{2}", { display: true });
@@ -112,15 +112,15 @@ The sum of the first $`n`$ integers is:
 ~~~
 ```
 
-`math` from `@sdxc/math/markdown` is a walk visitor. It turns each form into a `math` tag
+`math` from `sdxc/math/markdown` is a walk visitor. It turns each form into a `math` tag
 carrying `tex` and `display` attributes and leaves every other code block alone. Its handlers
 are synchronous, so it spreads into the same single walk as the rest of your preparation and
 the walk still answers with a `Result`:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
-import { highlight } from "@sdxc/highlight/markdown";
-import { Markdown } from "@sdxc/markdown";
-import { math } from "@sdxc/math/markdown";
+import { highlight } from "sdxc/highlight/markdown";
+import { Markdown } from "sdxc/markdown";
+import { math } from "sdxc/math/markdown";
 
 export function preparePost(document: Markdown.Document) {
 	return Markdown.walk(document, {
@@ -145,10 +145,10 @@ or inline code sits in the document, and its `cause` is the `MathError` with the
 the formula, so a broken post fails the build with both:
 
 ```typescript {% title="scripts/check-posts.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { MathError } from "@sdxc/math";
-import { math } from "@sdxc/math/markdown";
-import { isFailure } from "@sdxc/result";
+import { Markdown } from "sdxc/markdown";
+import { MathError } from "sdxc/math";
+import { math } from "sdxc/math/markdown";
+import { isFailure } from "sdxc/result";
 
 export function checkMath(path: string, source: string): string | null {
 	let parsed = Markdown.parse(source);
@@ -170,14 +170,14 @@ block or inline code its author wrote, and the walk succeeds.
 
 ## Draw the tags in a route
 
-`MathFormula` from `@sdxc/math/ui` is a `remix/component` component whose props are exactly
+`MathFormula` from `sdxc/math/ui` is a `remix/component` component whose props are exactly
 the attributes the visitor writes, so it goes straight into the `components` map of `toRemix`:
 
 ```tsx {% title="app/services/content/render-post.tsx" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { toRemix } from "@sdxc/markdown/remix";
-import { MathFormula } from "@sdxc/math/ui";
+import { toRemix } from "sdxc/markdown/remix";
+import { MathFormula } from "sdxc/math/ui";
 
 export function renderPost(document: Markdown.Document) {
 	return toRemix(document, { components: { math: MathFormula } });
@@ -194,7 +194,7 @@ The same component draws a formula outside markdown, in any view:
 ```tsx {% title="resources/components/pricing-note.tsx" %}
 import type { Handle } from "remix/component";
 
-import { MathFormula } from "@sdxc/math/ui";
+import { MathFormula } from "sdxc/math/ui";
 
 export function PricingNote(handle: Handle) {
 	return () => (
@@ -215,10 +215,10 @@ turning each `math` tag into the markup `toMathML` writes, with unconvertible Te
 `<code>`:
 
 ```typescript {% title="app/services/content/render.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { Markdown } from "sdxc/markdown";
 
-import { toHTML } from "@sdxc/markdown/html";
-import { renderMath } from "@sdxc/math/markdown";
+import { toHTML } from "sdxc/markdown/html";
+import { renderMath } from "sdxc/math/markdown";
 
 export function renderHTML(document: Markdown.Document): string {
 	return toHTML(document, { tags: { math: renderMath } });
@@ -234,4 +234,4 @@ the item for the ones that show source.
   and render this guide plugs math into.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — serve the HTML
   `renderMath` produces as each item's body.
-- [`@sdxc/math`](/api/math) — the full TeX subset and the MathML tree it produces.
+- [`sdxc/math`](/api/math) — the full TeX subset and the MathML tree it produces.

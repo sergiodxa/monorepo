@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { blur, transition } from "@sdxc/u/effects";
-import { hover } from "@sdxc/u/state";
+import { blur, transition } from "sdxc/u/effects";
+import { hover } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

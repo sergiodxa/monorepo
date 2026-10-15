@@ -28,7 +28,7 @@ export default createTool(toolset.getPackage, async (ctx) => {
 	return {
 		name: entry.name,
 		description: entry.description,
-		install: `npm add ${entry.name}`,
+		install: ["npm add", entry.name, ...entry.peers].join(" "),
 		subpaths: entry.subpaths.map((subpath) =>
 			subpath === "." ? entry.name : `${entry.name}${subpath.slice(1)}`,
 		),

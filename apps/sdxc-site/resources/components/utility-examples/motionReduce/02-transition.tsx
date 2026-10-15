@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { transition, transitionProperty } from "@sdxc/u/effects";
-import { motionReduce } from "@sdxc/u/responsive";
-import { hover } from "@sdxc/u/state";
-import { translateY } from "@sdxc/u/transform";
+import { transition, transitionProperty } from "sdxc/u/effects";
+import { motionReduce } from "sdxc/u/responsive";
+import { hover } from "sdxc/u/state";
+import { translateY } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

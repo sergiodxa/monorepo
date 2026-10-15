@@ -33,7 +33,7 @@ the whole point: a failure is a case in the signature rather than a control-flow
 `isSuccess` and `isFailure` narrow it, and early return is the ordinary shape:
 
 ```typescript
-import { isFailure } from "@sdxc/result";
+import { isFailure } from "sdxc/result";
 
 let parsed = Markdown.parse(source, { frontmatter: Frontmatter });
 if (isFailure(parsed)) return badRequest({ line: parsed.error.position?.start.line });
@@ -44,7 +44,7 @@ if (isFailure(parsed)) return badRequest({ line: parsed.error.position?.start.li
 `match` handles both branches in one expression when there is no early exit to take:
 
 ```typescript
-import { match } from "@sdxc/result";
+import { match } from "sdxc/result";
 
 let message = match(await fetchUser(id), {
 	success: (user) => `Hello, ${user.name}!`,
@@ -57,7 +57,7 @@ escape hatch, and it belongs where a failure genuinely is a programming error â€
 startup check â€” rather than in a request path.
 
 ```typescript
-import { unwrap } from "@sdxc/result";
+import { unwrap } from "sdxc/result";
 
 let tag = unwrap(await etag(body));
 let port = unwrap(parsePort(input), () => 3000);
@@ -69,7 +69,7 @@ Code outside the collection throws. `wrap` turns that into a `Result` so the res
 keeps one shape:
 
 ```typescript
-import { isSuccess, wrap } from "@sdxc/result";
+import { isSuccess, wrap } from "sdxc/result";
 
 let parsed = wrap(() => JSON.parse(input));
 if (isSuccess(parsed)) use(parsed.data);
@@ -79,7 +79,7 @@ if (isSuccess(parsed)) use(parsed.data);
 one failure should not cost you the other nine results:
 
 ```typescript
-import { partition } from "@sdxc/result";
+import { partition } from "sdxc/result";
 
 let [responses, errors] = partition(
 	await Promise.all(urls.map((url) => wrap(() => fetch(url)))),

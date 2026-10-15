@@ -12,12 +12,12 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { vstack } from "@sdxc/u/layout";
-import { maxIs } from "@sdxc/u/size";
-import { text, textAlign } from "@sdxc/u/typography";
-import { Button, Confirm } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { vstack } from "sdxc/u/layout";
+import { maxIs } from "sdxc/u/size";
+import { text, textAlign } from "sdxc/u/typography";
+import { Button, Confirm } from "sdxc/ui";
 
 /** The copy under the heading, which is where a cancellation's real consequences belong. */
 const CONSEQUENCES =

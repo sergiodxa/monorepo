@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { opacity, transition } from "@sdxc/u/effects";
-import { willChange } from "@sdxc/u/general";
-import { bs, is } from "@sdxc/u/size";
-import { hover } from "@sdxc/u/state";
-import { scale } from "@sdxc/u/transform";
+import { opacity, transition } from "sdxc/u/effects";
+import { willChange } from "sdxc/u/general";
+import { bs, is } from "sdxc/u/size";
+import { hover } from "sdxc/u/state";
+import { scale } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

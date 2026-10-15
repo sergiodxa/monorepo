@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ChevronDownIcon } from "@sdxc/icons";
-import { m } from "@sdxc/u/size";
-import { Disclosure } from "@sdxc/ui";
+import { ChevronDownIcon } from "sdxc/icons";
+import { m } from "sdxc/u/size";
+import { Disclosure } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Disclosure open>

@@ -14,15 +14,16 @@ place. It names every ability once, grants them through roles, refuses through g
 checks them in a route, a page, a background job and an MCP tool, with the plan and the
 feature flags read as facts beside the user.
 
-[`@sdxc/authz`](/api/authz) holds the catalog and the policy and answers every check
+[`sdxc/authz`](/api/authz) holds the catalog and the policy and answers every check
 synchronously from facts loaded once per request. Its conditions are
-[`@sdxc/expression`](/api/expression) JSON, and its failures are
-[`@sdxc/result`](/api/result) values. The adapters reach
-[`@sdxc/billing`](/api/billing), [`@sdxc/flags`](/api/flags), [`@sdxc/jobs`](/api/jobs) and
-[`@sdxc/mcp`](/api/mcp); install each one when you use its adapter.
+[`sdxc/expression`](/api/expression) JSON, and its failures are
+[`sdxc/result`](/api/result) values. The adapters reach
+[`sdxc/billing`](/api/billing), [`sdxc/flags`](/api/flags), [`sdxc/jobs`](/api/jobs) and
+[`sdxc/mcp`](/api/mcp), each from its own subpath, so a bundle carries only the adapters it
+imports.
 
 ```bash
-npm add @sdxc/authz @sdxc/result @sdxc/http remix
+npm add sdxc remix
 ```
 
 ## Name what people do
@@ -32,7 +33,7 @@ to nothing in particular, as `reports.export` does. Declare every one in a catal
 check, guard and test names it through the catalog rather than a string:
 
 ```typescript {% title="app/policies/abilities.ts" %}
-import { abilities, ability, context } from "@sdxc/authz";
+import { abilities, ability, context } from "sdxc/authz";
 
 import type { Project } from "~/app/models/projects";
 import type { Team } from "~/app/models/teams";
@@ -75,7 +76,7 @@ ability in declaration order with its description, for an admin page that explai
 The policy says who holds what. Roles only allow, and the only refusals are guards:
 
 ```typescript {% title="app/policies/policy.ts" %}
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
+import { allow, definePolicy, deny, fact } from "sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
@@ -145,14 +146,17 @@ declare module "@sdxc/authz" {
 }
 ```
 
+The block names `@sdxc/authz`, the module that declares `AuthzTypes`, as
+[every augmentation does](/docs/getting-started/install-and-pin#augment-a-package-by-its-own-name).
+
 ## Bind the person on each request
 
-`access()` from `@sdxc/authz/middleware/router` binds the policy to the request's roles and
+`access()` from `sdxc/authz/middleware/router` binds the policy to the request's roles and
 facts and publishes it as `ctx.access`. Nothing loads when it runs: a role or fact given as a
 function is read the first time a check needs it, and only once.
 
 ```typescript {% title="app/http/middleware/access.ts" %}
-import { access } from "@sdxc/authz/middleware/router";
+import { access } from "sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
 import { renderDenied } from "~/app/http/denied";
@@ -179,9 +183,9 @@ already loaded, such as a role per team on one page.
 refused request is never validated or acted on:
 
 ```tsx {% title="app/http/controllers/projects/update.tsx" %}
-import { requireAbility } from "@sdxc/authz/middleware/router";
-import { redirect } from "@sdxc/http/response";
-import { notFound } from "@sdxc/http/response/html";
+import { requireAbility } from "sdxc/authz/middleware/router";
+import { redirect } from "sdxc/http/response";
+import { notFound } from "sdxc/http/response/html";
 import { createAction } from "remix/router";
 
 import abilities from "~/app/policies/abilities";
@@ -235,8 +239,8 @@ A handler checks synchronously once the abilities it reads are loaded. `decide` 
 ability of a group at once, which is what a page needs to show or hide its buttons:
 
 ```tsx {% title="app/http/controllers/projects/show.tsx" %}
-import { requireAbility } from "@sdxc/authz/middleware/router";
-import { notFound } from "@sdxc/http/response/html";
+import { requireAbility } from "sdxc/authz/middleware/router";
+import { notFound } from "sdxc/http/response/html";
 import { createAction } from "remix/router";
 
 import abilities from "~/app/policies/abilities";
@@ -289,7 +293,7 @@ refusal crosses a Durable Object RPC intact. The `onDenied` responder turns it i
 own page:
 
 ```tsx {% title="app/http/denied.tsx" %}
-import type { Refusal } from "@sdxc/authz";
+import type { Refusal } from "sdxc/authz";
 import type { RequestContext } from "remix/router";
 
 import routes from "~/routes/web";
@@ -312,14 +316,14 @@ or `404`, and `requireAbility(ability, { onDenied })` overrides the responder fo
 
 ## Gate on the plan
 
-A paid feature is a guard over the customer's entitlements. `@sdxc/authz/facts/billing` binds
+A paid feature is a guard over the customer's entitlements. `sdxc/authz/facts/billing` binds
 them as a fact, read through the billing middleware's own `entitlements` reader, so the
 request shares one read with `requireEntitlement` and anything else that asks:
 
 ```typescript {% title="app/policies/policy.ts" %}
-import type { BillingFacts } from "@sdxc/authz/facts/billing";
+import type { BillingFacts } from "sdxc/authz/facts/billing";
 
-import { allow, definePolicy, deny, fact } from "@sdxc/authz";
+import { allow, definePolicy, deny, fact } from "sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
@@ -347,8 +351,8 @@ Bind it with `fromEntitlements()` in the `access()` facts, after the billing mid
 the chain:
 
 ```typescript {% title="app/http/middleware/access.ts" %}
-import { fromEntitlements } from "@sdxc/authz/facts/billing";
-import { access } from "@sdxc/authz/middleware/router";
+import { fromEntitlements } from "sdxc/authz/facts/billing";
+import { access } from "sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
 import { renderDenied } from "~/app/http/denied";
@@ -372,12 +376,12 @@ that checks an ability whose grants read `billing`, so every other route costs n
 
 ## Switch an ability off with a flag
 
-An operational switch is a guard over a flag. `@sdxc/authz/facts/flags` binds a
-[`@sdxc/flags`](/api/flags) catalog as a fact keyed by its property names, and evaluates only
+An operational switch is a guard over a flag. `sdxc/authz/facts/flags` binds a
+[`sdxc/flags`](/api/flags) catalog as a fact keyed by its property names, and evaluates only
 the flags some condition reads:
 
 ```typescript {% title="app/policies/policy.ts" %}
-import { definePolicy, deny, fact } from "@sdxc/authz";
+import { definePolicy, deny, fact } from "sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
@@ -398,9 +402,9 @@ export default definePolicy(abilities, {
 ```
 
 The fact declares the flags the policy reads, by their property names in your `features`
-catalog. Then add `flags: fromFlags(features)` from `@sdxc/authz/facts/flags` to the
+catalog. Then add `flags: fromFlags(features)` from `sdxc/authz/facts/flags` to the
 `access()` facts.
-It evaluates through the client `featureFlags()` from `@sdxc/flags/middleware/router`
+It evaluates through the client `featureFlags()` from `sdxc/flags/middleware/router`
 published, so list that middleware before `access()`; pass `client` to use another. A split
 on a flag no rule reads records no exposure, because nothing evaluated it.
 
@@ -417,16 +421,16 @@ for, and answers a `Result`, so a settings fact can read only the settings some 
 ## Check in a background job
 
 A job has no signed-in user, so its handler binds the subject from its own payload.
-`authz()` from `@sdxc/authz/middleware/dispatcher` publishes `ctx.authz` with the fact
+`authz()` from `sdxc/authz/middleware/dispatcher` publishes `ctx.authz` with the fact
 sources every job shares, added to the dispatcher's chain after flags. With the `JobTypes` augmentation from
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), every handler sees
 it typed from the registered policy:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import { authz } from "@sdxc/authz/middleware/dispatcher";
-import { fromFlags } from "@sdxc/authz/facts/flags";
-import featureFlags from "@sdxc/flags/middleware/dispatcher";
-import { createJobDispatcher } from "@sdxc/jobs";
+import { authz } from "sdxc/authz/middleware/dispatcher";
+import { fromFlags } from "sdxc/authz/facts/flags";
+import featureFlags from "sdxc/flags/middleware/dispatcher";
+import { createJobDispatcher } from "sdxc/jobs";
 
 import policy from "~/app/policies/policy";
 import { database } from "~/app/jobs/middleware/database";
@@ -450,8 +454,8 @@ The handler reads the member the job acts for and binds them. Facts it passes re
 shared ones by root:
 
 ```typescript {% title="app/jobs/export-report.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
 
 import abilities from "~/app/policies/abilities";
 import jobs from "~/app/jobs";
@@ -492,7 +496,7 @@ than its holder may. Declare a role per scope and bind it as `within`, a ceiling
 check must also pass:
 
 ```typescript {% title="app/policies/policy.ts" %}
-import { allow, definePolicy } from "@sdxc/authz";
+import { allow, definePolicy } from "sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
@@ -512,8 +516,8 @@ claims loaded up front:
 ```typescript {% title="app/initializers/router.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { access } from "@sdxc/authz/middleware/router";
-import { lazy } from "@sdxc/lazy-route";
+import { access } from "sdxc/authz/middleware/router";
+import { lazy } from "sdxc/lazy-route";
 
 import { requireToken } from "~/app/http/middleware/token";
 import abilities from "~/app/policies/abilities";
@@ -545,16 +549,16 @@ publishing the token and its holder. A check outside
 the ceiling refuses with cause `outOfScope`, and a viewer's write-scoped token still cannot
 write, because the holder's roles must allow it too.
 
-`@sdxc/authz/mcp` connects the abilities to the tools. `guard(claim)` returns the tool's
+`sdxc/authz/mcp` connects the abilities to the tools. `guard(claim)` returns the tool's
 `available` predicate, so one claim hides the tool from `tools/list` and refuses a call to it.
 `requireToolAbility` is tool middleware that checks an ability against the call's validated
 arguments. Here `toolset.renameProject` is a tool declared with a `projectId` and a `name`:
 
 ```typescript {% title="app/mcp/tools/rename-project.ts" %}
-import type { InputOf } from "@sdxc/mcp";
+import type { InputOf } from "sdxc/mcp";
 
-import { guard, requireToolAbility } from "@sdxc/authz/mcp";
-import { createTool } from "@sdxc/mcp";
+import { guard, requireToolAbility } from "sdxc/authz/mcp";
+import { createTool } from "sdxc/mcp";
 
 import abilities from "~/app/policies/abilities";
 import { Projects } from "~/app/models/projects";
@@ -592,13 +596,13 @@ and any other refusal answers as `ForbiddenError` with the guard's reason.
 
 ## Test the policy as a table
 
-`testAccess` from `@sdxc/authz/testing` binds from plain values, synchronously, so a table of
+`testAccess` from `sdxc/authz/testing` binds from plain values, synchronously, so a table of
 cases is the whole test:
 
 ```typescript {% title="app/policies/policy.test.ts" %}
-import type { Decision } from "@sdxc/authz";
+import type { Decision } from "sdxc/authz";
 
-import { testAccess } from "@sdxc/authz/testing";
+import { testAccess } from "sdxc/authz/testing";
 import { expect, test } from "vitest";
 
 import abilities from "~/app/policies/abilities";
@@ -669,4 +673,4 @@ JSON, so the previous version can be derived from it, or kept beside it.
   flag fact evaluates through.
 - [Expose your app over MCP](/docs/operations-and-testing/mcp-server) — the tools an agent's
   scope hides and refuses.
-- [`@sdxc/authz`](/api/authz) — every option, the decision shapes, and `factLoader`.
+- [`sdxc/authz`](/api/authz) — every option, the decision shapes, and `factLoader`.

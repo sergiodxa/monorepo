@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { is } from "@sdxc/u/size";
-import { AspectRatio } from "@sdxc/ui";
+import { bg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { is } from "sdxc/u/size";
+import { AspectRatio } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[is("16rem")]}>

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Alert } from "@sdxc/ui";
+import { Alert } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Alert color="success" live="assertive">

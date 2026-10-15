@@ -1,6 +1,6 @@
 ---
 title: Build the interface with remix/component
-description: Compose pages from @sdxc/ui components, lay them out with @sdxc/u mixins, and hydrate only the island that needs script.
+description: Compose pages from sdxc/ui components, lay them out with sdxc/u mixins, and hydrate only the island that needs script.
 section:
     title: Building Remix apps
     order: 3
@@ -9,13 +9,13 @@ lastUpdated: 2026-10-08
 ---
 
 A page in a Remix v3 app is `remix/component` JSX rendered on the server. This guide builds a
-projects page from [`@sdxc/ui`](/api/ui) components: a header, a grid of cards, and a dialog
-holding a form. It lays them out with [`@sdxc/u`](/api/u) mixins, adds glyphs from
-[`@sdxc/icons`](/api/icons), and hydrates exactly one small island, a copy-link button, since
+projects page from [`sdxc/ui`](/api/ui) components: a header, a grid of cards, and a dialog
+holding a form. It lays them out with [`sdxc/u`](/api/u) mixins, adds glyphs from
+[`sdxc/icons`](/api/icons), and hydrates exactly one small island, a copy-link button, since
 that is the only part of the page the platform cannot do on its own.
 
 ```bash
-npm add remix @sdxc/ui @sdxc/u @sdxc/icons
+npm add sdxc remix
 ```
 
 The page works with no client JavaScript at all. The dialog opens, the form submits and the
@@ -41,9 +41,9 @@ the import order as the cascade order.
 ```tsx {% title="resources/layouts/document.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import "@sdxc/ui/reset.css";
+import "sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
-import "@sdxc/ui/theme.css";
+import "sdxc/ui/theme.css";
 
 interface Props {
 	title: string;
@@ -89,13 +89,13 @@ script deciding the scheme and nothing flashing on first paint.
 
 ## Compose a card
 
-Every `@sdxc/ui` component is a `remix/component` component used as JSX, and compound parts such as
+Every `sdxc/ui` component is a `remix/component` component used as JSX, and compound parts such as
 `Card.Header` hang off the root. A component of your own composes them:
 
 ```tsx {% title="resources/components/project-card.tsx" %}
 import type { Handle } from "remix/component";
 
-import { Badge, Card, LinkButton } from "@sdxc/ui";
+import { Badge, Card, LinkButton } from "sdxc/ui";
 
 export interface Project {
 	name: string;
@@ -144,14 +144,14 @@ components.
 
 ## Layout with mixins
 
-`@sdxc/u` covers what a component does not: the space between components, page width, and
+`sdxc/u` covers what a component does not: the space between components, page width, and
 responsive behavior. Every export is a mixin, and a `mix` array composes them.
 
 ```tsx {% title="resources/components/project-grid.tsx" %}
 import type { Handle } from "remix/component";
 
-import { container, gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
-import { at } from "@sdxc/u/responsive";
+import { container, gap, grid, gridTemplate, vstack } from "sdxc/u/layout";
+import { at } from "sdxc/u/responsive";
 
 import type { Project } from "~/resources/components/project-card";
 
@@ -184,7 +184,7 @@ it the thing the grid measures, so the same list shows two columns in a wide mai
 one inside a narrow sidebar, whatever the viewport. Narrow is the unwrapped case, and each
 `at()` layers on above its breakpoint.
 
-Reach for a component before a pile of mixins. When `@sdxc/ui` has the element, the
+Reach for a component before a pile of mixins. When `sdxc/ui` has the element, the
 component already carries its spacing, focus ring and states. When it is close but not
 exact, pass a small `css({...})` from `remix/component` in its `mix` rather than rebuilding it.
 
@@ -197,8 +197,8 @@ open-state for you to track.
 ```tsx {% title="resources/components/new-project-dialog.tsx" %}
 import type { Handle } from "remix/component";
 
-import { PlusIcon } from "@sdxc/icons";
-import { Button, Dialog, Form, TextField } from "@sdxc/ui";
+import { PlusIcon } from "sdxc/icons";
+import { Button, Dialog, Form, TextField } from "sdxc/ui";
 
 import routes from "~/routes/web";
 
@@ -259,15 +259,15 @@ action side.
 ## An island, only where it's needed
 
 Copying a URL to the clipboard is behavior the platform has no declarative form for, so that
-one button becomes a `remix/component` client entry. The `@sdxc/ui` side of it is small: a `Button`
+one button becomes a `remix/component` client entry. The `sdxc/ui` side of it is small: a `Button`
 takes a behavior mixin such as `on("click", …)` through `mix` like any element does, and the
 icons swap on the next render.
 
 ```tsx {% title="resources/components/copy-link.tsx" %}
 import type { Handle } from "remix/component";
 
-import { CheckIcon, CopyIcon } from "@sdxc/icons";
-import { Button } from "@sdxc/ui";
+import { CheckIcon, CopyIcon } from "sdxc/icons";
+import { Button } from "sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
 export type CopyLinkProps = { href: string; label: string };
@@ -313,5 +313,5 @@ script at all.
   copy above with messages.
 - [Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts) — page-wide keys, a
   shortcuts panel, and announcing what a key did.
-- [`@sdxc/ui`](/api/ui) — the full component catalog and its mixins.
-- [`@sdxc/u`](/api/u) — every utility, with the CSS each one emits.
+- [`sdxc/ui`](/api/ui) — the full component catalog and its mixins.
+- [`sdxc/u`](/api/u) — every utility, with the CSS each one emits.

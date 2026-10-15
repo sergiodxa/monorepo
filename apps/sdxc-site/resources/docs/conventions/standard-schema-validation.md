@@ -17,7 +17,7 @@ handed it.
 ## What that looks like
 
 ```typescript
-import { Markdown } from "@sdxc/markdown";
+import { Markdown } from "sdxc/markdown";
 import * as s from "remix/data-schema";
 
 let Frontmatter = s.object({ title: s.string(), draft: s.optional(s.boolean()) });
@@ -32,13 +32,13 @@ in exactly the same call.
 
 ## Validating on your own
 
-[`@sdxc/validate`](/api/validate) is the general case: it takes a schema and a plain
+[`sdxc/validate`](/api/validate) is the general case: it takes a schema and a plain
 object, a `FormData`, a `URLSearchParams` or a whole `Request`, and answers with a `Result`
 instead of throwing.
 
 ```typescript
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 
 async function handler(request: Request) {
 	let result = await validate(request, schema);

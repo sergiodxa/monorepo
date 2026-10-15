@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { transition, transitionDuration } from "@sdxc/u/effects";
-import { media } from "@sdxc/u/responsive";
-import { hover } from "@sdxc/u/state";
-import { scale } from "@sdxc/u/transform";
+import { transition, transitionDuration } from "sdxc/u/effects";
+import { media } from "sdxc/u/responsive";
+import { hover } from "sdxc/u/state";
+import { scale } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

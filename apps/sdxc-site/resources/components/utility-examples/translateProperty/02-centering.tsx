@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { absolute, insRight, insTop, relative } from "@sdxc/u/layout";
-import { translateProperty } from "@sdxc/u/transform";
+import { absolute, insRight, insTop, relative } from "sdxc/u/layout";
+import { translateProperty } from "sdxc/u/transform";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

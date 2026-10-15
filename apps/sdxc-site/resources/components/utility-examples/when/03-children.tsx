@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mbs } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
+import { mbs } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

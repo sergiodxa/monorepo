@@ -11,16 +11,16 @@
 
 import type { Handle } from "remix/component";
 
-import { GripVerticalIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
-import { cursor, touchAction, userSelect } from "@sdxc/u/general";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { is, m, p } from "@sdxc/u/size";
-import { text } from "@sdxc/u/typography";
-import { Badge, DropIndicator, Header, Item } from "@sdxc/ui";
-import { DragSession } from "@sdxc/ui/behaviors";
-import { dragReorder } from "@sdxc/ui/mixins";
 import { clientEntry, on, ref } from "remix/component";
+import { GripVerticalIcon } from "sdxc/icons";
+import { fg } from "sdxc/u/color";
+import { cursor, touchAction, userSelect } from "sdxc/u/general";
+import { hstack, vstack } from "sdxc/u/layout";
+import { is, m, p } from "sdxc/u/size";
+import { text } from "sdxc/u/typography";
+import { Badge, DropIndicator, Header, Item } from "sdxc/ui";
+import { DragSession } from "sdxc/ui/behaviors";
+import { dragReorder } from "sdxc/ui/mixins";
 
 import { reorder } from "~/app/services/reorder-list";
 

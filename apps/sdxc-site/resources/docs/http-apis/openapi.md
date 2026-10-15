@@ -13,26 +13,26 @@ guide takes the books API from [Build a JSON API with problem details](/docs/htt
 and makes the schemas the handlers validate with the same values the published OpenAPI 3.1
 document is built from, so the contract and its enforcement cannot disagree.
 
-[`@sdxc/json-schema`](/api/json-schema) provides schema builders that validate exactly like
+[`sdxc/json-schema`](/api/json-schema) provides schema builders that validate exactly like
 `remix/data-schema` and can also describe themselves as JSON Schema 2020-12.
-[`@sdxc/openapi`](/api/openapi) binds those schemas to routes as operations, assembles the
+[`sdxc/openapi`](/api/openapi) binds those schemas to routes as operations, assembles the
 document, serves it, and checks responses against it in tests.
 
 ```bash
-npm add @sdxc/json-schema @sdxc/openapi
+npm add sdxc remix
 ```
 
 ## Swap the schema import
 
 A `remix/data-schema` schema validates, but nothing can read back what it accepts.
-`@sdxc/json-schema` has the same combinators with the same names, so rewriting the schema
+`sdxc/json-schema` has the same combinators with the same names, so rewriting the schema
 module from the first guide changes the import and the checks' subpath, and every handler
 that imports it keeps working. It also adds `integer()`, which a reference can state and a
 `number()` cannot, and a `BOOK` schema for the response the API answers with.
 
 ```typescript {% title="app/http/schemas/books.ts" %}
-import * as s from "@sdxc/json-schema";
-import * as checks from "@sdxc/json-schema/checks";
+import * as s from "sdxc/json-schema";
+import * as checks from "sdxc/json-schema/checks";
 
 export const BOOK = s
 	.object({
@@ -59,11 +59,11 @@ export const BOOK_PARAMS = s.object({
 
 `meta({ id: "Book" })` hoists the schema into `components.schemas`, and every use becomes a
 `$ref`, so the reference shows one `Book` rather than a copy per endpoint. A check from
-`@sdxc/json-schema/checks` both validates and adds its keyword (`minLength`, `maximum`), so a
+`sdxc/json-schema/checks` both validates and adds its keyword (`minLength`, `maximum`), so a
 limit is written once.
 
 Make the same change in the problem catalog, `app/services/problems.ts`: import `s` from
-`@sdxc/json-schema` instead of `remix/data-schema`, so the `validationFailed` extensions can
+`sdxc/json-schema` instead of `remix/data-schema`, so the `validationFailed` extensions can
 be described. The document describes every problem type, and a schema without a JSON Schema
 form fails the build.
 
@@ -73,10 +73,10 @@ An operation binds one route to what it reads and what it answers. The first arg
 becomes the `operationId`, which must be unique across the document.
 
 ```typescript {% title="app/http/openapi/operations.ts" %}
-import * as s from "@sdxc/json-schema";
-import * as checks from "@sdxc/json-schema/checks";
-import * as coerce from "@sdxc/json-schema/coerce";
-import { defineOperation } from "@sdxc/openapi";
+import * as s from "sdxc/json-schema";
+import * as checks from "sdxc/json-schema/checks";
+import * as coerce from "sdxc/json-schema/coerce";
+import { defineOperation } from "sdxc/openapi";
 
 import { BOOK, BOOK_INPUT, BOOK_PARAMS } from "~/app/http/schemas/books";
 import routes from "~/routes/web";
@@ -130,9 +130,9 @@ loads a controller.
 declaration the reference is built from.
 
 ```typescript {% title="app/http/controllers/api/books/create.ts" %}
-import { created } from "@sdxc/http/response/json";
-import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { created } from "sdxc/http/response/json";
+import { issuesFrom } from "sdxc/problem";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
@@ -163,7 +163,7 @@ a failure in `"params"` is the one to answer with `notFound`, as before.
 The list handler keeps parsing its query with the `createPaging` binding, because that binding
 also writes the `Link` URLs. The `query` schema on `LIST_BOOKS` documents the same names and
 limits, so keep the two side by side. A client reads that header with
-[`@sdxc/link-header`](/api/link-header), as
+[`sdxc/link-header`](/api/link-header), as
 [Paginate lists](/docs/http-apis/paginate-lists) shows.
 
 ## Build and serve the document
@@ -171,11 +171,11 @@ limits, so keep the two side by side. A client reads that header with
 `createDocument` collects the operations and the catalog. Nothing is assembled until
 `build()`, which returns a `Result` and fails on a duplicate `operationId`, a route OpenAPI
 cannot express, or a schema without a JSON Schema form. A conversion failure names the
-combinator with an RFC 6901 pointer from [`@sdxc/json-pointer`](/api/json-pointer).
+combinator with an RFC 6901 pointer from [`sdxc/json-pointer`](/api/json-pointer).
 
 ```typescript {% title="app/http/openapi/document.ts" %}
-import { createDocument } from "@sdxc/openapi";
-import { bearer } from "@sdxc/openapi/security";
+import { createDocument } from "sdxc/openapi";
+import { bearer } from "sdxc/openapi/security";
 
 import { CREATE_BOOK, LIST_BOOKS, SHOW_BOOK } from "~/app/http/openapi/operations";
 import { problems } from "~/app/services/problems";
@@ -200,7 +200,7 @@ document requires, for OAuth protected-resource metadata.
 Add `openapi: get("/api/openapi.json")` to the route table, then serve it:
 
 ```typescript {% title="app/http/controllers/api/openapi.ts" %}
-import { openapiHandler } from "@sdxc/openapi/router";
+import { openapiHandler } from "sdxc/openapi/router";
 import { createAction } from "remix/router";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
@@ -224,8 +224,8 @@ Commit the serialized document, so every contract change arrives as a reviewable
 commit that makes it:
 
 ```typescript {% title="app/http/openapi/document.test.ts" %}
-import { stringify } from "@sdxc/openapi";
-import { unwrap } from "@sdxc/result";
+import { stringify } from "sdxc/openapi";
+import { unwrap } from "sdxc/result";
 import { expect, test } from "vitest";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
@@ -238,14 +238,14 @@ test("the document builds and matches the committed snapshot", async () => {
 });
 ```
 
-The snapshot proves the document is stable, and `checkResponse` from `@sdxc/openapi/testing`
+The snapshot proves the document is stable, and `checkResponse` from `sdxc/openapi/testing`
 proves the handlers answer what it says. It finds the operation a request matches and reports
 every departure: an undocumented status, a problem `type` the operation does not list, a
 missing required header, or a body that fails its schema.
 
 ```typescript {% title="app/http/controllers/api/books/create.test.ts" %}
-import { checkResponse } from "@sdxc/openapi/testing";
-import { isFailure } from "@sdxc/result";
+import { checkResponse } from "sdxc/openapi/testing";
+import { isFailure } from "sdxc/result";
 import { expect, test } from "vitest";
 
 import { buildApiDocument } from "~/app/http/openapi/document";

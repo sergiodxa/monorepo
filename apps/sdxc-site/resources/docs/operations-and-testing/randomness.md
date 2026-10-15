@@ -14,17 +14,16 @@ that every other module shares. A giveaway winner it picked cannot be shown to b
 because nobody can draw the same winner again. A bug that only shows up on one roll of the
 dice shows up once.
 
-[`@sdxc/random`](/api/random) makes the source of randomness a value you pass around. A
+[`sdxc/random`](/api/random) makes the source of randomness a value you pass around. A
 `Random` offers the draws you actually want: `int`, `float`, `bool`, `pick` and `shuffle`.
 `systemRandom()` backs one with Web Crypto for production, and `createRandom(seed)` opens one
 that produces the same values in the same order from the same seed, on any machine. A seeded
 stream can also save where it is and resume from there later. Its main entry point has no
-dependencies; `RANDOM_STATE_SCHEMA` in `@sdxc/random/schema` validates a saved stream with
+dependencies; `RANDOM_STATE_SCHEMA` in `sdxc/random/schema` validates a saved stream with
 `remix/data-schema`.
 
 ```bash
-npm add @sdxc/random @sdxc/backoff @sdxc/http @sdxc/jobs remix
-npm add -D @sdxc/sample
+npm add sdxc remix
 ```
 
 ## Accept a `Random` in your own functions
@@ -34,9 +33,9 @@ Production code calls it without the argument, and a test passes a stream it con
 onboarding screen that shows one tip out of several is the smallest example:
 
 ```typescript {% title="app/services/onboarding.ts" %}
-import type { Random } from "@sdxc/random";
+import type { Random } from "sdxc/random";
 
-import { systemRandom } from "@sdxc/random";
+import { systemRandom } from "sdxc/random";
 
 export interface Tip {
 	id: string;
@@ -70,7 +69,7 @@ A test opens a stream on a seed named after itself. The same seed gives the same
 every run, so the test can assert exactly what the function did without touching a global:
 
 ```typescript {% title="app/services/onboarding.test.ts" %}
-import { createRandom } from "@sdxc/random";
+import { createRandom } from "sdxc/random";
 import { expect, test } from "vitest";
 
 import { pickTip } from "~/app/services/onboarding";
@@ -108,9 +107,9 @@ result. Anyone holding the seed and the same list can run the draw again and get
 answer:
 
 ```typescript {% title="app/services/giveaway.ts" %}
-import type { Seed } from "@sdxc/random";
+import type { Seed } from "sdxc/random";
 
-import { createRandom } from "@sdxc/random";
+import { createRandom } from "sdxc/random";
 
 export function drawWinners(
 	entrantIds: readonly string[],
@@ -131,8 +130,8 @@ The action that closes the giveaway draws the seed with `systemSeed()`, so nobod
 advance, and keeps it on the row:
 
 ```typescript {% title="app/http/controllers/giveaways/draw.ts" %}
-import { conflict, notFound, ok } from "@sdxc/http/response/json";
-import { systemSeed } from "@sdxc/random";
+import { conflict, notFound, ok } from "sdxc/http/response/json";
+import { systemSeed } from "sdxc/random";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -172,9 +171,9 @@ after it. When a run has parts that should not disturb each other, give each par
 stream with `derive(label)`:
 
 ```typescript {% title="app/services/season.ts" %}
-import type { Seed } from "@sdxc/random";
+import type { Seed } from "sdxc/random";
 
-import { createRandom } from "@sdxc/random";
+import { createRandom } from "sdxc/random";
 
 export function openSeason(seed: Seed) {
 	let season = createRandom(seed);
@@ -201,10 +200,10 @@ Object keeps it in its own storage, with the class exported from `bootstrap/work
 runtime can instantiate it:
 
 ```typescript {% title="bootstrap/do/bingo-hall.ts" %}
-import type { SeededRandom } from "@sdxc/random";
+import type { SeededRandom } from "sdxc/random";
 
-import { createRandom, restoreRandom, systemSeed } from "@sdxc/random";
-import { RANDOM_STATE_SCHEMA } from "@sdxc/random/schema";
+import { createRandom, restoreRandom, systemSeed } from "sdxc/random";
+import { RANDOM_STATE_SCHEMA } from "sdxc/random/schema";
 import { DurableObject } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
@@ -243,8 +242,8 @@ deserves a replay when it finds something odd. Draw a fresh seed, record it on t
 and open the stream on it:
 
 ```typescript {% title="app/jobs/orders/audit.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { createRandom, systemSeed } from "@sdxc/random";
+import { createJobHandler } from "sdxc/jobs";
+import { createRandom, systemSeed } from "sdxc/random";
 
 import jobs from "~/app/jobs";
 import { Orders } from "~/app/models/orders";
@@ -271,13 +270,13 @@ read back from an environment variable.
 ## Hand a stream to other packages
 
 Packages that draw take the same `Random`, so one seed can drive a whole test.
-[`@sdxc/sample`](/api/sample) accepts an open `SeededRandom` as its `seed`, and
-[`@sdxc/backoff`](/api/backoff) draws its jitter from a `random` option:
+[`sdxc/sample`](/api/sample) accepts an open `SeededRandom` as its `seed`, and
+[`sdxc/backoff`](/api/backoff) draws its jitter from a `random` option:
 
 ```typescript {% title="app/test/streams.ts" %}
-import { createBackoff } from "@sdxc/backoff";
-import { createRandom } from "@sdxc/random";
-import { createSample } from "@sdxc/sample";
+import { createBackoff } from "sdxc/backoff";
+import { createRandom } from "sdxc/random";
+import { createSample } from "sdxc/sample";
 
 export function testStreams(seed: string) {
 	let random = createRandom(seed);
@@ -301,9 +300,9 @@ its values replay with `--seed` like everything else in the run.
 
 ## Make secrets with Web Crypto
 
-`@sdxc/random` draws numbers, elements and orderings. Session ids, API keys, reset tokens,
+`sdxc/random` draws numbers, elements and orderings. Session ids, API keys, reset tokens,
 nonces and IVs come from Web Crypto directly or from `randomToken` and `randomBytes` in
-`@sdxc/crypto`, which
+`sdxc/crypto`, which
 [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) covers. A
 seeded stream is predictable to anyone who learns its seed, which is exactly what makes it
 useful for a draw you want to replay and what keeps it to draws that guard nothing.

@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { accent, fg } from "@sdxc/u/color";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { precededBy } from "@sdxc/u/state";
-import { text, textDecoration } from "@sdxc/u/typography";
+import { accent, fg } from "sdxc/u/color";
+import { hstack, vstack } from "sdxc/u/layout";
+import { precededBy } from "sdxc/u/state";
+import { text, textDecoration } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

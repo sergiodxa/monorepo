@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { flex, justify } from "@sdxc/u/layout";
+import { flex, justify } from "sdxc/u/layout";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

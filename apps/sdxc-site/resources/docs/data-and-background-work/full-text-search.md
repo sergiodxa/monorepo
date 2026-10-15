@@ -14,14 +14,14 @@ and the index is the app's to write: reading what a person typed so a stray quot
 character, deciding that a title match beats a body match, and showing where each result
 matched.
 
-This guide adds search to a help center's articles. [`@sdxc/search`](/api/search) parses the
+This guide adds search to a help center's articles. [`sdxc/search`](/api/search) parses the
 query, builds the FTS5 statement, ranks it with per-column weights, highlights matches and
-rebuilds the index in batches. [`@sdxc/pagination`](/api/pagination) pages the results,
-[`@sdxc/jobs`](/api/jobs) runs the rebuild, and [`@sdxc/result`](/api/result) carries every
+rebuilds the index in batches. [`sdxc/pagination`](/api/pagination) pages the results,
+[`sdxc/jobs`](/api/jobs) runs the rebuild, and [`sdxc/result`](/api/result) carries every
 failure.
 
 ```bash
-npm add @sdxc/search @sdxc/pagination @sdxc/jobs @sdxc/result @sdxc/http remix
+npm add sdxc remix
 ```
 
 ## Keep a search table beside the content
@@ -118,7 +118,7 @@ and which FTS5 table indexes them. It holds no connection, so one definition at 
 serves every request and every tenant's database:
 
 ```typescript {% title="app/models/search/articles.ts" %}
-import { defineSearch, parseQuery } from "@sdxc/search";
+import { defineSearch, parseQuery } from "sdxc/search";
 
 import { articleSearch } from "~/database/schema/article-search";
 
@@ -206,7 +206,7 @@ budget wants, and a batch that fails or runs twice leaves the index correct. A j
 one batch and enqueues the next walks a table of any size:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { job, jobs } from "@sdxc/jobs";
+import { job, jobs } from "sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
@@ -217,8 +217,8 @@ export default jobs({
 ```
 
 ```typescript {% title="app/jobs/reindex-article-search.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
 
 import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
@@ -275,7 +275,7 @@ any `remix/data-table` query. The filters the parse read out are yours to apply,
 the app knows what `section:billing` means:
 
 ```typescript {% title="app/models/search/articles.ts" %}
-import type { ParsedQuery } from "@sdxc/search";
+import type { ParsedQuery } from "sdxc/search";
 
 import { inList, notInList } from "remix/data-table";
 
@@ -306,10 +306,10 @@ weighted `bm25()` score, where lower is better. A search result list is one a re
 number and expects a total for, so page it by offset:
 
 ```tsx {% title="app/http/controllers/search.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { internalServerError } from "@sdxc/http/response/html";
-import { createPaging, Pagination } from "@sdxc/pagination";
-import { isFailure } from "@sdxc/result";
+import { redirect } from "sdxc/http/response";
+import { internalServerError } from "sdxc/http/response/html";
+import { createPaging, Pagination } from "sdxc/pagination";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { matchingArticles, parseArticleQuery } from "~/app/models/search/articles";
@@ -379,10 +379,10 @@ relevance shifts each time the index changes between two pages.
 does, ignoring case and diacritics, and both keep the text exactly as written:
 
 ```typescript {% title="app/services/search/hits.ts" %}
-import type { SearchRow } from "@sdxc/search";
-import type { Excerpt, HighlightSegment, ParsedQuery } from "@sdxc/search/query";
+import type { SearchRow } from "sdxc/search";
+import type { Excerpt, HighlightSegment, ParsedQuery } from "sdxc/search/query";
 
-import { excerpt, highlight } from "@sdxc/search/query";
+import { excerpt, highlight } from "sdxc/search/query";
 
 import type { articleSearch } from "~/database/schema/article-search";
 
@@ -412,7 +412,7 @@ either side.
 
 Segments are data, so the view renders each match as a `<mark>` element with no HTML built from
 strings. [Build a search dialog](/docs/building-remix-apps/search-dialog) draws them with
-`@sdxc/ui`'s `Highlight`. `@sdxc/search/query` holds only the parser and the highlighters, so a
+`sdxc/ui`'s `Highlight`. `sdxc/search/query` holds only the parser and the highlighters, so a
 browser bundle can parse and highlight with the same functions the server searched with.
 
 ## Search without FTS5
@@ -421,7 +421,7 @@ Leave out `fts` and the same definition runs every query as `LIKE` over the colu
 you already have is all it reads, so this search ships without a migration:
 
 ```typescript {% title="app/models/search/faq.ts" %}
-import { defineSearch } from "@sdxc/search";
+import { defineSearch } from "sdxc/search";
 
 import { faqs } from "~/database/schema/faqs";
 
@@ -460,4 +460,4 @@ up to 6 columns.
   the rebuild runs on.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases): the
   adapters a search runs on.
-- [`@sdxc/search`](/api/search): the full query syntax, every option and error.
+- [`sdxc/search`](/api/search): the full query syntax, every option and error.

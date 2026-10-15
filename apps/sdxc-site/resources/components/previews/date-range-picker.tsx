@@ -11,10 +11,10 @@
 
 import type { Handle } from "remix/component";
 
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { DateRangePicker, Description, Input, Label } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { DateRangePicker, Description, Input, Label } from "sdxc/ui";
 
 import { parseDayValue, stayLengthHint } from "~/app/services/calendar-labels";
 

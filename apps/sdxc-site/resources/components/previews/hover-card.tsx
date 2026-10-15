@@ -11,15 +11,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { CalendarIcon, MapPinIcon } from "@sdxc/icons";
-import { fg } from "@sdxc/u/color";
-import { opacity, visibility } from "@sdxc/u/effects";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { bs, is } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
-import { Avatar, Button, HoverCard, Link, Text } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
+import { CalendarIcon, MapPinIcon } from "sdxc/icons";
+import { fg } from "sdxc/u/color";
+import { opacity, visibility } from "sdxc/u/effects";
+import { hstack, vstack } from "sdxc/u/layout";
+import { bs, is } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
+import { text, weight } from "sdxc/u/typography";
+import { Avatar, Button, HoverCard, Link, Text } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const HOVER_CARD_CODE = `<Text>

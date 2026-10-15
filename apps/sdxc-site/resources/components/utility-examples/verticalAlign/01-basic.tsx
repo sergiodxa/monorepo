@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { inlineBlock } from "@sdxc/u/layout";
-import { bs, is } from "@sdxc/u/size";
-import { leading, verticalAlign } from "@sdxc/u/typography";
+import { inlineBlock } from "sdxc/u/layout";
+import { bs, is } from "sdxc/u/size";
+import { leading, verticalAlign } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

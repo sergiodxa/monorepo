@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border, outline } from "@sdxc/u/color";
-import { focusVisible } from "@sdxc/u/state";
+import { border, outline } from "sdxc/u/color";
+import { focusVisible } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

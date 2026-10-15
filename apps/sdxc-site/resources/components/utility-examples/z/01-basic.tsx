@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { border } from "@sdxc/u/color";
-import { shadow } from "@sdxc/u/effects";
-import { relative } from "@sdxc/u/layout";
-import { circle, is, mis } from "@sdxc/u/size";
-import { z } from "@sdxc/u/stacking";
+import { border } from "sdxc/u/color";
+import { shadow } from "sdxc/u/effects";
+import { relative } from "sdxc/u/layout";
+import { circle, is, mis } from "sdxc/u/size";
+import { z } from "sdxc/u/stacking";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

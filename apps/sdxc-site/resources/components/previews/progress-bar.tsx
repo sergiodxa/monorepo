@@ -10,13 +10,13 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { is, m } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, Header, ProgressBar } from "@sdxc/ui";
-import { shimmer } from "@sdxc/ui/animations";
 import { clientEntry, on } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { hstack, vstack } from "sdxc/u/layout";
+import { is, m } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Button, Header, ProgressBar } from "sdxc/ui";
+import { shimmer } from "sdxc/ui/animations";
 
 /** Percentage points one tick adds, so the bar crosses the whole track in a few seconds. */
 const STEP = 4;

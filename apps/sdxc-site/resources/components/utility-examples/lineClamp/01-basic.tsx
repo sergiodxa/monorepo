@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { maxIs } from "@sdxc/u/size";
-import { lineClamp, text, weight } from "@sdxc/u/typography";
+import { fg } from "sdxc/u/color";
+import { maxIs } from "sdxc/u/size";
+import { lineClamp, text, weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -11,11 +11,11 @@
 
 import type { Handle } from "remix/component";
 
-import { FolderIcon, UploadIcon } from "@sdxc/icons";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { Button, Description, FileTrigger, Header, Item, Separator } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { FolderIcon, UploadIcon } from "sdxc/icons";
+import { hstack, vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { Button, Description, FileTrigger, Header, Item, Separator } from "sdxc/ui";
 
 import { formatFileSize } from "~/app/services/file-size";
 

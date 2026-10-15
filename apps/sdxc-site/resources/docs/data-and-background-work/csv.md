@@ -13,13 +13,13 @@ report to download on the first of the month. Both directions have traps. An upl
 untyped text that may be malformed halfway through, and an export can carry a cell a
 spreadsheet runs as a formula on the machine of whoever opens it.
 
-This guide imports a contact list and exports it back. [`@sdxc/csv`](/api/csv) reads and writes
+This guide imports a contact list and exports it back. [`sdxc/csv`](/api/csv) reads and writes
 RFC 4180 and returns a `Result` wherever `JSON.parse` would throw,
-[`@sdxc/validate`](/api/validate) types each row with a schema, and
-[`@sdxc/http`](/api/http) sends the export as a download.
+[`sdxc/validate`](/api/validate) types each row with a schema, and
+[`sdxc/http`](/api/http) sends the export as a download.
 
 ```bash
-npm add @sdxc/csv @sdxc/validate @sdxc/result @sdxc/http remix
+npm add sdxc remix
 ```
 
 ## Describe a row
@@ -58,11 +58,11 @@ returns carries the `line` it stopped on. A row that parses but fails the schema
 kind of problem, so the import reports both, on one error that carries the list:
 
 ```typescript {% title="app/services/imports/read-contacts.ts" %}
-import type { Result } from "@sdxc/result";
+import type { Result } from "sdxc/result";
 
-import { parse } from "@sdxc/csv";
-import { failure, isFailure, success } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { parse } from "sdxc/csv";
+import { failure, isFailure, success } from "sdxc/result";
+import { validate } from "sdxc/validate";
 
 import type { Contact } from "~/app/services/imports/contact-row";
 
@@ -145,9 +145,9 @@ the problems or saves every contact. The file field is validated like any other:
 `remix/data-schema/form-data`'s `f.file()` refuses a submission that carries no file.
 
 ```tsx {% title="app/http/controllers/contacts/import.tsx" %}
-import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { redirect } from "sdxc/http/response";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -199,10 +199,10 @@ an account holds:
 ```typescript {% title="app/http/controllers/contacts/export.ts" %}
 import type { Database } from "remix/data-table";
 
-import { streamify } from "@sdxc/csv";
-import { attachment, csv } from "@sdxc/http/response";
-import { Pagination } from "@sdxc/pagination";
-import { isFailure } from "@sdxc/result";
+import { streamify } from "sdxc/csv";
+import { attachment, csv } from "sdxc/http/response";
+import { Pagination } from "sdxc/pagination";
+import { isFailure } from "sdxc/result";
 import { createAction } from "remix/router";
 
 import { contacts } from "~/database/schema";
@@ -294,7 +294,7 @@ instead of `,`, and reads it as UTF-8 only when it starts with a byte order mark
 options on the writer:
 
 ```typescript {% title="app/services/exports/spreadsheet-options.ts" %}
-import type { WriteOptions } from "@sdxc/csv";
+import type { WriteOptions } from "sdxc/csv";
 
 export function spreadsheetOptions(locale: string): WriteOptions {
 	let parts = new Intl.NumberFormat(locale).formatToParts(1.5);
@@ -314,4 +314,4 @@ files programs read: some parsers take the byte order mark as part of the first 
   statement that makes the import atomic.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — moving a large
   import off the request.
-- [`@sdxc/csv`](/api/csv) — every option and error field of the reader and writers.
+- [`sdxc/csv`](/api/csv) — every option and error field of the reader and writers.

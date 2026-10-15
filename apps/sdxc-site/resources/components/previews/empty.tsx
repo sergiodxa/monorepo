@@ -10,11 +10,11 @@
 
 import type { Handle } from "remix/component";
 
-import { FileTextIcon, SearchIcon } from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { Button, Empty, Group, Input, Item } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+import { FileTextIcon, SearchIcon } from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { Button, Empty, Group, Input, Item } from "sdxc/ui";
 
 /** The invoices the filter runs over, so the empty state has something to be empty of. */
 const INVOICES = [

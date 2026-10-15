@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { userSelect } from "@sdxc/u/general";
-import { font } from "@sdxc/u/typography";
+import { userSelect } from "sdxc/u/general";
+import { font } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 
@@ -18,5 +18,5 @@ export default {
 	title: "Selecting all at once",
 	description:
 		'Use `userSelect("all")` to select an element\'s whole text with one click. Click the command:',
-	render: () => <code mix={[userSelect("all"), font("mono"), demo.panel()]}>bun add @sdxc/u</code>,
+	render: () => <code mix={[userSelect("all"), font("mono"), demo.panel()]}>bun add sdxc/u</code>,
 } satisfies UtilityExampleModule;

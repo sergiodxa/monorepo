@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { hidden, hstack, vstack } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { text, weight } from "@sdxc/u/typography";
-import { Logo } from "@sdxc/ui";
-import { imageFallback } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { hidden, hstack, vstack } from "sdxc/u/layout";
+import { m } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
+import { text, weight } from "sdxc/u/typography";
+import { Logo } from "sdxc/ui";
+import { imageFallback } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 5, align: "start" })]}>

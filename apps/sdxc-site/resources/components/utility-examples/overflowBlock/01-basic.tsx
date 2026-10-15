@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { overflowBlock } from "@sdxc/u/overflow";
-import { bs, is, maxIs } from "@sdxc/u/size";
+import { overflowBlock } from "sdxc/u/overflow";
+import { bs, is, maxIs } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

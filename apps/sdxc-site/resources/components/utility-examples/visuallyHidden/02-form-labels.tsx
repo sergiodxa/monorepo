@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { visuallyHidden } from "@sdxc/u/a11y";
-import { hstack } from "@sdxc/u/layout";
+import { visuallyHidden } from "sdxc/u/a11y";
+import { hstack } from "sdxc/u/layout";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

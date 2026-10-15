@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "@sdxc/u/color";
-import { overflow } from "@sdxc/u/overflow";
-import { is, p } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
+import { bg } from "sdxc/u/color";
+import { overflow } from "sdxc/u/overflow";
+import { is, p } from "sdxc/u/size";
+import { when } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

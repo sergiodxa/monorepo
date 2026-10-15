@@ -6,10 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { opacity, transition, transitionBehavior } from "@sdxc/u/effects";
-import { cursor } from "@sdxc/u/general";
-import { startingStyle } from "@sdxc/u/responsive";
+import { bg, fg } from "sdxc/u/color";
+import { opacity, transition, transitionBehavior } from "sdxc/u/effects";
+import { cursor } from "sdxc/u/general";
+import { startingStyle } from "sdxc/u/responsive";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

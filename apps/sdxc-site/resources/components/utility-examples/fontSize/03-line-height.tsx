@@ -6,8 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { maxIs } from "@sdxc/u/size";
-import { fontSize, leading } from "@sdxc/u/typography";
+import { maxIs } from "sdxc/u/size";
+import { fontSize, leading } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

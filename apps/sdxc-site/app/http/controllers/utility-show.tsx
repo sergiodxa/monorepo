@@ -31,7 +31,7 @@ import {
 	STATE_FAMILY,
 } from "~/app/services/utility-calls";
 import { listUtilityExamples } from "~/app/services/utility-examples";
-import { themeScales } from "~/app/services/utility-theme";
+import { AUGMENTATION_LEAD, themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/site";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -94,7 +94,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow={`@sdxc/u/${reference.family}`} title={reference.property}>
+						<PageTitle eyebrow={`sdxc/u/${reference.family}`} title={reference.property}>
 							<ReferenceProse>{reference.summary}</ReferenceProse>
 						</PageTitle>
 
@@ -110,7 +110,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 							sourceUrl={`${CATALOGUE_SOURCE_BASE}u/src/${entry.family}/${entry.module}.ts`}
 						/>
 
-						<Snippet code={`import { ${reference.name} } from "@sdxc/u/${reference.family}";`} />
+						<Snippet code={`import { ${reference.name} } from "sdxc/u/${reference.family}";`} />
 					</header>
 
 					{table.length > 0 ? (
@@ -189,6 +189,11 @@ export default createAction(routes.api.utility, async (ctx) => {
 					{scales.length > 0 ? (
 						<ReferenceSection id="theme" title="Customizing your theme">
 							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
+								{scales.some((scale) => scale.declaration !== null) ? (
+									<p mix={[m(0), text("base"), fg("neutral")]}>
+										<ReferenceProse>{AUGMENTATION_LEAD}</ReferenceProse>
+									</p>
+								) : null}
 								{scales.map((scale) => (
 									<section key={scale.id} mix={[vstack({ gap: 3, align: "stretch" })]}>
 										<h3

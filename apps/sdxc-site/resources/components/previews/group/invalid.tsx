@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { XIcon } from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { Button, FieldError, Group, Input } from "@sdxc/ui";
-import { clearField, SEARCH_FIELD_CLEAR_COMMAND } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
+import { XIcon } from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { Button, FieldError, Group, Input } from "sdxc/ui";
+import { clearField, SEARCH_FIELD_CLEAR_COMMAND } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below apart from element ids. */
 const CODE = `<div mix={[vstack({ gap: 2, align: "stretch" })]}>

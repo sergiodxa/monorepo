@@ -9,12 +9,12 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { font, text } from "@sdxc/u/typography";
-import { ColorWheel, Label, Switch } from "@sdxc/ui";
-import { colorWheelDrag } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { hstack, vstack } from "sdxc/u/layout";
+import { font, text } from "sdxc/u/typography";
+import { ColorWheel, Label, Switch } from "sdxc/ui";
+import { colorWheelDrag } from "sdxc/ui/mixins";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let hue = 210;

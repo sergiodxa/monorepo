@@ -12,9 +12,9 @@ This guide lets a team member turn on alerts in their browser: a button on the s
 subscribes this browser, the server stores the subscription, and later a failed sync shows up
 as a notification even when the app is closed.
 
-[`@sdxc/web-push`](/api/web-push) holds both halves. Its main entry encrypts a payload for one
+[`sdxc/web-push`](/api/web-push) holds both halves. Its main entry encrypts a payload for one
 browser (RFC 8291), signs a VAPID token for the push service (RFC 8292), sends one `POST` and
-says what the answer means for the stored subscription. `@sdxc/web-push/browser` subscribes
+says what the answer means for the stored subscription. `sdxc/web-push/browser` subscribes
 from a click. Where subscriptions live, and when one is given up on, stay in your app.
 
 There is no push provider to sign up for. Each browser picks its vendor's push service (Chrome
@@ -23,7 +23,7 @@ uses `fcm.googleapis.com`, Firefox `updates.push.services.mozilla.com`, Safari
 only by the key pair you generate below.
 
 ```bash
-npm add @sdxc/web-push @sdxc/result @sdxc/validate remix
+npm add sdxc remix
 ```
 
 A subscription travels from the browser to your Worker once, and every notification travels
@@ -58,7 +58,7 @@ sequenceDiagram
 A push service identifies a sender by one P-256 key pair. Generate it once per deployment:
 
 ```bash
-bun -e 'import { WebPush } from "@sdxc/web-push"; console.log(await WebPush.generateKeys())'
+bun -e 'import { WebPush } from "sdxc/web-push"; console.log(await WebPush.generateKeys())'
 ```
 
 The public key goes to every page that subscribes, so it can live in plain configuration; the
@@ -109,8 +109,8 @@ subscription or replaces one made under another key:
 ```tsx {% title="resources/components/enable-push.tsx" %}
 import type { Handle } from "remix/component";
 
-import { isSuccess } from "@sdxc/result";
-import { isSupported, subscribe } from "@sdxc/web-push/browser";
+import { isSuccess } from "sdxc/result";
+import { isSupported, subscribe } from "sdxc/web-push/browser";
 import { clientEntry, on } from "remix/component";
 
 type EnablePushProps = { applicationServerKey: string; action: string };
@@ -154,9 +154,9 @@ P-256 key on the curve and a 16-byte auth secret. A row it accepts is one a send
 refuse:
 
 ```typescript {% title="app/http/controllers/push-subscriptions.ts" %}
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
-import { SUBSCRIPTION_SCHEMA } from "@sdxc/web-push";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
+import { SUBSCRIPTION_SCHEMA } from "sdxc/web-push";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -192,12 +192,12 @@ browsers on Chrome's push service cost one signature. Each send makes one attemp
 whose error code says what to do with the row:
 
 ```typescript {% title="app/services/notifications/push.ts" %}
-import type { WebPushError } from "@sdxc/web-push";
+import type { WebPushError } from "sdxc/web-push";
 import type { Database } from "remix/data-table";
 import type { PushSubscriptionRow } from "~/app/models/push-subscriptions";
 
-import { isFailure } from "@sdxc/result";
-import { WebPush } from "@sdxc/web-push";
+import { isFailure } from "sdxc/result";
+import { WebPush } from "sdxc/web-push";
 import { env } from "cloudflare:workers";
 
 import Subscriptions from "~/app/models/push-subscriptions";
@@ -264,16 +264,16 @@ only: an endpoint plus its keys can notify that browser, so treat it like a cred
 
 ## Send through messaging
 
-An app that already routes alerts through [`@sdxc/messaging`](/api/messaging), as
+An app that already routes alerts through [`sdxc/messaging`](/api/messaging), as
 [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) shows, adds
-browser push as one more destination. `BrowserPush` is an optional peer, so install
-`@sdxc/web-push` beside it:
+browser push as one more destination. `BrowserPush` sends through `sdxc/web-push`, which
+arrives with `sdxc`:
 
 ```typescript {% title="app/services/notifications/destinations.ts" %}
-import type { Destination } from "@sdxc/messaging";
-import type { Subscription, WebPush } from "@sdxc/web-push";
+import type { Destination } from "sdxc/messaging";
+import type { Subscription, WebPush } from "sdxc/web-push";
 
-import { BrowserPush } from "@sdxc/messaging/web-push";
+import { BrowserPush } from "sdxc/messaging/web-push";
 
 export function browserDestination(
 	push: WebPush,
@@ -314,8 +314,8 @@ current pair for a row with none. A row naming a key the sender no longer holds 
 network. Any `p256dh` on the P-256 curve works; RFC 8291's example key is a convenient one:
 
 ```typescript {% title="app/services/notifications/push.test.ts" %}
-import { isFailure } from "@sdxc/result";
-import { WebPush } from "@sdxc/web-push";
+import { isFailure } from "sdxc/result";
+import { WebPush } from "sdxc/web-push";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
@@ -356,4 +356,4 @@ test("an unsubscribed browser answers gone", async () => {
   delivery job, retries and fan-out that `BrowserPush` plugs into.
 - [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) — the public
   host rule a subscription's endpoint passes.
-- [`@sdxc/web-push`](/api/web-push) — every option and error code.
+- [`sdxc/web-push`](/api/web-push) — every option and error code.

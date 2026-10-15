@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vstack } from "@sdxc/u/layout";
-import { bs, is } from "@sdxc/u/size";
-import { weight } from "@sdxc/u/typography";
+import { vstack } from "sdxc/u/layout";
+import { bs, is } from "sdxc/u/size";
+import { weight } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

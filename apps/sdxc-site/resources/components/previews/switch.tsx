@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { hstack, vstack } from "@sdxc/u/layout";
-import { is } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Card, Separator, Switch, Text } from "@sdxc/ui";
-import { ariaChecked } from "@sdxc/ui/mixins";
 import { clientEntry, css } from "remix/component";
+import { hstack, vstack } from "sdxc/u/layout";
+import { is } from "sdxc/u/size";
+import { text, weight } from "sdxc/u/typography";
+import { Card, Separator, Switch, Text } from "sdxc/ui";
+import { ariaChecked } from "sdxc/ui/mixins";
 
 /** One row of the panel, so the three switches differ by more than their labels. */
 interface Preference {

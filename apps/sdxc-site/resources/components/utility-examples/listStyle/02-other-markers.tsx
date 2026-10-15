@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { listStyle } from "@sdxc/u/general";
-import { gap, grid, gridTemplate } from "@sdxc/u/layout";
-import { pis } from "@sdxc/u/size";
+import { listStyle } from "sdxc/u/general";
+import { gap, grid, gridTemplate } from "sdxc/u/layout";
+import { pis } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

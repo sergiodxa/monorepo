@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { animation } from "@sdxc/u/animation";
-import { motionSafe } from "@sdxc/u/responsive";
-import { bs, is } from "@sdxc/u/size";
+import { animation } from "sdxc/u/animation";
+import { motionSafe } from "sdxc/u/responsive";
+import { bs, is } from "sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

@@ -12,13 +12,13 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { hstack, vstack } from "@sdxc/u/layout";
-import { font, text, weight } from "@sdxc/u/typography";
-import { ColorArea, ColorSwatch } from "@sdxc/ui";
-import { colorAreaDrag } from "@sdxc/ui/mixins";
-import { formatHex, hsvToRgb } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
+import { fg } from "sdxc/u/color";
+import { hstack, vstack } from "sdxc/u/layout";
+import { font, text, weight } from "sdxc/u/typography";
+import { ColorArea, ColorSwatch } from "sdxc/ui";
+import { colorAreaDrag } from "sdxc/ui/mixins";
+import { formatHex, hsvToRgb } from "sdxc/ui/utils";
 
 /** The hue the square paints for, the one axis it does not edit. */
 const HUE = 210;

@@ -6,11 +6,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { hstack } from "@sdxc/u/layout";
-import { p } from "@sdxc/u/size";
-import { data } from "@sdxc/u/state";
+import { bg, border, fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { hstack } from "sdxc/u/layout";
+import { p } from "sdxc/u/size";
+import { data } from "sdxc/u/state";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

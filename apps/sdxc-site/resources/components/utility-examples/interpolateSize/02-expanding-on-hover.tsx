@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { transition } from "@sdxc/u/effects";
-import { interpolateSize } from "@sdxc/u/layout";
-import { overflow } from "@sdxc/u/overflow";
-import { is } from "@sdxc/u/size";
-import { hover } from "@sdxc/u/state";
-import { nowrap } from "@sdxc/u/typography";
+import { transition } from "sdxc/u/effects";
+import { interpolateSize } from "sdxc/u/layout";
+import { overflow } from "sdxc/u/overflow";
+import { is } from "sdxc/u/size";
+import { hover } from "sdxc/u/state";
+import { nowrap } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

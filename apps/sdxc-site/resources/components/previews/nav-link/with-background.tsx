@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { pb, pi } from "@sdxc/u/size";
-import { NavLink } from "@sdxc/ui";
+import { bg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { pb, pi } from "sdxc/u/size";
+import { NavLink } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<NavLink href="/docs" hasBackground mix={[pi(3), pb(2), rounded("md"), bg("neutral.tint")]}>

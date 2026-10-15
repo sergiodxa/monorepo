@@ -6,12 +6,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { bg, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
-import { absolute, insBottom, insIe, relative } from "@sdxc/u/layout";
-import { is, mbs, mis, p } from "@sdxc/u/size";
-import { layer, z } from "@sdxc/u/stacking";
-import { text } from "@sdxc/u/typography";
+import { bg, fg } from "sdxc/u/color";
+import { rounded } from "sdxc/u/effects";
+import { absolute, insBottom, insIe, relative } from "sdxc/u/layout";
+import { is, mbs, mis, p } from "sdxc/u/size";
+import { layer, z } from "sdxc/u/stacking";
+import { text } from "sdxc/u/typography";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
 

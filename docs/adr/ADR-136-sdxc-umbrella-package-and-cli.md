@@ -332,8 +332,10 @@ per location, an ambiguity error and three `init` renderers.
         generated
   - [ ] README, `LICENSE.md`, root README row and docs-site group (done); bootstrap on npm and
         trusted publisher (pending)
-  - [ ] Documentation site on `sdxc/*`: the site's own code imports `sdxc/*` (done); the
-        examples, snippets and guides it displays still show `@sdxc/*` (pending)
+  - [x] Documentation site on `sdxc/*`: the site's code, examples, catalogue snippets and
+        guides import `sdxc/*`, guides install `sdxc remix`, a package page keeps its
+        standalone `@sdxc/<name>` install and names its `sdxc/<name>` subpath, and
+        `declare module` blocks keep naming `@sdxc/<name>`
 - [x] Phase 2: CLI and configuration
   - [x] `bin`, project root, configuration lookup and validation, `config.schema.json`, `format`
   - [x] `sdxc init`

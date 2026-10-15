@@ -22,13 +22,12 @@ every redirect re-checked, and the failures map onto the job's retry and give-up
 caps bodies that did not come from `fetch` at all, such as a webhook delivery, and streams a
 capped image through a proxy.
 
-[`@sdxc/outbound`](/api/outbound) checks, follows and reads URLs a stranger chose, answering a
-`Result` from [`@sdxc/result`](/api/result) for every outcome. [`@sdxc/jobs`](/api/jobs) keeps
-the fetch off the request, and [`@sdxc/crypto`](/api/crypto) verifies the webhook signature.
+[`sdxc/outbound`](/api/outbound) checks, follows and reads URLs a stranger chose, answering a
+`Result` from [`sdxc/result`](/api/result) for every outcome. [`sdxc/jobs`](/api/jobs) keeps
+the fetch off the request, and [`sdxc/crypto`](/api/crypto) verifies the webhook signature.
 
 ```bash
-npm add @sdxc/outbound @sdxc/result @sdxc/jobs @sdxc/crypto @sdxc/validate \
-	@sdxc/http remix
+npm add sdxc remix
 ```
 
 ## Refuse the URL at the endpoint
@@ -40,10 +39,10 @@ rest). Running it where the URL arrives turns a subscription the job would refus
 immediate `422`:
 
 ```typescript {% title="app/http/controllers/calendars/create.ts" %}
-import { accepted, unprocessableEntity } from "@sdxc/http/response/json";
-import { checkUrl } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { accepted, unprocessableEntity } from "sdxc/http/response/json";
+import { checkUrl } from "sdxc/outbound";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -91,10 +90,10 @@ request leaving. `readText` then reads the body within a byte cap. Wrap both in 
 translates `OutboundError` into your own error, so the job handles one type:
 
 ```typescript {% title="app/services/calendar-download.ts" %}
-import type { OutboundError, OutboundErrorCode } from "@sdxc/outbound";
+import type { OutboundError, OutboundErrorCode } from "sdxc/outbound";
 
-import { follow, readText, release } from "@sdxc/outbound";
-import { failure, isFailure, success } from "@sdxc/result";
+import { follow, readText, release } from "sdxc/outbound";
+import { failure, isFailure, success } from "sdxc/result";
 
 const USER_AGENT = "Planner/1.0 (+https://planner.example/about/bot)";
 const MAX_CALENDAR_BYTES = 2 * 1024 * 1024;
@@ -149,7 +148,7 @@ cap, with the stream cancelled so the origin stops sending.
 to decide: a `304` is a success to a feed poller and a `403` a refusal to an article reader.
 `release` lets go of a body you will not read without waiting on the origin. `url` is where the
 chain ended, the base for any relative URL in the body. Keeping `CalendarError` at this boundary
-means the rest of your app never imports `@sdxc/outbound`, and swapping how the calendar is
+means the rest of your app never imports `sdxc/outbound`, and swapping how the calendar is
 fetched changes one file.
 
 ## Turn failures into job verbs
@@ -159,8 +158,8 @@ change. Every `refused-*` code, `too-many-redirects` and `too-large` gives the s
 time, so the job records it and stops:
 
 ```typescript {% title="app/jobs/calendars/refresh.ts" %}
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { createJobHandler } from "sdxc/jobs";
+import { isFailure } from "sdxc/result";
 
 import jobs from "~/app/jobs";
 import { Calendars } from "~/app/models/calendars";
@@ -231,8 +230,8 @@ address checks, and `resolve` is skipped with them. Give it a URL you configured
 visitor sent:
 
 ```typescript {% title="app/services/inventory-health.ts" %}
-import { follow, release } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
+import { follow, release } from "sdxc/outbound";
+import { isFailure } from "sdxc/result";
 import { env } from "cloudflare:workers";
 
 export async function inventoryIsUp(): Promise<boolean> {
@@ -260,16 +259,16 @@ check the signature, so whoever posts first decides how much your Worker buffers
 it. `readBytes` keeps the exact bytes the signature covers:
 
 ```typescript {% title="app/http/controllers/webhooks/inventory.ts" %}
-import { hmac } from "@sdxc/crypto";
+import { hmac } from "sdxc/crypto";
 import {
 	accepted,
 	badRequest,
 	payloadTooLarge,
 	serviceUnavailable,
 	unauthorized,
-} from "@sdxc/http/response/json";
-import { readBytes } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
+} from "sdxc/http/response/json";
+import { readBytes } from "sdxc/outbound";
+import { isFailure } from "sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -304,7 +303,7 @@ export default createAction(routes.webhooks.inventory, async (ctx) => {
 A `Content-Length` over the cap is answered `413` before any of the body is read. A missing
 secret answers `503` before the body is touched, so an unconfigured receiver accepts nothing.
 For a sender that follows [Standard Webhooks](/docs/identity-and-security/webhooks),
-`@sdxc/webhooks` reads and verifies the body itself.
+`sdxc/webhooks` reads and verifies the body itself.
 
 ## Stream a capped image through
 
@@ -314,9 +313,9 @@ publisher never sees their address. The bytes go straight to the client, so read
 first chunk past the cap.
 
 ```typescript {% title="app/http/controllers/images/show.ts" %}
-import { follow, limitBody, release } from "@sdxc/outbound";
-import { isFailure } from "@sdxc/result";
-import { validate } from "@sdxc/validate";
+import { follow, limitBody, release } from "sdxc/outbound";
+import { isFailure } from "sdxc/result";
+import { validate } from "sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -363,19 +362,19 @@ slow origin cannot hold the connection either. Sign the URLs your pages write wi
 
 ## Use the packages that already fetch through it
 
-Several packages fetch URLs a stranger chose and do it through `@sdxc/outbound`, so the same
+Several packages fetch URLs a stranger chose and do it through `sdxc/outbound`, so the same
 hop checks, deadline and caps apply without your code calling it:
 
-- [`@sdxc/distill`](/api/distill) reads articles and refuses address literals;
+- [`sdxc/distill`](/api/distill) reads articles and refuses address literals;
   [Read other people's pages](/docs/content-and-feeds/read-web-pages) builds a save-for-later
   feature on it, and link preview cards on `follow` and `readText` directly.
-- [`@sdxc/feed`](/api/feed) checks every hop with `hosts: "public"` by default and takes
+- [`sdxc/feed`](/api/feed) checks every hop with `hosts: "public"` by default and takes
   `hosts: "any"` for a feed on your own network, beside `maxBytes` and `maxRedirects`.
-- [`@sdxc/webmention`](/api/webmention) verifies a mention's source within `maxBytes`,
+- [`sdxc/webmention`](/api/webmention) verifies a mention's source within `maxBytes`,
   `timeoutMs` and `maxRedirects`, and refuses literals.
-- [`@sdxc/websub`](/api/websub) caps a hub's delivery with `maxBytes` before it compares the
+- [`sdxc/websub`](/api/websub) caps a hub's delivery with `maxBytes` before it compares the
   signature.
-- [`@sdxc/activitypub`](/api/activitypub) fetches every remote actor, key and post through it
+- [`sdxc/activitypub`](/api/activitypub) fetches every remote actor, key and post through it
   with each hop's host resolved, within one megabyte and ten seconds by default, and accepts a
   document only when its `id` has the origin the chain ended at. Deliveries go to an inbox that
   passed the same checks, with `redirect: "manual"`;
@@ -391,7 +390,7 @@ Each keeps its own error type and maps from `OutboundError` at its boundary, the
 host rules, since only a `.example` name is reserved:
 
 ```typescript {% title="app/services/calendar-download.test.ts" %}
-import { isFailure } from "@sdxc/result";
+import { isFailure } from "sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";

@@ -14,16 +14,15 @@ evaluates before it answers, and how you read a header that has more structure t
 word. Each has a package, and each takes a line or two in the composition root from
 [Wire the router](/docs/building-remix-apps/wire-the-router).
 
-[`@sdxc/no-www-middleware`](/api/no-www-middleware) keeps the site on one host,
-[`@sdxc/trailing-slash-middleware`](/api/trailing-slash-middleware) picks one form of every
-path, [`@sdxc/catch-response-middleware`](/api/catch-response-middleware) turns a thrown
-`Response` into the answer, [`@sdxc/lazy-route`](/api/lazy-route) imports a route's module on
-the first request that reaches it, and [`@sdxc/structured-fields`](/api/structured-fields)
+[`sdxc/no-www-middleware`](/api/no-www-middleware) keeps the site on one host,
+[`sdxc/trailing-slash-middleware`](/api/trailing-slash-middleware) picks one form of every
+path, [`sdxc/catch-response-middleware`](/api/catch-response-middleware) turns a thrown
+`Response` into the answer, [`sdxc/lazy-route`](/api/lazy-route) imports a route's module on
+the first request that reaches it, and [`sdxc/structured-fields`](/api/structured-fields)
 parses and writes the RFC 9651 header values that newer HTTP fields use.
 
 ```bash
-npm add @sdxc/no-www-middleware @sdxc/trailing-slash-middleware \
-	@sdxc/catch-response-middleware @sdxc/lazy-route @sdxc/structured-fields @sdxc/result @sdxc/http remix
+npm add sdxc remix
 ```
 
 ## One canonical path
@@ -33,8 +32,8 @@ even when your router answers both with the same page. Choose one and redirect t
 `trailingSlash()` with no options makes the slash-free form canonical:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { log } from "@sdxc/logger/middleware";
-import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { log } from "sdxc/logger/middleware";
+import { trailingSlash } from "sdxc/trailing-slash-middleware";
 import { createRouter } from "remix/router";
 
 import pricing from "~/app/http/controllers/pricing";
@@ -72,9 +71,9 @@ apex domain without a `Domain` attribute never reaches the `www.` host. `noWWW()
 apex domain the only one that answers:
 
 ```typescript {% title="app/initializers/router.ts" %}
-import { log } from "@sdxc/logger/middleware";
-import { noWWW } from "@sdxc/no-www-middleware";
-import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { log } from "sdxc/logger/middleware";
+import { noWWW } from "sdxc/no-www-middleware";
+import { trailingSlash } from "sdxc/trailing-slash-middleware";
 import { createRouter } from "remix/router";
 
 import pricing from "~/app/http/controllers/pricing";
@@ -139,7 +138,7 @@ returns, so a thrown `Response` escapes as a rejected promise and becomes a `500
 `catchResponse()` catches it and answers with it, which makes the second way work:
 
 ```typescript {% title="app/http/require-user.ts" %}
-import { redirect } from "@sdxc/http/response";
+import { redirect } from "sdxc/http/response";
 
 import { currentUser } from "~/app/http/session";
 import routes from "~/routes/web";
@@ -210,11 +209,11 @@ the first request that matches:
 ```typescript {% title="app/initializers/router.ts" %}
 import type { Middleware } from "remix/router";
 
-import { catchResponse } from "@sdxc/catch-response-middleware";
-import { lazy } from "@sdxc/lazy-route";
-import { log } from "@sdxc/logger/middleware";
-import { noWWW } from "@sdxc/no-www-middleware";
-import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { catchResponse } from "sdxc/catch-response-middleware";
+import { lazy } from "sdxc/lazy-route";
+import { log } from "sdxc/logger/middleware";
+import { noWWW } from "sdxc/no-www-middleware";
+import { trailingSlash } from "sdxc/trailing-slash-middleware";
 import { createRouter } from "remix/router";
 
 import { requireAdmin } from "~/app/http/middleware/require-admin";
@@ -270,20 +269,20 @@ chunk. A computed specifier cannot be split, and the deferral saves nothing.
 
 Newer HTTP fields share one grammar, RFC 9651: `Priority`, `Cache-Status`, `RateLimit` and
 `Idempotency-Key` are each a List, a Dictionary or an Item of typed values. Splitting them on
-commas by hand works until a quoted string contains one. Every call to `@sdxc/structured-fields`
+commas by hand works until a quoted string contains one. Every call to `sdxc/structured-fields`
 names the field's top-level type, because the RFC fixes it in the field's definition rather
 than in the text. `Link` is a different grammar, RFC 8288:
 [Parse and write Link headers](/docs/http-apis/link-header) covers it with
-[`@sdxc/link-header`](/api/link-header).
+[`sdxc/link-header`](/api/link-header).
 
 When your Worker fetches from an origin behind a CDN, `Cache-Status` says which caches
 answered. Describe a hop once, at module scope, with the `sf` builders, which compose with
 `remix/data-schema`:
 
 ```typescript {% title="app/services/cache-status.ts" %}
-import { isSuccess } from "@sdxc/result";
-import { getField } from "@sdxc/structured-fields";
-import { sf } from "@sdxc/structured-fields/schema";
+import { isSuccess } from "sdxc/result";
+import { getField } from "sdxc/structured-fields";
+import { sf } from "sdxc/structured-fields/schema";
 import * as s from "remix/data-schema";
 
 const HOP = sf.item(
@@ -315,8 +314,8 @@ on every response:
 ```typescript {% title="app/http/middleware/quota.ts" %}
 import type { Middleware } from "remix/router";
 
-import { json } from "@sdxc/http/response";
-import { setField } from "@sdxc/structured-fields";
+import { json } from "sdxc/http/response";
+import { setField } from "sdxc/structured-fields";
 
 import { Quotas } from "~/app/models/quotas";
 

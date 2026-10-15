@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { is, maxIs } from "@sdxc/u/size";
-import { Button, Card, Typeset } from "@sdxc/ui";
+import { is, maxIs } from "sdxc/u/size";
+import { Button, Card, Typeset } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Typeset mix={[is("100%"), maxIs("28rem")]}>

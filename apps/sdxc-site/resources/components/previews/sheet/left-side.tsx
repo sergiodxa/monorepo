@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { SlidersHorizontalIcon } from "@sdxc/icons";
-import { vstack } from "@sdxc/u/layout";
-import { Button, Checkbox, Sheet } from "@sdxc/ui";
+import { SlidersHorizontalIcon } from "sdxc/icons";
+import { vstack } from "sdxc/u/layout";
+import { Button, Checkbox, Sheet } from "sdxc/ui";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button commandfor="filters" command="show-modal" variant="outline">
