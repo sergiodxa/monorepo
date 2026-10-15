@@ -512,7 +512,20 @@ routes, jobs and MCP tools are.
   - [x] README, root README row, docs-site group, `sdxc/cli` in the umbrella; `sdxc`'s handwritten
         sources moved to `src/sdxc.ts` and `src/sdxc/` so the generator can write `src/cli.ts`
   - [ ] Bootstrap on npm and configure the trusted publisher
-- [ ] Phase 2: `sdxc` on `@sdxc/cli`
+- [x] Phase 2: `sdxc` on `@sdxc/cli`
+  - [x] `SDXC_COMMANDS` in `src/sdxc/contract.ts`, `createSDXC()` in `src/sdxc/cli.ts` mapping
+        every handler in `src/sdxc/commands/` through `lazy()`; `project()` publishes
+        `ctx.project` (`root`, `config`) and `packageRoot()` publishes `ctx.packageRoot`, which
+        `createSDXC({ packageRoot })` overrides in tests; one `packageManager()` module
+  - [x] `init`, `create`, `upgrade`, `ui`, then `make` as a group of kinds, with their tests on
+        `invoke()`; `run.ts`, the `*_USAGE` strings, `ui`'s and `make`'s flag tables, the
+        `--x`/`--no-x` checks, `create/git.ts` and the `confirm`, `exec` and `packageRoot`
+        options are gone
+  - [x] Prompts and tasks from "Where `sdxc` uses them", each tested with answers and without a
+        terminal. Three departures: `create`'s git question is handler-called, since it names the
+        directory and only applies to one `create` made; `create` installs nothing, per ADR-142,
+        so it has no install task; and `upgrade` reads the target's `changelog.jsonl` from
+        `cdn.jsdelivr.net` to know whether it crosses a breaking release before installing it
 - [x] Phase 3: `spec` on `@sdxc/cli`
   - [x] `spec run` declared in `src/cli-contract.ts`, its handler in `src/cli-run.ts`; the
         `--allow-*` flags are `.optionalValue().list()`, `peelValueFlag`, `parsePluginGrant` and
