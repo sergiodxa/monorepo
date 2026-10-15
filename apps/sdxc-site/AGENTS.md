@@ -11,8 +11,10 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 
 ## Things that cannot change
 
-- **`sdxc.sergiodxa.com`** is a custom domain declared in `cloudflare.config.ts`. A deploy that
-  drops it takes the site offline; rollback is redeploying the previous version.
+- **`sdxc.dev` and `sdxc.sergiodxa.com`** are custom domains declared in `cloudflare.config.ts`.
+  A deploy that drops one takes that address offline; rollback is redeploying the previous
+  version. `SITE_URL` in `config/site.ts` is `sdxc.dev`, and the `canonical-host` middleware
+  redirects a `GET` on a former host there while letting webhooks and MCP posts through.
 - **The tag names in `app/services/content.ts`** are the vocabulary every content file is
   written in. Renaming one silently turns every use of it into raw HTML text, because an
   unregistered element is left alone by the parser.

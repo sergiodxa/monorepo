@@ -148,12 +148,12 @@ describe("GET /llms.txt", () => {
 		expect(response.headers.get("content-type")).toContain("text/plain");
 
 		for (let entry of listPackages()) {
-			expect(body).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}.md`);
+			expect(body).toContain(`https://sdxc.dev/api/${entry.directory}.md`);
 		}
 
 		for (let section of await listGuides()) {
 			for (let guide of section.guides) {
-				expect(body).toContain(`https://sdxc.sergiodxa.com/docs/${guide.slug}.md`);
+				expect(body).toContain(`https://sdxc.dev/docs/${guide.slug}.md`);
 			}
 		}
 	});
@@ -162,7 +162,7 @@ describe("GET /llms.txt", () => {
 		let body = await (await fetchApp("/llms.txt")).text();
 
 		for (let page of await listCataloguePages()) {
-			expect(body).toContain(`https://sdxc.sergiodxa.com${page.markdownHref}`);
+			expect(body).toContain(`https://sdxc.dev${page.markdownHref}`);
 		}
 
 		expect(body).toContain("## @sdxc/ui — Components");
@@ -223,11 +223,11 @@ describe("GET /sitemap.xml", () => {
 		expect(body).not.toContain(ORIGIN);
 
 		for (let entry of listPackages()) {
-			expect(body).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}`);
+			expect(body).toContain(`https://sdxc.dev/api/${entry.directory}`);
 		}
 
 		for (let page of await listCataloguePages()) {
-			expect(body).toContain(`https://sdxc.sergiodxa.com${page.href}<`);
+			expect(body).toContain(`https://sdxc.dev${page.href}<`);
 		}
 	});
 });
@@ -240,7 +240,7 @@ describe("GET /rss.xml", () => {
 		expect(response.headers.get("content-type")).toContain("xml");
 		expect(body).toContain("<rss");
 		expect(body).toContain("<channel>");
-		expect(body).toContain("https://sdxc.sergiodxa.com/docs/releases/versioning");
+		expect(body).toContain("https://sdxc.dev/docs/releases/versioning");
 	});
 });
 
@@ -279,7 +279,7 @@ describe("POST /mcp", () => {
 		});
 
 		expect(body.result.isError).not.toBe(true);
-		expect(JSON.stringify(body.result)).toContain("https://sdxc.sergiodxa.com/api/markdown.md");
+		expect(JSON.stringify(body.result)).toContain("https://sdxc.dev/api/markdown.md");
 	});
 
 	test("get_package reads one in full, scope written or not", async () => {
@@ -307,12 +307,12 @@ describe("POST /mcp", () => {
 		let uris = new Set((body.result.resources as Array<{ uri: string }>).map((entry) => entry.uri));
 
 		for (let entry of listPackages()) {
-			expect(uris).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}.md`);
+			expect(uris).toContain(`https://sdxc.dev/api/${entry.directory}.md`);
 		}
 
 		for (let section of await listGuides()) {
 			for (let guide of section.guides) {
-				expect(uris).toContain(`https://sdxc.sergiodxa.com/docs/${guide.slug}.md`);
+				expect(uris).toContain(`https://sdxc.dev/docs/${guide.slug}.md`);
 			}
 		}
 	});
@@ -323,13 +323,13 @@ describe("POST /mcp", () => {
 		let uris = new Set((body.result.resources as Array<{ uri: string }>).map((entry) => entry.uri));
 
 		for (let page of await listCataloguePages()) {
-			expect(uris).toContain(`https://sdxc.sergiodxa.com${page.markdownHref}`);
+			expect(uris).toContain(`https://sdxc.dev${page.markdownHref}`);
 		}
 	});
 
 	test("reading a catalogue resource gives the same text its URL serves", async () => {
 		for (let path of ["/api/u/p.md", "/api/ui/badge.md", "/api/ui/behaviors/toaster.md"]) {
-			let { body } = await callMcp("resources/read", { uri: `https://sdxc.sergiodxa.com${path}` });
+			let { body } = await callMcp("resources/read", { uri: `https://sdxc.dev${path}` });
 			let contents = body.result.contents as Array<{ text: string }>;
 
 			expect(contents.at(0)?.text, path).toBe(await (await fetchApp(path)).text());
@@ -338,8 +338,8 @@ describe("POST /mcp", () => {
 
 	test("search_docs finds a mixin by name and a utility by the property it sets", async () => {
 		for (let [query, url] of [
-			["hotkey", "https://sdxc.sergiodxa.com/api/ui/mixins/hotkey"],
-			["padding", "https://sdxc.sergiodxa.com/api/u/p"],
+			["hotkey", "https://sdxc.dev/api/ui/mixins/hotkey"],
+			["padding", "https://sdxc.dev/api/u/p"],
 		] as const) {
 			let { body } = await callMcp("tools/call", { name: "search_docs", arguments: { query } });
 			expect(JSON.stringify(body.result), query).toContain(url);
@@ -348,7 +348,7 @@ describe("POST /mcp", () => {
 
 	test("reading a resource gives the same text its URL serves", async () => {
 		let { body } = await callMcp("resources/read", {
-			uri: "https://sdxc.sergiodxa.com/api/result.md",
+			uri: "https://sdxc.dev/api/result.md",
 		});
 
 		let contents = body.result.contents as Array<{ text: string }>;
@@ -372,7 +372,7 @@ describe("SEO metadata", () => {
 	test("names one origin whichever host served the request", async () => {
 		let body = await (await fetchApp("/api/result")).text();
 
-		expect(body).toContain('<link rel="canonical" href="https://sdxc.sergiodxa.com/api/result"');
+		expect(body).toContain('<link rel="canonical" href="https://sdxc.dev/api/result"');
 		expect(body).toContain('property="og:title"');
 		expect(body).toContain('property="og:site_name"');
 	});

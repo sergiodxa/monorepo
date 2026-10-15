@@ -13,7 +13,7 @@ import { describe, expect, test } from "vitest";
 import { buildOpenLinks } from "~/app/services/open-links";
 
 const MARKDOWN_HREF = "/api/result.md";
-const MARKDOWN_URL = "https://sdxc.sergiodxa.com/api/result.md";
+const MARKDOWN_URL = "https://sdxc.dev/api/result.md";
 const SOURCE_URL = "https://github.com/sergiodxa/monorepo/tree/main/packages/result";
 
 describe("buildOpenLinks", () => {

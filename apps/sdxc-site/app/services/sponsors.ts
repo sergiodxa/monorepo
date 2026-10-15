@@ -40,7 +40,7 @@ const PUBLIC_PRIVACY = "PUBLIC";
 const PAGE_SIZE = 100;
 
 /** Identifies this site to GitHub, which requires a caller to name itself. */
-const USER_AGENT = "sdxc.sergiodxa.com";
+const USER_AGENT = "sdxc.dev";
 
 /**
  * Asks for the maintainer's sponsorships with the private ones left out, twice: the

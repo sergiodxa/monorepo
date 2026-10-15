@@ -28,7 +28,7 @@ import { failure, isFailure, isSuccess, success } from "sdxc/result";
 const RELEASES_ENDPOINT = "https://api.github.com/repos/sergiodxa/monorepo/releases?per_page=100";
 
 /** GitHub refuses a call carrying no agent, so every request names the site making it. */
-const USER_AGENT = "sdxc.sergiodxa.com";
+const USER_AGENT = "sdxc.dev";
 
 /** The REST contract this code was written against, pinned so a later default cannot move it. */
 const API_VERSION = "2022-11-28";

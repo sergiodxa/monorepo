@@ -9,7 +9,13 @@
  */
 
 /** Where this site is read, which is the origin every URL it publishes is built on. */
-export const SITE_URL = "https://sdxc.sergiodxa.com";
+export const SITE_URL = "https://sdxc.dev";
+
+/**
+ * Hosts the site answered on before {@link SITE_URL}. The worker still serves them so old
+ * links resolve, and redirects a page read there to the same path on the current origin.
+ */
+export const FORMER_HOSTS = ["sdxc.sergiodxa.com"];
 
 /** Who wrote the collection, credited wherever the site names a person. */
 export const AUTHOR_NAME = "Sergio Xalambrí";

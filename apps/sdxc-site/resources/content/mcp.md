@@ -1,4 +1,4 @@
-`https://sdxc.sergiodxa.com/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io)
+`https://sdxc.dev/mcp` is a [Model Context Protocol](https://modelcontextprotocol.io)
 server over the {% $packageCount %} packages documented on this site. It speaks stateless
 Streamable HTTP, so there is no handshake and no session to keep: one `POST` is one exchange.
 
@@ -14,7 +14,7 @@ file take this:
 {
 	"mcpServers": {
 		"sdxc": {
-			"url": "https://sdxc.sergiodxa.com/mcp"
+			"url": "https://sdxc.dev/mcp"
 		}
 	}
 }

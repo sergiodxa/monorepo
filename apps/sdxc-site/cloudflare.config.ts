@@ -26,10 +26,11 @@ export default defineConfig({
 			traces: { enabled: true, headSamplingRate: 0.1 },
 		},
 		/**
-		 * The custom domain is declared here so a deploy never drops it; rollback is
-		 * redeploying the previous version rather than moving a domain.
+		 * The custom domains are declared here so a deploy never drops one; rollback is
+		 * redeploying the previous version rather than moving a domain. `sdxc.dev` is the
+		 * site's address, and `sdxc.sergiodxa.com` stays attached so its links redirect there.
 		 */
-		domains: ["sdxc.sergiodxa.com"],
+		domains: ["sdxc.dev", "sdxc.sergiodxa.com"],
 		/**
 		 * The sponsor list is read into KV on a schedule, so a page never waits on GitHub and
 		 * an outage there leaves the previous list standing. GitHub's sponsorship webhook

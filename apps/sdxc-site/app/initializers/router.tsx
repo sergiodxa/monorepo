@@ -20,6 +20,7 @@ import { trace } from "sdxc/trace-context/middleware";
 import { userAgent } from "sdxc/user-agent/middleware";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
+import canonicalHost from "~/app/http/middleware/canonical-host";
 import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import routes from "~/routes/web";
@@ -38,6 +39,7 @@ export function createWebRouter() {
 			asyncContext(),
 			log(logger),
 			trace(),
+			canonicalHost(),
 			formData(),
 			cop(),
 			assets(assetResolver, {
