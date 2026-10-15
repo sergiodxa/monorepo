@@ -10,6 +10,7 @@
 
 import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
+import { titleize } from "@sdxc/strings";
 
 import type { Feed } from "~/app/models/feed";
 import type { Kind } from "~/app/models/kinds";
@@ -28,7 +29,7 @@ export namespace FeedViewModel {
 	 */
 	export interface ActivityItem {
 		href: string;
-		/** Full sentence describing the activity, written in first person. */
+		/** Full sentence describing the activity, written in first person and headline-cased. */
 		label: string;
 		date: string;
 		/** Whether the activity points to preview-only content. */
@@ -72,7 +73,8 @@ export namespace FeedViewModel {
 export class FeedViewModel {
 	/**
 	 * Enforces the URL requirements of each kind: entries missing their `slug` or
-	 * `url` are dropped so every rendered row links somewhere valid.
+	 * `url` are dropped so every rendered row links somewhere valid. Every label is
+	 * headline-cased whole, so the sentence and the title inside it read as one.
 	 *
 	 * @param activity Feed items from the data layer.
 	 * @returns Render-safe feed payload with timeline metadata per activity kind.
@@ -152,7 +154,8 @@ export class FeedViewModel {
 					kind: "glossary",
 				};
 			})
-			.filter(this.isActivityItem);
+			.filter(this.isActivityItem)
+			.map((item) => ({ ...item, label: titleize(item.label) }));
 
 		return { activity: items };
 	}
