@@ -71,9 +71,8 @@ export async function plan(
 			new Error(`A ${request.kind} name cannot hold folders: ${name.segments.join("/")}`),
 		);
 	}
-	let folder = kind.folder;
+	let folder = folderOf(request.kind, request.variant);
 	let file = name.segments.join("/");
-	if (request.kind === "mcp" && request.variant === "resource") folder = MCP_RESOURCES_FOLDER;
 	if (request.kind === "migration") {
 		let chain = chainFolder(config.make.migrations, request.chain);
 		if (isFailure(chain)) return chain;
@@ -104,6 +103,11 @@ export async function plan(
 		files.push({ path: testPath, content: test.data });
 	}
 	return success({ files, values });
+}
+
+/** The folder a kind's files go in; a migration's comes from its chain instead. */
+export function folderOf(kind: KindName, variant: string | null): string {
+	return kind === "mcp" && variant === "resource" ? MCP_RESOURCES_FOLDER : KINDS[kind].folder;
 }
 
 /**
@@ -148,7 +152,7 @@ async function placeholders(
 		path: declarationPath,
 		routes: `~/routes/${request.routes}`,
 		tool: name.segments.map((segment) => segment.replaceAll("-", "_")).join("_"),
-		uri: `${await scheme(root)}://${name.segments.join("/")}`,
+		uri: `${await resourceScheme(root)}://${name.segments.join("/")}`,
 		model: `~/app/models/${name.segments.join("/")}`,
 	};
 	let values: Record<string, string> = {};
@@ -163,7 +167,7 @@ async function placeholders(
  * The URI scheme an MCP resource is declared under: the project's package name without its
  * scope, reduced to the characters a scheme allows, or `app` when nothing usable is left.
  */
-async function scheme(root: string): Promise<string> {
+export async function resourceScheme(root: string): Promise<string> {
 	let text = await wrap(() => readFile(join(root, "package.json"), "utf8"));
 	let parsed = isFailure(text) ? null : wrap(() => JSON.parse(text.data) as { name?: unknown });
 	let name = parsed !== null && isSuccess(parsed) ? parsed.data.name : undefined;

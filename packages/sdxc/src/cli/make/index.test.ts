@@ -82,7 +82,8 @@ describe("make", () => {
 		let result = await invoke([kind, name], root);
 
 		let test = path.replace(/(\.tsx?)$/, ".test$1");
-		expect(result).toEqual({ code: 0, stdout: `Wrote ${path}\nWrote ${test}\n`, stderr: "" });
+		expect(result.code).toBe(0);
+		expect(result.stdout.startsWith(`Wrote ${path}\nWrote ${test}\n`)).toBe(true);
 		expect(await files(root)).toEqual([path, test].sort());
 	});
 
@@ -227,29 +228,150 @@ describe("make", () => {
 	});
 });
 
-describe("generated files type check in the app template", () => {
-	test("every kind without a declaration", { timeout: 120_000 }, async () => {
-		let root = unwrap(await materialize("app"));
-		DIRECTORIES.push(dirname(root));
-		let runs = [
-			["middleware", "require-user"],
-			["validator", "signup"],
-			["model", "post"],
-			["factory", "post"],
-			["migration", "create-posts"],
-			["service", "billing/charge"],
-			["policy", "can-edit"],
-			["initializer", "cache"],
-			["email", "welcome"],
-		];
-		for (let argv of runs) {
-			let result = await invoke(argv, root);
-			expect(result.stderr, argv.join(" ")).toBe("");
-		}
+describe("declaring and mapping", () => {
+	test(
+		"a job, controller, tool and resource are declared, mapped and type check in the app template",
+		{ timeout: 120_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+			let runs = [
+				["job", "trials/expire"],
+				["job", "digest", "--cron", "0 8 * * *"],
+				["controller", "sponsors"],
+				["controller", "admin/users", "--method", "form"],
+				["controller", "ping", "--method", "post", "--path", "/api/ping"],
+				["mcp", "get-post"],
+				["mcp", "article", "--resource"],
+				["middleware", "require-user"],
+				["validator", "signup"],
+				["model", "post"],
+				["factory", "post"],
+				["migration", "create-posts"],
+				["service", "billing/charge"],
+				["policy", "can-edit"],
+				["initializer", "cache"],
+				["email", "welcome"],
+			];
+			for (let argv of runs) {
+				let result = await invoke(argv, root);
+				expect(result.stderr, argv.join(" ")).toBe("");
+				expect(result.stdout, argv.join(" ")).not.toContain("by hand");
+			}
 
-		let checked = await typecheck(root);
+			let read = (path: string) => readFile(join(root, path), "utf8");
+			let jobs = await read("app/jobs/index.ts");
+			let dispatcher = await read("app/initializers/dispatcher.ts");
+			let routes = await read("routes/web.ts");
+			let router = await read("app/initializers/router.tsx");
+			let tools = await read("app/mcp/tools/index.ts");
+			let mcp = await read("app/mcp/resources/index.ts");
+			let handler = await read("app/initializers/mcp.ts");
+			expect(jobs).toContain('import * as s from "remix/data-schema";');
+			expect(jobs).toContain("trials: {\n\t\texpire: job({ input: s.object({}) }),\n\t},");
+			expect(jobs).toContain('digest: job({ cron: "0 8 * * *" }),');
+			expect(dispatcher).toContain('import jobs from "~/app/jobs";');
+			expect(dispatcher).toContain(
+				'dispatcher.map(jobs.trials.expire, () => import("~/app/jobs/trials/expire"));\ndispatcher.map(jobs.digest, () => import("~/app/jobs/digest"));',
+			);
+			expect(routes).toContain('import { get, post, route, form } from "remix/routes";');
+			expect(routes).toContain('sponsors: get("/sponsors"),');
+			expect(routes).toContain('admin: {\n\t\tusers: form("/admin/users"),\n\t},');
+			expect(routes).toContain('ping: post("/api/ping"),');
+			expect(router).toContain(
+				'router.map(routes.admin.users, lazy(() => import("~/app/http/controllers/admin/users")));',
+			);
+			expect(tools).toContain('getPost: tool("get_post", {');
+			expect(mcp).toContain('article: resource("app://article", {');
+			expect(handler).toContain('import { createHandler, lazy } from "sdxc/mcp";');
+			expect(handler).toContain('import toolset from "~/app/mcp/tools";');
+			expect(handler).toContain(
+				'mcp.tools.map(toolset.getPost, lazy(() => import("~/app/mcp/tools/get-post")));',
+			);
+			expect(handler).toContain(
+				'mcp.resources.map(resourceset.article, lazy(() => import("~/app/mcp/resources/article")));',
+			);
 
-		expect(checked.output).toBe("");
-		expect(checked.code).toBe(0);
+			let checked = await typecheck(root);
+
+			expect(checked.output).toBe("");
+			expect(checked.code).toBe(0);
+		},
+	);
+
+	test("reuses the group whose handlers already live in the folder", async () => {
+		let root = await project();
+		await mkdir(join(root, "app/jobs"), { recursive: true });
+		await mkdir(join(root, "app/initializers"), { recursive: true });
+		await writeFile(
+			join(root, "app/jobs/index.ts"),
+			'import { job, jobs } from "sdxc/jobs";\n\nexport default jobs({\n\tactivityPub: {\n\t\tsend: job({ cron: "* * * * *" }),\n\t},\n});\n',
+		);
+		await writeFile(
+			join(root, "app/initializers/dispatcher.ts"),
+			'import { createJobDispatcher } from "sdxc/jobs";\n\nimport jobs from "../jobs/index.js";\n\nexport const dispatcher = createJobDispatcher({});\n\ndispatcher.map(jobs.activityPub.send, () => import("../jobs/activitypub/send.js"));\n',
+		);
+
+		let result = await invoke(
+			["job", "activitypub/receive", "--cron", "0 * * * *", "--no-test"],
+			root,
+		);
+
+		expect(result.stdout).toBe(
+			"Wrote app/jobs/activitypub/receive.ts\nEdited app/jobs/index.ts\nEdited app/initializers/dispatcher.ts\n",
+		);
+		expect(await readFile(join(root, "app/jobs/index.ts"), "utf8")).toContain(
+			'\t\tsend: job({ cron: "* * * * *" }),\n\t\treceive: job({ cron: "0 * * * *" }),\n',
+		);
+		expect(await readFile(join(root, "app/initializers/dispatcher.ts"), "utf8")).toContain(
+			'dispatcher.map(jobs.activityPub.receive, () => import("../jobs/activitypub/receive.js"));\n',
+		);
+		expect(await readFile(join(root, "app/jobs/activitypub/receive.ts"), "utf8")).toContain(
+			"createJobHandler(jobs.activityPub.receive,",
+		);
 	});
+
+	test("without an initializer to map on, writes the handler and prints both edits", async () => {
+		let root = await project();
+		await mkdir(join(root, "routes"));
+		await writeFile(
+			join(root, "routes/web.ts"),
+			'import { route } from "remix/routes";\n\nexport default route({});\n',
+		);
+
+		let result = await invoke(["controller", "sponsors", "--no-test"], root);
+
+		expect(result.stdout).toBe(
+			[
+				"Wrote app/http/controllers/sponsors.tsx",
+				"Declare and map it by hand, since no initializer in app/initializers/ imports routes/web:",
+				"In routes/web.ts, in route({ … }):",
+				'  sponsors: get("/sponsors"),',
+				"In the initializer that maps routes/web:",
+				'  router.map(routes.sponsors, lazy(() => import("~/app/http/controllers/sponsors")));',
+				"",
+			].join("\n"),
+		);
+		expect(await readFile(join(root, "routes/web.ts"), "utf8")).toBe(
+			'import { route } from "remix/routes";\n\nexport default route({});\n',
+		);
+	});
+
+	test(
+		"--dry-run prints the new files and the diff of each edit",
+		{ timeout: 60_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+			let before = await readFile(join(root, "routes/web.ts"), "utf8");
+
+			let result = await invoke(["controller", "sponsors", "--no-test", "--dry-run"], root);
+
+			expect(result.stdout).toContain("Would write app/http/controllers/sponsors.tsx:");
+			expect(result.stdout).toContain("--- a/routes/web.ts\n+++ b/routes/web.ts\n");
+			expect(result.stdout).toContain('+\tsponsors: get("/sponsors"),');
+			expect(result.stdout).toContain("+++ b/app/initializers/router.tsx");
+			expect(await readFile(join(root, "routes/web.ts"), "utf8")).toBe(before);
+		},
+	);
 });

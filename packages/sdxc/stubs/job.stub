@@ -7,5 +7,5 @@ import { createJobHandler } from "sdxc/jobs";
 import jobs from "~/app/jobs";
 
 export default createJobHandler(jobs.{{path}}, async (ctx) => {
-	ctx.log.set({ job: { input: ctx.input } });
+	ctx.log.set({ job: { name: "{{name}}" } });
 });

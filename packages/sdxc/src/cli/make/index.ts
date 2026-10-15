@@ -17,13 +17,16 @@ import type { CommandIO } from "../run.js";
 
 import { loadConfig } from "../config.js";
 import { defaultPackageRoot } from "../create/templates.js";
+import { unifiedDiff } from "../diff.js";
 import { runFormat } from "../format.js";
 import { findProjectRoot } from "../project.js";
 
+import type { Declared } from "./declare.js";
 import type { MakeRequest, PlannedFile } from "./generate.js";
 import type { KindName } from "./kinds.js";
 
-import { plan } from "./generate.js";
+import { declare } from "./declare.js";
+import { folderOf, plan, resourceScheme } from "./generate.js";
 import { isKind, KINDS } from "./kinds.js";
 import { parseName } from "./names.js";
 import { copyStubs } from "./stubs.js";
@@ -153,21 +156,58 @@ export async function make(
 		chain: values.chain,
 		routes: values.routes ?? config.make.routes,
 	};
-	let planned = await plan(request, root.data, config, packageRoot);
+	let declared: Declared | null = null;
+	if (kind === "job" || kind === "controller" || kind === "mcp") {
+		let segments = request.name.segments;
+		declared = await declare(
+			{
+				kind,
+				name: request.name,
+				variant: request.variant,
+				cron: values.cron,
+				method,
+				pattern: values.path,
+				routes: request.routes,
+				handler: `${folderOf(kind, request.variant)}/${segments.join("/")}`,
+				tool: segments.map((segment) => segment.replaceAll("-", "_")).join("_"),
+				uri: `${await resourceScheme(root.data)}://${segments.join("/")}`,
+				title: request.name.title,
+			},
+			root.data,
+		);
+	}
+	let overrides: Record<string, string> = declared === null ? {} : { path: declared.path };
+	let planned = await plan(request, root.data, config, packageRoot, overrides);
 	if (isFailure(planned)) return fail(io, planned.error);
+	let edits = declared?.kind === "edits" ? declared.edits : [];
 
 	if (dryRun) {
-		for (let file of planned.data.files)
+		for (let file of planned.data.files) {
 			io.stdout(`Would write ${file.path}:\n\n${file.content}\n`);
+		}
+		for (let edit of edits) io.stdout(unifiedDiff(edit.path, edit.before, edit.after));
+		if (declared?.kind === "manual") io.stdout(manualNote(declared));
 		return 0;
 	}
 	let written = await writeFiles(root.data, planned.data.files);
 	if (isFailure(written)) return fail(io, written.error);
 	let paths = planned.data.files.map((file) => file.path);
 	for (let path of paths) io.stdout(`Wrote ${path}\n`);
-	let formatted = await runFormat(config.format, paths, root.data);
+	let edited = await wrap(async () => {
+		for (let edit of edits) await writeFile(join(root.data, edit.path), edit.after);
+	});
+	if (isFailure(edited)) return fail(io, edited.error);
+	for (let edit of edits) io.stdout(`Edited ${edit.path}\n`);
+	if (declared?.kind === "manual") io.stdout(manualNote(declared));
+	let changed = [...paths, ...edits.map((edit) => edit.path)];
+	let formatted = await runFormat(config.format, changed, root.data);
 	if (isFailure(formatted)) return fail(io, formatted.error);
 	return 0;
+}
+
+/** What `make` prints when a declaration and its mapping are left for the user to make. */
+function manualNote(declared: Extract<Declared, { kind: "manual" }>): string {
+	return `Declare and map it by hand, since ${declared.reason}:\n${declared.instructions}\n`;
 }
 
 /** The stub variant a request's flags select, or `null` for the kind's own stub. */
