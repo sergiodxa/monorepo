@@ -26,8 +26,11 @@ Split ADR-136's package in two:
   that runs the kit's command line, so installing `sdxc` also provides the command once it is
   on npm.
 
+Until npm grants the name, `sdxc` is `private`: the release leaves it out and the
+documentation site does not list it. Guides install and import the `@sdxc/*` packages they use.
+
 Documentation writes the command as a global install types it, `sdxc run …`, and installs it
-with `npm add -g @sdxc/kit`. Imports stay `sdxc/<name>`.
+with `npm add -g @sdxc/kit`. Imports name each package, `@sdxc/<name>`.
 
 ## Consequences
 
