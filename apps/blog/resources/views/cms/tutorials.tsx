@@ -84,6 +84,8 @@ export namespace CMSTutorialsActionView {
 	export interface Props {
 		title: string;
 		description: string;
+		/** The saved post's public URL, linked after the description; absent until the post is saved. */
+		publicHref?: string;
 		mode: "new" | "edit";
 		action: string;
 		submitLabel: string;
@@ -237,14 +239,32 @@ export function CMSTutorialsIndexView() {
  */
 export function CMSTutorialsActionView() {
 	return ({ model, assets }: { model: CMSTutorialsActionView.Props; assets: DocumentAssets }) => {
-		let { action, description, mode, shareHref, submitLabel, teaserError, title, values } = model;
+		let {
+			action,
+			description,
+			publicHref,
+			mode,
+			shareHref,
+			submitLabel,
+			teaserError,
+			title,
+			values,
+		} = model;
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.tutorials.index.href()}>
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>
-						<p mix={[fg("neutral")]}>{description}</p>
+						<p mix={[fg("neutral")]}>
+							{description}
+							{publicHref ? (
+								<>
+									{" "}
+									<Link href={publicHref}>{publicHref}</Link>.
+								</>
+							) : null}
+						</p>
 
 						<Form method="post" action={action} mix={[gap(3)]}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}

@@ -83,7 +83,8 @@ export default createController(routes.cms.releases, {
 
 			return ctx.render(CMSReleasesEditView, {
 				title: `Edit ${release.meta.slug}`,
-				description: `Editing the releases post at ${routes.post.href({ postType: "releases", postSlug: release.meta.slug })}.`,
+				description: "Editing the releases post at",
+				publicHref: routes.post.href({ postType: "releases", postSlug: release.meta.slug }),
 				action: routes.cms.releases.update.href({ id: release.id }),
 				shareHref: shareHref(release),
 				values: { title: release.meta.title, content: release.meta.content },

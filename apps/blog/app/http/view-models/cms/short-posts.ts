@@ -64,6 +64,8 @@ export namespace ShortPostViewModel {
 		kind: Kind;
 		title: string;
 		description: string;
+		/** The saved post's public URL, linked after the description; absent until the post is saved. */
+		publicHref?: string;
 		mode: "new" | "edit";
 		action: string;
 		submitLabel: string;
@@ -165,7 +167,8 @@ export class ShortPostViewModel {
 		return {
 			kind,
 			title: `Edit ${label} ${this.label(kind, source)}`,
-			description: `Editing ${label} at ${routes.post.href({ postType: topic, postSlug: source.slug })}.`,
+			description: `Editing ${label} at`,
+			publicHref: routes.post.href({ postType: topic, postSlug: source.slug }),
 			mode: "edit",
 			action: cms.update.href({ id: source.id }),
 			submitLabel: `Save ${label}`,

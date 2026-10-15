@@ -59,6 +59,8 @@ export namespace CMSReleasesEditView {
 	export interface Props {
 		title: string;
 		description: string;
+		/** The post's public URL, linked after the description. */
+		publicHref: string;
 		action: string;
 		/** The "Post on X" link of the saved post. */
 		shareHref: string;
@@ -195,14 +197,16 @@ export function CMSReleasesIndexView() {
  */
 export function CMSReleasesEditView() {
 	return ({ model, assets }: { model: CMSReleasesEditView.Props; assets: DocumentAssets }) => {
-		let { action, description, shareHref, title, values } = model;
+		let { action, description, publicHref, shareHref, title, values } = model;
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.releases.index.href()}>
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>
-						<p mix={[fg("neutral")]}>{description}</p>
+						<p mix={[fg("neutral")]}>
+							{description} <Link href={publicHref}>{publicHref}</Link>.
+						</p>
 
 						<Form method="post" action={action} mix={[gap(3)]}>
 							<input type="hidden" name="_method" value="PUT" />

@@ -187,7 +187,8 @@ export class TutorialViewModel {
 
 		return {
 			title: `Edit Tutorial ${tutorial.title ?? ""}`,
-			description: `Editing tutorial at ${routes.post.href({ postType: "tutorials", postSlug: tutorial.slug ?? "" })}.`,
+			description: "Editing tutorial at",
+			publicHref: routes.post.href({ postType: "tutorials", postSlug: tutorial.slug ?? "" }),
 			mode: "edit" as const,
 			action: routes.cms.tutorials.update.href({ id: tutorial.id }),
 			submitLabel: "Save Tutorial",

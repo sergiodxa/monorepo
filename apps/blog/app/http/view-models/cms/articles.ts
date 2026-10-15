@@ -190,7 +190,8 @@ export class ArticleViewModel {
 
 		return {
 			title: `Edit Article ${article.title ?? ""}`,
-			description: `Editing article at ${routes.post.href({ postType: "articles", postSlug: article.slug ?? "" })}.`,
+			description: "Editing article at",
+			publicHref: routes.post.href({ postType: "articles", postSlug: article.slug ?? "" }),
 			mode: "edit" as const,
 			action: routes.cms.articles.update.href({ id: article.id }),
 			submitLabel: "Save Article",

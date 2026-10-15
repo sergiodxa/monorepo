@@ -200,8 +200,18 @@ export function CMSShortPostsIndexView() {
  */
 export function CMSShortPostsActionView() {
 	return ({ model, assets }: { model: CMSShortPostsActionView.Props; assets: DocumentAssets }) => {
-		let { action, contentError, description, kind, mode, shareHref, submitLabel, title, values } =
-			model;
+		let {
+			action,
+			contentError,
+			description,
+			publicHref,
+			kind,
+			mode,
+			shareHref,
+			submitLabel,
+			title,
+			values,
+		} = model;
 		let cms = routesOf(kind);
 
 		return (
@@ -209,7 +219,15 @@ export function CMSShortPostsActionView() {
 				<main>
 					<Card mix={[p(4), grid(), gap(3)]}>
 						<Heading level={2}>{title}</Heading>
-						<p mix={[fg("neutral")]}>{description}</p>
+						<p mix={[fg("neutral")]}>
+							{description}
+							{publicHref ? (
+								<>
+									{" "}
+									<Link href={publicHref}>{publicHref}</Link>.
+								</>
+							) : null}
+						</p>
 
 						<Form method="post" action={action} mix={[gap(3)]}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
