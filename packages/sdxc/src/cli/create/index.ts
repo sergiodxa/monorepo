@@ -13,7 +13,7 @@ import { parseArgs } from "node:util";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { isFailure, success, wrap } from "@sdxc/result";
 
 import type { CommandIO } from "../run.js";
 
@@ -21,12 +21,14 @@ import type { Git } from "./git.js";
 import type { TemplateSource, TemplateTree } from "./templates.js";
 
 import { SYSTEM_GIT } from "./git.js";
+import { describe, downloadTemplate } from "./github.js";
 import { commandsFor, inferPackageManager } from "./package-manager.js";
 import { resolveTarget } from "./target.js";
 import {
 	completeBuiltin,
 	DEFAULT_TEMPLATE,
 	defaultPackageRoot,
+	nameProject,
 	parseTemplate,
 	readBuiltinTemplate,
 	writeTree,
@@ -175,7 +177,12 @@ async function fetchTemplate(
 	packageRoot: string,
 ): Promise<Result<Fetched, Error>> {
 	if (source.kind === "github") {
-		return failure(new Error("GitHub templates are not supported yet; use a built-in template"));
+		let extracted = await downloadTemplate(source);
+		if (isFailure(extracted)) return extracted;
+		let named = nameProject(extracted.data.tree, name);
+		if (isFailure(named)) return named;
+		let commit = extracted.data.commit === null ? "" : ` at ${extracted.data.commit}`;
+		return success({ tree: extracted.data.tree, description: `${describe(source)}${commit}` });
 	}
 	let tree = await readBuiltinTemplate(packageRoot, source.name);
 	if (isFailure(tree)) return tree;

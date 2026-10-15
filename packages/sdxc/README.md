@@ -48,7 +48,7 @@ The JSON Schema 2020-12 document for the CLI configuration, which the `$schema` 
 Every command works from the project root: the nearest directory at or above the current one that holds a `package.json`.
 
 - `sdxc init [--dry-run]`: writes `.config/sdxc.jsonc`; `--dry-run` prints it instead.
-- `sdxc create [directory] [--template <template>] [--git | --no-git]`: writes a new project into a missing or empty directory from the built-in `app` template (a Remix v3 Worker on Cloudflare) or another one it names. It installs nothing and prints the next steps.
+- `sdxc create [directory] [--template <template>] [--git | --no-git]`: writes a new project into a missing or empty directory from the built-in `app` template (a Remix v3 Worker on Cloudflare) or from any GitHub repository, `--template org/repo[/path][#ref]`, sending `GITHUB_TOKEN` or `GH_TOKEN` when set. It installs nothing and prints the next steps.
 - `sdxc upgrade [version] [--no-install] [--output <file>]`: moves `sdxc`, and `remix` with it, to `version` (the latest when omitted), installs it, and prints the prompt an AI agent follows to update the code; `sdxc upgrade --prompt --from <version>` prints that prompt again without changing anything.
 
 ### Configuration
