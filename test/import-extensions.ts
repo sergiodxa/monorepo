@@ -8,6 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CodemodError } from "@sdxc/codemod";
+import type { Result } from "@sdxc/result";
+
+import { findModuleReferences } from "@sdxc/codemod";
+import { isFailure, success } from "@sdxc/result";
+
 /** A relative specifier found without an extension, located for the failure message. */
 export interface ExtensionlessSpecifier {
 	line: number;
@@ -15,39 +21,37 @@ export interface ExtensionlessSpecifier {
 }
 
 /**
- * Every syntactic position a module specifier appears in: static imports and re-exports,
- * side-effect imports, dynamic `import()`, and Vitest's module-id arguments, whose ids
- * have to match the specifier form the module under test uses.
+ * Vitest's module-id functions, whose first argument has to match the specifier form the
+ * module under test uses.
  */
-const SPECIFIER_PATTERNS = [
-	/\bfrom\s+["']([^"']+)["']/g,
-	/^\s*import\s+["']([^"']+)["']/gm,
-	/\bimport\s*\(\s*["']([^"']+)["']/g,
-	/\bvi\.(?:mock|doMock|unmock|doUnmock|importActual|importMock)\s*\(\s*["']([^"']+)["']/g,
+const VITEST_CALLS = [
+	"vi.mock",
+	"vi.doMock",
+	"vi.unmock",
+	"vi.doUnmock",
+	"vi.importActual",
+	"vi.importMock",
 ];
 
-/** Lines that are comment prose, where an `@example` may quote a specifier without importing it. */
-const COMMENT_LINE = /^\s*(?:\/\/|\/\*|\*)/;
-
 /**
- * Relative specifiers in `source` whose final path segment has no extension. A `?raw`
- * style query is ignored when judging the extension, and comment lines are skipped so a
- * JSDoc example never counts as an import.
+ * Relative specifiers in `source` whose final path segment has no extension: static imports
+ * and re-exports, side-effect imports, dynamic `import()` and Vitest's module-id arguments. A
+ * `?raw` style query is ignored when judging the extension; comments, strings and JSX text are
+ * never read as imports. A file that cannot be scanned is the failure.
  */
-export function findExtensionlessSpecifiers(source: string): ExtensionlessSpecifier[] {
+export function findExtensionlessSpecifiers(
+	filename: string,
+	source: string,
+): Result<ExtensionlessSpecifier[], CodemodError> {
+	let references = findModuleReferences(filename, source, { calls: VITEST_CALLS });
+	if (isFailure(references)) return references;
 	let found: ExtensionlessSpecifier[] = [];
-	let lines = source.split("\n");
-
-	for (let [index, line] of lines.entries()) {
-		if (COMMENT_LINE.test(line)) continue;
-		for (let specifier of specifiersIn(line)) {
-			if (isRelative(specifier) && !hasExtension(specifier)) {
-				found.push({ line: index + 1, specifier });
-			}
-		}
+	for (let reference of references.data) {
+		if (!isRelative(reference.specifier) || hasExtension(reference.specifier)) continue;
+		let line = source.slice(0, reference.specifierRange.start).split("\n").length;
+		found.push({ line, specifier: reference.specifier });
 	}
-
-	return found;
+	return success(found);
 }
 
 /** Whether a specifier points at a sibling file rather than a package. */
@@ -65,16 +69,4 @@ export function hasExtension(specifier: string): boolean {
 	let path = specifier.split("?")[0] ?? "";
 	let segment = path.slice(path.lastIndexOf("/") + 1);
 	return segment !== "" && segment !== "." && segment !== ".." && segment.includes(".");
-}
-
-/** Every specifier string on one line, in source order. */
-function specifiersIn(line: string): string[] {
-	let specifiers: string[] = [];
-	for (let pattern of SPECIFIER_PATTERNS) {
-		for (let match of line.matchAll(pattern)) {
-			let specifier = match[1];
-			if (specifier !== undefined) specifiers.push(specifier);
-		}
-	}
-	return specifiers;
 }

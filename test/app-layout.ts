@@ -9,6 +9,12 @@
 
 import { dirname, join, relative } from "node:path";
 
+import type { CodemodError } from "@sdxc/codemod";
+import type { Result } from "@sdxc/result";
+
+import { findModuleReferences } from "@sdxc/codemod";
+import { isFailure, success } from "@sdxc/result";
+
 /**
  * Apps already moved onto the layout. An app joins this list in the commit that converts it,
  * and from then on the guard keeps it there.
@@ -68,10 +74,14 @@ export function isBootstrapEntry(name: string): boolean {
 	return /^(worker|browser)\.(workers\.)?test\.tsx?$/.test(name);
 }
 
-/** Every static and dynamic import specifier in a module's source. */
-export function importSpecifiers(source: string): string[] {
-	let pattern = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+)["']([^"']+)["']/g;
-	return [...source.matchAll(pattern)].map((match) => match[1] ?? "");
+/**
+ * Every static and dynamic import specifier in a module's source, read by a scanner that
+ * leaves comments, strings and JSX text alone. A file that cannot be scanned is the failure.
+ */
+export function importSpecifiers(filename: string, source: string): Result<string[], CodemodError> {
+	let references = findModuleReferences(filename, source);
+	if (isFailure(references)) return references;
+	return success(references.data.map((reference) => reference.specifier));
 }
 
 /**

@@ -10,6 +10,7 @@
 import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { findExtensionlessSpecifiers, hasExtension, isRelative } from "./import-extensions";
@@ -36,14 +37,9 @@ describe("relative imports inside packages carry a .js extension", () => {
 				'vi.mock("./f", () => ({}));',
 			].join("\n");
 
-			expect(findExtensionlessSpecifiers(source).map((found) => found.specifier)).toEqual([
-				"./a",
-				"../b",
-				"./c/index",
-				"./d",
-				"./e",
-				"./f",
-			]);
+			expect(
+				unwrap(findExtensionlessSpecifiers("a.ts", source)).map((found) => found.specifier),
+			).toEqual(["./a", "../b", "./c/index", "./d", "./e", "./f"]);
 		});
 
 		test("accepts extensions, queries on extensions, and package specifiers", () => {
@@ -56,7 +52,18 @@ describe("relative imports inside packages carry a .js extension", () => {
 				'import { d } from "node:fs";',
 			].join("\n");
 
-			expect(findExtensionlessSpecifiers(source)).toEqual([]);
+			expect(unwrap(findExtensionlessSpecifiers("a.ts", source))).toEqual([]);
+		});
+
+		test("reads Vitest module ids behind type arguments and skips specifiers in strings", () => {
+			let source = [
+				'let actual = await vi.importActual<typeof import("./a.js")>("./a");',
+				"let text = 'import { b } from \"./b\";';",
+			].join("\n");
+
+			expect(unwrap(findExtensionlessSpecifiers("a.ts", source))).toEqual([
+				{ line: 1, specifier: "./a" },
+			]);
 		});
 
 		test("skips comment lines, where an example quotes a specifier", () => {
@@ -68,13 +75,15 @@ describe("relative imports inside packages carry a .js extension", () => {
 				'// from "./b"',
 			].join("\n");
 
-			expect(findExtensionlessSpecifiers(source)).toEqual([]);
+			expect(unwrap(findExtensionlessSpecifiers("a.ts", source))).toEqual([]);
 		});
 
 		test("reports the line each specifier sits on", () => {
 			let source = ['import { a } from "./a.js";', "", 'import { b } from "./b";'].join("\n");
 
-			expect(findExtensionlessSpecifiers(source)).toEqual([{ line: 3, specifier: "./b" }]);
+			expect(unwrap(findExtensionlessSpecifiers("a.ts", source))).toEqual([
+				{ line: 3, specifier: "./b" },
+			]);
 		});
 
 		test("classifies relative specifiers and extensions", () => {
@@ -94,10 +103,12 @@ describe("relative imports inside packages carry a .js extension", () => {
 		let offenders: string[] = [];
 
 		for (let file of packageSourceFiles()) {
-			let source = readFileSync(join(ROOT, file), "utf8");
-			for (let found of findExtensionlessSpecifiers(source)) {
-				offenders.push(`${file}:${found.line} ${found.specifier}`);
+			let found = findExtensionlessSpecifiers(file, readFileSync(join(ROOT, file), "utf8"));
+			if (isFailure(found)) {
+				offenders.push(found.error.message);
+				continue;
 			}
+			for (let { line, specifier } of found.data) offenders.push(`${file}:${line} ${specifier}`);
 		}
 
 		expect(offenders, "relative specifiers without a .js extension").toEqual([]);

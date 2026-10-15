@@ -10,6 +10,7 @@
 import { globSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -41,7 +42,7 @@ describe("the scanner itself", () => {
 			'import "./d";',
 		].join("\n");
 
-		expect(importSpecifiers(source)).toEqual(["./a", "~/b", "../c", "./d"]);
+		expect(unwrap(importSpecifiers("a.ts", source))).toEqual(["./a", "~/b", "../c", "./d"]);
 	});
 
 	test("treats the alias and relative paths into bootstrap as entry-point imports", () => {
@@ -86,11 +87,13 @@ describe.each(CONVERTED_APPS)("apps/%s", (app) => {
 			cwd: appRoot,
 		});
 
-		let offenders = files.flatMap((file) =>
-			importSpecifiers(readFileSync(join(appRoot, file), "utf8"))
+		let offenders = files.flatMap((file) => {
+			let specifiers = importSpecifiers(file, readFileSync(join(appRoot, file), "utf8"));
+			if (isFailure(specifiers)) return [specifiers.error.message];
+			return specifiers.data
 				.filter((specifier) => reachesBootstrap(specifier, file))
-				.map((specifier) => `${file} → ${specifier}`),
-		);
+				.map((specifier) => `${file} → ${specifier}`);
+		});
 
 		expect(offenders).toEqual([]);
 	});
