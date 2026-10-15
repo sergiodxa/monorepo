@@ -62,6 +62,10 @@ Add `packages/cli`, published as `@sdxc/cli`: command lines declared as a contra
 handlers, the same split as `remix` route contracts, `@sdxc/jobs` and `@sdxc/mcp`. Rebuild `sdxc`
 on it, then `spec`.
 
+The package runs on Node and Bun and depends on nothing about where an app is deployed: a Remix
+app serving from Node or Bun and one deployed to Cloudflare get the same command line, and
+anything platform-specific reaches a command through the app's own middleware.
+
 ### 1. Commands are a contract
 
 ```typescript
@@ -292,7 +296,7 @@ test installs its own the way an app test installs `ctx.db`.
 
 ### 8. Apps ship their own command line
 
-An app gets a `bootstrap/cli.ts` beside `bootstrap/worker.ts`, the way a Laravel app has
+An app gets a `bootstrap/cli.ts` beside its server entry, the way a Laravel app has
 `artisan`: commands that import the app itself, its models, services and initializers, for work
 that belongs to the app but to no request (seeding, backfills, granting a role, replaying a
 job).
@@ -323,32 +327,28 @@ export default createCLI({ name: "app", commands: commandset, middleware: [datab
   `app/commands/index.ts` with one handler file per command, laid out like `app/mcp/`, and
   `bootstrap/cli.ts` maps each through `lazy()`. `sdxc make command users/grant` writes the
   handler, its test, the declaration and the mapping, as it does for jobs and tools.
-- **The commands run in the `sdxc` process, against the app's real data.** `sdxc run <command>`
-  loads `bootstrap/cli.ts` in Node or Bun and answers `cloudflare:workers` with an `env` built
-  from the app's `cloudflare.config.ts`, so app code, `@sdxc/data-table-d1` and every
-  initializer run unchanged. Each D1 binding is a `D1Database` backed by a SQL client:
-  - **Local (the default):** the SQLite file Miniflare persists for that binding under
-    `.wrangler/state`, opened through the D1 implementation `@sdxc/cloudflare-mocks` already runs
-    tests on, so a command sees and changes exactly what `bun dev` serves. SQLite's write-ahead log
-    lets it run beside a dev server.
-  - **`--remote`:** the D1 HTTP API (`/accounts/<account>/d1/database/<id>/query`), authenticated
-    with `CLOUDFLARE_API_TOKEN`, for a backfill or a support fix against production.
-  - Secrets come from `.dev.vars` locally and from the shell's environment with `--remote`; a
-    secret a command reads and neither supplies is a failure naming it.
-  - KV and R2 follow the same split (Miniflare's local files, the REST API remotely) once a
-    command needs them. A binding with no client from outside the runtime (Durable Object storage,
-    queues, service bindings) is a failure naming the binding, and a command that needs one calls
-    the deployed Worker over HTTP instead.
-- **A SQL shell comes with it.** `sdxc db [binding]` opens an interactive SQL prompt on the same
-  client, local or `--remote`, and `sdxc db --execute "SELECT …"` prints one query's rows, so
-  inspecting a database needs neither `wrangler d1 execute` nor a separate tool.
+- **It runs on the app's runtime, started by a script.** `bootstrap/cli.ts` is a plain module:
+  `"cli": "bun ./bootstrap/cli.ts"` (or `node`) in `package.json`, run as
+  `bun run cli users grant ada@example.com`. Nothing installs it globally.
+- **Where the data comes from is the app's middleware.** The `database()` middleware a command
+  line installs connects the way the app's server does: a Postgres URL, a SQLite file. Commands
+  that can reach production declare a `--remote` flag, and the middleware reads it to pick the
+  production connection.
+- **A Cloudflare app supplies its bindings the same way.** Its middleware builds `ctx.db` over
+  the SQLite file the local dev server keeps for each D1 database, or over Cloudflare's REST API
+  with `--remote` through the adapters ADR-147 proposes. Code that imports `env` from
+  `cloudflare:workers` needs that module answered outside workerd; that is the Cloudflare app's
+  setup to provide, and `@sdxc/cli` knows nothing about it.
+- **A SQL shell is a command any app mounts.** `@sdxc/database-middleware/cli` (ADR-146) ships a
+  `db` command that runs SQL through `ctx.db`'s `exec`, interactively or once with `--execute`,
+  so it works on whatever database the app's middleware connected.
 - The same middleware an app's router uses publishes its services, so a command reads `ctx.db`
   exactly as a controller does, and the app's own test setup installs a test database for
   `invoke()`.
-- A command never ships in the deployed Worker: `bootstrap/worker.ts` does not import
-  `bootstrap/cli.ts`, and the build's entry is the worker.
-- `--remote` prints the account and database it targets and asks for confirmation before the
-  command runs, with `--yes` to skip it in scripts.
+- A command never ships in the server build: the server entry does not import
+  `bootstrap/cli.ts`.
+- A `--remote` run asks for confirmation through `ctx.prompt.confirm`, naming what it targets,
+  with `--yes` to skip it in scripts.
 
 ### Where `sdxc` uses them
 
@@ -382,7 +382,7 @@ the duplicates above, and `@sdxc/cli` stays free of anything about JavaScript pr
   garbles the child's own output.
 - **Apps get a command line.** One-off work against an app's data is a typed, tested command
   that imports the app, run locally or with `--remote`, instead of a hand-written SQL file passed
-  to `wrangler d1 execute`.
+  to a database console.
 - **Lazy commands.** Startup imports only the handler that runs.
 - **New commands are cheap.** A command is a contract entry, a handler file and one `map` call,
   the shape `sdxc make` already writes for controllers, jobs and MCP tools.
@@ -397,11 +397,8 @@ the duplicates above, and `@sdxc/cli` stays free of anything about JavaScript pr
 - **Terminal rendering becomes ours.** Raw-mode key reading, redrawing, wide characters and
   Windows consoles are a lasting maintenance surface; the virtual-terminal harness is what keeps
   it honest.
-- **A test package runs outside tests.** Local D1 reuses `@sdxc/cloudflare-mocks`' SQLite D1,
-  so that implementation becomes part of what `sdxc run` depends on, and the remote client is a
-  second `D1Database` the repo maintains against Cloudflare's HTTP API.
-- **Only D1 at first.** App commands that touch KV, R2 or Durable Objects wait for their clients
-  or go through the deployed Worker.
+- **Commands reach only what the app's middleware can connect to.** On Cloudflare that is the
+  services ADR-147's adapters cover; a Durable Object is reached through the deployed Worker.
 
 ### Neutral
 
@@ -438,9 +435,9 @@ shares the terminal is most of the work; the drawing under it is a few hundred l
 Start the app's Worker locally and run the command inside it, forwarding argv, output, prompts
 and the exit code over a message channel.
 
-**Rejected because**: every terminal feature would cross a process boundary, a remote run would
-need Cloudflare's remote-binding proxy in place of a documented HTTP API, and a SQL client in the
-`sdxc` process reaches the same local file and the same remote database with none of that.
+**Rejected because**: it ties the command line to one platform, every terminal feature would
+cross a process boundary, and middleware in the command's own process reaches the same local
+file and, through ADR-147's adapters, the same remote database with none of that.
 
 ### 5. Handlers in the contract
 
@@ -481,14 +478,10 @@ routes, jobs and MCP tools are.
 
 ### Phase 4: App command lines
 
-1. The `env` built from `cloudflare.config.ts`: local D1 on Miniflare's files, `--remote` D1 on
-   the HTTP API, secrets from `.dev.vars` or the shell, and failures naming an unsupported
-   binding; a spike first runs an app's own `Database` initializer both ways.
-2. `sdxc run`, the `app/commands/` row in the app layout rules, and `bootstrap/cli.ts` and
-   `app/commands/index.ts` in the `app` template.
-3. `sdxc make command`, declaring and mapping like `make job`, verified against the materialized
+1. The `app/commands/` row in the app layout rules, and `bootstrap/cli.ts`, `app/commands/index.ts`
+   and the `cli` script in the `app` template.
+2. `sdxc make command`, declaring and mapping like `make job`, verified against the materialized
    template.
-4. `sdxc db`, with the interactive prompt and `--execute`.
 
 ## References
 
@@ -497,6 +490,8 @@ routes, jobs and MCP tools are.
 - [ADR-142: `sdxc create` Templates](./ADR-142-sdxc-create-templates.md)
 - [ADR-143: `sdxc make` Generators](./ADR-143-sdxc-make-generators.md)
 - [ADR-144: `sdxc upgrade`](./ADR-144-sdxc-upgrade.md)
+- [ADR-146: Command-Line Entry Points for Middleware Packages](./ADR-146-cli-middleware-entry-points.md)
+- [ADR-147: Cloudflare API Adapters](./ADR-147-cloudflare-api-adapters.md)
 - [Standard Schema](https://standardschema.dev)
 - [`node:util` `parseArgs`](https://nodejs.org/api/util.html#utilparseargsconfig)
 
