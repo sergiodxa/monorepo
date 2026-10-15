@@ -1,0 +1,40 @@
+{
+	"include": [
+		"app/**/*",
+		"bootstrap/**/*",
+		"config/**/*",
+		"database/**/*",
+		"resources/**/*",
+		"routes/**/*",
+		".cloudflare/types/index.d.ts",
+		"cloudflare.config.ts",
+		"vite.config.ts"
+	],
+	"compilerOptions": {
+		"target": "es2022",
+		"lib": ["es2023", "dom", "dom.iterable"],
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"resolveJsonModule": true,
+		"allowImportingTsExtensions": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitOverride": true,
+		"jsx": "react-jsx",
+		"jsxImportSource": "remix/component",
+		"types": ["vite/client"],
+		"paths": {
+			"~/app/*": ["./app/*"],
+			"~/config/*": ["./config/*"],
+			"~/database/*": ["./database/*"],
+			"~/resources/*": ["./resources/*"],
+			"~/routes/*": ["./routes/*"]
+		}
+	}
+}

@@ -1,0 +1,28 @@
+{
+	"name": "app",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "vite build",
+		"cf:deploy": "cf deploy --prebuilt",
+		"cf:typegen": "cf workers types",
+		"check": "vp check",
+		"dev": "vite dev",
+		"start": "vite preview",
+		"test": "vp test run",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@pitlane/assets": "0.1.0",
+		"remix": "3.0.0",
+		"sdxc": "0.0.1"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+		"@pitlane/vite-plugin-remix": "0.8.0",
+		"cf": "1.0.0-beta.5",
+		"typescript": "^6.0.3",
+		"vite": "^8.3.4",
+		"vite-plus": "0.3.3"
+	}
+}

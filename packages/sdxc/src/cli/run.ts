@@ -11,6 +11,7 @@ import { parseArgs } from "node:util";
 
 import { isFailure, wrap } from "@sdxc/result";
 
+import { create } from "./create/index.js";
 import { init } from "./init.js";
 import { findProjectRoot } from "./project.js";
 import { upgrade } from "./upgrade/index.js";
@@ -27,6 +28,7 @@ export const USAGE = [
 	"Usage: sdxc <command> [options]",
 	"",
 	"Commands:",
+	"  create      Write a new project from a built-in template or a GitHub repository",
 	"  init        Write .config/sdxc.jsonc with every default spelled out",
 	"  upgrade     Move to another sdxc release and print the prompt for the code",
 	"",
@@ -44,6 +46,7 @@ export const USAGE = [
  */
 export async function run(argv: readonly string[], io: CommandIO): Promise<number> {
 	if (argv[0] === "upgrade") return upgrade(argv.slice(1), io);
+	if (argv[0] === "create") return create(argv.slice(1), io);
 	let args = wrap(() =>
 		parseArgs({
 			args: [...argv],

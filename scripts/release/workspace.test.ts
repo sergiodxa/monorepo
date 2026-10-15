@@ -253,6 +253,8 @@ describe("packageFromManifest", () => {
 			"packages/highlight/tsconfig.json",
 			"packages/highlight/README.md",
 			"packages/highlight/LICENSE.md",
+			"packages/highlight/templates",
+			"packages/highlight/stubs",
 			"packages/highlight/styles.css",
 		]);
 	});
@@ -290,6 +292,7 @@ describe("packageFromManifest", () => {
 		expect(umbrella.name).toBe("sdxc");
 		expect(umbrella.dependencies).toEqual(["@sdxc/result"]);
 		expect(umbrella.shippedPaths).toContain("packages/sdxc/package.json");
+		expect(umbrella.shippedPaths).toContain("packages/sdxc/templates");
 	});
 
 	test("counts a dependency on an unscoped workspace package as internal", () => {

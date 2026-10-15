@@ -92,5 +92,5 @@ which the CLI would then delete; the tarball plus `remix/tar-parser` needs neith
 
 ## Current Progress
 
-- [ ] Built-in `app` template and the materialize-and-typecheck test
+- [x] Built-in `app` template and the materialize-and-typecheck test
 - [ ] GitHub templates

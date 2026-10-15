@@ -518,6 +518,12 @@ export default defineConfig({
 			typeCheck: true,
 			denyWarnings: true,
 		},
+		/**
+		 * `sdxc create`'s built-in templates import `sdxc/*` as an installed project does, so
+		 * they resolve only once materialized; their own test materializes each one and type
+		 * checks it there.
+		 */
+		ignorePatterns: ["packages/sdxc/templates/**"],
 		plugins: [
 			"eslint",
 			"import",

@@ -47,6 +47,12 @@ export const TYPESCRIPT_TARGET = /\.tsx?$/;
 const SHIPPED_FILES = ["package.json", "tsconfig.json", "README.md", "LICENSE.md"];
 
 /**
+ * Folders a package ships verbatim beside `dist/`, such as the project templates and code
+ * stubs a command line writes from, so a change to one is a release of the package too.
+ */
+export const SHIPPED_FOLDERS = ["templates", "stubs"];
+
+/**
  * One `exports` entry: a path, a subpath or condition map, a fallback array, or `null` to
  * block a subpath.
  */
@@ -139,6 +145,7 @@ export function packageFromManifest(dir: string, manifest: PackageManifest): Pac
 	let shippedPaths = new Set([
 		posix.join(base, "src"),
 		...SHIPPED_FILES.map((file) => posix.join(base, file)),
+		...SHIPPED_FOLDERS.map((folder) => posix.join(base, folder)),
 	]);
 	for (let target of collectExportTargets(manifest)) {
 		if (!TYPESCRIPT_TARGET.test(target)) shippedPaths.add(posix.join(base, target));

@@ -1,0 +1,9 @@
+# Dependencies and build output
+node_modules
+dist
+
+# Cloudflare's generated types and local state
+.cloudflare
+
+# Local secrets
+.dev.vars

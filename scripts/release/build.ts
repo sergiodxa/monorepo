@@ -11,6 +11,7 @@
 import {
 	access,
 	copyFile,
+	cp,
 	mkdir,
 	mkdtemp,
 	readdir,
@@ -30,7 +31,7 @@ import ts from "typescript";
 import type { Package, PackageManifest } from "./workspace.js";
 
 import { nonTypeScriptTargets } from "./manifest.js";
-import { collectExportTargets } from "./workspace.js";
+import { collectExportTargets, SHIPPED_FOLDERS } from "./workspace.js";
 
 /** Test files under `src/`, left out of the program so nothing test-only reaches `dist/`. */
 const TEST_FILE = /\.(?:workers\.)?test\.tsx?$/;
@@ -72,6 +73,9 @@ export async function buildPackage(
 		),
 		...nonTypeScriptTargets(pkg.manifest).map((target) =>
 			copyTarget(pkg.name, packageDir, stagingDir, target),
+		),
+		...SHIPPED_FOLDERS.map((folder) =>
+			copyFolderIfPresent(join(packageDir, folder), join(stagingDir, folder)),
 		),
 	]);
 	for (let copy of copies) {
@@ -198,6 +202,15 @@ async function emittedSources(distDir: string): Promise<Map<string, string>> {
 async function copyIfPresent(source: string, destination: string): Promise<Result<void, Error>> {
 	if (!(await exists(source))) return success(undefined);
 	return wrap(() => copyFile(source, destination));
+}
+
+/** Copies a folder and everything in it, when the package has one. */
+async function copyFolderIfPresent(
+	source: string,
+	destination: string,
+): Promise<Result<void, Error>> {
+	if (!(await exists(source))) return success(undefined);
+	return wrap(() => cp(source, destination, { recursive: true }));
 }
 
 /** Copies one verbatim target; a `*` pattern names files the build cannot enumerate, so it is refused. */
