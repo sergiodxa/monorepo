@@ -18,6 +18,8 @@ interface Manifest {
 	license?: string;
 	private?: boolean;
 	dependencies?: Record<string, string>;
+	peerDependencies?: Record<string, string>;
+	peerDependenciesMeta?: Record<string, { optional?: boolean }>;
 	exports?: Record<string, unknown> | string;
 }
 
@@ -60,7 +62,7 @@ export interface PackageEntry {
 	description: string;
 	/** The licence it is published under, as the manifest names it. */
 	license: string | null;
-	/** Whether the package pulls in nothing from outside the collection. */
+	/** Whether the package pulls in, and asks for, nothing from outside the collection. */
 	standalone: boolean;
 	/** Whether the package depends on no framework. */
 	frameworkFree: boolean;
@@ -70,6 +72,8 @@ export interface PackageEntry {
 	internalDependencies: string[];
 	/** Names of the releases outside this collection it installs alongside itself. */
 	externalDependencies: string[];
+	/** The peers a project installs beside it, such as `remix`; optional ones are left out. */
+	peers: string[];
 }
 
 /** A titled run of packages, as the landing page lists them. */
@@ -141,17 +145,20 @@ function readPublished(): PackageEntry[] {
 		if (!directory) continue;
 
 		let dependencies = Object.keys(manifest.dependencies ?? {});
+		let peerNames = Object.keys(manifest.peerDependencies ?? {});
+		let peers = peerNames.filter((peer) => !manifest.peerDependenciesMeta?.[peer]?.optional);
 
 		entries.push({
 			directory,
 			name: manifest.name,
 			description: manifest.description,
 			license: manifest.license ?? null,
-			standalone: dependencies.every(isInternal),
-			frameworkFree: !dependencies.some(isFramework),
+			standalone: [...dependencies, ...peers].every(isInternal),
+			frameworkFree: ![...dependencies, ...peerNames].some(isFramework),
 			subpaths: readSubpaths(manifest),
 			internalDependencies: dependencies.filter(isInternal).map(toDirectory).sort(),
 			externalDependencies: dependencies.filter((name) => !isInternal(name)).sort(),
+			peers: peers.sort(),
 		});
 	}
 
