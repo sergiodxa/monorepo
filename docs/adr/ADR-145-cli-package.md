@@ -513,5 +513,8 @@ routes, jobs and MCP tools are.
         sources moved to `src/sdxc.ts` and `src/sdxc/` so the generator can write `src/cli.ts`
   - [ ] Bootstrap on npm and configure the trusted publisher
 - [ ] Phase 2: `sdxc` on `@sdxc/cli`
-- [ ] Phase 3: `spec` on `@sdxc/cli`
+- [x] Phase 3: `spec` on `@sdxc/cli`
+  - [x] `spec run` declared in `src/cli-contract.ts`, its handler in `src/cli-run.ts`; the
+        `--allow-*` flags are `.optionalValue().list()`, `peelValueFlag`, `parsePluginGrant` and
+        the `USAGE` string are gone, and the tests run on `invoke()`
 - [ ] Phase 4: App command lines
