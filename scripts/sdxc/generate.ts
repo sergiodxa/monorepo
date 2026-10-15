@@ -52,7 +52,13 @@ async function main(): Promise<Result<string, Error>> {
 	if (isFailure(removed)) return removed;
 	let formatted = spawnSync(
 		"bunx",
-		["vp", "fmt", relative(REPO_ROOT, manifestPath), `packages/${UMBRELLA_DIR}/config.schema.json`],
+		[
+			"vp",
+			"fmt",
+			relative(REPO_ROOT, manifestPath),
+			`packages/${UMBRELLA_DIR}/config.schema.json`,
+			`packages/${UMBRELLA_DIR}/lock.schema.json`,
+		],
 		{ cwd: REPO_ROOT, stdio: "inherit" },
 	);
 	if (formatted.status !== 0) return failure(new Error("vp fmt failed on the generated JSON"));

@@ -367,7 +367,8 @@
 		"./yaml": "./src/yaml.ts",
 		"./zip": "./src/zip.ts",
 		"./zone-file": "./src/zone-file.ts",
-		"./config.schema.json": "./config.schema.json"
+		"./config.schema.json": "./config.schema.json",
+		"./lock.schema.json": "./lock.schema.json"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

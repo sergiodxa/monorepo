@@ -1,7 +1,7 @@
 /**
  * Generates the `sdxc` umbrella package from the workspace: one re-export module per export
  * subpath of every exposed `@sdxc/*` package, the `exports` map pointing at them, the dependency
- * list, and `config.schema.json`. Pure over the files it reads, so the drift test and the
+ * list, `config.schema.json` and `lock.schema.json`. Pure over the files it reads, so the drift test and the
  * writer share one definition of what the committed package must hold.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -20,6 +20,7 @@ import ts from "typescript";
 import type { ExportTarget, Package, PackageManifest } from "../release/workspace.js";
 
 import { configJSONSchema } from "../../packages/sdxc/src/cli/config.js";
+import { lockJSONSchema } from "../../packages/sdxc/src/cli/lock.js";
 import { WORKSPACE_SCOPE, readPackages } from "../release/workspace.js";
 
 /** The umbrella's directory under `packages/`, which is also its unscoped name. */
@@ -105,6 +106,10 @@ export async function generateUmbrella(root: string): Promise<Result<Umbrella, E
 	if (isFailure(schema)) return schema;
 	files.set("config.schema.json", `${JSON.stringify(schema.data, null, "\t")}\n`);
 	exports["./config.schema.json"] = "./config.schema.json";
+	let lockSchema = lockJSONSchema();
+	if (isFailure(lockSchema)) return lockSchema;
+	files.set("lock.schema.json", `${JSON.stringify(lockSchema.data, null, "\t")}\n`);
+	exports["./lock.schema.json"] = "./lock.schema.json";
 	return success({ files, exports, dependencies: exposed.map((pkg) => pkg.name).sort() });
 }
 
