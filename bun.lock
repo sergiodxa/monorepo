@@ -1635,6 +1635,7 @@
         "@sdxc/captcha": "workspace:*",
         "@sdxc/catch-response-middleware": "workspace:*",
         "@sdxc/cloudflare-pricing": "workspace:*",
+        "@sdxc/codemod": "workspace:*",
         "@sdxc/cron": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/csv": "workspace:*",
