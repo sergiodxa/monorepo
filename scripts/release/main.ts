@@ -45,6 +45,7 @@ import { renderNotes } from "./notes.js";
 import { publish, viewPackages } from "./npm.js";
 import { inGitHubActions, preflightTrustedPublishers } from "./oidc.js";
 import { dependencyPins, isNew, planRelease, releaseVersion } from "./plan.js";
+import { UI_REGISTRY_PACKAGE, writeUIRegistry } from "./ui-registry.js";
 import {
 	REPOSITORY_PAGE,
 	REPOSITORY_URL,
@@ -176,6 +177,10 @@ async function main(): Promise<Result<void, Error>> {
 				packages,
 			});
 			if (isFailure(changelog)) return changelog;
+		}
+		if (name === UI_REGISTRY_PACKAGE) {
+			let registry = await writeUIRegistry(stagingDir, { root: REPO_ROOT, version: today });
+			if (isFailure(registry)) return registry;
 		}
 		staged.set(name, stagingDir);
 	}
