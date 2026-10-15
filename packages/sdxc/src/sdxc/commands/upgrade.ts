@@ -35,11 +35,11 @@ import {
 import { buildPrompt, packageOf } from "../upgrade/prompt.js";
 import { fetchChangelog, fetchRelease } from "../upgrade/registry.js";
 
+/** The middleware `upgrade` runs behind. */
+const UPGRADE_MIDDLEWARE = [project(), packageRoot()] as const;
+
 /** The context `upgrade`'s handler receives. */
-type UpgradeContext = HandlerContext<
-	typeof SDXC_COMMANDS.upgrade,
-	readonly [ReturnType<typeof project>, ReturnType<typeof packageRoot>]
->;
+type UpgradeContext = HandlerContext<typeof SDXC_COMMANDS.upgrade, typeof UPGRADE_MIDDLEWARE>;
 
 /** The release a run moves to, and the changelog it ships when the CDN served it. */
 interface Target {
@@ -52,7 +52,7 @@ interface Target {
  * Progress goes to stderr; stdout carries only the prompt.
  */
 export default createCommand(SDXC_COMMANDS.upgrade, {
-	middleware: [project(), packageRoot()],
+	middleware: UPGRADE_MIDDLEWARE,
 	/** Prints the prompt with `--prompt`, and otherwise bumps, installs and hands off. */
 	async handler(ctx) {
 		let output = ctx.flags.output === undefined ? null : resolve(ctx.cwd, ctx.flags.output);

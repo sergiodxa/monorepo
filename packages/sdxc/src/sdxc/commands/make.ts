@@ -7,29 +7,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createCommand, success, usage } from "@sdxc/cli";
+import type { ChainContext } from "@sdxc/cli";
+
+import { createCommand, success } from "@sdxc/cli";
 import { isFailure } from "@sdxc/result";
 
-import type { MakeContext, MakeInput } from "../make/index.js";
-import type { KindName } from "../make/kinds.js";
-import type { Project } from "../middleware.js";
+import type { MakeInput } from "../make/index.js";
 
 import { METHODS, SDXC_COMMANDS } from "../contract.js";
 import { make } from "../make/index.js";
-import { KINDS } from "../make/kinds.js";
 import { copyStubs } from "../make/stubs.js";
 import { packageRoot, project } from "../middleware.js";
 
-/** What every `make` handler reads besides its own command's input. */
-type Shared = MakeContext & { readonly project: Project; readonly packageRoot: string };
-
 /** The middleware every `make` handler runs behind. */
-function chain() {
-	return [project(), packageRoot()] as const;
-}
+const MAKE_MIDDLEWARE = [project(), packageRoot()] as const;
 
 /** Makes one file of `input.kind` in the project the middleware found. */
-async function run(ctx: Shared, input: MakeInput) {
+async function run(ctx: ChainContext<typeof MAKE_MIDDLEWARE>, input: MakeInput) {
 	let made = await make(ctx, ctx.project, ctx.packageRoot, input);
 	if (isFailure(made)) return made;
 	return success();
@@ -37,7 +31,7 @@ async function run(ctx: Shared, input: MakeInput) {
 
 /** `sdxc make controller`, which declares the route and maps the controller. */
 export const controller = createCommand(SDXC_COMMANDS.make.controller, {
-	middleware: chain(),
+	middleware: MAKE_MIDDLEWARE,
 	/** Asks for the method on a terminal, with `get` preselected. */
 	handler: (ctx) =>
 		run(ctx, {
@@ -53,7 +47,7 @@ export const controller = createCommand(SDXC_COMMANDS.make.controller, {
 
 /** `sdxc make job`, which declares the job and maps its handler. */
 export const job = createCommand(SDXC_COMMANDS.make.job, {
-	middleware: chain(),
+	middleware: MAKE_MIDDLEWARE,
 	/** `--cron` writes a scheduled job. */
 	handler: (ctx) =>
 		run(ctx, {
@@ -67,7 +61,7 @@ export const job = createCommand(SDXC_COMMANDS.make.job, {
 
 /** `sdxc make mcp`, which declares the tool or resource and maps its handler. */
 export const mcp = createCommand(SDXC_COMMANDS.make.mcp, {
-	middleware: chain(),
+	middleware: MAKE_MIDDLEWARE,
 	/** `--resource` writes a resource instead of a tool. */
 	handler: (ctx) =>
 		run(ctx, {
@@ -81,7 +75,7 @@ export const mcp = createCommand(SDXC_COMMANDS.make.mcp, {
 
 /** `sdxc make migration`, numbered within its chain. */
 export const migration = createCommand(SDXC_COMMANDS.make.migration, {
-	middleware: chain(),
+	middleware: MAKE_MIDDLEWARE,
 	/** `--chain` picks one of `make.migrations`. */
 	handler: (ctx) =>
 		run(ctx, {
@@ -95,7 +89,7 @@ export const migration = createCommand(SDXC_COMMANDS.make.migration, {
 
 /** `sdxc make factory`, which writes no test. */
 export const factory = createCommand(SDXC_COMMANDS.make.factory, {
-	middleware: chain(),
+	middleware: MAKE_MIDDLEWARE,
 	/** Writes the factory alone. */
 	handler: (ctx) =>
 		run(ctx, { kind: "factory", name: ctx.arguments.name, test: false, dryRun: ctx.flags.dryRun }),
@@ -117,7 +111,7 @@ function plain<
 		| "email",
 >(kind: Kind) {
 	return createCommand(SDXC_COMMANDS.make[kind], {
-		middleware: chain(),
+		middleware: MAKE_MIDDLEWARE,
 		/** Writes the file and, unless `--no-test` or `make.tests` says otherwise, its test. */
 		handler: (ctx) =>
 			run(ctx, {
@@ -152,7 +146,7 @@ export const email = plain("email");
 
 /** `sdxc make stubs`, which copies the built-in stubs of the named kinds, or every kind. */
 export const stubs = createCommand(SDXC_COMMANDS.make.stubs, {
-	middleware: chain(),
+	middleware: MAKE_MIDDLEWARE,
 	/** Prints each stub written, and each one kept because the project already edits it. */
 	async handler(ctx) {
 		let copied = await copyStubs(
@@ -169,32 +163,18 @@ export const stubs = createCommand(SDXC_COMMANDS.make.stubs, {
 });
 
 /**
- * `sdxc make` with no kind: on a terminal, asks for the kind, the name and, for a controller,
- * the method, then makes it with every other flag at its default. Without a terminal it is a
- * usage error, which prints the list of kinds.
+ * `sdxc make` with no kind: the contract asks for the kind and the name on a terminal, and this
+ * asks a controller's method, then makes it with every flag of the kind at its default. Without
+ * a terminal the missing kind is a usage error, which prints the list of kinds.
  */
 export const group = createCommand(SDXC_COMMANDS.make, {
-	middleware: chain(),
-	/** Exits 2 when no kind or name is given. */
+	middleware: MAKE_MIDDLEWARE,
+	/** Takes `get` for a controller's method without a terminal. */
 	async handler(ctx) {
-		let kind = await ctx.prompt.select<KindName | null>({
-			message: "What should sdxc make?",
-			options: (Object.keys(KINDS) as KindName[]).map((value) => ({ value })),
-			default: null,
-			name: "kind",
-		});
-		if (isFailure(kind)) return kind;
-		if (kind.data === null) return usage("Name a kind to make");
-		let name = await ctx.prompt.text({
-			message: `What should the ${kind.data} be called?`,
-			default: "",
-			name: "name",
-		});
-		if (isFailure(name)) return name;
-		if (name.data.trim() === "") return usage(`Name the ${kind.data} to make`);
+		let { kind, name } = ctx.arguments;
 		let method: string | undefined;
-		if (kind.data === "controller") {
-			let picked = await ctx.prompt.select<string>({
+		if (kind === "controller") {
+			let picked = await ctx.prompt.select({
 				message: "Which method?",
 				options: METHODS,
 				default: "get",
@@ -203,6 +183,6 @@ export const group = createCommand(SDXC_COMMANDS.make, {
 			if (isFailure(picked)) return picked;
 			method = picked.data;
 		}
-		return run(ctx, { kind: kind.data, name: name.data, method, test: undefined, dryRun: false });
+		return run(ctx, { kind, name, method, test: ctx.flags.test, dryRun: ctx.flags.dryRun });
 	},
 });

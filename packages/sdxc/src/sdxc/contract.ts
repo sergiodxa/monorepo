@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Flag } from "@sdxc/cli";
-
 import { argument, command, commands, flag, prompt } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 
@@ -20,14 +18,6 @@ export const METHODS = ["get", "post", "put", "patch", "delete", "form"] as cons
 
 /** Every kind `sdxc make` writes, in the order its help lists them. */
 const KIND_NAMES = Object.keys(KINDS) as [keyof typeof KINDS, ...(keyof typeof KINDS)[]];
-
-/**
- * A boolean flag that reads `undefined` when neither `--<name>` nor `--no-<name>` is passed, so
- * a configured default or a question decides.
- */
-function optionalBoolean(name: string, description: string): Flag<boolean | undefined> {
-	return flag.boolean(name, { default: undefined, description }) as Flag<boolean | undefined>;
-}
 
 /** Text that holds at least one character, so an empty answer keeps a prompt open. */
 function nonEmpty(message: string) {
@@ -47,11 +37,14 @@ function nameArgument(kind: string, placeholder: string) {
 	});
 }
 
-/** `--test` / `--no-test`, shared by every kind that writes a test beside its file. */
-const TEST_FLAG = optionalBoolean(
-	"test",
-	"Write a test beside the file, or skip it with --no-test (default: make.tests)",
-);
+/**
+ * `--test` / `--no-test`, shared by every kind that writes a test beside its file; unset, it
+ * takes `make.tests`.
+ */
+const TEST_FLAG = flag.boolean("test", {
+	default: undefined,
+	description: "Write a test beside the file, or skip it with --no-test (default: make.tests)",
+});
 
 /** `--dry-run`, shared by every command that can print what it would write instead. */
 const DRY_RUN_FLAG = flag.boolean("dry-run", {
@@ -81,11 +74,12 @@ export const SDXC_COMMANDS = commands({
 					ask: "always",
 				}),
 			}),
-			git: optionalBoolean(
-				"git",
-				"Initialize a git repository without asking, or skip it with --no-git",
-			),
+			git: flag.boolean("git", {
+				default: undefined,
+				description: "Initialize a git repository without asking, or skip it with --no-git",
+			}),
 		},
+		tasks: true,
 		examples: ["create blog", "create blog --template org/repo/apps/blog#main --no-git"],
 	}),
 	init: command({
@@ -94,8 +88,21 @@ export const SDXC_COMMANDS = commands({
 	}),
 	make: commands({
 		description: "Write a controller, job, model or other file where the app layout puts it",
+		arguments: {
+			kind: argument(s.enum_(KIND_NAMES), {
+				description: "What to write; each kind is also a command with its own flags",
+				prompt: prompt.select({ message: "What should sdxc make?", options: KIND_NAMES }),
+			}),
+			name: argument(nonEmpty("Name it"), {
+				description: "The file's name; a slash makes a folder inside the kind's folder",
+				prompt: prompt.text({ message: "What should it be called?" }),
+			}),
+		},
+		flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+		tasks: true,
 		controller: command({
 			description: "A route handler in app/http/controllers, declared and mapped",
+			tasks: true,
 			arguments: { name: nameArgument("controller", "admin/users") },
 			flags: {
 				method: flag.string("method", {
@@ -120,16 +127,19 @@ export const SDXC_COMMANDS = commands({
 		}),
 		middleware: command({
 			description: "A middleware in app/http/middleware",
+			tasks: true,
 			arguments: { name: nameArgument("middleware", "require-user") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		validator: command({
 			description: "An input validator in app/http/validators",
+			tasks: true,
 			arguments: { name: nameArgument("validator", "signup") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		job: command({
 			description: "A background job in app/jobs, declared and mapped",
+			tasks: true,
 			arguments: { name: nameArgument("job", "trials/expire") },
 			flags: {
 				cron: flag.string("cron", {
@@ -143,11 +153,13 @@ export const SDXC_COMMANDS = commands({
 		}),
 		model: command({
 			description: "A model in app/models",
+			tasks: true,
 			arguments: { name: nameArgument("model", "post") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		migration: command({
 			description: "A numbered SQL migration in a configured chain",
+			tasks: true,
 			arguments: { name: nameArgument("migration", "create-posts") },
 			flags: {
 				chain: flag.string("chain", {
@@ -159,31 +171,37 @@ export const SDXC_COMMANDS = commands({
 		}),
 		factory: command({
 			description: "A test factory in database/factories",
+			tasks: true,
 			arguments: { name: nameArgument("factory", "post") },
 			flags: { dryRun: DRY_RUN_FLAG },
 		}),
 		service: command({
 			description: "A service in app/services",
+			tasks: true,
 			arguments: { name: nameArgument("service", "billing/charge") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		policy: command({
 			description: "An authorization policy in app/policies",
+			tasks: true,
 			arguments: { name: nameArgument("policy", "can-edit") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		initializer: command({
 			description: "An initializer in app/initializers",
+			tasks: true,
 			arguments: { name: nameArgument("initializer", "cache") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		email: command({
 			description: "An email template in app/emails",
+			tasks: true,
 			arguments: { name: nameArgument("email", "welcome") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		mcp: command({
 			description: "An MCP tool in app/mcp/tools, or a resource, declared and mapped",
+			tasks: true,
 			arguments: { name: nameArgument("tool", "get-post") },
 			flags: {
 				resource: flag.boolean("resource", {
@@ -208,6 +226,7 @@ export const SDXC_COMMANDS = commands({
 		list: command({ description: "Every component, marking copies that are edited or behind" }),
 		add: command({
 			description: "Copy components and point the project's imports at the copies",
+			tasks: true,
 			arguments: {
 				components: argument.variadic(s.string(), {
 					valueName: "component",
@@ -227,6 +246,7 @@ export const SDXC_COMMANDS = commands({
 		}),
 		update: command({
 			description: "Replace copied files with the installed version",
+			tasks: true,
 			arguments: {
 				components: argument.variadic(s.string(), { min: 1, valueName: "component" }),
 			},
@@ -237,6 +257,7 @@ export const SDXC_COMMANDS = commands({
 		}),
 		remove: command({
 			description: "Delete copies and point imports back at sdxc/ui/<name>",
+			tasks: true,
 			arguments: {
 				components: argument.variadic(s.string(), {
 					valueName: "component",
@@ -248,6 +269,7 @@ export const SDXC_COMMANDS = commands({
 	}),
 	upgrade: command({
 		description: "Move to another sdxc release and print the prompt for the code",
+		tasks: true,
 		arguments: {
 			version: argument(s.string(), {
 				optional: true,

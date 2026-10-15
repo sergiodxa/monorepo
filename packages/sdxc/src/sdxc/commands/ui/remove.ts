@@ -27,7 +27,7 @@ export default createCommand(SDXC_COMMANDS.ui.remove, {
 			if (copies.length === 0) {
 				return failure(new Error("No component is copied; sdxc ui add copies one"));
 			}
-			let picked = await ctx.prompt.multiselect<string>({
+			let picked = await ctx.prompt.multiselect({
 				message: "Remove which copies?",
 				options: copies.sort(),
 				default: [],

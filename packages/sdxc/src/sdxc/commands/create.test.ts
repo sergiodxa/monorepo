@@ -112,6 +112,23 @@ describe("create", () => {
 		expect(result.stdout).toContain("Initialized a git repository\n");
 	});
 
+	test("on a terminal, Enter initializes git", async () => {
+		let cwd = await temporary();
+
+		let result = await create(["blog", "--template=app"], cwd, {
+			interactive: true,
+			tty: {},
+			keys: ["x", "enter"],
+		});
+
+		expect(result.code).toBe(0);
+		expect(result.screens[0]).toBe("? Initialize a git repository in blog? (Y/n) › ● Yes / ○ No");
+		expect(result.exec.map((call) => call.command.join(" "))).toEqual([
+			"git --version",
+			"git init --quiet",
+		]);
+	});
+
 	test("without a terminal, takes the current directory and the app template, and skips git", async () => {
 		let here = await temporary();
 

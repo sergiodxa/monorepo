@@ -214,15 +214,35 @@ describe("make", () => {
 		let dryStubs = await invoke(["stubs", "--dry-run"], root);
 
 		expect(none).toMatchObject({ code: 2, stdout: "" });
-		expect(none.stderr).toMatch(/^Name a kind to make\n\nUsage: sdxc make <command> \[options\]/);
+		expect(none.stderr).toMatch(
+			/^<kind> is required when stdin is not a terminal\n<name> is required when stdin is not a terminal\n\nUsage: sdxc make <command> \[options\]/,
+		);
 		expect(none.stderr).toContain("  controller   A route handler in app/http/controllers");
 		expect(kind.stderr).toMatch(/^Unknown command "widget" for sdxc make\n/);
 		expect(name.code).toBe(2);
 		expect(name.stderr).toMatch(/^<name> is required when stdin is not a terminal\n/);
 		expect(flag.stderr).toMatch(
-			/^--cron is not a flag of sdxc make service; sdxc make job takes it\n/,
+			/^--cron is not a flag of sdxc make service; sdxc make job takes it\n\n/,
 		);
+		expect(flag.stderr).not.toContain("Unexpected argument");
 		expect(dryStubs.code).toBe(2);
+		expect(await files(root)).toEqual([]);
+	});
+
+	test("reads the flags written before the kind, and a kind and name given to make alone", async () => {
+		let root = await project();
+
+		let before = await invoke(["--dry-run", "job", "digest"], root);
+		let positional = await invoke(["--no-test", "--dry-run"], root, {
+			interactive: true,
+			answers: { kind: "model", name: "post" },
+		});
+
+		expect(before.code).toBe(0);
+		expect(before.stdout).toContain("app/jobs/digest.ts");
+		expect(positional.code).toBe(0);
+		expect(positional.stdout).toContain("app/models/post.ts");
+		expect(positional.stdout).not.toContain("post.test.ts");
 		expect(await files(root)).toEqual([]);
 	});
 
@@ -243,7 +263,7 @@ describe("make", () => {
 		expect(asked.stderr).toBe(
 			[
 				"✓ What should sdxc make? controller",
-				"✓ What should the controller be called? ping",
+				"✓ What should it be called? ping",
 				"✓ Which method? post",
 				"",
 			].join("\n"),

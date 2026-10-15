@@ -9,7 +9,7 @@
 
 import { relative } from "node:path";
 
-import type { HandlerContext } from "@sdxc/cli";
+import type { ChainContext } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
 import { createCommand, success } from "@sdxc/cli";
@@ -31,11 +31,11 @@ import {
 import { packageRoot } from "../middleware.js";
 import { packageManager, scriptCommand } from "../package-manager.js";
 
-/** The context `create`'s handler receives. */
-type CreateContext = HandlerContext<
-	typeof SDXC_COMMANDS.create,
-	readonly [ReturnType<typeof packageRoot>]
->;
+/** The middleware `create` runs behind; it runs outside any project. */
+const CREATE_MIDDLEWARE = [packageRoot()] as const;
+
+/** What `create`'s helpers read off the context. */
+type CreateContext = ChainContext<typeof CREATE_MIDDLEWARE>;
 
 /** A template fetched and completed for the project, with how to describe where it came from. */
 interface Fetched {
@@ -45,7 +45,7 @@ interface Fetched {
 
 /** Creates the project, then initializes git when asked to, then prints the next steps. */
 export default createCommand(SDXC_COMMANDS.create, {
-	middleware: [packageRoot()],
+	middleware: CREATE_MIDDLEWARE,
 	/** Exits 1 when the target or the template is refused, writing nothing. */
 	async handler(ctx) {
 		let source = parseTemplate(ctx.flags.template);
@@ -60,7 +60,7 @@ export default createCommand(SDXC_COMMANDS.create, {
 		ctx.stdout(`Created ${target.data.name} from ${fetched.data.description}\n`);
 
 		if (!target.data.exists && ctx.flags.git !== false) {
-			let initialized = await initializeGit(ctx, target.data.directory, shown);
+			let initialized = await initializeGit(ctx, ctx.flags.git, target.data.directory, shown);
 			if (isFailure(initialized)) return initialized;
 		}
 
@@ -81,13 +81,15 @@ export default createCommand(SDXC_COMMANDS.create, {
 
 /**
  * Runs `git init` in the new project when `--git` was passed, or when the user says yes on a
- * terminal; without a terminal and without `--git`, no repository is made. A missing `git` is
- * noted and skipped.
+ * terminal, where Enter says yes; without a terminal and without `--git`, no repository is
+ * made. A missing `git` is noted and skipped.
  *
+ * @param wanted - `--git` or `--no-git`, or `undefined` to ask
  * @param shown - The project directory relative to where the command ran, for the question
  */
 async function initializeGit(
 	ctx: CreateContext,
+	wanted: boolean | undefined,
 	directory: string,
 	shown: string,
 ): Promise<Result<void, Error>> {
@@ -96,11 +98,11 @@ async function initializeGit(
 		ctx.stdout("git is not on the PATH, so no repository was initialized\n");
 		return success(undefined);
 	}
-	let wanted = ctx.flags.git;
 	if (wanted === undefined) {
 		let answer = await ctx.prompt.confirm({
 			message: `Initialize a git repository in ${shown}?`,
 			default: false,
+			initial: true,
 			name: "git",
 		});
 		if (isFailure(answer)) return answer;
