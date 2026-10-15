@@ -15,6 +15,15 @@ import type { FlagStore, StoredFlagSet } from "./index.js";
 
 import { FlagStoreError } from "./index.js";
 
+/**
+ * The calls this store makes on a Workers KV binding. Declared here so a binding typed by any
+ * source fits it: a Worker's generated types, `@cloudflare/workers-types`, or a test's own.
+ */
+export interface WorkerKVNamespace {
+	get(key: string, type: "text"): Promise<string | null>;
+	put(key: string, value: string): Promise<void>;
+}
+
 /** The key the set lives under when the caller names none. */
 const DEFAULT_KEY = "flags";
 
@@ -52,7 +61,7 @@ function isFlagSet(value: unknown): value is StoredFlagSet {
  * write to is a working store rather than a failure a caller has to special-case.
  */
 export class WorkerKVFlagStore implements FlagStore {
-	readonly #kv: KVNamespace;
+	readonly #kv: WorkerKVNamespace;
 
 	/** The key the set lives under, for a caller that also manages the namespace. */
 	readonly key: string;
@@ -61,7 +70,7 @@ export class WorkerKVFlagStore implements FlagStore {
 	 * @param kv The namespace the set is stored in.
 	 * @param options The key the set lives under.
 	 */
-	constructor(kv: KVNamespace, { key = DEFAULT_KEY }: WorkerKVFlagStoreOptions = {}) {
+	constructor(kv: WorkerKVNamespace, { key = DEFAULT_KEY }: WorkerKVFlagStoreOptions = {}) {
 		this.#kv = kv;
 		this.key = key;
 	}
