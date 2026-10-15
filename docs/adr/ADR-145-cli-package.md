@@ -525,7 +525,7 @@ routes, jobs and MCP tools are.
         terminal. Three departures: `create`'s git question is handler-called, since it names the
         directory and only applies to one `create` made; `create` installs nothing, per ADR-142,
         so it has no install task; and `upgrade` reads the target's `changelog.jsonl` from
-        `cdn.jsdelivr.net` to know whether it crosses a breaking release before installing it
+        `unpkg.com` to know whether it crosses a breaking release before installing it
 - [x] Phase 3: `spec` on `@sdxc/cli`
   - [x] `spec run` declared in `src/cli-contract.ts`, its handler in `src/cli-run.ts`; the
         `--allow-*` flags are `.optionalValue().list()`, `peelValueFlag`, `parsePluginGrant` and

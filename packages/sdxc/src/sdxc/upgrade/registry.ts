@@ -20,7 +20,7 @@ import { CHANGELOG_FILE, parseChangelog } from "./changelog.js";
 export const REGISTRY = "https://registry.npmjs.org";
 
 /** Where one published file of a version is served, `<PACKAGE_FILES>/sdxc@<version>/<file>`. */
-export const PACKAGE_FILES = "https://cdn.jsdelivr.net/npm";
+export const PACKAGE_FILES = "https://unpkg.com";
 
 /** The fields of a version manifest the upgrade reads. */
 const VERSION_SCHEMA = s.object({
