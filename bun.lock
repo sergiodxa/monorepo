@@ -1630,7 +1630,7 @@
       "name": "sdxc",
       "version": "0.0.1",
       "bin": {
-        "sdxc": "./src/cli.ts",
+        "sdxc": "./src/sdxc.ts",
       },
       "dependencies": {
         "@sdxc/activitypub": "workspace:*",
@@ -1646,6 +1646,7 @@
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/catch-response-middleware": "workspace:*",
+        "@sdxc/cli": "workspace:*",
         "@sdxc/cloudflare-pricing": "workspace:*",
         "@sdxc/codemod": "workspace:*",
         "@sdxc/cron": "workspace:*",
