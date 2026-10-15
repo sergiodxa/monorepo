@@ -1,6 +1,6 @@
 /**
  * Tests for the activity feed view model's labels, which join a first-person
- * sentence to a stored title and must read as one headline-cased line whatever
+ * sentence to a stored title and must read as one sentence-cased line whatever
  * casing the title was written in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -23,7 +23,7 @@ function labels(items: Array<Feed.ActivityItem>) {
 }
 
 describe("FeedViewModel.index", () => {
-	test("headline-cases the sentence together with the title of every kind", () => {
+	test("sentence-cases the sentence together with the title of every kind", () => {
 		expect(
 			labels([
 				activity({
@@ -42,12 +42,12 @@ describe("FeedViewModel.index", () => {
 				activity({ kind: "til", slug: "d", title: "how to use git worktrees", content: "Body" }),
 			]),
 		).toEqual([
-			"I Published How to Make Regional HTTP Requests with Durable Objects",
-			"I Wrote about the Remix Way",
-			"I Saved Everything I Know about Good API Design",
-			"I Listed What I Released in 2026-W41",
-			"I Added the Definition of Durable Object",
-			"TIL How to Use Git Worktrees",
+			"I published how to make regional HTTP requests with Durable Objects",
+			"I wrote about the Remix way",
+			"I saved everything I know about good API design",
+			"I listed what I released in 2026-W41",
+			"I added the definition of Durable Object",
+			"TIL how to use Git worktrees",
 		]);
 	});
 
@@ -62,8 +62,8 @@ describe("FeedViewModel.index", () => {
 				activity({ kind: "tutorial", slug: "b", title: "Add an MCP Server to a Remix v3 App" }),
 			]),
 		).toEqual([
-			"I Published How to Use waitUntil for Non-Blocking Cache Writes",
-			"I Published How to Add an MCP Server to a Remix v3 App",
+			"I published how to use waitUntil for non-blocking cache writes",
+			"I published how to add an MCP server to a Remix v3 app",
 		]);
 	});
 });

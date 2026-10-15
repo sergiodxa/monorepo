@@ -10,12 +10,13 @@
 
 import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
-import { titleize } from "@sdxc/strings";
+import { createSentenceCaser } from "@sdxc/strings";
 
 import type { Feed } from "~/app/models/feed";
 import type { Kind } from "~/app/models/kinds";
 
 import { noteTitle, normalizeUrl } from "~/app/models/post-values";
+import { PROPER_NOUNS } from "~/config/proper-nouns";
 import routes from "~/routes/web";
 
 /**
@@ -29,7 +30,7 @@ export namespace FeedViewModel {
 	 */
 	export interface ActivityItem {
 		href: string;
-		/** Full sentence describing the activity, written in first person and headline-cased. */
+		/** Full sentence describing the activity, written in first person and sentence-cased. */
 		label: string;
 		date: string;
 		/** Whether the activity points to preview-only content. */
@@ -74,12 +75,13 @@ export class FeedViewModel {
 	/**
 	 * Enforces the URL requirements of each kind: entries missing their `slug` or
 	 * `url` are dropped so every rendered row links somewhere valid. Every label is
-	 * headline-cased whole, so the sentence and the title inside it read as one.
+	 * sentence-cased whole, keeping `PROPER_NOUNS`, so it reads as one human sentence.
 	 *
 	 * @param activity Feed items from the data layer.
 	 * @returns Render-safe feed payload with timeline metadata per activity kind.
 	 */
 	static index(activity: Array<Feed.ActivityItem>): FeedViewModel.Page {
+		let sentence = createSentenceCaser({ special: PROPER_NOUNS });
 		let items = activity
 			.map((item): FeedViewModel.ActivityItem | null => {
 				if (item.kind === "article") {
@@ -155,7 +157,7 @@ export class FeedViewModel {
 				};
 			})
 			.filter(this.isActivityItem)
-			.map((item) => ({ ...item, label: titleize(item.label) }));
+			.map((item) => ({ ...item, label: sentence(item.label) }));
 
 		return { activity: items };
 	}
