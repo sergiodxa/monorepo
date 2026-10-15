@@ -16,7 +16,10 @@ import { isFailure } from "@sdxc/result";
 
 import type { Address, Transport } from "./types.js";
 
+import { CurrentMailer } from "./context.js";
 import { Mailer } from "./mailer.js";
+
+export { CurrentMailer } from "./context.js";
 
 /**
  * Declared here, in an imported module rather than an ambient .d.ts, so the
@@ -49,10 +52,9 @@ export interface MailMiddlewareOptions {
 }
 
 /**
- * Creates a middleware that publishes a request-scoped mailer as `context.email`,
- * resolving a container-based transport once per request. The `later()` queue
- * flushes in a `finally` after `next()`; the response is already decided by then,
- * so a failed deferred send is a warning on the invocation's log rather than an error.
+ * Publishes a request-scoped mailer as `context.email`, under the {@link CurrentMailer} key the
+ * command-line entry shares. The `later()` queue flushes after `next()`, when the response is
+ * already decided, so a failed deferred send is a warning on the invocation's log.
  *
  * @param options - Transport and sender configuration; see {@link MailMiddlewareOptions}.
  * @returns A middleware that populates `context.email`.
@@ -71,7 +73,7 @@ export default function mail(options: MailMiddlewareOptions): Middleware {
 			headers: options.headers,
 		});
 
-		context.email = mailer;
+		context.set(CurrentMailer, mailer, { property: "email" });
 
 		try {
 			return await next();

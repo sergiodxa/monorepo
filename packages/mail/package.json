@@ -6,10 +6,11 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
+		"./cloudflare": "./src/cloudflare.ts",
 		"./markdown": "./src/markdown.tsx",
 		"./memory": "./src/memory.ts",
 		"./middleware": "./src/middleware.ts",
-		"./cloudflare": "./src/cloudflare.ts",
+		"./middleware/cli": "./src/cli.ts",
 		"./unsubscribe": "./src/unsubscribe.ts"
 	},
 	"scripts": {
@@ -24,9 +25,16 @@
 		"@sdxc/uuid": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/cli": {
+			"optional": true
+		}
 	}
 }

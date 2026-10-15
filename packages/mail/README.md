@@ -277,7 +277,31 @@ binding.
 Publishes a request-scoped `Mailer` as `context.email` and flushes its queue after `next()`.
 `options` takes `transport` (a `Transport`, or `(context) => Transport` per request), `from`,
 `replyTo?` and `headers?`. Each deferred send logs `mail.sent` or a `mail.send_failed` warning
-on the current log.
+on the current log. It publishes under the `CurrentMailer` context key, exported here and from
+`./middleware/cli`, so `ctx.get(CurrentMailer)` reads the same mailer in a route or a command.
+
+### `@sdxc/mail/middleware/cli`
+
+#### `mail(options: MailCommandOptions): CommandMiddleware` (default export)
+
+Publishes a `Mailer` as `ctx.email` on an [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli)
+command, so an admin command resends a message with the templates a route uses. `options` takes
+the router entry's fields, with `transport` a `Transport` or `(ctx) => Transport` per run. The
+queue flushes after the handler and each send is logged as in the router entry; a failed deferred
+send also fails the run with its error. On a laptop, pass `MemoryTransport` or a transport of your
+own that prints each message, so a local run never emails a real user.
+
+```typescript
+import { createCLI } from "@sdxc/cli";
+import mail from "@sdxc/mail/middleware/cli";
+import { MemoryTransport } from "@sdxc/mail/memory";
+
+let cli = createCLI({
+	name: "app",
+	commands,
+	middleware: [mail({ transport: new MemoryTransport(), from: { email: "no-reply@example.com" } })],
+});
+```
 
 ### `@sdxc/mail/unsubscribe`
 
