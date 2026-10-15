@@ -95,9 +95,31 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 				<SearchPalette
 					appleKeyboard={isApplePlatform()}
 					indexHref={routes.searchIndex.href()}
-					fallbacks={[
-						{ label: "All guides", href: docsPath },
-						{ label: "All packages", href: apiPath },
+					links={[
+						{
+							label: "Guides",
+							href: docsPath,
+							description: "Build a Remix app on Cloudflare, step by step",
+							icon: "guides",
+						},
+						{
+							label: "Packages",
+							href: apiPath,
+							description: "Every package's API reference",
+							icon: "packages",
+						},
+						{
+							label: "Utilities",
+							href: utilitiesPath,
+							description: "Styling mixins in @sdxc/u",
+							icon: "utilities",
+						},
+						{
+							label: "Components",
+							href: componentsPath,
+							description: "The component library in @sdxc/ui",
+							icon: "components",
+						},
 					]}
 				/>
 

@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SearchDocument } from "~/app/services/search-query";
 
-import { rankDocuments } from "~/app/services/search-query";
+import { highlightSegments, rankDocuments } from "~/app/services/search-query";
 
 const DOCUMENTS: SearchDocument[] = [
 	{
@@ -100,5 +100,28 @@ describe("rankDocuments", () => {
 
 	test("never returns more than it was asked for", () => {
 		expect(rankDocuments(DOCUMENTS, "parsing", 1)).toHaveLength(1);
+	});
+});
+
+describe("highlightSegments", () => {
+	test("marks a word where it starts one, as the ranking matched it", () => {
+		expect(highlightSegments("@sdxc/result", "result")).toEqual([
+			{ text: "@sdxc/", match: false },
+			{ text: "result", match: true },
+		]);
+	});
+
+	test("leaves a word found inside another word unmarked", () => {
+		expect(highlightSegments("Validated forms", "dated")).toEqual([
+			{ text: "Validated forms", match: false },
+		]);
+	});
+
+	test("marks every word of the query, whatever its case, keeping the text as written", () => {
+		expect(highlightSegments("Parse Markdown", "markdown PARSE")).toEqual([
+			{ text: "Parse", match: true },
+			{ text: " ", match: false },
+			{ text: "Markdown", match: true },
+		]);
 	});
 });

@@ -140,3 +140,41 @@ export function rankDocuments(
 
 	return scored.slice(0, limit).map((entry) => entry.document);
 }
+
+/** One stretch of a result's text, and whether a word of the query matched it. */
+export interface HighlightSegment {
+	text: string;
+	match: boolean;
+}
+
+/**
+ * Splits `text` into the stretches a query's words matched and the rest, marking a word
+ * only where it starts one in `text`, the same rule the ranking applies, so the marks
+ * show exactly why a row was listed. Overlapping matches merge into one stretch.
+ *
+ * @param text - The title or summary to mark, as written.
+ * @param query - What the reader typed.
+ * @returns Every stretch of `text` in order, whose texts concatenate back to `text`.
+ * @example highlightSegments("@sdxc/result", "result") // [{ text: "@sdxc/", match: false }, { text: "result", match: true }]
+ */
+export function highlightSegments(text: string, query: string): HighlightSegment[] {
+	let lower = text.toLowerCase();
+	let marked: boolean[] = Array.from({ length: text.length }, () => false);
+
+	for (let token of tokenize(query)) {
+		for (let at = lower.indexOf(token); at !== -1; at = lower.indexOf(token, at + 1)) {
+			if (isWordCharacter(lower[at - 1])) continue;
+			marked.fill(true, at, at + token.length);
+		}
+	}
+
+	let segments: HighlightSegment[] = [];
+	for (let [index, character] of Array.from(text).entries()) {
+		let match = marked[index] ?? false;
+		let last = segments.at(-1);
+		if (last?.match === match) last.text += character;
+		else segments.push({ text: character, match });
+	}
+
+	return segments;
+}
