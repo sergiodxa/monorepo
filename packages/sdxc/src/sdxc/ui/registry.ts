@@ -9,7 +9,6 @@
 
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import type { Result } from "@sdxc/result";
 
@@ -45,19 +44,12 @@ export interface Registry {
 	entries: Map<string, RegistryEntry>;
 }
 
-/** The root of the `sdxc` package this module runs from, in the workspace and once built. */
-export function installedPackageRoot(): string {
-	return fileURLToPath(new URL("../../../", import.meta.url));
-}
-
 /**
  * The registry of the `sdxc` package at `packageRoot`, with the version its `package.json`
  * declares. A package without `registry/ui` is a failure: the registry exists only in a
  * published release.
  */
-export async function readRegistry(
-	packageRoot: string = installedPackageRoot(),
-): Promise<Result<Registry, Error>> {
+export async function readRegistry(packageRoot: string): Promise<Result<Registry, Error>> {
 	let manifest = await wrap(
 		async () =>
 			JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as {

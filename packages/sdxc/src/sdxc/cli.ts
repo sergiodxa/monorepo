@@ -49,6 +49,26 @@ export function createSDXC(
 		lazy(() => import("./commands/init.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.ui.list,
+		lazy(() => import("./commands/ui/list.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ui.add,
+		lazy(() => import("./commands/ui/add.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ui.diff,
+		lazy(() => import("./commands/ui/diff.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ui.update,
+		lazy(() => import("./commands/ui/update.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.ui.remove,
+		lazy(() => import("./commands/ui/remove.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.upgrade,
 		lazy(() => import("./commands/upgrade.js")),
 	);

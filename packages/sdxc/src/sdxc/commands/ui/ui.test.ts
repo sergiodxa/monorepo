@@ -11,17 +11,18 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { InvokeOptions } from "@sdxc/cli/test";
+
+import { spawnExec } from "@sdxc/cli";
+import { invoke as invokeCLI } from "@sdxc/cli/test";
 import { isSuccess, wrap } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
-import { run } from "../run.js";
+import type { RegistryEntry } from "../../ui/registry.js";
 
-import type { RegistryEntry } from "./registry.js";
-
-import { hashContent } from "./commands.js";
-import { REGISTRY_DIR } from "./registry.js";
-
-import { UI_USAGE, ui } from "./index.js";
+import { createSDXC } from "../../cli.js";
+import { hashContent } from "../../ui/commands.js";
+import { REGISTRY_DIR } from "../../ui/registry.js";
 
 /** Directories created by the current test, removed after it. */
 const CREATED: string[] = [];
@@ -105,24 +106,16 @@ async function project(files: Record<string, string> = {}): Promise<string> {
 	return root;
 }
 
-/** Runs `sdxc ui <argv>` in `cwd` against `packageRoot`, collecting both streams. */
-async function invoke(argv: string[], cwd: string, packageRoot: string) {
-	let stdout = "";
-	let stderr = "";
-	let code = await ui(
-		argv,
-		{
-			cwd,
-			stdout: (text) => {
-				stdout += text;
-			},
-			stderr: (text) => {
-				stderr += text;
-			},
-		},
-		{ packageRoot },
-	);
-	return { code, stdout, stderr };
+/**
+ * Runs `sdxc ui <argv>` in `cwd` against `packageRoot`, without a terminal unless `options`
+ * scripts answers.
+ */
+function invoke(argv: string[], cwd: string, packageRoot: string, options: InvokeOptions = {}) {
+	return invokeCLI(createSDXC({ packageRoot }), ["ui", ...argv], {
+		cwd,
+		interactive: false,
+		...options,
+	});
 }
 
 async function read(root: string, path: string): Promise<string> {
@@ -140,10 +133,10 @@ describe("sdxc ui add", () => {
 
 		let result = await invoke(["add", "dialog"], join(root, "app"), sdxc);
 
-		expect(result).toEqual({
+		expect(result).toMatchObject({
 			code: 0,
 			stdout: "Copied dialog to resources/components/ui/dialog.tsx\n",
-			stderr: "",
+			stderr: "Writing files\n✓ Writing files 2/2\n",
 		});
 		expect(await read(root, "resources/components/ui/dialog.tsx")).toBe(DIALOG.source.content);
 		expect(await read(root, "app/routes/home.tsx")).toBe(
@@ -198,12 +191,18 @@ describe("sdxc ui add", () => {
 			".config/sdxc.jsonc": JSON.stringify({ format: [process.execPath, formatter] }),
 		});
 
-		await invoke(["add", "button"], root, sdxc);
+		let added = await invoke(["add", "button"], root, sdxc, { exec: spawnExec });
 		let listed = await invoke(["list"], root, sdxc);
 
 		let copy = await read(root, "resources/components/ui/button.tsx");
 		expect(copy.endsWith("// formatted\n")).toBe(true);
 		expect(await read(root, ".config/sdxc.lock.jsonl")).toContain(hashContent(copy));
+		expect(added.stderr).toBe(
+			"Writing files\n✓ Writing files 2/2\nFormatting 2 files\n✓ Formatting 2 files\n",
+		);
+		expect(added.exec.map((call) => call.command)).toEqual([
+			[process.execPath, formatter, "resources/components/ui/button.tsx", "app/routes/home.tsx"],
+		]);
 		expect(listed.stdout).toBe("button  copied from 2026.10.14\n");
 	});
 
@@ -214,7 +213,7 @@ describe("sdxc ui add", () => {
 		let unknown = await invoke(["add", "carousel"], root, sdxc);
 		let blocked = await invoke(["add", "button"], root, sdxc);
 
-		expect(unknown).toEqual({
+		expect(unknown).toMatchObject({
 			code: 1,
 			stdout: "",
 			stderr: "sdxc 2026.10.14 ships no component named carousel; sdxc ui list shows every one\n",
@@ -310,7 +309,7 @@ describe("sdxc ui list, diff and update", () => {
 		let root = await project();
 		await invoke(["add", "button"], root, sdxc);
 
-		expect(await invoke(["diff", "button"], root, sdxc)).toEqual({
+		expect(await invoke(["diff", "button"], root, sdxc)).toMatchObject({
 			code: 0,
 			stdout: "button matches sdxc 2026.10.14\n",
 			stderr: "",
@@ -326,7 +325,11 @@ describe("sdxc ui remove", () => {
 
 		let result = await invoke(["remove", "dialog"], root, sdxc);
 
-		expect(result).toEqual({ code: 0, stdout: "Removed dialog\n", stderr: "" });
+		expect(result).toMatchObject({
+			code: 0,
+			stdout: "Removed dialog\n",
+			stderr: "Writing files\n✓ Writing files 2/2\n",
+		});
 		expect(await exists(root, "resources/components/ui/dialog.tsx")).toBe(false);
 		expect(await read(root, "app/routes/home.tsx")).toBe(
 			[
@@ -341,34 +344,101 @@ describe("sdxc ui remove", () => {
 	});
 });
 
+describe("prompts", () => {
+	test("add with no names searches the registry on a terminal, and is a usage error without one", async () => {
+		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+		let root = await project();
+
+		let picked = await invoke(["add"], root, sdxc, {
+			interactive: true,
+			answers: { components: ["tabs"] },
+		});
+		let unattended = await invoke(["add"], root, sdxc);
+
+		expect(picked.code).toBe(0);
+		expect(picked.stderr).toMatch(/^✓ Add which components\? tabs\n/);
+		expect(await exists(root, "resources/components/ui/tabs.tsx")).toBe(true);
+		expect(unattended.code).toBe(2);
+		expect(unattended.stderr).toMatch(/^Name at least one component to add\n\nUsage: sdxc ui add/);
+	});
+
+	test("remove with no names picks from the copies on a terminal, and is a usage error without one", async () => {
+		let sdxc = await sdxcPackage("2026.10.14", [BUTTON, DIALOG]);
+		let root = await project();
+		let none = await invoke(["remove"], root, sdxc, { interactive: true });
+		await invoke(["add", "button", "dialog"], root, sdxc);
+
+		let unattended = await invoke(["remove"], root, sdxc);
+		let picked = await invoke(["remove"], root, sdxc, {
+			interactive: true,
+			answers: { components: ["dialog"] },
+		});
+
+		expect(none).toMatchObject({
+			code: 1,
+			stderr: "No component is copied; sdxc ui add copies one\n",
+		});
+		expect(unattended.code).toBe(2);
+		expect(picked.code).toBe(0);
+		expect(picked.stderr).toMatch(/^✓ Remove which copies\? dialog\n/);
+		expect(await exists(root, "resources/components/ui/dialog.tsx")).toBe(false);
+		expect(await exists(root, "resources/components/ui/button.tsx")).toBe(true);
+	});
+
+	test("update asks before replacing each edited file, and leaves it without a terminal", async () => {
+		let older = await sdxcPackage("2026.10.10", [BUTTON]);
+		let newer = await sdxcPackage("2026.10.20", [
+			{
+				...BUTTON,
+				changedIn: "2026.10.20",
+				source: { ...BUTTON.source, content: `${BUTTON.source.content}// v2\n` },
+			},
+		]);
+		let root = await project();
+		await invoke(["add", "button"], root, older);
+		let button = "resources/components/ui/button.tsx";
+		await writeFile(join(root, button), `${await read(root, button)}// mine\n`);
+
+		let unattended = await invoke(["update", "button"], root, newer);
+		let declined = await invoke(["update", "button"], root, newer, {
+			interactive: true,
+			answers: { overwrite: false },
+		});
+		let accepted = await invoke(["update", "button"], root, newer, {
+			interactive: true,
+			answers: { overwrite: true },
+		});
+
+		expect(unattended.stdout).toContain(
+			`${button} is edited; left as it is (--force replaces it)\n`,
+		);
+		expect(declined.stderr).toBe(
+			`✓ ${button} is edited; replace it with the installed version? No\n`,
+		);
+		expect(declined.stdout).toContain("left as it is");
+		expect(accepted.stdout).toBe("Updated 1 file of button\n");
+		expect(await read(root, button)).toContain("// v2");
+	});
+});
+
 describe("usage", () => {
-	test("exits 2 with the usage for a missing command, an unknown one, or a misplaced flag", async () => {
+	test("exits 2 with the help for a missing command, an unknown one, or a misplaced flag", async () => {
 		let sdxc = await sdxcPackage("2026.10.14", [BUTTON]);
 		let root = await project();
 
-		expect(await invoke([], root, sdxc)).toEqual({ code: 2, stdout: "", stderr: UI_USAGE });
-		expect((await invoke(["publish"], root, sdxc)).stderr).toBe(
-			`Unknown ui command: publish\n\n${UI_USAGE}`,
+		let none = await invoke([], root, sdxc);
+		let unknown = await invoke(["publish"], root, sdxc);
+		let misplaced = await invoke(["list", "--force"], root, sdxc);
+
+		expect(none).toMatchObject({ code: 2, stdout: "" });
+		expect(none.stderr).toMatch(/^Usage: sdxc ui <command> \[options\]/);
+		expect(unknown.stderr).toMatch(/^Unknown command "publish" for sdxc ui\n\nUsage: sdxc ui /);
+		expect(misplaced.stderr).toMatch(
+			/^--force is not a flag of sdxc ui list; sdxc ui update takes it\n/,
 		);
-		expect((await invoke(["list", "--force"], root, sdxc)).stderr).toBe(
-			`sdxc ui list takes no --force\n\n${UI_USAGE}`,
-		);
-		expect((await invoke(["add"], root, sdxc)).code).toBe(2);
+		expect((await invoke(["diff"], root, sdxc)).code).toBe(2);
 		expect((await invoke(["remove", "button"], root, sdxc)).stderr).toBe(
 			"Not copied: button; sdxc ui list shows the copies\n",
 		);
-	});
-
-	test("sdxc dispatches ui with the arguments after it", async () => {
-		let stdout = "";
-		let code = await run(["ui", "--help"], {
-			cwd: await project(),
-			stdout: (text) => {
-				stdout += text;
-			},
-			stderr: () => undefined,
-		});
-
-		expect({ code, stdout }).toEqual({ code: 0, stdout: UI_USAGE });
 	});
 });

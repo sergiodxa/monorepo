@@ -11,17 +11,17 @@ import { createHash } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import type { AnyCommandContext } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success, wrap } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import { compare } from "@sdxc/semver";
 
 import type { Config } from "../config.js";
 import type { Lock, UILockEntry } from "../lock.js";
 
-import { loadConfig } from "../config.js";
 import { unifiedDiff } from "../diff.js";
-import { runFormat } from "../format.js";
+import { formatFiles } from "../format.js";
 import {
 	readLock,
 	removeUIEntry,
@@ -80,19 +80,19 @@ export interface ListRow {
 	copy: { release: string; edited: boolean; behind: boolean } | null;
 }
 
+/** What a `ui` command's handler runs with: its context, and its prompts, tasks and processes. */
+export type UICommandContext = Pick<AnyCommandContext, "exec" | "task" | "stdout" | "stderr">;
+
 /**
- * Reads the configuration, the installed registry, the lock file and the copies' layout of
- * the project at `root`.
+ * Reads the installed registry, the lock file and the copies' layout of the project at `root`.
  *
- * @param packageRoot - The `sdxc` package holding the registry; the running one by default.
+ * @param packageRoot - The `sdxc` package holding the registry.
  */
 export async function loadContext(
-	root: string,
-	packageRoot?: string,
+	project: { root: string; config: Config },
+	packageRoot: string,
 ): Promise<Result<UIContext, Error>> {
-	let loaded = await loadConfig(root);
-	if (isFailure(loaded)) return loaded;
-	let config = loaded.data.config;
+	let { root, config } = project;
 	let registry = await readRegistry(packageRoot);
 	if (isFailure(registry)) return registry;
 	let lock = await readLock(root, config);
@@ -214,13 +214,13 @@ export async function diffComponent(
 
 /**
  * Replaces each file of each copy whose hash still matches the lock with the installed version.
- * An edited file is left alone and reported unless `force`; the entry moves to the installed
- * release only when every file was replaced.
+ * An edited file is replaced only when `overwrite` answers yes for it, and otherwise left alone
+ * and reported; the entry moves to the installed release only when every file was replaced.
  */
 export async function planUpdate(
 	context: UIContext,
 	names: readonly string[],
-	options: { force: boolean },
+	options: { overwrite: (path: string) => Promise<Result<boolean, Error>> },
 ): Promise<Result<Plan, Error>> {
 	let unknown = uncopiedNames(context, names);
 	if (unknown !== null) return failure(unknown);
@@ -244,10 +244,14 @@ export async function planUpdate(
 			let local = await readProjectFile(context.root, path);
 			let recorded = copied.files[file.path];
 			let untouched = local === null || (recorded !== undefined && hashContent(local) === recorded);
-			if (!untouched && !options.force) {
-				skipped += 1;
-				plan.report.push(`${path} is edited; left as it is (--force replaces it)`);
-				continue;
+			if (!untouched) {
+				let overwrite = await options.overwrite(path);
+				if (isFailure(overwrite)) return overwrite;
+				if (!overwrite.data) {
+					skipped += 1;
+					plan.report.push(`${path} is edited; left as it is (--force replaces it)`);
+					continue;
+				}
 			}
 			let content = pointAtCopies(path, file.content, copies, context.layout);
 			if (isFailure(content)) return content;
@@ -304,27 +308,35 @@ export async function planRemove(
 }
 
 /**
- * Writes and deletes the plan's files, runs `format` over what it wrote, then records the lock
- * entries with each new file hashed as it ended up. A failed `format` is reported, and the
- * hashes are then of the files as written.
+ * Writes and deletes the plan's files as a task counting each one, runs `format` over what it
+ * wrote, then records the lock entries with each new file hashed as it ended up. A failed
+ * `format` is reported, and the hashes are then of the files as written.
  */
-export async function applyPlan(context: UIContext, plan: Plan): Promise<Result<string[], Error>> {
+export async function applyPlan(
+	ctx: UICommandContext,
+	context: UIContext,
+	plan: Plan,
+): Promise<Result<string[], Error>> {
 	let report = [...plan.report];
 	let written: string[] = [];
-	for (let [path, change] of plan.files) {
-		let target = join(context.root, path);
-		let applied = await wrap(async () => {
-			if (change.after === null) {
-				await rm(target, { force: true });
-				return;
+	if (plan.files.size > 0) {
+		let applied = await ctx.task("Writing files", async (task) => {
+			task.total(plan.files.size);
+			for (let [path, change] of plan.files) {
+				let target = join(context.root, path);
+				if (change.after === null) {
+					await rm(target, { force: true });
+				} else {
+					await mkdir(dirname(target), { recursive: true });
+					await writeFile(target, change.after);
+					written.push(path);
+				}
+				task.advance();
 			}
-			await mkdir(dirname(target), { recursive: true });
-			await writeFile(target, change.after);
 		});
 		if (isFailure(applied)) return applied;
-		if (change.after !== null) written.push(path);
 	}
-	let formatted = await runFormat(context.config.format, written, context.root);
+	let formatted = await formatFiles(ctx, context.config.format, written, context.root);
 	if (isFailure(formatted)) {
 		report.push(`${formatted.error.message}; the lock file records them as written`);
 	}
@@ -333,6 +345,29 @@ export async function applyPlan(context: UIContext, plan: Plan): Promise<Result<
 	let saved = await writeLock(context.root, lock.data);
 	if (isFailure(saved)) return saved;
 	return success(report);
+}
+
+/**
+ * Prints the plan's diff on stdout and its report on stderr under `--dry-run`; otherwise applies
+ * it and prints its report on stdout.
+ */
+export async function finishPlan(
+	ctx: UICommandContext,
+	context: UIContext,
+	plan: Plan,
+	dryRun: boolean,
+): Promise<Result<void, Error>> {
+	if (dryRun) {
+		let diff = await renderPlan(context, plan);
+		if (isFailure(diff)) return diff;
+		ctx.stdout(diff.data);
+		for (let line of plan.report) ctx.stderr(`${line}\n`);
+		return success(undefined);
+	}
+	let report = await applyPlan(ctx, context, plan);
+	if (isFailure(report)) return report;
+	for (let line of report.data) ctx.stdout(`${line}\n`);
+	return success(undefined);
 }
 
 /**
