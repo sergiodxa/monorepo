@@ -28,7 +28,7 @@ for (let reference of references.data) {
 }
 ```
 
-The file name's extension decides what the scanner reads: `.js`, `.mjs` and `.cjs` as JavaScript, `.jsx` with JSX, `.ts`, `.mts` and `.cts` as TypeScript, and `.tsx` as TypeScript with JSX. Strings, template literals, regular expressions, comments and JSX text are tokens of their own, so `<p>Don't import "./x.js"</p>` names no module.
+The file name's extension decides what the scanner reads: `.js`, `.mjs`, `.cjs` and `.jsx` as JavaScript with JSX, `.ts`, `.mts` and `.cts` as TypeScript, and `.tsx` as TypeScript with JSX. A `<` where an expression begins is an element in every JavaScript file, so a `.js` component reads the same as a `.jsx` one, and `a < b` stays a comparison. Strings, template literals, regular expressions, comments and JSX text are tokens of their own, so `<p>Don't import "./x.js"</p>` names no module.
 
 ### Rewrite specifiers
 

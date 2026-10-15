@@ -67,7 +67,7 @@ holds 8,048 JavaScript and TypeScript source files, a corpus a scanner can be co
 ## Decision
 
 Add `@sdxc/codemod`, a library of source-to-source edits over JavaScript and TypeScript (`.js`,
-`.jsx`, `.ts`, `.tsx`, `.mts`, `.cts`) built on its own scanner, with no runtime dependency beyond
+`.mjs`, `.cjs`, `.jsx`, `.ts`, `.tsx`, `.mts`, `.cts`) built on its own scanner, with no runtime dependency beyond
 `@sdxc/result`. Every edit scans the input, computes replacements by source range, and returns the
 new text, so only the replaced ranges change and a file keeps its formatting, comments and quote
 style.
@@ -75,7 +75,8 @@ style.
 ### Scanner
 
 - **Tokenizer.** Produces identifiers, keywords, punctuators, numbers, strings, template parts,
-  regular expressions, comments and, in `.jsx` and `.tsx`, JSX tokens, each with its range.
+  regular expressions, comments and, in every extension but `.ts`, `.mts` and `.cts`, JSX
+  tokens, each with its range.
   - A `/` begins a regular expression when the previous significant token admits an expression:
     an operator, `(`, `[`, `{`, `,`, `;`, `:`, `?`, `=>`, an expression keyword (`return`,
     `typeof`, `in`, `of`, `new`, `delete`, `void`, `throw`, `case`, `do`, `else`, `yield`,
@@ -83,8 +84,8 @@ style.
     `while`, `for` or `with` head; after `}` when the brace closed a block. A stack records what
     each open bracket belongs to.
   - A template literal's `${` pushes onto the same stack and its `}` returns to the template.
-  - In `.jsx` and `.tsx`, a `<` in a position that admits an expression begins JSX, except a
-    generic arrow head (`<T,>` or `<T extends …>`). A `<` after an identifier, `)` or `]` is an
+  - In `.js`, `.mjs`, `.cjs`, `.jsx` and `.tsx`, a `<` in a position that admits an expression
+    begins JSX, except a generic arrow head (`<T,>` or `<T extends …>`). A `<` after an identifier, `)` or `]` is an
     operator or opens type arguments; type arguments are skipped as a balanced `<…>` group when
     the group is followed by `(` or a template literal, and read as comparisons otherwise.
   - A `}` that closes an arrow function's block body or a statement block ends a statement, so a
@@ -92,6 +93,10 @@ style.
     expression. The bracket stack records which one each `{` opened, from the token before it. Inside JSX, text runs to `{` or `<`,
     attribute strings have no escapes, and `{…}` returns to code. In `.ts`, `.mts` and `.cts`, `<`
     never begins JSX.
+  - JSX is read in every JavaScript extension, decided by the extension alone: React-style
+    projects keep components in `.js`, and in plain JavaScript a `<` where an
+    expression begins is a syntax error, so reading it as JSX changes no valid program. The
+    oracle parses those files as JSX for the same reason.
 - **Structure.** Over the tokens: bracket matching, top-level import and export declarations with
   their bound names, `import(…)` and listed calls anywhere, object literals and their properties,
   and statement ends.
@@ -254,3 +259,4 @@ both bring a Babel parser stack for a task that needs specifier ranges.
 - [x] `addProperty`, `insertAfterLast`
 - [x] Exact-output fixtures for every edit
 - [x] Release build and repo tests moved to `findModuleReferences`
+- [x] JSX read in `.js`, `.mjs` and `.cjs`, with ambiguity fixtures for JSX against `<` in each

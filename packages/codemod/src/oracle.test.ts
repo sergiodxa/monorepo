@@ -153,14 +153,16 @@ function scannedReferences(filename: string, source: string): string[] | Error {
 	return [...found, ...tokens].sort();
 }
 
-/** The language `oxc-parser` reads `filename` as, matching the scanner's reading of extensions. */
-function langOf(filename: string): "js" | "jsx" | "ts" | "tsx" | "dts" {
+/**
+ * The language `oxc-parser` reads `filename` as, matching the scanner's reading of extensions:
+ * every JavaScript extension as JSX.
+ */
+function langOf(filename: string): "jsx" | "ts" | "tsx" | "dts" {
 	if (filename.endsWith(".d.ts") || filename.endsWith(".d.mts") || filename.endsWith(".d.cts"))
 		return "dts";
 	if (filename.endsWith(".tsx")) return "tsx";
 	if (/\.[mc]?ts$/.test(filename)) return "ts";
-	if (filename.endsWith(".jsx")) return "jsx";
-	return "js";
+	return "jsx";
 }
 
 /** The repository root, four levels above this file. */

@@ -1,0 +1,26 @@
+import { render } from "./render.js";
+let a = 1, b = 2, items = ["x"], props = {};
+let tight = a<b;
+let chained = a<b>a;
+let both = a <b && b> a;
+let indexed = items[0] < "y";
+let called = Math.max(a, b) < 3;
+let postfix = a++ < b-- && <i>{a}</i>;
+let shifted = (a << 2) >> 1 >>> 0;
+let element = <p>Don't import "./not-an-import.js" here // or here</p>;
+let afterArrow = () => <span title="a < b">{a < b ? "x" : "y"}</span>;
+let afterComma = [<b key="1" />, <b key="2" />];
+let conditional = a ? <em /> : a < b;
+let divided = <br /> / 2;
+let spread = <Card {...props} on:click={() => a < b} />;
+function component() {
+	if (a < b) return <div style={{ width: a / b }}>{`template ${a}`}</div>;
+	return <>
+		{items.map((item) => (
+			<li key={item}>{item < "m" ? item : <s>{item}</s>}</li>
+		))}
+		{/* import("./comment.js") */}
+	</>;
+}
+render(component(), document.body);
+let dynamic = import("./in-js.js");

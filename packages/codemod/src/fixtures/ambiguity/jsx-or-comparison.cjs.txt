@@ -1,0 +1,6 @@
+const { render } = require("./render.cjs");
+const limit = 3, total = 4;
+module.exports = function Badge() {
+	return total < limit ? null : <span className="badge">{total}</span>;
+};
+render(<Badge />);

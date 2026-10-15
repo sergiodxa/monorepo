@@ -1,0 +1,4 @@
+import { h } from "./h.mjs";
+export let view = (count) => count < 10 ? <small>{count}</small> : <strong>{count}</strong>;
+export let lessThan = view(1) < view(2);
+export { h } from "./h.mjs";

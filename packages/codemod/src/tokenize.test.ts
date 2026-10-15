@@ -25,8 +25,10 @@ function failureOf(filename: string, source: string): string {
 }
 
 describe("languageOf", () => {
-	test("reads JSX only in .jsx and .tsx, and TypeScript only in .ts, .mts, .cts and .tsx", () => {
-		expect(languageOf("a.js")).toEqual({ typescript: false, jsx: false });
+	test("reads JSX in every extension but .ts, .mts and .cts, and TypeScript only in those and .tsx", () => {
+		expect(languageOf("a.js")).toEqual({ typescript: false, jsx: true });
+		expect(languageOf("a.mjs")).toEqual({ typescript: false, jsx: true });
+		expect(languageOf("a.cjs")).toEqual({ typescript: false, jsx: true });
 		expect(languageOf("a.jsx")).toEqual({ typescript: false, jsx: true });
 		expect(languageOf("a.mts")).toEqual({ typescript: true, jsx: false });
 		expect(languageOf("a.d.ts")).toEqual({ typescript: true, jsx: false });
@@ -36,6 +38,22 @@ describe("languageOf", () => {
 });
 
 describe("tokenize", () => {
+	test("reads a < in expression position of a .js file as JSX and after an operand as less-than", () => {
+		expect(tokens("a.js", "a < b; <p>a &lt; b</p>")).toEqual([
+			"identifier a",
+			"punctuator <",
+			"identifier b",
+			"punctuator ;",
+			"jsx <",
+			"jsx p",
+			"jsx >",
+			"jsx a &lt; b",
+			"jsx </",
+			"jsx p",
+			"jsx >",
+		]);
+	});
+
 	test("reads a / after an if head as a regular expression and after an operand as division", () => {
 		expect(tokens("a.js", "if (x) /re/.test(y); a / b")).toEqual([
 			"identifier if",

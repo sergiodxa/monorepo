@@ -48,11 +48,15 @@ export interface Language {
 	jsx: boolean;
 }
 
-/** The extensions the scanner reads, and the syntax each admits. */
+/**
+ * The extensions the scanner reads, and the syntax each admits. Every JavaScript extension
+ * admits JSX: a `<` where an expression begins is a syntax error in plain JavaScript, so reading
+ * it as an element leaves every valid program as it was and covers `.js` files that hold JSX.
+ */
 const LANGUAGES: Record<string, Language> = {
-	".js": { typescript: false, jsx: false },
-	".mjs": { typescript: false, jsx: false },
-	".cjs": { typescript: false, jsx: false },
+	".js": { typescript: false, jsx: true },
+	".mjs": { typescript: false, jsx: true },
+	".cjs": { typescript: false, jsx: true },
 	".jsx": { typescript: false, jsx: true },
 	".ts": { typescript: true, jsx: false },
 	".mts": { typescript: true, jsx: false },
