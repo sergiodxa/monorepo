@@ -163,6 +163,6 @@ number is the part that most needs to be the same everywhere.
 ## Current Progress
 
 - [x] `@sdxc/jsonl` with `parse`, `stringify`, `lines`, `read`, `encode` and `encodeLines`
-- [ ] `sdxc` lock file on `@sdxc/jsonl`
+- [x] `sdxc` lock file on `@sdxc/jsonl` (`packages/sdxc/src/sdxc/lock.ts`)
 - [x] `auth-saas` transfer files and import body on `lines` and `encode`
 - [x] `@sdxc/spec` stdio transport on `lines` and `read`
