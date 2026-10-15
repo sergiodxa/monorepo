@@ -226,29 +226,28 @@ async function dispatch(
 	context: CommandContext,
 	handler: CommandHandler<CommandContext>,
 ): Promise<CommandResult> {
-	let outcome: CommandResult | undefined;
-	let index = 0;
-	let next = async (): Promise<void> => {
+	/** Runs the chain from `index`, answering the outcome the run exits with. */
+	let run = async (index: number): Promise<CommandResult> => {
 		let middleware = chain[index];
-		index += 1;
-		if (middleware === undefined) {
-			outcome = await handler(context);
-			return;
+		if (middleware === undefined) return handler(context);
+		let downstream: CommandResult | undefined;
+		let returned = await middleware(context, async () => {
+			downstream = await run(index + 1);
+			return downstream;
+		});
+		if (returned !== undefined && (downstream === undefined || isFailure(returned))) {
+			return returned;
 		}
-		let returned = await middleware(context, next);
-		if (returned !== undefined && (outcome === undefined || isFailure(returned))) {
-			outcome = returned;
-		}
+		return downstream ?? success(undefined);
 	};
+	let outcome: CommandResult;
 	try {
-		await next();
+		outcome = await run(0);
 	} catch (error) {
 		return failure(asError(error));
 	}
-	if (context.signal.aborted && outcome !== undefined && isFailure(outcome)) {
-		return failure(new CancelledError());
-	}
-	return outcome ?? success(undefined);
+	if (context.signal.aborted && isFailure(outcome)) return failure(new CancelledError());
+	return outcome;
 }
 
 /** A thrown value as an `Error`. */

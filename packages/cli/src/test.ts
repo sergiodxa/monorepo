@@ -72,6 +72,11 @@ export interface InvokeOptions {
 	keys?: readonly string[];
 	/** Aborting it stops the run the way Ctrl+C does. */
 	signal?: AbortSignal;
+	/**
+	 * Text piped into the run, which `ctx.stdin.text()` reads. Piped stdin is no terminal, so
+	 * `interactive` then defaults to `false`.
+	 */
+	stdin?: string;
 }
 
 /** What a run printed and how it ended. */
@@ -129,11 +134,23 @@ function tableExec(replies: Readonly<Record<string, ExecReply>>, calls: ExecCall
 	};
 }
 
-/** A stdin that reports being a terminal or not and never produces input. */
-function quietInput(isTTY: boolean): Input {
-	return Object.assign(new EventEmitter(), {
+/**
+ * A stdin that reports being a terminal or not. Read, a pipe produces `text` and ends, empty
+ * when there is none; a terminal produces nothing.
+ */
+function scriptedInput(isTTY: boolean, text: string | undefined): Input {
+	let emitter = new EventEmitter();
+	let sent = false;
+	return Object.assign(emitter, {
 		isTTY,
-		resume: () => undefined,
+		resume: () => {
+			if (isTTY || sent) return;
+			sent = true;
+			queueMicrotask(() => {
+				if (text !== undefined && text !== "") emitter.emit("data", text);
+				emitter.emit("end");
+			});
+		},
 		pause: () => undefined,
 	});
 }
@@ -178,14 +195,14 @@ export async function invoke<Commands extends Group, Chain extends readonly AnyC
 			close: () => undefined,
 		});
 	}
-	let interactive = options.interactive ?? true;
+	let interactive = options.interactive ?? options.stdin === undefined;
 	let code = await runScripted(
 		cli,
 		argv,
 		{
 			cwd: options.cwd ?? process.cwd(),
 			env: options.env ?? {},
-			stdin: quietInput(interactive),
+			stdin: scriptedInput(interactive, options.stdin),
 			stdout,
 			stderr,
 			exec,

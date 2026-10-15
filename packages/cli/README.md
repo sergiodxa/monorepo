@@ -181,11 +181,14 @@ What a handler receives.
 - `prompt.text | password | number | confirm | select | multiselect | search(options)`: ask from a handler. Each takes a `default` used without a terminal, `initial` when a terminal should start elsewhere (`default: false, initial: true` answers no in CI and yes on Enter), plus `name` for scripted answers and `schema`. A list prompt's value type comes from its `options`.
 - `task(label?, fn)`: runs `fn` under a spinner and answers a `Result`; `fn` receives a `Task`.
 - `exec(command, options?)`: runs a program with no shell. `options.stdio` is `"inherit"`, `"ignore"`, `"collect"` or `"stderr"` (its stdout to the CLI's stderr), and `"inherit"` and `"stderr"` pause any spinner. Answers the exit code and collected output, or an `ExecError`.
+- `stdin`: `isTTY`, and `text()`, which reads everything piped in (`cat query.sql | app db`).
+- `setExecEnv(variables)`: adds variables every child `exec` starts with, under each call's own `options.env`, for a middleware that hands children what it knows.
 - `get(key)`, `has(key)`, `set(key, value, { property }?)`: read and publish values under context keys; `property` installs the value as `ctx.<property>`.
+- `require(key)`: `get` for a value an earlier middleware must have published; a missing one fails the run naming the command.
 
 ### `success(data?)`, `failure(error)`, `usage(message)`, `cancelled()`, `exit(code, message?)`
 
-What a handler or middleware answers: `failure` exits 1 with the error's message, `usage` exits 2 with the command's help, `cancelled` exits 130, and `exit` exits with `code`, printing `message` when given.
+What a handler or middleware answers: `failure` exits 1 with the error's message, `usage` exits 2 with the command's help, `cancelled` exits 130, and `exit` exits with `code`, printing `message` when given. `exitCodeOf(error)` answers the code a failure exits with.
 
 ### `UsageError`, `CancelledError`, `ExitError`, `ExecError`, `EXIT_CODES`
 
@@ -207,6 +210,7 @@ Runs `argv` and answers `{ code, stdout, stderr, exec, screens }`.
 - `options.answers`: prompt answers keyed by the flag or argument they fill, or an array answered in order; a prompt with no answer fails the run naming it.
 - `options.exec`: replies keyed by command (`{ "git init": { code: 0 } }`), recorded in `exec`; an unlisted command fails naming itself. Or an `Exec` function.
 - `options.interactive: false`: applies the no-terminal rules instead of the answers.
+- `options.stdin`: text piped into the run, read by `ctx.stdin.text()`; it makes `interactive` default to `false`.
 - `options.tty` and `options.keys`: draw prompts on a virtual terminal (`{ columns: 80 }`) and press `keys` (`"down"`, `"space"`, `"enter"`, …), collecting each screen in `screens`.
 
 Without a terminal, task lines carry no durations, so output compares exactly.
@@ -215,7 +219,9 @@ Without a terminal, task lines carry no durations, so output compares exactly.
 
 #### `CommandMiddleware<Effect>`
 
-`(ctx, next) => void | CommandResult`. A middleware that answers a failure ends the run; `Effect` (`{ key, value, property }`) names what it publishes, so the handler's `ctx` gains that property, typed.
+`(ctx, next) => void | CommandResult`. `next()` resolves to what the rest of the chain answered, so a middleware can log the outcome. A middleware that answers a failure ends the run; `Effect` (`{ key, value, property }`) names what it publishes, so the handler's `ctx` gains that property, typed.
+
+A middleware's own `ctx` is `AnyCommandContext`, without the properties earlier middleware installed, since one middleware can run in many chains. It reads them with `ctx.require(Key)`; a package whose middleware is always installed may instead augment `CommandContext` with its property.
 
 #### `Task`
 

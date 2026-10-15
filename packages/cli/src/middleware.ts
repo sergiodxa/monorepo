@@ -15,8 +15,11 @@ import type { AnyCommandContext } from "./context.js";
 /** What a command answers: success exits 0, a failure exits by its kind. */
 export type CommandResult = Result<unknown, Error>;
 
-/** Runs the rest of the chain, ending in the command's handler. */
-export type NextFunction = () => Promise<void>;
+/**
+ * Runs the rest of the chain, ending in the command's handler, and resolves to what it answered,
+ * so a middleware can log or wrap the outcome; a throw in the rest of the chain rejects it.
+ */
+export type NextFunction = () => Promise<CommandResult>;
 
 /** What one middleware puts into the context, and the property it installs it as. */
 export interface ContextEffect {

@@ -12,6 +12,7 @@ import type { ContextValue } from "remix/router";
 
 import type { CancelledError } from "./errors.js";
 import type { ExecError, ExecOptions, ExecOutput } from "./exec.js";
+import type { Input } from "./keys.js";
 import type { Prompter } from "./prompt.js";
 import type { Session } from "./session.js";
 import type { Env, Style } from "./style.js";
@@ -57,8 +58,17 @@ export class CommandContext<Arguments = unknown, Flags = unknown> {
 	 */
 	readonly task: RunTask;
 
+	/**
+	 * What the command was piped. `stdin.isTTY` is true at a terminal, where `text()` would wait
+	 * for the user to end input, so a handler reads it only when `isTTY` is false.
+	 *
+	 * @example let sql = ctx.flags.execute ?? (ctx.stdin.isTTY ? undefined : await ctx.stdin.text());
+	 */
+	readonly stdin: Stdin;
+
 	readonly #session: Session;
 	readonly #values = new Map<object, unknown>();
+	#execEnv: Env = {};
 
 	/** @param init - The parsed command and the run it belongs to */
 	constructor(init: CommandContextInit<Arguments, Flags>) {
@@ -71,6 +81,7 @@ export class CommandContext<Arguments = unknown, Flags = unknown> {
 		this.signal = init.session.signal;
 		this.prompt = init.prompt;
 		this.task = init.session.tasks.task;
+		this.stdin = createStdin(init.session.stdin);
 		this.#session = init.session;
 	}
 
@@ -96,7 +107,22 @@ export class CommandContext<Arguments = unknown, Flags = unknown> {
 		command: readonly string[],
 		options?: ExecOptions,
 	): Promise<Result<ExecOutput, ExecError | CancelledError>> {
-		return this.#session.exec(command, options);
+		return this.#session.exec(command, {
+			...options,
+			env: { ...this.#execEnv, ...options?.env },
+		});
+	}
+
+	/**
+	 * Adds variables every child `exec` starts with, over the run's `env` and under a call's own
+	 * `options.env`, so a middleware hands children what it knows (a trace parent) and a caller
+	 * still overrides it. An `undefined` value removes the variable from children.
+	 *
+	 * @param variables - Merged over what earlier calls added
+	 * @example ctx.setExecEnv({ TRACEPARENT: toTraceParent(trace) });
+	 */
+	setExecEnv(variables: Env): void {
+		this.#execEnv = { ...this.#execEnv, ...variables };
 	}
 
 	/**
@@ -108,6 +134,23 @@ export class CommandContext<Arguments = unknown, Flags = unknown> {
 	get<Key extends object>(key: Key): ContextValue<Key> | undefined {
 		if (this.#values.has(key)) return this.#values.get(key) as ContextValue<Key>;
 		return (key as { defaultValue?: ContextValue<Key> }).defaultValue;
+	}
+
+	/**
+	 * Reads a value an earlier middleware must have published. A middleware sees the bare
+	 * context, without the properties earlier ones installed, so this is how it reads them
+	 * without an `undefined` it has no answer for; a missing value fails the run with exit 1.
+	 *
+	 * @param key - The context key to read
+	 * @throws Error When nothing published a value for the key
+	 * @example let db = ctx.require(Database);
+	 */
+	require<Key extends object>(key: Key): NonNullable<ContextValue<Key>> {
+		let value = this.get(key);
+		if (value === undefined || value === null) {
+			throw new Error(`${this.path.join(" ")} read a context key that no middleware published`);
+		}
+		return value as NonNullable<ContextValue<Key>>;
 	}
 
 	/**
@@ -141,6 +184,34 @@ export class CommandContext<Arguments = unknown, Flags = unknown> {
 			writable: false,
 		});
 	}
+}
+
+/** The run's standard input. */
+export interface Stdin {
+	/** Whether stdin is a terminal, as opposed to a pipe or a file. */
+	readonly isTTY: boolean;
+	/** Everything piped in, read once to its end; later calls answer the same text. */
+	text(): Promise<string>;
+}
+
+/** A reader over `input` that reads it to the end at most once. */
+function createStdin(input: Input): Stdin {
+	let reading: Promise<string> | undefined;
+	return {
+		isTTY: input.isTTY === true,
+		text() {
+			reading ??= new Promise((resolve, reject) => {
+				let chunks: string[] = [];
+				input.on("data", (chunk: string | Uint8Array) => {
+					chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8"));
+				});
+				input.once("end", () => resolve(chunks.join("")));
+				input.once("error", reject);
+				input.resume();
+			});
+			return reading;
+		},
+	};
 }
 
 /** A context whatever it parsed, for middleware that runs before every command. */

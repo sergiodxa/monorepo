@@ -6,18 +6,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { failure } from "@sdxc/result";
+import { failure, isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { ExecRequest } from "./exec.js";
 import type { ChainContext } from "./handler.js";
 import type { CommandMiddleware } from "./middleware.js";
 
 import { argument } from "./argument.js";
 import { createCLI } from "./cli.js";
 import { command, commands } from "./command.js";
-import { exit, success, usage } from "./errors.js";
+import { exit, exitCodeOf, success, usage } from "./errors.js";
 import { flag } from "./flag.js";
 import { createCommand } from "./handler.js";
 import { lazy } from "./lazy.js";
@@ -367,6 +368,95 @@ describe("middleware", () => {
 		cli.map(CONTRACT.init, () => failure(new Error("unreachable")));
 
 		expect((await invoke(cli, ["init"])).code).toBe(0);
+	});
+
+	test("hands each middleware what the rest of the chain answered", async () => {
+		let seen: string[] = [];
+		let observe: CommandMiddleware = async (_ctx, next) => {
+			let result = await next();
+			seen.push(isFailure(result) ? `exit ${exitCodeOf(result.error)}` : "ok");
+		};
+		let contract = commands({ ok: command(), bad: command(), denied: command() });
+		let cli = createCLI({ name: "p", commands: contract, middleware: [observe] });
+		cli.map(contract.ok, () => success());
+		cli.map(contract.bad, () => usage("No"));
+		cli.map(
+			contract.denied,
+			createCommand(contract.denied, {
+				middleware: [() => failure(new Error("Denied"))],
+				handler: () => success(),
+			}),
+		);
+
+		await invoke(cli, ["ok"]);
+		let bad = await invoke(cli, ["bad"]);
+		let denied = await invoke(cli, ["denied"]);
+
+		expect(seen).toEqual(["ok", "exit 2", "exit 1"]);
+		expect(bad.code).toBe(2);
+		expect(denied).toMatchObject({ code: 1, stderr: "Denied\n" });
+	});
+
+	test("reads what an earlier middleware published, or fails naming the command", async () => {
+		let read: CommandMiddleware = async (ctx, next) => {
+			ctx.stdout(`${ctx.require(Project)}\n`);
+			await next();
+		};
+		let cli = createCLI({ name: "sdxc", commands: CONTRACT, middleware: [project(), read] });
+		let bare = createCLI({ name: "sdxc", commands: CONTRACT, middleware: [read] });
+		cli.map(CONTRACT.init, () => success());
+		bare.map(CONTRACT.init, () => success());
+
+		expect((await invoke(cli, ["init"], { cwd: "/w" })).stdout).toBe("/w/root\n");
+		expect(await invoke(bare, ["init"])).toMatchObject({
+			code: 1,
+			stderr: "init read a context key that no middleware published\n",
+		});
+	});
+
+	test("adds variables to every child, under the call's own env", async () => {
+		let requests: ExecRequest[] = [];
+		let carry: CommandMiddleware = async (ctx, next) => {
+			ctx.setExecEnv({ TRACEPARENT: "from-middleware", DROPPED: undefined });
+			await next();
+		};
+		let cli = createCLI({ name: "sdxc", commands: CONTRACT, middleware: [carry] });
+		cli.map(CONTRACT.init, async (ctx) => {
+			await ctx.exec(["child"]);
+			await ctx.exec(["child"], { env: { TRACEPARENT: "from-caller" } });
+			return success();
+		});
+
+		await invoke(cli, ["init"], {
+			env: { DROPPED: "inherited", HOME: "/home" },
+			exec: async (_command, request) => {
+				requests.push(request);
+				return success({ code: 0, stdout: "", stderr: "", output: "" });
+			},
+		});
+
+		expect(requests.map((request) => request.env)).toEqual([
+			{ TRACEPARENT: "from-middleware", DROPPED: undefined, HOME: "/home" },
+			{ TRACEPARENT: "from-caller", DROPPED: undefined, HOME: "/home" },
+		]);
+	});
+});
+
+describe("stdin", () => {
+	test("reads what was piped in, and reports a terminal", async () => {
+		let contract = commands({ run: command() });
+		let cli = createCLI({ name: "p", commands: contract });
+		cli.map(contract.run, async (ctx) => {
+			if (ctx.stdin.isTTY) ctx.stdout("terminal\n");
+			else ctx.stdout(`piped ${JSON.stringify(await ctx.stdin.text())}\n`);
+			return success();
+		});
+
+		let piped = await invoke(cli, ["run"], { stdin: "SELECT 1;\n" });
+		let terminal = await invoke(cli, ["run"]);
+
+		expect(piped.stdout).toBe('piped "SELECT 1;\\n"\n');
+		expect(terminal.stdout).toBe("terminal\n");
 	});
 });
 

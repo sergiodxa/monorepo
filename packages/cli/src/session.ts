@@ -69,6 +69,7 @@ export interface PromptRequest {
 export interface Session {
 	cwd: string;
 	env: Env;
+	stdin: Input;
 	stdout: Output;
 	stderr: Output;
 	/** Styling for stdout, with stderr's under `stderr`. */
@@ -225,6 +226,7 @@ export function openSession(io: RunIO, noProgress: boolean, script: Script | und
 	return {
 		cwd,
 		env,
+		stdin,
 		stdout,
 		stderr,
 		style,

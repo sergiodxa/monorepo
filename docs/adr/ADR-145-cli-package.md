@@ -220,6 +220,11 @@ create: command({
   name its answers in the toggle and the summary line.
 - `ChainContext<typeof CHAIN>` types a helper shared by every command behind one middleware
   chain, since each command's own context is assignable to it.
+- A middleware's `next()` resolves to what the rest of the chain answered, so a `log()`
+  middleware records a handler's failure and its `exitCodeOf()` code. It reads what earlier
+  middleware published with `ctx.require(Key)`, and hands child processes variables with
+  `ctx.setExecEnv()`, under each `exec` call's own `env`. `ctx.stdin.text()` reads piped input,
+  which `invoke()` scripts with `stdin`.
 - Ctrl+C or Escape cancels: the prompt answers a `cancelled` failure, the terminal is restored,
   and an unhandled one exits 130 with nothing written.
 - Prompts render on stderr, so `sdxc upgrade --prompt | pbcopy` stays clean, and are erased once
@@ -546,7 +551,9 @@ routes, jobs and MCP tools are.
         tri-state `flag.boolean` (`--git`, `--test`), a prompt's `initial` apart from its
         `default`, group `arguments` and `flags` (`make` alone), `ChainContext`, an unknown
         flag's value, the typed alias in schema errors, flag `heading`s and `tasks`, confirm
-        labels, and list prompts inferring their type
+        labels, and list prompts inferring their type; then, for ADR-146's middleware entries,
+        `next()` resolving to the result, `exitCodeOf`, `ctx.require`, `ctx.setExecEnv` and
+        `ctx.stdin`
 - [x] Phase 3: `spec` on `@sdxc/cli`
   - [x] `spec run` declared in `src/cli-contract.ts`, its handler in `src/cli-run.ts`; the
         `--allow-*` flags are `.optionalValue().list()`, `peelValueFlag`, `parsePluginGrant` and

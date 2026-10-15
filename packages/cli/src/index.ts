@@ -27,7 +27,7 @@ export type {
 	GroupInputs,
 	Node,
 } from "./command.js";
-export type { AnyCommandContext, CommandContextInit } from "./context.js";
+export type { AnyCommandContext, CommandContextInit, Stdin } from "./context.js";
 export type { Exec, ExecOptions, ExecOutput, ExecRequest, Stdio } from "./exec.js";
 export type {
 	BooleanFlagOptions,
@@ -89,6 +89,7 @@ export {
 	UsageError,
 	cancelled,
 	exit,
+	exitCodeOf,
 	success,
 	usage,
 } from "./errors.js";
