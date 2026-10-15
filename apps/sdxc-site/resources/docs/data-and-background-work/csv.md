@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 8
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-15
 ---
 
 CSV is how most people move data in and out of an app: a spreadsheet of contacts to import, a
@@ -314,4 +314,6 @@ files programs read: some parsers take the byte order mark as part of the first 
   statement that makes the import atomic.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — moving a large
   import off the request.
+- [Stream JSON Lines](/docs/data-and-background-work/json-lines) — the same import and export
+  for records with nested data.
 - [`sdxc/csv`](/api/csv) — every option and error field of the reader and writers.

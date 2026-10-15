@@ -82,6 +82,8 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"xml",
 			"html",
 			"csv",
+			"jsonl",
+			"jsonc",
 			"icalendar",
 			"epub",
 			"zip",
