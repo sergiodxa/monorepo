@@ -207,8 +207,9 @@ create: command({
 
 ### 6. Tasks and styling
 
-A task is async work the user waits on. `ctx.task(label, fn)` runs `fn` while a spinner shows the
-label, and answers what `fn` returned:
+A task is async work the user waits on. `ctx.task(label?, options?, fn)` runs `fn` while a spinner
+shows the label, and answers what `fn` returned; the callback comes last so options (`total`,
+`timeout`, `done`) sit beside the label:
 
 ```typescript
 let posts = await ctx.task("Fetching posts", async (task) => {
@@ -228,9 +229,25 @@ posts.data; // what the callback returned
 - **`task.signal` aborts the work.** Ctrl+C aborts it, and so does a `timeout` option, so `fetch`
   and child processes stop with the task instead of outliving the CLI; the task then answers a
   `cancelled` failure, which exits 130 when the handler returns it.
-- **`task.update(label)`** changes what the spinner says. **`task.progress(done, total)`** turns
-  the spinner into a bar with a count, for work with a known size: files copied by `ui add`,
-  entries read from a changelog.
+- **`task.update(label)`** changes what the spinner says.
+- **Counted work shows a bar.** A `total` option, or `task.setTotal(n)` once the size is known
+  (it may grow, as when `ui add --with-deps` finds more components), turns the spinner into a bar,
+  and `task.advance(by = 1)` counts finished work. Parallel steps each call `advance()` when they
+  finish, so none needs to know how far the others got; the count never passes the total. The
+  final line carries the count: `✓ Copying components 10/10 (240 ms)`, or `✗ … 7/10` when the task
+  stops early.
+
+  ```typescript
+  await ctx.task("Copying components", { total: files.length }, async (task) => {
+  	await Promise.all(
+  		files.map(async (file) => {
+  			await writeFile(file.path, file.source);
+  			task.advance();
+  		}),
+  	);
+  });
+  ```
+
 - **The label is optional.** `ctx.task(fn)` shows only the spinner while it runs and erases it
   when it ends, leaving no line behind, for short waits the next output explains (`ui list`
   reading the registry before printing its table). Without a terminal it prints nothing. A
@@ -244,7 +261,7 @@ posts.data; // what the callback returned
   pauses the spinner and resumes it when the child exits, so child output is never interleaved
   with frames.
 - **Without a terminal** on stderr, or with `CI`, `TERM=dumb` or `--no-progress`, nothing
-  animates: a task prints its label once and its final line once, and `update` and `progress`
+  animates: a task prints its label once and its final line once, and `update` and `advance`
   print nothing.
 - `ctx.style` colours and weights text (`style.bold`, `style.dim`, `style.green`, …), off when the
   stream is not a terminal or `NO_COLOR` is set and forced on by `FORCE_COLOR`. Help output uses
@@ -439,7 +456,7 @@ routes, jobs and MCP tools are.
 4. Process context (`exec`, `style`) and `@sdxc/cli/test` with scripted answers.
 5. Prompts: the seven kinds, binding to flags and arguments, the non-terminal rules,
    cancellation, and the virtual-terminal harness with a test per kind.
-6. `task` with `signal`, `timeout`, `update`, `progress`, nesting, terminal ownership with
+6. `task` with `signal`, `timeout`, `update`, `total`/`setTotal`/`advance`, nesting, terminal ownership with
    `exec` and writes, and the
    non-animated fallback.
 7. README, `LICENSE.md`, root README row, docs-site group; bootstrap on npm with its trusted
