@@ -28,14 +28,14 @@ A bundle carries only the subpaths it imports. Import every package through `sdx
 ### Start a project and grow it
 
 ```sh
-npx sdxc create my-app              # a Remix v3 app, or --template org/repo from GitHub
-npx sdxc make controller posts/show # a file where the app layout puts it, with its test
-npx sdxc ui add dialog              # copy a component into the project to edit it
-npx sdxc upgrade                    # move to the latest release and print a prompt for the code
-npx sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts
+sdxc create my-app                   # a Remix v3 app, or --template org/repo from GitHub
+sdxc make controller posts/show      # a file where the app layout puts it, with its test
+sdxc ui add dialog                   # copy a component into the project to edit it
+sdxc upgrade                         # move to the latest release and print a prompt for the code
+sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts
 ```
 
-On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
+Install `sdxc` globally (`npm add -g sdxc`) to type these as written, or prefix them with `npx`. On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
 
 ## API
 
