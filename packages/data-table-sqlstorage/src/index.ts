@@ -20,6 +20,24 @@ import { getTableColumnDefinitions, getTableName, getTablePrimaryKey } from "rem
 
 import { splitSqlStatements } from "./sql-script.js";
 
+/** A value Durable Object SQLite stores and returns. */
+type SqlStorageValue = ArrayBuffer | string | number | null;
+
+/** What one `exec` call answers, as far as the adapter reads it. */
+interface SqlStorageResult {
+	toArray(): Record<string, SqlStorageValue>[];
+	readonly rowsWritten: number;
+}
+
+/**
+ * The call the adapter makes on a Durable Object's `ctx.storage.sql`. Declared here so storage
+ * typed by any source fits it: a Worker's generated `SqlStorage`, `@cloudflare/workers-types`,
+ * or a test's own.
+ */
+export interface SqlStorageBinding {
+	exec(query: string, ...bindings: SqlStorageValue[]): SqlStorageResult;
+}
+
 /** What a caller reaching for a transaction is told the platform offers instead. */
 let transactionsUnsupportedMessage =
 	"Durable Object SQL storage has no transaction statements. Every write an object makes " +
@@ -47,7 +65,7 @@ interface SqlStorageAdapterOptions {
  * @returns A `DatabaseDriver` implementation for `SqlStorage`.
  */
 export function createSQLStorageDatabaseAdapter(
-	db: SqlStorage,
+	db: SqlStorageBinding,
 	options?: SqlStorageAdapterOptions,
 ): DatabaseDriver {
 	return {
@@ -930,7 +948,7 @@ function hasReturningClause(operation: DataManipulationOperation): boolean {
 
 function normalizeAffectedRowsForReader(
 	kind: DataManipulationOperation["kind"],
-	cursor: SqlStorageCursor<Record<string, SqlStorageValue>>,
+	cursor: SqlStorageResult,
 ): number | undefined {
 	if (isWriteOperationKind(kind)) {
 		return cursor.rowsWritten;
@@ -968,7 +986,7 @@ function normalizeInsertIdForReader(
 function normalizeInsertIdForRun(
 	kind: DataManipulationOperation["kind"],
 	operation: DataManipulationOperation,
-	db: SqlStorage,
+	db: SqlStorageBinding,
 ): unknown {
 	if (!isInsertOperationKind(kind) || !isInsertOperation(operation)) {
 		return undefined;
