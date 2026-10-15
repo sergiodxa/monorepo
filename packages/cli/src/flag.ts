@@ -39,7 +39,8 @@ export interface FlagSpec {
 	valueName: string | undefined;
 	/**
 	 * Whether `default` was declared; a declared `undefined` still counts. A boolean without one
-	 * still reads `false` when missing, but a prompt bound to it asks.
+	 * still reads `false` when missing, but a prompt bound to it asks, as one does for a default
+	 * of `undefined`.
 	 */
 	hasDefault: boolean;
 	default: unknown;
@@ -56,6 +57,8 @@ export interface FlagSpec {
 	optionalValue: boolean;
 	/** Left out of the help. */
 	hidden: boolean;
+	/** The help section the flag is listed under; `undefined` lists it under "Options". */
+	heading: string | undefined;
 }
 
 /** A declared flag, typed with the value its handler reads. */
@@ -120,13 +123,29 @@ export interface FlagOptions {
 	prompt?: PromptDeclaration;
 	/** Left out of the help. */
 	hidden?: boolean;
+	/**
+	 * Lists the flag in the help under this section title instead of "Options", so a command
+	 * with many flags reads in groups. Sections follow in the order their first flag is declared.
+	 */
+	heading?: string;
 }
 
 /** Options a boolean flag takes. */
 export interface BooleanFlagOptions extends FlagOptions {
-	/** The value when neither `--<name>` nor `--no-<name>` is passed. @default false */
-	default?: boolean;
+	/**
+	 * The value when neither `--<name>` nor `--no-<name>` is passed. `undefined` leaves the flag
+	 * unset, so a configured default or a later question decides, and the help shows `--[no-]<name>`.
+	 * @default false
+	 */
+	default?: boolean | undefined;
 }
+
+/** The handler's value type for a boolean flag declared with `options`. */
+type BooleanValue<Options> = Options extends { default: infer Default }
+	? undefined extends Default
+		? boolean | undefined
+		: boolean
+	: boolean;
 
 /** Options a string or number flag takes. */
 export interface ValueFlagOptions extends FlagOptions {
@@ -175,6 +194,7 @@ function baseSpec(kind: FlagKind, name: string, options: ValueFlagOptions): Flag
 		list: false,
 		optionalValue: false,
 		hidden: options.hidden === true,
+		heading: options.heading,
 	};
 }
 
@@ -199,11 +219,18 @@ function valueFlag(spec: FlagSpec): ValueFlag<unknown, boolean, boolean, boolean
 export const flag = {
 	/**
 	 * `--<name>` reads `true` and `--no-<name>` reads `false`; passing both is a usage error.
+	 * Neither reads the `default`: `false`, or `undefined` for a tri-state flag declared with
+	 * `default: undefined`.
 	 *
 	 * @param name - The long name, in kebab case
+	 * @example flags: { git: flag.boolean("git", { default: undefined }) } // boolean | undefined
 	 */
-	boolean(name: string, options: BooleanFlagOptions = {}): Flag<boolean> {
-		let spec = baseSpec("boolean", name, options);
+	boolean<const Options extends BooleanFlagOptions = Record<never, never>>(
+		name: string,
+		options?: Options,
+	): Flag<BooleanValue<Options>> {
+		let given: BooleanFlagOptions = options ?? {};
+		let spec = baseSpec("boolean", name, given);
 		if (!spec.hasDefault) spec.default = false;
 		spec.required = false;
 		return { [FLAG]: spec };

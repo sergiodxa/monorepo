@@ -24,6 +24,7 @@ export type {
 	FlagsShape,
 	Group,
 	GroupDefinition,
+	GroupInputs,
 	Node,
 } from "./command.js";
 export type { AnyCommandContext, CommandContextInit } from "./context.js";
@@ -37,7 +38,13 @@ export type {
 	ValueFlag,
 	ValueFlagOptions,
 } from "./flag.js";
-export type { CLITypes, CommandAction, CommandHandler, HandlerContext } from "./handler.js";
+export type {
+	ChainContext,
+	CLITypes,
+	CommandAction,
+	CommandHandler,
+	HandlerContext,
+} from "./handler.js";
 export type { Input } from "./keys.js";
 export type { Lazy } from "./lazy.js";
 export type {

@@ -8,7 +8,7 @@
  */
 
 import type { ArgumentsOf, FlagsOf, Node } from "./command.js";
-import type { CommandContext } from "./context.js";
+import type { AnyCommandContext, CommandContext } from "./context.js";
 import type { Carried } from "./flag.js";
 import type { AnyCommandMiddleware, ChainProperties, CommandResult } from "./middleware.js";
 
@@ -41,6 +41,19 @@ export type HandlerContext<
 > = CommandContext<ArgumentsOf<Target>, FlagsOf<Target>> &
 	ChainProperties<Global> &
 	ChainProperties<Chain>;
+
+/**
+ * The context of any command that runs behind `Chain`, whatever it parsed: the type a helper
+ * shared by several commands takes, since each command's own context is assignable to it.
+ *
+ * @example
+ * const MAKE = [project(), packageRoot()] as const;
+ * function write(ctx: ChainContext<typeof MAKE>, file: string) { ctx.project.root; }
+ */
+export type ChainContext<
+	Chain extends readonly AnyCommandMiddleware[] = [],
+	Global extends readonly AnyCommandMiddleware[] = CurrentChain,
+> = AnyCommandContext & ChainProperties<Global> & ChainProperties<Chain>;
 
 /** The work itself: a success exits 0 and a failure exits by its kind. */
 export type CommandHandler<Context> = (context: Context) => CommandResult | Promise<CommandResult>;

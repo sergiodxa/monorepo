@@ -11,6 +11,7 @@ import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
+import type { ChainContext } from "./handler.js";
 import type { CommandMiddleware } from "./middleware.js";
 
 import { argument } from "./argument.js";
@@ -43,9 +44,14 @@ const CONTRACT = commands({
 				}),
 				git: flag.boolean("git", { prompt: prompt.confirm({ message: "Initialize git?" }) }),
 				install: flag.boolean("install", { default: true, description: "Install dependencies" }),
-				allowNet: flag.string("allow-net", { valueName: "host" }).optionalValue().list(),
+				color: flag.boolean("color", { default: undefined, description: "Colour the output" }),
+				allowNet: flag
+					.string("allow-net", { valueName: "host", heading: "Permissions" })
+					.optionalValue()
+					.list(),
 			},
 			examples: ["ui add button dialog"],
+			tasks: true,
 		}),
 		list: command({ description: "List components", hidden: true }),
 	}),
@@ -99,19 +105,51 @@ describe("help", () => {
 				"  <components...>  Names",
 				"",
 				"Options:",
-				"  --with-deps               Copy what they reach too",
-				"  --template <name>         Template (default: app)",
+				"  --with-deps        Copy what they reach too",
+				"  --template <name>  Template (default: app)",
 				"  --[no-]git",
-				"  --no-install              Install dependencies",
+				"  --no-install       Install dependencies",
+				"  --[no-]color       Colour the output",
+				"  --no-progress      Print tasks without animation",
+				"  -h, --help         Show this help",
+				"",
+				"Permissions:",
 				"  --allow-net[=<host,...>]",
-				"  --no-progress             Print tasks without animation",
-				"  -h, --help                Show this help",
 				"",
 				"Examples:",
 				"  sdxc ui add button dialog",
 				"",
 			].join("\n"),
 		);
+	});
+
+	test("lists --no-progress only for a command that runs tasks", async () => {
+		let cli = createCLI({ name: "sdxc", commands: CONTRACT });
+
+		let init = await invoke(cli, ["init", "--help"]);
+
+		expect(init.stdout).not.toContain("--no-progress");
+		expect(init.stdout).toContain("--dry-run");
+	});
+
+	test("prints a group's own arguments and flags beside its members", async () => {
+		let contract = commands({
+			make: commands({
+				description: "Make a file",
+				arguments: { kind: argument(s.string(), { description: "What to make" }) },
+				flags: { dryRun: flag.boolean("dry-run") },
+				job: command({ description: "A job" }),
+			}),
+		});
+		let cli = createCLI({ name: "sdxc", commands: contract });
+
+		let help = await invoke(cli, ["make", "--help"]);
+
+		expect(help.stdout).toContain(
+			"Usage: sdxc make <command> [options]\n       sdxc make <kind> [options]\n",
+		);
+		expect(help.stdout).toContain("  <kind>  What to make");
+		expect(help.stdout).toContain("  --dry-run");
 	});
 
 	test("prints --version at the root only", async () => {
@@ -207,6 +245,45 @@ describe("running", () => {
 		expect(await invoke(cli, ["ui"])).toMatchObject({ code: 0, stdout: "group ui\n" });
 	});
 
+	test("runs a mapped group with the arguments and flags it declares", async () => {
+		let contract = commands({
+			make: commands({
+				arguments: {
+					kind: argument(s.enum_(["job", "model"]), {
+						prompt: prompt.select({ message: "What?", options: ["job", "model"] }),
+					}),
+				},
+				flags: { dryRun: flag.boolean("dry-run") },
+				job: command({ flags: { dryRun: flag.boolean("dry-run") } }),
+			}),
+		});
+		let cli = createCLI({ name: "sdxc", commands: contract });
+		cli.map(contract.make, (ctx) => {
+			expectTypeOf(ctx.arguments.kind).toEqualTypeOf<"job" | "model">();
+			expectTypeOf(ctx.flags.dryRun).toEqualTypeOf<boolean>();
+			ctx.stdout(`group ${ctx.arguments.kind} ${ctx.flags.dryRun}\n`);
+			return success();
+		});
+		cli.map(contract.make.job, (ctx) => {
+			ctx.stdout(`job ${ctx.flags.dryRun}\n`);
+			return success();
+		});
+
+		let asked = await invoke(cli, ["make", "--dry-run"], { answers: { kind: "model" } });
+		let typed = await invoke(cli, ["make", "model"]);
+		let member = await invoke(cli, ["make", "--dry-run", "job"]);
+		let quiet = await invoke(cli, ["make"], { interactive: false });
+		let wrong = await invoke(cli, ["make", "jobb"]);
+
+		expect(asked.stdout).toBe("group model true\n");
+		expect(typed.stdout).toBe("group model false\n");
+		expect(member.stdout).toBe("job true\n");
+		expect(quiet.code).toBe(2);
+		expect(quiet.stderr).toMatch(/^<kind> is required when stdin is not a terminal\n/);
+		expect(wrong.code).toBe(2);
+		expect(wrong.stderr).toMatch(/^Unknown command "jobb" for sdxc make; did you mean "job"\?\n/);
+	});
+
 	test("refuses mapping a command twice or one outside the contract", () => {
 		let cli = createCLI({ name: "sdxc", commands: CONTRACT });
 		cli.map(CONTRACT.init, () => success());
@@ -256,6 +333,33 @@ describe("middleware", () => {
 		await invoke(cli, ["init"]);
 
 		expect(order).toEqual(["cli", "command", "handler"]);
+	});
+
+	test("types a helper shared by commands behind one chain", async () => {
+		const CHAIN = [project()] as const;
+		/** Reads what every command behind `CHAIN` receives. */
+		let where = (ctx: ChainContext<typeof CHAIN>) => `${ctx.project} ${ctx.path.join(" ")}\n`;
+		let cli = createCLI({ name: "sdxc", commands: CONTRACT });
+		cli.map(
+			CONTRACT.init,
+			createCommand(CONTRACT.init, {
+				middleware: CHAIN,
+				handler: (ctx) => success(ctx.stdout(where(ctx))),
+			}),
+		);
+		cli.map(
+			CONTRACT.ui.add,
+			createCommand(CONTRACT.ui.add, {
+				middleware: CHAIN,
+				handler: (ctx) => success(ctx.stdout(where(ctx))),
+			}),
+		);
+
+		let init = await invoke(cli, ["init"], { cwd: "/w" });
+		let add = await invoke(cli, ["ui", "add", "button", "--no-git"], { cwd: "/w" });
+
+		expect(init.stdout).toBe("/w/root init\n");
+		expect(add.stdout).toBe("/w/root ui add\n");
 	});
 
 	test("ends the run without the handler when a middleware skips next()", async () => {

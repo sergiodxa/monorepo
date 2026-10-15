@@ -48,6 +48,8 @@ export interface Entry {
 	/** Flags by long name and by alias. */
 	longs: ReadonlyMap<string, FlagEntry>;
 	shorts: ReadonlyMap<string, FlagEntry>;
+	/** Its handler runs tasks, so the help lists `--no-progress`. */
+	tasks: boolean;
 }
 
 /** The whole indexed contract. */
@@ -81,35 +83,34 @@ export function buildTree(name: string, root: Group): Tree {
 		let longs = new Map<string, FlagEntry>();
 		let shorts = new Map<string, FlagEntry>();
 		let args: ArgumentEntry[] = [];
-		if (!isGroup(node)) {
-			for (let [key, declared] of Object.entries(node.flags)) {
-				let flag = { key, spec: flagSpec(declared) };
-				for (let long of [flag.spec.name, ...flag.spec.aliases]) {
-					if (RESERVED_NAMES.has(long) || long.startsWith("no-")) {
-						throw new Error(`${title}: --${long} is reserved for every command`);
-					}
-					if (longs.has(long)) throw new Error(`${title}: two flags are named --${long}`);
-					longs.set(long, flag);
+		let declaration = isGroup(node) ? groupSpec(node) : node;
+		for (let [key, declared] of Object.entries(declaration.flags)) {
+			let flag = { key, spec: flagSpec(declared) };
+			for (let long of [flag.spec.name, ...flag.spec.aliases]) {
+				if (RESERVED_NAMES.has(long) || long.startsWith("no-")) {
+					throw new Error(`${title}: --${long} is reserved for every command`);
 				}
-				let short = flag.spec.short;
-				if (short !== undefined) {
-					if (short.length !== 1 || RESERVED_SHORTS.has(short)) {
-						throw new Error(`${title}: -${short} must be one character other than h`);
-					}
-					if (shorts.has(short)) throw new Error(`${title}: two flags are named -${short}`);
-					shorts.set(short, flag);
-				}
-				flags.push(flag);
+				if (longs.has(long)) throw new Error(`${title}: two flags are named --${long}`);
+				longs.set(long, flag);
 			}
-			let entriesOfArguments = Object.entries(node.arguments);
-			entriesOfArguments.forEach(([key, declared], index) => {
-				let spec = argumentSpec(declared);
-				if (spec.variadic && index < entriesOfArguments.length - 1) {
-					throw new Error(`${title}: the variadic argument <${key}> must be the last one`);
+			let short = flag.spec.short;
+			if (short !== undefined) {
+				if (short.length !== 1 || RESERVED_SHORTS.has(short)) {
+					throw new Error(`${title}: -${short} must be one character other than h`);
 				}
-				args.push({ key, spec });
-			});
+				if (shorts.has(short)) throw new Error(`${title}: two flags are named -${short}`);
+				shorts.set(short, flag);
+			}
+			flags.push(flag);
 		}
+		let entriesOfArguments = Object.entries(declaration.arguments);
+		entriesOfArguments.forEach(([key, declared], index) => {
+			let spec = argumentSpec(declared);
+			if (spec.variadic && index < entriesOfArguments.length - 1) {
+				throw new Error(`${title}: the variadic argument <${key}> must be the last one`);
+			}
+			args.push({ key, spec });
+		});
 		let entry: Entry = {
 			node,
 			path,
@@ -120,6 +121,7 @@ export function buildTree(name: string, root: Group): Tree {
 			flags,
 			longs,
 			shorts,
+			tasks: declaration.tasks,
 		};
 		entries.set(node, entry);
 		for (let long of longs.keys()) owners.set(long, [...(owners.get(long) ?? []), entry]);

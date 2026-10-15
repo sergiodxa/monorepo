@@ -153,12 +153,43 @@ describe("flags", () => {
 		expect(run.seen).toMatchObject({ arguments: { directory: "dir" }, flags: { allowNet: true } });
 	});
 
-	test("rejects an empty comma list and a missing value", async () => {
-		let empty = await parse(["run", "--allow-env="]);
-		let missing = await parse(["run", "--output"]);
+	test("rejects an empty comma list, an empty value and a missing value alike", async () => {
+		let list = await parse(["run", "--allow-env=,"]);
+		let empty = await parse(["run", "--seed="]);
+		let bare = await parse(["run", "--allow-env="]);
+		let missing = await parse(["run", "--seed"]);
 
-		expect(empty.stderr).toContain("--allow-env= needs at least one value");
-		expect(missing.stderr).toContain("--output needs a value");
+		expect(list.stderr).toContain("--allow-env needs a value\n");
+		expect(bare.stderr).toContain("--allow-env needs a value\n");
+		expect(empty.stderr).toContain("--seed needs a value\n");
+		expect(missing.stderr).toContain("--seed needs a value\n");
+	});
+
+	test("names the alias typed when a value fails", async () => {
+		let run = await parse(["run", "--jobs=many"]);
+		let main = await parse(["run", "--concurrency", "many"]);
+
+		expect(run.code).toBe(2);
+		expect(run.stderr).toContain('--jobs: expects a number, got "many"');
+		expect(main.stderr).toContain('--concurrency: expects a number, got "many"');
+	});
+
+	test("reads an unknown flag's value when every command declaring it takes one", async () => {
+		let run = await parse(["ui", "remove", "--output", "out.txt"]);
+
+		expect(run.code).toBe(2);
+		expect(run.stderr).toContain("--output is not a flag of prog ui remove; prog run takes it");
+		expect(run.stderr).not.toContain("Unexpected argument");
+	});
+
+	test("moves flags written before a member's name onto that member", async () => {
+		let run = await parse(["ui", "--force", "update", "button"]);
+		let unknown = await parse(["ui", "--with-deps", "update", "button"]);
+
+		expect(run.code).toBe(0);
+		expect(run.seen).toMatchObject({ flags: { force: true } });
+		expect(unknown.code).toBe(2);
+		expect(unknown.stderr).toContain("--with-deps is not a flag of prog ui update");
 	});
 
 	test("checks values through the flag's schema", async () => {

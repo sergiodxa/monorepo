@@ -7,12 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { Command } from "./command.js";
 import type { HandlerContext } from "./handler.js";
+import type { PromptError } from "./prompt.js";
 
 import { argument } from "./argument.js";
 import { createCLI } from "./cli.js";
@@ -138,7 +141,90 @@ describe("prompts bound to flags and arguments", () => {
 	});
 });
 
+describe("tri-state boolean flags", () => {
+	/** A command whose `--git` stays unset unless passed or answered. */
+	const TRI_STATE = commands({
+		go: command({
+			flags: {
+				git: flag.boolean("git", {
+					default: undefined,
+					prompt: prompt.confirm({ message: "Initialize git?" }),
+				}),
+				cache: flag.boolean("cache", { default: undefined }),
+			},
+		}),
+	});
+
+	test("read undefined when neither spelling is passed, and ask on a terminal", async () => {
+		let cli = createCLI({ name: "app", commands: TRI_STATE });
+		cli.map(TRI_STATE.go, (ctx) => {
+			expectTypeOf(ctx.flags.git).toEqualTypeOf<boolean | undefined>();
+			ctx.stdout(`${String(ctx.flags.git)} ${String(ctx.flags.cache)}\n`);
+			return success();
+		});
+
+		let quiet = await invoke(cli, ["go"], { interactive: false });
+		let asked = await invoke(cli, ["go"], { answers: { git: true } });
+		let given = await invoke(cli, ["go", "--no-git", "--cache"], { answers: {} });
+
+		expect(quiet.stdout).toBe("undefined undefined\n");
+		expect(asked.stdout).toBe("true undefined\n");
+		expect(given.stdout).toBe("false true\n");
+	});
+});
+
 describe("prompts a handler asks", () => {
+	test("start a terminal from `initial` and answer `default` without one", async () => {
+		let cli = program(async (ctx) => {
+			let git = await ctx.prompt.confirm({
+				message: "Initialize git?",
+				default: false,
+				initial: true,
+				name: "git",
+			});
+			return isFailure(git) ? "failed" : String(git.data);
+		});
+
+		let quiet = await invoke(cli, ["ask"], { interactive: false });
+		let entered = await invoke(cli, ["ask"], { tty: {}, keys: ["x", "enter"] });
+
+		expect(quiet.stdout).toBe("false\n");
+		expect(entered.screens[0]).toBe("? Initialize git? (Y/n) › ● Yes / ○ No");
+		expect(entered.stdout).toBe("true\n");
+	});
+
+	test("confirm: names its answers, in the toggle and the summary", async () => {
+		let cli = program(async (ctx) => {
+			let mode = await ctx.prompt.confirm({
+				message: "Mode",
+				active: "fast",
+				inactive: "careful",
+				default: false,
+			});
+			return isFailure(mode) ? "failed" : String(mode.data);
+		});
+
+		let run = await invoke(cli, ["ask"], { tty: {}, keys: ["x", "enter"] });
+
+		expect(run.screens[0]).toBe("? Mode (y/N) › ○ fast / ● careful");
+		expect(run.stderr).toBe("✓ Mode careful");
+	});
+
+	test("infer a list prompt's value type from its options", async () => {
+		let cli = program(async (ctx) => {
+			let names = ["a", "b"];
+			let picked = await ctx.prompt.multiselect({ message: "Which?", options: names, default: [] });
+			let one = await ctx.prompt.select({ message: "One?", options: names, default: "a" });
+			expectTypeOf(picked).toEqualTypeOf<Result<string[], PromptError>>();
+			expectTypeOf(one).toEqualTypeOf<Result<string, PromptError>>();
+			return isFailure(picked) || isFailure(one) ? "failed" : `${picked.data.join()} ${one.data}`;
+		});
+
+		let run = await invoke(cli, ["ask"], { answers: [["b"], "b"] });
+
+		expect(run.stdout).toBe("b b\n");
+	});
+
 	test("answer the default without a terminal, and from the script with one", async () => {
 		let cli = program(async (ctx) => {
 			let overwrite = await ctx.prompt.confirm({

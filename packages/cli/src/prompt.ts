@@ -65,7 +65,12 @@ export interface NumberOptions extends PromptBase {
 }
 
 /** A yes-or-no question. */
-export type ConfirmOptions = PromptBase;
+export interface ConfirmOptions extends PromptBase {
+	/** What the toggle and the summary line call a yes. @default "Yes" */
+	active?: string;
+	/** What the toggle and the summary line call a no. @default "No" */
+	inactive?: string;
+}
 
 /** One value from a list. */
 export interface SelectOptions<T = unknown> extends PromptBase {
@@ -148,6 +153,12 @@ export const prompt = {
 export interface AskOptions<T> {
 	/** The answer without a terminal, so the command still runs in CI or under an agent. */
 	default: T;
+	/**
+	 * What a terminal starts from, preselected or filled in, when it differs from `default`: a
+	 * question can answer no in CI and still take yes on Enter.
+	 * @default the `default`
+	 */
+	initial?: T;
 	/** The name a test's scripted `answers` object answers this prompt by. */
 	name?: string;
 	/** Checks the answer; a failed check keeps the prompt open with the issue under it. */
@@ -163,14 +174,14 @@ export interface Prompter {
 	password(options: PasswordOptions & AskOptions<string>): Promise<Result<string, PromptError>>;
 	number(options: NumberOptions & AskOptions<number>): Promise<Result<number, PromptError>>;
 	confirm(options: ConfirmOptions & AskOptions<boolean>): Promise<Result<boolean, PromptError>>;
-	select<T>(options: SelectOptions<T> & AskOptions<T>): Promise<Result<T, PromptError>>;
+	select<T>(options: SelectOptions<T> & AskOptions<NoInfer<T>>): Promise<Result<T, PromptError>>;
 	multiselect<T>(
-		options: MultiselectOptions<T> & AskOptions<readonly T[]>,
+		options: MultiselectOptions<T> & AskOptions<readonly NoInfer<T>[]>,
 	): Promise<Result<T[], PromptError>>;
 	search<T>(
-		options: SearchOptions<T> & { multiple: true } & AskOptions<readonly T[]>,
+		options: SearchOptions<T> & { multiple: true } & AskOptions<readonly NoInfer<T>[]>,
 	): Promise<Result<T[], PromptError>>;
-	search<T>(options: SearchOptions<T> & AskOptions<T>): Promise<Result<T, PromptError>>;
+	search<T>(options: SearchOptions<T> & AskOptions<NoInfer<T>>): Promise<Result<T, PromptError>>;
 }
 
 /** The choices of a list prompt with every label and flag filled in. */

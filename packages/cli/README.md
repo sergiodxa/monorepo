@@ -117,11 +117,11 @@ run.stdout; // "Hello, Ada!\n"
 
 ### `commands(definition: GroupDefinition): Group`
 
-A group of commands keyed by name, with an optional `description` and `hidden`; groups nest, so `app users find` is `contract.users.find`.
+A group of commands keyed by name, with an optional `description` and `hidden`; groups nest, so `app users find` is `contract.users.find`. A group may declare its own `arguments`, `flags` and `tasks`, read by a handler mapped onto the group when no member is named: `app make` with a `kind` argument whose prompt asks which member to run. A flag written before a member's name moves to that member.
 
 ### `command(definition: CommandDefinition): Command`
 
-One command: `description`, `arguments`, `flags`, `examples` for its help, and `hidden`. Its arguments and flags type the handler's `ctx.arguments` and `ctx.flags`.
+One command: `description`, `arguments`, `flags`, `examples` for its help, `hidden`, and `tasks: true` when its handler runs `ctx.task`, which lists `--no-progress` in its help. Its arguments and flags type the handler's `ctx.arguments` and `ctx.flags`.
 
 ### `argument(schema: StandardSchemaV1, options?: SingleArgumentOptions): Argument`
 
@@ -133,21 +133,21 @@ The remaining positionals as an array, with `min`, `max` and `default`; `min: 1`
 
 ### `flag.boolean(name: string, options?: BooleanFlagOptions): Flag<boolean>`
 
-`--name` and the generated `--no-name`; passing both is a usage error.
+`--name` and the generated `--no-name`; passing both is a usage error. With `default: undefined` the flag is `boolean | undefined`, unset when neither is passed, so a configuration or a later question decides; the help shows `--[no-]name`.
 
 ### `flag.string(name: string, options?: ValueFlagOptions): ValueFlag<string>` and `flag.number(name, options?)`
 
-A flag with a value, as `--name value` or `--name=value`, checked by `options.schema` when given. `options` also take `default`, `required`, `prompt`, `short` (`-n`), `aliases`, `valueName`, `description` and `hidden`.
+A flag with a value, as `--name value` or `--name=value`, checked by `options.schema` when given. `options` also take `default`, `required`, `prompt`, `short` (`-n`), `aliases`, `valueName`, `description` and `hidden`. Every flag kind takes `heading`, the help section it is listed under: `{ heading: "Permissions" }`.
 
 - `.multiple()`: the flag may repeat, and its value is an array.
 - `.list()`: a comma list, `--env=HOME,PATH`.
 - `.optionalValue()`: the flag may stand alone, `--allow-net` or `--allow-net=api.example.com`; alone it is `true`.
 
-A flag belongs to the command that declares it: passing it to another command is a usage error naming the commands that take it.
+A flag belongs to the command that declares it: passing it to another command is a usage error naming the commands that take it, and the value written after it is read as its value. A value that fails is reported under the name typed (`--jobs`, not `--concurrency`), and an empty `--name=` is the same usage error as a missing value.
 
 ### `prompt.text | password | number | confirm | select | multiselect | search(options)`
 
-A prompt declaration for a flag's or an argument's `prompt`. Every kind takes `message` and `ask` (`"missing"`, the default, or `"always"` to show it even when a `default` exists); list kinds take `options` as values or `{ value, label, hint, disabled }`. `password` takes `mask`, `number` takes `min`, `max` and `step`, `multiselect` and `search` take `min` and `max`, and `search` takes `multiple`. A failed schema check keeps the prompt open with the issue under it.
+A prompt declaration for a flag's or an argument's `prompt`. Every kind takes `message` and `ask` (`"missing"`, the default, or `"always"` to show it even when a `default` exists); list kinds take `options` as values or `{ value, label, hint, disabled }`. `password` takes `mask`, `number` takes `min`, `max` and `step`, `confirm` takes `active` and `inactive` (the words for yes and no), `multiselect` and `search` take `min` and `max`, and `search` takes `multiple`. A failed schema check keeps the prompt open with the issue under it.
 
 ### `createCLI(options: CLIOptions): CLI`
 
@@ -178,7 +178,7 @@ What a handler receives.
 - `cwd`, `env`, `signal`: the run's directory, environment, and the signal Ctrl+C aborts.
 - `stdout(text)`, `stderr(text)`: write output; a running task redraws around them.
 - `style`: colours for stdout, and `style.stderr` for stderr, off without a terminal or with `NO_COLOR`.
-- `prompt.text | password | number | confirm | select | multiselect | search(options)`: ask from a handler. Each takes a `default` used without a terminal, plus `name` for scripted answers and `schema`.
+- `prompt.text | password | number | confirm | select | multiselect | search(options)`: ask from a handler. Each takes a `default` used without a terminal, `initial` when a terminal should start elsewhere (`default: false, initial: true` answers no in CI and yes on Enter), plus `name` for scripted answers and `schema`. A list prompt's value type comes from its `options`.
 - `task(label?, fn)`: runs `fn` under a spinner and answers a `Result`; `fn` receives a `Task`.
 - `exec(command, options?)`: runs a program with no shell. `options.stdio` is `"inherit"`, `"ignore"`, `"collect"` or `"stderr"` (its stdout to the CLI's stderr), and `"inherit"` and `"stderr"` pause any spinner. Answers the exit code and collected output, or an `ExecError`.
 - `get(key)`, `has(key)`, `set(key, value, { property }?)`: read and publish values under context keys; `property` installs the value as `ctx.<property>`.
@@ -228,6 +228,17 @@ What `cli.run` and `ctx.exec` take and answer.
 #### `HandlerContext<Target, Chain>`, `ArgumentsOf<Target>`, `FlagsOf<Target>`
 
 The context, arguments and flags a command's handler receives, for typing helpers.
+
+#### `ChainContext<Chain>`
+
+The context of any command behind `Chain`, whatever it parsed, for a helper several commands share:
+
+```typescript
+const MIDDLEWARE = [database("app.db")] as const;
+function findUser(ctx: ChainContext<typeof MIDDLEWARE>, email: string) {
+	return ctx.db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+}
+```
 
 ## Patterns
 

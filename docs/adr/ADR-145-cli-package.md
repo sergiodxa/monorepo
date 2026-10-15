@@ -92,24 +92,35 @@ export let sdxc = commands({
 ```
 
 - `commands({...})` nests: a group's keys are its subcommands, and `sdxc ui add` is
-  `sdxc.ui.add`. A group without a mapped handler of its own prints its help.
+  `sdxc.ui.add`. A group without a mapped handler of its own prints its help. A group may
+  declare its own `arguments` and `flags` for a handler mapped onto it: `sdxc make` alone
+  declares `<kind>` and `<name>` with prompts, so a terminal is asked and a script gets a usage
+  error, and a word its first argument rejects is reported as an unknown command. A flag written
+  before a member's name (`sdxc make --dry-run job`) moves to that member.
 - A flag belongs to the command that declares it. `--force` on `ui add` is a usage error naming
   the commands that take it; this replaces `ui`'s and `make`'s `FLAGS` tables. `make` becomes a
   group, `make job`, `make controller`, `make stubs`, so each kind declares its own flags.
 - Arguments and flag values parse through any Standard Schema, with `remix/data-schema` the
   documented one; the handler's `ctx.arguments` and `ctx.flags` are its
   output types. Every failed argument or flag is reported in one usage error.
-- Flag kinds: `flag.boolean` (with `--no-<name>` generated, and passing both is a usage error),
+- Flag kinds: `flag.boolean` (with `--no-<name>` generated, and passing both is a usage error;
+  `default: undefined` makes it `boolean | undefined`, unset unless passed, for a choice a
+  configuration or a question makes, shown as `--[no-]<name>`),
   `flag.string` and `flag.number` (`--name value` and `--name=value`), `.multiple()` for a
   repeated flag, `.list()` for a comma list, and `.optionalValue()` for `spec`'s
   `--allow-net[=hosts]`. `-h`/`--help` and `--` are reserved; a short alias is declared per flag.
+- A value that fails is reported under the name typed (`--jobs`, not `--concurrency`), an empty
+  `--name=` reads as a missing value, and a flag another command declares consumes its value, so
+  `--cron "0 8 * * *"` on the wrong kind is one error rather than two.
 
 ### 2. Help is generated
 
 `--help` at any level, and every usage error, prints help rendered from the contract: the usage
 line, the subcommands with their descriptions, the arguments, then the flags with their value
-names and defaults. Unknown commands suggest the closest declared name. The five `*_USAGE`
-strings are deleted.
+names and defaults. A flag's `heading` lists it under its own section (`spec run`'s Scheduling,
+Generated data, Diagnostics and Permissions), and `--no-progress` is listed only for a command
+declared with `tasks: true`, though every command accepts it. Unknown commands suggest the
+closest declared name. The five `*_USAGE` strings are deleted.
 
 ### 3. A runtime that maps handlers
 
@@ -203,7 +214,12 @@ create: command({
   the user should see; the flag still skips it.
 - `ctx.prompt.*` is also callable from a handler for questions that depend on earlier work (which
   of the files `update` found edited to overwrite). Each call takes a `default` used without a
-  terminal, so the handler stays runnable non-interactively.
+  terminal, so the handler stays runnable non-interactively, and an optional `initial` the
+  terminal starts from: `create`'s git question answers no in CI and yes on Enter. A list
+  prompt's value type is inferred from its `options`, and `confirm` takes `active`/`inactive` to
+  name its answers in the toggle and the summary line.
+- `ChainContext<typeof CHAIN>` types a helper shared by every command behind one middleware
+  chain, since each command's own context is assignable to it.
 - Ctrl+C or Escape cancels: the prompt answers a `cancelled` failure, the terminal is restored,
   and an unhandled one exits 130 with nothing written.
 - Prompts render on stderr, so `sdxc upgrade --prompt | pbcopy` stays clean, and are erased once
@@ -526,8 +542,15 @@ routes, jobs and MCP tools are.
         directory and only applies to one `create` made; `create` installs nothing, per ADR-142,
         so it has no install task; and `upgrade` reads the target's `changelog.jsonl` from
         `unpkg.com` to know whether it crosses a breaking release before installing it
+  - [x] Gaps the migration worked around, fixed in `@sdxc/cli` and the workarounds removed:
+        tri-state `flag.boolean` (`--git`, `--test`), a prompt's `initial` apart from its
+        `default`, group `arguments` and `flags` (`make` alone), `ChainContext`, an unknown
+        flag's value, the typed alias in schema errors, flag `heading`s and `tasks`, confirm
+        labels, and list prompts inferring their type
 - [x] Phase 3: `spec` on `@sdxc/cli`
   - [x] `spec run` declared in `src/cli-contract.ts`, its handler in `src/cli-run.ts`; the
         `--allow-*` flags are `.optionalValue().list()`, `peelValueFlag`, `parsePluginGrant` and
         the `USAGE` string are gone, and the tests run on `invoke()`
+  - [x] Its help sections return as flag `heading`s, its schemas stop naming the flag, and the
+        run reads `ctx.env` and `ctx.cwd`, so `invoke()` isolates it from the process
 - [ ] Phase 4: App command lines

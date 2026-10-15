@@ -17,9 +17,12 @@ import type { FlagSpec } from "./flag.js";
 import type { Occurrence, Parsed } from "./parse.js";
 import type { Prompter, PromptKind, PromptKinds } from "./prompt.js";
 import type { PromptRequest, Session } from "./session.js";
+import type { Entry } from "./tree.js";
 
+import { isGroup } from "./command.js";
 import { CancelledError, UsageError } from "./errors.js";
 import { validate } from "./schema.js";
+import { closest } from "./suggest.js";
 
 /** The values a handler reads. */
 export interface Inputs {
@@ -46,6 +49,16 @@ class Issues {
 	add(label: string, messages: readonly string[]): void {
 		for (let message of messages) this.lines.push(`${label}: ${message}`);
 	}
+}
+
+/**
+ * The issue for a word a group's first argument rejects: the word was tried as a member's name
+ * first, so it reads as a mistyped command, with the closest member suggested.
+ */
+function unknownMember(entry: Entry, word: string): string {
+	let suggestion = closest(word, entry.children.keys());
+	let hint = suggestion === undefined ? "" : `; did you mean "${suggestion}"?`;
+	return `Unknown command "${word}" for ${entry.title}${hint}`;
 }
 
 /** Text read as a number, or `undefined` when it is not one. */
@@ -155,7 +168,9 @@ export async function resolveInputs(
 			continue;
 		}
 		let checked = await check(spec.variadic ? given : given[0]);
-		if (isFailure(checked)) issues.add(label, [checked.error.message]);
+		if (isFailure(checked) && isGroup(entry.node) && key === entry.arguments[0]?.key) {
+			issues.lines.push(unknownMember(entry, given[0] as string));
+		} else if (isFailure(checked)) issues.add(label, [checked.error.message]);
 		else inputs.arguments[key] = checked.data;
 	}
 	for (let extra of positionals) issues.lines.push(`Unexpected argument ${JSON.stringify(extra)}`);
@@ -201,7 +216,7 @@ export async function resolveInputs(
 			inputs.flags[key] = !(occurrences.at(-1) as Occurrence).negated;
 			continue;
 		}
-		let items: string[] = [];
+		let values: Occurrence[] = [];
 		let bare = false;
 		let broken = false;
 		for (let occurrence of occurrences) {
@@ -210,24 +225,29 @@ export async function resolveInputs(
 				continue;
 			}
 			if (!spec.list) {
-				items.push(occurrence.value);
+				values.push(occurrence);
 				continue;
 			}
 			let parts = splitList(occurrence.value);
 			if (parts.length === 0) {
-				issues.lines.push(`${occurrence.spelled}= needs at least one value`);
+				issues.lines.push(`${occurrence.spelled} needs a value`);
 				broken = true;
 			}
-			items.push(...parts);
+			for (let part of parts) values.push({ ...occurrence, value: part });
 		}
 		if (broken) continue;
 		if (bare) {
 			inputs.flags[key] = true;
 			continue;
 		}
-		let checked = await check(many ? items : items.at(-1));
-		if (isFailure(checked)) issues.add(label, [checked.error.message]);
-		else inputs.flags[key] = checked.data;
+		if (!many) values = values.slice(-1);
+		let outputs: unknown[] = [];
+		for (let value of values) {
+			let checked = await checkItems([value.value], spec.kind, spec.schema);
+			if (isFailure(checked)) issues.add(value.spelled, checked.error.messages);
+			else outputs.push(checked.data[0]);
+		}
+		if (outputs.length === values.length) inputs.flags[key] = many ? outputs : outputs[0];
 	}
 
 	if (issues.lines.length > 0) return failure(new UsageError(issues.lines.join("\n")));
@@ -237,7 +257,9 @@ export async function resolveInputs(
 		let asks =
 			declared !== undefined &&
 			session.interactive &&
-			(!input.spec.hasDefault || declared.options.ask === "always");
+			(!input.spec.hasDefault ||
+				input.spec.default === undefined ||
+				declared.options.ask === "always");
 		if (!asks || declared === undefined) {
 			if (input.fallback !== undefined) input.assign(input.fallback.value);
 			else if (declared !== undefined) {
@@ -269,6 +291,7 @@ export function createPrompter(session: Session): Prompter {
 		kind: Kind,
 		options: PromptKinds[Kind] & {
 			default: unknown;
+			initial?: unknown;
 			name?: string;
 			schema?: StandardSchemaV1;
 		},
@@ -280,7 +303,7 @@ export function createPrompter(session: Session): Prompter {
 			options,
 			names: options.name === undefined ? [] : [options.name],
 			label: options.name ?? JSON.stringify(options.message),
-			initial: options.default,
+			initial: "initial" in options ? options.initial : options.default,
 			async check(answer) {
 				let checked = await validate(options.schema, answer);
 				return isFailure(checked) ? failure(new Error(checked.error.message)) : success(answer);

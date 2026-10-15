@@ -47,7 +47,7 @@ export function interaction<Kind extends PromptKind>(
 		case "number":
 			return numberLine(options as PromptKinds["number"], initial);
 		case "confirm":
-			return confirm(initial === true);
+			return confirm(initial === true, options as PromptKinds["confirm"]);
 		case "select":
 			return list((options as PromptKinds["select"]).options, initial, { mode: "one" });
 		case "multiselect": {
@@ -201,12 +201,14 @@ function numberLine(options: PromptKinds["number"], initial: unknown): Interacti
 }
 
 /** Yes or no: `y` and `n` answer at once, the arrows switch, and Enter takes the current one. */
-function confirm(initial: boolean): Interaction {
+function confirm(initial: boolean, options: PromptKinds["confirm"]): Interaction {
 	let value = initial;
+	let active = options.active ?? "Yes";
+	let inactive = options.inactive ?? "No";
 	return {
 		render(style, header) {
-			let yes = value ? style.cyan(style.underline("Yes")) : style.dim("Yes");
-			let no = value ? style.dim("No") : style.cyan(style.underline("No"));
+			let yes = value ? style.cyan(style.underline(active)) : style.dim(active);
+			let no = value ? style.dim(inactive) : style.cyan(style.underline(inactive));
 			let marker = value ? "(Y/n)" : "(y/N)";
 			return [
 				`${header} ${style.dim(marker)} › ${value ? "●" : "○"} ${yes} / ${value ? "○" : "●"} ${no}`,
@@ -219,7 +221,7 @@ function confirm(initial: boolean): Interaction {
 			if (["left", "right", "up", "down", "tab"].includes(key.name)) value = !value;
 			return undefined;
 		},
-		summary: (answer) => (answer === true ? "Yes" : "No"),
+		summary: (answer) => (answer === true ? active : inactive),
 	};
 }
 

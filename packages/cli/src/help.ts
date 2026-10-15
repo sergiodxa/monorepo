@@ -1,6 +1,6 @@
 /**
  * Help rendered from the contract: the usage line, the description, the subcommands, the
- * arguments, then the flags with their value names and defaults. Every `--help` and every usage
+ * arguments, then the flags with their value names and defaults, under their headings. Every `--help` and every usage
  * error prints it, so the text and what the parser accepts come from one declaration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -28,11 +28,16 @@ type Row = readonly [left: string, right: string];
 export function renderHelp(entry: Entry, program: HelpProgram, style: Style): string {
 	let node = entry.node;
 	let sections: string[] = [];
-	let usage = [entry.title];
-	if (isGroup(node)) usage.push("<command>");
-	for (let argument of entry.arguments) usage.push(argumentLabel(argument.key, argument.spec));
-	usage.push("[options]");
-	sections.push(`${style.bold("Usage:")} ${usage.join(" ")}`);
+	let lines: string[] = [];
+	if (isGroup(node)) lines.push(`${entry.title} <command> [options]`);
+	if (!isGroup(node) || entry.arguments.length > 0 || entry.flags.length > 0) {
+		let usage = [entry.title];
+		for (let argument of entry.arguments) usage.push(argumentLabel(argument.key, argument.spec));
+		usage.push("[options]");
+		lines.push(usage.join(" "));
+	}
+	let indent = " ".repeat("Usage: ".length);
+	sections.push(`${style.bold("Usage:")} ${lines.join(`\n${indent}`)}`);
 
 	let description = isGroup(node) ? groupSpec(node).description : node.description;
 	if (entry.parent === undefined) description ??= program.description;
@@ -57,17 +62,21 @@ export function renderHelp(entry: Entry, program: HelpProgram, style: Style): st
 		sections.push(section("Arguments:", rows, style));
 	}
 
-	let flagRows: Row[] = [];
+	let headings = new Map<string, Row[]>([["Options", []]]);
 	for (let { spec } of entry.flags) {
 		if (spec.hidden) continue;
-		flagRows.push([flagLabel(spec), flagNotes(spec)]);
+		let heading = spec.heading ?? "Options";
+		let rows = headings.get(heading) ?? [];
+		headings.set(heading, rows);
+		rows.push([flagLabel(spec), flagNotes(spec)]);
 	}
-	if (!isGroup(node)) flagRows.push(["--no-progress", "Print tasks without animation"]);
+	let builtins = headings.get("Options") as Row[];
+	if (entry.tasks) builtins.push(["--no-progress", "Print tasks without animation"]);
 	if (program.version !== undefined && entry.parent === undefined) {
-		flagRows.push(["--version", "Print the version"]);
+		builtins.push(["--version", "Print the version"]);
 	}
-	flagRows.push(["-h, --help", "Show this help"]);
-	sections.push(section("Options:", flagRows, style));
+	builtins.push(["-h, --help", "Show this help"]);
+	for (let [heading, rows] of headings) sections.push(section(`${heading}:`, rows, style));
 
 	if (!isGroup(node) && node.examples.length > 0) {
 		let program = entry.title.split(" ")[0] as string;
@@ -100,13 +109,18 @@ function argumentLabel(
 /**
  * The left column for one flag: its short alias, its names, and its value. A boolean shows the
  * spelling that changes something: `--name` when it defaults to false, `--no-name` when it
- * defaults to true, and `--[no-]name` when it asks.
+ * defaults to true, and `--[no-]name` when it asks or is left unset.
  */
 function flagLabel(spec: FlagSpec): string {
 	let names: string[] = [];
 	if (spec.short !== undefined) names.push(`-${spec.short}`);
 	if (spec.kind === "boolean") {
-		let prefix = spec.prompt !== undefined ? "[no-]" : spec.default === true ? "no-" : "";
+		let prefix =
+			spec.prompt !== undefined || spec.default === undefined
+				? "[no-]"
+				: spec.default === true
+					? "no-"
+					: "";
 		names.push(`--${prefix}${spec.name}`);
 		for (let alias of spec.aliases) names.push(`--${prefix}${alias}`);
 		return names.join(", ");

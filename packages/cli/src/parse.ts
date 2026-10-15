@@ -59,6 +59,10 @@ export function parseArgv(tree: Tree, argv: readonly string[], withVersion: bool
 	};
 	let index = 0;
 	let rest = false;
+	/** Flag tokens read at a group, replayed against the member the command line goes on to name. */
+	let atGroup: string[] = [];
+	/** How many issues stood before the current group's flags were read. */
+	let groupIssues = 0;
 
 	/** Records a global flag, answering whether `token` was one. */
 	function global(token: string): boolean {
@@ -83,15 +87,17 @@ export function parseArgv(tree: Tree, argv: readonly string[], withVersion: bool
 		}
 		if (isFlagToken(token)) {
 			if (global(token)) continue;
-			if (isGroup(parsed.entry.node)) {
-				parsed.issues.push(unknownFlag(tree, parsed.entry, token));
-				continue;
-			}
+			let start = index - 1;
 			index = readFlag(tree, parsed, argv, index, token);
+			if (isGroup(parsed.entry.node)) atGroup.push(...argv.slice(start, index));
 			continue;
 		}
-		if (isGroup(parsed.entry.node)) {
+		if (isGroup(parsed.entry.node) && parsed.positionals.length === 0) {
 			let child = parsed.entry.children.get(token);
+			if (child === undefined && parsed.entry.arguments.length > 0) {
+				parsed.positionals.push(token);
+				continue;
+			}
 			if (child === undefined) {
 				let suggestion = closest(token, parsed.entry.children.keys());
 				let hint = suggestion === undefined ? "" : `; did you mean "${suggestion}"?`;
@@ -102,14 +108,37 @@ export function parseArgv(tree: Tree, argv: readonly string[], withVersion: bool
 				return parsed;
 			}
 			parsed.entry = child;
+			parsed.issues.length = groupIssues;
+			replay(tree, parsed, atGroup);
+			groupIssues = parsed.issues.length;
 			continue;
 		}
 		parsed.positionals.push(token);
 	}
-	if (rest && isGroup(parsed.entry.node) && parsed.positionals.length > 0) {
+	if (
+		rest &&
+		isGroup(parsed.entry.node) &&
+		parsed.entry.arguments.length === 0 &&
+		parsed.positionals.length > 0
+	) {
 		parsed.issues.push(`Unknown command "${parsed.positionals[0]}" for ${parsed.entry.title}`);
 	}
 	return parsed;
+}
+
+/**
+ * Re-reads the flag tokens written before a member's name against that member, so
+ * `prog make --dry-run job` reaches `job`'s `--dry-run` and a group's flag the member lacks is
+ * reported as unknown to it. The caller drops what the group's own reading recorded.
+ */
+function replay(tree: Tree, parsed: Parsed, tokens: string[]): void {
+	let replayed = tokens.splice(0);
+	parsed.occurrences = new Map();
+	let index = 0;
+	while (index < replayed.length) {
+		let token = replayed[index] as string;
+		index = readFlag(tree, parsed, replayed, index + 1, token);
+	}
 }
 
 /** Reads one flag token of a command, answering the index after any value it consumed. */
@@ -138,13 +167,19 @@ function readFlag(
 	}
 	if (flag === undefined) {
 		parsed.issues.push(unknownFlag(tree, entry, token));
-		return index;
+		return inline === undefined && ownersTakeValue(tree, long ? name : "")
+			? skipValue(argv, index)
+			: index;
 	}
 	let list = parsed.occurrences.get(flag.key) ?? [];
 	parsed.occurrences.set(flag.key, list);
 	if (flag.spec.kind === "boolean") {
 		if (inline !== undefined) parsed.issues.push(`${spelled} takes no value`);
 		else list.push({ value: true, negated, spelled });
+		return index;
+	}
+	if (inline === "") {
+		parsed.issues.push(`${spelled} needs a value`);
 		return index;
 	}
 	if (inline !== undefined) {
@@ -156,12 +191,33 @@ function readFlag(
 		return index;
 	}
 	let next = argv[index];
-	if (next === undefined || (isFlagToken(next) && next !== "--") || next === "--") {
+	if (next === undefined || isFlagToken(next) || next === "--") {
 		parsed.issues.push(`${spelled} needs a value`);
 		return index;
 	}
 	list.push({ value: next, negated: false, spelled });
 	return index + 1;
+}
+
+/**
+ * Whether every command declaring `--<name>` reads a value after it, so the word following a
+ * misplaced `--cron "0 8 * * *"` is its value rather than a second, unexpected argument.
+ */
+function ownersTakeValue(tree: Tree, name: string): boolean {
+	let owners = tree.owners.get(name) ?? [];
+	return (
+		owners.length > 0 &&
+		owners.every((owner) => {
+			let spec = owner.longs.get(name)?.spec;
+			return spec !== undefined && spec.kind !== "boolean" && !spec.optionalValue;
+		})
+	);
+}
+
+/** The index after the value at `index`, or `index` when the next token is no value. */
+function skipValue(argv: readonly string[], index: number): number {
+	let next = argv[index];
+	return next === undefined || isFlagToken(next) || next === "--" ? index : index + 1;
 }
 
 /**
