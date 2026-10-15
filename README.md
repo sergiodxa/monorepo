@@ -13,7 +13,7 @@ on the edge.
 
 - 🌐 **Products**: [Uptime](https://uptime.sergiodxa.com) ·
   [Reader](https://reader.sergiodxa.com) · [Books](https://books.sergiodxa.com)
-- 📦 **Packages**: [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com)
+- 📦 **Packages**: [sdxc.dev](https://sdxc.dev)
 - ✍️ **Blog**: [sergiodxa.com](https://sergiodxa.com)
 
 ## Products
@@ -45,7 +45,7 @@ upgrade path for readers who started with an earlier edition.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
 | [blog](apps/blog)           | My personal site and CMS: articles, tutorials and bookmarks, with Webmentions and ActivityPub so the fediverse can follow along | [sergiodxa.com](https://sergiodxa.com)           |
 | [r3-auth](apps/r3-auth)     | The OAuth 2.0 and OpenID Connect provider every app here signs in with: GitHub or email and password                            | [auth.sergiodxa.com](https://auth.sergiodxa.com) |
-| [sdxc-site](apps/sdxc-site) | Documentation, guides and changelog for the `@sdxc` packages                                                                    | [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com) |
+| [sdxc-site](apps/sdxc-site) | Documentation, guides and changelog for the `@sdxc` packages                                                                    | [sdxc.dev](https://sdxc.dev)                     |
 
 ## In the Workshop
 
@@ -150,7 +150,7 @@ export default { fetch: mcp.fetch };
 
 Versions are calendar dates (`2026.9.4`), released daily from whatever changed, and packages
 released together are pinned to each other so they always work together. Guides and API
-references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
+references live at [sdxc.dev](https://sdxc.dev).
 
 ### Everything at Once
 

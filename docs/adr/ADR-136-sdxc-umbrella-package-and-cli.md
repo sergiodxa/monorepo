@@ -43,7 +43,7 @@ and the `sdxc` CLI with its project configuration. Each command group has its ow
 - `scripts/release/manifest.ts` rewrites every `workspace:` range, peers included, to the exact
   version shipping in that release.
 - The release tooling and `test/public-packages.test.ts` assume a package is named
-  `@sdxc/<dir>`; the published `homepage` is `https://sdxc.sergiodxa.com/api/<dir>`.
+  `@sdxc/<dir>`; the published `homepage` is `https://sdxc.dev/api/<dir>`.
 
 ### How a consumer meets `remix`
 

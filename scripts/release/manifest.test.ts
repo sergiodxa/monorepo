@@ -217,7 +217,7 @@ describe("publishManifest", () => {
 	test("credits the author and points npm at the docs page and the sponsor link", () => {
 		let output = publish();
 
-		expect(output.homepage).toBe("https://sdxc.sergiodxa.com/api/example");
+		expect(output.homepage).toBe("https://sdxc.dev/api/example");
 		expect(output.author).toEqual({ name: "Sergio Xalambrí", url: "https://sergiodxa.com" });
 		expect(output.funding).toEqual({
 			type: "github",
@@ -238,7 +238,7 @@ describe("publishManifest", () => {
 		let output = unwrap(publishManifest(umbrella, OPTIONS));
 
 		expect(output.name).toBe("sdxc");
-		expect(output.homepage).toBe("https://sdxc.sergiodxa.com/api/sdxc");
+		expect(output.homepage).toBe("https://sdxc.dev/api/sdxc");
 		expect(output.dependencies).toEqual({ "@sdxc/result": "2026.9.3" });
 		expect(output.peerDependencies).toEqual({ remix: "3.0.0" });
 		expect(output.exports).toEqual({

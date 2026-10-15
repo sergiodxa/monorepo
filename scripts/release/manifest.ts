@@ -34,7 +34,7 @@ const FUNDING = { type: "github", url: "https://github.com/sponsors/sergiodxa" }
  * The documentation site, whose API pages are keyed by package directory, so a scoped and an
  * unscoped package both find their page at `/api/<dir>`.
  */
-const DOCS_URL = "https://sdxc.sergiodxa.com";
+const DOCS_URL = "https://sdxc.dev";
 
 /** Where a published package says it lives; npm checks it against the trusted publisher. */
 export interface PublishRepository {
