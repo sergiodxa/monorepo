@@ -207,5 +207,10 @@ request, and the router's response types say nothing a command line can use.
 
 - [x] Phase 1: Context — `@sdxc/cli`'s `get`/`has`/`set` with `property`,
       `CommandMiddleware<Effect>` and `AnyCommandContext`, shipped with ADR-145 Phase 1
-- [ ] Phase 2: Services an app command reads first
-- [ ] Phase 3: The rest
+- [x] Phase 2: Services an app command reads first — `@sdxc/data-model/cli`,
+      `@sdxc/database-middleware/cli` (with the `db` command: `DB_COMMAND` and `dbHandler`),
+      `@sdxc/logger/middleware/cli`, `@sdxc/trace-context/middleware/cli`
+- [x] Phase 3: The rest — `@sdxc/jobs/cli` (a memory queue drained through the app's dispatcher
+      after the handler), `@sdxc/i18n/middleware/cli`, `@sdxc/mail/middleware/cli`,
+      `@sdxc/billing/middleware/cli`, `@sdxc/newsletter/middleware/cli`; the i18n, mail, billing and
+      newsletter router entries now publish under context keys too; `sdxc` export map regenerated
