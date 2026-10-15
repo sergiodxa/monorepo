@@ -259,6 +259,15 @@ Records every delivery instead of sending it. `options.mime: true` also records 
 message. Members: `messages`, `last`, `deliveries` (`RecordedDelivery[]`, each
 `{ message, mime? }`), `lastMime`, `find(predicate)` and `clear()`.
 
+### `@sdxc/mail/print`
+
+#### `new PrintTransport(options: PrintTransportOptions)`
+
+Writes each message to `options.write` instead of sending it, and reports it sent: the envelope,
+subject, date, `Message-ID` and extra headers, then the plain-text body. `options.mime: true`
+writes the raw MIME message instead. It writes only through the function it is given, so it runs
+anywhere: `ctx.stderr` in a command, `(text) => process.stderr.write(text)` in a script.
+
 ### `@sdxc/mail/cloudflare`
 
 #### `new CloudflareTransport(binding: SendEmailBinding)`
@@ -288,18 +297,23 @@ Publishes a `Mailer` as `ctx.email` on an [`@sdxc/cli`](https://www.npmjs.com/pa
 command, so an admin command resends a message with the templates a route uses. `options` takes
 the router entry's fields, with `transport` a `Transport` or `(ctx) => Transport` per run. The
 queue flushes after the handler and each send is logged as in the router entry; a failed deferred
-send also fails the run with its error. On a laptop, pass `MemoryTransport` or a transport of your
-own that prints each message, so a local run never emails a real user.
+send also fails the run with its error. On a laptop, pass a `PrintTransport` writing to the
+command's stderr, so a local run shows each message and never emails a real user.
 
 ```typescript
 import { createCLI } from "@sdxc/cli";
 import mail from "@sdxc/mail/middleware/cli";
-import { MemoryTransport } from "@sdxc/mail/memory";
+import { PrintTransport } from "@sdxc/mail/print";
 
 let cli = createCLI({
 	name: "app",
 	commands,
-	middleware: [mail({ transport: new MemoryTransport(), from: { email: "no-reply@example.com" } })],
+	middleware: [
+		mail({
+			transport: (ctx) => new PrintTransport({ write: (text) => ctx.stderr(text) }),
+			from: { email: "no-reply@example.com" },
+		}),
+	],
 });
 ```
 

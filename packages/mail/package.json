@@ -9,6 +9,7 @@
 		"./cloudflare": "./src/cloudflare.ts",
 		"./markdown": "./src/markdown.tsx",
 		"./memory": "./src/memory.ts",
+		"./print": "./src/print.ts",
 		"./middleware": "./src/middleware.ts",
 		"./middleware/cli": "./src/cli.ts",
 		"./unsubscribe": "./src/unsubscribe.ts"
