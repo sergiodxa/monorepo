@@ -232,6 +232,22 @@ describe("sdxc upgrade --prompt", () => {
 			stderr: "--from 2026.11.1 is newer than this sdxc, 2026.10.14\n",
 		});
 	});
+
+	test("reads the lock file with the rules sdxc ui writes it by", async () => {
+		let packageRoot = await targetRelease([]);
+		let root = await fixtureProject();
+		await writeFile(
+			join(root, ".config/sdxc.lock.jsonl"),
+			[
+				'{"kind":"ui","name":"button","release":"2026.9.4","files":{"button.tsx":"sha256-a"}}',
+				'{"kind":"ui","name":"button","release":"2026.9.4","files":{"button.tsx":"sha256-a"}}',
+				"",
+			].join("\n"),
+		);
+		let result = await invoke(["--prompt", "--from", "2026.9.4"], root, packageRoot);
+		expect(result.code).toBe(1);
+		expect(result.stderr).toContain(".config/sdxc.lock.jsonl:2: repeats the ui entry button");
+	});
 });
 
 describe("packageOf", () => {

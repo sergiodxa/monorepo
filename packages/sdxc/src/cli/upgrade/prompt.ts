@@ -12,12 +12,11 @@ import { join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
-import * as JSONL from "@sdxc/jsonl";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import { compare } from "@sdxc/semver";
 
 import { loadConfig } from "../config.js";
-import { resolveInside } from "../project.js";
+import { readLock, uiEntries } from "../lock.js";
 
 import type { ChangelogEntry } from "./changelog.js";
 
@@ -208,7 +207,7 @@ async function readOwnManifest(
 /**
  * The components the project's lock file records whose registry entry in the installed
  * release names a later `changedIn` than the release the copy came from. Without a lock file
- * there are none; a component the registry no longer has is left out.
+ * there are none; a component the registry no longer has is left out, and an invalid lock fails.
  */
 async function changedComponents(
 	root: string,
@@ -216,29 +215,16 @@ async function changedComponents(
 ): Promise<Result<ChangedComponent[], Error>> {
 	let config = await loadConfig(root);
 	if (isFailure(config)) return config;
-	let lockPath = resolveInside(root, config.data.config.lock);
-	if (isFailure(lockPath)) return lockPath;
-	let lockFile = lockPath.data;
-	let text = await wrap(() => readFile(lockFile, "utf8"));
-	if (isFailure(text)) return success([]);
-	let lines = JSONL.parse(text.data);
-	if (isFailure(lines))
-		return failure(new Error(`${config.data.config.lock}: ${lines.error.message}`));
+	let lock = await readLock(root, config.data.config);
+	if (isFailure(lock)) return lock;
 	let changed: ChangedComponent[] = [];
-	for (let line of lines.data) {
-		if (!isUiEntry(line)) continue;
-		let changedIn = await registryChangedIn(packageRoot, line.name);
-		if (changedIn !== null && compare(changedIn, line.release) > 0) {
-			changed.push({ name: line.name, release: line.release, changedIn });
+	for (let entry of uiEntries(lock.data)) {
+		let changedIn = await registryChangedIn(packageRoot, entry.name);
+		if (changedIn !== null && compare(changedIn, entry.release) > 0) {
+			changed.push({ name: entry.name, release: entry.release, changedIn });
 		}
 	}
 	return success(changed);
-}
-
-function isUiEntry(line: unknown): line is { kind: "ui"; name: string; release: string } {
-	if (typeof line !== "object" || line === null) return false;
-	let entry = line as Record<string, unknown>;
-	return entry.kind === "ui" && typeof entry.name === "string" && typeof entry.release === "string";
 }
 
 /** The `changedIn` of a component's registry entry, or `null` when the entry is missing or unreadable. */
