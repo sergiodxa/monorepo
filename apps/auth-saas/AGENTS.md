@@ -11,14 +11,14 @@ and [ADR-002](../../docs/adr/auth-saas/ADR-002-rebuild-path-and-implementation-o
 ## Commands
 
 ```bash
-bun run dev               # Run development server
-bun run build             # Build for production
-bun run start             # Start production server locally
-bun run cf:deploy         # Deploy to Cloudflare Workers
-bun run cf:typegen        # Generate TypeScript types for Cloudflare Workers bindings
-bun run db:local:drop     # Drop local database
-bun run db:local:migrate  # Apply migrations to local database
-bun run db:remote:migrate # Apply migrations to remote database
+bun run dev                  # Run development server
+bun run build                # Build for production
+bun run start                # Start production server locally
+bun run cf:deploy            # Deploy to Cloudflare Workers
+sdxc run typegen             # Generate TypeScript types for Cloudflare Workers bindings
+sdxc run db migrate          # Apply control-plane migrations to the local database
+sdxc run db migrate --remote # Apply control-plane migrations to the remote database
+sdxc run db console          # SQL prompt over the local control-plane database
 ```
 
 ## Rules
@@ -47,12 +47,14 @@ no `src/`, and each top-level directory names a role. Import across them with th
 | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `bootstrap/worker.ts`                                 | The Worker entry: serves assets, picks the router by host (`api.` → management, `/mcp` → MCP, platform → web, otherwise a resolved tenant), cron and queue |
 | `bootstrap/browser.ts`                                | The browser entry that hydrates islands                                                                                                                    |
+| `bootstrap/cli.ts`                                    | The command-line entry `sdxc run` starts; the Worker never imports it                                                                                      |
 | `app/models/tenant/object.ts`                         | The tenant Durable Object, exported from `bootstrap/worker.ts` as `Tenant`                                                                                 |
 | `routes/{web,tenant,management,mcp}.ts`               | The four route contracts                                                                                                                                   |
 | `app/initializers/router.ts`                          | `webRouter`, mapping `routes/web.ts` on the bare platform domain                                                                                           |
 | `app/initializers/tenant-router.ts`                   | `tenantRouter`, mapping `routes/tenant.ts` for a request resolved to one tenant                                                                            |
 | `app/initializers/management-router.ts`               | `managementRouter`, mapping `routes/management.ts` on `api.{PLATFORM_DOMAIN}`                                                                              |
 | `app/initializers/mcp-router.ts`, `mcp.ts`            | `mcpRouter` for `routes/mcp.ts`, and the MCP server it imports on first call                                                                               |
+| `app/commands/`, `app/initializers/cli.ts`            | The command line: the contract in `index.ts`, one handler per file, mapped in `cli.ts` over the local database from `local-database.ts`                    |
 | `app/initializers/`                                   | Every other single instance: logger, job dispatcher, database, billing, flags, cookies, hostname client, resource servers, assets                          |
 | `app/http/controllers/`, `middleware/`, `validators/` | The HTTP layer; `app/http/openapi/` builds the management API document                                                                                     |
 | `app/jobs/`                                           | Background jobs (`index.ts` declares them) and their middleware                                                                                            |

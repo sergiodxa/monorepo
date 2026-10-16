@@ -33,7 +33,7 @@ Copy the returned `database_id` and KV `id` into `wrangler.jsonc`
 ## 2. Apply control-plane migrations
 
 ```bash
-bun run --cwd apps/auth-saas db:remote:migrate
+cd apps/auth-saas && sdxc run db migrate --remote
 ```
 
 ## 3. Zone / DNS setup

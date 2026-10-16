@@ -5,11 +5,36 @@ isolated in its own Cloudflare Durable Object over [`@sdxc/oidc-provider`](../..
 
 Production URL: https://auth.sergiodxa.com
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development.
-2. Run `bun run db:local:migrate` to create the local control-plane D1 schema.
-3. Run `bun run dev` to start the development server at http://localhost:3004
+```sh
+bun install
+sdxc run typegen
+sdxc run db migrate
+bun dev
+```
+
+In a fresh clone, copy `.env.example` to `.dev.vars` first. `bun dev` serves the app at
+http://localhost:3004. Run `sdxc run typegen` again whenever you change a binding in
+`wrangler.jsonc`.
+
+## Everyday commands
+
+```sh
+sdxc make controller dashboard/settings    # a page, mapped in routes/web.ts
+sdxc make migration add-tenant-notes       # then: sdxc run db migrate
+sdxc make migration add-scopes --chain tenant # a tenant Durable Object migration
+sdxc make model tenant-note                # then: ctx.models.tenantNotes
+sdxc make job reports/daily --cron "0 8 * * *"
+sdxc make command tenants/suspend          # then: sdxc run tenants suspend
+
+sdxc run db console                        # SQL prompt over the local control-plane database
+sdxc run about                             # the app's name and the versions it runs on
+bun check                                  # format, lint and types, from the repo root
+```
+
+`sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
+right away.
 
 ## Cloudflare Services
 
@@ -64,8 +89,8 @@ defined in `database/schema.ts`, and the `@sdxc/data-model` models over them liv
 `app/models/`, reached from routes and jobs as `ctx.models`.
 
 ```bash
-bun run db:local:migrate  # Apply migrations locally
-bun run db:remote:migrate # Apply migrations to production
+sdxc run db migrate          # Apply migrations to the local database
+sdxc run db migrate --remote # Apply migrations to production
 ```
 
 Each tenant's own schema lives in `database/tenant-migrations/` and is applied by the
@@ -74,17 +99,17 @@ tenant Durable Object itself on boot. That object is `app/models/tenant/object.t
 
 ## Scripts
 
-| Script              | Description                             |
-| ------------------- | --------------------------------------- |
-| `dev`               | Start the development server            |
-| `build`             | Build for production                    |
-| `start`             | Preview the production build            |
-| `cf:deploy`         | Deploy to Cloudflare Workers            |
-| `cf:typegen`        | Generate Cloudflare binding types       |
-| `db:local:drop`     | Drop the local database                 |
-| `db:local:migrate`  | Apply control-plane migrations locally  |
-| `db:remote:migrate` | Apply control-plane migrations remotely |
-| `typecheck`         | Type-check                              |
+| Script      | Description                                                 |
+| ----------- | ----------------------------------------------------------- |
+| `dev`       | Start the development server                                |
+| `build`     | Build for production                                        |
+| `start`     | Preview the production build                                |
+| `cli`       | Run a command from `app/commands/`, what `sdxc run` invokes |
+| `cf:deploy` | Deploy to Cloudflare Workers                                |
+| `typecheck` | Type-check                                                  |
+
+To start over with an empty local database, delete `.wrangler/` and run
+`sdxc run db migrate` again.
 
 ## Deployment
 
