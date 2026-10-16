@@ -31,12 +31,11 @@ export const CATALOGUE_SOURCE_BASE = "https://github.com/sergiodxa/monorepo/blob
 export const THEMING_SLUG = "theming";
 
 /** One reference page of a catalogue, as a listing or an index names it. */
-export interface CataloguePage {
+/** What every catalogue page carries, whichever tree it lives in. */
+interface CataloguePageFields {
 	title: string;
 	/** The package the page documents, as it is imported. */
 	package: "@sdxc/u" | "@sdxc/ui";
-	/** What the page documents, which is also the MCP resource template it answers on. */
-	kind: "utility" | "component" | "export";
 	/**
 	 * The band it is listed under within its package: a utility family such as `layout`,
 	 * or `Components`, `Mixins`, `Behaviors` and so on.
@@ -47,6 +46,30 @@ export interface CataloguePage {
 	/** The page's `.md` twin, which is what an agent reads it from. */
 	markdownHref: string;
 }
+
+/** An `@sdxc/u` utility's page, at `routes.api.utility`. */
+interface UtilityPage extends CataloguePageFields {
+	kind: "utility";
+	params: { utility: string };
+}
+
+/** The theme contract's or a component's page, at `routes.api.component`. */
+interface ComponentPage extends CataloguePageFields {
+	kind: "component";
+	params: { component: string };
+}
+
+/** An `@sdxc/ui` subpath export's page, at `routes.api.uiExport`. */
+interface ExportPage extends CataloguePageFields {
+	kind: "export";
+	params: { subpath: string; slug: string };
+}
+
+/**
+ * One catalogue page. `kind` is also the MCP resource template it answers on, and `params` are
+ * what its route builds the page's URL from, so a sitemap lists it through the route table.
+ */
+export type CataloguePage = UtilityPage | ComponentPage | ExportPage;
 
 /**
  * Every page, in the order the sidebars list them: the utilities by family, then the
@@ -65,6 +88,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 				kind: "utility",
 				section: family.name,
 				summary: reference?.summary ?? "",
+				params: { utility: entry.name },
 				href: routes.api.utility.href({ utility: entry.name }),
 				markdownHref: routes.markdown.utility.href({ utility: entry.name }),
 			});
@@ -77,6 +101,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 		kind: "component",
 		section: "Components",
 		summary: THEMING_SUMMARY,
+		params: { component: THEMING_SLUG },
 		href: routes.api.component.href({ component: THEMING_SLUG }),
 		markdownHref: routes.markdown.component.href({ component: THEMING_SLUG }),
 	});
@@ -89,6 +114,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 			kind: "component",
 			section: "Components",
 			summary: reference?.summary ?? "",
+			params: { component: entry.slug },
 			href: routes.api.component.href({ component: entry.slug }),
 			markdownHref: routes.markdown.component.href({ component: entry.slug }),
 		});
@@ -103,6 +129,7 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
 				kind: "export",
 				section: UI_SUBPATH_TITLES[subpath],
 				summary: reference?.summary ?? "",
+				params: { subpath, slug: entry.slug },
 				href: routes.api.uiExport.href({ subpath, slug: entry.slug }),
 				markdownHref: routes.markdown.uiExport.href({ subpath, slug: entry.slug }),
 			});

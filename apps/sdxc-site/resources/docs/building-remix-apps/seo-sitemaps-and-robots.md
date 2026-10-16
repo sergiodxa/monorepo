@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 5
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-16
 ---
 
 A crawler learns about your site from four places: the head of each page, the sitemap, the
@@ -154,14 +154,13 @@ export default route({
 });
 ```
 
-The sitemap handler appends one entry per page and answers with `xml()`. Build each `loc`
-through `seo.canonical` rather than from `ctx.url`: a sitemap fetched from a preview then
-still points a crawler at production, and every URL in it agrees with the canonical link on
-the page it names.
+`fromRoutes` builds the sitemap from that table and needs a decision for every `GET` route, so
+a new page fails typechecking until you list it or pass `false`. Resolving against
+`seo.baseUrl` keeps a preview's sitemap pointing at production.
 
 ```typescript {% title="app/http/controllers/sitemap.ts" %}
 import { xml } from "@sdxc/http/response";
-import { Sitemap } from "@sdxc/sitemap";
+import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
 
 import Post from "~/app/models/post";
@@ -169,19 +168,18 @@ import { seo } from "~/app/initializers/seo";
 import routes from "~/routes/web";
 
 export default createAction(routes.sitemap, async (ctx) => {
-	let sitemap = new Sitemap();
-	let canonicalUrl = (path: string) => new URL(seo.canonical(path));
+	let posts = await Post.listPublished(ctx.db);
 
-	sitemap.append(canonicalUrl(routes.home.href()), {
-		priority: 1,
-		frequency: "weekly",
-	});
-
-	for (let post of await Post.listPublished(ctx.db)) {
-		sitemap.append(canonicalUrl(routes.post.href({ slug: post.slug })), {
+	let sitemap = fromRoutes(routes, seo.baseUrl, {
+		home: { priority: 1, frequency: "weekly" },
+		blog: true,
+		post: posts.map((post) => ({
+			params: { slug: post.slug },
 			updatedAt: new Date(post.updatedAt),
-		});
-	}
+		})),
+		sitemap: false,
+		robots: false,
+	});
 
 	return xml(sitemap.toString(), {
 		headers: { "Cache-Control": "public, max-age=3600" },

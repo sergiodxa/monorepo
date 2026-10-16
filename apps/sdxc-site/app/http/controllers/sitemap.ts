@@ -14,13 +14,13 @@
 
 import { createAction } from "remix/router";
 import { xml } from "sdxc/http/response";
-import { Sitemap } from "sdxc/sitemap";
+import { fromRoutes } from "sdxc/sitemap/remix";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups } from "~/app/services/packages";
-import { absoluteUrl } from "~/config/site";
+import { SITE_URL } from "~/config/site";
 import routes from "~/routes/web";
 
 /** How a landing page ranks against a reference page, which is what `priority` orders. */
@@ -34,48 +34,61 @@ const PRIORITY = {
 } as const;
 
 export default createAction(routes.sitemap, async (ctx) => {
-	let sitemap = new Sitemap();
+	let [sections, catalogue] = await Promise.all([listGuides(), listCataloguePages()]);
 
-	sitemap.append(new URL(absoluteUrl(routes.home.href())), {
-		priority: PRIORITY.home,
-		frequency: "weekly",
+	let reference = { priority: PRIORITY.reference, frequency: "weekly" as const };
+
+	let sitemap = fromRoutes(routes, SITE_URL, {
+		home: { priority: PRIORITY.home, frequency: "weekly" },
+		philosophy: false,
+		showcase: false,
+		security: false,
+		maintenance: false,
+		sponsors: false,
+		docs: {
+			index: { priority: PRIORITY.hub, frequency: "weekly" },
+			changelog: false,
+			show: sections.flatMap((section) =>
+				section.guides.map((guide) => {
+					let updated = guide.frontmatter.lastUpdated;
+					return {
+						params: { slug: guide.slug },
+						priority: PRIORITY.guide,
+						frequency: "monthly" as const,
+						...(updated ? { updatedAt: new Date(updated) } : {}),
+					};
+				}),
+			),
+		},
+		api: {
+			index: { priority: PRIORITY.packageIndex, frequency: "weekly" },
+			utility: catalogue.flatMap((page) =>
+				page.kind === "utility" ? [{ params: page.params, ...reference }] : [],
+			),
+			component: catalogue.flatMap((page) =>
+				page.kind === "component" ? [{ params: page.params, ...reference }] : [],
+			),
+			uiExport: catalogue.flatMap((page) =>
+				page.kind === "export" ? [{ params: page.params, ...reference }] : [],
+			),
+			show: listPackageGroups().flatMap((group) =>
+				group.packages.map((entry) => ({
+					params: { name: entry.directory },
+					priority: PRIORITY.package,
+					frequency: "weekly" as const,
+				})),
+			),
+		},
+		moved: false,
+		markdown: false,
+		frames: false,
+		examples: false,
+		llms: false,
+		sitemap: false,
+		feed: false,
+		searchIndex: false,
+		mcp: false,
 	});
-	sitemap.append(new URL(absoluteUrl(routes.docs.index.href())), {
-		priority: PRIORITY.hub,
-		frequency: "weekly",
-	});
-	sitemap.append(new URL(absoluteUrl(routes.api.index.href())), {
-		priority: PRIORITY.packageIndex,
-		frequency: "weekly",
-	});
-
-	for (let section of await listGuides()) {
-		for (let guide of section.guides) {
-			let updated = guide.frontmatter.lastUpdated;
-
-			sitemap.append(new URL(absoluteUrl(routes.docs.show.href({ slug: guide.slug }))), {
-				priority: PRIORITY.guide,
-				frequency: "monthly",
-				...(updated ? { updatedAt: new Date(updated) } : {}),
-			});
-		}
-	}
-
-	for (let group of listPackageGroups()) {
-		for (let entry of group.packages) {
-			sitemap.append(new URL(absoluteUrl(routes.api.show.href({ name: entry.directory }))), {
-				priority: PRIORITY.package,
-				frequency: "weekly",
-			});
-		}
-	}
-
-	for (let page of await listCataloguePages()) {
-		sitemap.append(new URL(absoluteUrl(page.href)), {
-			priority: PRIORITY.reference,
-			frequency: "weekly",
-		});
-	}
 
 	return await withBundleCache(ctx.request, xml(sitemap.toString()));
 });
