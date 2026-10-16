@@ -1,7 +1,7 @@
 /**
  * One sidebar tree as a list of links: each section's own entries, then its groups, each
- * of which a reader can fold away once they are done with it. It is drawn twice per
- * page, in the docked rail and the drawer.
+ * a title over its entries, all expanded so the whole tree is scannable at once. It is
+ * drawn twice per page, in the docked rail and the drawer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,16 +9,10 @@
 
 import type { Handle } from "remix/component";
 
-import { ChevronDownIcon } from "sdxc/icons";
-import { border } from "sdxc/u/color";
-import { rounded, transition, transitionDuration } from "sdxc/u/effects";
-import { justify, shrink } from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { is, minBs, minIs, pb, pi } from "sdxc/u/size";
-import { open, when } from "sdxc/u/state";
-import { rotate } from "sdxc/u/transform";
+import { flex, items } from "sdxc/u/layout";
+import { minBs, pb, pi } from "sdxc/u/size";
 import { text } from "sdxc/u/typography";
-import { Disclosure, Sidebar } from "sdxc/ui";
+import { Sidebar } from "sdxc/ui";
 
 import type { NavGroup, NavTree } from "~/app/services/navigation-tree";
 
@@ -50,7 +44,7 @@ export default function DocsNav(handle: Handle<DocsNav.Props>) {
 							))}
 
 							{section.groups.map((group) => (
-								<CollapsibleGroup key={group.title} group={group} activePath={activePath} />
+								<NavGroupItem key={group.title} group={group} activePath={activePath} />
 							))}
 						</Sidebar.Menu>
 					</Sidebar.Group>
@@ -60,7 +54,7 @@ export default function DocsNav(handle: Handle<DocsNav.Props>) {
 	};
 }
 
-namespace CollapsibleGroup {
+namespace NavGroupItem {
 	export interface Props {
 		group: NavGroup;
 		/** The path of the page being read, which is what marks one link as current. */
@@ -68,64 +62,38 @@ namespace CollapsibleGroup {
 	}
 }
 
-/** Renders one group of the tree as a disclosure over its entries. */
-function CollapsibleGroup(handle: Handle<CollapsibleGroup.Props>) {
+/** Renders one group of the tree as its title over its entries, always expanded. */
+function NavGroupItem(handle: Handle<NavGroupItem.Props>) {
 	return () => {
 		let { activePath, group } = handle.props;
 
 		return (
 			<Sidebar.MenuItem>
-				{/* Every group starts open, so the whole tree is scannable on the first paint and
-				    a reader folds away only what they are done with. Each one folds on its own,
-				    so the rail and the drawer never close each other's. */}
-				<Disclosure
-					open
+				<span
 					mix={[
-						is("full"),
-						minIs("0"),
-						border("none"),
-						rounded("none"),
-						open(when('& summary [data-slot="icon"]', rotate(180))),
+						flex(),
+						items("center"),
+						minBs("2.25rem"),
+						pi("0.625rem"),
+						pb("0.375rem"),
+						text("sm"),
 					]}
 				>
-					<Disclosure.Trigger
-						mix={[
-							justify("between"),
-							minBs("2.25rem"),
-							pi("0.625rem"),
-							pb("0.375rem"),
-							text("sm"),
-							when('& [data-slot="icon"]', [
-								shrink(),
-								transition("transform", { duration: "200ms" }),
-							]),
-							media(
-								"(prefers-reduced-motion: reduce)",
-								when('& [data-slot="icon"]', transitionDuration("0s")),
-							),
-						]}
-					>
-						{group.title}
-						<ChevronDownIcon data-slot="icon" size={14} aria-hidden="true" />
-					</Disclosure.Trigger>
+					{group.title}
+				</span>
 
-					{/* The rule under a group title starts beneath that title's first letter, so the
-					    entries read as indented under it rather than as a column set apart. Both
-					    insets replace ones the components set, which is what `style` settles. */}
-					<Disclosure.Panel style={{ paddingInline: 0 }}>
-						<Sidebar.MenuSub
-							style={{ marginInlineStart: "0.625rem", paddingInlineStart: "0.25rem" }}
-						>
-							{group.entries.map((entry) => (
-								<Sidebar.MenuSubItem key={entry.href}>
-									<Sidebar.MenuSubLink href={entry.href} active={entry.href === activePath}>
-										{entry.title}
-									</Sidebar.MenuSubLink>
-								</Sidebar.MenuSubItem>
-							))}
-						</Sidebar.MenuSub>
-					</Disclosure.Panel>
-				</Disclosure>
+				{/* The rule under a group title starts beneath that title's first letter, so the
+				    entries read as indented under it rather than as a column set apart. Both
+				    insets replace ones the component sets, which is what `style` settles. */}
+				<Sidebar.MenuSub style={{ marginInlineStart: "0.625rem", paddingInlineStart: "0.25rem" }}>
+					{group.entries.map((entry) => (
+						<Sidebar.MenuSubItem key={entry.href}>
+							<Sidebar.MenuSubLink href={entry.href} active={entry.href === activePath}>
+								{entry.title}
+							</Sidebar.MenuSubLink>
+						</Sidebar.MenuSubItem>
+					))}
+				</Sidebar.MenuSub>
 			</Sidebar.MenuItem>
 		);
 	};
