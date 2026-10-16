@@ -7,11 +7,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { LiveFrameEvent } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
 
 import { pi } from "@sdxc/u/size";
 import { Spinner } from "@sdxc/ui";
 import { spin } from "@sdxc/ui/animations";
+import {
+	activeDescendantKeys,
+	chooseOption,
+	chosenOption,
+	LIVE_FRAME_RELOAD_EVENT,
+	liveFrame,
+} from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 import { QuietSearchInput, QuietSearchRow } from "~/resources/components/quiet-search-input";
@@ -82,11 +90,6 @@ function samePage(link: HTMLAnchorElement): boolean {
 		link.pathname === location.pathname &&
 		link.search === location.search
 	);
-}
-
-/** Follows the link a result row holds, as a click on it would. */
-function follow(option: HTMLElement | undefined): void {
-	option?.querySelector<HTMLAnchorElement>("a[href]")?.click();
 }
 
 /** Props must be a `type` rather than an `interface` to satisfy `SerializableProps`. */
@@ -208,29 +211,19 @@ function animateResults(before: ResultsSnapshot, direction: number): void {
 export const SearchBox = clientEntry(
 	import.meta.url,
 	function SearchBox(handle: Handle<SearchBoxProps>) {
-		let debounce: ReturnType<typeof setTimeout> | undefined;
-		let spinnerDelay: ReturnType<typeof setTimeout> | undefined;
 		let spinning = false;
-		/** Whether typing has moved past the results on screen. */
-		let pending = false;
-		/** The chosen row's index, or `-1` while the box itself is the choice. */
-		let selected = -1;
-		/** The chosen row's id, which `aria-activedescendant` names. */
-		let activeId: string | undefined;
 		/** Whether the box is empty, which points the combobox at the quick links. */
 		let blank = handle.props.query === "";
-		/** Counts keystrokes, so a reload only settles the state when no newer one is pending. */
-		let latest = 0;
 		/** The tab marked ahead of its results, or `null` once the frame shows the tab it marks. */
 		let markedKind: string | null = null;
+		/** The side the next rows slide in from: `1` or `-1` after a tab switch, `0` otherwise. */
+		let direction = 0;
+		/** Whether the next rows arrive with the first chosen, so arrows that switched tabs keep switching them. */
+		let chooseFirst = false;
+		/** The results as they stood when the reload under way began replacing them. */
+		let before: ResultsSnapshot | undefined;
 		/** What the page rendered the box with, which closing the dialog returns it to. */
 		let initialQuery = handle.props.query;
-		let initialSrc = searchFrameSrc(handle.props.frameSrc, initialQuery);
-
-		handle.signal.addEventListener("abort", () => {
-			clearTimeout(debounce);
-			clearTimeout(spinnerDelay);
-		});
 
 		handle.queueTask(() => {
 			watchSearchDialog(handle.signal);
@@ -239,59 +232,10 @@ export const SearchBox = clientEntry(
 			dialog?.addEventListener("click", onClick, { signal: handle.signal });
 		});
 
-		/** Marks a search pending: busy at once, and the spinner after its delay. */
-		function begin(): void {
-			pending = true;
-			markBusy(true);
-			clearTimeout(spinnerDelay);
-			spinnerDelay = setTimeout(() => {
-				spinning = true;
-				void handle.update();
-			}, SPINNER_DELAY_MS);
-		}
-
-		/** Clears the pending marks once the newest results are showing. */
-		function settle(): void {
-			pending = false;
-			markedKind = null;
-			markBusy(false);
-			clearTimeout(spinnerDelay);
-			if (!spinning) return;
-			spinning = false;
-			void handle.update();
-		}
-
-		/** The rows the arrows move through: the quick links while the box is empty, else the results. */
-		function options(): Array<HTMLElement> {
-			return optionsOf(blank ? SEARCH_QUICK_LINKS_ID : SEARCH_LISTBOX_ID);
-		}
-
-		/** Chooses the row at `index`, or the box itself for `-1`, keeping focus in the box. */
-		function choose(index: number): void {
-			selected = index;
-			let rows = options();
-			activeId = rows[index]?.id;
-			rows.forEach((row, at) => row.setAttribute("aria-selected", at === index ? "true" : "false"));
-			rows[index]?.scrollIntoView?.({ block: "nearest" });
-			void handle.update();
-		}
-
-		/**
-		 * Points the frame at `src` and reloads it, unless it already shows it. The new rows
-		 * start unchosen, or with the first one chosen when `chooseFirst` asks, so arrows that
-		 * switched tabs keep switching them.
-		 */
-		async function load(src: string, keystroke: number, chooseFirst = false, direction = 0) {
-			if (src === handle.frame.src) return settle();
-
-			let before = snapshot();
-			handle.frame.src = src;
-			await handle.frame.reload().catch(() => undefined);
-
-			if (keystroke !== latest) return markBusy(true);
-			settle();
-			choose(chooseFirst && options().length > 0 ? 0 : -1);
-			animateResults(before, direction);
+		/** The box as the document holds it now. */
+		function box(): HTMLInputElement | null {
+			let element = document.getElementById(handle.props.id);
+			return element instanceof HTMLInputElement ? element : null;
 		}
 
 		/** The tab the reader is on: the one marked ahead of its results, else the frame's. */
@@ -300,16 +244,43 @@ export const SearchBox = clientEntry(
 		}
 
 		/**
-		 * Marks `kind`'s tab current and starts loading its results at once. A newer reload
-		 * cancels the one in flight before it renders, so quick presses end on the last tab
-		 * pressed and never flash back to one passed on the way. The rows slide in from the
-		 * side the tab sits on, relative to the tab the reader left.
+		 * Follows the frame's reload: the results are busy from the first keystroke, the spinner
+		 * shows once the wait turns slow, and the newest rows animate in from how the old ones
+		 * stood, starting unchosen or with the first chosen as a tab switch by arrow asked.
 		 */
-		function switchTab(kind: string, chooseFirst: boolean): void {
-			let box = document.getElementById(handle.props.id);
-			if (!(box instanceof HTMLInputElement)) return;
+		function onLiveFrame(event: LiveFrameEvent): void {
+			if (event.state === "pending") {
+				markBusy(true);
+			} else if (event.state === "slow") {
+				spinning = true;
+				void handle.update();
+			} else if (event.state === "loading") {
+				before = snapshot();
+			} else {
+				markBusy(false);
+				markedKind = null;
+				if (before && event.currentTarget instanceof HTMLElement) {
+					chooseOption(event.currentTarget, chooseFirst ? 0 : -1);
+					animateResults(before, direction);
+				}
+				before = undefined;
+				direction = 0;
+				chooseFirst = false;
+				if (!spinning) return;
+				spinning = false;
+				void handle.update();
+			}
+		}
+
+		/**
+		 * Marks `kind`'s tab current and reloads its results at once. A newer reload cancels the
+		 * one in flight before it renders, so quick presses end on the last tab pressed and never
+		 * flash back to one passed on the way. The rows slide in from the side the tab sits on.
+		 */
+		function switchTab(kind: string, first: boolean): void {
 			let { kinds } = handle.props;
-			let direction = Math.sign(kinds.indexOf(kind) - kinds.indexOf(currentKind()));
+			direction = Math.sign(kinds.indexOf(kind) - kinds.indexOf(currentKind()));
+			chooseFirst = first;
 			markedKind = kind;
 			for (let tab of document.querySelectorAll(`[${SEARCH_KIND_ATTRIBUTE}]`)) {
 				if (tab.getAttribute(SEARCH_KIND_ATTRIBUTE) === kind) {
@@ -317,15 +288,7 @@ export const SearchBox = clientEntry(
 					tab.scrollIntoView?.({ block: "nearest", inline: "nearest" });
 				} else tab.removeAttribute("aria-current");
 			}
-			clearTimeout(debounce);
-			let keystroke = ++latest;
-			begin();
-			void load(
-				searchFrameSrc(handle.props.frameSrc, box.value, kind),
-				keystroke,
-				chooseFirst,
-				direction,
-			);
+			box()?.dispatchEvent(new Event(LIVE_FRAME_RELOAD_EVENT));
 		}
 
 		/**
@@ -346,7 +309,7 @@ export const SearchBox = clientEntry(
 			if (kind !== null) {
 				event.preventDefault();
 				switchTab(kind, false);
-				document.getElementById(handle.props.id)?.focus();
+				box()?.focus();
 			} else if (samePage(link)) {
 				dialog?.close();
 			} else if (link.target === "" || link.target === "_self") {
@@ -356,52 +319,32 @@ export const SearchBox = clientEntry(
 
 		/**
 		 * Returns the box and the frame to how the page rendered them, so the dialog reopens on
-		 * the page's own query (blank on every page but `/search`) with nothing pending.
+		 * the page's own query (blank on every page but `/search`) on the "All" tab.
 		 */
 		function reset(): void {
 			document.getElementById(handle.props.dialogId)?.removeAttribute(SEARCH_FOLLOW_ATTRIBUTE);
-			clearTimeout(debounce);
-			let keystroke = ++latest;
-			let box = document.getElementById(handle.props.id);
-			if (box instanceof HTMLInputElement) box.value = initialQuery;
-			blank = initialQuery === "";
-			choose(-1);
-			void load(initialSrc, keystroke);
+			let input = box();
+			if (!input) return;
+			input.value = initialQuery;
+			chooseOption(input, -1);
+			if ((initialQuery === "") !== blank) {
+				blank = initialQuery === "";
+				void handle.update();
+			}
+			markedKind = "";
+			input.dispatchEvent(new Event(LIVE_FRAME_RELOAD_EVENT));
 		}
 
-		/**
-		 * Moves the choice through the rows: down from the box to the first row and around from
-		 * the last, up from the first back to the box. While a row is chosen, left and right
-		 * switch kind tabs, around from either end; with none chosen they move the caret. Enter
-		 * follows the chosen row, or the only row when nothing is chosen; otherwise it submits
-		 * the form to `/search`.
-		 */
-		function navigate(event: KeyboardEvent): void {
-			let rows = options();
+		/** While a row is chosen, left and right switch kind tabs, around from either end. */
+		function switchTabByArrow(event: KeyboardEvent): void {
 			let { kinds } = handle.props;
-
-			if (
-				(event.key === "ArrowRight" || event.key === "ArrowLeft") &&
-				selected >= 0 &&
-				kinds.length > 1
-			) {
-				event.preventDefault();
-				let step = event.key === "ArrowRight" ? 1 : -1;
-				let at = Math.max(0, kinds.indexOf(currentKind()));
-				switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true);
-			} else if (event.key === "ArrowDown" && rows.length > 0) {
-				event.preventDefault();
-				choose(selected + 1 >= rows.length ? 0 : selected + 1);
-			} else if (event.key === "ArrowUp" && selected >= 0) {
-				event.preventDefault();
-				choose(selected - 1);
-			} else if (event.key === "Enter" && selected >= 0 && rows[selected]) {
-				event.preventDefault();
-				follow(rows[selected]);
-			} else if (event.key === "Enter" && !pending && rows.length === 1) {
-				event.preventDefault();
-				follow(rows[0]);
-			}
+			if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+			if (kinds.length < 2 || !(event.currentTarget instanceof HTMLElement)) return;
+			if (chosenOption(event.currentTarget) < 0) return;
+			event.preventDefault();
+			let step = event.key === "ArrowRight" ? 1 : -1;
+			let at = Math.max(0, kinds.indexOf(currentKind()));
+			switchTab(kinds[(at + step + kinds.length) % kinds.length] ?? "", true);
 		}
 
 		return () => (
@@ -424,28 +367,25 @@ export const SearchBox = clientEntry(
 					aria-autocomplete="list"
 					aria-controls={blank ? SEARCH_QUICK_LINKS_ID : SEARCH_LISTBOX_ID}
 					aria-expanded={blank || handle.props.optionCount > 0 ? "true" : "false"}
-					aria-activedescendant={selected >= 0 ? activeId : undefined}
 					aria-label={handle.props.label}
 					placeholder={handle.props.label}
 					autocomplete="off"
 					enterkeyhint="search"
 					autofocus
 					mix={[
-						on<HTMLInputElement, "keydown">("keydown", navigate),
+						liveFrame({
+							src: (text) => searchFrameSrc(handle.props.frameSrc, text, currentKind()),
+							debounce: SEARCH_DEBOUNCE_MS,
+							slowAfter: SPINNER_DELAY_MS,
+						}),
+						activeDescendantKeys(),
+						on<HTMLInputElement, "keydown">("keydown", switchTabByArrow),
+						on<HTMLInputElement, "ui:live-frame">("ui:live-frame", onLiveFrame),
 						on<HTMLInputElement, "input">("input", (event) => {
-							let box = event.currentTarget;
-							let text = box.value;
-							let keystroke = ++latest;
-							if ((text === "") !== blank) {
-								choose(-1);
-								blank = text === "";
-							}
-
-							clearTimeout(debounce);
-							begin();
-							debounce = setTimeout(() => {
-								void load(searchFrameSrc(handle.props.frameSrc, text, currentKind()), keystroke);
-							}, SEARCH_DEBOUNCE_MS);
+							if ((event.currentTarget.value === "") === blank) return;
+							chooseOption(event.currentTarget, -1);
+							blank = !blank;
+							void handle.update();
 						}),
 					]}
 				/>
