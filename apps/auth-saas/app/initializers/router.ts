@@ -27,7 +27,7 @@ import { mail } from "~/app/http/middleware/mail";
 import { models } from "~/app/http/middleware/models";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { assetResolver } from "~/app/initializers/assets";
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { turnstile } from "~/app/initializers/turnstile";
 import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
@@ -52,7 +52,7 @@ export const webRouter = createRouter({
 		asyncContext(),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry }),
-		database(createDatabase()),
+		database(openDatabase()),
 		models(),
 		mail(),
 		render({ assets: assetResolver }),

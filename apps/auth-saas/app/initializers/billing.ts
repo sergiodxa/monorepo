@@ -14,8 +14,8 @@ import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import { createDatabase } from "~/app/initializers/database";
-import { models } from "~/app/models";
+import { openDatabase } from "~/app/initializers/database";
+import models from "~/app/models";
 import { buildFeatureMap, buildProductMap } from "~/app/services/billing/catalog";
 
 /**
@@ -65,7 +65,7 @@ export const polar: Billing = new PolarBilling({
 
 /** The billing deliveries model, bound to the platform database the isolate shares. */
 function deliveries() {
-	return models.bind({ db: createDatabase() }).billingDeliveries;
+	return models.bind({ db: openDatabase() }).billingDeliveries;
 }
 
 /**

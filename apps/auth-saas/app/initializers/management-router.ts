@@ -30,7 +30,7 @@ import { mail } from "~/app/http/middleware/mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import { models } from "~/app/http/middleware/models";
 import { requestOrigin } from "~/app/http/request-origin";
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { createHostnameClient } from "~/app/initializers/hostnames";
 import { logger } from "~/app/initializers/logger";
 import { sessionCookie } from "~/app/initializers/session-cookie";
@@ -73,7 +73,7 @@ export const managementRouter = createRouter({
 		asyncContext(),
 		securityHeaders(MANAGEMENT_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry }),
-		database(createDatabase()),
+		database(openDatabase()),
 		models(),
 		managementWellKnown(issuer),
 		formData(),

@@ -19,9 +19,9 @@ let database: Database | undefined;
  *
  * @returns A database bound to the `PLATFORM_DB` binding.
  * @example
- * let middleware = [database(createDatabase())];
+ * let middleware = [database(openDatabase())];
  */
-export function createDatabase(): Database {
+export function openDatabase(): Database {
 	return (database ??= new Database(createD1DatabaseAdapter(env.PLATFORM_DB), {
 		now: () => Date.now(),
 	}));

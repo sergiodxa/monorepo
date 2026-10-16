@@ -8,18 +8,20 @@
  */
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
+import { models } from "@sdxc/data-model/jobs";
+import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
 import { hostnames } from "~/app/jobs/middleware/hostnames";
 import { mail } from "~/app/jobs/middleware/mail";
-import { models } from "~/app/jobs/middleware/models";
 import { tenant } from "~/app/jobs/middleware/tenant";
+import registry from "~/app/models";
 
 /**
  * The registry both worker handlers run through. Every job gets the control-plane
@@ -29,7 +31,13 @@ import { tenant } from "~/app/jobs/middleware/tenant";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(createDatabase), models(), hostnames(), tenant(), mail()],
+	middleware: [
+		database(openDatabase),
+		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+		hostnames(),
+		tenant(),
+		mail(),
+	],
 	timeout: "5 minutes",
 
 	/**

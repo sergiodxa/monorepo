@@ -11,7 +11,7 @@ import { models as publishModels } from "@sdxc/data-model/router";
 
 import type { Models } from "~/app/models";
 
-import { models as registry } from "~/app/models";
+import registry from "~/app/models";
 
 declare module "remix/router" {
 	interface RequestContext {
@@ -23,7 +23,7 @@ declare module "remix/router" {
 /**
  * Creates the middleware; install it after `database()`, whose `ctx.db` it binds to.
  *
- * @example createRouter({ middleware: [database(createDatabase()), models()] });
+ * @example createRouter({ middleware: [database(openDatabase()), models()] });
  */
 export function models() {
 	return publishModels(registry, (ctx) => ({ db: ctx.db }));

@@ -13,15 +13,15 @@ import { BillingWebhook } from "@sdxc/billing";
 import { createAction } from "remix/router";
 
 import { billingDeliveries, polar } from "~/app/initializers/billing";
-import { createDatabase } from "~/app/initializers/database";
-import { models } from "~/app/models";
+import { openDatabase } from "~/app/initializers/database";
+import models from "~/app/models";
 import { createBillingWebhookHandlers } from "~/app/services/billing-sync";
 import routes from "~/routes/web";
 
 /** Verifies, deduplicates and applies each billing provider delivery. */
 let webhook = new BillingWebhook(
 	polar,
-	createBillingWebhookHandlers(models.bind({ db: createDatabase() }), polar),
+	createBillingWebhookHandlers(models.bind({ db: openDatabase() }), polar),
 	{
 		store: billingDeliveries,
 	},

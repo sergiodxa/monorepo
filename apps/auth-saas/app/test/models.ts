@@ -15,7 +15,7 @@ import { unwrap } from "@sdxc/result";
 import type { Models as BoundModels } from "~/app/models";
 import type { TenantRow } from "~/app/models/tenants";
 
-import { models } from "~/app/models";
+import models from "~/app/models";
 
 /**
  * Binds every model to `db`.

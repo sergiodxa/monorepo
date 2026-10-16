@@ -25,7 +25,7 @@ import { platformTenantStub } from "~/app/initializers/platform-tenant";
  * @param issuer - The management API's own origin, `https://api.{PLATFORM_DOMAIN}`.
  * @returns The middleware, for the management router's global chain after `database`.
  * @example
- * createRouter({ middleware: [database(createDatabase()), managementWellKnown(issuer)] });
+ * createRouter({ middleware: [database(openDatabase()), managementWellKnown(issuer)] });
  */
 export function managementWellKnown(issuer: string): Middleware {
 	let api = managementResourceServer(issuer);

@@ -12,7 +12,7 @@ import type { BoundRegistry } from "@sdxc/data-model";
 import { createModels } from "@sdxc/data-model";
 
 /** Every control-plane model, keyed by the name `ctx.models` exposes it under. */
-export const models = createModels({
+const models = createModels({
 	customers: () => import("./customers"),
 	tenants: () => import("./tenants"),
 	memberships: () => import("./memberships"),
@@ -33,3 +33,5 @@ export const models = createModels({
 
 /** The registry bound to one request or job, for a service handed `ctx.models`. */
 export type Models = BoundRegistry<typeof models>;
+
+export default models;
