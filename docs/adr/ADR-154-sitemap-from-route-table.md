@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-15
+**Accepted** - 2026-10-16
 
 ## Background
 
@@ -20,7 +20,7 @@ controller against its contract.
 
 ### What a route table is at runtime
 
-`route()` from `remix/routes` (`@remix-run/fetch-router` 0.22) returns a plain nested object.
+`route()` from `remix/routes` (`@remix-run/fetch-router` 1.0) returns a plain nested object.
 Each leaf is a `Route` with:
 
 | Member    | What it gives                                                                                 |
@@ -44,28 +44,29 @@ decision, and only params can come from the app.
 
 ## Decision
 
-Add a `@sdxc/sitemap/remix` entry point. Its `sitemap()` function takes the route table and an
-object that decides every `GET` and `ANY` route in it. A route left out of that object is a
-type error.
+Add a `@sdxc/sitemap/remix` entry point. Its `fromRoutes(routes, origin, decisions)` takes the
+route table, the origin to resolve URLs against, and an object that decides every `GET` and
+`ANY` route in the table. A route left out of that object is a type error. The sitemap
+controller calls it inside its handler after running its own queries, so each decision is a
+plain value and every query runs once:
 
 ```ts
-import { sitemap } from "@sdxc/sitemap/remix";
+import { xml } from "@sdxc/http/response";
+import { fromRoutes } from "@sdxc/sitemap/remix";
+import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
 
-export const SITEMAP = sitemap(routes, {
-	feed: { priority: 1 },
-	/** `findAll` answers newest first, so the first row dates the listing. */
-	articles: async (ctx) => {
-		let latest = (await ctx.models.articles.findAll({ includePreview: false })).at(0);
-		return { updatedAt: latest ? new Date(latest.created_at) : undefined };
-	},
-	post: async (ctx) => {
-		let [articles, tutorials] = await Promise.all([
-			ctx.models.articles.findAll({ includePreview: false }),
-			ctx.models.tutorials.findAll({ includePreview: false }),
-		]);
-		return [
+export default createAction(routes.sitemap, async (ctx) => {
+	let [articles, tutorials] = await Promise.all([
+		ctx.models.articles.findAll({ includePreview: false }),
+		ctx.models.tutorials.findAll({ includePreview: false }),
+	]);
+
+	let sitemap = fromRoutes(routes, ctx.url, {
+		feed: { priority: 1 },
+		articles: { updatedAt: articles.at(0) && new Date(articles[0].created_at) },
+		post: [
 			...articles.map((article) => ({
 				params: { postType: "articles", postSlug: article.meta.slug },
 				updatedAt: new Date(article.created_at),
@@ -74,43 +75,35 @@ export const SITEMAP = sitemap(routes, {
 				params: { postType: "tutorials", postSlug: tutorial.meta.slug },
 				updatedAt: new Date(tutorial.created_at),
 			})),
-		];
-	},
-	colors: false,
-	healthcheck: false,
-	activityPub: false,
-	cms: false,
-	/** …and a decision for each of the table's remaining GET routes. */
+		],
+		colors: false,
+		healthcheck: false,
+		activityPub: false,
+		cms: false,
+		/** …and a decision for each of the table's remaining GET routes. */
+	});
+
+	return xml(sitemap.toString(), { headers: { "Cache-Control": "public, max-age=3600" } });
 });
 ```
 
 ### What each route accepts
 
-| Route                      | Value                                                                                                    |
-| -------------------------- | -------------------------------------------------------------------------------------------------------- |
-| No params                  | `Sitemap.AppendOptions`, a function returning them, or `false`                                           |
-| Params (`:slug`, `*path`)  | A function returning `{ params, ...Sitemap.AppendOptions }[]`, params typed from the pattern, or `false` |
-| A nested map               | An object deciding each of its routes, or `false` for the whole subtree                                  |
-| `POST`, `PUT`, `DELETE`, … | Not a key; only routes a crawler can request take a decision                                             |
+| Route                          | Value                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------- |
+| No required params             | `true`, `false`, or `Sitemap.AppendOptions`                                                 |
+| Required params                | `false`, or a list of `{ params, ...Sitemap.AppendOptions }`, params typed from the pattern |
+| A nested map                   | An object deciding each of its routes, or `false` for the whole subtree                     |
+| `POST`, `PUT`, `DELETE`, …     | Not a key; only routes a crawler can request take a decision                                |
+| A pattern `href()` can't build | `false` only (a hostname pattern with params, a nameless `*`)                               |
 
 - Optional groups such as `(.:ext)` are left out of the URL unless the entry passes their param,
   so `topic: get("/topics/:slug(.:ext)")` lists `/topics/<slug>`.
 - A `form()` route is decided through its nested `index` route.
-- Functions receive whatever context the caller passes, so a controller hands in its `ctx` and
-  reads `ctx.models` the way its other handlers do.
-
-### What `sitemap()` returns
-
-A builder, not a controller. `SITEMAP.build(ctx, origin)` resolves every entry, turns each into an
-absolute URL with `route.href(params)` against `origin`, and returns the `Sitemap` the base
-entry already defines. The app's controller keeps its own response, caching and headers:
-
-```ts
-export default createAction(routes.sitemap, async (ctx) => {
-	let document = await SITEMAP.build(ctx, ctx.url);
-	return xml(document.toString(), { headers: { "Cache-Control": "public, max-age=3600" } });
-});
-```
+- Pages are listed in the order the table declares its routes, and each route's pages in the
+  order given.
+- `fromRoutes` returns the `Sitemap` the base entry defines, so the controller keeps its own
+  response, caching and headers.
 
 ### Package boundary
 
@@ -124,7 +117,7 @@ peer dependency, the same split `@sdxc/markdown` uses for its `./remix` entry.
 
 - **No page is forgotten** - adding a `GET` route to `routes/web.ts` fails `bun typecheck` until
   the sitemap includes it or excludes it with `false`.
-- **Params are checked** - a function for `post` must return `postType` and `postSlug`, inferred
+- **Params are checked** - every page listed for `post` must pass `postType` and `postSlug`, inferred
   from `/:postType/:postSlug(.:ext)`, so a renamed param breaks the build.
 - **One shape for every app** - the blog, uptime, the sdxc site and the `app` template stop
   hand-rolling the same loop of `new URL(routes.x.href(), origin)` calls.
@@ -151,8 +144,8 @@ peer dependency, the same split `@sdxc/markdown` uses for its `./remix` entry.
 
 **Priority:** High
 
-1. Add `src/remix/index.ts` with `sitemap()`, its decision types and `build()`.
-2. Test it against a route table with static, param, optional-group, `form()`, `ANY` and nested
+1. Add `src/remix/index.ts` with `fromRoutes()` and its `Decisions` type.
+2. Test it against a route table with static, param, optional-group, `form()`, write-only and nested
    routes, plus type tests that a missing `GET` route and a wrong param fail.
 3. Add the `./remix` export and the `remix` peer dependency, and document the entry in the
    README and the sdxc site's SEO guide.
@@ -188,6 +181,16 @@ to the route table.
 
 **Rejected because**: a param page needs data in the test database to show up, and the failure
 appears at test time rather than in the editor.
+
+### 4. A builder whose decisions are functions of the request context
+
+Declare the sitemap once at module scope, with a function per route that receives the request
+context and runs its own query, and call `build(ctx, origin)` from the controller.
+
+**Rejected because**: the functions' context type cannot be inferred alongside the route table
+without an explicit type argument, and routes that share data (a listing page dated by its
+newest post, and the posts themselves) would each query it. Calling `fromRoutes` inside the
+handler lets the handler run each query once and pass plain values.
 
 ## References
 

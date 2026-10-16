@@ -5,7 +5,8 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./remix": "./src/remix/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -13,5 +14,11 @@
 	"dependencies": {
 		"@sdxc/result": "workspace:*",
 		"@sdxc/xml": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
 	}
 }

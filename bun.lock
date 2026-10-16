@@ -1956,6 +1956,12 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/xml": "workspace:*",
       },
+      "devDependencies": {
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
+      },
     },
     "packages/spam": {
       "name": "@sdxc/spam",

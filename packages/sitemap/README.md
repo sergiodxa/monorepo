@@ -36,6 +36,23 @@ sitemap.toString();
 `updatedAt` is written as `<lastmod>`, `frequency` as `<changefreq>` and `priority` as
 `<priority>`.
 
+### Build one from a Remix route table
+
+`fromRoutes` from `@sdxc/sitemap/remix` walks a `remix/routes` table and needs a decision for
+every `GET` route in it, so a page added to the table fails typechecking until the sitemap lists
+or excludes it. A route with params lists its pages, with the params typed from its pattern.
+
+```typescript
+import { fromRoutes } from "@sdxc/sitemap/remix";
+
+let sitemap = fromRoutes(routes, "https://example.com", {
+	home: { priority: 1 },
+	post: posts.map((post) => ({ params: { slug: post.slug }, updatedAt: post.updatedAt })),
+	healthcheck: false,
+	admin: false, // a nested map, excluded whole
+});
+```
+
 ### Read a published sitemap
 
 ```typescript
@@ -120,6 +137,13 @@ Reads a parsed `XML` document as a sitemap, following the rules under
 
 Retrieves and parses one sitemap, taking what `fetch` takes. Any `ok` response is parsed
 whatever its `Content-Type`; a network error or an error status is a `SitemapFetchError`.
+
+### `fromRoutes(routes, origin, decisions): Sitemap`
+
+From `@sdxc/sitemap/remix`. Lists the table's pages in declared order, each URL built by its
+route's `href()` against `origin`. A route without required params takes `true`, `false` or
+`Sitemap.AppendOptions`; a route with params takes `false` or a list of `{ params, ...options }`;
+a nested map takes its own decisions or `false`. `POST` and other write routes take none.
 
 ### `SitemapParseError`
 
