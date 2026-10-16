@@ -1,26 +1,32 @@
 /**
- * HTTP action for the XML sitemap. It combines section URLs, the topic index and every author's
- * topic with published articles and tutorials, deriving `lastmod` hints from the freshest
- * creation date per section, so crawlers get a canonical index of the site's public pages.
+ * HTTP action for the XML sitemap. It decides every route the blog declares, listing the section
+ * pages, the topic index, every author's topic and every published article and tutorial, with
+ * `lastmod` hints from the freshest post per section, so crawlers get the site's public pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { xml } from "@sdxc/http/response";
-import { Sitemap } from "@sdxc/sitemap";
+import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
 
-import { topicPath } from "~/app/http/view-models/topic";
 import { isBuiltInTopic } from "~/app/models/topics";
 import routes from "~/routes/web";
+
+/** The newest of `dates`, or `undefined` when no section has a post yet. */
+function latest(...dates: Array<string | undefined>): Date | undefined {
+	let times = dates.filter((date) => date !== undefined).map((date) => new Date(date).getTime());
+	return times.length > 0 ? new Date(Math.max(...times)) : undefined;
+}
 
 /** Serves the XML sitemap covering the section pages and every published post. */
 export default createAction(
 	routes.sitemap,
 	/**
 	 * Repository `findAll` results arrive newest-first, so `.at(0)` holds the latest
-	 * timestamp for each listing page.
+	 * timestamp for each listing page. A kind's topic answers at its own section page, so only
+	 * authors' topics list under `/topics/:slug`.
 	 * @returns XML response for the sitemap endpoint.
 	 */
 	async function sitemapAction(ctx) {
@@ -31,56 +37,55 @@ export default createAction(
 			ctx.models.topics.findAll(),
 		]);
 
-		let sitemap = new Sitemap();
-
 		let lastArticleDate = articles.at(0)?.created_at;
 		let lastTutorialDate = tutorials.at(0)?.created_at;
 		let lastBookmarkDate = likes.at(0)?.created_at;
 
-		let dates = [lastArticleDate, lastTutorialDate, lastBookmarkDate]
-			.filter(Boolean)
-			.map((d) => new Date(d).getTime());
-
-		let lastPostDate = dates.length > 0 ? new Date(Math.max(...dates)) : undefined;
-
-		sitemap.append(new URL(routes.feed.href(), ctx.url), { updatedAt: lastPostDate });
-
-		sitemap.append(new URL(routes.articles.href(), ctx.url), {
-			updatedAt: lastArticleDate ? new Date(lastArticleDate) : undefined,
-		});
-
-		sitemap.append(new URL(routes.tutorials.href(), ctx.url), {
-			updatedAt: lastTutorialDate ? new Date(lastTutorialDate) : undefined,
-		});
-
-		sitemap.append(new URL(routes.bookmarks.href(), ctx.url), {
-			updatedAt: lastBookmarkDate ? new Date(lastBookmarkDate) : undefined,
-		});
-
-		sitemap.append(new URL(routes.glossary.href(), ctx.url));
-
-		sitemap.append(new URL(routes.topics.href(), ctx.url));
-		for (let topic of topics) {
-			if (!isBuiltInTopic(topic.slug)) sitemap.append(new URL(topicPath(topic), ctx.url));
-		}
-
-		for (let article of articles) {
-			sitemap.append(
-				new URL(routes.post.href({ postType: "articles", postSlug: article.meta.slug }), ctx.url),
-				{
+		let sitemap = fromRoutes(routes, ctx.url, {
+			feed: { updatedAt: latest(lastArticleDate, lastTutorialDate, lastBookmarkDate) },
+			colors: false,
+			sponsor: false,
+			sponsors: false,
+			wellKnown: false,
+			activityPub: false,
+			nodeInfo: false,
+			sitemap: false,
+			healthcheck: false,
+			mcp: false,
+			mcpMarkdown: false,
+			encoreSupport: false,
+			encorePrivacy: false,
+			encorePrivacyMarkdown: false,
+			articles: { updatedAt: latest(lastArticleDate) },
+			tutorials: { updatedAt: latest(lastTutorialDate) },
+			bookmarks: { updatedAt: latest(lastBookmarkDate) },
+			glossary: true,
+			releases: false,
+			notes: false,
+			til: false,
+			topics: true,
+			topic: topics
+				.filter((topic) => !isBuiltInTopic(topic.slug))
+				.map((topic) => ({ params: { slug: topic.slug } })),
+			search: false,
+			searchFrame: false,
+			post: [
+				...articles.map((article) => ({
+					params: { postType: "articles", postSlug: article.meta.slug },
 					updatedAt: new Date(article.created_at),
-				},
-			);
-		}
-
-		for (let tutorial of tutorials) {
-			sitemap.append(
-				new URL(routes.post.href({ postType: "tutorials", postSlug: tutorial.meta.slug }), ctx.url),
-				{
+				})),
+				...tutorials.map((tutorial) => ({
+					params: { postType: "tutorials", postSlug: tutorial.meta.slug },
 					updatedAt: new Date(tutorial.created_at),
-				},
-			);
-		}
+				})),
+			],
+			postRelated: false,
+			auth: false,
+			rss: false,
+			atom: false,
+			jsonFeed: false,
+			cms: false,
+		});
 
 		return xml(sitemap.toString());
 	},
