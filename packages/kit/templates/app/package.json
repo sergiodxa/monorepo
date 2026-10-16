@@ -8,8 +8,6 @@
 		"cf:typegen": "cf workers types",
 		"check": "vp check",
 		"cli": "bun ./bootstrap/cli.ts",
-		"db:local:migrate": "sdxc run db migrate",
-		"db:remote:migrate": "sdxc run db migrate --remote",
 		"dev": "vp dev",
 		"start": "vp preview",
 		"test": "vp test run",

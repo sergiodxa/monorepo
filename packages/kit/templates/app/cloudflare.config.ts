@@ -22,8 +22,8 @@ export default defineConfig({
 		triggers: [triggers.queue({ name: manifest.name })],
 		env: {
 			/**
-			 * The app's database. `cf d1 create <name>` prints the id to put here and in the
-			 * `db:*:migrate` scripts; until then, `bun db:local:migrate` and `bun dev` run on a local copy.
+			 * The app's database. `cf d1 create <name>` prints the id to put here, where the
+			 * `sdxc run db` commands read it; until then, `bun dev` runs on a local copy.
 			 */
 			DB: bindings.d1({ name: manifest.name, id: "00000000-0000-4000-8000-000000000000" }),
 			/**

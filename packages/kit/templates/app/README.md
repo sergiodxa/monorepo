@@ -7,7 +7,7 @@ A Remix v3 app on Cloudflare Workers, built on the `@sdxc/*` packages.
 ```sh
 bun install
 bun cf:typegen
-bun db:local:migrate
+sdxc run db migrate
 bun dev
 ```
 
@@ -19,7 +19,7 @@ you change a binding in `cloudflare.config.ts`.
 ```sh
 sdxc make controller about                 # a page, mapped in routes/web.ts
 sdxc make controller api/keys --routes api # a JSON endpoint
-sdxc make migration create-posts           # then: bun db:local:migrate
+sdxc make migration create-posts           # then: sdxc run db migrate
 sdxc make model post                       # then: ctx.models.post
 sdxc make job reports/daily --cron "0 8 * * *"
 sdxc make email welcome
@@ -77,6 +77,6 @@ another origin, add that origin to `config/security-policy.ts`. API errors use t
 ```sh
 bun check
 bun build
-bun db:remote:migrate
+sdxc run db migrate --remote
 bun cf:deploy
 ```

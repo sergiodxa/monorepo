@@ -35,7 +35,7 @@ export const PROJECT_ROOT = join(import.meta.dirname, "../..");
 /** The `DB` binding's id, as `cloudflare.config.ts` declares it, or its name until it has one. */
 export const DATABASE_ID = config.worker.env.DB.id ?? config.worker.env.DB.name ?? manifest.name;
 
-/** The SQLite file `bun dev` and `bun db:local:migrate` use for the `DB` binding. */
+/** The SQLite file `bun dev` and `sdxc run db migrate` use for the `DB` binding. */
 export const LOCAL_DATABASE_FILE = join(
 	PROJECT_ROOT,
 	".cloudflare/state/v3/d1",

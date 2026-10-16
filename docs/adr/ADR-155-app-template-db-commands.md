@@ -19,12 +19,12 @@ but to no request.
 
 ## Decision
 
-Database work is a command group in the app's own command line, and the package scripts call
-it:
+Database work is a command group in the app's own command line, run with `sdxc run`, and the
+template has no `db:*` package scripts:
 
 ```sh
-sdxc run db migrate            # bun db:local:migrate
-sdxc run db migrate --remote   # bun db:remote:migrate
+sdxc run db migrate            # applies pending migrations locally
+sdxc run db migrate --remote   # applies them to production
 sdxc run db console            # sql> prompt over the local copy
 ```
 
