@@ -46,7 +46,9 @@ run({
 	/**
 	 * Sends a submission under the form's declared encoding, coercing a file entry to
 	 * its filename for a urlencoded body, and returns the response as-is so the frame
-	 * can read its redirect target.
+	 * can read its redirect target. Every request revalidates the browser's stored copy,
+	 * since a page from an earlier deploy names island chunks that deploy removed; the
+	 * build-named tag keeps an unchanged page a `304`.
 	 */
 	async resolveFrame(src, options) {
 		let { target, signal, method, formData, encType } = options ?? {};
@@ -64,6 +66,13 @@ run({
 					)
 				: formData;
 
-		return await fetch(src, { credentials: "same-origin", headers, signal, method, body });
+		return await fetch(src, {
+			credentials: "same-origin",
+			cache: "no-cache",
+			headers,
+			signal,
+			method,
+			body,
+		});
 	},
 });
