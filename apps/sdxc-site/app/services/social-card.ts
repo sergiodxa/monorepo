@@ -88,11 +88,12 @@ export function pagePathFromCardPath(path: string): string {
 }
 
 /**
- * Where a rendered card is stored: one object per template and content, never overwritten,
- * under this site's prefix in the bucket it shares with the author's blog.
+ * Where the card whose content hashes to `hash` is stored: one object per template and
+ * content, never overwritten, under this site's prefix in the bucket it shares with the
+ * author's blog. A card URL's `v` is that hash, so a request names its object directly.
  */
-export function socialCardKey(content: SocialCard.Content): string {
-	return `${SOCIAL_CARD_PREFIX}/${SOCIAL_CARD_TEMPLATE}/${socialCardHash(content)}.png`;
+export function socialCardKey(hash: string): string {
+	return `${SOCIAL_CARD_PREFIX}/${SOCIAL_CARD_TEMPLATE}/${hash}.png`;
 }
 
 /**

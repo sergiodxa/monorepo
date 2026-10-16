@@ -29,8 +29,10 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 const REVALIDATE = "public, max-age=3600";
 
 /**
- * Answers a `GET` for `<page>.png` with that page's card: the stored one, or one rendered,
- * stored after the response, and returned. The drawing code and fonts load on the first
+ * Answers a `GET` for `<page>.png` with that page's card. A repeat request is answered from
+ * the edge cache; a `v` naming a stored card is served without rendering its page; otherwise
+ * the page is rendered, its card read from storage or drawn, stored after the response, and
+ * returned. The drawing code and fonts load on the first
  * card drawn, so every other request runs without them. A `.png` path naming no page continues to the
  * router, so it answers as any unknown address does.
  */
@@ -41,17 +43,31 @@ export default function socialCards(): Middleware {
 		let pagePath = pagePathFromCardPath(pathname.slice(1, -".png".length));
 		if (pagePath.endsWith(".png")) return next();
 
+		let edge = edgeCache();
+		let cached = await edge?.match(context.request);
+		if (cached) return cached;
+		let respond = (response: Response) => {
+			if (edge) waitUntil(edge.put(context.request, response.clone()));
+			return response;
+		};
+
+		let storage = cardStorage();
+		let version = context.url.searchParams.get("v");
+		if (version && /^[0-9a-z]+$/.test(version)) {
+			let stored = await storage.get(socialCardKey(version));
+			if (stored) return respond(png(stored, IMMUTABLE));
+		}
+
 		let page = await renderPage(pagePath);
 		if (!page) return next();
 
 		let content = socialCardContent(page);
 		let hash = socialCardHash(content);
-		let cacheControl = context.url.searchParams.get("v") === hash ? IMMUTABLE : REVALIDATE;
-		let storage = cardStorage();
-		let key = socialCardKey(content);
+		let cacheControl = version === hash ? IMMUTABLE : REVALIDATE;
+		let key = socialCardKey(hash);
 
 		let stored = await storage.get(key);
-		if (stored) return png(stored, cacheControl);
+		if (stored) return respond(png(stored, cacheControl));
 
 		let [{ socialCardFonts }, { renderSocialCard }] = await Promise.all([
 			import("~/app/initializers/social-card-fonts"),
@@ -66,7 +82,7 @@ export default function socialCards(): Middleware {
 		let card = new File([bytes.slice()], `${hash}.png`, { type: "image/png" });
 		waitUntil(Promise.resolve(storage.set(key, card)));
 		currentLog()?.set({ socialCard: { path: pagePath, rendered: true } });
-		return png(card, cacheControl);
+		return respond(png(card, cacheControl));
 	};
 }
 
@@ -81,6 +97,16 @@ async function renderPage(pagePath: string) {
 	if (response.status !== 200) return null;
 	if (!response.headers.get("content-type")?.includes("text/html")) return null;
 	return readPageFacts(await response.text(), pagePath);
+}
+
+/**
+ * The colo's Workers cache, which answers a repeated card request before any page renders;
+ * absent outside the Workers runtime. Cast, since the DOM's `CacheStorage` type shadows the
+ * Workers declaration that has `default`.
+ */
+function edgeCache(): Cache | null {
+	if (typeof caches === "undefined") return null;
+	return (caches as unknown as { default: Cache }).default;
 }
 
 /** The card as an image response, cacheable by any shared cache. */

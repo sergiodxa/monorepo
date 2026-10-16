@@ -59,7 +59,10 @@ platform faces cannot be redistributed; Inter is the closest open face.
   the stored card or renders, stores (after the response) and returns it. A request whose
   `v` matches the content hash is cached for a year as `immutable`; one without it for an
   hour. A `.png` path naming no page continues to the router, which answers as for any
-  unknown address. The drawing code and fonts load on the first card drawn.
+  unknown address. The drawing code and fonts load on the first card drawn. A repeat
+  request is answered from the colo's Workers Cache API, and a request whose `v` names a
+  stored card is served from storage without rendering its page, since `v` is the hash the
+  storage key is built from.
 - **`DocumentLayout`** sets `og.image` and `og.image:alt` for every page with a canonical
   URL to `<page path>.png?v=<hash>` (`/index.png` for the home page). The hash
   in the URL is what makes platforms that cache images per URL fetch the new card after an

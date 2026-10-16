@@ -15,6 +15,8 @@ import { success } from "@sdxc/result";
 import { createMemoryFileStorage } from "remix/file-storage/memory";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
+import { socialCardKey } from "~/app/services/social-card";
+
 /** The one store every request in this file shares, so a second request can find the first's card. */
 const STORAGE = createMemoryFileStorage();
 
@@ -90,6 +92,17 @@ describe("GET <page>.png", () => {
 		let response = await fetchApp("/docs.png");
 		expect(response.status).toBe(200);
 		expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
+	});
+
+	test("a stored card named by its hash is served without rendering the page", async () => {
+		await STORAGE.set(
+			socialCardKey("storedonly"),
+			new File([new Uint8Array([137, 80, 78, 71])], "stored.png", { type: "image/png" }),
+		);
+		let response = await fetchApp("/api/not-a-package.png?v=storedonly");
+		expect(response.status).toBe(200);
+		expect(response.headers.get("cache-control")).toContain("immutable");
+		expect(Array.from(new Uint8Array(await response.arrayBuffer()))).toEqual([137, 80, 78, 71]);
 	});
 
 	test("a path that is not a page has no card", async () => {
