@@ -42,6 +42,9 @@ export const SOCIAL_CARD_SIZE = { width: 1200, height: 630 } as const;
  */
 export const SOCIAL_CARD_TEMPLATE = "1";
 
+/** This site's folder in the shared card bucket, which a lifecycle rule can target alone. */
+const SOCIAL_CARD_PREFIX = "sdxc";
+
 /** The segment the home page's card is stored under, since `/` leaves no name for a file. */
 const HOME_SEGMENT = "index";
 
@@ -84,9 +87,12 @@ export function pagePathFromCardPath(path: string): string {
 	return path === HOME_SEGMENT ? "/" : `/${path}`;
 }
 
-/** Where a rendered card is stored: one object per template and content, never overwritten. */
+/**
+ * Where a rendered card is stored: one object per template and content, never overwritten,
+ * under this site's prefix in the bucket it shares with the author's blog.
+ */
 export function socialCardKey(content: SocialCard.Content): string {
-	return `${SOCIAL_CARD_TEMPLATE}/${socialCardHash(content)}.png`;
+	return `${SOCIAL_CARD_PREFIX}/${SOCIAL_CARD_TEMPLATE}/${socialCardHash(content)}.png`;
 }
 
 /**

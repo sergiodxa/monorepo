@@ -97,7 +97,7 @@ describe("card addresses", () => {
 
 	test("the storage key is scoped to the template", () => {
 		expect(socialCardKey(socialCardContent(page))).toMatch(
-			new RegExp(`^${SOCIAL_CARD_TEMPLATE}/[0-9a-z]+\\.png$`),
+			new RegExp(`^sdxc/${SOCIAL_CARD_TEMPLATE}/[0-9a-z]+\\.png$`),
 		);
 	});
 

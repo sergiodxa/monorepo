@@ -45,8 +45,9 @@ platform faces cannot be redistributed; Inter is the closest open face.
   modules (the Cloudflare Vite plugin hands a Worker a `.bin` import as an `ArrayBuffer`) and
   parsed on the first card an isolate renders, never at module scope.
 - **`app/models/social-cards.ts`** — an R2-backed `FileStorage` (`get`, `has`, `list`,
-  `put`, `remove`, `set`) over the `SOCIAL_CARDS` bucket binding. Keys are
-  `<template>/<content hash>.png`, so a content edit or a template change writes a new
+  `put`, `remove`, `set`) over the `SOCIAL_CARDS` binding to the `social-cards` bucket,
+  which the author's blog shares. Keys are `sdxc/<template>/<content hash>.png`, so the two
+  sites' cards stay apart and a lifecycle rule can target either prefix, and a content edit or a template change writes a new
   object and old objects are never served for new content.
 - **`<page path>.png`** — every page's card lives at the page's own address with `.png`
   added (`/api/jwt.png`, `/index.png` for the home page). The `socialCards()` middleware in
@@ -75,7 +76,7 @@ platform faces cannot be redistributed; Inter is the closest open face.
 ### Negative
 
 - The first request for a card spends tens of milliseconds of CPU rendering it.
-- A new R2 bucket must exist before the deploy that declares it.
+- The shared `social-cards` R2 bucket must exist before the first deploy that declares it.
 
 ### Neutral
 

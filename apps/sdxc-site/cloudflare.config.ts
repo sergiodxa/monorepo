@@ -49,9 +49,10 @@ export default defineConfig({
 			CACHE: bindings.kv({ id: "006c6214d1d6469787114fe5b30e6e41" }),
 			/**
 			 * Every page's rendered social card, keyed by template and content, so a card is
-			 * drawn once and served from storage after that.
+			 * drawn once and served from storage after that. The bucket is shared with the
+			 * author's blog; this site's cards live under `sdxc/`.
 			 */
-			SOCIAL_CARDS: bindings.r2({ name: "sdxc-social-cards" }),
+			SOCIAL_CARDS: bindings.r2({ name: "social-cards" }),
 			GITHUB_TOKEN: bindings.secret(),
 			GITHUB_SPONSORS_WEBHOOK_SECRET: bindings.secret(),
 		},
