@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { createAction } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { seo } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
@@ -29,7 +29,7 @@ const TITLE = "React Router OAuth2 Handbook";
  * @returns The rendered HTML response.
  */
 export function renderHome(
-	ctx: RequestContext,
+	ctx: AppContext,
 	options: { error?: string; status?: number; confirmEmail?: string } = {},
 ) {
 	return ctx.render(

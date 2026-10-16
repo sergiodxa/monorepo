@@ -110,5 +110,9 @@ export function retryDelivery(error: unknown): boolean {
 /** Verifies each delivery's signature and dispatches it to {@link handlers}. */
 const WEBHOOK = new BillingWebhook(polar, handlers, { retry: retryDelivery });
 
-/** POST /webhooks/polar — records a paid order against the buyer's newsletter profile. */
-export default createAction(routes.webhooks.polar, (ctx) => WEBHOOK.handler(ctx));
+/**
+ * POST /webhooks/polar — records a paid order against the buyer's newsletter profile. The
+ * endpoint reads the request and the services published on every context, so it receives the
+ * router's context as the base `RequestContext` its handlers are typed against.
+ */
+export default createAction(routes.webhooks.polar, (ctx) => WEBHOOK.handler(ctx as RequestContext));

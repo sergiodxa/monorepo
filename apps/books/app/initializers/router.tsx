@@ -10,6 +10,7 @@
 
 import type { Billing } from "@sdxc/billing";
 import type { Newsletter } from "@sdxc/newsletter";
+import type { RouterContext } from "remix/router";
 
 import { assets } from "@sdxc/assets-middleware";
 import { attribution } from "@sdxc/attribution/middleware";
@@ -34,6 +35,16 @@ import { logger } from "~/app/initializers/logger";
 import { buttondown } from "~/app/initializers/newsletter";
 import routes from "~/routes/web";
 
+/** The context a controller sees once the router's middleware has run. */
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
+
+declare module "remix/router" {
+	/** Types `createAction` and `createController` with the context the router's chain builds. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
+
 /**
  * Builds the books HTTP router. `headRequests()` leads the middleware chain so a `HEAD` probe
  * reads like its `GET` to later steps. Each route is mapped individually through `lazy()`,
@@ -51,8 +62,8 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 			headRequests(),
 			asyncContext(),
 			log(logger),
-			getClientIP(),
 			trace(),
+			getClientIP(),
 
 			/**
 			 * Remembers the campaign a visitor landed from in a signed cookie, so the subscribe

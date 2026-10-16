@@ -11,7 +11,6 @@
 
 import type { Billing } from "@sdxc/billing";
 import type { Log } from "@sdxc/logger";
-import type { RequestContext } from "remix/router";
 
 import { toMetadata } from "@sdxc/attribution";
 import { redirect } from "@sdxc/http/response";
@@ -19,6 +18,8 @@ import { Location } from "@sdxc/location";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
 import { seo } from "~/app/initializers/seo";
@@ -45,7 +46,7 @@ const MAX_ORDER_PAGES = 5;
  * lets the form endpoint answer 400 while still returning the page.
  * @returns The rendered HTML response.
  */
-function renderUpgrade(ctx: RequestContext, options: { error?: string; status?: number } = {}) {
+function renderUpgrade(ctx: AppContext, options: { error?: string; status?: number } = {}) {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}

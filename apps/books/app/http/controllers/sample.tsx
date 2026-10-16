@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { toCampaign } from "@sdxc/attribution";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import {
 	INVALID_EMAIL_MESSAGE,
@@ -53,7 +53,7 @@ const GENERIC_MESSAGE = "Something went wrong, please try again.";
  * @returns The rendered HTML response.
  */
 function renderForm(
-	ctx: RequestContext,
+	ctx: AppContext,
 	options: { error?: string; status?: number; confirmEmail?: string } = {},
 ) {
 	return ctx.render(
@@ -81,7 +81,7 @@ function renderForm(
  * @param ctx - The request context, for its URL and renderer.
  * @returns The rendered HTML response, or the form again for a parse failure.
  */
-async function renderChapter(ctx: RequestContext) {
+async function renderChapter(ctx: AppContext) {
 	let parsed = readChapter();
 
 	if (isFailure(parsed)) {
