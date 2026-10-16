@@ -31,6 +31,7 @@ declare module "remix/router" {
  * produces, holding what an unrecognized string holds.
  */
 const UNKNOWN: UserAgent = {
+	raw: "",
 	browser: { name: null, version: null },
 	engine: { name: null, version: null },
 	os: { name: null, version: null },

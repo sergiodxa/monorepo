@@ -106,7 +106,9 @@ With no argument it reads the current request through `asyncContext()` from
 
 #### `UserAgent`
 
-`{ browser: Browser; engine: Engine; os: OperatingSystem; device: Device }`.
+`{ raw: string; browser: Browser; engine: Engine; os: OperatingSystem; device: Device }`. `raw`
+is the string that was parsed, for forwarding it verbatim, as a spam or analytics provider
+expects.
 
 #### `Browser`
 

@@ -100,6 +100,8 @@ export interface Device {
 
 /** Everything one user agent string gives up, each part read independently. */
 export interface UserAgent {
+	/** The string these parts were read from, for a caller that forwards or stores it verbatim. */
+	raw: string;
 	browser: Browser;
 	engine: Engine;
 	os: OperatingSystem;

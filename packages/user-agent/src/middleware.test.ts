@@ -43,6 +43,7 @@ describe(userAgent, () => {
 		expect(agent.browser).toEqual({ name: "Safari", version: "17.4" });
 		expect(agent.os).toEqual({ name: "iOS", version: "17.4" });
 		expect(agent.device).toEqual({ type: "mobile", vendor: "Apple", model: "iPhone" });
+		expect(agent.raw).toBe(IPHONE);
 	});
 
 	test("reads as the unknown agent when the request sends no header", async () => {
@@ -69,6 +70,7 @@ describe(userAgent, () => {
 		let ctx = new RequestContext(new Request("https://example.com/"));
 
 		expect(ctx.get(CurrentUserAgent)).toEqual({
+			raw: "",
 			browser: { name: null, version: null },
 			engine: { name: null, version: null },
 			os: { name: null, version: null },

@@ -27,6 +27,7 @@ import { detectOperatingSystem } from "./os.js";
  */
 export function parse(userAgent: string): UserAgent {
 	return {
+		raw: userAgent,
 		browser: detectBrowser(userAgent),
 		engine: detectEngine(userAgent),
 		os: detectOperatingSystem(userAgent),
