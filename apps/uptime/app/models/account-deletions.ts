@@ -21,7 +21,7 @@ import { accountDeletions } from "~/database/schema";
 const COLUMNS = ["id", "created_at", "subject_id", "email", "requested_at"] as const;
 
 export const AccountDeletions = createModel(accountDeletions, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		/**
@@ -65,12 +65,6 @@ export const AccountDeletions = createModel(accountDeletions, {
 		 */
 		async remove(subjectId: string): Promise<void> {
 			await this.query().where({ subject_id: subjectId }).delete();
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

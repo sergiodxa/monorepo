@@ -61,7 +61,8 @@ export interface PublicFlowMonitor {
 }
 
 export const StatusPages = createModel(statusPages, {
-	optional: ["id", "is_public", "show_overall_status"],
+	generateId: generateUUID,
+	optional: ["is_public", "show_overall_status"],
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -202,10 +203,6 @@ export const StatusPages = createModel(statusPages, {
 	},
 
 	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
-		},
-
 		/**
 		 * Removes every row attaching monitors to the page before the page itself goes, so a
 		 * deleted page leaves no attachment behind. Each statement stands on its own, which

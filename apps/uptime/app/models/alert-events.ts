@@ -32,7 +32,8 @@ export interface AlertEventOutcome
 		> {}
 
 export const AlertEvents = createModel(alertEvents, {
-	optional: ["id", "sent_at"],
+	generateId: generateUUID,
+	optional: ["sent_at"],
 
 	scopes: {
 		forAlert: (query, alertId: string) => query.where({ alert_id: alertId }),
@@ -242,7 +243,7 @@ export const AlertEvents = createModel(alertEvents, {
 
 	callbacks: {
 		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID(), sent_at: values.sent_at ?? Date.now() };
+			return { ...values, sent_at: values.sent_at ?? Date.now() };
 		},
 	},
 });

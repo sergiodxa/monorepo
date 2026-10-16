@@ -41,7 +41,7 @@ export interface DailyStatsInput {
 }
 
 export const MonitorDailyStats = createModel(monitorDailyStats, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		ofMonitor: (query, monitorId: string, monitorType: DailyStatsMonitorType) =>
@@ -81,7 +81,6 @@ export const MonitorDailyStats = createModel(monitorDailyStats, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				p95_response_time_ms: values.p95_response_time_ms ?? null,
 			};
 		},

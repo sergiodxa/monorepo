@@ -29,7 +29,7 @@ export interface ApiKeyInput {
 }
 
 export const ApiKeys = createModel(apiKeys, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -61,12 +61,6 @@ export const ApiKeys = createModel(apiKeys, {
 		/** Records that a key was just used, which the keys page shows beside each one. */
 		async markUsed(apiKeyId: string): Promise<void> {
 			await this.query().where({ id: apiKeyId }).update({ last_used_at: Date.now() });
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

@@ -48,7 +48,8 @@ export interface PingMetadata {
 }
 
 export const CronJobMonitors = createModel(cronJobMonitors, {
-	optional: ["id", "grace_period_seconds", "timezone", "status", "alert_on_late"],
+	generateId: generateUUID,
+	optional: ["grace_period_seconds", "timezone", "status", "alert_on_late"],
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -118,7 +119,7 @@ export const CronJobMonitors = createModel(cronJobMonitors, {
 				values.enabled_at != null && values.cron_expression
 					? calculateNextExpected(values.cron_expression, values.timezone ?? "UTC")
 					: null;
-			return { next_expected_at: nextExpectedAt, ...values, id: values.id ?? generateUUID() };
+			return { next_expected_at: nextExpectedAt, ...values };
 		},
 
 		/** Removes the monitor's ping history with it, which nothing else would ever reach. */

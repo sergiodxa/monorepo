@@ -17,7 +17,7 @@ import jobs from "~/app/jobs";
 import { teamDomains } from "~/database/schema";
 
 export const TeamDomains = createModel(teamDomains, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -62,7 +62,6 @@ export const TeamDomains = createModel(teamDomains, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				verified_at: values.verified_at ?? null,
 			};
 		},

@@ -152,8 +152,8 @@ function onSameDay(a: number, b: number) {
 }
 
 export const TrialWatches = createModel(trialWatches, {
+	generateId: generateUUID,
 	optional: [
-		"id",
 		"normalized_url",
 		"report_token",
 		"expires_at",
@@ -365,7 +365,6 @@ export const TrialWatches = createModel(trialWatches, {
 			let now = Date.now();
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				normalized_url: normalizeTrialUrl(values.url),
 				report_token: randomToken(),
 				expires_at: now + TRIAL_WATCH_DURATION_DAYS * DAY_MS,

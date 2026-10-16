@@ -62,7 +62,8 @@ interface RecurringPattern {
 }
 
 export const MaintenanceWindows = createModel(maintenanceWindows, {
-	optional: ["id", "suppress_alerts", "show_on_status_page", "is_recurring"],
+	generateId: generateUUID,
+	optional: ["suppress_alerts", "show_on_status_page", "is_recurring"],
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -123,12 +124,6 @@ export const MaintenanceWindows = createModel(maintenanceWindows, {
 					monitorScopeMatches(storedMonitorScope(window), params.monitorType, params.monitorId) &&
 					isActiveAt(window, now),
 			);
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

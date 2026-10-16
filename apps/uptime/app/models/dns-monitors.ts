@@ -87,8 +87,8 @@ export interface DnsCheckOutcome {
 }
 
 export const DnsMonitors = createModel(dnsMonitors, {
+	generateId: generateUUID,
 	optional: [
-		"id",
 		"interval_seconds",
 		"is_enabled",
 		"registration_status",
@@ -178,7 +178,6 @@ export const DnsMonitors = createModel(dnsMonitors, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				next_due_at: nextDueAtOnEnable(values.is_enabled ?? true),
 			};
 		},

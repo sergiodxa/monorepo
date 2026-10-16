@@ -30,7 +30,8 @@ const CLAIM_COLUMNS = ["id", "team_id", "host", "port", "timeout_ms", "last_stat
 export type ClaimedTcpMonitor = Pick<SelectTcpMonitor, (typeof CLAIM_COLUMNS)[number]>;
 
 export const TcpMonitors = createModel(tcpMonitors, {
-	optional: ["id", "timeout_ms", "interval_seconds", "is_enabled"],
+	generateId: generateUUID,
+	optional: ["timeout_ms", "interval_seconds", "is_enabled"],
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -88,7 +89,6 @@ export const TcpMonitors = createModel(tcpMonitors, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				next_due_at: nextDueAtOnEnable(values.is_enabled ?? true),
 			};
 		},

@@ -63,9 +63,9 @@ interface StatsRow {
 }
 
 export const Monitors = createModel(monitors, {
-	/** `id` comes from `beforeCreate`; the rest are columns the table declares a default for. */
+	generateId: generateUUID,
+	/** Columns the table declares a default for. */
 	optional: [
-		"id",
 		"method",
 		"expected_status",
 		"interval_seconds",
@@ -275,7 +275,6 @@ export const Monitors = createModel(monitors, {
 				enabled_at: Date.now(),
 				next_due_at: nextDueAtOnEnable(true),
 				...values,
-				id: values.id ?? generateUUID(),
 			};
 		},
 

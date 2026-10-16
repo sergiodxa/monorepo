@@ -22,7 +22,8 @@ import { alerts } from "~/database/schema";
 export const MAX_ALERTS_PER_TEAM = 10;
 
 export const Alerts = createModel(alerts, {
-	optional: ["id", "notify_on_recovery", "cooldown_minutes"],
+	generateId: generateUUID,
+	optional: ["notify_on_recovery", "cooldown_minutes"],
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -66,10 +67,6 @@ export const Alerts = createModel(alerts, {
 	},
 
 	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
-		},
-
 		/**
 		 * Saving a `config` clears the broken mark, since a channel saved again is the owner's
 		 * answer to it; the next delivery confirms it.

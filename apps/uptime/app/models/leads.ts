@@ -93,7 +93,8 @@ export function hasMarketingConsent(lead: Pick<SelectLead, "consented_at">) {
 }
 
 export const Leads = createModel(leads, {
-	optional: ["id", "unsubscribe_token", "emails_sent"],
+	generateId: generateUUID,
+	optional: ["unsubscribe_token", "emails_sent"],
 
 	methods: {
 		/**
@@ -256,11 +257,10 @@ export const Leads = createModel(leads, {
 	},
 
 	callbacks: {
-		/** Mints the row's id and the unsubscribe token, a random credential no address derives. */
+		/** Mints the unsubscribe token, a random credential no address derives. */
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				unsubscribe_token: values.unsubscribe_token ?? randomToken(),
 			};
 		},

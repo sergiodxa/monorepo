@@ -27,17 +27,12 @@ export interface ContentCheckRule {
 }
 
 export const ContentChecks = createModel(monitorContentChecks, {
-	/** `id` comes from `beforeCreate`; the flags are columns the table declares a default for. */
-	optional: ["id", "case_sensitive", "is_enabled"],
+	generateId: generateUUID,
+	/** The flags are columns the table declares a default for. */
+	optional: ["case_sensitive", "is_enabled"],
 
 	scopes: {
 		ofMonitor: (query, monitorId: string) => query.where({ monitor_id: monitorId }),
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
-		},
 	},
 });
 

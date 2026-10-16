@@ -66,7 +66,7 @@ export function isEntitlingStatus(status: string): boolean {
 }
 
 export const Subscriptions = createModel(subscriptions, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		/**
@@ -183,12 +183,6 @@ export const Subscriptions = createModel(subscriptions, {
 			}
 
 			return moved;
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

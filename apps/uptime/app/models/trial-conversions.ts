@@ -62,7 +62,8 @@ export function trialConversionUrls(row: Pick<SelectTrialConversion, "urls">): s
 }
 
 export const TrialConversions = createModel(trialConversions, {
-	optional: ["id", "emails_sent", "watch_count"],
+	generateId: generateUUID,
+	optional: ["emails_sent", "watch_count"],
 
 	scopes: {
 		signedUpBetween: (query, from: number, to: number) =>
@@ -133,12 +134,6 @@ export const TrialConversions = createModel(trialConversions, {
 		 */
 		listPaidBetween(from: number, to: number): Promise<SelectTrialConversion[]> {
 			return this.paidBetween(from, to).orderBy("paid_at", "asc").all();
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

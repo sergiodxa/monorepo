@@ -23,7 +23,7 @@ import { trialWatchResults, trialWatches } from "~/database/schema";
 const RESULT_HISTORY_LIMIT = 200;
 
 export const TrialWatchResults = createModel(trialWatchResults, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		ofWatch: (query, watchId: string) => query.where({ trial_watch_id: watchId }),
@@ -79,12 +79,6 @@ export const TrialWatchResults = createModel(trialWatchResults, {
 			}
 
 			return { rowsAffected, batches, reachedCeiling: true };
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

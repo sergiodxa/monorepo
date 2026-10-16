@@ -22,7 +22,7 @@ import { memberships } from "~/database/schema";
 export type MembershipRole = "member" | "admin";
 
 export const Memberships = createModel(memberships, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -79,12 +79,6 @@ export const Memberships = createModel(memberships, {
 			let firstTeam = await this.context.models.teams.find(verified[0]!.team_id);
 			if (!firstTeam) throw new Error("Failed to load the team joined by domain");
 			return firstTeam;
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

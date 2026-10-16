@@ -32,7 +32,8 @@ const CLAIM_COLUMNS = ["id", "team_id", "source", "last_status"] as const;
 export type ClaimedFlowMonitor = Pick<SelectFlowMonitor, (typeof CLAIM_COLUMNS)[number]>;
 
 export const FlowMonitors = createModel(flowMonitors, {
-	optional: ["id", "interval_seconds", "is_enabled"],
+	generateId: generateUUID,
+	optional: ["interval_seconds", "is_enabled"],
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -101,7 +102,6 @@ export const FlowMonitors = createModel(flowMonitors, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				interval_seconds: values.interval_seconds ?? DEFAULT_FLOW_INTERVAL_SECONDS,
 				next_due_at: nextDueAtOnEnable(values.is_enabled ?? true),
 			};

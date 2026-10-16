@@ -53,7 +53,7 @@ export interface TeamWithRole {
 }
 
 export const Teams = createModel(teams, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		/** Finds a team by its UUID primary key or its unique slug, whichever the URL carries. */
@@ -187,10 +187,6 @@ export const Teams = createModel(teams, {
 	},
 
 	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
-		},
-
 		/**
 		 * Makes the owner an admin member of the team just created, so no team exists that its
 		 * owner cannot open. When that write fails the team row is removed again, leaving no

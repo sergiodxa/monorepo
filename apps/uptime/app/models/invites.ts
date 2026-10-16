@@ -17,7 +17,7 @@ import { isNull } from "remix/data-table";
 import { invites } from "~/database/schema";
 
 export const Invites = createModel(invites, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -58,7 +58,6 @@ export const Invites = createModel(invites, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				accepted_at: values.accepted_at ?? null,
 			};
 		},
