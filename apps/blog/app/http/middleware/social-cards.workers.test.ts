@@ -13,6 +13,7 @@ import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
+import { readSocialCard } from "~/app/services/social-card";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
@@ -93,6 +94,17 @@ describe("GET <page>.png", () => {
 		await Promise.all(PENDING);
 		let stored = await env.SOCIAL_CARDS.list({ prefix: "blog/1/" });
 		expect(stored.objects.length).toBeGreaterThan(0);
+	});
+
+	test("a listing publishes its rows as entries its card reads", async () => {
+		let response = await request("/articles");
+		let card = readSocialCard(await response.text(), "/articles");
+		expect(card?.kind).toBe("listing");
+		let titles = card?.kind === "listing" ? card.entries.map((entry) => entry.title) : [];
+		expect(titles).toContain("Cards Drawn in a Worker");
+		expect(card?.kind === "listing" && card.entries[0]?.date).toMatch(
+			/^[A-Z][a-z]{2} \d{2}, \d{2}$/,
+		);
 	});
 
 	test("a listing's card renders from its feed", async () => {

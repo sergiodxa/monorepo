@@ -74,13 +74,17 @@ function absoluteHref(rawHref: string) {
 	return `https://${rawHref}`;
 }
 
-/** An article or a tutorial: its linked title, a preview badge while scheduled, and its date. */
+/**
+ * An article or a tutorial as an `h-entry`: its linked title, a preview badge while scheduled,
+ * and its date, so a microformats reader of the listing finds every entry in it.
+ */
 function PageRow(handle: Handle<{ item: Extract<TopicViewModel.Item, { type: "page" }> }>) {
 	return () => {
 		let { item } = handle.props;
 		return (
 			<li
 				mix={[
+					mf("h-entry"),
 					grid(),
 					gridTemplate({ columns: "1fr auto" }),
 					gap(3),
@@ -92,14 +96,19 @@ function PageRow(handle: Handle<{ item: Extract<TopicViewModel.Item, { type: "pa
 				]}
 			>
 				<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-					<Link href={item.href}>{item.label}</Link>
+					<Link href={item.href} mix={[mf("u-url", "p-name")]}>
+						{item.label}
+					</Link>
 					{item.preview && (
 						<Badge color="warning" variant="secondary" mix={[mis(2)]}>
 							Preview
 						</Badge>
 					)}
 				</p>
-				<time mix={[text("sm"), fg("neutral.muted"), nowrap(), tabularNums()]}>
+				<time
+					datetime={isoDate(item.date)}
+					mix={[mf("dt-published"), text("sm"), fg("neutral.muted"), nowrap(), tabularNums()]}
+				>
 					{formatDate(item.date)}
 				</time>
 			</li>
