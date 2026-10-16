@@ -17,7 +17,10 @@ namespace DocumentLayout {
 	export interface Props {
 		/** The page's content, rendered inside `<main>`. */
 		children: RemixNode;
-		/** The stylesheets and client entry the request resolved, from `ctx.assets`. */
+		/**
+		 * The stylesheets, client entry and CSP nonce the request resolved, from `ctx.assets`;
+		 * the nonce is read only when the page hydrates, for its inline import map.
+		 */
 		assets: DocumentAssets;
 		title: string;
 		/** Whether the page carries an island, the only reason to link the client entry. */
@@ -44,7 +47,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					{stylesheets.map((href) => (
 						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
 					))}
-					{hydrates ? <ImportMap value={script.importMap} /> : null}
+					{hydrates ? <ImportMap value={script.importMap} nonce={assets.nonce} /> : null}
 				</head>
 				<body>
 					<main mix={css({ maxInlineSize: "48rem", marginInline: "auto", padding: "1.5rem" })}>

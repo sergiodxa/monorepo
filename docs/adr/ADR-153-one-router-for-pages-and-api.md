@@ -22,9 +22,14 @@ and the router's own middleware must be what pages and endpoints both use.
   limit per client address (`@sdxc/rate-limit` on a Cloudflare rate limiter binding, keyed with
   `@sdxc/get-client-ip`, answering `429` as an `@sdxc/problem` document).
 - **Each contract's chain is a shared `createMiddleware(...)` tuple its controllers declare** as
-  `middleware`: `app/http/middleware/page.ts` (`formData()`, `cop()`, `assets(...)`,
-  `render(...)`) and `app/http/middleware/api.ts` (`cors()`). Controller middleware keeps the
+  `middleware`: `app/http/middleware/page.ts` (`formData()`, `cop()`,
+  `securityHeaders(SECURITY_POLICY)`, `assets(...)`, `render(...)`) and
+  `app/http/middleware/api.ts` (`cors()`). Controller middleware keeps the
   context each one publishes typed in the handler, which `lazy()`'s guard argument does not.
+- **Pages carry the security headers.** `config/security-policy.ts` declares an
+  `@sdxc/security-headers` policy whose Content-Security-Policy admits the app's own origin,
+  inline `<style>` for `css()`, and the response's nonce, which `assets()` reads into
+  `ctx.assets.nonce` for the document's inline import map.
 - **Each contract owns its 404** as a catch-all route: `notFound: "/*path"` renders the 404 page,
   and `api.notFound: "/api/*path"` answers `application/problem+json`. The more specific pattern
   wins, so the router needs no default handler.
@@ -41,8 +46,9 @@ and the router's own middleware must be what pages and endpoints both use.
 
 ## Consequences
 
-- An API request skips the form parser, the cross-origin check and the asset lookups, and a page
-  request skips CORS.
+- An API request skips the form parser, the cross-origin check, the security headers and the
+  asset lookups, and a page request skips CORS. JSON and MCP responses carry no CSP, which
+  governs only documents a browser renders.
 - A page controller names its chain (`middleware: page`); one that forgets it fails to type
   check, since `ctx.render` and `ctx.assets` come from that chain.
 - The rate limit's budget is written twice, in the binding in `cloudflare.config.ts` and in the

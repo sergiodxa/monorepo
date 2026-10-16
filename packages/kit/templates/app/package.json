@@ -26,6 +26,7 @@
 		"@sdxc/openapi": "0.0.1",
 		"@sdxc/problem": "0.0.1",
 		"@sdxc/rate-limit": "0.0.1",
+		"@sdxc/security-headers": "0.0.1",
 		"@sdxc/ui": "0.0.1",
 		"remix": "3.0.0"
 	},

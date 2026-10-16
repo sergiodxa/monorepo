@@ -241,7 +241,7 @@ describe("built-in templates type check as a consumer's project", () => {
 });
 
 describe("the app template's command line", () => {
-	test("runs its example command under Bun, and its test passes", { timeout: 60_000 }, async () => {
+	test("runs its example command under Bun, and its tests pass", { timeout: 60_000 }, async () => {
 		let project = unwrap(await materialize("app", "blog"));
 		DIRECTORIES.push(dirname(project));
 
@@ -256,7 +256,7 @@ describe("the app template's command line", () => {
 		expect(about.output).toContain('"command.path":"about","outcome":"ok"');
 		expect(unknown.code).toBe(2);
 		expect(unknown.output).toContain('Unknown command "abuot" for blog; did you mean "about"?');
-		expect(tested.output).toContain("Tests  2 passed (2)");
+		expect(tested.output).toContain("Tests  4 passed (4)");
 		expect(tested.code).toBe(0);
 	});
 });

@@ -18,7 +18,9 @@ changing a binding.
 One router serves two route contracts:
 
 - `routes/web.ts`, the pages. Each page controller declares `app/http/middleware/page.ts`, which
-  parses forms, checks cross-origin posts and resolves the document's assets.
+  parses forms, checks cross-origin posts, sends the security headers in
+  `config/security-policy.ts` and resolves the document's assets. Name an origin in that
+  policy's Content-Security-Policy before a page loads a script, style, image or font from it.
 - `routes/api.ts`, the endpoints machine clients call: `GET /api/health`,
   `GET /api/openapi.json` and `POST /mcp`. Each declares `app/http/middleware/api.ts` (CORS), and
   errors answer as `application/problem+json` from the catalog in `config/problems.ts`; set
