@@ -3,11 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vp build",
+		"build": "vite build",
 		"cf:deploy": "bunx wrangler deploy",
 		"cli": "bun ./bootstrap/cli.ts",
-		"dev": "vp dev",
-		"start": "vp preview",
+		"dev": "vite dev",
+		"start": "vite preview",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
