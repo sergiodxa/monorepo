@@ -500,7 +500,6 @@ export const SearchPalette = clientEntry(
 									minBs(0),
 									overflowY("auto"),
 									grid(),
-									gap(2),
 									p(2),
 								]}
 							>
