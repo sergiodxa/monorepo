@@ -23,7 +23,8 @@ One router serves two route contracts:
 
 - `routes/web.ts`, the pages. Each page controller declares `app/http/middleware/page.ts`, which
   parses forms, checks cross-origin posts, loads the visitor's session as `ctx.session` (a signed
-  cookie naming a record in the `SESSIONS` KV store, saved after the controller runs), refuses
+  cookie naming a record in the `SESSIONS` KV store, saved after the controller runs) and the
+  visitor's language as `ctx.intl`, refuses
   a post without valid honeypot fields, sends
   the security headers in `config/security-policy.ts` and resolves the document's assets. A form
   renders the fields with `HoneypotFields` from `@sdxc/honeypot/ui`, and asks for Cloudflare
@@ -41,6 +42,15 @@ binding in `cloudflare.config.ts`. Every request, job and command continues the 
 `traceparent` or starts a trace, and its log record carries the `trace_id`, so one query finds a
 request and every job it enqueued. Document an endpoint by adding its operation to
 `routes/api.ts` and to `app/initializers/openapi.ts`.
+
+## Languages
+
+Page copy lives in `resources/locales/`, one MessageFormat 2 bundle per language, and a page
+reads it through `ctx.intl.t("home.title")`, or `Trans` from `@sdxc/i18n/ui` for copy with
+markup. The page middleware picks the language from `?lng=`, the session's `lng` value and
+`Accept-Language`, falling back to English. Add a language by saving its bundle beside
+`en.json` and listing it in `app/initializers/i18n.ts`, whose `translate(language)` serves a
+job or an email the same copy.
 
 ## Database
 

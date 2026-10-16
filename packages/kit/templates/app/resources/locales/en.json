@@ -1,0 +1,10 @@
+{
+	"home": {
+		"title": "Welcome",
+		"body": "Edit {#file}app/http/controllers/home.tsx{/file}, or add a page with {#command}sdxc make controller <name>{/command}."
+	},
+	"notFound": {
+		"title": "Not found",
+		"back": "Back home"
+	}
+}

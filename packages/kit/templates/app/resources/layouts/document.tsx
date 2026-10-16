@@ -5,8 +5,10 @@
  */
 
 import type { DocumentAssets } from "@sdxc/assets-middleware";
+import type { I18n } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
+import { IntlProvider } from "@sdxc/i18n/ui";
 import { css } from "remix/component";
 import { ImportMap } from "remix/component/server";
 
@@ -22,6 +24,8 @@ namespace DocumentLayout {
 		 * the nonce is read only when the page hydrates, for its inline import map.
 		 */
 		assets: DocumentAssets;
+		/** The request's translator, from `ctx.intl`: it sets `<html lang>` and is what `intl(handle)` reads below it. */
+		intl: I18n;
 		title: string;
 		/** Whether the page carries an island, the only reason to link the client entry. */
 		hydrates?: boolean;
@@ -31,11 +35,11 @@ namespace DocumentLayout {
 /** Renders the `<html>`, `<head>` and `<body>` shell around a page. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, children, hydrates = false, title } = handle.props;
+		let { assets, children, hydrates = false, intl, title } = handle.props;
 		let { script, stylesheets } = assets;
 
 		return (
-			<html lang="en" class="system">
+			<html lang={intl.locale} class="system">
 				<head>
 					<meta charSet="utf-8" data-rmx-key="charset" />
 					<meta
@@ -51,7 +55,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				</head>
 				<body>
 					<main mix={css({ maxInlineSize: "48rem", marginInline: "auto", padding: "1.5rem" })}>
-						{children}
+						<IntlProvider intl={intl}>{children}</IntlProvider>
 					</main>
 					{hydrates ? <script type="module" src={script.href}></script> : null}
 				</body>

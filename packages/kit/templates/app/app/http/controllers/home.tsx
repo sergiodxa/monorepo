@@ -3,6 +3,7 @@
  * which links the stylesheets and client entry the page middleware resolved.
  */
 
+import { Trans } from "@sdxc/i18n/ui";
 import { createAction } from "remix/router";
 
 import page from "~/app/http/middleware/page";
@@ -14,11 +15,10 @@ export default createAction(routes.home, {
 	/** GET / — the welcome page. */
 	handler: (ctx) =>
 		ctx.render(
-			<DocumentLayout assets={ctx.assets} title="Welcome">
-				<h1>Welcome</h1>
+			<DocumentLayout assets={ctx.assets} intl={ctx.intl} title={ctx.intl.t("home.title")}>
+				<h1>{ctx.intl.t("home.title")}</h1>
 				<p>
-					Edit <code>app/http/controllers/home.tsx</code>, or add a page with{" "}
-					<code>sdxc make controller &lt;name&gt;</code>.
+					<Trans i18nKey="home.body" components={{ file: <code />, command: <code /> }} />
 				</p>
 			</DocumentLayout>,
 		),

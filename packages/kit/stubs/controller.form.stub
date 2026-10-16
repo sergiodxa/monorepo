@@ -26,7 +26,7 @@ export default createController(routes.{{path}}, {
 		async index(ctx) {
 			let fields = unwrap(await ctx.honeypot.issue());
 			return ctx.render(
-				<DocumentLayout assets={ctx.assets} title="{{title}}">
+				<DocumentLayout assets={ctx.assets} intl={ctx.intl} title="{{title}}">
 					<h1>{{title}}</h1>
 					<form method="post" action={routes.{{path}}.action.href()}>
 						<HoneypotFields {...fields} />

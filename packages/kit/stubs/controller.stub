@@ -13,7 +13,7 @@ export default createAction(routes.{{path}}, {
 	/** Renders the {{title}} page. */
 	handler: (ctx) =>
 		ctx.render(
-			<DocumentLayout assets={ctx.assets} title="{{title}}">
+			<DocumentLayout assets={ctx.assets} intl={ctx.intl} title="{{title}}">
 				<h1>{{title}}</h1>
 			</DocumentLayout>,
 		),
