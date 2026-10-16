@@ -37,8 +37,15 @@ import {
 
 /** Where the property goes and what it is. */
 export interface AddPropertyOptions {
-	/** The dotted callee whose first argument is the object literal, such as `jobs` or `route`. */
+	/** The dotted callee that receives the object literal, such as `jobs` or `route`. */
 	call: string;
+	/**
+	 * The zero-based position of the object literal among the call's arguments, for a call that
+	 * takes it after others, such as `fromRoutes(routes, origin, { … })`.
+	 *
+	 * @default 0
+	 */
+	argument?: number;
 	/**
 	 * Keys of nested object literals to walk, outermost first. A value that is a call, such as
 	 * `route("/prefix", { … })`, is walked through its object argument; a missing level is created.
@@ -66,9 +73,9 @@ interface Property {
 const METHOD_MODIFIERS = new Set(["get", "set", "async", "static"]);
 
 /**
- * `source` with `key: value` appended to the object literal passed as the first argument of the
- * first call to `options.call`, after walking `options.path`. An existing `key`, or no such
- * call, is a failure.
+ * `source` with `key: value` appended to the object literal passed as argument `options.argument`
+ * (the first by default) of the first call to `options.call` that passes one there, after walking
+ * `options.path`. An existing `key`, or no such call, is a failure.
  *
  * @example addProperty("index.ts", source, { call: "jobs", path: ["trials"], key: "expire", value: "job({})" })
  */
@@ -83,13 +90,19 @@ export function addProperty(
 	let notFound = (reason: string): Result<never, CodemodError> =>
 		failure(new CodemodError("not-found", filename, reason));
 
-	let call = findCalls(structure, options.call).find((candidate) =>
-		isPunctuator(structure.code[candidate.open + 1], "{"),
-	);
-	if (call === undefined) {
-		return notFound(`no call to \`${options.call}\` with an object literal as its first argument`);
+	let position = options.argument ?? 0;
+	let object = -1;
+	for (let candidate of findCalls(structure, options.call)) {
+		let span = elements(structure, candidate.open)[position];
+		if (span === undefined || !isPunctuator(structure.code[span.start], "{")) continue;
+		object = span.start;
+		break;
 	}
-	let object = call.open + 1;
+	if (object === -1) {
+		return notFound(
+			`no call to \`${options.call}\` with an object literal as argument ${position}`,
+		);
+	}
 	let path = options.path ?? [];
 	for (let [depth, segment] of path.entries()) {
 		let property = properties(structure, object).find((candidate) => candidate.key === segment);

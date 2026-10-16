@@ -99,7 +99,7 @@ Moves the imports and re-exports of `options.names` from `options.from` to `opti
 
 ### `addProperty(filename, source, options: AddPropertyOptions): Result<Edit, CodemodError>`
 
-Appends `key: value` to the object literal passed as the first argument of the first call to `options.call`. `options.path` walks nested object literals by key; a value that is a call, such as `route("/prefix", { … })`, is walked through its object argument, and a missing level is created. The property follows the last one with its siblings' indentation and trailing-comma style. An existing key fails with `duplicate-key`.
+Appends `key: value` to the object literal passed as the first argument of the first call to `options.call`, or as the argument at `options.argument` for a call such as `fromRoutes(routes, origin, { … })`. `options.path` walks nested object literals by key; a value that is a call, such as `route("/prefix", { … })`, is walked through its object argument, and a missing level is created. The property follows the last one with its siblings' indentation and trailing-comma style. An existing key fails with `duplicate-key`.
 
 ### `insertAfterLast(filename, source, options: InsertOptions): Result<Edit, CodemodError>`
 

@@ -196,6 +196,18 @@ const CASES: Record<string, Case[]> = {
 			extension: "ts",
 			run: (f, s) => addProperty(f, s, { call: "tools", key: "list", value: "tool()" }),
 		},
+		{
+			name: "later-argument",
+			extension: "ts",
+			run: (f, s) =>
+				addProperty(f, s, {
+					call: "fromRoutes",
+					argument: 2,
+					path: ["admin"],
+					key: "users",
+					value: "{ index: true }",
+				}),
+		},
 	],
 	"insert-after-last": [
 		{
@@ -281,6 +293,21 @@ describe("edit failures and no-ops", () => {
 
 		expect(isFailure(duplicate) && duplicate.error.message).toBe("a.ts: `digest` already exists");
 		expect(isFailure(missing) && missing.error.code).toBe("not-found");
+	});
+
+	test("addProperty fails when no call passes an object literal at the argument asked for", () => {
+		let source = "let sitemap = fromRoutes(routes, origin, decisions);\n";
+
+		let result = addProperty("a.ts", source, {
+			call: "fromRoutes",
+			argument: 2,
+			key: "home",
+			value: "true",
+		});
+
+		expect(isFailure(result) && result.error.message).toBe(
+			"a.ts: no call to `fromRoutes` with an object literal as argument 2",
+		);
 	});
 
 	test("addProperty fails when the path reaches a value that is not an object literal", () => {
