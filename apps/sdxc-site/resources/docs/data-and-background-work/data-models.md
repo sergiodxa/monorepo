@@ -39,7 +39,7 @@ import { fail } from "remix/data-table";
 import { users } from "~/database/schema";
 
 export const Users = createModel(users, {
-	optional: ["id"],
+	generateId: generateUUID,
 	defaultScope: (query) => query.where({ deleted_at: null }),
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -54,18 +54,16 @@ export const Users = createModel(users, {
 			if (values.name === "") return fail("Name is required", ["name"]);
 		},
 		async beforeCreate(values) {
-			return {
-				...values,
-				id: values.id ?? generateUUID(),
-				email: values.email.toLowerCase(),
-			};
+			return { ...values, email: values.email.toLowerCase() };
 		},
 	},
 });
 ```
 
-`optional` lists the columns `create` may leave out because a callback or the database fills
-them, a `.default()` column included; nullable columns and `created_at`/`updated_at` are
+`generateId` creates the primary key of every row inserted without one, so `create` takes `id`
+as optional and every callback already sees the new key; a key the caller passes is kept.
+`optional` lists the other columns `create` may leave out because a callback or the database
+fills them, a `.default()` column included; nullable columns and `created_at`/`updated_at` are
 optional already, and every other column is required by the type of `create`. A scope receives a query
 it may refine with `where`, `orderBy`, `limit` and the other methods that keep the row type, and
 answers it. `with()` and `select()` change the row, so they belong in a method.
@@ -315,7 +313,7 @@ let claimed = await ctx.models.bookmarks.upsert(
 `conflict` defaults to the primary key, and `update` to every value but the key and
 `created_at`; `update: {}` leaves a conflicting row as it was. Either way it answers the row as it
 stands, so the second call tells whether this address won. Being one statement, it runs no
-callbacks, so it takes the `id` a `beforeCreate` would otherwise fill.
+callbacks; the model's `generateId` still fills the key of the row it inserts.
 
 ## Bind several registries
 
