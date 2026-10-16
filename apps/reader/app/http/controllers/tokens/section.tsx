@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { borderEdge, fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { m, maxIs, mbs, pbs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Alert, Button, Description, Input, Label, Select, Text } from "@sdxc/ui";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { UserStore } from "~/app/models/user-store";
 
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
@@ -49,7 +48,7 @@ const SCOPE_ID = "settings-token-scope";
  * @param ctx - The request's dictionary and the query it arrived with.
  */
 function tokenNote(
-	ctx: RequestContext,
+	ctx: AppContext,
 ): { message: string; color: "success" | "warning" | "danger" } | null {
 	let outcome = ctx.url.searchParams.get(TOKEN_PARAM);
 	if (outcome === null) return null;
@@ -83,7 +82,7 @@ function isLive(token: UserStore.AgentToken, now: number): boolean {
  * @param token - The token the row is drawn for.
  * @param now - Epoch milliseconds the row is drawn at.
  */
-function stateOf(ctx: RequestContext, token: UserStore.AgentToken, now: number): string {
+function stateOf(ctx: AppContext, token: UserStore.AgentToken, now: number): string {
 	if (token.revokedAt !== null) {
 		return ctx.intl.t("agent.tokens.state.revoked", {
 			date: shortDate(token.revokedAt, ctx.locale, now),
@@ -114,7 +113,7 @@ function stateOf(ctx: RequestContext, token: UserStore.AgentToken, now: number):
  * @param entitled - Whether their plan answers an agent at all.
  */
 export default function tokensSection(
-	ctx: RequestContext,
+	ctx: AppContext,
 	tokens: UserStore.AgentToken[],
 	entitled: boolean,
 ) {

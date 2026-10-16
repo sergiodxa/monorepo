@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, Router } from "remix/router";
+import type { Middleware } from "remix/router";
 
 import featureFlags from "@sdxc/flags/middleware/router";
 import { lazy } from "@sdxc/lazy-route";
@@ -20,6 +20,7 @@ import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
+import type { createWebRouter } from "~/app/initializers/router";
 
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
@@ -27,6 +28,13 @@ import { flags } from "~/app/initializers/flags";
 import { documentRendering } from "~/app/test/rendering";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
+
+/**
+ * The router a controller under test is mapped onto, typed as the app's own so a controller
+ * written against the full context maps onto it. Its chain seeds the values a page reads in
+ * place of the session, the sign-in and the log the production chain builds.
+ */
+export type AppRouter = ReturnType<typeof createWebRouter>;
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://reader.test";
@@ -65,7 +73,7 @@ export function seedAuth(viewer: Viewer | null): Middleware {
  * @param viewer - Who the request is signed in as, or `null` for an anonymous one.
  * @example let router = createTestRouter(VIEWER); router.map(routes.reading, reading);
  */
-export function createTestRouter(viewer: Viewer | null): Router {
+export function createTestRouter(viewer: Viewer | null): AppRouter {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
@@ -96,7 +104,7 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			 */
 			...documentRendering(),
 		],
-	});
+	}) as unknown as AppRouter;
 
 	router.map(
 		routes.sidebar.feeds,
@@ -115,7 +123,7 @@ export function createTestRouter(viewer: Viewer | null): Router {
  * @example await fetchRoute(router, routes.items.read.href({ itemId }), { read: "true" });
  */
 export function fetchRoute(
-	router: Router,
+	router: AppRouter,
 	path: string,
 	body?: Record<string, string>,
 ): Promise<Response> {

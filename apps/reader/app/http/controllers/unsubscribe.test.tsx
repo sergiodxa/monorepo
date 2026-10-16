@@ -7,11 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { unsubscribeUrl } from "~/app/services/unsubscribe";
@@ -41,7 +40,7 @@ vi.doMock("~/app/models/user-store", () => ({
 let { default: unsubscribe } = await import("./unsubscribe");
 
 /** A router with the endpoint mapped and nobody signed in, as a mail client arrives. */
-function createRouter(): Router {
+function createRouter(): AppRouter {
 	let router = createTestRouter(null);
 	router.map(routes.unsubscribe, unsubscribe);
 	return router;

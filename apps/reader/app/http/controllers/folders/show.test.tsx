@@ -11,12 +11,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { UserStore } from "~/app/models/user-store";
+import type { AppRouter } from "~/app/test/controller";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
 import { createUserStoreDouble } from "~/app/test/store";
@@ -65,7 +64,7 @@ function page(items: UserStore.Item[]): UserStore.TimelineResult {
 
 /** Dispatches a real `GET` to `path` as `viewer`, through the folder controller alone. */
 function get(path: string, viewer: Viewer | null = VIEWER): Promise<Response> {
-	let router: Router = createTestRouter(viewer);
+	let router: AppRouter = createTestRouter(viewer);
 	router.map(routes.folder, show);
 	return fetchRoute(router, path);
 }

@@ -11,6 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RouterContext } from "remix/router";
+
 import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
@@ -57,6 +59,16 @@ const WEBSUB_CALLBACK = "/websub/{feedId}/{token}";
  * reader's behalf by a page they did not visit.
  */
 const AGENT_ENDPOINT = "/mcp";
+
+/** The context a controller sees once the router's middleware has run. */
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
+
+declare module "remix/router" {
+	/** Types `createAction` and `createController` with the context the router's chain builds. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
 
 /** What {@link createWebRouter} reads per request to build the session middleware. */
 export interface WebRouterOptions {

@@ -11,10 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
@@ -28,7 +27,7 @@ vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 let { default: settings } = await import("./settings");
 
 /** A router with the settings controller mapped, signed in as `viewer` or as nobody. */
-function createRouter(viewer: typeof VIEWER | null): Router {
+function createRouter(viewer: typeof VIEWER | null): AppRouter {
 	let router = createTestRouter(viewer);
 	router.map(routes.settings, settings);
 	return router;

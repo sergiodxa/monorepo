@@ -17,8 +17,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -31,6 +29,7 @@ import { Alert, Button, Checkbox, Description, Label, LinkButton, Select, Text }
 import { createAction } from "remix/router";
 
 import type { Presentation } from "~/app/initializers/cookies";
+import type { AppContext } from "~/app/initializers/router";
 import type { UserStore } from "~/app/models/user-store";
 import type { Tier } from "~/app/services/entitlement";
 
@@ -98,7 +97,7 @@ function importedCount(params: URLSearchParams, name: string): number {
  * @param ctx - The request's dictionary and the query it arrived with.
  */
 function importNote(
-	ctx: RequestContext,
+	ctx: AppContext,
 ): { message: string; color: "success" | "warning" | "danger" } | null {
 	let imported = ctx.url.searchParams.get(IMPORTED_PARAM);
 
@@ -175,7 +174,7 @@ const FACE_ID = "settings-face";
  * @param current - What is stored for this reader, or what the cookie says before a
  * sign-in has written a row.
  */
-function appearanceSection(ctx: RequestContext, current: Presentation) {
+function appearanceSection(ctx: AppContext, current: Presentation) {
 	let saved = ctx.url.searchParams.get(APPEARANCE_PARAM) === "saved";
 
 	return (
@@ -259,7 +258,7 @@ const HOURS = Array.from({ length: 24 }, (_unused, hour) => hour);
  * @param ctx - The request's dictionary and the query it arrived with.
  */
 function notificationNote(
-	ctx: RequestContext,
+	ctx: AppContext,
 ): { message: string; color: "success" | "warning" | "danger" } | null {
 	let params = ctx.url.searchParams;
 
@@ -296,7 +295,7 @@ function notificationNote(
  * @param ctx - The request being answered.
  * @param notifications - What the reader's own object holds about all of this.
  */
-function notificationsSection(ctx: RequestContext, notifications: UserStore.Notifications) {
+function notificationsSection(ctx: AppContext, notifications: UserStore.Notifications) {
 	let note = notificationNote(ctx);
 
 	return (
@@ -501,7 +500,7 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
  * @param tokens - Every token they minted for an agent, newest first.
  */
 async function settingsPage(
-	ctx: RequestContext,
+	ctx: AppContext,
 	settings: UserStore.Settings | null,
 	entitlement: UserStore.Entitlement,
 	notifications: UserStore.Notifications,

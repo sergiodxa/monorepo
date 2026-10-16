@@ -10,10 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { readPresentation, writePresentation } from "~/app/initializers/cookies";
@@ -29,7 +28,7 @@ let { default: appearance, FACE_FIELD, THEME_FIELD } = await import("./appearanc
 let { default: settings } = await import("./settings");
 
 /** A router with both surfaces mapped, signed in as `viewer` or as nobody. */
-function createRouter(viewer: typeof VIEWER | null): Router {
+function createRouter(viewer: typeof VIEWER | null): AppRouter {
 	let router = createTestRouter(viewer);
 	router.map(routes.settings, settings);
 	router.map(routes.appearance, appearance);

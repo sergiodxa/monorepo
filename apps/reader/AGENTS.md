@@ -116,7 +116,7 @@ indicate requirement levels.
   page draws as a server-rendered `<Frame>`: a frame route that throws ends the whole
   document, and an error page answered there nests a second document in the first.
 - MUST let `worker-configuration.d.ts` be the only declaration of a binding's type; run
-  `bun run cf:typegen` after every change to `wrangler.jsonc`.
+  `sdxc run typegen` after every change to `wrangler.jsonc`.
 
 - SHOULD keep controllers small, folding a one-off view straight into `ctx.render()` and
   giving `resources/` a file only for markup that is reused or hydrated.
@@ -129,14 +129,24 @@ indicate requirement levels.
 
 - Bootstrap
   - `bootstrap/worker.ts` <- Worker entry point: the `fetch` and `scheduled` handlers
+  - `bootstrap/cli.ts` <- Command-line entry point, started by `sdxc run`
 - Initializers
-  - `app/initializers/router.tsx` <- Global middleware chain and route-to-controller mapping
+  - `app/initializers/router.tsx` <- Global middleware chain, route-to-controller mapping, and
+    `AppContext`, the context a controller sees
+  - `app/initializers/cli.ts` <- The command line and the middleware every command runs through
+  - `app/initializers/local-database.ts` <- The local feed catalog a command reads, located
+    from `wrangler.jsonc`
+  - `app/initializers/i18n.ts` <- The languages and dictionaries requests and commands share
   - `app/initializers/logger.ts` <- The one logger every request, object and cron run writes through
   - `app/initializers/billing.ts` <- The Polar billing instance
   - `app/initializers/cookies.ts` <- The standalone cookies: return-to, language, presentation
+- Commands
+  - `app/commands/index.ts` <- Every `sdxc run` command: `about`, `typegen`, `db console`,
+    `db migrate`
 - Configuration
   - `routes/web.ts` <- Registry of every URL the app serves
-  - `config/router-context.d.ts` <- `RequestContext` values the global middleware installs
+  - `config/router-context.d.ts` <- `RequestContext` values the global middleware installs,
+    for helpers typed against a slice of the base context
   - `config/security-policy.ts` <- The policy every response is read under
   - `config/security-txt.ts` <- The security.txt the app serves
 - HTTP Layer

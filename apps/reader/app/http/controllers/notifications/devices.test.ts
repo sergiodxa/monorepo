@@ -7,10 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, ORIGIN, VIEWER } from "~/app/test/controller";
@@ -39,7 +38,7 @@ const SUBSCRIPTION = {
 };
 
 /** A router with the registration route mapped, signed in as the test viewer. */
-function createRouter(): Router {
+function createRouter(): AppRouter {
 	let router = createTestRouter(VIEWER);
 	router.map(routes.notifications.devices, devices);
 	return router;

@@ -11,10 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, fetchRoute, ORIGIN, VIEWER } from "~/app/test/controller";
@@ -32,19 +31,19 @@ vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 let { default: save } = await import("./save");
 
 /** A router with the save action mapped, signed in as `viewer` or as nobody. */
-function createRouter(viewer: typeof VIEWER | null): Router {
+function createRouter(viewer: typeof VIEWER | null): AppRouter {
 	let router = createTestRouter(viewer);
 	router.map(routes.items.save, save);
 	return router;
 }
 
 /** Posts the save form for {@link ITEM_ID}. */
-function postSave(router: Router, body: Record<string, string>) {
+function postSave(router: AppRouter, body: Record<string, string>) {
 	return fetchRoute(router, routes.items.save.href({ itemId: ITEM_ID }), body);
 }
 
 /** Posts it the way the row's own mark does, having already moved itself. */
-function postInPlace(router: Router, saved: string) {
+function postInPlace(router: AppRouter, saved: string) {
 	let url = new URL(routes.items.save.href({ itemId: ITEM_ID }), ORIGIN);
 
 	return router.fetch(

@@ -7,10 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
@@ -27,14 +26,14 @@ vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 let { default: read } = await import("./read");
 
 /** A router with the mark-read action mapped, signed in as `viewer` or as nobody. */
-function createRouter(viewer: typeof VIEWER | null): Router {
+function createRouter(viewer: typeof VIEWER | null): AppRouter {
 	let router = createTestRouter(viewer);
 	router.map(routes.items.read, read);
 	return router;
 }
 
 /** Posts the mark-read form for {@link ITEM_ID}. */
-function markRead(router: Router, body: Record<string, string>) {
+function markRead(router: AppRouter, body: Record<string, string>) {
 	return fetchRoute(router, routes.items.read.href({ itemId: ITEM_ID }), body);
 }
 

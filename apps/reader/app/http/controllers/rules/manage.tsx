@@ -11,8 +11,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { borderEdge, fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, grow, items, vstack } from "@sdxc/u/layout";
@@ -23,6 +21,7 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { UserStore } from "~/app/models/user-store";
 
 import { chrome } from "~/app/http/controllers/chrome";
@@ -133,7 +132,7 @@ export function afterRule(outcome: string): string {
  * @param ctx - The request's dictionary and the query it arrived with.
  */
 function notice(
-	ctx: RequestContext,
+	ctx: AppContext,
 ): { message: string; color: "success" | "warning" | "danger" } | null {
 	let applied = ctx.url.searchParams.get(APPLIED_PARAM);
 
@@ -193,7 +192,7 @@ function notice(
  * @param feeds - The reader's subscriptions, for naming the one a rule is scoped to.
  */
 function sentenceFor(
-	ctx: RequestContext,
+	ctx: AppContext,
 	rule: UserStore.Rule,
 	feeds: readonly UserStore.FeedSummary[],
 ): { sentence: string; scope: string } {
@@ -215,7 +214,7 @@ function sentenceFor(
 
 /** Renders the page, with whatever a candidate in the query would have caught. */
 async function rulesView(
-	ctx: RequestContext,
+	ctx: AppContext,
 	held: UserStore.Rule[],
 	feeds: UserStore.FeedSummary[],
 	entitled: boolean,

@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RequestContext } from "remix/router";
+
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -64,12 +66,13 @@ export const endpoint = new BillingWebhook(
 );
 
 /**
- * POST /webhooks/billing — one delivery from the payment platform.
- *
- * No guard stands in front of it. A reader's session has nothing to do with a delivery,
- * and the signature is what says whether to trust one.
+ * POST /webhooks/billing — one delivery from the payment platform, behind no guard: the
+ * signature alone says whether to trust it. The endpoint reads only the request, so it
+ * receives the router's context as the base `RequestContext` it is typed against.
  */
-export default createAction(routes.webhooks.billing, { handler: endpoint.handler });
+export default createAction(routes.webhooks.billing, {
+	handler: (ctx) => endpoint.handler(ctx as RequestContext),
+});
 
 /**
  * Re-reads one customer and writes what came back. Throwing reports the failure to the

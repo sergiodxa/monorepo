@@ -11,10 +11,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Router } from "remix/router";
-
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";
 
 import { createTestRouter, ORIGIN, VIEWER } from "~/app/test/controller";
@@ -34,7 +33,7 @@ vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 let { default: open } = await import("./open");
 
 /** A router with the ping route mapped, signed in as `viewer` or as nobody. */
-function createRouter(viewer: typeof VIEWER | null): Router {
+function createRouter(viewer: typeof VIEWER | null): AppRouter {
 	let router = createTestRouter(viewer);
 	router.map(routes.items.open, open);
 	return router;
@@ -46,7 +45,7 @@ function createRouter(viewer: typeof VIEWER | null): Router {
  * @param router - The router to dispatch through.
  * @param body - The body to send; browsers send `PING`, and the route reads none of it.
  */
-function ping(router: Router, body = "PING"): Promise<Response> {
+function ping(router: AppRouter, body = "PING"): Promise<Response> {
 	let url = new URL(routes.items.open.href({ itemId: ITEM_ID }), ORIGIN);
 
 	return router.fetch(

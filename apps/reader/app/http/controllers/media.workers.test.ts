@@ -14,6 +14,8 @@ import { setupServer } from "msw/node";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
+import type { AppRouter } from "~/app/test/controller";
+
 import { MAX_IMAGE_BYTES, mediaUrl } from "~/app/services/media";
 import routes from "~/routes/web";
 
@@ -22,7 +24,8 @@ import media from "./media";
 /** MSW server standing in for the publishers' image hosts. */
 let server = setupServer();
 
-let router = createRouter();
+/** A router with no middleware, typed as the app's so the controller maps onto it. */
+let router = createRouter() as unknown as AppRouter;
 router.map(routes.media, media);
 
 beforeAll(() => {
