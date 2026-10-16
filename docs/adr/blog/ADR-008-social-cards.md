@@ -50,8 +50,12 @@ pages use.
   alt text and size, and a `summary_large_image` Twitter card in place of the page's own.
   The post, topic and feed views pass a version hashed from what the card shows, so a
   platform caching images per URL fetches the new card when the page changes.
-- Cards are served with `Cache-Control: public, max-age=86400`: a listing's entries change
-  with every post, and storage keeps every version the content has had.
+- Cards carry the `Cache-Tag` of the page they are drawn from, so the purges that already
+  clear pages clear their cards: editing a post purges its `post:<type>:<slug>` tag and its
+  card, and every CMS write purges `posts`, which listing and home cards carry. A post card
+  stays at the edge for 30 days (`s-maxage=2592000`), since only an edit changes it; a
+  listing card for an hour, which bounds how long a scheduled post that goes live without a
+  write takes to appear. Browsers keep either for an hour.
 
 The home page's meta description is now the profile summary rather than the author's name,
 which its card shows under the heading.

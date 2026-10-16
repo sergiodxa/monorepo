@@ -7,11 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CacheTag } from "@sdxc/workers-cache";
 import type { Middleware } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
+import { cacheTag } from "@sdxc/workers-cache";
+
+import type { SocialCard } from "~/app/services/social-card";
 
 import { currentEnv } from "~/app/http/middleware/env";
+import { TAGS } from "~/app/initializers/cache";
 import { socialCards as cardStorage } from "~/app/models/social-cards";
 import {
 	pagePathFromCardPath,
@@ -22,10 +27,17 @@ import {
 import { PROFILE } from "~/config/profile";
 
 /**
- * A day: a listing's newest entries change with every post, so its card is fetched again
- * daily, while storage keeps every version the content has had.
+ * A post's card at the edge until the post is edited, which purges its tag: nothing else
+ * changes what the card shows. A browser keeps it an hour.
  */
-const CACHE_CONTROL = "public, max-age=86400";
+const POST_CACHE_CONTROL = "public, max-age=3600, s-maxage=2592000";
+
+/**
+ * A listing's card for an hour. Every CMS write purges it at once, and the hour bounds how
+ * long a scheduled post that goes live without a write waits to appear; storage is keyed by
+ * content, so an expiry with nothing new costs a page render and no drawing.
+ */
+const LISTING_CACHE_CONTROL = "public, max-age=3600, s-maxage=3600";
 
 /**
  * Answers a `GET` for `<page>.png` with that page's card: the stored one, or one rendered,
@@ -47,7 +59,9 @@ export default function socialCards(): Middleware {
 		let cards = cardStorage();
 		let key = socialCardKey(content);
 		let stored = await cards.get(key);
-		if (stored) return png(stored);
+		let tag = cardTag(content, pagePath);
+		let cacheControl = content.kind === "post" ? POST_CACHE_CONTROL : LISTING_CACHE_CONTROL;
+		if (stored) return png(stored, tag, cacheControl);
 
 		let [{ socialCardFonts }, { renderSocialCard }] = await Promise.all([
 			import("~/app/initializers/social-card-fonts"),
@@ -62,7 +76,7 @@ export default function socialCards(): Middleware {
 		let card = new File([bytes.slice()], `${socialCardVersion(key)}.png`, { type: "image/png" });
 		env.waitUntil(Promise.resolve(cards.set(key, card)));
 		currentLog()?.set({ socialCard: { path: pagePath, rendered: true } });
-		return png(card);
+		return png(card, tag, cacheControl);
 	};
 }
 
@@ -82,13 +96,24 @@ async function renderPage(env: App.Env, pagePath: string): Promise<string | null
 	return await response.text();
 }
 
-/** The card as an image response, cacheable by any shared cache. */
-function png(file: File): Response {
+/**
+ * The cache tag the card's page carries, so the purge that clears the page clears its card:
+ * a post's own tag, purged when the post is edited, and the post list's for a listing,
+ * purged by every write that adds or changes a post.
+ */
+function cardTag(content: SocialCard.Content, pagePath: string): CacheTag {
+	let [, postType = "", postSlug = ""] = pagePath.split("/");
+	return content.kind === "post" ? TAGS.post(postType, postSlug) : TAGS.postList();
+}
+
+/** The card as an image response, tagged like its page and cacheable by any shared cache. */
+function png(file: File, tag: CacheTag, cacheControl: string): Response {
 	return new Response(file.stream(), {
 		headers: {
 			"content-type": "image/png",
 			"content-length": String(file.size),
-			"cache-control": CACHE_CONTROL,
+			"cache-control": cacheControl,
+			"cache-tag": cacheTag([tag]),
 		},
 	});
 }

@@ -88,6 +88,8 @@ describe("GET <page>.png", () => {
 		let response = await request(card);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toBe("image/png");
+		expect(response.headers.get("cache-tag")).toBe(`post:articles:${SLUG}`);
+		expect(response.headers.get("cache-control")).toContain("s-maxage=2592000");
 		let bytes = new Uint8Array(await response.arrayBuffer());
 		expect(Array.from(bytes.slice(1, 4))).toEqual([80, 78, 71]);
 
@@ -110,7 +112,10 @@ describe("GET <page>.png", () => {
 	test("a listing's card renders from its feed", async () => {
 		let card = await advertisedCard("/articles");
 		expect(card).toMatch(/^\/articles\.png\?v=/);
-		expect((await request(card)).status).toBe(200);
+		let response = await request(card);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("cache-tag")).toBe("posts");
+		expect(response.headers.get("cache-control")).toContain("s-maxage=3600");
 	});
 
 	test("the home page's card lives under index", async () => {
