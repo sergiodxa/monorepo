@@ -253,6 +253,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 
 | Mixin                           | Host                       | Adds                                                                    |
 | ------------------------------- | -------------------------- | ----------------------------------------------------------------------- |
+| `activeDescendantKeys()`        | a combobox input           | Arrows over its `aria-controls` options; Enter follows the chosen link. |
 | `ariaChecked()`                 | checkbox, switch or radio  | `aria-checked` kept in step with the live control.                      |
 | `attachmentTrigger()`           | `Attachment.Trigger`       | The whole card as one activation target.                                |
 | `calendarKeys(model)`           | `Calendar.Grid`            | Arrow/Page/Home/End navigation over a `CalendarModel`.                  |
@@ -277,6 +278,7 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `hotkey(combo)`                 | a `<dialog>`/`[popover]`   | A document-wide shortcut toggling its host.                             |
 | `imageFallback()`               | an `Avatar`/`Logo` image   | Shows the fallback when the image fails, cached images included.        |
 | `keymap(bindings)`              | any host                   | Page-wide shortcuts that stand down in fields and foreign dialogs.      |
+| `liveFrame(options)`            | a text input in a frame    | The frame reloaded from `src(value)` once typing pauses.                |
 | `listboxKeys()`                 | `ListBox`                  | Arrow, Home/End and typeahead navigation.                               |
 | `longPress(options?)`           | any element                | Fires after a pointer holds still for `duration`.                       |
 | `menuKeys(options?)`            | `Menu`                     | The ARIA menu pattern: roving focus, arrows, typeahead.                 |
@@ -302,11 +304,13 @@ Helpers for writing your own:
 - `trackHostNode(handle)` — returns a getter for the mixin's current host node.
 - `bindKeymap(document, bindings, { signal, scope? })` — `keymap` without a host, with the same
   stand-down rules as `isClaimedKeystroke(event, scope?)`.
+- `chooseOption(combobox, index)` and `chosenOption(combobox)` — set and read the option
+  `activeDescendantKeys` has chosen, after a reload replaces the options.
 - `syncAriaChecked(control)` — refreshes `ariaChecked` after a programmatic checked write or reset.
 - `colorChannelProperty(channel)` and `getCommandItemId(item, index)` — the custom property and the
   item id `channelSync` and `commandFilter` read.
 
-Mixins that emit DOM events export their `Event` subclass (`DismissEvent`, `ReorderEvent`,
+Mixins that emit DOM events export their `Event` subclass (`DismissEvent`, `LiveFrameEvent`, `ReorderEvent`,
 `ThemeChangeEvent`, …), and those that read markup export the `data-*` attribute and command names
 they use (`DRAG_REORDER_ROW_ATTRIBUTE`, `SEARCH_FIELD_CLEAR_COMMAND`, …).
 
