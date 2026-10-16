@@ -44,46 +44,36 @@ if (isFailure(result)) console.warn(result.error.message);
 
 The plain-text part is derived from the HTML, so every message ships both.
 
-### Author an email as a class
+### Define an email
 
 ```tsx
-import type { Handle } from "remix/component";
+import { defineEmail, Email } from "@sdxc/mail";
 
-import { Email } from "@sdxc/mail";
+interface TeamInvite {
+	team: string;
+	url: string;
+}
 
-function InviteBody(handle: Handle<{ team: string; url: string }>) {
-	return () => (
+export const TeamInviteEmail = defineEmail<TeamInvite>({
+	subject: (invite) => `Join ${invite.team}`,
+	body: (handle) => () => (
 		<Email.Layout preview={`Join ${handle.props.team}`} title="Invite">
 			<Email.Heading>You have been invited</Email.Heading>
 			<Email.Text>Join {handle.props.team} to start collaborating.</Email.Text>
 			<Email.Button href={handle.props.url}>Accept invite</Email.Button>
 			<Email.Footer>You received this because someone invited you to a team.</Email.Footer>
 		</Email.Layout>
-	);
-}
+	),
+});
 
-export class TeamInviteEmail implements Email {
-	constructor(private invite: { team: string; email: string; url: string; subject: string }) {}
-
-	get to() {
-		return { email: this.invite.email };
-	}
-
-	get subject() {
-		return this.invite.subject;
-	}
-
-	body() {
-		return <InviteBody team={this.invite.team} url={this.invite.url} />;
-	}
-}
-
-await mailer.send(new TeamInviteEmail(invite));
+await mailer.send(new TeamInviteEmail(invite.email, invite));
 ```
 
-`Email` is both the contract (type) and the layout kit (value), so one import covers
-`implements Email` and `<Email.Layout>`. The subject arrives as a string, already in the
-recipient's language.
+`defineEmail()` returns a class built with the recipient (a string, an `Address` or a list) and
+the props; `replyTo`, `headers`, `unsubscribe`, `list` and `calendar` are optional functions of
+the props. The subject arrives as a string, already in the recipient's language. Any object
+with `to`, `subject` and `body()` also satisfies the `Email` contract, for an email whose
+addressing needs more than its props.
 
 ### Publish a mailer on the request context
 
@@ -103,7 +93,7 @@ let router = createRouter({
 });
 
 router.post("/invites", async (context) => {
-	context.email.later(new TeamInviteEmail(invite));
+	context.email.later(new TeamInviteEmail(invite.email, invite));
 	return new Response(null, { status: 204 });
 });
 ```
@@ -120,7 +110,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 let transport = new MemoryTransport();
 let mailer = new Mailer({ transport, from: { email: "no-reply@example.com" } });
 
-await mailer.send(new TeamInviteEmail(invite));
+await mailer.send(new TeamInviteEmail(invite.email, invite));
 
 expect(transport.messages).toHaveLength(1);
 expect(transport.last?.email).toBeInstanceOf(TeamInviteEmail);
@@ -168,6 +158,11 @@ Assembles a raw RFC 5322 message for a provider that takes MIME. Bodies go into
 headers fold at 78 characters, non-ASCII names and subjects become RFC 2047 encoded words, each
 part is quoted-printable or base64, whichever is smaller, line endings are CRLF, and `Bcc` is
 left to the envelope.
+
+### `defineEmail<Props>(definition: EmailDefinition<Props>): EmailClass<Props>`
+
+Builds an email class from `subject(props)` and a `body` component. Each call returns its own
+class, so `instanceof` tells two emails apart; an instance exposes the `props` it was built with.
 
 ### `isEmail(value: Message | Email): value is Email`
 
@@ -351,7 +346,7 @@ router.post("/password-reset", async (context) => {
 });
 
 router.post("/invites", async (context) => {
-	context.email.later(new TeamInviteEmail(invite)); // sent after the response, failures logged
+	context.email.later(new TeamInviteEmail(invite.email, invite)); // sent after the response, failures logged
 	return new Response(null, { status: 204 });
 });
 ```
@@ -364,48 +359,26 @@ Gmail and Yahoo require one-click unsubscribe on subscribed and marketing mail. 
 its target and list, and the mailer writes the headers:
 
 ```tsx
-import type { MailingList, Unsubscribe } from "@sdxc/mail";
-
-import { Email } from "@sdxc/mail";
+import { defineEmail, Email } from "@sdxc/mail";
 import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { unwrap } from "@sdxc/result";
 
-class DailyDigestEmail implements Email {
-	constructor(
-		private member: { id: string; email: string },
-		private token: string,
-	) {}
-
-	get to() {
-		return { email: this.member.email };
-	}
-
-	get subject() {
-		return "Your daily digest";
-	}
-
-	get unsubscribe(): Unsubscribe {
-		return {
-			url: `https://example.com/unsubscribe/${this.token}`,
-			mailto: "unsubscribe@example.com",
-		};
-	}
-
-	get list(): MailingList {
-		return { id: "daily-digest.example.com", name: "Daily digest" };
-	}
-
-	body() {
-		return (
-			<Email.Layout title="Daily digest">
-				<Email.Text>Here is what happened today.</Email.Text>
-			</Email.Layout>
-		);
-	}
-}
+const DailyDigestEmail = defineEmail<{ token: string }>({
+	subject: () => "Your daily digest",
+	unsubscribe: (props) => ({
+		url: `https://example.com/unsubscribe/${props.token}`,
+		mailto: "unsubscribe@example.com",
+	}),
+	list: () => ({ id: "daily-digest.example.com", name: "Daily digest" }),
+	body: () => () => (
+		<Email.Layout title="Daily digest">
+			<Email.Text>Here is what happened today.</Email.Text>
+		</Email.Layout>
+	),
+});
 
 let token = unwrap(await signUnsubscribeToken(secret, { subject: member.id, list: "digest" }));
-await mailer.send(new DailyDigestEmail(member, token));
+await mailer.send(new DailyDigestEmail(member.email, { token }));
 ```
 
 ```text

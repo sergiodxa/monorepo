@@ -165,7 +165,7 @@ export class Mailer {
 	 * @param input - A plain message, or an email object that renders its own body.
 	 * @param overrides - Fields that replace what the input provides for this send.
 	 * @returns The provider's identifier on success, a `MailError` on failure.
-	 * @example let result = await mailer.send(new TeamInviteEmail(invite));
+	 * @example let result = await mailer.send(new TeamInviteEmail(invite.email, invite));
 	 */
 	async send(
 		input: Message | Email,

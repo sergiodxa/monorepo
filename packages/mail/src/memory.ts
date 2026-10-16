@@ -43,7 +43,7 @@ export interface RecordedDelivery {
  *
  * @example
  * let transport = new MemoryTransport();
- * await new Mailer({ transport, from: SENDER }).send(new TeamInviteEmail(invite));
+ * await new Mailer({ transport, from: SENDER }).send(new TeamInviteEmail(invite.email, invite));
  * expect(transport.find((message) => message.email instanceof TeamInviteEmail)).toBeDefined();
  *
  * @example

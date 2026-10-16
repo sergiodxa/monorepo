@@ -22,6 +22,7 @@ export type {
 	Transport,
 	Unsubscribe,
 } from "./types.js";
+export type { DefinedEmail, EmailClass, EmailDefinition } from "./define.js";
 export type { MailerOptions, SendOptions } from "./mailer.js";
 export type { RenderedEmail } from "./render.js";
 
@@ -35,6 +36,7 @@ export type EmailTableRow = EmailComponents.Table.Row;
 /** A web font for `Email.Layout` to declare, named here for the same reason as above. */
 export type EmailFont = EmailComponents.Font;
 
+export { defineEmail } from "./define.js";
 export { MailError } from "./errors.js";
 export { formatAddress, toAddressList } from "./lib/address.js";
 export { htmlToText } from "./lib/html-to-text.js";
@@ -43,8 +45,8 @@ export { buildMimeMessage } from "./mime.js";
 export { render } from "./render.js";
 
 /**
- * An email authored as a class: who it goes to, what it says, and what it
- * looks like, handed straight to `send()` or `later()`. Declared as an alias
+ * An email: who it goes to, what it says, and what it looks like, handed
+ * straight to `send()` or `later()`. Declared as an alias
  * so it can share the `Email` identifier with the layout kit below.
  */
 export type Email = EmailContract;
