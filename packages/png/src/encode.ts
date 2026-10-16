@@ -9,7 +9,7 @@
 import type { PNG } from "./png.js";
 
 import { SIGNATURE, writeChunk } from "./chunks.js";
-import { FILTER_COUNT, filterRow } from "./filters.js";
+import { chooseFilter, filterRow } from "./filters.js";
 import { deflate } from "./zlib.js";
 
 /** The largest `IDAT` written; bigger compressed data spans several chunks. */
@@ -106,23 +106,13 @@ function textChunk(keyword: string, value: string): Uint8Array {
 function filterScanlines(image: PNG.Image, channels: number): Uint8Array {
 	let stride = image.width * channels;
 	let output = new Uint8Array((stride + 1) * image.height);
-	let candidates = Array.from({ length: FILTER_COUNT }, () => new Uint8Array(stride));
 	let previous: Uint8Array | undefined;
 	for (let y = 0; y < image.height; y++) {
 		let row = scanline(image, y, channels);
-		let best = 0;
-		let bestCost = Infinity;
-		for (let type = 0; type < FILTER_COUNT; type++) {
-			let candidate = candidates[type] ?? new Uint8Array(stride);
-			let cost = filterRow(type, row, previous, channels, candidate);
-			if (cost < bestCost) {
-				best = type;
-				bestCost = cost;
-			}
-		}
+		let best = chooseFilter(row, previous, channels);
 		let start = y * (stride + 1);
 		output[start] = best;
-		output.set(candidates[best] ?? row, start + 1);
+		filterRow(best, row, previous, channels, output.subarray(start + 1, start + 1 + stride));
 		previous = row;
 	}
 	return output;
