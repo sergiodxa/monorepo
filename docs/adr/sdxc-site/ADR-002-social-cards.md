@@ -32,10 +32,9 @@ inside the Worker bundle. The site renders with the system font stack, whose
 platform faces cannot be redistributed; Inter is the closest open face.
 
 The home page has a card of its own, since its name is the site's wordmark: the wordmark
-set large with the landing page's pitch under it, the landing page's terminal session
-beside it, and a stats band below the frame's rule with the collection's counts (packages,
-RFCs, UI components, styling utilities), read from the same source as the landing page's
-own stats band.
+set large and centred with the landing page's pitch under it, and a stats band below the
+frame's rule with the collection's counts (packages, RFCs, UI components, styling
+utilities), read from the same source as the landing page's own stats band.
 
 ### Pieces
 

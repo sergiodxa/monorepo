@@ -11,7 +11,7 @@
 import type { Font } from "@sdxc/font";
 import type { Raster } from "@sdxc/raster";
 
-import { Canvas, color, Path, radialGradient, TRANSPARENT, withAlpha } from "@sdxc/raster";
+import { Canvas, color, radialGradient, TRANSPARENT, withAlpha } from "@sdxc/raster";
 
 import type { SocialCard } from "~/app/services/social-card";
 
@@ -39,7 +39,6 @@ const PALETTE = {
 	title: color("oklch(0.965 0.005 275)"),
 	description: color("oklch(0.73 0.013 275)"),
 	quiet: color("oklch(0.62 0.014 275)"),
-	terminal: color("oklch(0.19 0.007 275)"),
 };
 
 /**
@@ -60,15 +59,6 @@ const FRAME = {
 
 /** Where the home card's stats band begins, as the landing page's band follows its hero. */
 const HOME_BAND = 470;
-
-/** The commands the home card's terminal runs, the landing page's own session. */
-const HOME_COMMANDS = [
-	"npm add -g @sdxc/kit",
-	"sdxc create blog",
-	"sdxc make controller posts/show",
-	"sdxc ui add dialog",
-	"sdxc run about",
-];
 
 /** The widest a line of centred text may run, leaving the rails room to breathe. */
 const TEXT_WIDTH = 880;
@@ -251,78 +241,48 @@ function textOptions(
 }
 
 /**
- * The home card, set like the landing page's hero: the wordmark large with the pitch under
- * it, the terminal session beside it, and the collection's counts in a band below, divided
- * like the page's stats band.
+ * The home card, set like the landing page's hero: the wordmark large and centred with the
+ * pitch under it in the space above the frame's rule, and the collection's counts in a band
+ * below, divided like the page's stats band.
  */
 function drawHome(
 	canvas: Canvas,
 	content: SocialCard.HomeContent,
 	fonts: SocialCardImage.Fonts,
 ): void {
-	let left = FRAME.railLeft + 40;
+	let x = canvas.width / 2;
 	canvas.text("sdxc", {
 		font: fonts.semibold,
-		size: 168,
+		size: 176,
 		tracking: -8,
-		x: left - 6,
-		y: 236,
+		x,
+		y: 228,
+		align: "center",
 		paint: PALETTE.title,
 	});
 	canvas.text(content.tagline, {
 		font: fonts.semibold,
-		size: 34,
-		tracking: -0.5,
-		maxWidth: 470,
+		size: 40,
+		tracking: -0.75,
+		maxWidth: TEXT_WIDTH,
 		maxLines: 1,
-		x: left,
-		y: 312,
+		x,
+		y: 314,
+		align: "center",
 		paint: PALETTE.title,
 	});
 	canvas.text(content.description, {
 		font: fonts.regular,
-		size: 24,
+		size: 26,
 		lineHeight: 1.45,
-		maxWidth: 450,
-		maxLines: 3,
-		x: left,
-		y: 360,
+		maxWidth: 760,
+		maxLines: 2,
+		x,
+		y: 372,
+		align: "center",
 		paint: PALETTE.description,
 	});
-	drawTerminal(canvas, fonts);
 	drawStats(canvas, content.stats, fonts);
-}
-
-/** A terminal window like the landing page's, its commands led by the program they run. */
-function drawTerminal(canvas: Canvas, fonts: SocialCardImage.Fonts): void {
-	let x = 640;
-	let y = 96;
-	let width = FRAME.railRight - 40 - x;
-	let height = 314;
-	canvas.fillPath(Path.roundedRect(x, y, width, height, 12), PALETTE.rule);
-	canvas.fillPath(Path.roundedRect(x + 2, y + 2, width - 4, height - 4, 10), PALETTE.terminal);
-	canvas.fillRect(x + 2, y + 54, width - 4, 2, PALETTE.rule);
-	canvas.text("Terminal", {
-		font: fonts.mono,
-		size: 18,
-		x: x + 24,
-		y: y + 35,
-		paint: PALETTE.quiet,
-	});
-	HOME_COMMANDS.forEach((command, index) => {
-		let baseline = y + 104 + index * 42;
-		let [program = "", ...rest] = command.split(" ");
-		let text = { font: fonts.mono, size: 20, x: x + 24, y: baseline };
-		let programWidth = fonts.mono.measure(`${program} `, text.size);
-		canvas.text(program, { ...text, paint: PALETTE.eyebrow });
-		canvas.text(rest.join(" "), {
-			...text,
-			x: x + 24 + programWidth,
-			maxWidth: width - 48 - programWidth,
-			maxLines: 1,
-			paint: PALETTE.title,
-		});
-	});
 }
 
 /** The counts band between the rails, one cell per figure, divided by the frame's rule. */
