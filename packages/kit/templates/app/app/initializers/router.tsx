@@ -6,6 +6,7 @@
 
 import type { RouterContext } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -15,6 +16,7 @@ import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import problems from "~/config/problems";
 import apiRoutes from "~/routes/api";
@@ -46,6 +48,7 @@ export function createWebRouter() {
 				key: (ctx) => addressKey(getClientIP(ctx.request)),
 				onLimit: () => problems.tooManyRequests(),
 			}),
+			database(openDatabase()),
 		],
 	});
 

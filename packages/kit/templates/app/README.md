@@ -38,6 +38,23 @@ Every request is rate limited per client address, 100 a minute, through the `RAT
 binding in `cloudflare.config.ts`. Document an endpoint by adding its operation to
 `routes/api.ts` and to `app/initializers/openapi.ts`.
 
+## Database
+
+`app/initializers/database.ts` opens `remix/data-table` over the `DB` D1 binding, and the router
+and the job dispatcher publish it as `ctx.db`. Write a table's migration and model with
+`sdxc make`, then apply the migrations to the local copy `bun dev` reads:
+
+```sh
+sdxc make migration create-posts
+sdxc make model post
+bun db:local:migrate
+```
+
+Under Vitest, `DB` is an in-memory SQLite stand-in from `@sdxc/cloudflare-mocks`, so a test runs
+real SQL. Before the first deploy, create the database with `bunx cf d1 create <name>` and put the
+id it prints in `cloudflare.config.ts` and in the `db:local:migrate` and `db:remote:migrate`
+scripts.
+
 ## Add code
 
 `sdxc make <kind> <name>` writes a file of that kind where it belongs, with a test beside it,
@@ -76,6 +93,7 @@ new one with its test, declared and mapped.
 bun check
 bun test
 bun build
+bun db:remote:migrate
 bun cf:deploy
 ```
 

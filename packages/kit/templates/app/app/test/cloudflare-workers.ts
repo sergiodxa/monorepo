@@ -1,11 +1,16 @@
 /**
  * The `cloudflare:workers` module under Vitest, which imports the app's modules in Node, outside
  * the Worker runtime. It carries the development secrets `.env.example` lists, so a module that
- * reads `env` at import loads the same way it does under `bun dev`.
+ * reads `env` at import loads the same way it does under `bun dev`. Its bindings are in-memory
+ * stand-ins that behave like Cloudflare's, so a test reads and writes real SQL through `DB`.
  */
 
-/** The secrets the app reads, with the values a project starts with for development. */
+import { createD1Database, createRateLimit } from "@sdxc/cloudflare-mocks";
+
+/** The bindings and secrets the app reads, with the values a project starts with for development. */
 export const env = {
+	DB: createD1Database(),
+	RATE_LIMITER: createRateLimit(),
 	HONEYPOT_SECRET: "development-honeypot-secret",
 	TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
 	TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
