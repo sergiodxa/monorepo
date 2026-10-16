@@ -5,15 +5,17 @@
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
+import { render } from "@sdxc/mail";
 import { describe, expect, test } from "vitest";
 
 import { {{Name}}Email } from "{{specifier}}";
 
 describe("{{Name}}Email", () => {
-	test("is addressed to its recipient under its heading", () => {
+	test("is addressed to its recipient under its heading", async () => {
 		let email = new {{Name}}Email("ada@example.com", { heading: "Hello", body: "Welcome." });
 
 		expect(email.to).toEqual({ email: "ada@example.com" });
 		expect(email.subject).toBe("Hello");
+		expect((await render(email.body())).text).toContain("Welcome.");
 	});
 });

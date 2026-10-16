@@ -5,44 +5,22 @@
  * @see {@link https://sdxc.dev/api/mail}{{header}}
  */
 
-import type { Handle } from "remix/component";
-import type { Email as EmailContract } from "@sdxc/mail";
+import { defineEmail, Email } from "@sdxc/mail";
 
-import { Email } from "@sdxc/mail";
-
-/** What the {{title}} email says. */
+/** What the {{title}} email says, already translated for its reader. */
 export interface {{Name}}Copy {
 	heading: string;
 	body: string;
 }
 
-/** Renders the email's body from copy the caller wrote. */
-function {{Name}}Body(handle: Handle<{{Name}}Copy>) {
-	return () => (
+/** The {{title}} email, sent with `new {{Name}}Email(recipient, copy)`. */
+export const {{Name}}Email = defineEmail<{{Name}}Copy>({
+	subject: (copy) => copy.heading,
+	body: (handle) => () => (
 		<Email.Layout preview={handle.props.heading} title={handle.props.heading}>
 			<Email.Heading>{handle.props.heading}</Email.Heading>
 			<Email.Text>{handle.props.body}</Email.Text>
 			{/* TODO: lay out the rest of the email */}
 		</Email.Layout>
-	);
-}
-
-/** The {{title}} email, addressed to one recipient. */
-export class {{Name}}Email implements EmailContract {
-	constructor(
-		private recipient: string,
-		private copy: {{Name}}Copy,
-	) {}
-
-	get to() {
-		return { email: this.recipient };
-	}
-
-	get subject() {
-		return this.copy.heading;
-	}
-
-	body() {
-		return <{{Name}}Body {...this.copy} />;
-	}
-}
+	),
+});
