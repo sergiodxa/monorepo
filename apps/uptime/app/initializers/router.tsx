@@ -49,7 +49,7 @@ import { createSessionMiddleware } from "~/app/http/middleware/session";
 import socialCards from "~/app/http/middleware/social-cards";
 import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
@@ -162,7 +162,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * Publishes `ctx.db` on every surface. The session, the auth guard and every
 			 * controller below read from it, so it leads the chain that reaches storage.
 			 */
-			database(createDatabase()),
+			database(openDatabase()),
 			/**
 			 * Publishes `ctx.jobs` on every surface, over the same billed queue the dispatcher
 			 * writes through, so a controller enqueues without importing the dispatcher.

@@ -28,7 +28,7 @@ declare module "remix/router" {
  * Creates the middleware; install it after `database()`, whose `ctx.db` it binds to. A
  * router without `jobEnqueuer()`, such as a test's, enqueues through the module enqueuer.
  *
- * @example createRouter({ middleware: [database(createDatabase()), modelsMiddleware()] });
+ * @example createRouter({ middleware: [database(openDatabase()), modelsMiddleware()] });
  */
 export default function modelsMiddleware(): Middleware {
 	return publishModels(models, (ctx) => ({

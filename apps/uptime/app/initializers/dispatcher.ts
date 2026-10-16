@@ -17,7 +17,7 @@ import { createJobDispatcher } from "@sdxc/jobs";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
@@ -86,7 +86,7 @@ export const dispatcher = createJobDispatcher({
 	 */
 	middleware: [
 		costLedger(),
-		database(createDatabase),
+		database(openDatabase),
 		models(),
 		mailer(),
 		destinations(),

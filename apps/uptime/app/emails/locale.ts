@@ -11,20 +11,14 @@
 import { createTranslator } from "@sdxc/i18n";
 import { currentLog } from "@sdxc/logger";
 
-import { supportedLanguages } from "~/database/schema";
-import de from "~/resources/locales/de";
-import en from "~/resources/locales/en";
-import es from "~/resources/locales/es";
-import fr from "~/resources/locales/fr";
-import it from "~/resources/locales/it";
-import ja from "~/resources/locales/ja";
+import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 
 /**
  * Language an email is written in when nothing better is known about its reader.
  * Alerts are addressed to a mailbox rather than to an account, and an invite is read
  * by someone who has no stored preference yet, so this is what both fall back to.
  */
-export const DEFAULT_EMAIL_LOCALE = "en";
+export const DEFAULT_EMAIL_LOCALE = FALLBACK_LANGUAGE;
 
 /**
  * A language the app does not ship falls back to {@link DEFAULT_EMAIL_LOCALE}, and one
@@ -34,8 +28,8 @@ export const DEFAULT_EMAIL_LOCALE = "en";
  * @example let { locale, t } = emailTranslator();
  */
 export const emailTranslator = createTranslator({
-	resources: { en, es, de, ja, fr, it },
-	supportedLanguages,
+	resources: RESOURCES,
+	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: DEFAULT_EMAIL_LOCALE,
 	onError(error, key) {
 		currentLog()?.warn("i18n.error", { key, type: error.name, message: error.message });

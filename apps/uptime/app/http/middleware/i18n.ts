@@ -17,15 +17,7 @@ import { Auth } from "remix/middleware/auth";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { language as languageCookie } from "~/app/initializers/cookies";
-import { supportedLanguages } from "~/database/schema";
-import de from "~/resources/locales/de";
-import en from "~/resources/locales/en";
-import es from "~/resources/locales/es";
-import fr from "~/resources/locales/fr";
-import it from "~/resources/locales/it";
-import ja from "~/resources/locales/ja";
-
-const DEFAULT_LANGUAGE = "en";
+import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 
 /**
  * The language the database supplied for a request, keyed by that request:
@@ -37,7 +29,7 @@ const resolvedFromDatabase = new WeakMap<Request, string>();
 /**
  * The signed-in viewer's stored language preference, or `null` when there is
  * no session to read (anonymous, or `auth` hasn't run yet). Validated against
- * {@link supportedLanguages} since the detector discards a bad value silently.
+ * {@link SUPPORTED_LANGUAGES} since the detector discards a bad value silently.
  */
 async function findLocale(request: Request): Promise<string | null> {
 	let ctx = getContext();
@@ -50,7 +42,7 @@ async function findLocale(request: Request): Promise<string | null> {
 
 	let stored = preferences?.preferred_language;
 	if (!stored) return null;
-	if (!(supportedLanguages as readonly string[]).includes(stored)) return null;
+	if (!SUPPORTED_LANGUAGES.includes(stored)) return null;
 
 	resolvedFromDatabase.set(request, stored);
 
@@ -64,13 +56,13 @@ async function findLocale(request: Request): Promise<string | null> {
  */
 const detect = i18nMiddleware({
 	detection: {
-		supportedLanguages: [...supportedLanguages],
-		fallbackLanguage: DEFAULT_LANGUAGE,
+		supportedLanguages: SUPPORTED_LANGUAGES,
+		fallbackLanguage: FALLBACK_LANGUAGE,
 		cookie: languageCookie,
 		findLocale,
 		order: ["cookie", "custom", "header"],
 	},
-	resources: { en, es, de, ja, fr, it },
+	resources: RESOURCES,
 });
 
 /**

@@ -15,7 +15,7 @@ import { models as registry } from "~/app/models";
 /**
  * Creates the middleware; list it after `database()`, whose database it binds to.
  *
- * @example createJobDispatcher({ middleware: [database(createDatabase), models()] });
+ * @example createJobDispatcher({ middleware: [database(openDatabase), models()] });
  */
 export function models() {
 	return publishModels(registry, (ctx) => ({ db: ctx.require(Database), jobs: enqueuer }));
