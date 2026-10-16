@@ -10,8 +10,9 @@ Rules are written following RFC 2119, which defines the keywords "MUST", "MUST N
 - MUST use `ctx.render` from `remix/middleware/render` for rendering views in HTTP controllers.
 - MUST use `getContext` from `remix/middleware/async-context` to access the request context outside controllers.
 - MUST use `ctx` argument of controller actions for request context access inside controllers.
-- MUST keep `bootstrap/` to the entry points (`worker.ts`, `browser.ts`) with the `GeoFetchDO` class re-exported from `app/services/geo-fetch.ts`, where it delegates to `proxyProbe()` in `app/services/geo-fetch.ts`; the router is `createWebRouter` in `app/initializers/router.tsx`, and nothing outside `bootstrap/` imports from it.
+- MUST keep `bootstrap/` to the entry points (`worker.ts`, `browser.ts`, `cli.ts`) with the `GeoFetchDO` class re-exported from `app/services/geo-fetch.ts`, where it delegates to `proxyProbe()` in `app/services/geo-fetch.ts`; the router is `createWebRouter` in `app/initializers/router.tsx`, and nothing outside `bootstrap/` imports from it.
 - MUST build every package instance (database, billing, flags, mailer, queue, assets, SEO, cookies, issuer) in `app/initializers/`, and put static configuration (pricing, origin, security.txt, security headers policy, time zones) in `config/`.
+- MUST declare every command in `app/commands/index.ts` with its handler in its own file beside it, mapped through `lazy()` in `app/initializers/cli.ts`; run them with `sdxc run <command>` (`sdxc run db migrate [--remote]`, `sdxc run typegen`), whose database commands read the `DB` entry of `wrangler.jsonc`.
 - MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a cold isolate imports the controllers it serves rather than the whole route table. A new route added with a static import silently puts its module back on every cold start.
 - MUST declare an API controller's route map in `routes/api-groups.ts` and import it from there, so `app/initializers/router.tsx` can map the group while the controller behind it stays unloaded.
 - MUST keep DB-facing fields in `snake_case` (`author_id`, `published_at`, `created_at`, etc.).

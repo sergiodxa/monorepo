@@ -39,20 +39,38 @@ as `app/models/reports.ts` and `app/models/team-digests.ts`.
 
 ## Layout
 
-The app follows the repo's one-home-per-kind layout: `bootstrap/` holds only the Worker and
-browser entry points, re-exporting the `GeoFetchDO` class from `app/services/geo-fetch.ts`; the router, logger, job
+The app follows the repo's one-home-per-kind layout: `bootstrap/` holds only the Worker,
+browser and command-line entry points, re-exporting the `GeoFetchDO` class from `app/services/geo-fetch.ts`; the router, logger, job
 dispatcher and queue, database, billing, flags, mailer, assets and SEO instances are built in
 `app/initializers/`; app logic is in `app/services/` (crowded features grouped by folder: `alerts/`, `api/`,
 `dns/`, `reports/`, `trial/`), test helpers in `app/test/`,
 translations in `resources/locales/`, and static configuration (pricing, origin, security.txt,
 security headers policy) in `config/`.
 
-## Development
+## Start
 
 ```sh
 bun install
-bun run --cwd apps/uptime db:local:migrate   # apply migrations to local D1
-bun run --cwd apps/uptime dev
+cp .env.example .dev.vars   # in a fresh clone
+sdxc run typegen            # writes worker-configuration.d.ts from wrangler.jsonc
+sdxc run db migrate         # applies database/migrations to the local D1 copy
+bun dev
+```
+
+Run `sdxc run typegen` again whenever you change a binding in `wrangler.jsonc` or a secret in
+`.dev.vars`.
+
+## Everyday commands
+
+```sh
+sdxc make controller <name>        # a page or endpoint, mapped in app/initializers/router.tsx
+sdxc make migration <name>         # then: sdxc run db migrate
+sdxc make model <name>             # then: ctx.models.<name>
+sdxc make job <name>               # declared in app/jobs/index.ts, mapped in the dispatcher
+sdxc make command <group/name>     # then: sdxc run <group> <name>
+
+sdxc run about                     # the app's name, its @sdxc/cli and remix versions
+sdxc run db console                # SQL prompt over the local database
 ```
 
 From the repo root: `bun check` (format, lint and type check in one pass) and `bun run test`.
@@ -65,6 +83,7 @@ and a Cloudflare dry run with `bunx wrangler deploy --dry-run` from this app.
 
 ```sh
 bun run --cwd apps/uptime build
+sdxc run db migrate --remote   # from apps/uptime, when the release adds migrations
 bun run --cwd apps/uptime cf:deploy
 ```
 

@@ -3,13 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"start": "vite preview",
+		"build": "vp build",
 		"cf:deploy": "bunx wrangler deploy",
-		"cf:typegen": "bunx wrangler types",
-		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
-		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote",
+		"cli": "bun ./bootstrap/cli.ts",
+		"dev": "vp dev",
+		"start": "vp preview",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -21,6 +19,7 @@
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/captcha": "workspace:*",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/cloudflare-pricing": "workspace:*",
 		"@sdxc/cron": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
@@ -45,6 +44,7 @@
 		"@sdxc/idempotency": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/link-header": "workspace:*",
 		"@sdxc/location": "workspace:*",
@@ -84,10 +84,11 @@
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
+		"@sdxc/kit": "workspace:*",
 		"@sdxc/messageformat": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"fflate": "0.8.3",
-		"vite": "^8.3.4",
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
 		"wrangler": "^4.149.0"
 	}
 }
