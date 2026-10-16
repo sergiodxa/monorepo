@@ -38,6 +38,10 @@ and the router's own middleware must be what pages and endpoints both use.
   `@sdxc/captcha`'s Turnstile widget, admitted by the CSP nonce and the Turnstile origin, and
   declares `captcha(turnstile)` on the action alone, so only a submission pays for the
   verification call. `.env.example` carries Cloudflare's always-passing test keys.
+- **A form scores what it receives.** The form stub runs the message through an `@sdxc/spam`
+  filter of the local rules, timed from the honeypot's signed render time, and refuses a `spam`
+  verdict with a 422. Reputation checks are left for the app to add, since each needs an
+  account or a network call.
 - **Each contract owns its 404** as a catch-all route: `notFound: "/*path"` renders the 404 page,
   and `api.notFound: "/api/*path"` answers `application/problem+json`. The more specific pattern
   wins, so the router needs no default handler.

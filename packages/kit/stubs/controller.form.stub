@@ -6,12 +6,13 @@
 import { captcha } from "@sdxc/captcha/middleware";
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
-import { unwrap } from "@sdxc/result";
+import { isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createController } from "remix/router";
 
 import page from "~/app/http/middleware/page";
 import { turnstile } from "~/app/initializers/captcha";
+import { spamFilter } from "~/app/initializers/spam";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "{{routes}}";
 
@@ -29,6 +30,9 @@ export default createController(routes.{{path}}, {
 					<h1>{{title}}</h1>
 					<form method="post" action={routes.{{path}}.action.href()}>
 						<HoneypotFields {...fields} />
+						<label>
+							Message <textarea name="message" required />
+						</label>
 						<TurnstileWidget siteKey={env.TURNSTILE_SITE_KEY} nonce={ctx.assets.nonce} />
 						<button type="submit">Send</button>
 					</form>
@@ -38,11 +42,22 @@ export default createController(routes.{{path}}, {
 
 		/**
 		 * Receives a submission that passed the honeypot and the CAPTCHA, which answers a 403
-		 * before the handler runs, and sends the visitor back to the form.
+		 * before the handler runs, refuses a message scored as spam with a 422, and sends the
+		 * visitor back to the form.
 		 */
 		action: {
 			middleware: [captcha(turnstile)],
-			handler() {
+			async handler(ctx) {
+				let honeypot = ctx.honeypotOutcome;
+				let message = ctx.formData.get("message");
+				let assessment = await spamFilter.check({
+					content: typeof message === "string" ? message : "",
+					renderedAt: isSuccess(honeypot) ? honeypot.data.renderedAt : undefined,
+					author: { userAgent: ctx.request.headers.get("User-Agent") ?? undefined },
+				});
+				if (assessment.verdict === "spam") {
+					return new Response("Message refused as spam", { status: 422 });
+				}
 				return new Response(null, {
 					status: 303,
 					headers: { location: routes.{{path}}.index.href() },
