@@ -61,6 +61,27 @@ async function project(config?: string): Promise<string> {
 	return root;
 }
 
+/** A project whose router maps `routes/web.ts` and whose sitemap decides it with `fromRoutes`. */
+async function sitemapProject(): Promise<string> {
+	let root = await project();
+	await mkdir(join(root, "routes"));
+	await mkdir(join(root, "app/initializers"), { recursive: true });
+	await mkdir(join(root, "app/http/controllers"), { recursive: true });
+	await writeFile(
+		join(root, "routes/web.ts"),
+		'import { get, route } from "remix/routes";\n\nexport default route({\n\thome: get("/"),\n\tadmin: route("/admin", {}),\n});\n',
+	);
+	await writeFile(
+		join(root, "app/initializers/router.ts"),
+		'import { createRouter } from "remix/router";\n\nimport routes from "~/routes/web";\n\nexport let router = createRouter();\n',
+	);
+	await writeFile(
+		join(root, "app/http/controllers/sitemap.ts"),
+		'import { fromRoutes } from "@sdxc/sitemap/remix";\n\nimport routes from "~/routes/web";\n\nexport let sitemap = fromRoutes(routes, "https://example.com", {\n\thome: true,\n\tadmin: false,\n});\n',
+	);
+	return root;
+}
+
 /** Runs `sdxc make <argv>` in `cwd`, without a terminal unless `options` scripts answers. */
 function invoke(argv: string[], cwd: string, options: InvokeOptions = {}) {
 	return invokeCLI(createSDXC(), ["make", ...argv], { cwd, interactive: false, ...options });
@@ -440,14 +461,11 @@ describe("declaring and mapping", () => {
 			expect(ran.output).toMatch(/^Send digest\n/);
 			expect(ran.code).toBe(0);
 
-			let sitemap = join(root, "app/http/controllers/sitemap.ts");
-			await writeFile(
-				sitemap,
-				(await readFile(sitemap, "utf8")).replace(
-					"notFound: false,",
-					"notFound: false,\n\t\t\tsponsors: true,\n\t\t\tadmin: false,",
-				),
-			);
+			let sitemap = await read("app/http/controllers/sitemap.ts");
+			expect(sitemap).toContain("\t\t\tsponsors: true,\n");
+			expect(sitemap).toContain("\t\t\tadmin: {\n\t\t\t\tusers: { index: true },\n\t\t\t},\n");
+			expect(sitemap).not.toContain("ping");
+			expect(sitemap).not.toContain("keys");
 			let checked = await typecheck(root);
 
 			expect(checked.output).toContain("Found no type errors");
@@ -582,6 +600,44 @@ describe("declaring and mapping", () => {
 		);
 		expect(await readFile(join(root, "routes/web.ts"), "utf8")).toBe(
 			'import { route } from "remix/routes";\n\nexport default route({});\n',
+		);
+	});
+
+	test("decides a new page in the sitemap: an empty list for params, and none in an excluded group", async () => {
+		let root = await sitemapProject();
+
+		await invoke(["controller", "posts/show", "--path", "/posts/:slug", "--no-test"], root);
+		await invoke(["controller", "about", "--no-test"], root);
+		await invoke(["controller", "admin/users", "--no-test"], root);
+		await invoke(["controller", "ping", "--method", "post", "--no-test"], root);
+
+		expect(await readFile(join(root, "app/http/controllers/sitemap.ts"), "utf8")).toBe(
+			[
+				'import { fromRoutes } from "@sdxc/sitemap/remix";',
+				"",
+				'import routes from "~/routes/web";',
+				"",
+				'export let sitemap = fromRoutes(routes, "https://example.com", {',
+				"\thome: true,",
+				"\tadmin: false,",
+				"\tposts: {",
+				"\t\tshow: [],",
+				"\t},",
+				"\tabout: true,",
+				"});",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("prints the sitemap decision with the other edits when they cannot be placed", async () => {
+		let root = await sitemapProject();
+		await rm(join(root, "app/initializers"), { recursive: true });
+
+		let result = await invoke(["controller", "signup", "--method", "form", "--no-test"], root);
+
+		expect(result.stdout).toContain(
+			"In app/http/controllers/sitemap.ts, in fromRoutes(…)'s decisions:\n  signup: { index: true },\n",
 		);
 	});
 

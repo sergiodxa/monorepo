@@ -1,10 +1,9 @@
 /**
  * Declares and maps what `make job`, `make controller`, `make mcp` and `make command` generate:
  * the entry in the job map, route contract, MCP or command declaration module, and the mapping
- * in the initializer that serves it, so the new handler answers as soon as the command finishes;
- * `make model` registers the model in `app/models/index.ts` the same way. Both edits are
- * computed before anything is written; when either cannot be placed, neither is made and the
- * command prints them for the user instead, so a declaration never ships without its mapping.
+ * in the initializer that serves it, plus a page's sitemap decision; `make model` registers the
+ * model in `app/models/index.ts` the same way. Every edit is computed before anything is written;
+ * when one cannot be placed, none is made and the command prints them for the user instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -80,6 +79,9 @@ const ROUTE_HELPERS: Readonly<Record<string, string>> = {
 	delete: "del",
 	form: "form",
 };
+
+/** The route helpers that declare a page, which a sitemap built with `fromRoutes` must decide. */
+const PAGE_HELPERS = new Set(["get", "form"]);
 
 /** The name an instance gets when the initializer that creates it cannot be read, by factory. */
 const INSTANCE_NAMES: Readonly<Record<string, string>> = {
@@ -205,16 +207,28 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 	let lazyLocal = "lazy";
 	let statement = (lazy: string) =>
 		`${instance}.map(${local}.${path.join(".")}, ${lazy}(() => import(${literal(handler)})));`;
+	let sitemap = PAGE_HELPERS.has(helper) ? await findSitemap(root, module) : null;
+	let decision = sitemapDecision(helper, pattern);
 	let manual = (reason: string): Declared => ({
 		kind: "manual",
 		path: path.join("."),
 		reason,
-		instructions: instructions(
-			`${contract ?? `${module}.ts`}, in route({ … })${groupNote(path)}`,
-			`${path.at(-1)}: ${value},`,
-			initializer?.path ?? `the initializer that maps ${module}`,
-			statement(lazyLocal),
-		),
+		instructions: [
+			instructions(
+				`${contract ?? `${module}.ts`}, in route({ … })${groupNote(path)}`,
+				`${path.at(-1)}: ${value},`,
+				initializer?.path ?? `the initializer that maps ${module}`,
+				statement(lazyLocal),
+			),
+			sitemap === null
+				? null
+				: [
+						`In ${sitemap.path}, in fromRoutes(…)'s decisions${groupNote(path)}:`,
+						indent(`${path.at(-1)}: ${decision},`),
+					].join("\n"),
+		]
+			.filter((text) => text !== null)
+			.join("\n"),
 	});
 	if (contract === null) return manual(`there is no route contract ${module}.ts`);
 	if (initializer === null) return manual(`no initializer in app/initializers/ imports ${module}`);
@@ -259,14 +273,57 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 		"createRouter",
 	);
 	if (isFailure(mapped)) return manual(mapped.error.message);
-	return {
-		kind: "edits",
-		path: path.join("."),
-		edits: [
-			{ path: contract, before: file.data.source, after: added.data.source },
-			{ path: initializer.path, before: initializer.source, after: mapped.data },
-		],
-	};
+	let edits: FileEdit[] = [
+		{ path: contract, before: file.data.source, after: added.data.source },
+		{ path: initializer.path, before: initializer.source, after: mapped.data },
+	];
+	if (sitemap !== null) {
+		let decided = addProperty(sitemap.path, sitemap.source, {
+			call: "fromRoutes",
+			argument: 2,
+			path: path.slice(0, -1),
+			key: name.key,
+			value: decision,
+		});
+		if (isSuccess(decided)) {
+			edits.push({ path: sitemap.path, before: sitemap.source, after: decided.data.source });
+		} else if (decided.error.code === "invalid-output") {
+			return manual(decided.error.message);
+		}
+	}
+	return { kind: "edits", path: path.join("."), edits };
+}
+
+/**
+ * The sitemap decision a new page starts with: listed, or an empty list of pages when its pattern
+ * has required params, so it is in the sitemap until the developer changes it. A `form` route
+ * decides its page under `index`.
+ */
+function sitemapDecision(helper: string, pattern: string): string {
+	let required = /[:*][A-Za-z_$]/.test(pattern.replace(/\([^)]*\)/g, ""));
+	let page = required ? "[]" : "true";
+	return helper === "form" ? `{ index: ${page} }` : page;
+}
+
+/**
+ * The controller that builds a sitemap with `fromRoutes` over the contract `module`, which needs
+ * a decision for every page the contract declares; `null` when the app has none.
+ */
+async function findSitemap(root: string, module: string): Promise<SourceFile | null> {
+	let folder = "app/http/controllers";
+	let entries = await wrap(() => readdir(join(root, folder), { recursive: true }));
+	if (isFailure(entries)) return null;
+	for (let entry of entries.data.sort()) {
+		if (!/\.tsx?$/.test(entry) || /\.test\.tsx?$/.test(entry)) continue;
+		let file = await readSource(root, posix.join(folder, entry.split("\\").join("/")));
+		if (isFailure(file) || !file.data.source.includes("fromRoutes(")) continue;
+		let local = defaultLocal(file.data, module);
+		if (local === null) continue;
+		if (new RegExp(`\\bfromRoutes\\(\\s*${escape(local)}\\s*,`).test(file.data.source)) {
+			return file.data;
+		}
+	}
+	return null;
 }
 
 /** Declares an MCP tool or resource beside the others and maps it on the MCP handler. */
