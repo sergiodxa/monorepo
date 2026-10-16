@@ -9,6 +9,8 @@
 import type { RequestContext } from "remix/router";
 
 import { failure, unwrap } from "@sdxc/result";
+import { createContextKey, createRouter } from "remix/router";
+import { get } from "remix/routes";
 import { describe, expect, test, vi } from "vitest";
 
 import { OpenAPIBuildError } from "./errors.js";
@@ -89,5 +91,25 @@ describe("openapiHandler", () => {
 			title: "The OpenAPI document failed to build",
 			detail: 'Security scheme "oauth" is not declared',
 		});
+	});
+
+	test("serves a route whose router publishes context of its own", async () => {
+		let Tenant = createContextKey<string>();
+		let router = createRouter({
+			middleware: [
+				(ctx, next) => {
+					ctx.set(Tenant, "acme", { property: "tenant" });
+					return next();
+				},
+			],
+		});
+		router.get(
+			get("/openapi.json"),
+			openapiHandler(() => createFixtureDocument().build()),
+		);
+
+		let response = await router.fetch(URL_BASE);
+
+		expect(response.status).toBe(200);
 	});
 });

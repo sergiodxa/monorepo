@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Result } from "@sdxc/result";
-import type { RequestHandler } from "remix/router";
+import type { RequestContext, RequestHandler } from "remix/router";
 
 import { problem } from "@sdxc/problem";
 import { Accept, IfNoneMatch } from "remix/headers";
@@ -36,8 +36,8 @@ type Served =
 
 /**
  * Serves the document: JSON by default, YAML for `?format=yaml` or an `Accept` preferring
- * `application/yaml`. A build or serialization failure answers `500` with a problem
- * document, and the same outcome is reused for every later request.
+ * `application/yaml`, on any route whatever its middleware publishes. A build failure
+ * answers `500` with a problem document, and the outcome is reused for every later request.
  *
  * @param build - Assembles the document; called once, on the first request.
  * @param options - The `Cache-Control` both representations carry.
@@ -46,7 +46,7 @@ type Served =
 export function openapiHandler(
 	build: () => Result<OpenAPI.Document, OpenAPIBuildError>,
 	options: ServeOptions = {},
-): RequestHandler {
+): RequestHandler<RequestContext<any, any>> {
 	let cacheControl = options.cacheControl ?? "public, max-age=300";
 	let served: Promise<Served> | undefined;
 
