@@ -7,10 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Email as EmailContract } from "@sdxc/mail";
-import type { Handle } from "remix/component";
-
-import { Email } from "@sdxc/mail";
+import { defineEmail, Email } from "@sdxc/mail";
 
 /** What the confirmation says, in the language the submission was made in. */
 export interface PostingPublishedCopy {
@@ -20,9 +17,10 @@ export interface PostingPublishedCopy {
 	footer: string;
 }
 
-/** Renders the confirmation body from copy the caller already translated. */
-function PostingPublishedBody(handle: Handle<PostingPublishedCopy>) {
-	return () => {
+/** The confirmation sent to the address a posting listed as its contact. */
+export const PostingPublishedEmail = defineEmail<PostingPublishedCopy>({
+	subject: (copy) => copy.subject,
+	body: (handle) => () => {
 		let { body, footer, heading } = handle.props;
 
 		return (
@@ -32,25 +30,5 @@ function PostingPublishedBody(handle: Handle<PostingPublishedCopy>) {
 				<Email.Footer>{footer}</Email.Footer>
 			</Email.Layout>
 		);
-	};
-}
-
-/** The confirmation sent to the address a posting listed as its contact. */
-export class PostingPublishedEmail implements EmailContract {
-	constructor(
-		private recipient: string,
-		private copy: PostingPublishedCopy,
-	) {}
-
-	get to() {
-		return { email: this.recipient };
-	}
-
-	get subject() {
-		return this.copy.subject;
-	}
-
-	body() {
-		return <PostingPublishedBody {...this.copy} />;
-	}
-}
+	},
+});
