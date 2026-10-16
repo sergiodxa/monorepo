@@ -29,6 +29,7 @@
 		"@sdxc/json-schema": "0.0.1",
 		"@sdxc/lazy-route": "0.0.1",
 		"@sdxc/logger": "0.0.1",
+		"@sdxc/mail": "0.0.1",
 		"@sdxc/mcp": "0.0.1",
 		"@sdxc/openapi": "0.0.1",
 		"@sdxc/problem": "0.0.1",

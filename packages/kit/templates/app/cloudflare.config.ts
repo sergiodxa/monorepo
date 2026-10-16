@@ -26,6 +26,11 @@ export default defineConfig({
 			 * `db:*:migrate` scripts; until then, `bun db:local:migrate` and `bun dev` run on a local copy.
 			 */
 			DB: bindings.d1({ name: manifest.name, id: "00000000-0000-4000-8000-000000000000" }),
+			/**
+			 * Sends the app's email. Cloudflare delivers only from an address on a domain with Email
+			 * Routing enabled, so set `MAIL_FROM` in `config/constants.ts` to one before deploying.
+			 */
+			EMAIL: bindings.sendEmail(),
 			/** Where the job dispatcher enqueues; `cf queues create <name>` before the first deploy. */
 			QUEUE: bindings.queue({ name: manifest.name }),
 			/**

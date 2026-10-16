@@ -52,6 +52,18 @@ markup. The page middleware picks the language from `?lng=`, the session's `lng`
 `en.json` and listing it in `app/initializers/i18n.ts`, whose `translate(language)` serves a
 job or an email the same copy.
 
+## Email
+
+`sdxc make email welcome` writes an email as a `remix/component` class in `app/emails/`. A
+controller sends it through `ctx.email`, which every request carries: `ctx.email.later(email)`
+sends after the response, and `await ctx.email.send(email)` when the response depends on it. A
+job builds a mailer over the same transport, `new Mailer({ transport, from: MAIL_FROM })` from
+`app/initializers/mail.ts` and `config/constants.ts`, and awaits `send()`.
+
+Mail leaves through the `EMAIL` `send_email` binding, which `bun dev` simulates. Cloudflare
+delivers only from a domain with Email Routing enabled, so set `MAIL_FROM` to an address on
+yours before deploying.
+
 ## Database
 
 `app/initializers/database.ts` opens `remix/data-table` over the `DB` D1 binding, and the router

@@ -5,3 +5,6 @@
 
 /** Where problem `type` URIs point; each problem's slug follows it, so it ends in `/`. */
 export const PROBLEMS_URL = "https://example.com/problems/";
+
+/** Who the app's email comes from: an address on a domain Cloudflare Email Routing verified. */
+export const MAIL_FROM = { email: "no-reply@example.com", name: "App" };

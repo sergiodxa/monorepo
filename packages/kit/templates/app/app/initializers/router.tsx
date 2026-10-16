@@ -10,6 +10,7 @@ import { database } from "@sdxc/database-middleware";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import mail from "@sdxc/mail/middleware";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
@@ -19,6 +20,8 @@ import { createRouter } from "remix/router";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { transport } from "~/app/initializers/mail";
+import { MAIL_FROM } from "~/config/constants";
 import problems from "~/config/problems";
 import apiRoutes from "~/routes/api";
 import webRoutes from "~/routes/web";
@@ -51,6 +54,7 @@ export function createWebRouter() {
 				onLimit: () => problems.tooManyRequests(),
 			}),
 			database(openDatabase()),
+			mail({ transport, from: MAIL_FROM }),
 		],
 	});
 
