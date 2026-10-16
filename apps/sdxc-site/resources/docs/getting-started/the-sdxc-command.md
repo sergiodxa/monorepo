@@ -118,10 +118,16 @@ sdxc make command users/grant
 
 `--method` takes `get`, `post`, `put`, `patch`, `delete` or `form`, a page with an action
 beside it, and `--routes` picks a route contract other than `make.routes`. `--cron` declares a
-scheduled job instead of one with input. When either edit cannot be placed, such as a project
-whose initializer is laid out differently, `make` writes the handler, leaves the other files
-as they are, and prints both edits for you to make, so a declaration never lands without its
-mapping.
+scheduled job instead of one with input.
+
+A `get` or `form` controller is a page, so when a controller builds the sitemap with
+`fromRoutes` over the same route contract, `make` adds the page's decision there too: `true`,
+or `[]` when the pattern has required params, for you to fill with the pages to list. A page
+inside a group the sitemap already excludes with `false` stays excluded.
+
+When an edit cannot be placed, such as a project whose initializer is laid out differently,
+`make` writes the handler, leaves the other files as they are, and prints every edit for you
+to make, so a declaration never lands without its mapping.
 
 A migration is named like the files already in its chain and sorts after all of them. A chain
 of `0004-add-feeds.sql` files gets `0005-add-index.sql`, a chain of
