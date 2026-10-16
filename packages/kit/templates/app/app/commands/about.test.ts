@@ -1,5 +1,5 @@
 /**
- * The `about` command, run through the app's command line as `bun run cli about` runs it.
+ * The `about` command, run through the app's command line as `sdxc run about` runs it.
  */
 
 import { invoke } from "@sdxc/cli/test";

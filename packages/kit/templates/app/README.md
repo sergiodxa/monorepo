@@ -92,11 +92,11 @@ sdxc make model post
 bun db:local:migrate
 ```
 
-`bun db:local:migrate` runs `bun run cli db migrate`, which applies every migration the local
+`bun db:local:migrate` runs `sdxc run db migrate`, which applies every migration the local
 copy lacks and records it in the `d1_migrations` table D1 uses; `bun db:remote:migrate` adds
 `--remote` and applies them to the production database through `cf d1 migrations apply`.
-`bun run cli db console` opens a `sql>` prompt over the local copy, and
-`bun run cli db console --execute "SELECT …"` runs one statement.
+`sdxc run db console` opens a `sql>` prompt over the local copy, and
+`sdxc run db console --execute "SELECT …"` runs one statement.
 
 Under Vitest, `DB` is an in-memory SQLite stand-in from `@sdxc/cloudflare-mocks`, so a test runs
 real SQL. Before the first deploy, create the database with `bunx cf d1 create <name>` and put the
@@ -106,8 +106,9 @@ the `SESSIONS` binding.
 ## Add code
 
 `sdxc make <kind> <name>` writes a file of that kind where it belongs, with a test beside it,
-and adds any `@sdxc/*` package the file imports to `package.json`. The `sdxc` command comes
-from `npm add -g @sdxc/kit`:
+and adds any `@sdxc/*` package the file imports to `package.json`. The project lists
+`@sdxc/kit` as a dev dependency, so its package scripts and `bunx sdxc` reach the `sdxc`
+command; `npm add -g @sdxc/kit` puts it on your path everywhere:
 
 ```sh
 sdxc make controller about
@@ -122,15 +123,13 @@ as soon as the command finishes.
 ## Run commands
 
 `bootstrap/cli.ts` is the app's own command line, for work that belongs to the app but to no
-request. It runs on Bun, outside the Worker, through its package script:
+request. It runs on Bun, outside the Worker, through `sdxc run`, from any folder in the
+project:
 
 ```sh
-bun run cli about
-bun run cli --help
+sdxc run about
+sdxc run --help
 ```
-
-With `@sdxc/kit` installed globally, `sdxc run about` does the same from any folder in the
-project.
 
 `app/commands/index.ts` declares each command, and `sdxc make command users/grant` writes a
 new one with its test, declared and mapped. A command reads the local database as `ctx.db`, sends

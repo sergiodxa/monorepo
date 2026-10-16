@@ -23,9 +23,9 @@ Database work is a command group in the app's own command line, and the package 
 it:
 
 ```sh
-bun run cli db migrate            # bun db:local:migrate
-bun run cli db migrate --remote   # bun db:remote:migrate
-bun run cli db console            # sql> prompt over the local copy
+sdxc run db migrate            # bun db:local:migrate
+sdxc run db migrate --remote   # bun db:remote:migrate
+sdxc run db console            # sql> prompt over the local copy
 ```
 
 - **One id.** Every `db` command reads the database id from `cloudflare.config.ts`.

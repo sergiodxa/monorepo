@@ -1,5 +1,5 @@
 /**
- * The command line's entry point, started by `bun run cli` or `sdxc run`: it runs the command
+ * The command line's entry point, started by `sdxc run`: it runs the command
  * the arguments name and exits with its code. The Worker never imports it, so no command ships
  * in the server build.
  */
