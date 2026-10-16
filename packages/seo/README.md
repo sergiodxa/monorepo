@@ -186,7 +186,7 @@ tag sets, each namespace restating the title and description. Props:
 - `title?`: The page title
 - `description?`: Falls back to `site.description`
 - `site?`: From `seo.site`; adds `og:site_name` and the Twitter handles and card
-- `og?`: `type` (`"website"` by default, or `"article"`), `image`, `imageAlt` and `locale`
+- `og?`: `type` (`"website"` by default, or `"article"`), `image`, `imageAlt`, `imageWidth`, `imageHeight` and `locale`
 - `robots?`: From `seo.robotsTag()`
 
 ### `Seo.JsonLd`

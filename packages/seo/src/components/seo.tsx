@@ -32,6 +32,12 @@ export namespace Seo {
 		image?: string;
 		/** Alternative text for the card image, for the consumers that expose it. */
 		imageAlt?: string;
+		/**
+		 * The image's size in pixels, as `og:image:width` and `og:image:height`. A platform that
+		 * knows the size can lay out the card on the first share, before fetching the image.
+		 */
+		imageWidth?: number;
+		imageHeight?: number;
 		/** `og:locale`, e.g. `"en_US"`. */
 		locale?: string;
 	}
@@ -93,6 +99,12 @@ function SeoMeta(handle: Handle<Seo.MetaProps>) {
 				{description && <meta property="og:description" content={description} />}
 				{og?.image && <meta property="og:image" content={og.image} />}
 				{og?.imageAlt && <meta property="og:image:alt" content={og.imageAlt} />}
+				{og?.image && og.imageWidth !== undefined && (
+					<meta property="og:image:width" content={String(og.imageWidth)} />
+				)}
+				{og?.image && og.imageHeight !== undefined && (
+					<meta property="og:image:height" content={String(og.imageHeight)} />
+				)}
 				{og?.locale && <meta property="og:locale" content={og.locale} />}
 				<meta name="twitter:card" content={twitter?.card ?? DEFAULT_TWITTER_CARD} />
 				{twitter?.site && <meta name="twitter:site" content={twitter.site} />}

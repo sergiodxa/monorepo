@@ -90,6 +90,28 @@ describe("Seo.Meta", () => {
 		);
 	});
 
+	test("states the card image's size when given, and only with an image", async () => {
+		let instance = seo();
+		let sized = await renderToString(
+			<Seo.Meta
+				canonical={instance.canonical("/")}
+				site={instance.site}
+				og={{ image: instance.absolute("/og/home.png"), imageWidth: 1200, imageHeight: 630 }}
+			/>,
+		);
+		expect(sized).toContain('<meta property="og:image:width" content="1200" />');
+		expect(sized).toContain('<meta property="og:image:height" content="630" />');
+
+		let imageless = await renderToString(
+			<Seo.Meta
+				canonical={instance.canonical("/")}
+				site={instance.site}
+				og={{ imageWidth: 1200, imageHeight: 630 }}
+			/>,
+		);
+		expect(imageless).not.toContain("og:image:width");
+	});
+
 	test("falls back to the site's default description", async () => {
 		let instance = seo();
 		let html = await renderToString(
