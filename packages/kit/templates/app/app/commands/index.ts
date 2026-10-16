@@ -5,11 +5,24 @@
  */
 
 import { command, commands, flag } from "@sdxc/cli";
+import { DB_COMMAND } from "@sdxc/database-middleware/cli";
 
 /** The app's commands; `sdxc make command <name>` declares one here and maps its handler. */
 export default commands({
 	about: command({
 		description: "Print the app's name, its @sdxc/cli and remix versions, and the runtime",
 		flags: { json: flag.boolean("json", { description: "Print it as JSON" }) },
+	}),
+	db: commands({
+		console: DB_COMMAND,
+		migrate: command({
+			description: "Apply the migrations in database/migrations the database lacks",
+			flags: {
+				remote: flag.boolean("remote", {
+					description: "Apply them to the production database instead of the local copy",
+				}),
+			},
+			examples: ["db migrate", "db migrate --remote"],
+		}),
 	}),
 });

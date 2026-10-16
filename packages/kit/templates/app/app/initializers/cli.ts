@@ -5,12 +5,19 @@
  */
 
 import { createCLI, lazy } from "@sdxc/cli";
+import { database } from "@sdxc/database-middleware/cli";
+import i18n from "@sdxc/i18n/middleware/cli";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
+import mail from "@sdxc/mail/middleware/cli";
+import { PrintTransport } from "@sdxc/mail/print";
 import { trace } from "@sdxc/trace-context/middleware/cli";
 
 import commandset from "~/app/commands";
+import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
+import { openLocalDatabase } from "~/app/initializers/local-database";
 import { logger } from "~/app/initializers/logger";
+import { MAIL_FROM } from "~/config/constants";
 
 import manifest from "../../package.json" with { type: "json" };
 
@@ -23,14 +30,39 @@ const COMMAND_LOGGER = createLogger({
 	sink: (record) => process.stderr.write(`${JSON.stringify(record)}\n`),
 });
 
-/** The command line `bootstrap/cli.ts` runs and a command's test invokes. */
+/**
+ * The command line `bootstrap/cli.ts` runs and a command's test invokes. A command reads the
+ * local database as `ctx.db`, prints the email it sends to stderr through `ctx.email`, and
+ * writes its own output in the language `LANG` names through `ctx.intl`.
+ */
 export const cli = createCLI({
 	name: manifest.name,
 	commands: commandset,
-	middleware: [log(COMMAND_LOGGER), trace()],
+	middleware: [
+		log(COMMAND_LOGGER),
+		trace(),
+		database(openLocalDatabase),
+		mail({
+			transport: (ctx) => new PrintTransport({ write: (text) => ctx.stderr(text) }),
+			from: MAIL_FROM,
+		}),
+		i18n({
+			resources: RESOURCES,
+			supportedLanguages: SUPPORTED_LANGUAGES,
+			fallbackLanguage: FALLBACK_LANGUAGE,
+		}),
+	],
 });
 
 cli.map(
 	commandset.about,
 	lazy(() => import("~/app/commands/about")),
+);
+cli.map(
+	commandset.db.console,
+	lazy(() => import("~/app/commands/db/console")),
+);
+cli.map(
+	commandset.db.migrate,
+	lazy(() => import("~/app/commands/db/migrate")),
 );

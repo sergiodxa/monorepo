@@ -92,10 +92,15 @@ sdxc make model post
 bun db:local:migrate
 ```
 
+`bun db:local:migrate` runs `bun run cli db migrate`, which applies every migration the local
+copy lacks and records it in the `d1_migrations` table D1 uses; `bun db:remote:migrate` adds
+`--remote` and applies them to the production database through `cf d1 migrations apply`.
+`bun run cli db console` opens a `sql>` prompt over the local copy, and
+`bun run cli db console --execute "SELECT …"` runs one statement.
+
 Under Vitest, `DB` is an in-memory SQLite stand-in from `@sdxc/cloudflare-mocks`, so a test runs
 real SQL. Before the first deploy, create the database with `bunx cf d1 create <name>` and put the
-id it prints in `cloudflare.config.ts` and in the `db:local:migrate` and `db:remote:migrate`
-scripts. Do the same for sessions with `bunx cf kv namespace create <name>`, whose id goes in
+id it prints in `cloudflare.config.ts`; the `db` commands read it from there. Do the same for sessions with `bunx cf kv namespace create <name>`, whose id goes in
 the `SESSIONS` binding.
 
 ## Add code
@@ -128,7 +133,10 @@ With `@sdxc/kit` installed globally, `sdxc run about` does the same from any fol
 project.
 
 `app/commands/index.ts` declares each command, and `sdxc make command users/grant` writes a
-new one with its test, declared and mapped.
+new one with its test, declared and mapped. A command reads the local database as `ctx.db`, sends
+email through `ctx.email`, which prints each message to stderr instead of delivering it, and
+writes its own output in the language `LANG` names through `ctx.intl`; `ctx.translate(language)`
+writes to someone else in theirs.
 
 ## Check and deploy
 
