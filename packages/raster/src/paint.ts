@@ -34,13 +34,25 @@ export function radialGradient(
 	return { kind: "radial", ...options };
 }
 
-/** A paint ready to sample: one premultiplied colour, or a position function into a table. */
+/**
+ * A paint ready to shade: one premultiplied colour, or a gradient's lookup table with the
+ * geometry that maps a pixel to its offset along it.
+ */
 export type Shader =
 	| { kind: "solid"; rgba: Float32Array }
-	| { kind: "gradient"; lut: Float32Array; position(x: number, y: number): number };
+	| {
+			kind: "linear";
+			lut: Float32Array;
+			x0: number;
+			y0: number;
+			/** The direction scaled by its inverse squared length, so a dot product is the offset. */
+			ux: number;
+			uy: number;
+	  }
+	| { kind: "radial"; lut: Float32Array; cx: number; cy: number; invX: number; invY: number };
 
 /**
- * Compiles a paint for sampling at pixel centres. A gradient's stops are sorted and
+ * Compiles a paint for shading at pixel centres. A gradient's stops are sorted and
  * interpolated in premultiplied sRGB, as CSS does, so a fade to transparent keeps its hue.
  */
 export function compilePaint(paint: Raster.Paint): Shader {
@@ -51,41 +63,63 @@ export function compilePaint(paint: Raster.Paint): Shader {
 		let dx = paint.to[0] - x0;
 		let dy = paint.to[1] - y0;
 		let lengthSquared = dx * dx + dy * dy || 1;
-		return {
-			kind: "gradient",
-			lut,
-			position: (x, y) => ((x - x0) * dx + (y - y0) * dy) / lengthSquared,
-		};
+		return { kind: "linear", lut, x0, y0, ux: dx / lengthSquared, uy: dy / lengthSquared };
 	}
 	let [cx, cy] = paint.center;
 	let [rx, ry] = typeof paint.radius === "number" ? [paint.radius, paint.radius] : paint.radius;
-	let invX = 1 / (rx || 1);
-	let invY = 1 / (ry || 1);
-	return {
-		kind: "gradient",
-		lut,
-		position: (x, y) => Math.hypot((x - cx) * invX, (y - cy) * invY),
-	};
+	return { kind: "radial", lut, cx, cy, invX: 1 / (rx || 1), invY: 1 / (ry || 1) };
 }
 
 /**
- * Writes the shader's premultiplied colour at pixel `(x, y)` into `out` at `offset`.
- * Sampling happens at the pixel centre, so a gradient is symmetric across the canvas.
+ * Writes the premultiplied colour of pixels `x0` to `x1` (exclusive) on row `y` into `out`,
+ * four floats each from index 0. Sampling happens at pixel centres, so a gradient is
+ * symmetric across the canvas; a whole span per call keeps the per-pixel work to arithmetic.
  */
-export function sample(shader: Shader, x: number, y: number, out: Float32Array, offset = 0): void {
+export function shadeSpan(
+	shader: Shader,
+	y: number,
+	x0: number,
+	x1: number,
+	out: Float32Array,
+): void {
+	let count = x1 - x0;
 	if (shader.kind === "solid") {
-		out[offset] = shader.rgba[0] ?? 0;
-		out[offset + 1] = shader.rgba[1] ?? 0;
-		out[offset + 2] = shader.rgba[2] ?? 0;
-		out[offset + 3] = shader.rgba[3] ?? 0;
+		let [r = 0, g = 0, b = 0, a = 0] = shader.rgba;
+		for (let index = 0; index < count * 4; index += 4) {
+			out[index] = r;
+			out[index + 1] = g;
+			out[index + 2] = b;
+			out[index + 3] = a;
+		}
 		return;
 	}
-	let t = shader.position(x + 0.5, y + 0.5);
-	let index = Math.round(Math.min(1, Math.max(0, t)) * (LUT_SIZE - 1)) * 4;
-	out[offset] = shader.lut[index] ?? 0;
-	out[offset + 1] = shader.lut[index + 1] ?? 0;
-	out[offset + 2] = shader.lut[index + 2] ?? 0;
-	out[offset + 3] = shader.lut[index + 3] ?? 0;
+	let lut = shader.lut;
+	let last = LUT_SIZE - 1;
+	let py = y + 0.5;
+	if (shader.kind === "linear") {
+		let t = (x0 + 0.5 - shader.x0) * shader.ux + (py - shader.y0) * shader.uy;
+		for (let index = 0; index < count * 4; index += 4) {
+			let entry = (t <= 0 ? 0 : t >= 1 ? last : (t * last + 0.5) | 0) * 4;
+			out[index] = lut[entry] as number;
+			out[index + 1] = lut[entry + 1] as number;
+			out[index + 2] = lut[entry + 2] as number;
+			out[index + 3] = lut[entry + 3] as number;
+			t += shader.ux;
+		}
+		return;
+	}
+	let dy = (py - shader.cy) * shader.invY;
+	let dy2 = dy * dy;
+	let dx = (x0 + 0.5 - shader.cx) * shader.invX;
+	for (let index = 0; index < count * 4; index += 4) {
+		let t = Math.sqrt(dx * dx + dy2);
+		let entry = (t >= 1 ? last : (t * last + 0.5) | 0) * 4;
+		out[index] = lut[entry] as number;
+		out[index + 1] = lut[entry + 1] as number;
+		out[index + 2] = lut[entry + 2] as number;
+		out[index + 3] = lut[entry + 3] as number;
+		dx += shader.invX;
+	}
 }
 
 /** A colour as premultiplied RGBA, the form every blend in the canvas works in. */
