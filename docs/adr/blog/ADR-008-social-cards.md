@@ -70,4 +70,6 @@ which its card shows under the heading.
 
 ### Neutral
 
-- Objects for old content stay in R2; a lifecycle rule on the bucket can expire them.
+- The bucket's `expire-blog-cards` lifecycle rule deletes objects under `blog/` 90 days
+  after they were written, so cards for old content do not accumulate; a current card that
+  expires is drawn again on its next request.

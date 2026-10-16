@@ -83,5 +83,6 @@ platform faces cannot be redistributed; Inter is the closest open face.
 
 ### Neutral
 
-- Unreferenced objects from old content or old templates stay in R2; a lifecycle rule on
-  the bucket can expire them.
+- The bucket's `expire-sdxc-cards` lifecycle rule deletes objects under `sdxc/` 90 days
+  after they were written, so cards for old content and old templates do not accumulate; a
+  current card that expires is drawn again on its next request.
