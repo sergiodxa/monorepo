@@ -71,7 +71,7 @@
 		"@sdxc/kit": "workspace:*",
 		"@sdxc/messageformat": "workspace:*",
 		"fflate": "0.8.3",
-		"vite": "^8.3.4",
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
 		"wrangler": "^4.149.0"
 	}
 }
