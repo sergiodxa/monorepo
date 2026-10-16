@@ -288,6 +288,10 @@ describe("GET /status/:slug", () => {
 		expect(response.status).toBe(200);
 		let body = await response.text();
 		expect(body).toContain(monitor.name);
+		expect(body).toMatch(
+			/<meta property="og:image" content="https:\/\/uptime\.sergiodxa\.com\/status\/acme-status\.png\?v=[0-9a-z]+"/,
+		);
+		expect(body).toContain('<meta property="og:image:width" content="1200"');
 		expect(body).toContain("Operational");
 		expect(body).toContain("All Systems Operational");
 	});

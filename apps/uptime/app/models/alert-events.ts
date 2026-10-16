@@ -91,6 +91,29 @@ export const AlertEvents = createModel(alertEvents, {
 		},
 
 		/**
+		 * When `monitorId`'s open incident began: its first down or degraded event after its
+		 * last recovery, across every alert watching it. `null` when nothing records one, which
+		 * is the case for a monitor no alert watches.
+		 */
+		async openIncidentSince(monitorId: string): Promise<number | null> {
+			let recovery = await this.query()
+				.where(and(eq("monitor_id", monitorId), eq("event_type", "up")))
+				.orderBy("created_at", "desc")
+				.first();
+			let start = await this.query()
+				.where(
+					and(
+						eq("monitor_id", monitorId),
+						ne("event_type", "up"),
+						gt("created_at", recovery?.created_at ?? 0),
+					),
+				)
+				.orderBy("created_at", "asc")
+				.first();
+			return start?.created_at ?? null;
+		},
+
+		/**
 		 * Sent notifications for `alertId`+`monitorId`+`eventType` since the pair's last
 		 * recovery, capped at `limit`; a `0` marks the incident's first notification. A bounded
 		 * read answers the caller's threshold question with one index seek.

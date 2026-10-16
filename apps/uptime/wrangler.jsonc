@@ -109,8 +109,15 @@
 		},
 	],
 
-	// R2 bucket bindings can be added here when needed
-	"r2_buckets": [],
+	// Every page's rendered social card, keyed by template and content. The bucket is shared
+	// with the author's other sites; this app's cards live under `uptime/`.
+	"r2_buckets": [
+		{
+			"binding": "SOCIAL_CARDS",
+			"bucket_name": "social-cards",
+			"preview_bucket_name": "social-cards",
+		},
+	],
 
 	// Without a `dead_letter_queue` an exhausted message is discarded, and nothing records
 	// that a scheduled check was never performed. The `checkHttp` job only retries infrastructure

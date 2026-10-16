@@ -46,6 +46,7 @@ import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import socialCards from "~/app/http/middleware/social-cards";
 import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { createDatabase } from "~/app/initializers/database";
@@ -172,6 +173,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * on the first model a request reads, so a request that reads none binds nothing.
 			 */
 			models(),
+			/**
+			 * Answers `<page>.png` with the page's social card before routing, since page
+			 * patterns would claim the path; it reads `ctx.models` for a status page's card.
+			 */
+			socialCards(),
 			/**
 			 * Publishes `ctx.email` on every surface, including machine ones — the
 			 * cron-job ping endpoint dispatches alerts too. Sits after the log so

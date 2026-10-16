@@ -41,17 +41,10 @@ import type { ServiceStatus } from "~/app/services/status-page";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import { SEO } from "~/app/initializers/seo";
-import { getTeamHttpSummaries } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
-import {
-	computeOverallStatus,
-	deriveCronStatus,
-	deriveDnsStatus,
-	deriveFlowStatus,
-	deriveHttpStatus,
-	deriveTcpStatus,
-} from "~/app/services/status-page";
-import { listPublishedMaintenance, publicName } from "~/app/services/status-page-maintenance";
+import { loadStatusCard, socialCardHash, socialCardUrl } from "~/app/services/social-card";
+import { listPublishedMaintenance } from "~/app/services/status-page-maintenance";
+import { loadStatusPageOverview } from "~/app/services/status-page-overview";
 import { badgeVariant } from "~/resources/components/badge";
 import DocumentLayout from "~/resources/layouts/document";
 import UptimeBar from "~/resources/views/shared/uptime-bar";
@@ -140,115 +133,9 @@ export default createAction(routes.statusPage, async (ctx) => {
 
 	apportionCostByTeam([page.team_id]);
 
-	let attachments = await ctx.models.statusPages.listAttachments(page.id);
-
-	let [allMonitors, allDnsMonitors, allTcpMonitors, allFlowMonitors, allCronJobs, httpSummaries] =
-		await Promise.all([
-			ctx.models.monitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
-			ctx.models.dnsMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
-			ctx.models.tcpMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
-			/**
-			 * Projected to `id`/`name`/`last_status` in the query itself: a flow's spec source
-			 * holds the credentials it signs in with, and this page renders to the world.
-			 */
-			ctx.models.statusPages.listPublicFlowMonitors(page.team_id),
-			ctx.models.cronJobMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
-			getTeamHttpSummaries(page.team_id),
-		]);
-
-	let healthByMonitorId = new Map(
-		isFailure(httpSummaries)
-			? []
-			: httpSummaries.data.map((summary) => [summary.monitorId, summary.health]),
-	);
-	let monitorsById = new Map(allMonitors.map((monitor) => [monitor.id, monitor]));
-	let dnsMonitorsById = new Map(allDnsMonitors.map((monitor) => [monitor.id, monitor]));
-	let tcpMonitorsById = new Map(allTcpMonitors.map((monitor) => [monitor.id, monitor]));
-	let flowMonitorsById = new Map(allFlowMonitors.map((monitor) => [monitor.id, monitor]));
-	let cronJobsById = new Map(allCronJobs.map((monitor) => [monitor.id, monitor]));
-
-	let [httpServices, dnsServices, tcpServices, flowServices] = await Promise.all([
-		Promise.all(
-			attachments.monitors
-				.flatMap((row) => {
-					let monitor = monitorsById.get(row.monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "http" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
-					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "http"),
-				})),
-		),
-		Promise.all(
-			attachments.dnsMonitors
-				.flatMap((row) => {
-					let monitor = dnsMonitorsById.get(row.dns_monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "dns" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveDnsStatus(monitor.last_status),
-					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "dns"),
-				})),
-		),
-		Promise.all(
-			attachments.tcpMonitors
-				.flatMap((row) => {
-					let monitor = tcpMonitorsById.get(row.tcp_monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "tcp" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveTcpStatus(monitor.last_status),
-					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "tcp"),
-				})),
-		),
-		Promise.all(
-			attachments.flowMonitors
-				.flatMap((row) => {
-					let monitor = flowMonitorsById.get(row.flow_monitor_id);
-					return monitor ? [{ displayName: row.display_name, monitor }] : [];
-				})
-				.map(async ({ displayName, monitor }) => ({
-					kind: "flow" as const,
-					id: monitor.id,
-					name: publicName(displayName, monitor.name),
-					status: deriveFlowStatus(monitor.last_status),
-					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "flow"),
-				})),
-		),
-	]);
-
-	let cronServices = attachments.cronJobs
-		.flatMap((row) => {
-			let monitor = cronJobsById.get(row.cron_job_monitor_id);
-			return monitor ? [{ displayName: row.display_name, monitor }] : [];
-		})
-		.map(({ displayName, monitor }) => ({
-			kind: "cron" as const,
-			id: monitor.id,
-			name: publicName(displayName, monitor.name),
-			cronExpression: monitor.cron_expression,
-			lastPingAt: monitor.last_ping_at,
-			status: deriveCronStatus(monitor.status),
-		}));
-
-	let overallStatus = computeOverallStatus([
-		...httpServices.map((service) => service.status),
-		...dnsServices.map((service) => service.status),
-		...tcpServices.map((service) => service.status),
-		...flowServices.map((service) => service.status),
-		...cronServices.map((service) => service.status),
-	]);
-
-	let barServices = [...httpServices, ...dnsServices, ...tcpServices, ...flowServices];
+	let overview = await loadStatusPageOverview(ctx.models, page);
+	let { barServices, cronServices, overallStatus } = overview;
+	let card = await loadStatusCard(ctx.models, page, overview);
 
 	let now = Date.now();
 	let maintenance = (
@@ -309,6 +196,10 @@ export default createAction(routes.statusPage, async (ctx) => {
 			seo={{
 				description: page.description ?? page.title,
 				canonical: SEO.canonical(ctx.url),
+				og: {
+					image: socialCardUrl(`/status/${slug}`, socialCardHash(card)),
+					imageAlt: `${page.title}: ${card.since}`,
+				},
 			}}
 		>
 			<main mix={[maxIs("640px"), m(0, "auto"), p("40px", "20px")]}>

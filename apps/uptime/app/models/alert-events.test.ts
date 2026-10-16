@@ -470,3 +470,40 @@ describe("alertEvents.forAlert / forMonitor", () => {
 		expect(rows.map((event) => event.id)).toEqual([mine.id]);
 	});
 });
+
+describe("alertEvents.openIncidentSince", () => {
+	/** Records an event for `monitor-1` and stamps when it was created, `agoMs` before now. */
+	async function eventAt(
+		agoMs: number,
+		event_type: SelectAlertEvent["event_type"],
+		alert_id = "alert-1",
+	) {
+		let row = await record({
+			alert_id,
+			monitor_id: "monitor-1",
+			event_type,
+			status: "sent",
+			error_message: null,
+			monitor_type: "http",
+			monitor_name: "My site",
+		});
+		let createdAt = Date.now() - agoMs;
+		await db.update(alertEvents, row.id, { created_at: createdAt });
+		return createdAt;
+	}
+
+	test("is the first down or degraded event after the last recovery, across alerts", async () => {
+		await eventAt(60_000 * 60, "down");
+		await eventAt(60_000 * 50, "up");
+		let start = await eventAt(60_000 * 20, "degraded", "alert-2");
+		await eventAt(60_000 * 10, "down");
+		expect(await models.alertEvents.openIncidentSince("monitor-1")).toBe(start);
+	});
+
+	test("is null once the monitor has recovered, or when nothing recorded an incident", async () => {
+		await eventAt(60_000 * 20, "down");
+		await eventAt(60_000 * 10, "up");
+		expect(await models.alertEvents.openIncidentSince("monitor-1")).toBeNull();
+		expect(await models.alertEvents.openIncidentSince("monitor-unwatched")).toBeNull();
+	});
+});

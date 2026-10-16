@@ -19,6 +19,7 @@ import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
 import { SEO } from "~/app/initializers/seo";
+import { marketingCardVersion, SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -105,7 +106,11 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					<ImportMap value={script.importMap} nonce={nonce} />
-					{seo ? <Seo title={title} site={SEO.site} {...seo} /> : title && <title>{title}</title>}
+					{seo ? (
+						<Seo title={title} site={SEO.site} {...seo} og={withSocialCard(seo, title)} />
+					) : (
+						title && <title>{title}</title>
+					)}
 					{script.preloads.map((href) => (
 						<link key={href} rel="modulepreload" href={href} />
 					))}
@@ -135,4 +140,21 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			</html>
 		);
 	};
+}
+
+/**
+ * The page's Open Graph facts with its social card added: a page that names its own image
+ * keeps it, and any other indexable page advertises its `<page>.png` card at the size every
+ * card is drawn. A page without a canonical URL advertises none.
+ */
+function withSocialCard(
+	seo: Omit<Seo.Props, "title" | "site">,
+	title: string | undefined,
+): Seo.OpenGraph | undefined {
+	let size = { imageWidth: SOCIAL_CARD_SIZE.width, imageHeight: SOCIAL_CARD_SIZE.height };
+	if (seo.og?.image) return { ...size, ...seo.og };
+	if (!seo.canonical) return seo.og;
+	let path = new URL(seo.canonical).pathname;
+	let version = marketingCardVersion(title ?? "", seo.description ?? "", path);
+	return { ...size, image: socialCardUrl(path, version), imageAlt: title, ...seo.og };
 }
