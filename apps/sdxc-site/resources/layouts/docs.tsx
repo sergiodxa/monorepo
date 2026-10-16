@@ -178,7 +178,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 												{crumb.href ? (
 													<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
 												) : (
-													<span>{crumb.label}</span>
+													<Breadcrumbs.Link aria-current="page">{crumb.label}</Breadcrumbs.Link>
 												)}
 											</Breadcrumbs.Item>
 										))}
