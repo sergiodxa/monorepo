@@ -80,7 +80,7 @@ jobs:
           done
 
       - name: Generate framework types
-        run: bun --filter '*' cf:typegen
+        run: bun --filter '*' cli typegen
 
       - name: Run Check
         run: bun run check

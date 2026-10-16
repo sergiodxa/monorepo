@@ -68,9 +68,11 @@ Local commands to run from the app directory (e.g. `apps/blog`):
 ```bash
 bun dev                         # Run dev server
 bun build                       # Build for production
-bun db:local:migrate            # Apply migrations locally
-bun db:remote:migrate           # Apply migrations to production
-bun cf:typegen                  # Generate TypeScript types for Cloudflare Workers bindings
+sdxc run db migrate             # Apply migrations to the local database
+sdxc run db migrate --remote    # Apply migrations to production
+sdxc run db console             # SQL prompt over the local database
+sdxc run typegen                # Generate TypeScript types for Cloudflare Workers bindings
+sdxc run about                  # Print the app's name and the versions it runs on
 ```
 
 ## Rules
@@ -86,7 +88,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST write tests with Vitest, never Jest, Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories — `vp test run <path>` scopes a run without changing directory
 - MUST use Vite+ (`vp check`) for formatting, linting and type checking, never other tools like Prettier, ESLint or a direct `tsc` run in CI
-- MUST apply migrations using `bun run db:local:migrate` or `bun run db:remote:migrate`, never invoking `cf d1 migrations` or `wrangler d1 migrations` directly
+- MUST apply migrations with `sdxc run db migrate` (add `--remote` for production), never invoking `cf d1 migrations` or `wrangler d1 migrations` directly; `sdxc` runs the app's `bun run cli` (`bootstrap/cli.ts`), so `bun run cli db migrate` works where `sdxc` is not on PATH
 - MUST write documentation for each shared package, following [](./docs/guides/package-documentation.md) as guidelines
 - MUST write documentation for each application, following [](./docs/guides/app-documentation.md) as guidelines
 - MUST write an ADR for any significant architectural decisions, following [](./docs/guides/adr-writing.md) as guidelines
