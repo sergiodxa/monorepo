@@ -33,6 +33,13 @@ export default defineConfig({
 			 * adapter declares the same budget for the `RateLimit` headers; keep the two in step.
 			 */
 			RATE_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } }),
+			/**
+			 * Visitors' sessions. `cf kv namespace create <name>` prints the id to put here; until
+			 * then, `bun dev` keeps sessions in a local copy.
+			 */
+			SESSIONS: bindings.kv({ id: "00000000000000000000000000000000" }),
+			/** Signs the session cookie. */
+			SESSION_SECRET: bindings.secret(),
 			/** Signs the honeypot fields every page form carries. */
 			HONEYPOT_SECRET: bindings.secret(),
 			/** The Turnstile widget's site key, which a form renders. */

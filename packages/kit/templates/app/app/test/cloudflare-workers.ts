@@ -5,12 +5,14 @@
  * stand-ins that behave like Cloudflare's, so a test reads and writes real SQL through `DB`.
  */
 
-import { createD1Database, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { createD1Database, createKVNamespace, createRateLimit } from "@sdxc/cloudflare-mocks";
 
 /** The bindings and secrets the app reads, with the values a project starts with for development. */
 export const env = {
 	DB: createD1Database(),
 	RATE_LIMITER: createRateLimit(),
+	SESSIONS: createKVNamespace(),
+	SESSION_SECRET: "development-session-secret",
 	HONEYPOT_SECRET: "development-honeypot-secret",
 	TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
 	TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",

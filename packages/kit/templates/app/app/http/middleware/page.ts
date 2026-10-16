@@ -1,6 +1,6 @@
 /**
  * The middleware every page declares: the parsed form body, the cross-origin check a
- * cookie-backed form relies on, the honeypot every form submission must pass, the security
+ * cookie-backed form relies on, the visitor's session, the honeypot every form submission must pass, the security
  * headers, and the document's assets and renderer. A page controller passes it as its
  * `middleware`, so only requests that render a document pay for it.
  */
@@ -11,20 +11,23 @@ import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
+import { session } from "remix/middleware/session";
 import { createMiddleware } from "remix/router";
 
 import { assetResolver } from "~/app/initializers/assets";
 import { honeypot as trap } from "~/app/initializers/honeypot";
+import { sessionCookie, sessionStorage } from "~/app/initializers/session";
 import { SECURITY_POLICY } from "~/config/security-policy";
 
 /**
- * Publishes `ctx.formData`, `ctx.honeypot`, `ctx.securityHeaders`, `ctx.assets` and
+ * Publishes `ctx.formData`, `ctx.session`, `ctx.honeypot`, `ctx.securityHeaders`, `ctx.assets` and
  * `ctx.render` on a page's context. A POST without valid honeypot fields is refused with a 400
  * before the controller runs; the security headers come right before the assets and renderer.
  */
 export default createMiddleware(
 	formData(),
 	cop(),
+	session(sessionCookie, sessionStorage),
 	honeypot(trap),
 	securityHeaders(SECURITY_POLICY),
 	assets(assetResolver, {

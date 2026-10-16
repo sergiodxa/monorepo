@@ -33,6 +33,7 @@
 		"@sdxc/problem": "0.0.1",
 		"@sdxc/rate-limit": "0.0.1",
 		"@sdxc/security-headers": "0.0.1",
+		"@sdxc/session-storage-kv": "0.0.1",
 		"@sdxc/spam": "0.0.1",
 		"@sdxc/trace-context": "0.0.1",
 		"@sdxc/ui": "0.0.1",

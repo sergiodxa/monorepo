@@ -22,7 +22,9 @@ changing a binding.
 One router serves two route contracts:
 
 - `routes/web.ts`, the pages. Each page controller declares `app/http/middleware/page.ts`, which
-  parses forms, checks cross-origin posts, refuses a post without valid honeypot fields, sends
+  parses forms, checks cross-origin posts, loads the visitor's session as `ctx.session` (a signed
+  cookie naming a record in the `SESSIONS` KV store, saved after the controller runs), refuses
+  a post without valid honeypot fields, sends
   the security headers in `config/security-policy.ts` and resolves the document's assets. A form
   renders the fields with `HoneypotFields` from `@sdxc/honeypot/ui`, and asks for Cloudflare
   Turnstile by rendering `TurnstileWidget` and declaring `captcha(turnstile)` on its action, and
@@ -55,7 +57,8 @@ bun db:local:migrate
 Under Vitest, `DB` is an in-memory SQLite stand-in from `@sdxc/cloudflare-mocks`, so a test runs
 real SQL. Before the first deploy, create the database with `bunx cf d1 create <name>` and put the
 id it prints in `cloudflare.config.ts` and in the `db:local:migrate` and `db:remote:migrate`
-scripts.
+scripts. Do the same for sessions with `bunx cf kv namespace create <name>`, whose id goes in
+the `SESSIONS` binding.
 
 ## Add code
 
