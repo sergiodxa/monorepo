@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-16
+**Implemented** - 2026-10-16
 
 ## Background
 
@@ -198,5 +198,9 @@ handler lets the handler run each query once and pass plain values.
 
 ## Current Progress
 
-- [ ] Phase 1: `@sdxc/sitemap/remix`
+- [x] Phase 1: `@sdxc/sitemap/remix`
 - [ ] Phase 2: Move the apps onto it
+  - [x] blog
+  - [x] uptime
+  - [x] sdxc site
+  - [ ] `app` template
