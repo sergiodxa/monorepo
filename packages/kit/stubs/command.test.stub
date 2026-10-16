@@ -1,5 +1,5 @@
 /**
- * The `{{command}}` command, run through the app's command line.
+ * The `{{command}}` command, run through the app's command line.{{header}}
  */
 
 import { invoke } from "@sdxc/cli/test";

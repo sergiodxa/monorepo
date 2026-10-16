@@ -1,6 +1,6 @@
 /**
  * Answers the `{{uri}}` resource: describe what a read returns, and `null` for one that does
- * not exist.
+ * not exist.{{header}}
  */
 
 import { createResource } from "@sdxc/mcp";

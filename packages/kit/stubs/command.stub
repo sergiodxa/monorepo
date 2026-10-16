@@ -1,5 +1,5 @@
 /**
- * `{{command}}`: describe what it changes, what it prints, and whether it is safe to run twice.
+ * `{{command}}`: describe what it changes, what it prints, and whether it is safe to run twice.{{header}}
  */
 
 import { createCommand, success } from "@sdxc/cli";

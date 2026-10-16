@@ -18,11 +18,13 @@ import { failure, isFailure, wrap } from "@sdxc/result";
 import type { GitHubTemplate } from "../create/github.js";
 import type { TemplateSource, TemplateTree } from "../create/templates.js";
 
+import { headerTags, resolveAuthor } from "../author.js";
 import { SDXC_COMMANDS } from "../contract.js";
 import { describe, downloadTemplate, GitHubRefusal, githubToken } from "../create/github.js";
 import { resolveTarget } from "../create/target.js";
 import {
 	completeBuiltin,
+	creditTemplate,
 	nameProject,
 	parseTemplate,
 	readBuiltinTemplate,
@@ -52,7 +54,7 @@ export default createCommand(SDXC_COMMANDS.create, {
 		if (isFailure(source)) return source;
 		let target = await resolveTarget(ctx.cwd, ctx.arguments.directory);
 		if (isFailure(target)) return target;
-		let fetched = await fetchTemplate(ctx, source.data, target.data.name);
+		let fetched = await fetchTemplate(ctx, source.data, target.data.name, target.data.directory);
 		if (isFailure(fetched)) return fetched;
 		let written = await writeTree(target.data.directory, fetched.data.tree);
 		if (isFailure(written)) return written;
@@ -121,11 +123,15 @@ async function initializeGit(
 	return success(undefined);
 }
 
-/** Reads the template `source` names and completes it for the project `name`. */
+/**
+ * Reads the template `source` names and completes it for the project `name`. A built-in
+ * template's modules credit the author resolved from `directory`, where the project is written.
+ */
 async function fetchTemplate(
 	ctx: CreateContext,
 	source: TemplateSource,
 	name: string,
+	directory: string,
 ): Promise<Result<Fetched, Error>> {
 	if (source.kind === "github") {
 		let extracted = await download(ctx, source);
@@ -139,6 +145,7 @@ async function fetchTemplate(
 	if (isFailure(tree)) return tree;
 	let completed = await completeBuiltin(tree.data, name, ctx.packageRoot);
 	if (isFailure(completed)) return completed;
+	creditTemplate(tree.data, headerTags(await resolveAuthor(directory)));
 	return success({ tree: tree.data, description: `the ${source.name} template` });
 }
 

@@ -1,6 +1,6 @@
 /**
  * Answers the `{{tool}}` tool: describe what it returns, and what a model should do when it
- * finds nothing.
+ * finds nothing.{{header}}
  */
 
 import { createTool } from "@sdxc/mcp";

@@ -1,6 +1,6 @@
 /**
  * The scheduled {{title}} job: describe what each run sweeps or reports, and why on this
- * schedule.
+ * schedule.{{header}}
  */
 
 import { createJobHandler } from "@sdxc/jobs";

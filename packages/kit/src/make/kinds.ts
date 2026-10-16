@@ -38,9 +38,10 @@ export interface Kind {
 
 /**
  * The placeholders every stub may use: the file's base name (`name`), its camelCase `key`, its
- * PascalCase `Name`, its `snake` and `title` spellings, and the import `specifier` of the file.
+ * PascalCase `Name`, its `snake` and `title` spellings, the import `specifier` of the file, and
+ * the `header` tags crediting its author, placed at the end of the module JSDoc's description.
  */
-export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "specifier"];
+export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "specifier", "header"];
 
 /**
  * Every kind, in the order `sdxc make --help` lists them. `path` is the declaration's key path

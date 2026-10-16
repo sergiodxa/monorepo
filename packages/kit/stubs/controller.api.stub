@@ -1,6 +1,6 @@
 /**
  * The {{title}} endpoint: describe what a client sends, what it gets back and which errors it
- * should expect.
+ * should expect.{{header}}
  */
 
 import { createAction } from "remix/router";

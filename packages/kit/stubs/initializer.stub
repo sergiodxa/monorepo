@@ -1,6 +1,6 @@
 /**
  * The app's one {{title}}: describe what it is configured with and who reads it. Build it
- * here, once, so every caller shares the same instance.
+ * here, once, so every caller shares the same instance.{{header}}
  */
 
 /** The {{title}} every caller imports. */

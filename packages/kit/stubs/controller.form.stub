@@ -1,6 +1,6 @@
 /**
  * The {{title}} form: the page that shows it and the action that receives it. Describe what
- * a submission changes and where the visitor lands afterwards.
+ * a submission changes and where the visitor lands afterwards.{{header}}
  */
 
 import { captcha } from "@sdxc/captcha/middleware";

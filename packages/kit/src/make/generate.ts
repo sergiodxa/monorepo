@@ -8,13 +8,15 @@
  */
 
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import type { Config } from "../config.js";
+
+import { headerTags, resolveAuthor } from "../author.js";
 
 import type { KindName } from "./kinds.js";
 import type { Name } from "./names.js";
@@ -150,6 +152,7 @@ async function placeholders(
 		snake: name.snake,
 		title: name.title,
 		specifier: `~/${file}`,
+		header: headerTags(await resolveAuthor(dirname(join(root, file)))),
 	};
 	let declarationPath = name.segments.map(camel).join(".");
 	let extra: Record<string, string> = {

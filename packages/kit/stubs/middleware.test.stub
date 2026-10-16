@@ -1,5 +1,5 @@
 /**
- * The {{title}} middleware.
+ * The {{title}} middleware.{{header}}
  */
 
 import { describe, expect, test } from "vitest";

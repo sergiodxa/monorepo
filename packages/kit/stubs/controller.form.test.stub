@@ -1,6 +1,6 @@
 /**
  * The {{title}} form, rendered and submitted through the app's router, so every middleware
- * and the page chain's checks run as they do in the Worker.
+ * and the page chain's checks run as they do in the Worker.{{header}}
  */
 
 import { unwrap } from "@sdxc/result";

@@ -1,6 +1,6 @@
 /**
  * The {{title}} middleware: describe what it publishes on the context or which requests it
- * answers before the handler runs.
+ * answers before the handler runs.{{header}}
  */
 
 import type { Middleware } from "remix/router";

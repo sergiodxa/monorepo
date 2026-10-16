@@ -1,5 +1,5 @@
 /**
- * The {{title}} MCP handler.
+ * The {{title}} MCP handler.{{header}}
  */
 
 import { describe, expect, test } from "vitest";

@@ -1,6 +1,6 @@
 /**
  * {{title}}: describe the rule this service carries out across models, and what a caller can
- * rely on when it succeeds.
+ * rely on when it succeeds.{{header}}
  */
 
 import type { Result } from "@sdxc/result";

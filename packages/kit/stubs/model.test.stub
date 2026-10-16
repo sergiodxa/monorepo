@@ -1,5 +1,5 @@
 /**
- * The {{title}} model.
+ * The {{title}} model.{{header}}
  */
 
 import { describe, expect, test } from "vitest";

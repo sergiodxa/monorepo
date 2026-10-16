@@ -15,6 +15,7 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
+import { addHeaderTags } from "../author.js";
 import { renderConfig } from "../init.js";
 import { resolveInside } from "../project.js";
 import { resolveRelease, scopedPackageOf } from "../releases.js";
@@ -197,6 +198,18 @@ export async function completeBuiltin(
 		tree.files.set(".config/sdxc.jsonc", new TextEncoder().encode(config.data));
 	}
 	return success(undefined);
+}
+
+/**
+ * Adds `tags` to the module JSDoc of every TypeScript module in a built-in template, so the new
+ * project's files credit its author the way the files `sdxc make` writes do.
+ */
+export function creditTemplate(tree: TemplateTree, tags: string): void {
+	for (let [path, bytes] of tree.files) {
+		if (!/\.tsx?$/.test(path)) continue;
+		let source = new TextDecoder().decode(bytes);
+		tree.files.set(path, new TextEncoder().encode(addHeaderTags(source, tags)));
+	}
 }
 
 /** Every package the tree's `package.json` lists under `dependencies` or `devDependencies`. */

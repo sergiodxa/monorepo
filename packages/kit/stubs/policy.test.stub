@@ -1,5 +1,5 @@
 /**
- * The {{title}} policy.
+ * The {{title}} policy.{{header}}
  */
 
 import { describe, expect, test } from "vitest";

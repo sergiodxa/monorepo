@@ -1,5 +1,5 @@
 /**
- * The {{title}} job: describe what it changes and why it runs off the request.
+ * The {{title}} job: describe what it changes and why it runs off the request.{{header}}
  */
 
 import { createJobHandler } from "@sdxc/jobs";

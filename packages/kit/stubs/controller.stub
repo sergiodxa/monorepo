@@ -1,5 +1,5 @@
 /**
- * The {{title}} page: describe what a visitor finds here and why the route exists.
+ * The {{title}} page: describe what a visitor finds here and why the route exists.{{header}}
  */
 
 import { createAction } from "remix/router";

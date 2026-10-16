@@ -1,5 +1,5 @@
 /**
- * The {{title}} email: describe who receives it and what it tells them.
+ * The {{title}} email: describe who receives it and what it tells them.{{header}}
  */
 
 import type { Handle } from "remix/component";
