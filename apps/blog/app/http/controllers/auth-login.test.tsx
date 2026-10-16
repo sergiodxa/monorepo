@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
 import { JWK, JWT } from "@sdxc/jwt";
 import { createLogger } from "@sdxc/logger";
@@ -24,11 +25,11 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 
 import auth from "~/app/http/middleware/auth";
 import createEnvMiddleware from "~/app/http/middleware/env";
-import models from "~/app/http/middleware/models";
+import registry from "~/app/models";
 import { testDatabase } from "~/app/test/database";
 import { blankSearchFrame } from "~/app/test/frames";
 import { bindModels } from "~/app/test/models";
@@ -159,7 +160,7 @@ function openBrowser(db: Database): Browser {
 				createMemorySessionStorage(),
 			),
 			database(db),
-			models(),
+			models(registry, (ctx) => ({ db: ctx.db })),
 			auth,
 			...pageRenderer(),
 		],

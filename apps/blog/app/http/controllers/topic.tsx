@@ -12,7 +12,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 import type { SelectTopic } from "~/database/schema";
 
 import { atomResponse } from "~/app/http/controllers/feeds/atom";

@@ -1,12 +1,14 @@
 /**
- * What the blog's model callbacks and methods read besides the database: the rest of the
- * registry, bound to the same request or job, so a model reaching another one is type-checked.
+ * What the blog's models add to the contexts that read them: the rest of the registry for a
+ * model's callbacks and methods, and `ctx.models` on every request context, including ones
+ * typed before the router's chain runs (route-agnostic middleware, MCP handlers).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 import type { BoundModels } from "@sdxc/data-model";
 
+import type { BlogModels } from "~/app/models";
 import type { Articles } from "~/app/models/articles";
 import type { Bookmarks } from "~/app/models/bookmarks";
 import type { Glossary } from "~/app/models/glossary";
@@ -47,6 +49,13 @@ declare module "@sdxc/data-model" {
 	interface ModelContext {
 		/** Every model, bound to the same database and unit of work as the one calling. */
 		models: BoundModels<BlogModelEntries>;
+	}
+}
+
+declare module "remix/router" {
+	interface RequestContext {
+		/** The blog's models, bound to `ctx.db` by the router's global `models()` middleware. */
+		models: BlogModels;
 	}
 }
 

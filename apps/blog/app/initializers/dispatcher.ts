@@ -8,6 +8,8 @@
  */
 import type { JobDispatcherContext, JobEnqueuer } from "@sdxc/jobs";
 
+import { models } from "@sdxc/data-model/jobs";
+import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
@@ -17,7 +19,7 @@ import { jobQueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { activityPub } from "~/app/jobs/middleware/activitypub";
 import { mail } from "~/app/jobs/middleware/mail";
-import { models } from "~/app/jobs/middleware/models";
+import registry from "~/app/models";
 
 /**
  * The registry both worker entrypoints run through. The timeout sits under the
@@ -26,7 +28,12 @@ import { models } from "~/app/jobs/middleware/models";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(createDatabase), models(), mail(), activityPub(enqueuer)],
+	middleware: [
+		database(createDatabase),
+		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+		mail(),
+		activityPub(enqueuer),
+	],
 	timeout: "2 minutes",
 	queue: jobQueue,
 });

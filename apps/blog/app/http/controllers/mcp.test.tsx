@@ -14,7 +14,7 @@ import { walk, walkResources } from "@sdxc/mcp";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 
 import { MCP_RATE_LIMIT } from "~/app/http/middleware/mcp-rate-limit";
 import resourceset from "~/app/mcp/resources";

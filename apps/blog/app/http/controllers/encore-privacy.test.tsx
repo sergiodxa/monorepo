@@ -10,7 +10,7 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 
 import { blankSearchFrame } from "~/app/test/frames";
 import { pageRenderer } from "~/app/test/renderer";

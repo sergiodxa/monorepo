@@ -16,7 +16,7 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 import type * as schema from "~/database/schema";
 
 import createEnvMiddleware from "~/app/http/middleware/env";

@@ -11,7 +11,7 @@ import { parse } from "@sdxc/well-known/webfinger";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 
 import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";

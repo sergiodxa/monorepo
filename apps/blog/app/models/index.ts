@@ -11,7 +11,8 @@ import type { BoundRegistry } from "@sdxc/data-model";
 
 import { createModels } from "@sdxc/data-model";
 
-export const models = createModels({
+/** The blog's models; `sdxc make model <name>` registers one here. */
+const registry = createModels({
 	users: () => import("./users"),
 	webmentions: () => import("./webmentions"),
 	webmentionDomains: () => import("./webmention-domains"),
@@ -29,4 +30,6 @@ export const models = createModels({
 });
 
 /** The registry bound to one request or job, for code handed `ctx.models`. */
-export type BlogModels = BoundRegistry<typeof models>;
+export type BlogModels = BoundRegistry<typeof registry>;
+
+export default registry;

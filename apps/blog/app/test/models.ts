@@ -10,7 +10,7 @@ import type { Database } from "remix/data-table";
 
 import { publishModels as publishRegistry } from "@sdxc/data-model/testing";
 
-import { models } from "~/app/models";
+import registry from "~/app/models";
 
 /**
  * Binds every model to `db`.
@@ -18,7 +18,7 @@ import { models } from "~/app/models";
  * @param db A database from `testDatabase()` or `migratedDatabase()`.
  */
 export function bindModels(db: Database) {
-	return models.bind({ db });
+	return registry.bind({ db });
 }
 
 /**
@@ -29,5 +29,5 @@ export function bindModels(db: Database) {
  * @param db The database the job reads.
  */
 export function publishModels(ctx: Parameters<typeof publishRegistry>[0], db: Database): void {
-	publishRegistry(ctx, models, { db });
+	publishRegistry(ctx, registry, { db });
 }

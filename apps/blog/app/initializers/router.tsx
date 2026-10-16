@@ -13,9 +13,10 @@
 
 import type { Transport } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
-import type { Middleware, RequestContext } from "remix/router";
+import type { Middleware, RequestContext, RouterContext } from "remix/router";
 
 import { assets } from "@sdxc/assets-middleware";
+import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
@@ -48,7 +49,6 @@ import { isAuthenticated } from "~/app/http/middleware/auth";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import githubWebhook from "~/app/http/middleware/github-webhook";
 import mcpRateLimit from "~/app/http/middleware/mcp-rate-limit";
-import models from "~/app/http/middleware/models";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
@@ -63,11 +63,22 @@ import { assetResolver } from "~/app/initializers/assets";
 import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
+import registry from "~/app/models";
 import { PROFILE } from "~/config/profile";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { SECURITY_TXT } from "~/config/security-txt";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
+
+/** The context a controller sees once the router's global middleware has run. */
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
+
+declare module "remix/router" {
+	/** Types `createAction` and `createController` with the context the router's chain builds. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
 
 /**
  * Paths where a non-`GET` request signals a machine caller, since a reader's browser sends
@@ -228,7 +239,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			asyncContext(),
 			socialCards(),
 			database(createDatabase()),
-			models(),
+			models(registry, (ctx) => ({ db: ctx.db })),
 			jobEnqueuer(jobQueue),
 			workersCache({ cache: () => platformCache }),
 			/**

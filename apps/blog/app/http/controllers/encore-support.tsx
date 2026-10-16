@@ -13,7 +13,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
 
-import type { AppContext } from "~/app/http/context";
+import type { AppContext } from "~/app/initializers/router";
 
 import { SupportRequestSchema } from "~/app/http/validators/encore-support";
 import { EncoreSupportView } from "~/resources/views/encore-support";
