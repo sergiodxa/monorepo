@@ -50,7 +50,8 @@ copy. Every page's head then carries its title, description, canonical link on `
 Open Graph tags, from the `title`, `description` and `url` it passes `DocumentLayout`.
 `/robots.txt` lets every crawler in and names `/sitemap.xml`, which lists the home page; add a
 page to `app/http/controllers/sitemap.ts` when it should be indexed. A path ending in `/`
-redirects to the same path without it, the form canonical links use.
+redirects to the same path without it, and a `www.` host to the apex domain, the forms
+canonical links use.
 
 `/.well-known/security.txt` tells a researcher where to report a vulnerability. Replace the
 contact in `config/security-txt.ts` with yours, and review the file before its `expires`

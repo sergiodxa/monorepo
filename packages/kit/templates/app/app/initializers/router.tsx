@@ -11,6 +11,7 @@ import { getClientIP } from "@sdxc/get-client-ip";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
+import { noWWW } from "@sdxc/no-www-middleware";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
@@ -50,6 +51,7 @@ export function createWebRouter() {
 			asyncContext(),
 			log(logger),
 			trace(),
+			noWWW(),
 			trailingSlash(),
 			wellKnown({ "security.txt": securityTxtEntry }),
 			rateLimit({

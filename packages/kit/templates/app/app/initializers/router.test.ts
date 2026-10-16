@@ -51,4 +51,11 @@ describe("router", () => {
 	test("keeps security.txt current for at least another month", () => {
 		expect(SECURITY_TXT.expires.getTime() - Date.now()).toBeGreaterThan(RENEWAL_WINDOW_MS);
 	});
+
+	test("redirects the www. host to the apex domain", async () => {
+		let response = await createWebRouter().fetch("https://www.example.com/sitemap.xml");
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get("location")).toBe("https://example.com/sitemap.xml");
+	});
 });

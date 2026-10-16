@@ -32,6 +32,7 @@
 		"@sdxc/logger": "0.0.1",
 		"@sdxc/mail": "0.0.1",
 		"@sdxc/mcp": "0.0.1",
+		"@sdxc/no-www-middleware": "0.0.1",
 		"@sdxc/openapi": "0.0.1",
 		"@sdxc/problem": "0.0.1",
 		"@sdxc/rate-limit": "0.0.1",
