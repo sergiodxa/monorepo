@@ -6,10 +6,33 @@ live-priced release page, a gated sample chapter, an upgrade path, and purchase 
 Production URL: https://books.sergiodxa.com (served by the `books` worker until cutover;
 this worker is reachable on its `workers.dev` subdomain in the meantime)
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run dev` to start the development server at http://localhost:3003
+```sh
+bun install
+sdxc run typegen
+bun dev
+```
+
+In a fresh clone, copy `.env.example` to `.dev.vars` first. Run `sdxc run typegen` again
+whenever you change a binding or a secret in `cloudflare.config.ts`. The dev server listens
+on http://localhost:3003.
+
+## Everyday commands
+
+```sh
+sdxc make controller about           # a page, mapped in routes/web.ts
+sdxc make service pricing            # business logic, in app/services/
+sdxc make command catalog/refresh    # then: sdxc run catalog refresh
+
+sdxc run about                       # the app's name and the versions it runs on
+sdxc run typegen                     # the Worker's env types from cloudflare.config.ts
+bun check                            # format, lint and types, from the repo root
+vp test run --project books          # this app's tests, from the repo root
+```
+
+`sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
+right away. Where `sdxc` is not on your path, `bun run cli <command>` runs the same commands.
 
 ## Cloudflare Services
 
@@ -69,14 +92,15 @@ visitor's browser.
 
 ## Scripts
 
-| Script              | Purpose                                   |
-| ------------------- | ----------------------------------------- |
-| `bun run dev`       | Start the dev server on port 3003         |
-| `bun run build`     | Build the worker and client assets        |
-| `bun run start`     | Preview the production build              |
-| `bun run typecheck` | Type-check the app                        |
-| `bun cf:typegen`    | Regenerate `.cloudflare/types/index.d.ts` |
-| `bun cf:deploy`     | Deploy the worker                         |
+| Script                  | Purpose                                   |
+| ----------------------- | ----------------------------------------- |
+| `bun run dev`           | Start the dev server on port 3003         |
+| `bun run build`         | Build the worker and client assets        |
+| `bun run start`         | Preview the production build              |
+| `bun run typecheck`     | Type-check the app                        |
+| `bun run cli <command>` | Run an app command, as `sdxc run` does    |
+| `sdxc run typegen`      | Regenerate `.cloudflare/types/index.d.ts` |
+| `bun cf:deploy`         | Deploy the worker                         |
 
 ## Deployment
 

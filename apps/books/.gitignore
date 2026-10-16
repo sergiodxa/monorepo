@@ -1,7 +1,9 @@
-# Artifacts the root .gitignore does not already cover.
+# Dependencies and build output
+node_modules
+dist
 
-# Folders
-/.cloudflare
+# Cloudflare's generated types and local state
+.cloudflare
 
-# Files
+# Local secrets
 .dev.vars

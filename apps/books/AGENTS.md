@@ -66,6 +66,14 @@ breaks something you cannot see from here:
 - **Routing** is `remix/router`: `routes/web.ts` declares the route table, and one
   controller per endpoint lives in `app/http/controllers/`. Link and redirect through
   the typed `routes.x.href()` — never a hand-written path string.
+- **Router context** is inferred: `AppContext` in `app/initializers/router.tsx` is what the
+  global middleware publishes, and a helper that renders for several actions takes it as its
+  `ctx` type.
+- **Site-wide constants** (the origin, the site name, the OG image) live in
+  `config/constants.ts`; the SEO instance and every page read them from there.
+- **The command line** is `sdxc run <command>` (or `bun run cli <command>`): the contract is
+  `app/commands/index.ts`, one handler per file beside it, wired in `app/initializers/cli.ts`.
+  `sdxc run typegen` regenerates the `env` types after a binding or secret changes.
 - **Views** are `remix/component` components under `resources/`. Every component takes a
   `Handle` and returns a render function, and is used as JSX — never called as a plain
   function. No `key=` on `remix/component` or `@sdxc/ui` components.

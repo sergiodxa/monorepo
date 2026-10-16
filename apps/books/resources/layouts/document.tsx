@@ -21,7 +21,8 @@ import { minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import { OG_IMAGE_URL, seo } from "~/app/initializers/seo";
+import { seo } from "~/app/initializers/seo";
+import { OG_IMAGE_URL } from "~/config/constants";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";

@@ -1,11 +1,11 @@
 {
 	"extends": "../../tsconfig.json",
 	"include": [
-		"config/**/*",
 		"app/**/*",
 		"bootstrap/**/*",
-		"routes/**/*",
+		"config/**/*",
 		"resources/**/*",
+		"routes/**/*",
 		".cloudflare/types/index.d.ts",
 		"cloudflare.config.ts",
 		"vite.config.ts"
@@ -18,10 +18,10 @@
 		"types": ["@total-typescript/ts-reset", "vite/client", "bun", "node"],
 		"rootDirs": ["."],
 		"paths": {
-			"~/config/*": ["./config/*"],
 			"~/app/*": ["./app/*"],
-			"~/routes/*": ["./routes/*"],
-			"~/resources/*": ["./resources/*"]
+			"~/config/*": ["./config/*"],
+			"~/resources/*": ["./resources/*"],
+			"~/routes/*": ["./routes/*"]
 		}
 	}
 }
