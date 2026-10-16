@@ -25,7 +25,7 @@ export default defineConfig({
 		env: {
 			/**
 			 * The board's postings, read by the list, the MCP tools and the expiry sweep.
-			 * `bun run db:local:migrate` applies `database/migrations/` to the local copy, the
+			 * `sdxc run db migrate` applies `database/migrations/` to the local copy, the
 			 * only copy this app has: it answers no traffic outside the laptop it runs on.
 			 */
 			DB: bindings.d1({ name: "demo", id: "00000000-0000-4000-8000-000000000000" }),

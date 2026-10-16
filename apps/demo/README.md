@@ -4,11 +4,36 @@ Job board demo app for the Remix talk.
 
 Production URL: Local app — it runs on a laptop and is never deployed.
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run db:local:migrate` to create the board's table
-3. Run `bun run dev` to start the development server at http://localhost:3008
+```sh
+bun install
+sdxc run typegen
+sdxc run db migrate
+bun dev
+```
+
+In a fresh clone, copy `.env.example` to `.dev.vars` first. `bun dev` serves the board at
+http://localhost:3008. Run `sdxc run typegen` again whenever you change a binding in
+`cloudflare.config.ts`.
+
+## Everyday commands
+
+```sh
+sdxc make controller about                 # a page, mapped in routes/web.ts
+sdxc make migration add-remote-flag        # then: sdxc run db migrate
+sdxc make model company                    # then: ctx.models.company
+sdxc make job postings/digest --cron "0 8 * * *"
+sdxc make command postings/close           # then: sdxc run postings close
+
+sdxc run db console                        # SQL prompt over the local database
+sdxc run about                             # the versions the board is built on
+bun check                                  # format, lint and types, from the repo root
+```
+
+`sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
+right away. Where `sdxc` is not on your path, run `bun ../../packages/kit/src/bin.ts` in its
+place.
 
 Every adapter the app reaches for has an in-memory implementation, so the board runs with
 no network at all: mail is captured and shown at `/outbox`, the listing cache and the job
@@ -52,10 +77,11 @@ queue live in the worker, and the captcha is a word the form prints.
 ## Database
 
 ```bash
-bun run db:local:migrate    # apply migrations to the local D1 copy
+sdxc run db migrate         # apply migrations to the local D1 copy
+sdxc run db console         # query it
 ```
 
-The local copy lives in `.cloudflare/state`, the same directory `bun run dev` reads, so a
+The local copy lives in `.cloudflare/state`, the same directory `bun dev` reads, so a
 fresh checkout needs the migration once before the board has a table.
 
 ## Spec
@@ -75,13 +101,12 @@ bun run spec
 
 ## Scripts
 
-| Script                     | Purpose                                    |
-| -------------------------- | ------------------------------------------ |
-| `bun run dev`              | Start the development server               |
-| `bun run build`            | Build for production                       |
-| `bun run cf:typegen`       | Generate types for the Cloudflare bindings |
-| `bun run db:local:migrate` | Apply migrations locally                   |
-| `bun run spec`             | Start a dev server and run the spec suite  |
+| Script                | Purpose                                        |
+| --------------------- | ---------------------------------------------- |
+| `bun dev`             | Start the development server                   |
+| `bun run build`       | Build for production                           |
+| `bun run spec`        | Start a dev server and run the spec suite      |
+| `bun run mcp:inspect` | Open an MCP inspector to call the `/mcp` tools |
 
 ## Deployment
 

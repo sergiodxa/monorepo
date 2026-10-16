@@ -28,7 +28,7 @@ shortest correct version of a thing wins over the clever one.
 - MUST keep models free of request concerns: a model callback never reads the language or the
   translator, so wording a message, and enqueueing the job that sends it in the visitor's
   language, stays in the controller or the MCP tool
-- MUST keep the D1 binding and `database/migrations/` real, so `bun run db:local:migrate`
+- MUST keep the D1 binding and `database/migrations/` real, so `sdxc run db migrate`
   is what creates the board's table
 
 ## Reference Files
@@ -39,6 +39,7 @@ shortest correct version of a thing wins over the clever one.
 | Router assembly, `AppContext` | `app/initializers/router.tsx`    |
 | MCP server                    | `app/initializers/mcp.ts`        |
 | Job dispatcher and its queue  | `app/initializers/dispatcher.ts` |
+| Command line (`sdxc run`)     | `app/initializers/cli.ts`        |
 | In-memory adapters            | `app/initializers/`              |
 | Asset resolver (manifest)     | `app/initializers/assets.ts`     |
 | Models and their registry     | `app/models/`                    |

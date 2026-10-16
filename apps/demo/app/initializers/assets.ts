@@ -1,6 +1,6 @@
 /**
  * The board's asset resolver, read from the manifest the Vite plugin writes: the source URLs
- * `vite dev` serves while editing, the hashed files `vite build` emits once built. The
+ * `vp dev` serves while editing, the hashed files `vp build` emits once built. The
  * document links what it returns, so no tag names a file the build may have renamed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

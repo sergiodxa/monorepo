@@ -3,7 +3,7 @@
 	"bases": {
 		"web": { "env": "DEMO_BASE_URL", "default": "http://localhost:3008" },
 	},
-	// The D1 database `bun db:local:migrate` creates, opened as the SQLite file Miniflare keeps
+	// The D1 database `sdxc run db migrate` creates, opened as the SQLite file Miniflare keeps
 	// it in, so `setup` can empty the board before the suite runs.
 	"databases": {
 		"local": {

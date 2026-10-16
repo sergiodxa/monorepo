@@ -3,22 +3,21 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"start": "vite preview",
+		"build": "vp build",
 		"cf:deploy": "cf deploy --prebuilt",
-		"cf:typegen": "cf workers types",
-		"typecheck": "tsc --noEmit",
-		"db:local:migrate": "cf d1 migrations apply 00000000-0000-4000-8000-000000000000 --dir ./database/migrations --local --persist-to ./.cloudflare/state",
-		"db:remote:migrate": "cf d1 migrations apply 00000000-0000-4000-8000-000000000000 --dir ./database/migrations",
+		"cli": "bun ./bootstrap/cli.ts",
+		"dev": "vp dev",
 		"mcp:inspect": "bunx @mcpjam/inspector@latest",
-		"spec": "spec run spec --allow-config"
+		"spec": "spec run spec --allow-config",
+		"start": "vp preview",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@pitlane/assets": "0.1.0",
 		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/captcha": "workspace:*",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/database-middleware": "workspace:*",
@@ -48,6 +47,6 @@
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/spec": "workspace:*",
 		"cf": "1.0.0-beta.5",
-		"vite": "^8.3.4"
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
 	}
 }
