@@ -21,7 +21,8 @@ export interface PageWindow {
 }
 
 export const Subjects = createModel(subjects, {
-	optional: ["id", "role"],
+	generateId: generateUUID,
+	optional: ["role"],
 
 	methods: {
 		/** The subject registered under an address, or `null` when nobody registered it. */
@@ -36,16 +37,6 @@ export const Subjects = createModel(subjects, {
 				.limit(window.limit)
 				.offset(window.offset)
 				.all();
-		},
-	},
-
-	callbacks: {
-		/**
-		 * Gives a new subject a generated id unless the caller picked one. The address stays
-		 * unverified unless the caller stamps `email_verified_at`, as provider logins do.
-		 */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

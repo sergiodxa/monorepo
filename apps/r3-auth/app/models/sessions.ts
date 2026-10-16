@@ -40,7 +40,8 @@ export async function hashRefreshToken(token: string): Promise<string> {
 }
 
 export const Sessions = createModel(sessions, {
-	optional: ["id", "expires_at", "scope"],
+	generateId: generateUUID,
+	optional: ["expires_at", "scope"],
 
 	scopes: {
 		/** Sessions whose expiry has passed, which the sweep removes. */
@@ -134,14 +135,13 @@ export const Sessions = createModel(sessions, {
 
 	callbacks: {
 		/**
-		 * Gives a new session its public id and an expiry {@link SESSION_TTL} out, since the
-		 * column carries no database default. `scope` is kept so a refresh reissues tokens as
-		 * broad as the ones the session started with.
+		 * Gives a new session an expiry {@link SESSION_TTL} out, since the column carries no
+		 * database default. `scope` is kept so a refresh reissues tokens as broad as the ones the
+		 * session started with.
 		 */
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				expires_at: values.expires_at ?? Date.now() + SESSION_TTL,
 			};
 		},

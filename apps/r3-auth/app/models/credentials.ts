@@ -18,7 +18,7 @@ import { generateUUID } from "@sdxc/uuid/v7";
 import { credentials } from "~/database/schema";
 
 export const Credentials = createModel(credentials, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		/**
@@ -67,13 +67,6 @@ export const Credentials = createModel(credentials, {
 				verified_at: verifiedAt,
 			});
 			return isFailure(created) ? created : success(undefined);
-		},
-	},
-
-	callbacks: {
-		/** Gives every credential a generated id. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

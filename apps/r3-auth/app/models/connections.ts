@@ -15,7 +15,7 @@ import { generateUUID } from "@sdxc/uuid/v7";
 import { connections } from "~/database/schema";
 
 export const Connections = createModel(connections, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		/**
@@ -33,13 +33,6 @@ export const Connections = createModel(connections, {
 		 */
 		findBySubjectId(subjectId: string) {
 			return this.query().where({ subject_id: subjectId }).orderBy("created_at", "asc").all();
-		},
-	},
-
-	callbacks: {
-		/** Gives every connection a generated id. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

@@ -45,8 +45,8 @@ export interface EditedClient extends SelectClient {
 }
 
 export const Clients = createModel(clients, {
+	generateId: generateUUID,
 	optional: [
-		"id",
 		"secret",
 		"backchannel_logout_session_required",
 		"frontchannel_logout_session_required",
@@ -115,13 +115,12 @@ export const Clients = createModel(clients, {
 
 	callbacks: {
 		/**
-		 * Gives a new client a generated id and secret. The created row is the one place that
+		 * Gives a new client a generated secret. The created row is the one place that
 		 * secret is surfaced, so a caller shows it right away or loses it.
 		 */
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				secret: values.secret ?? randomToken(),
 			};
 		},

@@ -25,7 +25,7 @@ export interface GrantWithClient extends SelectGrant {
 }
 
 export const Grants = createModel(grants, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	scopes: {
 		/** The consent one subject gave one client. */
@@ -83,13 +83,6 @@ export const Grants = createModel(grants, {
 		/** Withdraws one subject's consent for one client, answering how many rows went. */
 		async deleteBySubjectAndClient(subjectId: string, clientId: string): Promise<number> {
 			return (await this.between(subjectId, clientId).delete()).affectedRows;
-		},
-	},
-
-	callbacks: {
-		/** Gives every grant a generated id. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });
