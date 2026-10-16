@@ -7,6 +7,7 @@
 import { createCLI, lazy } from "@sdxc/cli";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
+import { trace } from "@sdxc/trace-context/middleware/cli";
 
 import commandset from "~/app/commands";
 import { logger } from "~/app/initializers/logger";
@@ -26,7 +27,7 @@ const COMMAND_LOGGER = createLogger({
 export const cli = createCLI({
 	name: manifest.name,
 	commands: commandset,
-	middleware: [log(COMMAND_LOGGER)],
+	middleware: [log(COMMAND_LOGGER), trace()],
 });
 
 cli.map(

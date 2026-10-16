@@ -253,10 +253,12 @@ describe("the app template's command line", () => {
 		expect(about.output).toMatch(
 			/^blog\n {2}@sdxc\/cli {2}2026\.10\.14\n {2}remix {6}\S+\n {2}runtime {4}Bun /,
 		);
-		expect(about.output).toContain('"command.path":"about","outcome":"ok"');
+		expect(about.output).toMatch(
+			/"command\.path":"about","trace_id":"[0-9a-f]{32}".*"outcome":"ok"/,
+		);
 		expect(unknown.code).toBe(2);
 		expect(unknown.output).toContain('Unknown command "abuot" for blog; did you mean "about"?');
-		expect(tested.output).toContain("Tests  5 passed (5)");
+		expect(tested.output).toContain("Tests  6 passed (6)");
 		expect(tested.code).toBe(0);
 	});
 });

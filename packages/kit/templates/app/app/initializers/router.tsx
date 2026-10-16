@@ -12,6 +12,7 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -42,6 +43,7 @@ export function createWebRouter() {
 		middleware: [
 			asyncContext(),
 			log(logger),
+			trace(),
 			rateLimit({
 				adapter: new CloudflareAdapter(env.RATE_LIMITER, { limit: 100, window: "1 minute" }),
 				prefix: "address",
