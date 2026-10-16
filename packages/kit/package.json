@@ -30,7 +30,7 @@
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"cf": "1.0.0-beta.5",
 		"remix": "3.0.0",
-		"vite": "^8.3.4"
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
 	},
 	"peerDependencies": {
 		"remix": "3.0.0"

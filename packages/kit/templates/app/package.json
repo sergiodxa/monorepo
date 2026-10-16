@@ -3,13 +3,13 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "vite build",
+		"build": "vp build",
 		"cf:deploy": "cf deploy --prebuilt",
 		"cf:typegen": "cf workers types",
 		"check": "vp check",
 		"cli": "bun ./bootstrap/cli.ts",
-		"dev": "vite dev",
-		"start": "vite preview",
+		"dev": "vp dev",
+		"start": "vp preview",
 		"test": "vp test run",
 		"typecheck": "tsc --noEmit"
 	},
@@ -35,9 +35,12 @@
 		"@types/node": "^26.6.5",
 		"cf": "1.0.0-beta.5",
 		"typescript": "^6.0.3",
-		"vite": "^8.3.4",
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
 		"vite-plus": "0.3.3",
 		"vitest": "4.1.11"
+	},
+	"overrides": {
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
 	},
 	"packageManager": "bun@1.4.2"
 }

@@ -438,7 +438,7 @@ describe("declaring and mapping", () => {
 
 			let checked = await typecheck(root);
 
-			expect(checked.output).toBe("");
+			expect(checked.output).toContain("Found no type errors");
 			expect(checked.code).toBe(0);
 		},
 	);

@@ -1,6 +1,6 @@
 /**
  * The asset resolver, read from the manifest the Vite plugin writes: the source files
- * `vite dev` serves while editing, and the hashed files `vite build` emits. The document
+ * `vp dev` serves while editing, and the hashed files `vp build` emits. The document
  * links what it returns, so no tag names a file the build renamed.
  */
 

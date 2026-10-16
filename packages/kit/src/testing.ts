@@ -96,7 +96,9 @@ export function registryDocument(
 
 /**
  * Links what `package.json` gained since, generates the Worker's types with the project's own
- * `cf`, then type checks the project with the workspace's TypeScript, answering what it printed.
+ * `cf`, then type checks the project through its own `vp check`, answering what it printed. That
+ * is the checker a consumer's `bun run check` runs, and it reports `vite.config.ts` type errors
+ * TypeScript 6's `tsc` passes.
  */
 export async function typecheck(project: string): Promise<Spawned> {
 	let linked = await linkDependencies(project);
@@ -104,7 +106,7 @@ export async function typecheck(project: string): Promise<Spawned> {
 	let types = await run([join(project, "node_modules/cf/bin/cf"), "workers", "types"], project);
 	if (types.code !== 0) return types;
 	return run(
-		[join(project, "node_modules/typescript/bin/tsc"), "--noEmit", "-p", project],
+		[join(project, "node_modules/vite-plus/bin/vp"), "check", "--no-fmt", "--no-lint"],
 		project,
 	);
 }

@@ -235,7 +235,7 @@ describe("built-in templates type check as a consumer's project", () => {
 
 		let result = await typecheck(project);
 
-		expect(result.output).toBe("");
+		expect(result.output).toContain("Found no type errors");
 		expect(result.code).toBe(0);
 	});
 });
