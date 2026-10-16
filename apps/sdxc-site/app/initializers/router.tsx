@@ -23,6 +23,7 @@ import { userAgent } from "sdxc/user-agent/middleware";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import canonicalHost from "~/app/http/middleware/canonical-host";
+import frameTransforms from "~/app/http/middleware/frame-transforms";
 import socialCards from "~/app/http/middleware/social-cards";
 import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
@@ -53,6 +54,7 @@ export function createWebRouter() {
 			log(logger),
 			trace(),
 			canonicalHost(),
+			frameTransforms(),
 			socialCards(),
 			userAgent(),
 			formData(),
