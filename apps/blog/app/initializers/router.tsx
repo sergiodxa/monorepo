@@ -373,6 +373,11 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		routes.searchFrame,
 		lazy(() => import("~/app/http/controllers/search-frame")),
 	);
+	/** Mapped ahead of `post`, whose two-segment pattern also matches a card path. */
+	router.map(
+		routes.socialCard,
+		lazy(() => import("~/app/http/controllers/social-card")),
+	);
 	/** A post page negotiates to its `Article`, which `ctx.activityPub` answers. */
 	router.map(
 		routes.post,

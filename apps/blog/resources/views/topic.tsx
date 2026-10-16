@@ -35,6 +35,7 @@ import type { BookmarksViewModel } from "~/app/http/view-models/bookmarks";
 import type { GlossaryViewModel } from "~/app/http/view-models/glossary";
 import type { TopicViewModel } from "~/app/http/view-models/topic";
 
+import { LISTING_ENTRIES, socialCardVersion } from "~/app/services/social-card";
 import { ActivityRow } from "~/resources/components/activity-row";
 import { InlinePost } from "~/resources/components/inline-post";
 import { BlogLayout } from "~/resources/layouts/blog";
@@ -266,6 +267,14 @@ export function TopicView() {
 			title={model.title}
 			description={model.summary}
 			activePath={model.path}
+			card={{
+				path: model.path,
+				version: socialCardVersion(
+					model.title,
+					model.summary,
+					...model.items.slice(0, LISTING_ENTRIES).map((item) => item.key),
+				),
+			}}
 		>
 			<main mix={[mf("h-feed"), grid(), gap(4)]}>
 				<Heading level={1} mix={[mf("p-name"), text("3xl")]}>

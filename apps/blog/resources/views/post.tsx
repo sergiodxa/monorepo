@@ -33,6 +33,7 @@ import { Frame, unsafeHTML } from "remix/component";
 import type { PostViewModel } from "~/app/http/view-models/post";
 
 import { discussIntent } from "~/app/services/share";
+import { socialCardVersion } from "~/app/services/social-card";
 import { permalink } from "~/app/services/webmention";
 import { PROFILE } from "~/config/profile";
 import { YouTubeTag } from "~/resources/components/youtube-tag";
@@ -155,6 +156,10 @@ export function PostView() {
 				canonical={model.canonical}
 				activity={model.activity}
 				meta={model.meta}
+				card={{
+					path: `/${model.post.typePath}/${model.post.slug}`,
+					version: socialCardVersion(model.title, model.description, model.post.publishedAt),
+				}}
 			>
 				<main mix={[grid(), gap(4), mi("auto")]}>
 					<article mix={[mf("h-entry"), contents()]}>

@@ -119,6 +119,12 @@ export default route({
 	 */
 	searchFrame: get("/frames/search"),
 
+	/**
+	 * A page's social card, drawn from the page itself. It is declared before `post`, whose
+	 * two-segment pattern would otherwise claim a card path like `/social/index.png`.
+	 */
+	socialCard: get("/social/*path.png"),
+
 	post: get("/:postType/:postSlug(.:ext)"),
 	postRelated: get("/frames/posts/:postType/:postSlug/related"),
 

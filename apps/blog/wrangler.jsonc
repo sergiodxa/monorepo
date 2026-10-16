@@ -150,5 +150,11 @@
 			"bucket_name": "backups",
 			"preview_bucket_name": "backups",
 		},
+		{
+			// Every page's rendered social card, keyed by template and content.
+			"binding": "SOCIAL_CARDS",
+			"bucket_name": "blog-social-cards",
+			"preview_bucket_name": "blog-social-cards",
+		},
 	],
 }

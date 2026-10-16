@@ -62,6 +62,15 @@ export function getEnv<key extends keyof App.Env>(key: key, fallback?: App.Env[k
 }
 
 /**
+ * The whole environment the request runs with, for a handler that builds the router again
+ * to render a page in-process with the same bindings and secrets; `undefined` outside a
+ * request the env middleware ran for.
+ */
+export function currentEnv(): App.Env | undefined {
+	return getContext().get(envKey);
+}
+
+/**
  * Error thrown when an environment key cannot be resolved.
  */
 export class MissingEnvError extends ReferenceError {

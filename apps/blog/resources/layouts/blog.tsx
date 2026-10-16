@@ -25,7 +25,10 @@ import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typ
 import { Dialog } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
+import type { SocialCard } from "~/app/services/social-card";
+
 import { KINDS, POST_KINDS } from "~/app/models/kinds";
+import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
 import { PROFILE } from "~/config/profile";
 import { BlogFooter } from "~/resources/components/blog-footer";
 import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
@@ -69,6 +72,11 @@ export namespace BlogLayout {
 		activity?: string;
 		meta?: Array<MetaTag>;
 		/**
+		 * The page's social card. With it the page advertises a large image card, replacing
+		 * any `twitter:card` in `meta`, so every platform shows the drawn card.
+		 */
+		card?: SocialCard.Reference;
+		/**
 		 * Text the search dialog opens holding, with its results already rendered; the
 		 * `/search` page passes its own query so the dialog continues that search.
 		 */
@@ -107,6 +115,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 			activity,
 			assets,
 			canonical,
+			card,
 			children,
 			description,
 			insideSection,
@@ -124,7 +133,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				description={description}
 				canonical={canonical}
 				activity={activity}
-				meta={meta}
+				meta={card ? withCard(meta, card, title) : meta}
 				bodyMix={[
 					m(0),
 					minBs("100vh"),
@@ -223,4 +232,25 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 			</DocumentLayout>
 		);
 	};
+}
+
+/**
+ * The page's meta tags with its social card advertised: the image, its alt text and size,
+ * and a large-image Twitter card in place of whatever card type the page set.
+ */
+function withCard(
+	meta: Array<BlogLayout.MetaTag>,
+	card: SocialCard.Reference,
+	title: string,
+): Array<BlogLayout.MetaTag> {
+	let image = socialCardUrl(card);
+	return [
+		...meta.filter((tag) => (tag.property ?? tag.name) !== "twitter:card"),
+		{ property: "og:image", content: image },
+		{ property: "og:image:alt", content: title },
+		{ property: "og:image:width", content: String(SOCIAL_CARD_SIZE.width) },
+		{ property: "og:image:height", content: String(SOCIAL_CARD_SIZE.height) },
+		{ name: "twitter:card", content: "summary_large_image" },
+		{ name: "twitter:image", content: image },
+	];
 }

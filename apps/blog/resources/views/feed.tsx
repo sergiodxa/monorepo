@@ -21,7 +21,9 @@ import { Badge, Heading, Link } from "@sdxc/ui";
 import type { FeedViewModel } from "~/app/http/view-models/feed";
 import type { Kind } from "~/app/models/kinds";
 
+import { LISTING_ENTRIES, socialCardVersion } from "~/app/services/social-card";
 import { ACTOR_ID } from "~/config/activitypub";
+import { PROFILE } from "~/config/profile";
 import { ActivityRow } from "~/resources/components/activity-row";
 import { InlinePost } from "~/resources/components/inline-post";
 import { BlogLayout } from "~/resources/layouts/blog";
@@ -61,10 +63,18 @@ export function FeedView() {
 	return ({ model, assets }: { model: FeedView.Model; assets: DocumentAssets }) => (
 		<BlogLayout
 			assets={assets}
-			title="Sergio Xalambrí"
-			description="Sergio Xalambrí"
+			title={PROFILE.name}
+			description={PROFILE.summary}
 			activePath="/"
 			activity={ACTOR_ID}
+			card={{
+				path: "/",
+				version: socialCardVersion(
+					...model.activity
+						.slice(0, LISTING_ENTRIES)
+						.flatMap((item) => [item.href, item.label, item.date]),
+				),
+			}}
 		>
 			<main mix={[mf("h-feed"), grid(), gap(4)]}>
 				<Heading level={1} mix={[mf("p-name"), m(0), text("4xl")]}>
