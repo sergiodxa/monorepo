@@ -1,16 +1,16 @@
 ---
 title: Send email
-description: Write emails as remix/component classes, translate them for the reader, send them from a job, and assert on them with an in-memory transport.
+description: Define emails with a remix/component body, translate them for the reader, send them from a job, and assert on them with an in-memory transport.
 section:
     title: Data & background work
     order: 6
 order: 5
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-16
 ---
 
 This guide sends the message a job board owes someone who just published a position: a short
 confirmation, in the language they posted in, delivered through Cloudflare's email binding. The
-email is a class with a `remix/component` body, the copy comes from your message bundles, and the send
+email is its props and a `remix/component` body, the copy comes from your message bundles, and the send
 happens in a background job so a slow provider never delays the page the poster lands on.
 
 [`@sdxc/mail`](/api/mail) provides the mailer, the layout components and the transports,
@@ -53,17 +53,14 @@ export function createMailer(transport: Transport = createMailTransport()): Mail
 `send_email` binding named `EMAIL` and a verified sending domain. Each transport ships from its
 own subpath, so importing this one never pulls another provider into your bundle.
 
-## Write the email as a class
+## Define the email
 
-An email is anything with a `to`, a `subject` and a `body()` returning a `remix/component` element. A
-class that implements the `Email` contract keeps the data an email needs in its constructor and
-the markup beside it:
+An email is anything with a `to`, a `subject` and a `body()` returning a `remix/component`
+element. `defineEmail()` builds that from the props one email needs, a subject read from them
+and a body component:
 
 ```tsx {% title="app/emails/posting-published.tsx" %}
-import type { Email as EmailContract } from "@sdxc/mail";
-import type { Handle } from "remix/component";
-
-import { Email } from "@sdxc/mail";
+import { defineEmail, Email } from "@sdxc/mail";
 
 export interface PostingPublishedCopy {
 	subject: string;
@@ -72,47 +69,29 @@ export interface PostingPublishedCopy {
 	footer: string;
 }
 
-function PostingPublishedBody(handle: Handle<PostingPublishedCopy>) {
-	return () => (
+export const PostingPublishedEmail = defineEmail<PostingPublishedCopy>({
+	subject: (copy) => copy.subject,
+	body: (handle) => () => (
 		<Email.Layout preview={handle.props.heading} title={handle.props.heading}>
 			<Email.Heading>{handle.props.heading}</Email.Heading>
 			<Email.Text>{handle.props.body}</Email.Text>
 			<Email.Footer>{handle.props.footer}</Email.Footer>
 		</Email.Layout>
-	);
-}
+	),
+});
 ```
 
-`Email` names the contract in type space and the layout kit in value space, which is why the type
-import is renamed. The kit renders tables with inline styles, the one layout every mail client
-agrees on, and takes every color as a prop so it carries no brand of its own. `Email.Button`,
-`Email.Link`, `Email.Table` and `Email.Img` cover the rest of a transactional message.
+`PostingPublishedEmail` is a class: `new PostingPublishedEmail(recipient, copy)` takes the
+address, as a string or an `Address`, and the already-translated copy. `replyTo`, `headers`,
+`unsubscribe`, `list` and `calendar` are optional functions of the same props, for mail that
+needs them.
 
-The class itself, further down the same file, holds the recipient and the already-translated
-copy:
+`Email` is the layout kit. It renders tables with inline styles, the one layout every mail
+client agrees on, and takes every color as a prop so it carries no brand of its own.
+`Email.Button`, `Email.Link`, `Email.Table` and `Email.Img` cover the rest of a transactional
+message.
 
-```tsx {% title="app/emails/posting-published.tsx" %}
-export class PostingPublishedEmail implements EmailContract {
-	constructor(
-		private recipient: string,
-		private copy: PostingPublishedCopy,
-	) {}
-
-	get to() {
-		return { email: this.recipient };
-	}
-
-	get subject() {
-		return this.copy.subject;
-	}
-
-	body() {
-		return <PostingPublishedBody {...this.copy} />;
-	}
-}
-```
-
-The mailer renders `body()` to HTML and derives the plain-text part from that same HTML, so
+The mailer renders the body to HTML and derives the plain-text part from that same HTML, so
 every message ships both parts from one source.
 
 ## Translate for the reader
@@ -309,7 +288,7 @@ import routes from "~/routes/web";
 
 export default createAction(routes.account.password, async (ctx) => {
 	let user = await changePassword(ctx.formData);
-	ctx.email.later(new PasswordChangedEmail(user.email));
+	ctx.email.later(new PasswordChangedEmail(user.email, { name: user.name }));
 
 	return redirect(routes.account.index.href(), {
 		status: redirect.Status.SeeOther,
@@ -317,8 +296,8 @@ export default createAction(routes.account.password, async (ctx) => {
 });
 ```
 
-`changePassword` is your own model function, and `PasswordChangedEmail` another email class
-written like the one above.
+`changePassword` is your own model function, and `PasswordChangedEmail` another email defined
+like the one above.
 
 Each outcome is recorded on the request's log, so a failed send leaves a trace without failing
 a response that is already out. Use `await ctx.email.send(...)` instead when the response depends
