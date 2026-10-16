@@ -19,7 +19,7 @@ import { postings } from "~/database/schema";
 export const POSTING_LIFETIME_DAYS = 30;
 
 export const Postings = createModel(postings, {
-	optional: ["id"],
+	generateId: () => TypeID.fromUUID("job", generateUUID()).toString(),
 
 	scopes: {
 		/** Every read of the board hides an expired posting, so "open" is stated once. */
@@ -58,7 +58,6 @@ export const Postings = createModel(postings, {
 			let now = Date.now();
 			return {
 				...values,
-				id: values.id ?? TypeID.fromUUID("job", generateUUID()).toString(),
 				created_at: now,
 				updated_at: now,
 			};
