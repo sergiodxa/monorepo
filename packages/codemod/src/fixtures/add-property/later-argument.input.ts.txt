@@ -1,0 +1,8 @@
+let header = fromRoutes({ label: "header" });
+
+let sitemap = fromRoutes(routes, seo.baseUrl, {
+	home: { priority: 1 },
+	admin: {
+		dashboard: true,
+	},
+});
