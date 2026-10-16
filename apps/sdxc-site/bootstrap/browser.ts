@@ -47,13 +47,13 @@ run({
 	 * Sends a submission under the form's declared encoding, coercing a file entry to
 	 * its filename for a urlencoded body, and returns the response as-is so the frame
 	 * can read its redirect target. Every request revalidates the browser's stored copy,
-	 * since a page from an earlier deploy names island chunks that deploy removed; the
-	 * build-named tag keeps an unchanged page a `304`.
+	 * since a page from an earlier deploy names island chunks that deploy removed, and
+	 * says it is for a frame, which the Worker answers with markup the edge leaves as is.
 	 */
 	async resolveFrame(src, options) {
 		let { target, signal, method, formData, encType } = options ?? {};
 
-		let headers = new Headers({ accept: "text/html" });
+		let headers = new Headers({ accept: "text/html", "x-remix-frame": "true" });
 		if (target) headers.set("x-remix-target", target);
 
 		let body =

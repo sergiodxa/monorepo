@@ -37,25 +37,44 @@ test("every island is identified by its own module URL", () => {
 	expect(calls.filter((call) => call.id !== "import.meta.url")).toEqual([]);
 });
 
-/** Answers every page with the cache mode its request was sent under. */
+/** Answers every page with the cache mode and frame header its request was sent under. */
 const SERVER = setupServer(
-	http.get("https://sdxc.dev/*", ({ request }) => HttpResponse.text(request.cache)),
+	http.get("https://sdxc.dev/*", ({ request }) =>
+		HttpResponse.json({ cache: request.cache, frame: request.headers.get("x-remix-frame") }),
+	),
 );
 
-beforeAll(() => SERVER.listen({ onUnhandledRequest: "error" }));
-afterAll(() => SERVER.close());
+/** What the browser entry handed the runtime, captured once it boots. */
+let options: RunInit | undefined;
 
-test("a navigation revalidates the stored page instead of reusing it", async () => {
-	let options: RunInit | undefined;
+beforeAll(async () => {
+	SERVER.listen({ onUnhandledRequest: "error" });
 	vi.doMock("remix/component", () => ({
 		run: (given: RunInit) => {
 			options = given;
 		},
 	}));
 	await import("./browser.ts");
+});
+afterAll(() => SERVER.close());
 
-	let response = await options?.resolveFrame?.("https://sdxc.dev/api/u", {});
+/** How a request was sent, as the server saw it. */
+interface Sent {
+	cache: string;
+	frame: string | null;
+}
 
-	expect(response).toBeInstanceOf(Response);
-	expect(response instanceof Response ? await response.text() : null).toBe("no-cache");
+/** How the request for `src` was sent, as the server saw it. */
+async function sentAs(src: string): Promise<Sent> {
+	let response = await options?.resolveFrame?.(src, { target: "search" });
+	if (!(response instanceof Response)) throw new Error("resolveFrame returned no response");
+	return (await response.json()) as Sent;
+}
+
+test("a navigation revalidates the stored page instead of reusing it", async () => {
+	expect((await sentAs("https://sdxc.dev/api/u")).cache).toBe("no-cache");
+});
+
+test("a frame request says it is one, so the Worker keeps the edge from rewriting it", async () => {
+	expect((await sentAs("https://sdxc.dev/frames/search?q=dialog")).frame).toBe("true");
 });
