@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/raster",
+	"version": "0.0.1",
+	"description": "2D canvas for Workers: antialiased paths, gradients, masks and text, out to PNG",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/font": "workspace:*",
+		"@sdxc/png": "workspace:*"
+	}
+}

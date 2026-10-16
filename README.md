@@ -267,6 +267,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/codemod](packages/codemod)             | Source-to-source edits of JavaScript and TypeScript imports and declarations, changing only the edited ranges |
 | [@sdxc/csv](packages/csv)                     | Read and write RFC 4180 CSV, with a streaming writer and formula neutralization                               |
 | [@sdxc/epub](packages/epub)                   | Build EPUB 3.3 publications from XHTML chapters, checked against what epubcheck rejects                       |
+| [@sdxc/font](packages/font)                   | TrueType font reader: glyph lookup, metrics, kerning, outlines and line layout                                |
 | [@sdxc/icalendar](packages/icalendar)         | Read and write iCalendar documents, with recurrence rules and time zones                                      |
 | [@sdxc/jsdoc](packages/jsdoc)                 | Read JSDoc out of source text into a JSON documentation model                                                 |
 | [@sdxc/json-pointer](packages/json-pointer)   | Parse, stringify, get and set RFC 6901 JSON Pointers                                                          |
@@ -274,7 +275,9 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/jsonc](packages/jsonc)                 | JSON with comments and trailing commas, parsed with errors that point at the line and column                  |
 | [@sdxc/jsonl](packages/jsonl)                 | JSON Lines reading and writing, streamed with a bounded buffer and line numbers in every failure              |
 | [@sdxc/messageformat](packages/messageformat) | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                   |
+| [@sdxc/png](packages/png)                     | PNG encoder and decoder over Web Streams, with no WebAssembly                                                 |
 | [@sdxc/qr](packages/qr)                       | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer               |
+| [@sdxc/raster](packages/raster)               | 2D canvas for Workers: antialiased paths, gradients, masks and text, out to PNG                               |
 | [@sdxc/semver](packages/semver)               | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons                                  |
 | [@sdxc/xml](packages/xml)                     | XML parser and serializer for RSS-style feeds                                                                 |
 | [@sdxc/yaml](packages/yaml)                   | YAML reading and writing over a documented subset                                                             |
