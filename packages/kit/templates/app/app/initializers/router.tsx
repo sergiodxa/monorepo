@@ -21,6 +21,7 @@ import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
+import serverTiming from "~/app/http/middleware/server-timing";
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { transport } from "~/app/initializers/mail";
@@ -51,6 +52,7 @@ export function createWebRouter() {
 			asyncContext(),
 			log(logger),
 			trace(),
+			serverTiming(),
 			noWWW(),
 			trailingSlash(),
 			wellKnown({ "security.txt": securityTxtEntry }),

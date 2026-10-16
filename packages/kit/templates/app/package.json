@@ -39,6 +39,7 @@
 		"@sdxc/robots": "0.0.1",
 		"@sdxc/security-headers": "0.0.1",
 		"@sdxc/seo": "0.0.1",
+		"@sdxc/server-timing": "0.0.1",
 		"@sdxc/session-storage-kv": "0.0.1",
 		"@sdxc/sitemap": "0.0.1",
 		"@sdxc/spam": "0.0.1",

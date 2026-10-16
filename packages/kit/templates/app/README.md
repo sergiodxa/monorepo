@@ -40,7 +40,9 @@ One router serves two route contracts:
 Every request is rate limited per client address, 100 a minute, through the `RATE_LIMITER`
 binding in `cloudflare.config.ts`. Every request, job and command continues the caller's W3C
 `traceparent` or starts a trace, and its log record carries the `trace_id`, so one query finds a
-request and every job it enqueued. Document an endpoint by adding its operation to
+request and every job it enqueued. Every response carries a `Server-Timing` header with
+the request's duration, and a handler adds its own entries through
+`ctx.timing.measure("db", "listPosts", () => listPosts())`, which browser devtools show. Document an endpoint by adding its operation to
 `routes/api.ts` and to `app/initializers/openapi.ts`.
 
 ## Search engines and security.txt
