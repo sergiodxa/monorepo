@@ -14,6 +14,8 @@ import mail from "@sdxc/mail/middleware";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -23,6 +25,7 @@ import { logger } from "~/app/initializers/logger";
 import { transport } from "~/app/initializers/mail";
 import { MAIL_FROM } from "~/config/constants";
 import problems from "~/config/problems";
+import { securityTxtEntry } from "~/config/security-txt";
 import apiRoutes from "~/routes/api";
 import webRoutes from "~/routes/web";
 
@@ -47,6 +50,8 @@ export function createWebRouter() {
 			asyncContext(),
 			log(logger),
 			trace(),
+			trailingSlash(),
+			wellKnown({ "security.txt": securityTxtEntry }),
 			rateLimit({
 				adapter: new CloudflareAdapter(env.RATE_LIMITER, { limit: 100, window: "1 minute" }),
 				prefix: "address",
@@ -61,6 +66,14 @@ export function createWebRouter() {
 	router.map(
 		webRoutes.home,
 		lazy(() => import("~/app/http/controllers/home")),
+	);
+	router.map(
+		webRoutes.robots,
+		lazy(() => import("~/app/http/controllers/robots")),
+	);
+	router.map(
+		webRoutes.sitemap,
+		lazy(() => import("~/app/http/controllers/sitemap")),
 	);
 	router.map(
 		webRoutes.notFound,

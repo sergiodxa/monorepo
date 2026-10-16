@@ -31,4 +31,10 @@ describe("page", () => {
 		expect(html).toContain("<h1>Welcome</h1>");
 		expect(html).toContain("<code>app/http/controllers/home.tsx</code>");
 	});
+
+	test("links the canonical URL on SITE_URL, whichever host served the page", async () => {
+		let response = await createWebRouter().fetch("https://preview.example.net/?utm_source=mail");
+
+		expect(await response.text()).toContain('<link rel="canonical" href="https://example.com/"');
+	});
 });

@@ -14,7 +14,12 @@ export default createAction(routes.notFound, {
 	/** Any method on an unknown path renders the 404 document. */
 	handler: (ctx) =>
 		ctx.render(
-			<DocumentLayout assets={ctx.assets} intl={ctx.intl} title={ctx.intl.t("notFound.title")}>
+			<DocumentLayout
+				assets={ctx.assets}
+				intl={ctx.intl}
+				url={ctx.url}
+				title={ctx.intl.t("notFound.title")}
+			>
 				<h1>{ctx.intl.t("notFound.title")}</h1>
 				<p>
 					<a href={routes.home.href()}>{ctx.intl.t("notFound.back")}</a>

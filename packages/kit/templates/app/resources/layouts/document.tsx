@@ -1,5 +1,6 @@
 /**
- * The HTML document every page renders inside: the head tags, the page title, and the
+ * The HTML document every page renders inside: the head tags, the page's title, description,
+ * canonical link and link-preview tags, and the
  * stylesheets imported below in cascade order. The client entry is linked only by a page
  * that carries an island.
  */
@@ -9,8 +10,11 @@ import type { I18n } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
 
 import { IntlProvider } from "@sdxc/i18n/ui";
+import { Seo } from "@sdxc/seo";
 import { css } from "remix/component";
 import { ImportMap } from "remix/component/server";
+
+import { seo } from "~/app/initializers/seo";
 
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
@@ -27,6 +31,10 @@ namespace DocumentLayout {
 		/** The request's translator, from `ctx.intl`: it sets `<html lang>` and is what `intl(handle)` reads below it. */
 		intl: I18n;
 		title: string;
+		/** The page's summary in search results and link previews; the site's description by default. */
+		description?: string;
+		/** The request's URL, from `ctx.url`, which the canonical link names on `SITE_URL`. */
+		url: URL;
 		/** Whether the page carries an island, the only reason to link the client entry. */
 		hydrates?: boolean;
 	}
@@ -35,7 +43,7 @@ namespace DocumentLayout {
 /** Renders the `<html>`, `<head>` and `<body>` shell around a page. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { assets, children, hydrates = false, intl, title } = handle.props;
+		let { assets, children, description, hydrates = false, intl, title, url } = handle.props;
 		let { script, stylesheets } = assets;
 
 		return (
@@ -47,7 +55,13 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						content="width=device-width, initial-scale=1"
 						data-rmx-key="viewport"
 					/>
-					<title data-rmx-key="title">{title}</title>
+					<Seo.Meta
+						title={title}
+						description={description}
+						canonical={seo.canonical(url)}
+						site={seo.site}
+						og={{ locale: intl.locale }}
+					/>
 					{stylesheets.map((href) => (
 						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
 					))}

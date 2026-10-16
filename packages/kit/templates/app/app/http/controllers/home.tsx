@@ -15,7 +15,12 @@ export default createAction(routes.home, {
 	/** GET / — the welcome page. */
 	handler: (ctx) =>
 		ctx.render(
-			<DocumentLayout assets={ctx.assets} intl={ctx.intl} title={ctx.intl.t("home.title")}>
+			<DocumentLayout
+				assets={ctx.assets}
+				intl={ctx.intl}
+				url={ctx.url}
+				title={ctx.intl.t("home.title")}
+			>
 				<h1>{ctx.intl.t("home.title")}</h1>
 				<p>
 					<Trans i18nKey="home.body" components={{ file: <code />, command: <code /> }} />

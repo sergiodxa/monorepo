@@ -43,6 +43,19 @@ binding in `cloudflare.config.ts`. Every request, job and command continues the 
 request and every job it enqueued. Document an endpoint by adding its operation to
 `routes/api.ts` and to `app/initializers/openapi.ts`.
 
+## Search engines and security.txt
+
+Set `SITE_URL`, `SITE_NAME` and `SITE_DESCRIPTION` in `config/constants.ts` to your domain and
+copy. Every page's head then carries its title, description, canonical link on `SITE_URL` and
+Open Graph tags, from the `title`, `description` and `url` it passes `DocumentLayout`.
+`/robots.txt` lets every crawler in and names `/sitemap.xml`, which lists the home page; add a
+page to `app/http/controllers/sitemap.ts` when it should be indexed. A path ending in `/`
+redirects to the same path without it, the form canonical links use.
+
+`/.well-known/security.txt` tells a researcher where to report a vulnerability. Replace the
+contact in `config/security-txt.ts` with yours, and review the file before its `expires`
+date: a test fails a month ahead.
+
 ## Languages
 
 Page copy lives in `resources/locales/`, one MessageFormat 2 bundle per language, and a page

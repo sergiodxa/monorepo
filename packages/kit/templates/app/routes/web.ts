@@ -8,5 +8,7 @@ import { get, route } from "remix/routes";
 /** The pages, and the 404 page for any path no other route claims. */
 export default route({
 	home: get("/"),
+	robots: get("/robots.txt"),
+	sitemap: get("/sitemap.xml"),
 	notFound: "/*path",
 });
