@@ -12,4 +12,5 @@ import jobs from "~/app/jobs";
 
 export default createJobHandler(jobs.{{path}}, async (ctx) => {
 	ctx.log.set({ job: { name: "{{name}}" } });
+	// TODO: do the work, through the services on `ctx`
 });

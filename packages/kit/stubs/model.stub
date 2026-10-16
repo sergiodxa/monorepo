@@ -19,6 +19,7 @@ export const {{key}}Table = table({
 		id: c.text().primaryKey(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
+		// TODO: add the columns the migration creates
 	},
 	/** `create` and `update` stamp `created_at` and `updated_at` with the database's clock. */
 	timestamps: true,

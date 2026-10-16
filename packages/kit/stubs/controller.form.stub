@@ -33,6 +33,7 @@ export default createController(routes.{{path}}, {
 					<h1>{{title}}</h1>
 					<form method="post" action={routes.{{path}}.action.href()}>
 						<HoneypotFields {...fields} />
+						{/* TODO: replace the message field with the fields this form submits */}
 						<label>
 							Message <textarea name="message" required />
 						</label>
@@ -61,6 +62,7 @@ export default createController(routes.{{path}}, {
 				if (assessment.verdict === "spam") {
 					return new Response("Message refused as spam", { status: 422 });
 				}
+				// TODO: save the submission, then redirect where the visitor should land
 				return new Response(null, {
 					status: 303,
 					headers: { location: routes.{{path}}.index.href() },

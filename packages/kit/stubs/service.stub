@@ -12,5 +12,6 @@ import { success } from "@sdxc/result";
 
 /** Carries out {{title}}; a failure says why nothing changed. */
 export function {{key}}(): Result<void, Error> {
+	// TODO: carry out the rule across models
 	return success(undefined);
 }

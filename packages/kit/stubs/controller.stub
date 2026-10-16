@@ -18,6 +18,7 @@ export default createAction(routes.{{path}}, {
 		ctx.render(
 			<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title="{{title}}">
 				<h1>{{title}}</h1>
+				{/* TODO: render the page */}
 			</DocumentLayout>,
 		),
 });

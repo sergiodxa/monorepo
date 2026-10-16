@@ -22,6 +22,7 @@ function {{Name}}Body(handle: Handle<{{Name}}Copy>) {
 		<Email.Layout preview={handle.props.heading} title={handle.props.heading}>
 			<Email.Heading>{handle.props.heading}</Email.Heading>
 			<Email.Text>{handle.props.body}</Email.Text>
+			{/* TODO: lay out the rest of the email */}
 		</Email.Layout>
 	);
 }

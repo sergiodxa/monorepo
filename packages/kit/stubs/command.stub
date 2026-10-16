@@ -10,6 +10,7 @@ import { createCommand, success } from "@sdxc/cli";
 import commandset from "~/app/commands";
 
 export default createCommand(commandset{{member}}, (ctx) => {
+	// TODO: do the work, then report what changed
 	ctx.stdout("{{title}}\n");
 	return success();
 });

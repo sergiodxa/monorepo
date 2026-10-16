@@ -14,5 +14,8 @@ import routes from "{{routes}}";
 export default createAction(routes.{{path}}, {
 	middleware: api,
 	/** Answers {{title}} as JSON; report a failure with a builder from `~/config/problems`. */
-	handler: () => Response.json({}),
+	handler: () => {
+		// TODO: answer the request
+		return Response.json({});
+	},
 });
