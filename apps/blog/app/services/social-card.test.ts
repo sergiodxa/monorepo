@@ -104,7 +104,9 @@ describe("card addresses", () => {
 	test("the storage key is scoped to the template and follows the content", () => {
 		let card = readSocialCard(POST_PAGE, "/articles/the-remix-way");
 		if (!card) throw new Error("expected a card");
-		expect(socialCardKey(card)).toMatch(new RegExp(`^${SOCIAL_CARD_TEMPLATE}/[0-9a-z]+\\.png$`));
+		expect(socialCardKey(card)).toMatch(
+			new RegExp(`^blog/${SOCIAL_CARD_TEMPLATE}/[0-9a-z]+\\.png$`),
+		);
 		expect(socialCardKey(card)).not.toBe(socialCardKey({ ...card, title: "Changed" }));
 	});
 });

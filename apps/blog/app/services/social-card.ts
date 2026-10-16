@@ -65,6 +65,9 @@ export const SOCIAL_CARD_TEMPLATE = "1";
 /** How many of a listing's newest entries its card shows. */
 export const LISTING_ENTRIES = 3;
 
+/** The blog's folder in the shared card bucket, which a lifecycle rule can target alone. */
+const SOCIAL_CARD_PREFIX = "blog";
+
 /** The segment the home page's card is stored under, since `/` leaves no name for a file. */
 const HOME_SEGMENT = "index";
 
@@ -99,9 +102,12 @@ export function pagePathFromCardPath(path: string): string {
 	return path === HOME_SEGMENT ? "/" : `/${path}`;
 }
 
-/** Where a rendered card is stored: one object per template and content, never rewritten. */
+/**
+ * Where a rendered card is stored: one object per template and content, never rewritten,
+ * under the blog's prefix in the bucket it shares with the packages site.
+ */
 export function socialCardKey(content: SocialCard.Content): string {
-	return `${SOCIAL_CARD_TEMPLATE}/${socialCardVersion(JSON.stringify(content))}.png`;
+	return `${SOCIAL_CARD_PREFIX}/${SOCIAL_CARD_TEMPLATE}/${socialCardVersion(JSON.stringify(content))}.png`;
 }
 
 /**

@@ -91,7 +91,7 @@ describe("GET <page>.png", () => {
 		expect(Array.from(bytes.slice(1, 4))).toEqual([80, 78, 71]);
 
 		await Promise.all(PENDING);
-		let stored = await env.SOCIAL_CARDS.list({ prefix: "1/" });
+		let stored = await env.SOCIAL_CARDS.list({ prefix: "blog/1/" });
 		expect(stored.objects.length).toBeGreaterThan(0);
 	});
 

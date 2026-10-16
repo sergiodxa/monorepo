@@ -151,10 +151,11 @@
 			"preview_bucket_name": "backups",
 		},
 		{
-			// Every page's rendered social card, keyed by template and content.
+			// Every page's rendered social card, keyed by template and content. The bucket is
+			// shared with the packages site; the blog's cards live under `blog/`.
 			"binding": "SOCIAL_CARDS",
-			"bucket_name": "blog-social-cards",
-			"preview_bucket_name": "blog-social-cards",
+			"bucket_name": "social-cards",
+			"preview_bucket_name": "social-cards",
 		},
 	],
 }

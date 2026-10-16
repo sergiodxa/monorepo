@@ -43,7 +43,8 @@ pages use.
 - **`app/services/social-card.ts`** reads the card, builds its URL and storage key, and
   hashes versions; **`app/services/social-card-image.ts`** draws it.
 - **`app/models/social-cards.ts`** is an R2 `FileStorage` over the `SOCIAL_CARDS` bucket
-  (`blog-social-cards`), keyed `<template>/<content hash>.png`. A stored card is served
+  (`social-cards`, shared with the packages site), keyed `blog/<template>/<content hash>.png`
+  so the two sites' cards stay apart and a lifecycle rule can target either prefix. A stored card is served
   again; a new one is stored after the response.
 - **`BlogLayout`** takes a `card` reference (path and version) and emits `og:image`, its
   alt text and size, and a `summary_large_image` Twitter card in place of the page's own.
@@ -65,7 +66,7 @@ which its card shows under the heading.
 ### Negative
 
 - The first request for a card renders its page and spends 150–350 ms of CPU drawing it.
-- The `blog-social-cards` bucket must exist before the deploy that declares it.
+- The shared `social-cards` bucket must exist before the first deploy that declares it.
 
 ### Neutral
 
