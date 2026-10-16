@@ -13,7 +13,7 @@ import type { Raster } from "./types.js";
 const HEX = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 
 /** A CSS colour function: its name and everything between the parentheses. */
-const FUNCTION = /^(rgba?|oklch)\(\s*([^)]*)\)$/i;
+const FUNCTION = /^(rgba?|oklch)\(([^)]*)\)$/i;
 
 /** Fully transparent black, the colour a fade to nothing ends on. */
 export const TRANSPARENT: Raster.Color = Object.freeze({ r: 0, g: 0, b: 0, a: 0 });

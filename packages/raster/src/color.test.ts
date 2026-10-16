@@ -52,6 +52,17 @@ describe("color", () => {
 		expect(() => color("oklch(a b c)")).toThrow(RangeError);
 	});
 
+	test("reads whitespace after the opening parenthesis", () => {
+		expect(bytes(color("rgb(\t 10 20 30)"))).toEqual([10, 20, 30, 255]);
+		expect(bytes(color("rgb( 10, 20, 30 )"))).toEqual([10, 20, 30, 255]);
+	});
+
+	test("rejects an unclosed function in linear time", () => {
+		let start = performance.now();
+		expect(() => color(`rgb(${"\t".repeat(100_000)}`)).toThrow(RangeError);
+		expect(performance.now() - start).toBeLessThan(100);
+	});
+
 	test("withAlpha scales the alpha it is given", () => {
 		expect(withAlpha(color("#ffffff80"), 0.5).a).toBeCloseTo(0.25, 2);
 	});
