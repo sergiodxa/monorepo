@@ -1,8 +1,8 @@
-# ADR-156: Shared Search Dialog
+# ADR-156: Shared Search Dialog Through Mixins
 
 ## Status
 
-**Proposed** - 2026-10-16
+**Accepted** - 2026-10-16
 
 ## Background
 
@@ -13,188 +13,148 @@ frame as the reader types, with kind tabs, counts, and `kind:` filters (ADR-117)
 
 sdxc.dev was rebuilt from the blog's version, and the two were then brought into line: the tab
 strip keeps a minimum height, the dialog closes once a soft navigation settles, and the box takes
-its label as a prop. Most of the client code is now the same file in two places, so every fix has to
-be made twice, and the second copy can easily be missed.
+its label as a prop. After that, most of the client code was the same file in two places, so
+every fix had to be made twice.
 
 ## Context
 
-### What differs today
+### What differed between the two apps
 
-| File in `resources/components/` | Lines | Difference between the two apps                                                                                                                                                     |
+| File in `resources/components/` | Lines | Difference                                                                                                                                                                          |
 | ------------------------------- | ----: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `search-box.tsx`                |   455 | Import specifiers only                                                                                                                                                              |
 | `search-surface.ts`             |   100 | Import specifiers only                                                                                                                                                              |
 | `quiet-search-input.tsx`        |    97 | Import specifiers only                                                                                                                                                              |
-| `search-tabs.tsx`               |    84 | Import specifiers, and the tab type's name (`SearchViewModel.Tab` / `SearchResults.Tab`); both types have the same shape                                                            |
+| `search-tabs.tsx`               |    84 | Import specifiers, and the tab type's name; both types have the same shape                                                                                                          |
 | `search-keys.ts`                |   136 | The blog opens the dialog from the trigger on wide screens only, and rewrites the ⌘K hint to "Ctrl K" in the browser; sdxc.dev renders the hint on the server with `keyComboGlyphs` |
-| `search-trigger.tsx`            |    46 | Different look (a nav pill or a `LinkButton`); same dialog id and trigger attribute                                                                                                 |
-| `search-result.tsx`             |   111 | Different by design: activity rows with emoji, or kind icons with summaries                                                                                                         |
-| `search-quick-links.tsx`        |   130 | Different by design: each site's own sections                                                                                                                                       |
+| `search-trigger.tsx`            |    46 | Different look; same dialog id and trigger attribute                                                                                                                                |
+| `search-result.tsx`             |   111 | Different by design                                                                                                                                                                 |
+| `search-quick-links.tsx`        |   130 | Different by design                                                                                                                                                                 |
 | `results-pager.tsx`             |    67 | Small, per-page markup                                                                                                                                                              |
 
-### Coupling inside the shared files
+### What the search box island did
 
-- `search-box.tsx` exports six ids and id builders (`SEARCH_RESULTS_ID`, `SEARCH_LISTBOX_ID`,
-  `searchOptionId`, `SEARCH_QUICK_LINKS_ID`, `searchQuickLinkId`, plus the input id passed as a
-  prop). The app's frame view and its quick links import the same constants, because the island
-  finds the elements by id.
-- `search-keys.ts` reads `SEARCH_DIALOG_ID` and `SEARCH_TRIGGER_ATTRIBUTE` from the app's trigger
-  module.
-- Island props must serialize, so any per-app behavior has to be passed as data, not as a
-  callback.
+`SearchBox` did six jobs in one closure:
+
+1. Reload the frame from the box's text once typing pauses, ignoring answers to older text.
+2. Mark the results busy at once and show a spinner once the wait turns slow.
+3. Choose result rows with the arrows through `aria-activedescendant`, and follow one on Enter.
+4. Switch kind tabs by click or by Left and Right while a row is chosen.
+5. Animate the results card and rows from their old state into the new one.
+6. Wire the dialog: page shortcuts, close on reset, lift on follow, close on same-page links.
+
+Moving the whole island into a package as one component needs ten props (ids, label, query,
+frame address, dialog id, option count, kinds, trigger attribute, trigger media query), because
+island props must serialize and so every per-app choice becomes data. That is one component
+doing too much, with an API that grows each time an app differs.
 
 ## Decision
 
-Add the shared client pieces to `@sdxc/search` under a new `@sdxc/search/ui` entry point. Leave
-the server side in each app, and create no new package.
+Extract the generic jobs as mixins in `@sdxc/ui/mixins`, and keep each app's island as the
+place that composes them. An island an app writes itself can pass callbacks to a mixin, so the
+per-app choices stay ordinary code instead of props.
 
-### Exports of `@sdxc/search/ui`
+### Mixins
 
-#### Ids
-
-```ts
-interface SearchIds {
-	input: string;
-	results: string;
-	listbox: string;
-	quickLinks: string;
-	option(index: number): string;
-	quickLink(index: number): string;
-}
-
-function searchIds(prefix: string): SearchIds;
-```
-
-`searchIds("site-search")` gives `site-search-q`, `site-search-results`, `site-search-options`,
-and so on. This one function replaces the six constants, so the island and the app's frame view
-can't disagree about an id.
-
-#### `SearchBox` island
+#### `liveFrame(options)` - jobs 1 and 2
 
 ```tsx
-<SearchBox
-	ids="site-search"
-	label="Search guides and packages"
-	query={model.query}
-	frameSrc={routes.searchFrame.href()}
-	dialogId="site-search"
-	optionCount={model.items.length}
-	kind={model.kind ?? ""}
-	kinds={tabs.map((tab) => tab.kind ?? "")}
-	triggerAttribute="data-search-trigger"
-	triggerMedia="(min-width: 40rem)"
+<input
+	name="q"
+	mix={[
+		liveFrame({ src: (text) => searchFrameSrc(routes.searchFrame.href(), text, currentKind()) }),
+		on("ui:live-frame", (event) => {
+			if (event.state === "pending") markBusy(true);
+			if (event.state === "slow") showSpinner();
+			if (event.state === "settled") markBusy(false);
+		}),
+	]}
 />
 ```
 
-| Prop               | Purpose                                                                                                                                 |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `ids`              | Prefix passed to `searchIds`                                                                                                            |
-| `label`            | The input's accessible name and placeholder                                                                                             |
-| `query`            | The text the frame was rendered for                                                                                                     |
-| `frameSrc`         | The frame endpoint without a query, so each app's route owns its address                                                                |
-| `dialogId`         | The `<dialog>` the keys, trigger and backdrop control                                                                                   |
-| `optionCount`      | Rows in the listbox, for arrow-key movement                                                                                             |
-| `kind`, `kinds`    | The current tab and the tabs present, for kind switching                                                                                |
-| `triggerAttribute` | The attribute on the trigger link. Default `data-search-trigger`                                                                        |
-| `triggerMedia`     | Optional media query a plain click on the trigger must match before it opens the dialog. Without it, every plain click opens the dialog |
+- Reloads the host's frame (`handle.frame` of the mixin) from `src(value)` once typing pauses
+  (`debounce`, default 200 ms), and at once when the host receives `LIVE_FRAME_RELOAD_EVENT`.
+  A consumer dispatches that event after changing anything `src` reads, such as the kind tab.
+- Dispatches `LiveFrameEvent` with `state`: `pending`, `slow` (after `slowAfter`, default
+  350 ms), `loading` (just before the frame is replaced, for a snapshot), and `settled`.
+- Only the newest request settles, so an answer to older text never ends a newer wait.
 
-`data-search-card`, `data-search-follow` and `data-search-kind` become fixed constants that the
-package exports, since nothing needs to rename them.
+#### `activeDescendantKeys()` - job 3
 
-#### Page-wide behavior
+```tsx
+<input role="combobox" aria-controls={listboxId} mix={[activeDescendantKeys()]} />
+```
 
-`watchSearchDialog(signal, { dialogId, triggerAttribute, triggerMedia })`, `searchShortcut` and
-`opensDialog`. The island calls `watchSearchDialog` itself; the functions are exported so apps can
-test against them.
+- Down chooses the first option of the `aria-controls` listbox and wraps around from the last;
+  Up goes back toward the input. Enter follows the chosen option's link, or the only option when
+  it sits in no `aria-busy` region.
+- The choice lives in `aria-activedescendant` and `aria-selected`. `chooseOption(input, index)`
+  and `chosenOption(input)` set and read it, for an island that replaced the options or that adds
+  keys of its own (the kind tabs' Left and Right).
+- It finds the listbox through the host's `aria-controls`, so it needs no ids passed to it.
 
-#### Presentation
+### What each app keeps
 
-- `SearchTabs`, taking `SearchTab { kind: string | null; label: string; count: number; href: string; current: boolean }`
-- `QuietSearchInput`, `QuietSearchRow`
-- `searchSurface()`, `searchSurfaceMotion(enterDelay)`, `SEARCH_EXIT_MS`
+| Piece                                                                                              | Why it stays in the app                                                                                      |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| The island itself, which composes the mixins                                                       | It holds the app's choices: the frame address, the label, the tab order, which listbox an empty box controls |
+| Kind tabs and results motion (jobs 4 and 5)                                                        | Both read the app's markup (tab attribute, results card); the next candidates once a third consumer appears  |
+| Dialog wiring (job 6) and the trigger                                                              | Each site's trigger differs, and the blog opens the dialog on wide screens only                              |
+| Route, frame endpoint, frame view, results and tabs model, result row, quick links, `/search` page | Server side and presentation, which are each site's own                                                      |
 
-#### `searchFrameSrc(frameSrc, text, kind)`
-
-Builds the frame URL for the layout's first `<Frame src>` and for the island's reloads.
-
-### What stays in each app
-
-- The route, the frame endpoint, and the `/search` page
-- Query parsing into each site's kinds, and the results and tabs model
-- The frame view: the box, the card, the status line, and "See all"
-- The trigger, result row, quick links, and pager
-- The `<dialog>` and `<Frame>` markup in the layout or header
-
-### Change in the blog first
-
-Render the trigger's shortcut hint on the server with `keyComboGlyphs`, as sdxc.dev does, and
-remove `labelShortcut` and `SEARCH_SHORTCUT_ATTRIBUTE`. Then the package needs no option for
-rewriting the hint.
+The two `search-box.tsx` files are still the same apart from import specifiers, and went from 455
+to 395 lines each. What left them is the mechanism, which now has one copy, with its own tests, in
+`@sdxc/ui`; what stays is the composition, plus the motion and tab helpers.
 
 ## Consequences
 
 ### Positive
 
-- **One copy** - about 870 duplicated lines become a single package module, so each fix ships to
-  both sites at once.
-- **Ids from one function** - the frame view and the island read their ids from `searchIds`.
-- **Matches the `./ui` convention** - the components sit beside the query syntax their `kind:`
-  tabs depend on.
+- **One copy of the mechanism** - frame reloading, stale-answer handling, the slow-wait signal
+  and combobox keys are fixed once, in a package with its own tests.
+- **No prop list** - per-app choices are callbacks and markup in the app's own island, so a new
+  difference needs no new option.
+- **Reusable outside search** - any input that refreshes a frame (a filter, a picker) and any
+  combobox over server-rendered options can use the mixins.
 
 ### Negative
 
-- **More dependencies for `@sdxc/search`** - it gains `@sdxc/ui`, `@sdxc/u` and `@sdxc/icons`,
-  which server-only users such as the reader also install.
-- **Released API** - changing the dialog becomes a dated package release that both apps pick up,
-  where today one app can change on its own.
-- **The look is shared** - the surface styles and tabs set the visual design for both sites. A site
-  that wants a different card has to write its own instead of passing props.
+- **Two islands remain** - the composition is still duplicated between the two apps, so a change
+  to tabs, motion or dialog wiring is still made twice.
+- **Coordination through events** - the island and the mixins agree through
+  `LIVE_FRAME_RELOAD_EVENT`, `LiveFrameEvent` and the ARIA attributes, which a reader has to
+  follow across files.
 
 ### Neutral
 
-- **Both apps keep their own server side** - a third app writes its own route and frame view, and
-  uses the package for everything else.
+- **The island no longer renders `aria-activedescendant`** - the mixin owns that attribute on the
+  element, so the island leaves it out of its JSX.
 
 ## Implementation Plan
 
-### Phase 1: Package entry point
+### Phase 1: Mixins
 
-**Priority:** Medium
-**Estimated Effort:** Half a day
+1. Add `liveFrame` and `activeDescendantKeys` (with `chooseOption` and `chosenOption`) to
+   `@sdxc/ui/mixins`, each with tests against a real frame runtime and document.
+2. Move both apps' `SearchBox` islands onto them.
 
-1. Move `search-box`, `search-keys`, `search-tabs`, `search-surface` and `quiet-search-input`
-   from `apps/sdxc-site` into `packages/search/src/ui.tsx` (and sibling modules). Replace the id
-   constants with `searchIds` and add the `triggerAttribute` and `triggerMedia` props.
-2. Move the apps' search-box, search-keys and search-tabs tests into the package.
-3. Add the `./ui` export, the new dependencies, and a one-line README mention.
+### Phase 2: Further extraction (not yet decided)
 
-### Phase 2: sdxc.dev on the package
-
-1. Import from `@sdxc/search/ui`, and delete the five app copies.
-
-### Phase 3: Blog on the package
-
-1. Render the shortcut hint on the server.
-2. Import from `@sdxc/search/ui` with `triggerMedia={WIDE_SCREEN}`, and delete the five app
-   copies. `search-dialog.test.tsx` stays in the blog, since it runs the blog's router and
-   renderer.
+1. Revisit kind tabs, results motion and dialog wiring once a third site uses the dialog, or
+   when one of them needs the same fix in both apps.
+2. Render the blog's shortcut hint on the server, as sdxc.dev does, so the two `search-keys.ts`
+   files match.
+3. Show `liveFrame` in the sdxc.dev search dialog guide, whose example island reloads the frame by
+   hand.
 
 ## Alternatives Considered
 
-### 1. Add the components to `@sdxc/ui`
+### 1. One configurable `SearchBox` island in a package
 
-**Rejected because**: every `@sdxc/ui` component gets a catalogue page and a live preview on
-sdxc.dev, and an entry in the `sdxc ui` registry. This widget only works against a server frame
-endpoint, so a preview would need a fake endpoint, and copying it from the registry would bring no
-server side with it. `Command` in `@sdxc/ui` is the client-side palette over a fixed list of
-options.
+**Rejected because**: island props must serialize, so every per-app choice becomes a prop, and
+the component carries all six jobs behind about ten of them.
 
-### 2. A new `@sdxc/search-dialog` package
-
-**Rejected because**: it would be another package whose only consumers already depend on
-`@sdxc/search`, and it would also need a separate npm bootstrap and trusted publisher.
-
-### 3. Keep one copy per app
+### 2. Keep one copy per app
 
 **Rejected because**: the three fixes listed in the Background each had to be made by hand in the
 second app.
@@ -203,3 +163,12 @@ second app.
 
 - [ADR-109: Search Package](./ADR-109-search-package.md)
 - [ADR-117: Search Query Syntax](./ADR-117-search-query-syntax.md)
+
+## Current Progress
+
+- [x] Phase 1: Mixins
+  - [x] `liveFrame`
+  - [x] `activeDescendantKeys`, `chooseOption`, `chosenOption`
+  - [x] sdxc.dev island on the mixins
+  - [x] Blog island on the mixins
+- [ ] Phase 2: Further extraction
