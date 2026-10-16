@@ -28,7 +28,11 @@ import {
 import { searchShortcut } from "~/resources/components/search-keys";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import { BlogLayout } from "~/resources/layouts/blog";
-import { SEARCH_DIALOG_INPUT_ID, SearchFrameView } from "~/resources/views/search-frame";
+import {
+	SEARCH_DIALOG_INPUT_ID,
+	SEARCH_LABEL,
+	SearchFrameView,
+} from "~/resources/views/search-frame";
 import routes from "~/routes/web";
 
 /** The modules the runtime is asked for while the page hydrates, by the chunk the manifest names. */
@@ -367,7 +371,7 @@ describe("the search dialog", () => {
 
 		expect(dialog?.tagName).toBe("DIALOG");
 		expect(dialog?.getAttribute("aria-label")).toBe("Search");
-		expect(input().getAttribute("aria-label")).toBe("Search articles, tutorials and the glossary");
+		expect(input().getAttribute("aria-label")).toBe(SEARCH_LABEL);
 		expect(form?.getAttribute("method")).toBe("get");
 		expect(form?.getAttribute("action")).toBe(routes.search.href());
 		expect(input().name).toBe("q");

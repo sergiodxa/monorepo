@@ -93,6 +93,8 @@ function follow(option: HTMLElement | undefined): void {
 type SearchBoxProps = {
 	/** The input's id. */
 	id: string;
+	/** What the box searches, read out as its name and shown while it is empty. */
+	label: string;
 	/** The text the frame was rendered for, which an unedited box starts from. */
 	query: string;
 	/** The frame endpoint without a query, so the route owns its own address. */
@@ -423,8 +425,8 @@ export const SearchBox = clientEntry(
 					aria-controls={blank ? SEARCH_QUICK_LINKS_ID : SEARCH_LISTBOX_ID}
 					aria-expanded={blank || handle.props.optionCount > 0 ? "true" : "false"}
 					aria-activedescendant={selected >= 0 ? activeId : undefined}
-					aria-label="Search articles, tutorials and the glossary"
-					placeholder="Search articles, tutorials and the glossary"
+					aria-label={handle.props.label}
+					placeholder={handle.props.label}
 					autocomplete="off"
 					enterkeyhint="search"
 					autofocus

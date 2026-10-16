@@ -36,6 +36,9 @@ import routes from "~/routes/web";
 /** The dialog's search box id, apart from the `/search` page's own box. */
 export const SEARCH_DIALOG_INPUT_ID = "site-search-q";
 
+/** What the dialog's search box is named and shows while empty. */
+export const SEARCH_LABEL = "Search articles, tutorials and the glossary";
+
 /**
  * What the status line says. Blank text says nothing; a count is announced but not shown,
  * since the rows and the "See all" link already show it; a message is shown as well.
@@ -68,6 +71,7 @@ export function SearchFrameView() {
 					<form method="get" action={routes.search.href()}>
 						<SearchBox
 							id={SEARCH_DIALOG_INPUT_ID}
+							label={SEARCH_LABEL}
 							query={model.query}
 							frameSrc={routes.searchFrame.href()}
 							dialogId={SEARCH_DIALOG_ID}
