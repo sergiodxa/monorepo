@@ -11,7 +11,7 @@ import type { JobDispatcher, JobDispatcherContext } from "@sdxc/jobs";
 import type { MemoryQueue } from "@sdxc/jobs/memory";
 import type { Database as DataTable } from "remix/data-table";
 
-import { models as publishModels } from "@sdxc/data-model/jobs";
+import { models } from "@sdxc/data-model/jobs";
 import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
@@ -19,11 +19,11 @@ import * as memory from "@sdxc/jobs/memory";
 
 import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
-import { models } from "~/app/models";
+import registry from "~/app/models";
 
 /** The models a job reads as `ctx.models`, bound to the database the chain opened. */
 function modelsMiddleware() {
-	return publishModels(models, (ctx) => ({ db: ctx.require(Database) }));
+	return models(registry, (ctx) => ({ db: ctx.require(Database) }));
 }
 
 /** The dispatcher the board's jobs run through, carrying what its chain publishes. */

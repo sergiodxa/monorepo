@@ -12,7 +12,7 @@ import { isFailure } from "@sdxc/result";
 
 import { PostingPublishedEmail } from "~/app/emails/posting-published";
 import { translatorFor } from "~/app/initializers/i18n";
-import { mailer } from "~/app/initializers/mailer";
+import { mailer } from "~/app/initializers/mail";
 import jobs from "~/app/jobs";
 
 export default createJobHandler(jobs.sendConfirmation, async (ctx) => {

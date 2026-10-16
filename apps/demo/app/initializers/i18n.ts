@@ -21,9 +21,9 @@ export const SUPPORTED_LANGUAGES = ["en", "es"];
 export const FALLBACK_LANGUAGE = "en";
 
 /** Message bundles, one per supported language. */
-export const resources: Record<string, Messages> = { en, es };
+export const RESOURCES: Record<string, Messages> = { en, es };
 
 /** Builds a translator fixed to one language, for code running outside a request. */
 export function translatorFor(locale: string): I18n {
-	return createI18n({ locale, fallbackLanguage: FALLBACK_LANGUAGE, resources });
+	return createI18n({ locale, fallbackLanguage: FALLBACK_LANGUAGE, resources: RESOURCES });
 }

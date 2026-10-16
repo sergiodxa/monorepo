@@ -13,7 +13,7 @@ import { beforeEach, expect, test } from "vitest";
 
 import { cache, LISTING_KEY } from "~/app/initializers/cache";
 import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/initializers/captcha";
-import { outbox } from "~/app/initializers/mailer";
+import { outbox } from "~/app/initializers/mail";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { bindModels } from "~/app/test/models";
 import { createTestDatabase, fetchApp } from "~/app/test/router";

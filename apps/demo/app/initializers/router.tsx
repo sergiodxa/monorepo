@@ -13,6 +13,7 @@ import type { Middleware, RouterContext } from "remix/router";
 
 import { assets } from "@sdxc/assets-middleware";
 import { captcha } from "@sdxc/captcha/middleware";
+import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import i18n from "@sdxc/i18n/middleware";
@@ -26,13 +27,13 @@ import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import jobs from "~/app/http/middleware/jobs";
-import models from "~/app/http/middleware/models";
 import callerBudget from "~/app/http/middleware/rate-limit";
 import { assetResolver } from "~/app/initializers/assets";
 import { captchaProvider } from "~/app/initializers/captcha";
 import { openDatabase } from "~/app/initializers/database";
-import { FALLBACK_LANGUAGE, resources, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
+import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
+import registry from "~/app/models";
 import routes from "~/routes/web";
 
 /** Submissions one caller may make per minute, comfortably above a person filling a form. */
@@ -70,15 +71,15 @@ export function createWebRouter(
 			asyncContext(),
 			log(logger),
 			getClientIP(),
+			database(openDb()),
+			models(registry, (ctx) => ({ db: ctx.db })),
+			jobs(openDb),
 			formData(),
 			cop(),
 			i18n({
 				detection: { supportedLanguages: SUPPORTED_LANGUAGES, fallbackLanguage: FALLBACK_LANGUAGE },
-				resources,
+				resources: RESOURCES,
 			}),
-			database(openDb()),
-			models(),
-			jobs(openDb),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",

@@ -10,7 +10,7 @@ import type { Database } from "remix/data-table";
 
 import { createFactories } from "@sdxc/data-model/testing";
 
-import { models } from "~/app/models";
+import registry from "~/app/models";
 
 /**
  * Binds the models to `db` and builds the factories that write through them.
@@ -18,6 +18,6 @@ import { models } from "~/app/models";
  * @param db The database the test drives the app against.
  */
 export async function bindModels(db: Database) {
-	let bound = models.bind({ db });
+	let bound = registry.bind({ db });
 	return { models: bound, factories: createFactories(bound, { seed: 1 }) };
 }

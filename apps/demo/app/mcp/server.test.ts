@@ -12,7 +12,7 @@ import type { Database } from "remix/data-table";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { beforeEach, expect, test } from "vitest";
 
-import { outbox } from "~/app/initializers/mailer";
+import { outbox } from "~/app/initializers/mail";
 import { bindModels } from "~/app/test/models";
 import { createTestDatabase, fetchApp, ORIGIN } from "~/app/test/router";
 import { PostingFactory } from "~/database/factories/postings";

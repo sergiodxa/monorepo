@@ -10,11 +10,10 @@
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 
+import { MAIL_FROM } from "~/config/constants";
+
 /** Every message the board has sent, oldest first, for the whole life of the worker. */
 export const outbox = new MemoryTransport();
 
 /** The mailer every send goes through, addressed from the board itself. */
-export const mailer = new Mailer({
-	transport: outbox,
-	from: { email: "jobs@demo.test", name: "Remix Job Board" },
-});
+export const mailer = new Mailer({ transport: outbox, from: MAIL_FROM });

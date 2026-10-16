@@ -1,22 +1,25 @@
-import type { RemixNode } from "remix/component";
 /**
- * Router context values installed by globally-applied middleware. `app/initializers/router.tsx`
- * installs `formData()` and `renderWith(createHtmlRenderer)`; both populate the context
- * through a transform rather than through a route handler's own typing, so this
- * augmentation is what surfaces them to a controller.
+ * Request context members a handler typed by `RequestContext` reads: the 404 handler, which the
+ * router is built from and so cannot name `AppContext`, and every MCP tool and resource, whose
+ * context the MCP handler types as `RequestContext`. The router's global chain installs each.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { BoundRegistry } from "@sdxc/data-model";
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type {} from "remix/router";
+
+import type registry from "~/app/models";
 
 declare module "remix/router" {
 	interface RequestContext {
 		/** Renders a `remix/component` node into an HTML `Response`. */
 		render: Renderer<RemixNode>;
-		/** The request's parsed `FormData`, populated by the global `formData()` middleware. */
-		formData: FormData;
+		/** The board's models, bound to `ctx.db` by the global `models()` middleware. */
+		models: BoundRegistry<typeof registry>;
 	}
 }
 
