@@ -9,7 +9,7 @@
  */
 
 import { contentVariables } from "~/app/services/article";
-import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/config/site";
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/config/constants";
 
 export namespace SocialCard {
 	/** The facts every page document states about itself. */

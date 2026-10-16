@@ -20,7 +20,7 @@ import {
 	socialCardHash,
 	socialCardKey,
 } from "~/app/services/social-card";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 
 /** A year, for a card whose URL names its content's hash and so can never change. */
 const IMMUTABLE = "public, max-age=31536000, immutable";

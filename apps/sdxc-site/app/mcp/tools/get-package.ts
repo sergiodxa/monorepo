@@ -11,7 +11,7 @@ import { createTool, ToolError } from "sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 import { findPackage, listApplicationsUsing, readPackageReadme } from "~/app/services/packages";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import routes from "~/routes/web";
 
 /** Reads the package, or refuses an unknown name with where to look instead. */

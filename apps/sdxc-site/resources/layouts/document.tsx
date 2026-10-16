@@ -23,7 +23,7 @@ import type { OptionSelections } from "~/app/services/option-groups";
 
 import { seo } from "~/app/initializers/seo";
 import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
-import { SITE_DESCRIPTION, SITE_URL } from "~/config/site";
+import { SITE_DESCRIPTION, SITE_URL } from "~/config/constants";
 import OptionGroupScope from "~/resources/components/option-groups";
 import SiteFooter from "~/resources/components/site-footer";
 

@@ -52,7 +52,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 		level: 2,
 	}));
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${TITLE} — sdxc`}

@@ -23,7 +23,7 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -66,7 +66,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 		{ label: frontmatter.title },
 	];
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${frontmatter.title} — sdxc`}

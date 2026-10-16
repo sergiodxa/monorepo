@@ -29,7 +29,7 @@ export default createAction(routes.maintenance, async (ctx) => {
 
 	let { document, frontmatter } = page.data;
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${frontmatter.title} — sdxc`}

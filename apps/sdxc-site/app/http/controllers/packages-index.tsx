@@ -33,7 +33,7 @@ export default createAction(routes.api.index, async (ctx) => {
 	let tree = await buildPackagesNav();
 	let groups = listPackageGroups();
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="API — sdxc"

@@ -32,7 +32,7 @@ import {
 } from "~/app/services/utility-calls";
 import { listUtilityExamples } from "~/app/services/utility-examples";
 import { themeScales } from "~/app/services/utility-theme";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
@@ -75,7 +75,7 @@ export default createAction(routes.api.utility, async (ctx) => {
 		...scales.map((scale) => ({ id: scale.id, text: scale.title, level: 3 })),
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${reference.property} — @sdxc/u`}

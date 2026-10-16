@@ -63,7 +63,7 @@ export default createAction(routes.docs.index, async (ctx) => {
 			},
 		]);
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Documentation — sdxc"

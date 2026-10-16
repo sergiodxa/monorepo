@@ -22,7 +22,7 @@ import {
 	AUTHOR_X_URL,
 	SITE_NAME,
 	SPONSOR_URL,
-} from "~/config/site";
+} from "~/config/constants";
 import routes from "~/routes/web";
 
 /**

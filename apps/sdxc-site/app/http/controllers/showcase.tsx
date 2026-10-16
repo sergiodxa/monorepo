@@ -41,7 +41,7 @@ export default createAction(routes.showcase, async (ctx) => {
 	let first = (await listGuides()).at(0)?.guides.at(0);
 	let firstGuide = first ? routes.docs.show.href({ slug: first.slug }) : null;
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Showcase — sdxc"

@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { createRedirectResponse } from "remix/response/redirect";
 import { createAction } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import routes from "~/routes/web";
 
@@ -24,7 +24,7 @@ export const exampleSubmit = createAction(routes.examples.submit, (ctx) => retur
  * The page the request came from, when it is one of this site's own pages, and the component
  * reference otherwise, so a redirect never leaves the site or lands on another example address.
  */
-function returnToPage(ctx: RequestContext): Response {
+function returnToPage(ctx: AppContext): Response {
 	let referer = URL.parse(ctx.request.headers.get("referer") ?? "");
 	let back =
 		referer && referer.origin === ctx.url.origin && !referer.pathname.startsWith("/examples/")

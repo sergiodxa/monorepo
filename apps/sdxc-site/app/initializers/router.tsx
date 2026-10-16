@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RouterContext } from "remix/router";
+
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -26,6 +28,16 @@ import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import routes from "~/routes/web";
 
+/** The context a controller sees once the router's middleware has run. */
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
+
+declare module "remix/router" {
+	/** Types `createAction` and `createController` with the context the router's chain builds. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
+
 /**
  * Builds the HTTP router. `headRequests()` leads the chain so a `HEAD` probe reads like its
  * `GET` to every later step. Each route is mapped on its own through `lazy()`, since
@@ -42,6 +54,7 @@ export function createWebRouter() {
 			trace(),
 			canonicalHost(),
 			socialCards(),
+			userAgent(),
 			formData(),
 			cop(),
 			assets(assetResolver, {
@@ -49,7 +62,6 @@ export function createWebRouter() {
 				script: "bootstrap/browser.ts",
 			}),
 			render({ assets: assetResolver }),
-			userAgent(),
 		],
 		defaultHandler,
 	});

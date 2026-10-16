@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 import { isApplePlatform } from "sdxc/user-agent/helpers";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { ComponentPreview as Preview } from "~/resources/components/ui-previews.server";
 
 import { listUtilityExamples } from "~/app/services/utility-examples";
@@ -51,7 +50,7 @@ export const frameUtilityExample = createAction(routes.frames.utility, async (ct
 	let module = await findUtilityExample(utility, example);
 	let source = (await listUtilityExamples(utility)).find((it) => it.slug === example);
 	if (module === null || source === undefined) {
-		return await ctx.render(
+		return ctx.render(
 			<p>
 				No example “{example}” for “{utility}”.
 			</p>,
@@ -59,7 +58,7 @@ export const frameUtilityExample = createAction(routes.frames.utility, async (ct
 		);
 	}
 
-	return await ctx.render(
+	return ctx.render(
 		<UtilityExample code={source.code} align={module.align}>
 			{module.render()}
 		</UtilityExample>,
@@ -72,15 +71,15 @@ export const frameUtilityExample = createAction(routes.frames.utility, async (ct
  * holds the whole fragment in it. A slug with no preview answers with a `404` fragment.
  */
 async function renderPreview(
-	ctx: RequestContext,
+	ctx: AppContext,
 	preview: Preview | null,
 	slug: string,
 ): Promise<Response> {
 	if (preview === null) {
-		return await ctx.render(<p>No preview for “{slug}”.</p>, { status: 404 });
+		return ctx.render(<p>No preview for “{slug}”.</p>, { status: 404 });
 	}
 
-	return await ctx.render(
+	return ctx.render(
 		<ComponentPreview code={preview.code} flush={preview.flush}>
 			{preview.render({ appleKeyboard: isApplePlatform(ctx) })}
 		</ComponentPreview>,

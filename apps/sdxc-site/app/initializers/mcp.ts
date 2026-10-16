@@ -15,7 +15,7 @@ import { createHandler, lazy } from "sdxc/mcp";
 
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
-import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_HANDLE, SPONSOR_URL } from "~/config/site";
+import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_HANDLE, SPONSOR_URL } from "~/config/constants";
 
 /**
  * How long a client may hold the tool, resource and template lists. The lists change only

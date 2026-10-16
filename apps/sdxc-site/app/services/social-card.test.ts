@@ -18,7 +18,7 @@ import {
 	socialCardKey,
 	socialCardUrl,
 } from "~/app/services/social-card";
-import { SITE_DESCRIPTION } from "~/config/site";
+import { SITE_DESCRIPTION } from "~/config/constants";
 
 /** The card for a page other than the home page, which every such page draws. */
 function pageCard(page: Parameters<typeof socialCardContent>[0]) {

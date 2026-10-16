@@ -8,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 import { Markdown } from "sdxc/markdown";
@@ -21,6 +19,7 @@ import { m } from "sdxc/u/size";
 import { font, text } from "sdxc/u/typography";
 import { Typeset } from "sdxc/ui";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";
 import type { PackageEntry } from "~/app/services/packages";
 
@@ -41,7 +40,7 @@ import {
 	listPackageGroups,
 	readPackageReadme,
 } from "~/app/services/packages";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import CatalogueIndex from "~/resources/components/catalogue-index";
 import InstallCommand from "~/resources/components/install-command";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
@@ -74,7 +73,7 @@ export default createAction(routes.api.show, async (ctx) => {
 	let anchors: Anchor[] = body?.anchors ?? [];
 	let markdownHref = routes.markdown.package.href({ name });
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${entry.name} — sdxc`}
@@ -188,7 +187,7 @@ async function readCatalogue(name: string) {
  * @returns The rendered body and its headings, or `null` when the file is missing or
  * will not parse, which leaves the page its manifest frame rather than no page.
  */
-async function readReference(ctx: RequestContext, entry: PackageEntry) {
+async function readReference(ctx: AppContext, entry: PackageEntry) {
 	let source = await readPackageReadme(entry.directory);
 	if (source === null) return null;
 

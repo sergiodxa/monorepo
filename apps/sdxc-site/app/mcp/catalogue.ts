@@ -10,7 +10,7 @@
 import type { CataloguePage } from "~/app/services/catalogue-pages";
 
 import { listCataloguePages } from "~/app/services/catalogue-pages";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 
 /**
  * Every catalogue page of one kind as the entries a resource picker shows.

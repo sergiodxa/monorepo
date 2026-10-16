@@ -20,7 +20,7 @@ import { withBundleCache } from "~/app/http/caching";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups } from "~/app/services/packages";
-import { SITE_URL } from "~/config/site";
+import { SITE_URL } from "~/config/constants";
 import routes from "~/routes/web";
 
 /** How a landing page ranks against a reference page, which is what `priority` orders. */

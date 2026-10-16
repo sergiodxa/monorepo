@@ -8,11 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { vstack } from "sdxc/u/layout";
 import { LinkButton } from "sdxc/ui";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { NavTree } from "~/app/services/navigation";
 
 import PageTitle from "~/resources/components/page-title";
@@ -27,7 +26,7 @@ import DocumentLayout from "~/resources/layouts/document";
  * around the message still navigates and the way back leads to where the reader was.
  * @returns The rendered 404 document.
  */
-export default function docsNotFound(ctx: RequestContext, tree: NavTree) {
+export default function docsNotFound(ctx: AppContext, tree: NavTree) {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}

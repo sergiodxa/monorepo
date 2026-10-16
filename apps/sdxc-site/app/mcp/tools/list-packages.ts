@@ -10,7 +10,7 @@ import { createTool, ToolError } from "sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 import { listPackageGroups } from "~/app/services/packages";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import routes from "~/routes/web";
 
 /** Lists the groups, or refuses an unknown group by naming the ones that exist. */

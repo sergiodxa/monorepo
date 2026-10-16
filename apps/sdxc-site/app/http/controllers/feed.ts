@@ -17,7 +17,7 @@ import { RSS } from "sdxc/rss";
 
 import { withBundleCache } from "~/app/http/caching";
 import { listGuides } from "~/app/services/docs";
-import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from "~/config/site";
+import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME } from "~/config/constants";
 import routes from "~/routes/web";
 
 /** One dated guide, flattened out of its section so the whole set can be ordered by date. */

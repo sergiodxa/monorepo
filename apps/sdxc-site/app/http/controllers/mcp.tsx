@@ -46,7 +46,7 @@ export default createAction(routes.mcp, async (ctx) => {
 		throw content.error;
 	}
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="MCP endpoint — sdxc"

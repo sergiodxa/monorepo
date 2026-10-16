@@ -10,7 +10,7 @@ import { createTool, ToolError } from "sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 import { searchPackages } from "~/app/services/search";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 
 /** Lists the matching packages, or refuses with a hint toward `list_packages`. */
 export default createTool(toolset.searchPackages, async (ctx) => {

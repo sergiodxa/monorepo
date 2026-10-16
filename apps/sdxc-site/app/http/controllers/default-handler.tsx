@@ -7,7 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
+import type { RenderFunction } from "remix/middleware/render";
+import type { DocumentAssets } from "sdxc/assets-middleware";
 
 import { fg } from "sdxc/u/color";
 import { vstack } from "sdxc/u/layout";
@@ -22,7 +23,7 @@ import routes from "~/routes/web";
  * Renders the 404 document for unmatched routes. Takes only the members it reads, since the
  * router infers its context from the very options this handler is passed in.
  */
-export default function defaultHandler(ctx: Pick<RequestContext, "render" | "assets">) {
+export default function defaultHandler(ctx: { render: RenderFunction; assets: DocumentAssets }) {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}

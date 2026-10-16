@@ -41,7 +41,7 @@ export default createAction(routes.philosophy, async (ctx) => {
 
 	let roster = await readStoredSponsors(siteCache());
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title="Philosophy — sdxc"

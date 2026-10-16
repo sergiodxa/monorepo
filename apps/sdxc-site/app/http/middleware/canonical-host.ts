@@ -9,7 +9,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { FORMER_HOSTS, SITE_URL } from "~/config/site";
+import { FORMER_HOSTS, SITE_URL } from "~/config/constants";
 
 /**
  * Answers a `GET` or `HEAD` on a former host with a permanent redirect to the same path and

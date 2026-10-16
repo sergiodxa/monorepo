@@ -28,7 +28,7 @@ import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { readUiExport } from "~/app/services/ui-exports";
 import { isUiSubpath } from "~/app/services/ui-subpaths";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
@@ -80,7 +80,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 		})),
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${reference.name} — ${module}`}

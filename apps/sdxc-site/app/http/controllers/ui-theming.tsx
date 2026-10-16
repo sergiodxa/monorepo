@@ -8,13 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { fg } from "sdxc/u/color";
 import { vstack } from "sdxc/u/layout";
 import { m } from "sdxc/u/size";
 import { font, nowrap, text, tracking, weight } from "sdxc/u/typography";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { Anchor } from "~/app/services/article";
 import type { NavTree } from "~/app/services/navigation";
 import type { ThemeDeclaration } from "~/app/services/theming";
@@ -23,7 +22,7 @@ import { withBundleCache } from "~/app/http/caching";
 import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdown";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readTheme } from "~/app/services/theming";
-import { absoluteUrl } from "~/config/site";
+import { absoluteUrl } from "~/config/constants";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -41,7 +40,7 @@ import routes from "~/routes/web";
  * @param tree - The `@sdxc/ui` tree, so the shell around the page still navigates.
  * @returns The rendered page, with the cache policy every generated page carries.
  */
-export default async function themingPage(ctx: RequestContext, tree: NavTree) {
+export default async function themingPage(ctx: AppContext, tree: NavTree) {
 	let theme = await readTheme();
 	let markdownHref = routes.markdown.component.href({ component: THEMING_SLUG });
 
@@ -52,7 +51,7 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 		{ id: "dark", text: "Dark", level: 2 },
 	];
 
-	let response = await ctx.render(
+	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
 			title={`${THEMING_TITLE} — @sdxc/ui`}
