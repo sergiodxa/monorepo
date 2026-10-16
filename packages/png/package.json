@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/png",
+	"version": "0.0.1",
+	"description": "PNG encoder and decoder over Web Streams, with no WebAssembly",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@sdxc/zip": "workspace:*"
+	}
+}
