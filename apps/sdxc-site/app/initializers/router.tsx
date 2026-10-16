@@ -188,6 +188,10 @@ export function createWebRouter() {
 		routes.mcp,
 		lazy(() => import("~/app/http/controllers/mcp")),
 	);
+	router.map(
+		routes.socialCard,
+		lazy(() => import("~/app/http/controllers/social-card")),
+	);
 	router.post(
 		routes.mcp.pattern,
 		lazy(() => import("~/app/http/controllers/mcp").then((it) => it.mcpEndpoint)),

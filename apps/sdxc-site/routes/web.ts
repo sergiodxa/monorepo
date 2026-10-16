@@ -111,4 +111,5 @@ export default route({
 	 * same path beside it, since the two halves answer to different shapes of caller.
 	 */
 	mcp: get("/mcp"),
+	socialCard: get("/social/*path.png"),
 });

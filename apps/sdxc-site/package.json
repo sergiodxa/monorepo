@@ -15,8 +15,10 @@
 		"@pitlane/assets": "0.1.0",
 		"@remix-run/ui": "0.12.1",
 		"@sdxc/dates": "workspace:*",
+		"@sdxc/font": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/icons": "workspace:*",
+		"@sdxc/raster": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
@@ -27,6 +29,7 @@
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/jsdoc": "workspace:*",
+		"@sdxc/png": "workspace:*",
 		"cf": "1.0.0-beta.5",
 		"vite": "^8.3.4"
 	}

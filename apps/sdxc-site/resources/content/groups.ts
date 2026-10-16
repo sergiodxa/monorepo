@@ -87,6 +87,8 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"icalendar",
 			"epub",
 			"zip",
+			"png",
+			"font",
 			"distill",
 			"jsdoc",
 			"codemod",
@@ -136,6 +138,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"lazy-route",
 			"lazy-frame",
 			"qr",
+			"raster",
 		],
 	},
 	{

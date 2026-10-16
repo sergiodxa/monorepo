@@ -28,28 +28,36 @@ Regular (clamped to two lines), and a mono footer line under the second rule (th
 command on a package page). Colours are the site's oklch tokens, parsed with `color()`.
 
 The fonts are Inter (Regular, SemiBold) and JetBrains Mono (Regular), both SIL OFL, shipped
-as `.ttf` inside the Worker bundle. The site renders with the system font stack, whose
+inside the Worker bundle. The site renders with the system font stack, whose
 platform faces cannot be redistributed; Inter is the closest open face.
 
 ### Pieces
 
-- **`app/services/social-card.ts`** — `renderSocialCard(card: SocialCard.Content)`, the
-  template above, returning PNG bytes. Fonts parse once per isolate on first use, never at
-  module scope.
-- **`app/services/social-card-content.ts`** — resolves a page path to its card content
-  (`eyebrow`, `title`, `description`, `url`, `footer`) from the same catalogue the page
-  renders from, and returns nothing for a path that is not a page, so the route never
-  renders arbitrary text.
+- **`app/services/social-card.ts`** — derives a card's content (`eyebrow`, `title`,
+  `description`, `url`, `footer`) from the title, description and path every page document
+  already states. Titles read `Name — Section`: a section other than `sdxc` is the eyebrow
+  (`Dialog — @sdxc/ui`), otherwise the path decides it (Package, API reference, Guide), and a
+  package page gets `npm add <name>` as its footer. It also builds the card's URL and storage
+  key from a fast synchronous hash of the content and `SOCIAL_CARD_TEMPLATE`.
+- **`app/services/social-card-image.ts`** — `renderSocialCard(content, fonts)`, the template
+  above, returning PNG bytes.
+- **`app/initializers/social-card-fonts.ts`** — the three faces, bundled as `.ttf.bin` data
+  modules (the Cloudflare Vite plugin hands a Worker a `.bin` import as an `ArrayBuffer`) and
+  parsed on the first card an isolate renders, never at module scope.
 - **`app/models/social-cards.ts`** — an R2-backed `FileStorage` (`get`, `has`, `list`,
   `put`, `remove`, `set`) over the `SOCIAL_CARDS` bucket binding. Keys are
-  `<template version>/<sha-256 of the card content>.png`, so a content edit or a template
-  change writes a new object and old objects are never served for new content.
-- **`GET /social/*`** — the image route. It resolves the content, hashes it, returns the
-  stored file when present, and otherwise renders, stores and returns it, with
-  `Cache-Control: public, max-age=31536000, immutable`. A path that is not a page is 404.
-- **`DocumentLayout`** sets `og.image` (with its alt, width and height) for every page to
-  `/social/<page path>.png?v=<hash>`. The hash in the URL is what makes platforms that cache
-  images per URL fetch the new card after an edit.
+  `<template>/<content hash>.png`, so a content edit or a template change writes a new
+  object and old objects are never served for new content.
+- **`GET /social/*path.png`** — the image route. It renders the page at that path through
+  the site's own router and reads `og:title` and `og:description` back, so only a real page
+  has a card and the card says what the page says, with no per-page wiring. It then returns
+  the stored card or renders, stores (after the response) and returns it. A request whose
+  `v` matches the content hash is cached for a year as `immutable`; one without it for an
+  hour. A path that is not a page is 404.
+- **`DocumentLayout`** sets `og.image` and `og.image:alt` for every page with a canonical
+  URL to `/social/<page path>.png?v=<hash>` (`/social/index.png` for the home page). The hash
+  in the URL is what makes platforms that cache images per URL fetch the new card after an
+  edit.
 
 ## Consequences
 

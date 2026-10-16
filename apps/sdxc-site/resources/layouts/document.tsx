@@ -22,7 +22,8 @@ import { font } from "sdxc/u/typography";
 import type { OptionSelections } from "~/app/services/option-groups";
 
 import { seo } from "~/app/initializers/seo";
-import { SITE_URL } from "~/config/site";
+import { socialCardUrl } from "~/app/services/social-card";
+import { SITE_DESCRIPTION, SITE_URL } from "~/config/site";
 import OptionGroupScope from "~/resources/components/option-groups";
 import SiteFooter from "~/resources/components/site-footer";
 
@@ -62,6 +63,17 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { assets, canonical, children, description, og, selections, title } = handle.props;
 		let { script, stylesheets } = assets;
+		let canonicalUrl = seo.canonical(canonical ?? SITE_URL);
+		let card = canonical
+			? {
+					image: socialCardUrl({
+						title,
+						description: description ?? SITE_DESCRIPTION,
+						path: new URL(canonicalUrl).pathname,
+					}),
+					imageAlt: title,
+				}
+			: {};
 
 		return (
 			<html
@@ -88,9 +100,9 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<Seo.Meta
 						title={title}
 						description={description}
-						canonical={seo.canonical(canonical ?? SITE_URL)}
+						canonical={canonicalUrl}
 						site={seo.site}
-						og={og}
+						og={{ ...card, ...og }}
 					/>
 					<ImportMap value={script.importMap} />
 					{script.preloads.map((href) => (

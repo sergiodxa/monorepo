@@ -362,8 +362,10 @@
         "@pitlane/assets": "0.1.0",
         "@remix-run/ui": "0.12.1",
         "@sdxc/dates": "workspace:*",
+        "@sdxc/font": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/icons": "workspace:*",
+        "@sdxc/raster": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
@@ -374,6 +376,7 @@
         "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
         "@pitlane/vite-plugin-remix": "0.8.0",
         "@sdxc/jsdoc": "workspace:*",
+        "@sdxc/png": "workspace:*",
         "cf": "1.0.0-beta.5",
         "vite": "^8.3.4",
       },
@@ -975,6 +978,13 @@
         "vitest",
       ],
     },
+    "packages/font": {
+      "name": "@sdxc/font",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/get-client-ip": {
       "name": "@sdxc/get-client-ip",
       "version": "0.0.1",
@@ -1554,6 +1564,14 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/png": {
+      "name": "@sdxc/png",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/zip": "workspace:*",
+      },
+    },
     "packages/problem": {
       "name": "@sdxc/problem",
       "version": "0.0.1",
@@ -1599,6 +1617,14 @@
       "optionalPeers": [
         "remix",
       ],
+    },
+    "packages/raster": {
+      "name": "@sdxc/raster",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/font": "workspace:*",
+        "@sdxc/png": "workspace:*",
+      },
     },
     "packages/rate-limit": {
       "name": "@sdxc/rate-limit",
@@ -2849,6 +2875,8 @@
 
     "@sdxc/flags-engine": ["@sdxc/flags-engine@workspace:packages/flags-engine"],
 
+    "@sdxc/font": ["@sdxc/font@workspace:packages/font"],
+
     "@sdxc/get-client-ip": ["@sdxc/get-client-ip@workspace:packages/get-client-ip"],
 
     "@sdxc/highlight": ["@sdxc/highlight@workspace:packages/highlight"],
@@ -2935,11 +2963,15 @@
 
     "@sdxc/password-policy": ["@sdxc/password-policy@workspace:packages/password-policy"],
 
+    "@sdxc/png": ["@sdxc/png@workspace:packages/png"],
+
     "@sdxc/problem": ["@sdxc/problem@workspace:packages/problem"],
 
     "@sdxc/qr": ["@sdxc/qr@workspace:packages/qr"],
 
     "@sdxc/random": ["@sdxc/random@workspace:packages/random"],
+
+    "@sdxc/raster": ["@sdxc/raster@workspace:packages/raster"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
 
