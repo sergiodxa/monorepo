@@ -294,6 +294,7 @@
 		"./server-timing": "./src/server-timing.ts",
 		"./session-storage-kv": "./src/session-storage-kv.ts",
 		"./sitemap": "./src/sitemap.ts",
+		"./sitemap/remix": "./src/sitemap/remix.ts",
 		"./spam": "./src/spam.ts",
 		"./spam/memory": "./src/spam/memory.ts",
 		"./spam/author-email": "./src/spam/author-email.ts",
