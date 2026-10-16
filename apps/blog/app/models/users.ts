@@ -44,7 +44,8 @@ export class UserSaveError extends Error {
 }
 
 export const Users = createModel(users, {
-	optional: ["id", "role"],
+	generateId: generateUUID,
+	optional: ["role"],
 
 	methods: {
 		findByEmail(email: string) {
@@ -93,12 +94,6 @@ export const Users = createModel(users, {
 				return failure(new UserSaveError("The account could not be saved", { cause: saved.error }));
 			}
 			return success(saved.data);
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

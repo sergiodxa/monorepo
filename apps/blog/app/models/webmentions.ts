@@ -43,7 +43,7 @@ export function hostOf(url: string): string {
 }
 
 export const Webmentions = createModel(webmentions, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		findByPair(pair: Protocol.Pair) {
@@ -142,12 +142,6 @@ export const Webmentions = createModel(webmentions, {
 			}
 
 			return [...affected];
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

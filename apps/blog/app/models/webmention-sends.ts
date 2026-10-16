@@ -22,7 +22,7 @@ export interface SendOutcome {
 }
 
 export const WebmentionSends = createModel(webmentionSends, {
-	optional: ["id"],
+	generateId: generateUUID,
 
 	methods: {
 		/** The targets a post sent to before, skipping a stored URL that no longer parses. */
@@ -41,12 +41,6 @@ export const WebmentionSends = createModel(webmentionSends, {
 		/** Forgets a target the post no longer links, once the removal was sent. */
 		async forget(postId: string, target: string): Promise<void> {
 			await this.query().where({ post_id: postId, target }).delete();
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

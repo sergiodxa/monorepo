@@ -46,7 +46,8 @@ export function tagQuery(tag: string): string | null {
 }
 
 export const Topics = createModel(topics, {
-	optional: ["id", "description"],
+	generateId: generateUUID,
+	optional: ["description"],
 
 	scopes: {
 		alphabetical: (query) => query.orderBy("title", "asc").orderBy("slug", "asc"),
@@ -117,7 +118,6 @@ export const Topics = createModel(topics, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? generateUUID(),
 				title: values.title.trim(),
 				description: values.description ?? "",
 				query: canonicalOr(values.query),

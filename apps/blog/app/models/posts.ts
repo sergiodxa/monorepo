@@ -28,8 +28,8 @@ export interface Federatable {
 }
 
 export const Posts = createModel(posts, {
+	generateId: generateUUID,
 	inheritance: "type",
-	optional: ["id"],
 	metaTable: {
 		table: postMeta,
 		foreignKey: "post_id",
@@ -117,10 +117,6 @@ export const Posts = createModel(posts, {
 	},
 
 	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
-		},
-
 		/** Writes the post's search document, read through its own type's model. */
 		async afterCreate(row, ctx) {
 			await PostSearch.index(ctx, row.id, row.type);
