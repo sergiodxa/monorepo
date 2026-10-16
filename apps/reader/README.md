@@ -4,13 +4,34 @@ Follow any site that publishes RSS or Atom and read everything it writes in one 
 
 Production URL: https://reader.sergiodxa.com
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run db:local:migrate` to create the feed catalog locally
-3. Run `bun run dev` to start the development server at http://localhost:3006
+```sh
+bun install
+cp .env.example .dev.vars
+sdxc run typegen
+sdxc run db migrate
+bun dev
+```
 
-From the repo root: `bun check` (format, lint and type check in one pass) and `bun run test`.
+The development server answers at http://localhost:3006. Run `sdxc run typegen` again
+whenever you change a binding in `wrangler.jsonc`.
+
+## Everyday commands
+
+```sh
+sdxc make controller tags/merge                       # a page, mapped in routes/web.ts
+sdxc make migration add-feed-language --chain catalog # then: sdxc run db migrate
+sdxc make command feeds/recount                       # then: sdxc run feeds recount
+
+sdxc run db console                                   # SQL prompt over the local feed catalog
+sdxc run about                                        # the versions the app runs on
+```
+
+`sdxc run db migrate` applies the feed catalog's chain in `database/catalog-migrations`; the
+`database/migrations` and `database/feed-migrations` chains belong to the Durable Objects,
+which apply them themselves when they boot. From the repo root: `bun check` (format, lint
+and type check in one pass) and `bun run test`.
 
 ## Cloudflare Services
 
@@ -128,16 +149,24 @@ to exist before the first deploy.
 
 ## Scripts
 
-| Script              | Description                                     |
-| ------------------- | ----------------------------------------------- |
-| `dev`               | Start development server                        |
-| `build`             | Build for production                            |
-| `start`             | Preview the production build                    |
-| `cf:deploy`         | Deploy to Cloudflare                            |
-| `cf:typegen`        | Generate the Cloudflare binding types           |
-| `db:local:migrate`  | Apply the feed catalog migrations locally       |
-| `db:remote:migrate` | Apply the feed catalog migrations to production |
-| `typecheck`         | Type check with `tsc`                           |
+| Script      | Description                        |
+| ----------- | ---------------------------------- |
+| `dev`       | Start development server           |
+| `build`     | Build for production               |
+| `start`     | Preview the production build       |
+| `cli`       | The command line `sdxc run` starts |
+| `cf:deploy` | Deploy to Cloudflare               |
+| `typecheck` | Type check with `tsc`              |
+
+## Commands
+
+| Command                        | Description                                     |
+| ------------------------------ | ----------------------------------------------- |
+| `sdxc run about`               | The app's name and the versions it runs on      |
+| `sdxc run typegen`             | Generate the Cloudflare binding types           |
+| `sdxc run db migrate`          | Apply the feed catalog migrations locally       |
+| `sdxc run db migrate --remote` | Apply the feed catalog migrations to production |
+| `sdxc run db console`          | Run SQL against the local feed catalog          |
 
 ## Database
 
@@ -149,15 +178,15 @@ one registry per database: `user/` for a reader's object, `feed/` for a feed's o
 `catalog/` for D1.
 
 ```bash
-bun run db:local:migrate
-bun run db:remote:migrate
+sdxc run db migrate
+sdxc run db migrate --remote
 ```
 
 ## Deployment
 
 ```bash
 bun run build
-bun run db:remote:migrate
+sdxc run db migrate --remote
 bun run cf:deploy
 ```
 

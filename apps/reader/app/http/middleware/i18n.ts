@@ -11,13 +11,7 @@
 import i18nMiddleware from "@sdxc/i18n/middleware";
 
 import { LANGUAGE_COOKIE } from "~/app/initializers/cookies";
-import en from "~/resources/locales/en";
-import es from "~/resources/locales/es";
-
-/** Every language the app ships a full dictionary for, and the order a detector matches in. */
-const SUPPORTED_LANGUAGES = ["en", "es"];
-
-const DEFAULT_LANGUAGE = "en";
+import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 
 /**
  * Detects the request language and publishes a translator fixed to it. A key missing from
@@ -26,11 +20,11 @@ const DEFAULT_LANGUAGE = "en";
 export const i18n = i18nMiddleware({
 	detection: {
 		supportedLanguages: SUPPORTED_LANGUAGES,
-		fallbackLanguage: DEFAULT_LANGUAGE,
+		fallbackLanguage: FALLBACK_LANGUAGE,
 		cookie: LANGUAGE_COOKIE,
 		order: ["cookie", "header"],
 	},
-	resources: { en, es },
+	resources: RESOURCES,
 });
 
 export default i18n;

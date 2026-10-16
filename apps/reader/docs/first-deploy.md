@@ -99,7 +99,7 @@ bunx wrangler secret put CLIENT_ID
 
 ```bash
 bun run build
-bun run db:remote:migrate
+sdxc run db migrate --remote
 bun run cf:deploy
 ```
 

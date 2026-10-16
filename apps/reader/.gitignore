@@ -1,8 +1,10 @@
-# Artifacts the root .gitignore does not already cover.
+# Dependencies and build output
+node_modules
+dist
 
-# Folders
-/.wrangler
-
-# Files
-.dev.vars
+# Wrangler's generated types and local state
+.wrangler
 worker-configuration.d.ts
+
+# Local secrets
+.dev.vars

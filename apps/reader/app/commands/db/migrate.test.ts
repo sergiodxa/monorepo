@@ -1,0 +1,25 @@
+/**
+ * `db migrate --remote`, which hands the catalog's chain to `wrangler d1 migrations apply` for
+ * the production database named in `wrangler.jsonc`.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { invoke } from "@sdxc/cli/test";
+import { describe, expect, test } from "vitest";
+
+import { cli } from "~/app/initializers/cli";
+
+describe("db migrate", () => {
+	test("--remote applies the chain through wrangler to the configured catalog", async () => {
+		let run = await invoke(cli, ["db", "migrate", "--remote"], {
+			exec: { "bunx wrangler d1 migrations apply reader-catalog --remote": { code: 0 } },
+		});
+
+		expect(run.code).toBe(0);
+		expect(run.exec.map((call) => call.command)).toEqual([
+			["bunx", "wrangler", "d1", "migrations", "apply", "reader-catalog", "--remote"],
+		]);
+	});
+});
