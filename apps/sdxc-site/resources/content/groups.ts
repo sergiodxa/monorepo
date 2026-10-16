@@ -121,6 +121,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"workers-cache",
 			"search",
 			"session-storage-kv",
+			"file-storage-r2",
 			"data-table-d1",
 			"data-table-sqlstorage",
 		],

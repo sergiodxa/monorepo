@@ -15,6 +15,7 @@
 		"@pitlane/assets": "0.1.0",
 		"@remix-run/ui": "0.12.1",
 		"@sdxc/dates": "workspace:*",
+		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/font": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/icons": "workspace:*",
