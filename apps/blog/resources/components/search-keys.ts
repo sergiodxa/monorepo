@@ -1,7 +1,7 @@
 /**
  * The search dialog's page-wide behaviour, attached by the search box island that every page
  * hydrates: the shortcuts that open and close it, the trigger link opening it on wide screens,
- * and the fallbacks for closing it that older browsers lack. Each listener ends with `signal`.
+ * closing it once a navigation lands, and the fallbacks for closing it older browsers lack.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -140,7 +140,8 @@ export function labelShortcut(): void {
 }
 
 /**
- * Attaches everything above, plus closing the dialog on `pagehide`, so a page restored from
+ * Attaches everything above, plus closing the dialog once a soft navigation settles, since
+ * the document stays and so would the backdrop, and on `pagehide`, so a page restored from
  * the back/forward cache comes back closed.
  */
 export function watchSearchDialog(signal: AbortSignal): void {
@@ -148,5 +149,8 @@ export function watchSearchDialog(signal: AbortSignal): void {
 	watchKeys(signal);
 	watchBackdropClicks(signal);
 	watchTriggerClicks(signal);
-	window.addEventListener("pagehide", () => searchDialog()?.close(), { signal });
+	let close = () => searchDialog()?.close();
+	globalThis.navigation?.addEventListener("navigatesuccess", close, { signal });
+	globalThis.navigation?.addEventListener("navigateerror", close, { signal });
+	window.addEventListener("pagehide", close, { signal });
 }
