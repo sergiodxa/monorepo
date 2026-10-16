@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 4
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-16
 ---
 
 A form anyone can reach will be found by bots within days. No single check stops all of them,
@@ -15,14 +15,14 @@ it can, and what reaches your handler has already survived the rest.
 
 [`@sdxc/honeypot`](/api/honeypot) traps form-filling bots, [`@sdxc/rate-limit`](/api/rate-limit)
 keyed by [`@sdxc/get-client-ip`](/api/get-client-ip) caps each address, [`@sdxc/captcha`](/api/captcha)
-asks for a challenge, and inside the handler [`@sdxc/email-address`](/api/email-address),
-[`@sdxc/password-policy`](/api/password-policy) and [`@sdxc/spam`](/api/spam) judge what was
-submitted.
+asks for a challenge, [`@sdxc/spam`](/api/spam) scores what was written, and inside the handler
+[`@sdxc/email-address`](/api/email-address) and [`@sdxc/password-policy`](/api/password-policy)
+judge the address and password.
 
 ```bash
 npm add @sdxc/captcha @sdxc/email-address @sdxc/get-client-ip @sdxc/honeypot @sdxc/http \
 	@sdxc/lazy-route @sdxc/password-policy @sdxc/rate-limit @sdxc/result @sdxc/spam \
-	@sdxc/validate remix
+	@sdxc/user-agent @sdxc/validate remix
 ```
 
 ## Mount the guards on the route
@@ -30,29 +30,43 @@ npm add @sdxc/captcha @sdxc/email-address @sdxc/get-client-ip @sdxc/honeypot @sd
 The route is `signUp: form("/sign-up")` in `routes/web.ts`, beside a `checkYourEmail` page:
 `index` renders the form, `action` accepts it. The honeypot
 goes on both, because the page that renders the form has to issue the fields the submission is
-checked against. The budget and the challenge go on the action alone.
+checked against. The budget, the challenge and the spam score go on the action alone.
 
 ```typescript {% title="app/initializers/router.ts" %}
 import type { Captcha } from "@sdxc/captcha";
 
 import { captcha } from "@sdxc/captcha/middleware";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
 import { lazy } from "@sdxc/lazy-route";
+import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
+import { spam } from "@sdxc/spam/middleware";
+import { userAgent } from "@sdxc/user-agent/middleware";
 import { env } from "cloudflare:workers";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
-import { answerTrappedBots } from "~/app/http/controllers/sign-up/bots";
+import {
+	answerTrappedBots,
+	checkYourEmail,
+} from "~/app/http/controllers/sign-up/bots";
 import { callerBudget } from "~/app/http/middleware/rate-limit";
 import { productionCaptcha } from "~/app/initializers/captcha";
 import routes from "~/routes/web";
 
 const TRAP = new Honeypot({ secret: env.HONEYPOT_SECRET });
+const SPAM = createSpamFilter({ checks: DEFAULT_RULES });
 
 export function createWebRouter(guard: Captcha = productionCaptcha()) {
-	let router = createRouter({ middleware: [formData()] });
+	let router = createRouter({
+		middleware: [formData(), getClientIP(), userAgent()],
+	});
 	let trap = honeypot(TRAP, { onFailure: answerTrappedBots });
+	let scored = spam(SPAM, {
+		fields: { content: "about", email: "email" },
+		onSpam: checkYourEmail,
+	});
 
 	router.map(
 		routes.signUp.index,
@@ -71,7 +85,7 @@ export function createWebRouter(guard: Captcha = productionCaptcha()) {
 				import("~/app/http/controllers/sign-up/action").then(
 					(it) => it.action,
 				),
-			[trap, callerBudget("sign-up", 5), captcha(guard)],
+			[trap, callerBudget("sign-up", 5), captcha(guard), scored],
 		),
 	);
 
@@ -80,12 +94,13 @@ export function createWebRouter(guard: Captcha = productionCaptcha()) {
 ```
 
 The order is the cost order. The honeypot is an HMAC check over two form fields. The budget is
-one KV read and write. The challenge is a call to the provider. Only a submission that passes
-all three is parsed, has its domain looked up in DNS and has its password checked against a
-breach corpus. The guards are `lazy()`'s second argument, so a refused submission never loads
+one KV read and write. The challenge is a call to the provider. The spam score runs local rules
+over the free-text field. Only a submission that passes all four is parsed, has its domain
+looked up in DNS and has its password checked against a breach corpus. The guards are `lazy()`'s second argument, so a refused submission never loads
 the controller. `guard` is the CAPTCHA provider, passed in so a test can hand in its own.
-Remix's `formData()` runs in the router's global middleware: the honeypot, the challenge and the
-handler all read the submission it parsed. Each module this file imports is built in the
+Remix's `formData()` runs in the router's global middleware: the honeypot, the challenge, the
+spam score and the handler all read the submission it parsed. Beside it, `getClientIP()` and
+`userAgent()` publish `ctx.ip` and `ctx.userAgent`, which the spam score sends to its checks. Each module this file imports is built in the
 sections below.
 
 ## A trap no person fills
@@ -213,6 +228,16 @@ instead of Turnstile's. Every failure carries a `code` that separates what the v
 (`rejected`, `expired`) from what the provider broke (`unavailable`); an `onFailure` that answers
 `null` for `unavailable` keeps sign-ups open through a provider outage.
 
+## Score what was written
+
+`scored`, the `spam(filter, options)` guard in the router, scores the submission before the
+handler runs. Each entry in `fields` names a form field: `content` the free-text field, `email`
+the one describing who sent it. The middleware reads their values from the parsed form and adds
+`ctx.ip`, `ctx.userAgent` and the time the honeypot token signed, which the timing rule
+scores: a form sent within three seconds of rendering is a signal. A spam verdict goes to
+`onSpam`, here answered like a success so a bot learns nothing, and every other verdict reaches
+the handler as `ctx.spamAssessment`. Without `onSpam`, spam is refused with a `422`.
+
 ## Check the address
 
 Parse first, run the checks that need no network, then ask DNS whether the domain receives mail
@@ -247,19 +272,17 @@ unique index on `canonical`, so a second sign-up with different capitalization f
 existing account. `suggestDomain` from `@sdxc/email-address/typo` offers "did you mean
 gmail.com?" for a mistyped provider.
 
-## Check the password, then score the rest
+## Check the password
 
 With the address known, the handler checks the password against NIST's rules — at least 15
-characters, not a common password, not built from the email, not in a breach — and scores the
-free-text field. [`@sdxc/validate`](/api/validate) reads the parsed form into `SIGN_UP` first.
+characters, not a common password, not built from the email, not in a breach.
+[`@sdxc/validate`](/api/validate) reads the parsed form into `SIGN_UP` first.
 
 ```typescript {% title="app/http/controllers/sign-up/action.ts" %}
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { checkPassword } from "@sdxc/password-policy";
 import { isFailure } from "@sdxc/result";
-import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 
@@ -274,8 +297,6 @@ const SIGN_UP = s.object({
 	password: s.string(),
 	about: s.optional(s.string()),
 });
-
-const SPAM = createSpamFilter({ checks: DEFAULT_RULES });
 
 export async function action(ctx: RequestContext): Promise<Response> {
 	let trap = ctx.honeypotOutcome;
@@ -295,17 +316,7 @@ export async function action(ctx: RequestContext): Promise<Response> {
 		return renderSignUp(ctx, passwordMessage(issue));
 	}
 
-	let assessment = await SPAM.check({
-		content: form.data.about ?? "",
-		author: {
-			email: email.data.address,
-			ip: getClientIP(ctx.request)?.toString(),
-		},
-		renderedAt: trap.data.renderedAt,
-	});
-	if (assessment.verdict === "spam") return checkYourEmail();
-
-	let held = assessment.verdict === "unsure";
+	let held = ctx.spamAssessment.verdict === "unsure";
 	await createAccount(ctx, email.data, form.data.password, held);
 	return checkYourEmail();
 }
@@ -320,14 +331,12 @@ issue into copy. `createAccount` is your own service: hash the password exactly 
 is told to. The root import of `@sdxc/password-policy` bundles the common-password list,
 about 220 KB gzipped; import from `/length`, `/context` and `/breached` if that matters more.
 
-`renderedAt` is the time the honeypot token signed, which the spam filter's timing rule scores:
-a form sent within three seconds of rendering is a signal. A spam verdict is answered like a
-success and creates nothing; an unsure one creates the account held for review.
+An unsure spam verdict creates the account held for review.
 
 ## Guard a newsletter sign-up
 
 A newsletter box is the same kind of form with one field, and bots fill it to send confirmation
-emails to addresses that never asked, which spends your list's sending reputation. The three
+emails to addresses that never asked, which spends your list's sending reputation. The
 guards mount the same way on its route, inside the same `createWebRouter`:
 
 ```typescript {% title="app/initializers/router.ts" %}
