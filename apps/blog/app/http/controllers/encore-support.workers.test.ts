@@ -28,6 +28,15 @@ const ORIGIN = "https://blog.test";
 const PATH = "/apps/encore/support";
 const INBOX = "support-inbox@example.com";
 
+/** The `SUPPORT_RATE_LIMITER` binding's period, as `wrangler.jsonc` declares it. */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+/**
+ * Time a burst of submissions needs to finish inside one window, with room for a slow run;
+ * the whole burst normally takes under 200ms.
+ */
+const BURST_MARGIN_MS = 2_000;
+
 /** A transport whose provider refuses every message, as a rejected send does. */
 class RejectingTransport implements Transport {
 	async send(_message: NormalizedMessage): Promise<Result<SentMessage, MailError>> {
@@ -57,6 +66,17 @@ function environment(overrides: Partial<App.Env> = {}): App.Env {
 function uniqueAddress() {
 	let bytes = crypto.getRandomValues(new Uint8Array(2));
 	return `10.${bytes[0]}.${bytes[1]}.${Math.floor(Math.random() * 250) + 1}`;
+}
+
+/**
+ * Waits for the next rate-limit window when the current one ends within {@link BURST_MARGIN_MS}.
+ * The binding counts in windows aligned to the wall clock, so a burst that crosses a boundary
+ * splits its count across two windows and never reaches the limit.
+ */
+async function freshWindow() {
+	let remaining = RATE_LIMIT_WINDOW_MS - (Date.now() % RATE_LIMIT_WINDOW_MS);
+	if (remaining > BURST_MARGIN_MS) return;
+	await new Promise((resolve) => setTimeout(resolve, remaining));
 }
 
 /** The honeypot fields a rendered form carries, read from its HTML as a browser would post them. */
@@ -370,6 +390,7 @@ describe("POST /apps/encore/support", () => {
 	test("limits how often one address may submit, keeping the values", async () => {
 		let transport = new MemoryTransport();
 		let address = uniqueAddress();
+		await freshWindow();
 		for (let attempt = 0; attempt < SUPPORT_RATE_LIMIT; attempt++) {
 			await submit(await submission(), { transport, address });
 		}
@@ -387,6 +408,7 @@ describe("POST /apps/encore/support", () => {
 		let transport = new MemoryTransport();
 		let words = Array.from(crypto.getRandomValues(new Uint16Array(2)), (word) => word.toString(16));
 		let network = `2001:db8:${words.join(":")}`;
+		await freshWindow();
 		for (let attempt = 0; attempt < SUPPORT_RATE_LIMIT; attempt++) {
 			await submit(await submission(), { transport, address: `${network}::${attempt + 1}` });
 		}
