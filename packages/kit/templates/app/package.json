@@ -20,6 +20,7 @@
 		"@sdxc/assets-middleware": "0.0.1",
 		"@sdxc/captcha": "0.0.1",
 		"@sdxc/cli": "0.0.1",
+		"@sdxc/data-model": "0.0.1",
 		"@sdxc/data-table-d1": "0.0.1",
 		"@sdxc/database-middleware": "0.0.1",
 		"@sdxc/get-client-ip": "0.0.1",

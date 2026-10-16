@@ -43,8 +43,11 @@ export const LOCAL_DATABASE_FILE = join(
 	`${objectId(NAMESPACE, DATABASE_ID)}.sqlite`,
 );
 
-/** Opens the local database, creating the file where `bun dev` will find it when none exists yet. */
-export function openLocalDatabase(): Database {
-	mkdirSync(dirname(LOCAL_DATABASE_FILE), { recursive: true });
-	return createSqliteDatabase({ filename: LOCAL_DATABASE_FILE });
+/**
+ * Opens the local database, creating the file where `bun dev` will find it when none exists yet.
+ * Timestamps are written as epoch milliseconds, as the Worker's database writes them.
+ */
+export function openLocalDatabase(filename = LOCAL_DATABASE_FILE): Database {
+	if (filename !== ":memory:") mkdirSync(dirname(filename), { recursive: true });
+	return createSqliteDatabase({ filename }, { now: () => Date.now() });
 }

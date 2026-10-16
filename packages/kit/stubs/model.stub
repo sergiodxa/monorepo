@@ -17,6 +17,8 @@ export const {{key}}Table = table({
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
+	/** `create` and `update` stamp `created_at` and `updated_at` with the database's clock. */
+	timestamps: true,
 });
 
 /** One {{title}} row as it reads back from the database. */
