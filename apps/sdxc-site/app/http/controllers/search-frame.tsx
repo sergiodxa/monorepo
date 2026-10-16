@@ -20,8 +20,11 @@ import { SearchResults } from "~/app/services/search-results";
 import { SearchFrameView } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
 
-/** How many matches the dialog lists before pointing at the full page. */
-const SUGGESTION_COUNT = 8;
+/**
+ * How many matches the dialog lists before pointing at the full page: as many two-line rows
+ * as fit under the box, with the tabs and "See all", on a laptop screen without scrolling.
+ */
+const SUGGESTION_COUNT = 5;
 
 /**
  * Serves the dialog's body. Every state answers 200, a blank box and text that cannot run

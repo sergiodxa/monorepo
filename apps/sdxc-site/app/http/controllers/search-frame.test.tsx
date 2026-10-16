@@ -32,10 +32,10 @@ describe("GET /frames/search", () => {
 		expect(rowCount(body)).toBe(0);
 	});
 
-	test("lists at most eight matches, a tab per kind, and a link to every match", async () => {
+	test("lists at most five matches, a tab per kind, and a link to every match", async () => {
 		let { body } = await frame("form");
 
-		expect(rowCount(body)).toBe(8);
+		expect(rowCount(body)).toBe(5);
 		expect(body).toContain('data-search-kind=""');
 		expect(body).toContain('data-search-kind="ui"');
 		expect(body).toMatch(/See all \d+ results/);
