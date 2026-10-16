@@ -49,7 +49,7 @@ const extractedCounts = import.meta.glob<{ utilities: number; components: number
 );
 
 /** Numbers the copy quotes, written as `{% $name %}` holes so a claim is counted. */
-function contentVariables(): Record<string, string> {
+export function contentVariables(): Record<string, string> {
 	let facts = readPackageFacts();
 	let extracted = Object.values(extractedCounts)[0];
 

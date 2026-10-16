@@ -11,7 +11,7 @@
 import type { Font } from "@sdxc/font";
 import type { Raster } from "@sdxc/raster";
 
-import { Canvas, color, radialGradient, TRANSPARENT, withAlpha } from "@sdxc/raster";
+import { Canvas, color, Path, radialGradient, TRANSPARENT, withAlpha } from "@sdxc/raster";
 
 import type { SocialCard } from "~/app/services/social-card";
 
@@ -39,6 +39,7 @@ const PALETTE = {
 	title: color("oklch(0.965 0.005 275)"),
 	description: color("oklch(0.73 0.013 275)"),
 	quiet: color("oklch(0.62 0.014 275)"),
+	terminal: color("oklch(0.19 0.007 275)"),
 };
 
 /**
@@ -56,6 +57,18 @@ const FRAME = {
 	dash: 8,
 	cell: 48,
 };
+
+/** Where the home card's stats band begins, as the landing page's band follows its hero. */
+const HOME_BAND = 470;
+
+/** The commands the home card's terminal runs, the landing page's own session. */
+const HOME_COMMANDS = [
+	"npm add -g @sdxc/kit",
+	"sdxc create blog",
+	"sdxc make controller posts/show",
+	"sdxc ui add dialog",
+	"sdxc run about",
+];
 
 /** The widest a line of centred text may run, leaving the rails room to breathe. */
 const TEXT_WIDTH = 880;
@@ -85,8 +98,14 @@ export async function renderSocialCard(
 			],
 		}),
 	);
-	drawGrid(canvas);
-	drawFrame(canvas);
+	if (content.kind === "home") {
+		drawGrid(canvas, 0, HOME_BAND);
+		drawFrame(canvas, [HOME_BAND]);
+		drawHome(canvas, content, fonts);
+		return canvas.toPNG();
+	}
+	drawGrid(canvas, FRAME.ruleTop, FRAME.ruleBottom);
+	drawFrame(canvas, [FRAME.ruleTop, FRAME.ruleBottom]);
 	drawHeader(canvas, content, fonts);
 	drawBody(canvas, content, fonts);
 	canvas.text(content.footer, {
@@ -106,7 +125,7 @@ export async function renderSocialCard(
  * The grid behind the text, centred on the card so its lines fall symmetrically, faded by a
  * radial mask so it reads as texture near the middle and disappears toward the frame.
  */
-function drawGrid(canvas: Canvas): void {
+function drawGrid(canvas: Canvas, top: number, bottom: number): void {
 	let { height, width } = canvas;
 	let mask = radialGradient({
 		center: [width / 2, height / 2],
@@ -118,11 +137,11 @@ function drawGrid(canvas: Canvas): void {
 	});
 	canvas.mask(mask, () => {
 		for (let x = (width / 2) % FRAME.cell; x < width; x += FRAME.cell) {
-			canvas.fillRect(x - 0.75, FRAME.ruleTop, 1.5, FRAME.ruleBottom - FRAME.ruleTop, PALETTE.grid);
+			canvas.fillRect(x - 0.75, top, 1.5, bottom - top, PALETTE.grid);
 		}
 		for (
-			let y = FRAME.ruleTop + ((height / 2 - FRAME.ruleTop) % FRAME.cell);
-			y < FRAME.ruleBottom;
+			let y = top + ((((height / 2 - top) % FRAME.cell) + FRAME.cell) % FRAME.cell);
+			y < bottom;
 			y += FRAME.cell
 		) {
 			canvas.fillRect(0, y - 0.75, width, 1.5, PALETTE.grid);
@@ -131,9 +150,9 @@ function drawGrid(canvas: Canvas): void {
 }
 
 /** The rules across the card, the dashed rails down it, and a marker on every crossing. */
-function drawFrame(canvas: Canvas): void {
+function drawFrame(canvas: Canvas, rules: number[]): void {
 	let half = FRAME.line / 2;
-	for (let y of [FRAME.ruleTop, FRAME.ruleBottom]) {
+	for (let y of rules) {
 		canvas.fillRect(0, y - half, canvas.width, FRAME.line, PALETTE.rule);
 	}
 	for (let x of [FRAME.railLeft, FRAME.railRight]) {
@@ -143,7 +162,7 @@ function drawFrame(canvas: Canvas): void {
 	}
 	let size = FRAME.marker;
 	for (let x of [FRAME.railLeft, FRAME.railRight]) {
-		for (let y of [FRAME.ruleTop, FRAME.ruleBottom]) {
+		for (let y of rules) {
 			canvas.fillRect(x - size / 2, y - size / 2, size, size, PALETTE.marker);
 		}
 	}
@@ -152,7 +171,7 @@ function drawFrame(canvas: Canvas): void {
 /** The wordmark and the page's address above the top rule, as the site's header sets them. */
 function drawHeader(
 	canvas: Canvas,
-	content: SocialCard.Content,
+	content: SocialCard.PageContent,
 	fonts: SocialCardImage.Fonts,
 ): void {
 	canvas.text("sdxc", {
@@ -180,7 +199,11 @@ function drawHeader(
  * shrinks to fit two lines before it truncates, and the block is measured first so a
  * one-line title and a two-line one both sit in the middle.
  */
-function drawBody(canvas: Canvas, content: SocialCard.Content, fonts: SocialCardImage.Fonts): void {
+function drawBody(
+	canvas: Canvas,
+	content: SocialCard.PageContent,
+	fonts: SocialCardImage.Fonts,
+): void {
 	let x = canvas.width / 2;
 	let eyebrow = textOptions(fonts.mono, 24, x, { maxLines: 1, paint: PALETTE.eyebrow });
 	let title = textOptions(fonts.semibold, 76, x, {
@@ -225,4 +248,114 @@ function textOptions(
 	rest: Partial<Raster.TextOptions>,
 ): Raster.TextOptions {
 	return { font, size, x, y: 0, align: "center", maxWidth: TEXT_WIDTH, ...rest };
+}
+
+/**
+ * The home card, set like the landing page's hero: the wordmark large with the pitch under
+ * it, the terminal session beside it, and the collection's counts in a band below, divided
+ * like the page's stats band.
+ */
+function drawHome(
+	canvas: Canvas,
+	content: SocialCard.HomeContent,
+	fonts: SocialCardImage.Fonts,
+): void {
+	let left = FRAME.railLeft + 40;
+	canvas.text("sdxc", {
+		font: fonts.semibold,
+		size: 168,
+		tracking: -8,
+		x: left - 6,
+		y: 236,
+		paint: PALETTE.title,
+	});
+	canvas.text(content.tagline, {
+		font: fonts.semibold,
+		size: 34,
+		tracking: -0.5,
+		maxWidth: 470,
+		maxLines: 1,
+		x: left,
+		y: 312,
+		paint: PALETTE.title,
+	});
+	canvas.text(content.description, {
+		font: fonts.regular,
+		size: 24,
+		lineHeight: 1.45,
+		maxWidth: 450,
+		maxLines: 3,
+		x: left,
+		y: 360,
+		paint: PALETTE.description,
+	});
+	drawTerminal(canvas, fonts);
+	drawStats(canvas, content.stats, fonts);
+}
+
+/** A terminal window like the landing page's, its commands led by the program they run. */
+function drawTerminal(canvas: Canvas, fonts: SocialCardImage.Fonts): void {
+	let x = 640;
+	let y = 96;
+	let width = FRAME.railRight - 40 - x;
+	let height = 314;
+	canvas.fillPath(Path.roundedRect(x, y, width, height, 12), PALETTE.rule);
+	canvas.fillPath(Path.roundedRect(x + 2, y + 2, width - 4, height - 4, 10), PALETTE.terminal);
+	canvas.fillRect(x + 2, y + 54, width - 4, 2, PALETTE.rule);
+	canvas.text("Terminal", {
+		font: fonts.mono,
+		size: 18,
+		x: x + 24,
+		y: y + 35,
+		paint: PALETTE.quiet,
+	});
+	HOME_COMMANDS.forEach((command, index) => {
+		let baseline = y + 104 + index * 42;
+		let [program = "", ...rest] = command.split(" ");
+		let text = { font: fonts.mono, size: 20, x: x + 24, y: baseline };
+		let programWidth = fonts.mono.measure(`${program} `, text.size);
+		canvas.text(program, { ...text, paint: PALETTE.eyebrow });
+		canvas.text(rest.join(" "), {
+			...text,
+			x: x + 24 + programWidth,
+			maxWidth: width - 48 - programWidth,
+			maxLines: 1,
+			paint: PALETTE.title,
+		});
+	});
+}
+
+/** The counts band between the rails, one cell per figure, divided by the frame's rule. */
+function drawStats(canvas: Canvas, stats: SocialCard.Stat[], fonts: SocialCardImage.Fonts): void {
+	if (stats.length === 0) return;
+	let cell = (FRAME.railRight - FRAME.railLeft) / stats.length;
+	stats.forEach((stat, index) => {
+		let x = FRAME.railLeft + index * cell;
+		if (index > 0) {
+			canvas.fillRect(
+				x - FRAME.line / 2,
+				HOME_BAND,
+				FRAME.line,
+				canvas.height - HOME_BAND,
+				PALETTE.rule,
+			);
+		}
+		canvas.text(stat.value, {
+			font: fonts.semibold,
+			size: 56,
+			tracking: -1.5,
+			x: x + 36,
+			y: HOME_BAND + 90,
+			paint: PALETTE.title,
+		});
+		canvas.text(stat.label, {
+			font: fonts.regular,
+			size: 20,
+			maxWidth: cell - 48,
+			maxLines: 1,
+			x: x + 36,
+			y: HOME_BAND + 126,
+			paint: PALETTE.quiet,
+		});
+	});
 }

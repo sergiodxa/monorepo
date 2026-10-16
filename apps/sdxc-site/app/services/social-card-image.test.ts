@@ -51,6 +51,7 @@ describe("renderSocialCard", () => {
 	test("draws the frame and the text into a 1200×630 PNG", async () => {
 		let bytes = await renderSocialCard(
 			{
+				kind: "page",
 				eyebrow: "Package",
 				title: "@sdxc/jwt",
 				description: "Sign and verify JSON Web Tokens, with JWKS and key rotation.",
@@ -78,6 +79,7 @@ describe("renderSocialCard", () => {
 	test("a long title still fits between the rules", async () => {
 		let bytes = await renderSocialCard(
 			{
+				kind: "page",
 				eyebrow: "Guide",
 				title:
 					"A very long guide title that has to shrink and then wrap onto a second line to fit at all",

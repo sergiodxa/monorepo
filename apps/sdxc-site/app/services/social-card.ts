@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { contentVariables } from "~/app/services/article";
 import { absoluteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/config/site";
 
 export namespace SocialCard {
@@ -20,8 +21,9 @@ export namespace SocialCard {
 		path: string;
 	}
 
-	/** The text a card draws, in reading order. */
-	export interface Content {
+	/** A page's card: its kind, name and summary inside the frame. */
+	export interface PageContent {
+		kind: "page";
 		/** The small line above the title, naming what kind of page this is. */
 		eyebrow: string;
 		title: string;
@@ -31,6 +33,23 @@ export namespace SocialCard {
 		/** The line under the frame: an install command on a package page, the site otherwise. */
 		footer: string;
 	}
+
+	/** One figure in the home card's stats band, as the landing page's band states it. */
+	export interface Stat {
+		value: string;
+		label: string;
+	}
+
+	/** The home page's card: the wordmark, the pitch, and the collection counted. */
+	export interface HomeContent {
+		kind: "home";
+		tagline: string;
+		description: string;
+		stats: Stat[];
+	}
+
+	/** The text a card draws. */
+	export type Content = PageContent | HomeContent;
 }
 
 /** The size social platforms render a large card at. */
@@ -57,6 +76,7 @@ const TITLE_SEPARATOR = " — ";
  * gets its install command as the footer.
  */
 export function socialCardContent(page: SocialCard.Page): SocialCard.Content {
+	if (page.path === "/") return homeContent();
 	let separator = page.title.lastIndexOf(TITLE_SEPARATOR);
 	let name = separator === -1 ? page.title : page.title.slice(0, separator);
 	let section = separator === -1 ? SITE_NAME : page.title.slice(separator + TITLE_SEPARATOR.length);
@@ -64,6 +84,7 @@ export function socialCardContent(page: SocialCard.Page): SocialCard.Content {
 	let packageName = /^\/api\/([^/]+)$/.exec(page.path)?.[1];
 	let eyebrow = section === SITE_NAME ? eyebrowFor(page.path) : section;
 	return {
+		kind: "page",
 		eyebrow,
 		title: name,
 		description: page.description,
@@ -102,14 +123,7 @@ export function socialCardKey(hash: string): string {
  * layout can compute it while rendering.
  */
 export function socialCardHash(content: SocialCard.Content): string {
-	let input = [
-		SOCIAL_CARD_TEMPLATE,
-		content.eyebrow,
-		content.title,
-		content.description,
-		content.url,
-		content.footer,
-	].join("\u0000");
+	let input = `${SOCIAL_CARD_TEMPLATE}\u0000${JSON.stringify(content)}`;
 	let h1 = 0xdeadbeef;
 	let h2 = 0x41c6ce57;
 	for (let index = 0; index < input.length; index++) {
@@ -168,6 +182,26 @@ const NAMED_ENTITIES: Record<string, string> = {
 	quot: '"',
 	apos: "'",
 };
+
+/**
+ * The home card's text, quoting the landing page's own pitch and the counts its stats band
+ * shows, read from the same source so the two always agree.
+ */
+function homeContent(): SocialCard.HomeContent {
+	let counts = contentVariables();
+	let stat = (key: string, label: string) => ({ value: counts[key] ?? "", label });
+	return {
+		kind: "home",
+		tagline: "Take one, or take the set.",
+		description: `${counts.packageCount ?? ""} packages for Remix on Cloudflare Workers: Request and Response in, typed values out.`,
+		stats: [
+			stat("packageCount", "packages"),
+			stat("rfcCount", "RFCs followed"),
+			stat("componentCount", "UI components"),
+			stat("utilityCount", "styling utilities"),
+		].filter((entry) => entry.value !== ""),
+	};
+}
 
 /** The eyebrow for a page whose title names only the site, by the part of the site it is in. */
 function eyebrowFor(path: string): string {

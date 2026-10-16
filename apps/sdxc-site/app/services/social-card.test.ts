@@ -20,6 +20,13 @@ import {
 } from "~/app/services/social-card";
 import { SITE_DESCRIPTION } from "~/config/site";
 
+/** The card for a page other than the home page, which every such page draws. */
+function pageCard(page: Parameters<typeof socialCardContent>[0]) {
+	let content = socialCardContent(page);
+	if (content.kind !== "page") throw new Error(`expected a page card for ${page.path}`);
+	return content;
+}
+
 describe("socialCardContent", () => {
 	test("a package page names itself and gets its install command", () => {
 		expect(
@@ -29,6 +36,7 @@ describe("socialCardContent", () => {
 				path: "/api/jwt",
 			}),
 		).toEqual({
+			kind: "page",
 			eyebrow: "Package",
 			title: "@sdxc/jwt",
 			description: "JSON Web Tokens.",
@@ -38,7 +46,7 @@ describe("socialCardContent", () => {
 	});
 
 	test("a title suffix other than the site's name is the eyebrow", () => {
-		let content = socialCardContent({
+		let content = pageCard({
 			title: "Dialog — @sdxc/ui",
 			description: "A modal.",
 			path: "/api/ui/dialog",
@@ -50,30 +58,33 @@ describe("socialCardContent", () => {
 
 	test("guides and the reference index take their eyebrow from the path", () => {
 		expect(
-			socialCardContent({
+			pageCard({
 				title: "Naming — sdxc",
 				description: "",
 				path: "/docs/conventions/naming",
 			}).eyebrow,
 		).toBe("Guide");
-		expect(socialCardContent({ title: "API — sdxc", description: "", path: "/api" }).eyebrow).toBe(
+		expect(pageCard({ title: "API — sdxc", description: "", path: "/api" }).eyebrow).toBe(
 			"API reference",
 		);
 		expect(
-			socialCardContent({ title: "Philosophy — sdxc", description: "", path: "/philosophy" })
-				.eyebrow,
+			pageCard({ title: "Philosophy — sdxc", description: "", path: "/philosophy" }).eyebrow,
 		).toBe("sdxc");
 	});
 
-	test("the home page shows the bare host", () => {
+	test("the home page gets its own card with the pitch and the collection's counts", () => {
 		let content = socialCardContent({ title: "sdxc", description: SITE_DESCRIPTION, path: "/" });
-		expect(content.title).toBe("sdxc");
-		expect(content.url).toBe("sdxc.dev");
+		expect(content.kind).toBe("home");
+		if (content.kind !== "home") return;
+		expect(content.tagline).toBe("Take one, or take the set.");
+		expect(content.description).toMatch(/^\d+ packages for Remix on Cloudflare Workers/);
+		expect(content.stats.map((stat) => stat.label)).toContain("packages");
+		for (let stat of content.stats) expect(stat.value).toMatch(/^\d+$/);
 	});
 
 	test("a title with a dash inside keeps it", () => {
 		expect(
-			socialCardContent({ title: "Before — after — sdxc", description: "", path: "/docs/x" }).title,
+			pageCard({ title: "Before — after — sdxc", description: "", path: "/docs/x" }).title,
 		).toBe("Before — after");
 	});
 });
