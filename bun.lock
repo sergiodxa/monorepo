@@ -1969,7 +1969,10 @@
       "dependencies": {
         "@sdxc/doh": "workspace:*",
         "@sdxc/email-address": "workspace:*",
+        "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/honeypot": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/user-agent": "workspace:*",
       },
       "devDependencies": {
         "remix": "3.0.0",

@@ -76,6 +76,21 @@ Local checks run first, in order. Remote checks run in parallel only while the s
 the spam threshold, and a check that fails or overruns `timeout` adds nothing and is listed in
 `assessment.failures`.
 
+### Score a form before the handler
+
+```typescript
+import { spam } from "@sdxc/spam/middleware";
+
+router.post(routes.contact.action, {
+	middleware: [spam(filter, { fields: { content: "message", email: "email" } })],
+	handler: (ctx) => saveMessage(ctx.formData, ctx.spamAssessment.verdict === "unsure"),
+});
+```
+
+Each entry in `fields` names a form field, and the middleware reads its value from the submitted
+form. A spam verdict is answered with a 422 before the handler runs; the handler reads every other
+assessment from `ctx.spamAssessment`.
+
 ### Learn from moderators
 
 ```typescript
@@ -238,6 +253,20 @@ a ham answer `workers-ai.ham` at `-(hamScore × confidence)` (default 5), with t
 cut to `maxReasonLength` (200) as the detail. Content is cut to `maxContentLength` (4000).
 `model` defaults to `DEFAULT_WORKERS_AI_MODEL`, and takes any text model with JSON mode.
 
+### `@sdxc/spam/middleware`
+
+#### `spam(filter: SpamFilter, options: SpamMiddlewareOptions): Middleware`
+
+Router middleware scoring every request other than GET, HEAD and OPTIONS before the handler.
+`fields` names the form fields to read: `content` (one name, or several joined by line breaks),
+and the author's `name`, `email` and `url`. `format` and `languages` pass through. The
+submission also carries `ctx.ip` from `@sdxc/get-client-ip/middleware`, the raw header from
+`ctx.userAgent` (`@sdxc/user-agent/middleware`) and the render time `honeypot()` from
+`@sdxc/honeypot/middleware` verified, each when that middleware runs earlier.
+A `spam` verdict answers a plain 422 unless `onSpam(assessment, ctx)` returns its own `Response`,
+or `null` to continue. Every assessment is published as `ctx.spamAssessment`
+(`SpamAssessmentKey`), and the body stays readable.
+
 ### `@sdxc/spam/memory`
 
 #### `new MemoryCheck(options?: MemoryCheck.Options)`
@@ -253,27 +282,20 @@ say otherwise. A call answers the next queued outcome, else `signals`.
 ## Pattern: Refuse bots before scoring
 
 [`@sdxc/honeypot`](https://www.npmjs.com/package/@sdxc/honeypot) refuses what no person
-produces before any rule runs, and hands the signed render time the `timing` rule reads.
+produces before any rule runs, and `spam()` hands its signed render time to the `timing` rule.
 
 ```typescript
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
-import { unwrap } from "@sdxc/result";
 import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
+import { spam } from "@sdxc/spam/middleware";
 
 let trap = new Honeypot({ secret: env.HONEYPOT_SECRET });
 let filter = createSpamFilter({ checks: DEFAULT_RULES });
 
 router.post(routes.comments.create, {
-	middleware: [honeypot(trap)],
-	async handler(ctx) {
-		let form = await ctx.request.formData();
-		let assessment = await filter.check({
-			content: String(form.get("content") ?? ""),
-			renderedAt: unwrap(ctx.honeypotOutcome).renderedAt,
-		});
-		return saveComment(form, assessment);
-	},
+	middleware: [honeypot(trap), spam(filter, { fields: { content: "content" } })],
+	handler: (ctx) => saveComment(ctx.formData, ctx.spamAssessment),
 });
 ```
 

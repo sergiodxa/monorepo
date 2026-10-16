@@ -12,7 +12,8 @@
 		"./link-blocklist": "./src/link-blocklist.ts",
 		"./akismet": "./src/akismet.ts",
 		"./bayes": "./src/bayes.ts",
-		"./workers-ai": "./src/workers-ai.ts"
+		"./workers-ai": "./src/workers-ai.ts",
+		"./middleware": "./src/middleware.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
@@ -20,7 +21,10 @@
 	"dependencies": {
 		"@sdxc/doh": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
-		"@sdxc/result": "workspace:*"
+		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/honeypot": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/user-agent": "workspace:*"
 	},
 	"devDependencies": {
 		"remix": "3.0.0"
