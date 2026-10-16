@@ -281,6 +281,8 @@ that fails 30 days before it passes, makes a person review the contact once a ye
 
 ## Where to go next
 
+- [Draw social card images](/docs/building-remix-apps/social-card-images) — the `og:image`
+  each page advertises, drawn per page in the Worker.
 - [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — the pointers JSON
   well-known documents report on a refused member.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the other file
