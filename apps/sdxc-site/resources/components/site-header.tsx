@@ -13,10 +13,10 @@ import { Frame } from "remix/component";
 import { bg, borderEdge, fg } from "sdxc/u/color";
 import { rounded, transition, transitionBehavior } from "sdxc/u/effects";
 import { raw } from "sdxc/u/general";
-import { gap, hidden, hstack, inline, insBs, sticky } from "sdxc/u/layout";
+import { hidden, hstack, inline, insBs, sticky, vstack } from "sdxc/u/layout";
 import { overflow } from "sdxc/u/overflow";
 import { light, media } from "sdxc/u/responsive";
-import { bs, is, maxBs, maxIs, mi, p } from "sdxc/u/size";
+import { bs, is, maxBs, maxIs, mi, minBs, p } from "sdxc/u/size";
 import { z } from "sdxc/u/stacking";
 import { when } from "sdxc/u/state";
 import { text, tracking, weight } from "sdxc/u/typography";
@@ -112,7 +112,6 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 					closedby="any"
 					mix={[
 						p(0),
-						gap(2),
 						bg("transparent"),
 						rounded("none"),
 						overflow("visible"),
@@ -126,11 +125,13 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 						raw({ marginBlock: "min(12vh, 6rem) auto" }),
 					]}
 				>
-					<Frame
-						name="search"
-						src={searchFrameSrc(routes.searchFrame.href(), handle.props.searchQuery ?? "")}
-					/>
-					<SearchQuickLinks currentPath={activePath} />
+					<div mix={[vstack({ gap: 2 }), minBs(0)]}>
+						<Frame
+							name="search"
+							src={searchFrameSrc(routes.searchFrame.href(), handle.props.searchQuery ?? "")}
+						/>
+						<SearchQuickLinks currentPath={activePath} />
+					</div>
 				</Dialog>
 
 				<nav
