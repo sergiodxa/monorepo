@@ -26,13 +26,13 @@ needs [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) and `./testing` nee
 
 ```typescript
 import { createModel } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { fail } from "remix/data-table";
 
 import { users } from "./schema.js";
 
 export const Users = createModel(users, {
-	optional: ["id"],
+	generateId: generateUUID,
 	defaultScope: (query) => query.where({ deleted_at: null }),
 	scopes: {
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
@@ -47,7 +47,7 @@ export const Users = createModel(users, {
 			if (values.name === "") return fail("Name is required", ["name"]);
 		},
 		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID(), email: values.email.toLowerCase() };
+			return { ...values, email: values.email.toLowerCase() };
 		},
 	},
 });
@@ -204,6 +204,9 @@ Defines a model over a data-table table. Every option is optional:
 - `inheritance`: the discriminator column `extend()` pins sub-models on.
 - `optional`: columns `create` may leave out because a callback or the database fills them.
   Nullable columns and `created_at`/`updated_at` are optional already.
+- `generateId`: creates the primary key of a row `create` or `upsert` inserts without one,
+  such as `generateUUID` from `@sdxc/uuid/v7`, and makes the key optional in `create`. A key the
+  caller passes is kept; the table needs a single-column primary key.
 - `metaTable` and `meta`: a key/value companion table and the typed fields read from it.
 
 ### `withContext<Context>()`
@@ -406,7 +409,7 @@ the database has real transactions.
 ```typescript
 import { createModel } from "@sdxc/data-model";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { fail } from "remix/data-table";
 
 import { documents } from "./schema.js";
@@ -414,7 +417,8 @@ import { publishDocument } from "./jobs.js";
 import { slugify } from "./slugify.js";
 
 export const Documents = createModel(documents, {
-	optional: ["id", "slug", "version"],
+	generateId: generateUUID,
+	optional: ["slug", "version"],
 	callbacks: {
 		async validate(values) {
 			if (values.title !== undefined && values.title.trim() === "") {
@@ -422,7 +426,7 @@ export const Documents = createModel(documents, {
 			}
 		},
 		async beforeCreate(values) {
-			return { ...values, id: generateUUID(), slug: slugify(values.title), version: 1 };
+			return { ...values, slug: slugify(values.title), version: 1 };
 		},
 		async beforeUpdate(values, _ctx, before) {
 			return { ...values, version: before.version + 1 };

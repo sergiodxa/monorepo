@@ -99,6 +99,44 @@ describe("inputs", () => {
 		}>();
 	});
 
+	test("generateId makes the primary key optional in create and upsert", () => {
+		let generated = createModel(comments, { generateId: () => "c1" });
+
+		expectTypeOf<CreateValues<typeof generated>>().toEqualTypeOf<{
+			post_id: string;
+			body: string;
+			id?: string;
+			created_at?: string;
+			updated_at?: string;
+		}>();
+		expectTypeOf<CreateValues<typeof COMMENTS>>().toEqualTypeOf<CreateValues<typeof generated>>();
+	});
+
+	test("generateId must answer the primary key's type, on a single-column key", () => {
+		let numbered = table({
+			name: "numbered",
+			columns: { id: c.integer().primaryKey(), name: c.text() },
+		});
+		let pair = table({
+			name: "pairs",
+			primaryKey: ["left", "right"],
+			columns: { left: c.text(), right: c.text() },
+		});
+
+		// @ts-expect-error -- the key is a number
+		expectTypeOf(() => createModel(numbered, { generateId: () => "n1" })).toBeFunction();
+		// @ts-expect-error -- a composite key has no single column to generate
+		expectTypeOf(() => createModel(pair, { generateId: () => "p1" })).toBeFunction();
+		expectTypeOf<CreateValues<ReturnType<typeof keyedByNumber>>>().toEqualTypeOf<{
+			name: string;
+			id?: number;
+		}>();
+
+		function keyedByNumber() {
+			return createModel(numbered, { generateId: () => 1 });
+		}
+	});
+
 	test("update takes every column as optional", () => {
 		expectTypeOf<UpdateValues<typeof USERS>>().toEqualTypeOf<{
 			id?: string;

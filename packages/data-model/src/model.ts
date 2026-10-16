@@ -15,6 +15,8 @@ import type {
 	BindOptions,
 	CheckedDefinition,
 	ContextHost,
+	GeneratedKey,
+	KeyGenerator,
 	ModelContext,
 	ModelContextInit,
 	ModelOptions,
@@ -68,19 +70,39 @@ export interface CreateModel<Context extends ModelContext> {
 		Fields extends FieldMap = {},
 		const Optional extends keyof TableRow<T> & string = never,
 		const Inheritance extends keyof TableRow<T> & string = never,
+		Generate extends KeyGenerator<T> = never,
 	>(
 		table: T,
 		options?: ModelOptions<
-			Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance, Context>,
+			Shape<
+				T,
+				Constraints,
+				Scopes,
+				Methods,
+				Fields,
+				Optional | GeneratedKey<T, Generate>,
+				Inheritance,
+				Context
+			>,
 			Constraints,
 			Scopes,
 			Methods,
 			Fields,
 			Optional,
-			Inheritance
+			Inheritance,
+			Generate
 		>,
 	): CheckedDefinition<
-		Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance, Context>,
+		Shape<
+			T,
+			Constraints,
+			Scopes,
+			Methods,
+			Fields,
+			Optional | GeneratedKey<T, Generate>,
+			Inheritance,
+			Context
+		>,
 		Methods
 	>;
 }
@@ -92,6 +114,7 @@ export interface CreateModel<Context extends ModelContext> {
  *
  * @example
  * export const Users = createModel(users, {
+ * 	generateId: generateUUID,
  * 	scopes: { active: (query) => query.where({ deleted_at: null }) },
  * 	methods: { findByEmail(email: string) { return this.active().where({ email }).first(); } },
  * });

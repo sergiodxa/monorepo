@@ -694,6 +694,22 @@ export type ModelKey<T extends AnyTable> =
 			: TableRow<T>[Column]
 		: PrimaryKeyInput<T>;
 
+/** A table's primary-key column when the key is a single column, `never` for a composite key. */
+export type SingleKeyColumn<T extends AnyTable> =
+	TablePrimaryKey<T> extends readonly (infer Column extends keyof TableRow<T> & string)[]
+		? true extends IsUnion<Column>
+			? never
+			: Column
+		: never;
+
+/** What `generateId` returns: a new value for the table's single primary-key column. */
+export type KeyGenerator<T extends AnyTable> = () => TableRow<T>[SingleKeyColumn<T>];
+
+/** The key column `create` may leave out because `Generate` fills it, `never` without one. */
+export type GeneratedKey<T extends AnyTable, Generate> = [Generate] extends [never]
+	? never
+	: SingleKeyColumn<T>;
+
 /**
  * The shape `createModel` builds from its inferred options.
  *
@@ -851,6 +867,7 @@ export interface ModelOptions<
 	Fields extends FieldMap,
 	Optional extends string,
 	Inheritance extends string,
+	Generate extends KeyGenerator<S["table"]> = never,
 > {
 	/** Columns pinned to fixed values: every query filters on them and every create writes them. */
 	constraints?: Constraints;
@@ -858,6 +875,14 @@ export interface ModelOptions<
 	inheritance?: Inheritance;
 	/** Columns `create` may leave out because a `beforeCreate` callback or the database fills them. */
 	optional?: readonly Optional[];
+	/**
+	 * Creates the primary key of a row `create` or `upsert` inserts without one, so `create`
+	 * takes the key as optional; a key the caller passes is written as given. The table needs a
+	 * single-column primary key.
+	 *
+	 * @example createModel(users, { generateId: generateUUID })
+	 */
+	generateId?: Generate;
 	/**
 	 * Named refinements, each receiving a query and answering it refined. The intersection is
 	 * what gives each scope's `query` parameter its type while `Scopes` is inferred.

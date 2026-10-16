@@ -39,6 +39,18 @@ function split(config: ModelConfig, values: Row): { columns: Row; meta: Row | un
 	return { columns, meta: meta === undefined || meta === null ? undefined : (meta as Row) };
 }
 
+/**
+ * Fills the primary key of a row about to be inserted from the model's `generateId`, keeping a
+ * key the caller passed, so every callback and the statement see the same key.
+ */
+function withKey(config: ModelConfig, columns: Row): Row {
+	let [column] = config.primaryKey;
+	if (config.generateId === undefined || column === undefined) return columns;
+	return columns[column] === undefined || columns[column] === null
+		? { ...columns, [column]: config.generateId() }
+		: columns;
+}
+
 /** Reads the row a query selects, with its meta, or `null`. */
 async function readRow(
 	session: Session,
@@ -191,6 +203,7 @@ export function createRow(
 async function insert(scoped: Session, config: ModelConfig, values: Row): Promise<Outcome> {
 	let ctx = modelContext(scoped);
 	let initial = split(config, values);
+	initial.columns = withKey(config, initial.columns);
 
 	let invalid = await validate(config, initial.columns, initial.meta, "create", ctx);
 	if (invalid !== null) return failed(invalid);
@@ -423,7 +436,7 @@ export function upsertRow(
 	return runWrite(session, async (scoped) => {
 		let target = [...(options.conflict ?? config.primaryKey)];
 		let { columns } = split(config, values);
-		let inserted: Row = { ...columns, ...config.constraints };
+		let inserted: Row = { ...withKey(config, columns), ...config.constraints };
 		let { createdAt, updatedAt } = timestampColumns(config);
 		let now = scoped.db.now();
 

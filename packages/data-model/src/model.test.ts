@@ -805,3 +805,74 @@ describe("constraints and sub-models", () => {
 		expect(loaded?.comments.map((comment) => comment.body)).toEqual(["Hi"]);
 	});
 });
+
+describe("generated keys", () => {
+	/** A users model whose keys come from `generateId`, recording what `beforeCreate` saw. */
+	function setupGenerated() {
+		let seen: unknown[] = [];
+		let Users = createModel(users, {
+			generateId: createIds("user"),
+			optional: ["role"],
+			callbacks: {
+				async beforeCreate(values) {
+					seen.push(values.id);
+					return { ...values, role: values.role ?? "member" };
+				},
+			},
+		});
+		let { db } = openDatabase();
+		return { db, users: Users.bind({ db }), seen };
+	}
+
+	test("create fills the key, and beforeCreate already sees it", async () => {
+		let { users, seen } = setupGenerated();
+
+		let created = unwrap(await users.create({ email: "a@example.com", name: "Ada" }));
+
+		expect(created.id).toBe("user_0001");
+		expect(seen).toEqual(["user_0001"]);
+		expect((await users.find("user_0001"))?.name).toBe("Ada");
+	});
+
+	test("create keeps a key the caller passes", async () => {
+		let { users } = setupGenerated();
+
+		let created = unwrap(await users.create({ id: "mine", email: "a@example.com", name: "Ada" }));
+
+		expect(created.id).toBe("mine");
+	});
+
+	test("upsert fills the key of the row it inserts", async () => {
+		let { users } = setupGenerated();
+
+		let created = unwrap(
+			await users.upsert({ email: "a@example.com", name: "Ada", role: "member" }),
+		);
+
+		expect(created.id).toBe("user_0001");
+	});
+
+	test("a sub-model inherits the base's generateId", async () => {
+		let { db, users } = setupGenerated();
+		let author = unwrap(await users.create({ email: "a@example.com", name: "Ada" }));
+		let Posts = createModel(posts, { inheritance: "type", generateId: createIds("post") });
+		let Likes = Posts.extend("like", {});
+
+		let like = unwrap(await Likes.bind({ db }).create({ author_id: author.id }));
+
+		expect(like.id).toBe("post_0001");
+		expect(like.type).toBe("like");
+	});
+
+	test("generateId on a composite primary key is refused", () => {
+		let pairs = table({
+			name: "pairs",
+			primaryKey: ["left", "right"],
+			columns: { left: c.text(), right: c.text() },
+		});
+
+		expect(() => createModel(pairs, { generateId: (() => "x") as never })).toThrow(
+			"`generateId` needs a single-column primary key",
+		);
+	});
+});

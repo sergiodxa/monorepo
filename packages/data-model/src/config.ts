@@ -91,6 +91,8 @@ export interface ModelConfig {
 	callbacks: Callbacks<any>[];
 	metaTable: ResolvedMetaTable | undefined;
 	fields: FieldMap;
+	/** Creates the single primary-key column of a row inserted without one. */
+	generateId: (() => unknown) | undefined;
 }
 
 /** The options `createModel` and `extend` resolve, as the runtime reads them. */
@@ -104,6 +106,7 @@ export interface RawOptions {
 	callbacks?: Callbacks<any>;
 	metaTable?: MetaTableOptions;
 	meta?: FieldMap;
+	generateId?: () => unknown;
 }
 
 /**
@@ -188,7 +191,8 @@ function checkScopeNames(scopes: Record<string, RuntimeScope>, existing: Record<
 /**
  * Resolves `createModel`'s options.
  *
- * @throws {TypeError} When a scope shadows a member, or meta fields lack a meta table.
+ * @throws {TypeError} When a scope shadows a member, meta fields lack a meta table, or
+ * `generateId` meets a composite primary key.
  */
 export function resolveConfig(table: AnyTable, options: RawOptions): ModelConfig {
 	let scopes = options.scopes ?? {};
@@ -205,6 +209,9 @@ export function resolveConfig(table: AnyTable, options: RawOptions): ModelConfig
 	if (metaTable !== undefined && primaryKey.length !== 1) {
 		throw new TypeError("A model with a meta table needs a single-column primary key");
 	}
+	if (options.generateId !== undefined && primaryKey.length !== 1) {
+		throw new TypeError("`generateId` needs a single-column primary key");
+	}
 
 	return {
 		name: getTableName(table),
@@ -219,6 +226,7 @@ export function resolveConfig(table: AnyTable, options: RawOptions): ModelConfig
 		callbacks: options.callbacks === undefined ? [] : [options.callbacks],
 		metaTable,
 		fields,
+		generateId: options.generateId,
 	};
 }
 
