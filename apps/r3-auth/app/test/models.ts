@@ -10,7 +10,7 @@ import type { Database } from "remix/data-table";
 
 import type { AuthModels } from "~/app/models";
 
-import { models } from "~/app/models";
+import registry from "~/app/models";
 import { createTestDatabase } from "~/app/test/db";
 
 /**
@@ -19,7 +19,7 @@ import { createTestDatabase } from "~/app/test/db";
  * @param db - A database from `createTestDatabase()`.
  */
 export function bindModels(db: Database): AuthModels {
-	return models.bind({ db });
+	return registry.bind({ db });
 }
 
 /**

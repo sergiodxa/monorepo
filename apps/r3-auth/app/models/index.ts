@@ -18,7 +18,8 @@ import type { Grants } from "./grants";
 import type { Sessions } from "./sessions";
 import type { Subjects } from "./subjects";
 
-export const models = createModels({
+/** The registry the router, the job dispatcher and the command line each bind per invocation. */
+export default createModels({
 	subjects: () => import("./subjects"),
 	credentials: () => import("./credentials"),
 	connections: () => import("./connections"),

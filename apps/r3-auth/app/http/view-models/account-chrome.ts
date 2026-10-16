@@ -7,8 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
+import type { AppContext } from "~/app/initializers/router";
 import type { AccountLayout } from "~/resources/layouts/account";
 
 import abilities from "~/app/policies/abilities";
@@ -36,7 +35,7 @@ export type AccountChrome = Omit<AccountLayout.Props, "children" | "assets">;
  * offers the admin link exactly when `ctx.access` opens the admin area. The trail carries
  * only the page's ancestors, since the heading beneath it already names the page.
  */
-export function accountChrome(ctx: RequestContext, input: AccountChromeInput): AccountChrome {
+export function accountChrome(ctx: AppContext, input: AccountChromeInput): AccountChrome {
 	return {
 		documentTitle: input.documentTitle,
 		heading: input.heading,

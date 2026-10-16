@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
@@ -40,13 +40,13 @@ const NO_STORE: HeadersInit = { "Cache-Control": "no-store, private" };
  * Resolves the public id of the session this browser is signed in with, from the refresh
  * token its cookie session holds, or `null` when it holds none that is still live.
  */
-async function currentSessionId(ctx: RequestContext): Promise<string | null> {
+async function currentSessionId(ctx: AppContext): Promise<string | null> {
 	let refreshToken = getRefreshToken();
 	if (!refreshToken) return null;
 	return (await ctx.models.sessions.findByRefreshToken(refreshToken))?.id ?? null;
 }
 
-async function sessionsPage(ctx: RequestContext): Promise<Response> {
+async function sessionsPage(ctx: AppContext): Promise<Response> {
 	let subject = ctx.subject;
 	let [sessions, current] = await Promise.all([
 		ctx.models.sessions.findBySubjectId(subject.id),

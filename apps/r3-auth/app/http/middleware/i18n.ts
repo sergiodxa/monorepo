@@ -10,10 +10,7 @@
 import i18nMiddleware from "@sdxc/i18n/middleware";
 import { createCookie } from "remix/cookie";
 
-import en from "~/resources/locales/en";
-
-/** The only language this server currently serves. */
-const DEFAULT_LANGUAGE = "en";
+import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 
 /**
  * Cookie holding a chosen language. The name is kept as it is because browsers that
@@ -27,12 +24,12 @@ const languageCookie = createCookie("sdx:i18n", { path: "/", sameSite: "Lax" });
  */
 export const i18n = i18nMiddleware({
 	detection: {
-		supportedLanguages: [DEFAULT_LANGUAGE],
-		fallbackLanguage: DEFAULT_LANGUAGE,
+		supportedLanguages: SUPPORTED_LANGUAGES,
+		fallbackLanguage: FALLBACK_LANGUAGE,
 		cookie: languageCookie,
 		order: ["cookie", "header"],
 	},
-	resources: { en },
+	resources: RESOURCES,
 });
 
 export default i18n;

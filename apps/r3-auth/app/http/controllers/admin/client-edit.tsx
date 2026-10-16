@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
@@ -26,7 +26,7 @@ import ClientEditView from "~/resources/views/admin/client-edit";
 import routes from "~/routes/web";
 
 /** The page's chrome, shared by the form, a failed submission and the secret reveal. */
-function chrome(ctx: RequestContext, clientName: string, clientId: string) {
+function chrome(ctx: AppContext, clientName: string, clientId: string) {
 	return toChrome(ctx, {
 		documentTitle: ctx.intl.t("admin.clients.edit.documentTitle", { name: clientName }),
 		heading: ctx.intl.t("admin.clients.edit.title"),
@@ -40,7 +40,7 @@ function chrome(ctx: RequestContext, clientName: string, clientId: string) {
 }
 
 /** Every string the edit page renders, resolved once per request. */
-function labels(ctx: RequestContext) {
+function labels(ctx: AppContext) {
 	return {
 		title: ctx.intl.t("admin.clients.edit.title"),
 		description: ctx.intl.t("admin.clients.edit.description"),

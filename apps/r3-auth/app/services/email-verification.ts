@@ -14,7 +14,6 @@
  */
 
 import type { Result } from "@sdxc/result";
-import type { RequestContext } from "remix/router";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
@@ -22,6 +21,7 @@ import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { AuthModels } from "~/app/models";
 import type { SelectSubject } from "~/database/schema";
 
@@ -137,7 +137,7 @@ function verificationUrl(token: string): string {
  *   own response is identical on every outcome, so sign-in paths can ignore it.
  */
 export async function sendVerificationEmail(
-	ctx: RequestContext,
+	ctx: AppContext,
 	subjectId: string,
 ): Promise<VerificationSendOutcome> {
 	try {

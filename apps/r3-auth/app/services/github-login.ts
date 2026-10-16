@@ -16,7 +16,6 @@
 import type { Billing } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
 import type { GitHubAuthProfile } from "remix/auth";
-import type { RequestContext } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
@@ -25,6 +24,7 @@ import { env } from "cloudflare:workers";
 import { createGitHubAuthProvider, finishExternalAuth, startExternalAuth } from "remix/auth";
 import * as s from "remix/data-schema";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { AuthModels } from "~/app/models";
 
 import Customer from "~/app/services/customer";
@@ -114,7 +114,7 @@ function createProvider(origin: string) {
  * session and answers with the redirect to GitHub. The default scopes already
  * cover what this server needs, so none are requested explicitly.
  */
-export async function startGitHubLogin(ctx: RequestContext): Promise<Response> {
+export async function startGitHubLogin(ctx: AppContext): Promise<Response> {
 	return await startExternalAuth(createProvider(ctx.url.origin), ctx);
 }
 
@@ -168,7 +168,7 @@ async function isGitHubEmailVerified(accessToken: string, email: string | null):
  * to `access_denied`; anything else becomes a fixed `server_error`, so nothing leaks to the relying party.
  */
 export async function finishGitHubLogin(
-	ctx: RequestContext,
+	ctx: AppContext,
 ): Promise<Result<GitHubIdentity, ProviderLoginError>> {
 	let providerError = ctx.url.searchParams.get("error");
 

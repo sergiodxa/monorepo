@@ -9,16 +9,18 @@
 
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
+import { models } from "@sdxc/data-model/jobs";
+import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
-import { models } from "~/app/jobs/middleware/models";
+import registry from "~/app/models";
 
 /** Reports a completed run to the monitor watching it. The token resolves per call. */
 const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
@@ -30,7 +32,10 @@ const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(createDatabase), models()],
+	middleware: [
+		database(openDatabase),
+		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+	] as const,
 	queue: cloudflare.queue(() => env.QUEUE),
 
 	/**
@@ -54,6 +59,7 @@ export const dispatcher = createJobDispatcher({
 dispatcher.map(jobs.cleanExpiredSessions, () => import("~/app/jobs/clean-expired-sessions"));
 
 declare module "@sdxc/jobs" {
+	/** Types every job handler's `ctx` with what the dispatcher's middleware publishes: `ctx.db` and `ctx.models`. */
 	interface JobTypes {
 		context: JobDispatcherContext<typeof dispatcher>;
 	}

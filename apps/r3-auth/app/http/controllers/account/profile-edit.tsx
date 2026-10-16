@@ -9,7 +9,6 @@
  */
 
 import type { ValidationError } from "@sdxc/validate";
-import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -17,6 +16,7 @@ import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { SelectSubject } from "~/database/schema";
 
 import subjectAccess from "~/app/http/middleware/access";
@@ -67,7 +67,7 @@ function fieldError(issues: ValidationError["issues"], field: string): string | 
  * @param error - A failure no single field owns, such as a username already taken.
  */
 function editPage(
-	ctx: RequestContext,
+	ctx: AppContext,
 	values: ProfileValues,
 	issues: ValidationError["issues"] = [],
 	error: string | null = null,

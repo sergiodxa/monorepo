@@ -10,9 +10,11 @@
 import type { Billing } from "@sdxc/billing";
 import type { Transport } from "@sdxc/mail";
 import type { Database as DataTable } from "remix/data-table";
+import type { RouterContext } from "remix/router";
 
 import { assets } from "@sdxc/assets-middleware";
 import billing from "@sdxc/billing/middleware";
+import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
@@ -31,15 +33,15 @@ import type Limiters from "~/app/services/rate-limiters";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import i18n from "~/app/http/middleware/i18n";
-import { models } from "~/app/http/middleware/models";
 import { rateLimiters } from "~/app/http/middleware/rate-limiters";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
-import { createDatabase } from "~/app/initializers/database";
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { createMailTransport } from "~/app/initializers/mail";
 import { createRateLimiters } from "~/app/initializers/rate-limiters";
+import registry from "~/app/models";
 import routes from "~/routes/web";
 
 /**
@@ -48,6 +50,16 @@ import routes from "~/routes/web";
  * breaks every relying party's login at once.
  */
 const COP_BYPASS_PATTERNS = ["/oauth/{path...}", "/api/{path...}", "/oidc/logout"];
+
+/** The context a controller sees once the router's middleware has run. */
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
+
+declare module "remix/router" {
+	/** Types `createAction` and `createController` with the context the router's chain builds. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
 
 /** What the router reads per request, and the services a test substitutes for the bindings. */
 export interface WebRouterOptions {
@@ -79,8 +91,8 @@ export function createWebRouter(options: WebRouterOptions) {
 		middleware: [
 			headRequests(),
 			asyncContext(),
-			database(options.db ?? createDatabase()),
-			models(),
+			database(options.db ?? openDatabase()),
+			models(registry, (ctx) => ({ db: ctx.db })),
 			rateLimiters(() => options.limiters ?? createRateLimiters()),
 			log(logger),
 			getClientIP(),

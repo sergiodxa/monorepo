@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
+import type { AppContext } from "~/app/initializers/router";
 
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { NewSignInEmail } from "~/app/emails/new-sign-in";
@@ -27,7 +27,7 @@ import { describeUserAgent } from "~/app/http/view-models/account-session";
  *   client address are all read from it.
  * @param subjectId - Subject the session was opened for.
  */
-export async function notifyNewSignIn(ctx: RequestContext, subjectId: string): Promise<void> {
+export async function notifyNewSignIn(ctx: AppContext, subjectId: string): Promise<void> {
 	try {
 		let subject = await ctx.models.subjects.find(subjectId);
 		if (!subject) {

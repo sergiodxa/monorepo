@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
@@ -24,7 +24,7 @@ import SubjectEditView from "~/resources/views/admin/subject-edit";
 import routes from "~/routes/web";
 
 /** The page's chrome, shared by the form and a failed submission. */
-function chrome(ctx: RequestContext, displayName: string, subjectId: string) {
+function chrome(ctx: AppContext, displayName: string, subjectId: string) {
 	return toChrome(ctx, {
 		documentTitle: ctx.intl.t("admin.subjects.edit.documentTitle", { name: displayName }),
 		heading: ctx.intl.t("admin.subjects.edit.title"),
@@ -38,7 +38,7 @@ function chrome(ctx: RequestContext, displayName: string, subjectId: string) {
 }
 
 /** Every string the edit page renders, resolved once per request. */
-function labels(ctx: RequestContext) {
+function labels(ctx: AppContext) {
 	return {
 		title: ctx.intl.t("admin.subjects.edit.title"),
 		description: ctx.intl.t("admin.subjects.edit.description"),

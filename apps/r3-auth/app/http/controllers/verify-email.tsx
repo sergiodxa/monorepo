@@ -9,12 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { VerificationError } from "~/app/services/email-verification";
 
 import {
@@ -49,7 +48,7 @@ const TOKEN_PAGE_HEADERS: HeadersInit = {
  *   retrying client does not treat it as final.
  */
 function outcomePage(
-	ctx: RequestContext,
+	ctx: AppContext,
 	outcome: "verified" | "invalid" | "unavailable",
 	status: number,
 ): Response | Promise<Response> {
@@ -82,7 +81,7 @@ function outcomePage(
 }
 
 /** The page a token that is still unspent is answered with, offering the one button. */
-function confirmPage(ctx: RequestContext, token: string): Response | Promise<Response> {
+function confirmPage(ctx: AppContext, token: string): Response | Promise<Response> {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -101,7 +100,7 @@ function confirmPage(ctx: RequestContext, token: string): Response | Promise<Res
 }
 
 /** The page a failed consumption is answered with, by why it failed. */
-function failurePage(ctx: RequestContext, error: VerificationError): Response | Promise<Response> {
+function failurePage(ctx: AppContext, error: VerificationError): Response | Promise<Response> {
 	if (error.reason === "unavailable") return outcomePage(ctx, "unavailable", 503);
 
 	return outcomePage(ctx, "invalid", 400);

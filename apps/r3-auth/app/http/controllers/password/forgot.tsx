@@ -11,13 +11,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { ForgotPasswordSchema } from "~/app/http/validators/password";
 import { requestPasswordReset } from "~/app/services/password-reset";
@@ -34,7 +34,7 @@ import routes from "~/routes/web";
  * @param error - Why the previous submission was refused, already translated.
  */
 function requestPage(
-	ctx: RequestContext,
+	ctx: AppContext,
 	value: string,
 	error: string | null,
 ): Response | Promise<Response> {
@@ -65,7 +65,7 @@ function requestPage(
  * headers for a registered address, an unregistered one, and an address inside its cooldown.
  * It ends the flow, since the only step left is a retry the cooldown refuses.
  */
-function sentPage(ctx: RequestContext): Response | Promise<Response> {
+function sentPage(ctx: AppContext): Response | Promise<Response> {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}

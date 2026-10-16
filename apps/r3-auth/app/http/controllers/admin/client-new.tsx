@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
@@ -22,7 +22,7 @@ import ClientNewView from "~/resources/views/admin/client-new";
 import routes from "~/routes/web";
 
 /** The page's chrome, shared by the form, the failed submission and the reveal. */
-function chrome(ctx: RequestContext) {
+function chrome(ctx: AppContext) {
 	return toChrome(ctx, {
 		documentTitle: ctx.intl.t("admin.clients.create.documentTitle"),
 		heading: ctx.intl.t("admin.clients.create.title"),
@@ -35,7 +35,7 @@ function chrome(ctx: RequestContext) {
 }
 
 /** Every string the create page renders, resolved once per request. */
-function labels(ctx: RequestContext) {
+function labels(ctx: AppContext) {
 	return {
 		title: ctx.intl.t("admin.clients.create.title"),
 		description: ctx.intl.t("admin.clients.create.description"),

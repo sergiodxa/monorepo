@@ -10,8 +10,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { randomToken } from "@sdxc/crypto";
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
@@ -22,6 +20,7 @@ import { createController } from "remix/router";
 
 import type { AuthzState, ResponseMode } from "~/app/http/middleware/session";
 import type { AuthorizeQuery } from "~/app/http/validators/authorize";
+import type { AppContext } from "~/app/initializers/router";
 import type { SelectClient } from "~/database/schema";
 
 import {
@@ -75,7 +74,7 @@ const SELF_LOGIN_SCOPE = "openid offline_access";
  *
  * @param code - The `error` value the engine reported.
  */
-function signInErrorMessage(ctx: RequestContext, code: string): string {
+function signInErrorMessage(ctx: AppContext, code: string): string {
 	return ctx.intl.t(SIGN_IN_ERROR_KEYS[code] ?? SIGN_IN_ERROR_FALLBACK_KEY);
 }
 
@@ -117,7 +116,7 @@ function readPkce(query: AuthorizeQuery): OIDC.Pkce | null | undefined {
  * error only ever reaches an address the client registered.
  */
 async function errorRedirect(
-	ctx: RequestContext,
+	ctx: AppContext,
 	query: { redirect_uri: string; state: string; response_mode: ResponseMode },
 	error: string,
 	description: string,
@@ -136,7 +135,7 @@ async function errorRedirect(
  * @param error - Why the previous attempt was refused, already translated, when this
  * is a re-render.
  */
-function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState, error?: string) {
+function signInPage(ctx: AppContext, client: SelectClient, authz: AuthzState, error?: string) {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -182,7 +181,7 @@ function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState
  * authorization request for it, and redirects to itself carrying that request, so a
  * bare `/authorize` reaches the account area through the same flow relying parties use.
  */
-async function selfRedirect(ctx: RequestContext): Promise<Response> {
+async function selfRedirect(ctx: AppContext): Promise<Response> {
 	let client = unwrap(await ctx.models.clients.ensureAuthServerClient(ctx.url));
 	let state = randomToken();
 

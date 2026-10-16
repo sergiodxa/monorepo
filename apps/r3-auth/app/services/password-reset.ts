@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { toMs, toSeconds } from "@sdxc/duration";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
@@ -86,7 +86,7 @@ function resetUrl(token: string): string {
  * @param email - The address in its canonical form, as `ForgotPasswordSchema` answers it,
  *   which is what the cooldown is keyed on and the subject is looked up by.
  */
-export async function requestPasswordReset(ctx: RequestContext, email: string): Promise<void> {
+export async function requestPasswordReset(ctx: AppContext, email: string): Promise<void> {
 	try {
 		let cooldownDigest = await digest(email);
 		if (!cooldownDigest) {

@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
@@ -26,7 +26,7 @@ import AccountLayout from "~/resources/layouts/account";
 import GrantsView from "~/resources/views/account/grants";
 import routes from "~/routes/web";
 
-async function grantsPage(ctx: RequestContext): Promise<Response> {
+async function grantsPage(ctx: AppContext): Promise<Response> {
 	let subject = ctx.subject;
 	let grants = await ctx.models.grants.findBySubjectId(subject.id);
 

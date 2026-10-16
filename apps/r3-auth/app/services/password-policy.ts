@@ -10,11 +10,12 @@
 
 import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Result } from "@sdxc/result";
-import type { RequestContext } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
 import { checkPassword } from "@sdxc/password-policy";
 import { isSuccess, success } from "@sdxc/result";
+
+import type { AppContext } from "~/app/initializers/router";
 
 /**
  * Fewest characters a new password may have. Eight is NIST's floor for a password that
@@ -78,10 +79,7 @@ export async function checkNewPassword(
  *
  * @param issue - The refusal's `issue`, as {@link checkNewPassword} answered it.
  */
-export function passwordRefusalMessage(
-	ctx: RequestContext,
-	issue: PasswordPolicyError.Issue,
-): string {
+export function passwordRefusalMessage(ctx: AppContext, issue: PasswordPolicyError.Issue): string {
 	switch (issue.reason) {
 		case "too-short":
 			return ctx.intl.t("password.policy.tooShort", { minLength: issue.minLength });

@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { badRequest } from "@sdxc/http/response/json";
 import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { AuthzState } from "~/app/http/middleware/session";
+import type { AppContext } from "~/app/initializers/router";
 
 import { getAuthz, unsetAuthz } from "~/app/http/middleware/session";
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
@@ -54,7 +53,7 @@ function opBrowserStateCookie(value: string): string {
  * @param error - The OAuth error code and the description shown to the person.
  */
 async function errorResponse(
-	ctx: RequestContext,
+	ctx: AppContext,
 	authz: AuthzState,
 	error: { code: string; description: string },
 ): Promise<Response> {

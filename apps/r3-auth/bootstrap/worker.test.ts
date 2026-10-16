@@ -51,7 +51,7 @@ vi.doMock("cloudflare:workers", () => ({
  * Hands every job the database this file seeds, read at call time so each test's own
  * database is the one the sweep under test sweeps.
  */
-vi.doMock("~/app/initializers/database", () => ({ createDatabase: () => db }));
+vi.doMock("~/app/initializers/database", () => ({ openDatabase: () => db }));
 
 /**
  * The worker under test, imported once here at module scope. It reaches the

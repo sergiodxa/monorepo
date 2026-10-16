@@ -8,10 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { formatParts } from "@sdxc/dates";
 
+import type { AppContext } from "~/app/initializers/router";
 import type { SessionWithClient } from "~/app/models/sessions";
 import type { SelectClient, SelectConnection, SelectSubject } from "~/database/schema";
 
@@ -217,7 +216,7 @@ export function toPagination(
  *
  * @param ctx - The request, for its translator.
  */
-export function toNav(ctx: RequestContext): AdminView.Nav {
+export function toNav(ctx: AppContext): AdminView.Nav {
 	return {
 		label: ctx.intl.t("admin.nav.label"),
 		dashboard: ctx.intl.t("admin.nav.items.dashboard"),
@@ -234,7 +233,7 @@ export function toNav(ctx: RequestContext): AdminView.Nav {
  * trail reads.
  */
 export function toChrome(
-	ctx: RequestContext,
+	ctx: AppContext,
 	input: {
 		documentTitle: string;
 		heading: string;

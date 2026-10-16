@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { redirect } from "@sdxc/http/response";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import {
 	destroySession,
@@ -43,7 +43,7 @@ const CLEAR_SITE_DATA: HeadersInit = { "Clear-Site-Data": '"*"' };
  * leaves the parameters or the subject undetermined: the person in front of the browser
  * can still answer the question the page asks.
  */
-function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
+function confirmationPage(ctx: AppContext): Response | Promise<Response> {
 	return ctx.render(
 		<LogoutView
 			assets={ctx.assets}
@@ -59,7 +59,7 @@ function confirmationPage(ctx: RequestContext): Response | Promise<Response> {
  * back so a relying party can correlate the round trip. Falls back to this server's own
  * authorization endpoint, since `target` holds only addresses a client registered.
  */
-function postLogoutUrl(ctx: RequestContext, target: string | undefined, state?: string): string {
+function postLogoutUrl(ctx: AppContext, target: string | undefined, state?: string): string {
 	let url = new URL(target ?? new URL(routes.authorize.index.href(), ctx.url.origin).toString());
 	if (state) url.searchParams.set("state", state);
 	return url.toString();

@@ -12,13 +12,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
-
 import { password } from "@sdxc/crypto";
 import { addressKey } from "@sdxc/rate-limit";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
+
+import type { AppContext } from "~/app/initializers/router";
 
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
@@ -51,7 +51,7 @@ const TOKEN_PAGE_HEADERS: HeadersInit = {
  * @param error - Why the previous submission was refused, already translated.
  */
 function resetPage(
-	ctx: RequestContext,
+	ctx: AppContext,
 	token: string,
 	error: string | null,
 ): Response | Promise<Response> {
@@ -86,7 +86,7 @@ function resetPage(
  * subject that no longer exists. One page and one `400` for all four, so a token's holder
  * learns only that it is unusable; the next step, asking for a new link, is the same anyway.
  */
-function invalidPage(ctx: RequestContext): Response | Promise<Response> {
+function invalidPage(ctx: AppContext): Response | Promise<Response> {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -107,7 +107,7 @@ function invalidPage(ctx: RequestContext): Response | Promise<Response> {
 }
 
 /** The page a completed reset ends on, offering the way back to signing in. */
-function donePage(ctx: RequestContext): Response | Promise<Response> {
+function donePage(ctx: AppContext): Response | Promise<Response> {
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -134,7 +134,7 @@ function donePage(ctx: RequestContext): Response | Promise<Response> {
  *
  * @returns How many sessions were revoked, for the log line.
  */
-async function revokeSessions(ctx: RequestContext, subjectId: string) {
+async function revokeSessions(ctx: AppContext, subjectId: string) {
 	try {
 		await createOidcProvider(ctx.models).sendBackchannelLogoutTokens(subjectId);
 	} catch (error) {
