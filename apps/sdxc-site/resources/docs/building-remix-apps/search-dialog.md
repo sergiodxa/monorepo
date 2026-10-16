@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 13
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-16
 ---
 
 [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) builds the
@@ -15,9 +15,9 @@ shows the top matches as the reader types, and Enter or "See all" leads to a `/s
 with every match, paged. Each layer starts as plain HTML: a form that submits to `/search`
 works in a browser running no script, and the live results are an upgrade on top of it.
 
-[`@sdxc/ui`](/api/ui) supplies the dialog, the search field, the highlighted text, the field
-error and the pager, and [`@sdxc/u`](/api/u) styles what sits between them. The server side
-comes from [`@sdxc/search`](/api/search) and [`@sdxc/pagination`](/api/pagination), as the
+[`@sdxc/ui`](/api/ui) supplies the dialog, the search field, the frame reload as the reader
+types, the highlighted text, the field error and the pager, and [`@sdxc/u`](/api/u) styles what
+sits between them. The server side comes from [`@sdxc/search`](/api/search) and [`@sdxc/pagination`](/api/pagination), as the
 search guide set them up, and [`@sdxc/workers-cache`](/api/workers-cache) caches the dialog's
 answers at the edge.
 
@@ -308,19 +308,20 @@ excerpt.
 
 ## Reload the frame as the reader types
 
-`SearchBox` is the one client entry. It renders the box, and once script runs it points the
-frame at the fragment for the text so far and reloads it, once typing pauses:
+`SearchBox` is the one client entry. It renders the box, and once script runs the `liveFrame`
+mixin from `@sdxc/ui/mixins` points the frame at the fragment for the text so far and reloads
+it, once typing pauses:
 
 ```tsx {% title="resources/components/search-box.tsx" %}
+import type { LiveFrameEvent } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
 
 import { SearchField } from "@sdxc/ui";
-import { bindKeymap } from "@sdxc/ui/mixins";
+import { bindKeymap, LIVE_FRAME_RELOAD_EVENT, liveFrame } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 export const SEARCH_DIALOG_ID = "site-search";
 export const SEARCH_RESULTS_ID = "site-search-results";
-const DEBOUNCE_MS = 200;
 
 export function searchFrameSrc(frameSrc: string, text: string) {
 	let query = text.trim();
@@ -333,10 +334,10 @@ function searchDialog() {
 	return dialog instanceof HTMLDialogElement ? dialog : null;
 }
 
-function markBusy(busy: boolean) {
+function markBusy(event: LiveFrameEvent) {
 	let results = document.getElementById(SEARCH_RESULTS_ID);
-	if (busy) results?.setAttribute("aria-busy", "true");
-	else results?.removeAttribute("aria-busy");
+	if (event.state === "settled") results?.removeAttribute("aria-busy");
+	else results?.setAttribute("aria-busy", "true");
 }
 
 type SearchBoxProps = { id: string; query: string; frameSrc: string };
@@ -344,33 +345,13 @@ type SearchBoxProps = { id: string; query: string; frameSrc: string };
 export const SearchBox = clientEntry(
 	"/resources/components/search-box.tsx#SearchBox",
 	function SearchBox(handle: Handle<SearchBoxProps>) {
-		let debounce: ReturnType<typeof setTimeout> | undefined;
-		let latest = 0;
 		let initialQuery = handle.props.query;
-		handle.signal.addEventListener("abort", () => clearTimeout(debounce));
-
-		async function load(src: string, keystroke: number) {
-			if (src !== handle.frame.src) {
-				handle.frame.src = src;
-				await handle.frame.reload().catch(() => undefined);
-			}
-			if (keystroke === latest) markBusy(false);
-		}
-
-		function search(text: string) {
-			let keystroke = ++latest;
-			clearTimeout(debounce);
-			markBusy(true);
-			debounce = setTimeout(() => {
-				void load(searchFrameSrc(handle.props.frameSrc, text), keystroke);
-			}, DEBOUNCE_MS);
-		}
 
 		function reset() {
 			let box = document.getElementById(handle.props.id);
-			if (box instanceof HTMLInputElement) box.value = initialQuery;
-			clearTimeout(debounce);
-			void load(searchFrameSrc(handle.props.frameSrc, initialQuery), ++latest);
+			if (!(box instanceof HTMLInputElement)) return;
+			box.value = initialQuery;
+			box.dispatchEvent(new Event(LIVE_FRAME_RELOAD_EVENT));
 		}
 
 		handle.queueTask(() => {
@@ -398,9 +379,10 @@ export const SearchBox = clientEntry(
 				enterkeyhint="search"
 				autofocus
 				mix={[
-					on<HTMLInputElement, "input">("input", (event) => {
-						search(event.currentTarget.value);
+					liveFrame({
+						src: (text) => searchFrameSrc(handle.props.frameSrc, text),
 					}),
+					on<HTMLInputElement, "ui:live-frame">("ui:live-frame", markBusy),
 				]}
 			/>
 		);
@@ -408,16 +390,23 @@ export const SearchBox = clientEntry(
 );
 ```
 
-`handle.frame` is the frame the island was rendered in. Setting its `src` and calling
-`reload()` fetches the fragment for the new text and diffs it into the dialog: the matches
-change, and the box, being the same island, keeps its focus, its caret and what the reader has
-typed since. `latest` counts keystrokes, so only the newest reload clears `aria-busy` from the
-results region, and an answer to an older query never marks the newer one done. A blank box
-loads the bare `/frames/search`, the same cached answer the page started with.
+`liveFrame` reloads the frame the island was rendered in, 200 milliseconds after the last
+keystroke, from the address `src` builds for the box's value. The reload diffs the fragment into
+the dialog: the matches change, and the box, being the same island, keeps its focus, its caret
+and what the reader has typed since. A blank box asks for the bare `/frames/search`, the same
+cached answer the page started with, and a value whose address the frame already shows settles
+without a request.
 
-Closing the dialog runs `reset`, which puts the box and the frame back to the query the page
-rendered with, so the dialog reopens where every reader starts. `autofocus` puts the caret in
-the box each time `showModal()` opens the dialog.
+The mixin reports each reload as a `ui:live-frame` event, and `markBusy` mirrors it onto the
+results region: `aria-busy` from the first keystroke until the state is `settled`. Only the
+newest value settles, so an answer to an older query never marks the newer one done. A `slow`
+state also arrives once a wait passes 350 milliseconds, the moment to show a spinner if the box
+has one; `debounce` and `slowAfter` change either delay.
+
+Closing the dialog runs `reset`, which puts the query the page rendered with back in the box and
+dispatches `LIVE_FRAME_RELOAD_EVENT` on it, so the frame reloads at once, with no pause, and the
+dialog reopens where every reader starts. `autofocus` puts the caret in the box each time
+`showModal()` opens the dialog.
 
 The shortcuts are `bindKeymap` from `@sdxc/ui/mixins`: `⌘K` or `Ctrl+K` opens the dialog from
 anywhere on the page, and `/` does too. Both stand down for a keystroke typed into a field, so
@@ -554,4 +543,5 @@ and leaves it alone on a results page, where the reader came to read.
   reader's key caps, and the rules a keymap stands down by.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui):
   dialogs, invoker commands and islands.
-- [`@sdxc/ui`](/api/ui): `Modal`, `SearchField`, `Highlight`, `FieldError` and `Pagination`.
+- [`@sdxc/ui`](/api/ui): `Modal`, `SearchField`, `liveFrame`, `Highlight`, `FieldError` and
+  `Pagination`.
