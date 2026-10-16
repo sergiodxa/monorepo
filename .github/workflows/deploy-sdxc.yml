@@ -87,7 +87,7 @@ jobs:
       # before the build rather than taken from the repository. Its bindings and secrets come
       # from `cloudflare.config.ts` alone, so the step needs no `.dev.vars` or credentials.
       - name: Generate framework types
-        run: bun run --cwd apps/sdxc-site cf:typegen
+        run: bun run --cwd apps/sdxc-site cli typegen
 
       # Extracts the catalogue from the packages and bundles the worker, in that order —
       # which is what makes the deployed reference match the source this run checked out.

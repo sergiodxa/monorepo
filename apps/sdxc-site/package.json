@@ -3,12 +3,12 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "bun scripts/extract-catalogue.ts && vite build",
+		"build": "bun scripts/extract-catalogue.ts && vp build",
 		"catalogue": "bun scripts/extract-catalogue.ts",
 		"cf:deploy": "cf deploy --prebuilt",
-		"cf:typegen": "cf workers types",
-		"dev": "bun scripts/extract-catalogue.ts && vite dev",
-		"start": "vite preview",
+		"cli": "bun ./bootstrap/cli.ts",
+		"dev": "bun scripts/extract-catalogue.ts && vp dev",
+		"start": "vp preview",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -32,6 +32,6 @@
 		"@sdxc/jsdoc": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"cf": "1.0.0-beta.5",
-		"vite": "^8.3.4"
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
 	}
 }

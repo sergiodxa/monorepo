@@ -5,10 +5,30 @@ is, why the packages look alike, and which one to reach for.
 
 Production URL: https://sdxc.dev
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run dev` to start the development server at http://localhost:3007
+```sh
+bun install
+sdxc run typegen
+bun dev
+```
+
+In a fresh clone, copy `.env.example` to `.dev.vars` first. `bun dev` extracts the `@sdxc/u`
+and `@sdxc/ui` catalogue from the packages, then serves the site at http://localhost:3007.
+Run `sdxc run typegen` again whenever you change a binding in `cloudflare.config.ts`.
+
+## Everyday commands
+
+```sh
+sdxc make controller about                 # a page, mapped in routes/web.ts
+sdxc make command cache/purge              # then: sdxc run cache purge
+sdxc run about                             # the app's name and the versions it runs on
+bun run catalogue                          # re-extract the catalogue without restarting
+bun check                                  # format, lint and types, from the repo root
+```
+
+`sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
+right away. Tests run from the repository root with `vp test run --project sdxc-site`.
 
 ## Cloudflare Services
 
@@ -87,18 +107,20 @@ The pager steps only through the sidebar of the page being read.
 
 ## Scripts
 
-| Script       | Description                               |
-| ------------ | ----------------------------------------- |
-| `dev`        | Start development server                  |
-| `build`      | Build for production                      |
-| `start`      | Preview the production build              |
-| `cf:deploy`  | Deploy to Cloudflare                      |
-| `cf:typegen` | Regenerate `.cloudflare/types/index.d.ts` |
-| `typecheck`  | Type check the app with `tsc`             |
+| Script      | Description                                              |
+| ----------- | -------------------------------------------------------- |
+| `dev`       | Extract the catalogue, then start the development server |
+| `build`     | Extract the catalogue, then build for production         |
+| `catalogue` | Extract the catalogue alone                              |
+| `start`     | Preview the production build                             |
+| `cli`       | The app's command line, which `sdxc run` starts          |
+| `cf:deploy` | Deploy to Cloudflare                                     |
+| `typecheck` | Type check the app with `tsc`                            |
 
 ## Deployment
 
 ```bash
+bun run build
 bun run cf:deploy
 ```
 

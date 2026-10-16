@@ -10,7 +10,7 @@
 
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { remix } from "@pitlane/vite-plugin-remix";
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 
 /**
  * Names this build, so a cache validator can stand for "the bundle a page was rendered
