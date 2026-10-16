@@ -1,15 +1,16 @@
 // @vitest-environment happy-dom
 /**
  * Tests for the keys the search palette answers to from anywhere on a page: ⌘K or Ctrl+K
- * toggles it, `/` opens it only where a slash is not text being typed, and Escape closes it.
+ * toggles it, `/` opens it only where a slash is not text being typed, and Escape closes it;
+ * and the palette closes once a link it led to has loaded.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { searchShortcut } from "~/resources/components/search-keys";
+import { searchShortcut, watchSearchDialog } from "~/resources/components/search-keys";
 
 /** A `keydown` as the document would receive it, aimed at `target`. */
 function keydown(init: KeyboardEventInit, target?: Element): KeyboardEvent {
@@ -42,4 +43,35 @@ describe("searchShortcut", () => {
 		expect(searchShortcut(keydown({ key: "Escape" }), true)).toBe("close");
 		expect(searchShortcut(keydown({ key: "Escape" }), false)).toBeNull();
 	});
+});
+
+describe("watchSearchDialog", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		document.body.replaceChildren();
+	});
+
+	/** An open palette dialog, watched until the returned controller aborts. */
+	function openDialog(): { dialog: HTMLDialogElement; controller: AbortController } {
+		let dialog = document.createElement("dialog");
+		document.body.appendChild(dialog);
+		let controller = new AbortController();
+		watchSearchDialog(dialog, controller.signal);
+		dialog.showModal();
+		return { dialog, controller };
+	}
+
+	test.each(["navigatesuccess", "navigateerror"])(
+		"a soft navigation that ends in %s closes the palette and its backdrop",
+		(type) => {
+			let navigation = new EventTarget();
+			vi.stubGlobal("navigation", navigation);
+			let { dialog, controller } = openDialog();
+
+			navigation.dispatchEvent(new Event(type));
+
+			expect(dialog.open).toBe(false);
+			controller.abort();
+		},
+	);
 });

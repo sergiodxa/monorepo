@@ -1,7 +1,7 @@
 /**
  * The search palette's page-wide behaviour, attached by the palette island on every page:
  * the shortcuts that open and close it, closing on a backdrop click where `closedby` is
- * missing, and closing before the page enters the back/forward cache.
+ * missing, and closing once a navigation lands or the page enters the back/forward cache.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +40,9 @@ export function searchShortcut(event: KeyboardEvent, open: boolean): SearchShort
 /**
  * Attaches the shortcuts, ahead of whatever element has focus; a click that both starts and
  * ends on the backdrop closing the dialog, so a text selection dragged out of the panel
- * leaves it open; and closing on `pagehide`, so a page restored from the cache comes back
- * closed. Every listener ends with `signal`.
+ * leaves it open; closing once a soft navigation settles, since the document stays and so
+ * would the backdrop; and on `pagehide`, so a page restored from the cache comes back closed.
+ * Every listener ends with `signal`.
  *
  * @param dialog The palette's dialog.
  * @param signal Ends every listener, as the island unmounts.
@@ -77,5 +78,7 @@ export function watchSearchDialog(dialog: HTMLDialogElement, signal: AbortSignal
 		{ signal },
 	);
 
+	globalThis.navigation?.addEventListener("navigatesuccess", () => dialog.close(), { signal });
+	globalThis.navigation?.addEventListener("navigateerror", () => dialog.close(), { signal });
 	window.addEventListener("pagehide", () => dialog.close(), { signal });
 }
