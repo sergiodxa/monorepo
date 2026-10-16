@@ -9,16 +9,24 @@
 
 import type { Handle } from "remix/component";
 
+import { Frame } from "remix/component";
 import { bg, borderEdge, fg } from "sdxc/u/color";
-import { hidden, hstack, inline, insBs, sticky } from "sdxc/u/layout";
-import { media } from "sdxc/u/responsive";
-import { bs, is, maxIs, mi, p } from "sdxc/u/size";
+import { rounded, transition, transitionBehavior } from "sdxc/u/effects";
+import { raw } from "sdxc/u/general";
+import { gap, hidden, hstack, inline, insBs, sticky } from "sdxc/u/layout";
+import { overflow } from "sdxc/u/overflow";
+import { light, media } from "sdxc/u/responsive";
+import { bs, is, maxBs, maxIs, mi, p } from "sdxc/u/size";
 import { z } from "sdxc/u/stacking";
+import { when } from "sdxc/u/state";
 import { text, tracking, weight } from "sdxc/u/typography";
-import { NavLink } from "sdxc/ui";
+import { Dialog, NavLink } from "sdxc/ui";
 import { isApplePlatform } from "sdxc/user-agent/helpers";
 
-import { SearchPalette } from "~/resources/components/search-palette";
+import { searchFrameSrc } from "~/resources/components/search-box";
+import { SearchQuickLinks } from "~/resources/components/search-quick-links";
+import { SEARCH_EXIT_MS } from "~/resources/components/search-surface";
+import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
 import routes from "~/routes/web";
 
 /** Where the collection is read and its issues are filed. */
@@ -28,6 +36,11 @@ namespace SiteHeader {
 	export interface Props {
 		/** The path being read, which is what marks one destination as the current page. */
 		activePath?: string;
+		/**
+		 * Text the search dialog opens holding, with its results already rendered; the
+		 * `/search` page passes its own query so the dialog continues that search.
+		 */
+		searchQuery?: string;
 	}
 
 	export interface NavProps extends Props {}
@@ -68,7 +81,7 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 					sdxc
 				</a>
 
-				<SiteNav activePath={handle.props.activePath} />
+				<SiteNav activePath={handle.props.activePath} searchQuery={handle.props.searchQuery} />
 			</div>
 		</header>
 	);
@@ -92,36 +105,33 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 		return (
 			<div mix={[hstack({ gap: 3, align: "center" })]}>
 				{/* Sixty packages and a large README corpus are unusable without this, from any page. */}
-				<SearchPalette
-					appleKeyboard={isApplePlatform()}
-					indexHref={routes.searchIndex.href()}
-					links={[
-						{
-							label: "Guides",
-							href: docsPath,
-							description: "Build a Remix app on Cloudflare, step by step",
-							icon: "guides",
-						},
-						{
-							label: "Packages",
-							href: apiPath,
-							description: "Every package's API reference",
-							icon: "packages",
-						},
-						{
-							label: "Utilities",
-							href: utilitiesPath,
-							description: "Styling mixins in @sdxc/u",
-							icon: "utilities",
-						},
-						{
-							label: "Components",
-							href: componentsPath,
-							description: "The component library in @sdxc/ui",
-							icon: "components",
-						},
+				<SearchTrigger appleKeyboard={isApplePlatform()} />
+				<Dialog
+					id={SEARCH_DIALOG_ID}
+					aria-label="Search the documentation"
+					closedby="any"
+					mix={[
+						p(0),
+						gap(2),
+						bg("transparent"),
+						rounded("none"),
+						overflow("visible"),
+						raw({ boxShadow: "none" }),
+						transitionBehavior("allow-discrete"),
+						transition("display, overlay", { duration: SEARCH_EXIT_MS }),
+						light(when("&::backdrop", bg("rgb(0 0 0 / 0.12)"))),
+						is("min(40rem, 100% - 2rem)"),
+						maxIs("none"),
+						maxBs("calc(100dvh - min(12vh, 6rem) - 1rem)"),
+						raw({ marginBlock: "min(12vh, 6rem) auto" }),
 					]}
-				/>
+				>
+					<Frame
+						name="search"
+						src={searchFrameSrc(routes.searchFrame.href(), handle.props.searchQuery ?? "")}
+					/>
+					<SearchQuickLinks currentPath={activePath} />
+				</Dialog>
 
 				<nav
 					aria-label="Site"

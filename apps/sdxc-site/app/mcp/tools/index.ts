@@ -28,7 +28,8 @@ export default tools({
 			"Search every guide, package reference, @sdxc/u utility and @sdxc/ui reference page (components, mixins, behavior classes, animations, styles) on this site by page title, heading and summary. Returns the URL of each match, including the heading anchor, and every URL has a .md twin that serves the markdown source. Use this to find where something is explained.",
 		input: s.object({
 			query: s.string().pipe(checks.minLength(1), checks.maxLength(200)).meta({
-				description: "Words to look for. Every word must match for a page to be returned.",
+				description:
+					'Words to look for; every word must match. Also accepts "a phrase", -word to leave one out, a OR b, and kind:guide, kind:api, kind:u or kind:ui (or -kind:) to narrow by part of the site.',
 			}),
 			limit: s.defaulted(
 				s

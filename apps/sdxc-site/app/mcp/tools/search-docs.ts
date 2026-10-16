@@ -1,6 +1,7 @@
 /**
- * Answers `search_docs` over the same index the site's own palette filters, naming each
- * match's page and heading so a model can fetch it, or its markdown twin, directly.
+ * Answers `search_docs` over the same index and search syntax the site's search dialog uses,
+ * so `kind:guide` narrows here too, naming each match's page and heading so a model can
+ * fetch it, or its markdown twin, directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

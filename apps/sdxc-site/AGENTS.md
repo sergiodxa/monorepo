@@ -81,14 +81,24 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   is the one list of every `@sdxc/u` utility and every `@sdxc/ui` theme, component and
   subpath page that search, `/llms.txt`, the sitemap and the MCP resources read, so a page
   added to either catalogue reaches all four.
-- **One search index serves everything.** The palette, `/search.json` and the MCP
-  `search_docs` tool read `app/services/search.ts` and rank through
+- **One search index serves everything.** The search dialog, `/search`, `/search.json` and
+  the MCP `search_docs` tool read `app/services/search.ts` and rank through
   `app/services/search-query.ts`, so a reader and a model are answered in one order. The
+  search syntax (`kind:guide`, `-word`, `a OR b`, `"phrase"`) is read there too, by
+  `parseSearch`, so a filter typed in the dialog means the same thing to the tool. The
   index is built once per isolate from the same parse and heading anchoring the pages
   render (`anchorArticle`, `anchorPackageReadme`), so a result's fragment always exists.
-- **There is one palette.** It lives in the site header, holds `⌘K`, and covers the guides
-  and every package together. A page wanting search opens `SEARCH_DIALOG_ID` rather than
-  standing up a second one, which would take the same binding.
+- **There is one search dialog.** It lives in the site header, holds `⌘K`, and covers the
+  guides and every package together. A page wanting search opens `SEARCH_DIALOG_ID` rather
+  than standing up a second one, which would take the same binding.
+- **The search dialog is a frame.** The header renders a trigger linking to `/search` and a
+  dialog holding `<Frame src="/frames/search">`; the box island reloads that frame as the
+  reader types, so ranking, tabs and limits are decided on the server and the island knows
+  nothing about what it searches.
+- **A frame route streams its render.** A page inlines only the first chunk of a blocking
+  frame's body, so a frame controller returns `ctx.render(…)` as is; `withBundleCache`
+  rebuilds the body from a string, which workerd then reads in 4 KB pieces, and the page
+  would show the rest as text.
 - **Build a URL a machine will read from `SITE_URL`.** A sitemap, a feed, an `llms.txt`
   entry and an MCP resource URI are identities rather than links, so they name one origin
   regardless of which host answered.

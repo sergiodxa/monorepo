@@ -32,6 +32,8 @@ namespace PageLayout {
 		lastUpdated?: string;
 		/** The path being read, which is what marks one destination as the current page. */
 		activePath: string;
+		/** Text the header's search dialog opens holding. */
+		searchQuery?: string;
 		/** The page's body, already rendered from its markdown. */
 		children: RemixNode;
 	}
@@ -40,11 +42,12 @@ namespace PageLayout {
 /** Renders the bar, the page's hero band, and its body. */
 export default function PageLayout(handle: Handle<PageLayout.Props>) {
 	return () => {
-		let { activePath, children, description, eyebrow, lastUpdated, title } = handle.props;
+		let { activePath, children, description, eyebrow, lastUpdated, searchQuery, title } =
+			handle.props;
 
 		return (
 			<>
-				<SiteHeader activePath={activePath} />
+				<SiteHeader activePath={activePath} searchQuery={searchQuery} />
 
 				<main mix={[vstack({ align: "center" }), is("100%")]}>
 					<Band tone="grid" spacing="hero" ruled={false}>

@@ -50,7 +50,10 @@ describe("GET /", () => {
 
 	test("gives every element a unique id, so no tab strip answers another's label", async () => {
 		let body = await (await fetchApp("/")).text();
-		let ids = [...body.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+		/** The runtime writes one `rmx-data` script per inlined frame, which no label points at. */
+		let ids = [...body.matchAll(/\sid="([^"]+)"/g)]
+			.map((match) => match[1])
+			.filter((id) => id !== "rmx-data");
 
 		expect(ids.length).toBeGreaterThan(0);
 		expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);

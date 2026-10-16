@@ -1,8 +1,7 @@
 /**
  * `GET /search.json` — every page and every heading a reader can jump to, as one
- * document. The palette fetches it once and filters in the browser, which is what keeps
- * a keystroke off the network, and anything else that wants to search this site reads the
- * same file rather than scraping the pages.
+ * document, for anything that wants to search this site with its own ranking rather than
+ * scraping the pages. The site's own search ranks the same index on the server.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -103,8 +103,18 @@ export default route({
 	llms: get("/llms.txt"),
 	sitemap: get("/sitemap.xml"),
 	feed: get("/rss.xml"),
-	/** The search index the palette fetches once and filters in the browser. */
+	/** Every page and heading a search can land on, for a consumer ranking them itself. */
 	searchIndex: get("/search.json"),
+	/**
+	 * Every guide and package matching `?q=`, a page at a time. A plain `GET` form submits
+	 * here, so search works without script and a result list has its own address.
+	 */
+	search: get("/search"),
+	/**
+	 * The search dialog's body, loaded into the `<Frame>` every page's header carries: the
+	 * box, a tab per kind, and the top matches for `?q=`, re-requested as the reader types.
+	 */
+	searchFrame: get("/frames/search"),
 	/**
 	 * Package search and page reads over the Model Context Protocol. The pattern names the
 	 * explainer page a person lands on; the `POST` the protocol speaks is registered on the

@@ -21,7 +21,7 @@ import { buildPackagesNav } from "~/app/services/navigation";
 import { listPackageGroups } from "~/app/services/packages";
 import PageTitle from "~/resources/components/page-title";
 import RuledGrid, { RuledCell } from "~/resources/components/ruled-grid";
-import { SEARCH_DIALOG_ID } from "~/resources/components/search-palette";
+import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -46,9 +46,9 @@ export default createAction(routes.api.index, async (ctx) => {
 				</PageTitle>
 
 				{/*
-				 * The header's palette already searches every package alongside every guide,
-				 * and it holds the ⌘K binding, so this page opens that one rather than standing
-				 * a second palette up over a subset of the same index.
+				 * The header's search dialog already searches every package alongside every
+				 * guide, and it holds the ⌘K binding, so this page opens that one rather than
+				 * standing a second search up over a subset of the same index.
 				 */}
 				<div mix={[m("2rem", 0, 0, 0)]}>
 					<Button

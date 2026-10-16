@@ -16,7 +16,7 @@ import { Markdown } from "sdxc/markdown";
 import { isFailure } from "sdxc/result";
 
 import type { Anchor } from "~/app/services/article";
-import type { SearchDocument } from "~/app/services/search-query";
+import type { SearchDocument, SearchKind } from "~/app/services/search-query";
 
 import { anchorArticle, anchorPackageReadme, tableOfContents } from "~/app/services/article";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
@@ -42,6 +42,12 @@ export interface PackageMatch {
 	href: string;
 	/** The page's `.md` twin, which is what an agent reads the package from. */
 	markdownHref: string;
+}
+
+/** The kind a package's own pages belong to: its catalogue's for `u` and `ui`, else the API. */
+function packageKind(directory: string): SearchKind {
+	if (directory === "u" || directory === "ui") return directory;
+	return "api";
 }
 
 /**
@@ -96,7 +102,14 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 			let href = routes.docs.show.href({ slug: guide.slug });
 			let { description, title } = guide.frontmatter;
 
-			documents.push({ href, title, page: title, section: section.title, summary: description });
+			documents.push({
+				href,
+				title,
+				page: title,
+				section: section.title,
+				kind: "guide",
+				summary: description,
+			});
 
 			let source = await readGuide(guide.slug);
 			if (source === null) continue;
@@ -107,6 +120,7 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 					title: heading.text,
 					page: title,
 					section: section.title,
+					kind: "guide",
 				});
 			}
 		}
@@ -117,12 +131,14 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 
 		for (let entry of group.packages) {
 			let href = routes.api.show.href({ name: entry.directory });
+			let kind = packageKind(entry.directory);
 
 			documents.push({
 				href,
 				title: entry.name,
 				page: entry.name,
 				section,
+				kind,
 				summary: entry.description,
 			});
 
@@ -137,6 +153,7 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 					title: heading.text,
 					page: entry.name,
 					section,
+					kind,
 				});
 			}
 		}
@@ -148,6 +165,7 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 			title: page.title,
 			page: page.title,
 			section: `${page.package} · ${page.section}`,
+			kind: page.package === "@sdxc/u" ? "u" : "ui",
 			summary: page.summary,
 		});
 	}

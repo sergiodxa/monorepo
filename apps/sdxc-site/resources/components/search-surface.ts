@@ -1,7 +1,7 @@
 /**
- * The glass the search palette's surfaces are cut from, and how they move: the box's pill
- * and the card under it float apart over the page, each a frosted panel with a hairline
- * edge, settling into place as the dialog opens and falling back as it closes.
+ * The glass the search dialog's surfaces are cut from, and how they move: the box's pill and
+ * the card under it float apart over the page, each a frosted panel with a hairline edge,
+ * settling into place as the dialog opens and falling back as it closes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,14 +23,10 @@ import { when } from "sdxc/u/state";
 import { scaleProperty, translateProperty } from "sdxc/u/transform";
 import { durations, easings } from "sdxc/ui/animations";
 
+import { SEARCH_FOLLOW_ATTRIBUTE } from "~/resources/components/search-box";
+
 /** How long the dialog stays on screen after closing, while its surfaces fall back. */
 export const SEARCH_EXIT_MS: number = durations.fast;
-
-/**
- * The attribute the dialog carries once the reader follows one of its links, which lifts
- * its surfaces toward the reader while the next page loads.
- */
-export const SEARCH_FOLLOW_ATTRIBUTE = "data-search-follow";
 
 /**
  * The panel's own text color at low strength: a hairline that stays equally faint against
@@ -66,8 +62,8 @@ export function searchSurface() {
 }
 
 /**
- * Moves a surface toward the reader as the dialog opens, after `enterDelay` milliseconds,
- * and away at once as it is dismissed; following a link lifts it on toward the reader, so
+ * Moves a surface toward the reader as the dialog opens, after `enterDelay` milliseconds, and
+ * away at once as it is dismissed; following a link lifts it on toward the reader instead, so
  * leaving through a result reads apart from closing. Under reduced motion only opacity changes.
  *
  * @param enterDelay How long the surface waits after the dialog opens.

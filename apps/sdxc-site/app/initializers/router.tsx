@@ -196,6 +196,14 @@ export function createWebRouter() {
 		routes.searchIndex,
 		lazy(() => import("~/app/http/controllers/search-index")),
 	);
+	router.map(
+		routes.search,
+		lazy(() => import("~/app/http/controllers/search")),
+	);
+	router.map(
+		routes.searchFrame,
+		lazy(() => import("~/app/http/controllers/search-frame")),
+	);
 
 	/** One address answers both halves of the endpoint: the page, and the protocol. */
 	router.map(

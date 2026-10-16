@@ -1,12 +1,24 @@
 /**
- * What a search entry is, and how a query is ranked against a set of them. The
- * ranking is pure and holds no corpus, so the palette in the browser, the `/search.json`
- * consumer and the MCP search tool all order results the same way rather than each
- * inventing its own notion of a good match.
+ * What a search entry is, how the search syntax reads, and how a query is ranked against a
+ * set of entries. The ranking is pure and holds no corpus, so the search dialog, the
+ * `/search` page and the MCP search tool all answer a query in the same order.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { Result } from "sdxc/result";
+import type { ParsedQuery, SearchFilter, SearchTerm } from "sdxc/search/query";
+import type { ValidationError } from "sdxc/validate";
+
+import { isFailure } from "sdxc/result";
+import { parseQuery } from "sdxc/search/query";
+
+/** The part of the site an entry belongs to, which is what a search tab or `kind:` narrows to. */
+export type SearchKind = "guide" | "api" | "ui" | "u";
+
+/** Every kind, in the order the search tabs list them. */
+export const SEARCH_KINDS: readonly [SearchKind, ...SearchKind[]] = ["guide", "api", "u", "ui"];
 
 /** One destination a search can land on: a page, or one heading inside it. */
 export interface SearchDocument {
@@ -18,8 +30,34 @@ export interface SearchDocument {
 	page: string;
 	/** The section or group that page sits in, so a result says where it came from. */
 	section: string;
+	kind: SearchKind;
 	/** The page's opening sentence. A heading carries none, since the page above it does. */
 	summary?: string;
+}
+
+/** The words `kind:` reads as each kind, so a reader may type the tab's name or its plural. */
+const KIND_NAMES: Record<string, SearchKind> = {
+	guide: "guide",
+	guides: "guide",
+	docs: "guide",
+	api: "api",
+	package: "api",
+	packages: "api",
+	ui: "ui",
+	component: "ui",
+	components: "ui",
+	u: "u",
+	utility: "u",
+	utilities: "u",
+};
+
+/**
+ * The kind a `kind:` value names, read case-blind, or `null` for a word naming none.
+ *
+ * @example kindNamed("Components") // "ui"
+ */
+export function kindNamed(value: string): SearchKind | null {
+	return KIND_NAMES[value.trim().toLowerCase()] ?? null;
 }
 
 /** Score for a title the query matches whole, which is as good as a match gets. */
@@ -101,80 +139,89 @@ function scoreToken(document: SearchDocument, token: string): number {
 }
 
 /**
- * Ranks a corpus against a query, keeping only the entries every word of the query
- * reaches. Requiring all of them is what makes a second word narrow the list, which is
- * how a reader expects a palette to behave when the first word matched too much.
+ * Reads what a reader typed with the search syntax: words that must all match, `"phrases"`,
+ * `-word` to leave one out, `a OR b`, and `kind:` (or `-kind:`) to narrow by part of the site.
+ *
+ * @param text - What the reader typed.
+ * @returns The query, `null` for a blank box, or why the text cannot run.
+ * @example parseSearch("router kind:guides -legacy")
+ */
+export function parseSearch(text: string): Result<ParsedQuery | null, ValidationError> {
+	return parseQuery(text, { filters: ["kind"] });
+}
+
+/**
+ * How well an entry answers one clause: its best alternative, since an `OR` is satisfied by
+ * any one of them. Zero means none of them reached it.
+ */
+function scoreClause(document: SearchDocument, terms: SearchTerm[]): number {
+	return Math.max(...terms.map((term) => scoreToken(document, term.text.toLowerCase())));
+}
+
+/** Whether an entry's kind passes one `kind:` filter: named by it, or not named by an exclusion. */
+function passesKindFilter(document: SearchDocument, filter: SearchFilter): boolean {
+	let named = filter.values.some((value) => kindNamed(value) === document.kind);
+	return named !== filter.exclude;
+}
+
+/**
+ * Every entry a parsed query reaches, strongest first: each positive clause must reach it,
+ * no excluded clause may, and every `kind:` filter must hold. A query of filters alone keeps
+ * the corpus order, which lists a page above the headings inside it.
+ *
+ * @param documents - The corpus, in the order it should tie-break in.
+ * @param query - The parsed query.
+ * @returns Every match, best first.
+ */
+export function matchDocuments(
+	documents: readonly SearchDocument[],
+	query: ParsedQuery,
+): SearchDocument[] {
+	let required = query.clauses.filter((clause) => !clause.exclude);
+	let excluded = query.clauses.filter((clause) => clause.exclude);
+	let scored: Array<{ document: SearchDocument; score: number; order: number }> = [];
+
+	for (let [order, document] of documents.entries()) {
+		if (!query.filters.every((filter) => passesKindFilter(document, filter))) continue;
+		if (excluded.some((clause) => scoreClause(document, clause.terms) > 0)) continue;
+
+		let total = 0;
+		for (let clause of required) {
+			let score = scoreClause(document, clause.terms);
+			if (score === 0) {
+				total = -1;
+				break;
+			}
+			total += score;
+		}
+
+		if (total >= 0) scored.push({ document, score: total, order });
+	}
+
+	scored.sort((a, b) => b.score - a.score || a.order - b.order);
+
+	return scored.map((entry) => entry.document);
+}
+
+/**
+ * Ranks a corpus against a query as typed, keeping only the entries every word reaches.
+ * Requiring all of them is what makes a second word narrow the list, which is how a reader
+ * expects a search to behave when the first word matched too much.
  *
  * @param documents - The corpus to rank, in the order it should tie-break in.
- * @param query - What the reader typed; an empty one keeps the corpus order.
+ * @param query - What the reader typed; an empty one keeps the corpus order, and text the
+ * syntax cannot run reaches nothing.
  * @param limit - How many entries to return.
  * @returns The best matches, strongest first, at most `limit` of them.
- * @example rankDocuments(index, "parse markdown", 10)
+ * @example rankDocuments(index, "parse markdown kind:api", 10)
  */
 export function rankDocuments(
 	documents: readonly SearchDocument[],
 	query: string,
 	limit: number,
 ): SearchDocument[] {
-	let tokens = tokenize(query);
-	if (tokens.length === 0) return documents.slice(0, limit);
-
-	let scored: Array<{ document: SearchDocument; score: number; order: number }> = [];
-
-	for (let [order, document] of documents.entries()) {
-		let total = 0;
-
-		for (let token of tokens) {
-			let score = scoreToken(document, token);
-			if (score === 0) {
-				total = 0;
-				break;
-			}
-			total += score;
-		}
-
-		if (total > 0) scored.push({ document, score: total, order });
-	}
-
-	scored.sort((a, b) => b.score - a.score || a.order - b.order);
-
-	return scored.slice(0, limit).map((entry) => entry.document);
-}
-
-/** One stretch of a result's text, and whether a word of the query matched it. */
-export interface HighlightSegment {
-	text: string;
-	match: boolean;
-}
-
-/**
- * Splits `text` into the stretches a query's words matched and the rest, marking a word
- * only where it starts one in `text`, the same rule the ranking applies, so the marks
- * show exactly why a row was listed. Overlapping matches merge into one stretch.
- *
- * @param text - The title or summary to mark, as written.
- * @param query - What the reader typed.
- * @returns Every stretch of `text` in order, whose texts concatenate back to `text`.
- * @example highlightSegments("@sdxc/result", "result") // [{ text: "@sdxc/", match: false }, { text: "result", match: true }]
- */
-export function highlightSegments(text: string, query: string): HighlightSegment[] {
-	let lower = text.toLowerCase();
-	let marked: boolean[] = Array.from({ length: text.length }, () => false);
-
-	for (let token of tokenize(query)) {
-		for (let at = lower.indexOf(token); at !== -1; at = lower.indexOf(token, at + 1)) {
-			if (isWordCharacter(lower[at - 1])) continue;
-			marked.fill(true, at, at + token.length);
-		}
-	}
-
-	let segments: HighlightSegment[] = [];
-	for (let [index, character] of Array.from(text).entries()) {
-		let match = marked[index] ?? false;
-		let last = segments.at(-1);
-		if (last?.match === match) last.text += character;
-		else segments.push({ text: character, match });
-	}
-
-	return segments;
+	let parsed = parseSearch(query);
+	if (isFailure(parsed)) return [];
+	if (parsed.data === null) return documents.slice(0, limit);
+	return matchDocuments(documents, parsed.data).slice(0, limit);
 }

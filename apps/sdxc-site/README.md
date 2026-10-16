@@ -68,8 +68,9 @@ Observability is enabled, with traces head-sampled at 10%.
   which returns tokens rather than markup.
 - **Almost no first-party JavaScript.** Pages are server-rendered HTML; the tab strip is
   CSS-only and the sidebar collapses through a checkbox, so the islands are the copy button,
-  which needs script to reach the clipboard, the package palette, which needs it to filter,
-  and the option-group sync, which records a switch and carries it to the other strips on the
+  which needs script to reach the clipboard, the search box, which reloads the search dialog's
+  frame as the reader types (the dialog's trigger is a plain link to `/search`, which works
+  without it), and the option-group sync, which records a switch and carries it to the other strips on the
   page.
 - **A tab strip can name the choice it offers.** Every strip naming the same group — the
   install commands all name `package-manager` — shares one selection, kept in a single cookie
