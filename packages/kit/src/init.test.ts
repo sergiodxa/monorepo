@@ -66,6 +66,20 @@ describe("renderConfig", () => {
 		expect(unwrap(renderConfig())).toBe(EXPECTED);
 	});
 
+	test("writes a key it is given with that value instead of its example", () => {
+		let rendered = unwrap(renderConfig({ format: ["bunx", "vp", "fmt"] }));
+
+		expect(rendered).toBe(
+			EXPECTED.replace('// "format": ["bunx", "vp", "fmt"],', '"format": ["bunx", "vp", "fmt"],'),
+		);
+		let parsed = unwrap(JSONC.parse(rendered));
+		expect(unwrap(parseConfig(parsed, "/project", ".config/sdxc.jsonc")).config.format).toEqual([
+			"bunx",
+			"vp",
+			"fmt",
+		]);
+	});
+
 	test("renders a file that parses back to the defaults", () => {
 		let parsed = unwrap(JSONC.parse(unwrap(renderConfig())));
 		let loaded = unwrap(parseConfig(parsed, "/project", ".config/sdxc.jsonc"));

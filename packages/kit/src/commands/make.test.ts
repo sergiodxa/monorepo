@@ -11,17 +11,25 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { Exec } from "@sdxc/cli";
 import type { InvokeOptions } from "@sdxc/cli/test";
 
 import { invoke as invokeCLI } from "@sdxc/cli/test";
-import { unwrap } from "@sdxc/result";
+import { success, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
 import { REGISTRY } from "../releases.js";
-import { materialize, registryDocument, runCommandLine, typecheck } from "../testing.js";
+import {
+	checkFormatting,
+	materialize,
+	projectExec,
+	registryDocument,
+	runCommandLine,
+	typecheck,
+} from "../testing.js";
 
 /** The npm registry `create` and `make` pin `@sdxc/*` packages from: every one at 2026.10.14. */
 const SERVER = setupServer(
@@ -57,6 +65,15 @@ async function project(config?: string): Promise<string> {
 function invoke(argv: string[], cwd: string, options: InvokeOptions = {}) {
 	return invokeCLI(createSDXC(), ["make", ...argv], { cwd, interactive: false, ...options });
 }
+
+/**
+ * An exec under which the template's `format` command succeeds and leaves every file as `make`
+ * wrote it, for the tests that read the exact text of a declaration or a mapping.
+ */
+const UNFORMATTED: Exec = async () => success({ code: 0, stdout: "", stderr: "", output: "" });
+
+/** All `make` prints on stderr when the configured `format` command succeeds. */
+const FORMATTED = /^Formatting \d+ files?\n✓ Formatting \d+ files?\n$/;
 
 /** Every file under `root`, relative to it, sorted, leaving out `package.json`. */
 async function files(root: string): Promise<string[]> {
@@ -295,6 +312,30 @@ describe("make", () => {
 	});
 });
 
+describe("formatting", () => {
+	test(
+		"the app template's own check passes on the files make writes and edits",
+		{ timeout: 120_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+			let exec = projectExec(root);
+
+			let controller = await invoke(["controller", "posts/show"], root, { exec });
+			let tool = await invoke(["mcp", "search-posts"], root, { exec });
+			let checked = await checkFormatting(root);
+
+			expect(checked.output).not.toContain("Format issues found");
+			expect(checked.code).toBe(0);
+			expect(controller.stderr).toMatch(FORMATTED);
+			expect(tool.stderr).toMatch(FORMATTED);
+			expect(controller.exec.map((call) => call.command.slice(0, 3))).toEqual([
+				["bunx", "vp", "fmt"],
+			]);
+		},
+	);
+});
+
 describe("declaring and mapping", () => {
 	test(
 		"a job, controller, tool, resource and command are declared, mapped and type check in the app template",
@@ -324,8 +365,8 @@ describe("declaring and mapping", () => {
 				["command", "reports/daily/send"],
 			];
 			for (let argv of runs) {
-				let result = await invoke(argv, root);
-				expect(result.stderr, argv.join(" ")).toBe("");
+				let result = await invoke(argv, root, { exec: UNFORMATTED });
+				expect(result.stderr, argv.join(" ")).toMatch(FORMATTED);
 				expect(result.stdout, argv.join(" ")).not.toContain("by hand");
 			}
 

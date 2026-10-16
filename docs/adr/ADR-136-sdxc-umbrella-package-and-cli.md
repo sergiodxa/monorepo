@@ -206,8 +206,10 @@ up.
   and writes nothing.
 - **Configuration only.** The lock file is created by the first command that records state.
 - **The same file `create` ships.** The built-in templates' `.config/sdxc.jsonc` is `init`'s
-  output; a test renders it and compares, so a new key reaches new projects without editing a
-  template.
+  output with `format` set to `["bunx", "vp", "fmt"]`, since every built-in template checks with
+  Vite+ and `@sdxc/codemod` leaves inserted code for the project's formatter (ADR-137); a test
+  renders it and compares, so a new key reaches new projects without editing a template, and
+  another runs the template's own format check after `make` edits an initializer.
 
 ### 4. Imports in this repo and in documentation
 

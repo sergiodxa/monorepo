@@ -34,6 +34,12 @@ export const BUILTIN_TEMPLATES: readonly string[] = ["app"];
  */
 const RENAMED_FILES = new Map([["gitignore", ".gitignore"]]);
 
+/**
+ * The configuration every built-in template ships beyond `sdxc init`'s defaults: each one checks
+ * with Vite+, so the files `make` and `ui add` write are formatted as `vp check` expects.
+ */
+const BUILTIN_CONFIG = { format: ["bunx", "vp", "fmt"] };
+
 /** Where a template comes from, as `--template` spells it. */
 export type TemplateSource =
 	| { kind: "builtin"; name: string }
@@ -147,7 +153,8 @@ async function readInto(directory: string, prefix: string, tree: TemplateTree): 
 /**
  * Completes a built-in template for the project `name`: names it, pins every `@sdxc/*` package it
  * lists to the version npm calls `latest` and `remix` to the peer the kit declares, and writes
- * `.config/sdxc.jsonc` as `sdxc init` renders it, so a new configuration key reaches new projects.
+ * `.config/sdxc.jsonc` as `sdxc init` renders it with the template's formatter, so a new
+ * configuration key reaches new projects.
  */
 export async function completeBuiltin(
 	tree: TemplateTree,
@@ -182,7 +189,7 @@ export async function completeBuiltin(
 	});
 	if (isFailure(renamed)) return renamed;
 	if (!tree.files.has(".config/sdxc.jsonc")) {
-		let config = renderConfig();
+		let config = renderConfig(BUILTIN_CONFIG);
 		if (isFailure(config)) return config;
 		tree.files.set(".config/sdxc.jsonc", new TextEncoder().encode(config.data));
 	}

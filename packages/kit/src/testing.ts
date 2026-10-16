@@ -12,8 +12,10 @@ import { access, lstat, mkdir, mkdtemp, readFile, symlink } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { Exec } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
+import { spawnExec } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
@@ -124,6 +126,26 @@ export function testProject(project: string): Promise<Spawned> {
 		[join(project, "node_modules/vite-plus/bin/vp"), "test", "run", "--no-color"],
 		project,
 	);
+}
+
+/**
+ * An exec that runs `bunx vp …` with the project's own Vite+, as `bunx` resolves it from an
+ * install, so a test runs the `format` command a built-in template configures without a download.
+ */
+export function projectExec(project: string): Exec {
+	return (command, request) => {
+		let [runner, binary, ...rest] = command;
+		if (runner !== "bunx" || binary !== "vp") return spawnExec(command, request);
+		return spawnExec(
+			[process.execPath, join(project, "node_modules/vite-plus/bin/vp"), ...rest],
+			request,
+		);
+	};
+}
+
+/** Runs the project's own Vite+ formatter in check mode over the whole project, as `vp check` does. */
+export function checkFormatting(project: string): Promise<Spawned> {
+	return run([join(project, "node_modules/vite-plus/bin/vp"), "fmt", "--check"], project);
 }
 
 /** The directory `dependency` is installed at for this package or, failing that, the workspace. */

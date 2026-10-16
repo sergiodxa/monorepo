@@ -64,26 +64,38 @@ export async function init(
 
 /**
  * The configuration file `init` writes: `$schema` first, then every key in schema order with
- * its description as a comment. A key with a default is written with it; a key without one is
- * written commented out with its first example.
+ * its description as a comment. A top-level key in `values` is written with that value, any
+ * other key with its default, and a key with neither commented out with its first example.
+ *
+ * @example renderConfig({ format: ["bunx", "vp", "fmt"] })
  */
-export function renderConfig(): Result<string, Error> {
+export function renderConfig(values: Record<string, unknown> = {}): Result<string, Error> {
 	let schema = configJSONSchema();
 	if (isFailure(schema)) return schema;
 	let lines = ["{", `\t${JSON.stringify("$schema")}: ${JSON.stringify(SCHEMA_REFERENCE)},`];
-	renderProperties(schema.data, 1, lines);
+	renderProperties(schema.data, 1, lines, values);
 	lines.push("}");
 	return success(`${lines.join("\n")}\n`);
 }
 
-/** Appends one line per key of `schema`'s properties, nesting into a group that has its own. */
-function renderProperties(schema: JSONSchema, depth: number, lines: string[]): void {
+/**
+ * Appends one line per key of `schema`'s properties, nesting into a group that has its own;
+ * a key in `values` is written with its value there.
+ */
+function renderProperties(
+	schema: JSONSchema,
+	depth: number,
+	lines: string[],
+	values: Record<string, unknown> = {},
+): void {
 	let indent = "\t".repeat(depth);
 	for (let [key, property] of Object.entries(schema.properties ?? {})) {
 		if (key === "$schema" || typeof property === "boolean") continue;
 		if (typeof property.description === "string") lines.push(`${indent}// ${property.description}`);
 		let name = JSON.stringify(key);
-		if (property.properties !== undefined) {
+		if (key in values) {
+			lines.push(`${indent}${name}: ${inline(values[key])},`);
+		} else if (property.properties !== undefined) {
 			lines.push(`${indent}${name}: {`);
 			renderProperties(property, depth + 1, lines);
 			lines.push(`${indent}},`);

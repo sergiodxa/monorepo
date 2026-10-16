@@ -98,7 +98,7 @@ describe("built-in templates", () => {
 		);
 	});
 
-	test("app is named, pinned to the latest @sdxc packages and configured as sdxc init writes it", async () => {
+	test("app is named, pinned to the latest @sdxc packages and configured as sdxc init writes it with Vite+ formatting", async () => {
 		let tree = unwrap(await readBuiltinTemplate(PACKAGE_ROOT, "app"));
 		let own = JSON.parse(await readFile(join(PACKAGE_ROOT, "package.json"), "utf8")) as Manifest;
 
@@ -111,7 +111,10 @@ describe("built-in templates", () => {
 		expect(manifest.dependencies?.["@sdxc/ui"]).toBe("2026.10.14");
 		expect(manifest.dependencies?.sdxc).toBeUndefined();
 		expect(manifest.dependencies?.remix).toBe(own.peerDependencies?.remix);
-		expect(text(tree.files, ".config/sdxc.jsonc")).toBe(unwrap(renderConfig()));
+		expect(text(tree.files, ".config/sdxc.jsonc")).toBe(
+			unwrap(renderConfig({ format: ["bunx", "vp", "fmt"] })),
+		);
+		expect(manifest.devDependencies?.["vite-plus"]).toBeDefined();
 		expect(tree.files.has(".gitignore")).toBe(true);
 		expect(tree.files.has("gitignore")).toBe(false);
 	});
