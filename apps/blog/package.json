@@ -3,14 +3,12 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"typecheck": "tsc --noEmit",
-		"dev": "vite dev",
-		"build": "vite build",
-		"start": "vite preview",
+		"build": "vp build",
 		"cf:deploy": "bunx wrangler deploy",
-		"cf:typegen": "bunx wrangler types",
-		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
-		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote"
+		"cli": "bun ./bootstrap/cli.ts",
+		"dev": "vp dev",
+		"start": "vp preview",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@pitlane/assets": "0.1.0",
@@ -20,6 +18,7 @@
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/backoff": "workspace:*",
 		"@sdxc/cache": "workspace:*",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
@@ -39,6 +38,7 @@
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/json-feed": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/link-header": "workspace:*",
@@ -81,6 +81,7 @@
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/http-signatures": "workspace:*",
+		"@sdxc/kit": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"vite": "^8.3.4",
 		"wrangler": "^4.149.0"

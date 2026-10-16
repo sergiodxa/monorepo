@@ -5,11 +5,35 @@ served from a Cloudflare Worker.
 
 Production URL: https://sergiodxa.com
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development.
-2. Run `bun run db:local:migrate` to prepare the local D1 database.
-3. Run `bun run dev` to start the development server at http://localhost:3000.
+```sh
+bun install
+sdxc run typegen
+sdxc run db migrate
+bun dev
+```
+
+In a fresh clone, copy `.env.example` to `.dev.vars` first. `bun dev` serves the blog at
+http://localhost:3000. Run `sdxc run typegen` again whenever you change a binding in
+`wrangler.jsonc`.
+
+## Everyday commands
+
+```sh
+sdxc make controller about                 # a page, mapped in routes/web.ts
+sdxc make migration create-posts           # then: sdxc run db migrate
+sdxc make model post                       # then: ctx.models.post
+sdxc make job reports/daily --cron "0 8 * * *"
+sdxc make command users/grant              # then: sdxc run users grant
+
+sdxc run db console                        # SQL prompt over the local database
+sdxc run about                             # the app's name and the versions it runs on
+```
+
+`sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
+right away. Format, lint, type check and test from the repository root (`bun check`,
+`vp test run --project blog` and `--project blog-workers`).
 
 ## Cloudflare Services
 
@@ -240,8 +264,8 @@ in the HTML a reader first receives. See
 Migrations live in `database/migrations/`.
 
 ```bash
-bun run db:local:migrate  # Apply migrations locally
-bun run db:remote:migrate # Apply migrations to production
+sdxc run db migrate          # Apply migrations to the local database
+sdxc run db migrate --remote # Apply migrations to production
 ```
 
 ### Search index
@@ -306,16 +330,14 @@ expired session signs in first and comes back to the form.
 
 ## Scripts
 
-| Script              | Description                       |
-| ------------------- | --------------------------------- |
-| `dev`               | Start the development server      |
-| `build`             | Build for production              |
-| `start`             | Preview the production build      |
-| `cf:deploy`         | Deploy to Cloudflare Workers      |
-| `cf:typegen`        | Generate Cloudflare binding types |
-| `db:local:migrate`  | Apply local migrations            |
-| `db:remote:migrate` | Apply remote migrations           |
-| `typecheck`         | Type-check                        |
+| Script      | Description                                     |
+| ----------- | ----------------------------------------------- |
+| `dev`       | Start the development server                    |
+| `build`     | Build for production                            |
+| `start`     | Preview the production build                    |
+| `cf:deploy` | Deploy to Cloudflare Workers                    |
+| `cli`       | Run a command from `app/commands/` (`sdxc run`) |
+| `typecheck` | Type-check                                      |
 
 ## Jobs
 
@@ -335,7 +357,7 @@ what makes later changes an `Update` and a deletion a `Delete`.
 
 ```bash
 bun run build
-bun run db:remote:migrate
+sdxc run db migrate --remote
 bun run cf:deploy
 ```
 
@@ -365,7 +387,7 @@ deploy that serves them.
 
    ```bash
    bun run build
-   bun run db:remote:migrate
+   sdxc run db migrate --remote
    bun run cf:deploy
    ```
 
