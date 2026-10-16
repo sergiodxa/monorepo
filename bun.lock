@@ -112,6 +112,7 @@
         "@sdxc/distill": "workspace:*",
         "@sdxc/email-address": "workspace:*",
         "@sdxc/epub": "workspace:*",
+        "@sdxc/file-storage-r2": "workspace:*",
         "@sdxc/font": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/highlight": "workspace:*",
@@ -365,6 +366,7 @@
         "@pitlane/assets": "0.1.0",
         "@remix-run/ui": "0.12.1",
         "@sdxc/dates": "workspace:*",
+        "@sdxc/file-storage-r2": "workspace:*",
         "@sdxc/font": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/icons": "workspace:*",
@@ -930,6 +932,17 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/rss": "workspace:*",
         "@sdxc/xml": "workspace:*",
+      },
+    },
+    "packages/file-storage-r2": {
+      "name": "@sdxc/file-storage-r2",
+      "version": "0.0.1",
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20261011.1",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "remix": "3.0.0",
       },
     },
     "packages/flags": {
@@ -1763,6 +1776,7 @@
         "@sdxc/epub": "workspace:*",
         "@sdxc/expression": "workspace:*",
         "@sdxc/feed": "workspace:*",
+        "@sdxc/file-storage-r2": "workspace:*",
         "@sdxc/flags": "workspace:*",
         "@sdxc/flags-engine": "workspace:*",
         "@sdxc/font": "workspace:*",
@@ -2876,6 +2890,8 @@
     "@sdxc/expression": ["@sdxc/expression@workspace:packages/expression"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
+
+    "@sdxc/file-storage-r2": ["@sdxc/file-storage-r2@workspace:packages/file-storage-r2"],
 
     "@sdxc/flags": ["@sdxc/flags@workspace:packages/flags"],
 

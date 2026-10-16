@@ -46,7 +46,7 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 				compatibilityFlags: ["nodejs_compat"],
 				kvNamespaces: ["CACHE", "FLAGS"],
 				d1Databases: ["DB"],
-				r2Buckets: ["JWT_KEYS"],
+				r2Buckets: ["JWT_KEYS", "FILES"],
 			},
 		}),
 	],

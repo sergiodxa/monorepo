@@ -293,6 +293,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/cloudflare-pricing](packages/cloudflare-pricing)       | Cloudflare Developer Platform list prices, one module per service                      |
 | [@sdxc/data-table-d1](packages/data-table-d1)                 | Remix Data Table adapter for Cloudflare D1                                             |
 | [@sdxc/data-table-sqlstorage](packages/data-table-sqlstorage) | Remix Data Table adapter for Durable Object SQL                                        |
+| [@sdxc/file-storage-r2](packages/file-storage-r2)             | File storage adapter for Cloudflare R2                                                 |
 | [@sdxc/hostname](packages/hostname)                           | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains |
 | [@sdxc/session-storage-kv](packages/session-storage-kv)       | Session storage adapter for Cloudflare KV                                              |
 | [@sdxc/workers-cache](packages/workers-cache)                 | Cloudflare cache tags, purging and cache-status reads                                  |
