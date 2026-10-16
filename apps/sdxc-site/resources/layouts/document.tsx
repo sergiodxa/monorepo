@@ -22,7 +22,7 @@ import { font } from "sdxc/u/typography";
 import type { OptionSelections } from "~/app/services/option-groups";
 
 import { seo } from "~/app/initializers/seo";
-import { socialCardUrl } from "~/app/services/social-card";
+import { SOCIAL_CARD_SIZE, socialCardUrl } from "~/app/services/social-card";
 import { SITE_DESCRIPTION, SITE_URL } from "~/config/site";
 import OptionGroupScope from "~/resources/components/option-groups";
 import SiteFooter from "~/resources/components/site-footer";
@@ -72,6 +72,8 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						path: new URL(canonicalUrl).pathname,
 					}),
 					imageAlt: title,
+					imageWidth: SOCIAL_CARD_SIZE.width,
+					imageHeight: SOCIAL_CARD_SIZE.height,
 				}
 			: {};
 

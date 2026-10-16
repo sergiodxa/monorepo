@@ -68,6 +68,12 @@ describe("GET <page>.png", () => {
 		expect(new Uint8Array(await again.arrayBuffer())).toEqual(bytes);
 	});
 
+	test("a page states its card's size", async () => {
+		let html = await (await fetchApp("/api/jwt")).text();
+		expect(html).toContain('<meta property="og:image:width" content="1200" />');
+		expect(html).toContain('<meta property="og:image:height" content="630" />');
+	});
+
 	test("the home page's card lives under index", async () => {
 		let card = await advertisedCard("/");
 		expect(card).toMatch(/^\/index\.png\?v=/);
