@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/font",
+	"version": "0.0.1",
+	"description": "TrueType font reader: glyph lookup, metrics, kerning, outlines and line layout",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}
