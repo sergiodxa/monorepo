@@ -117,6 +117,7 @@ describe("built-in templates", () => {
 		expect(manifest.devDependencies?.["vite-plus"]).toBeDefined();
 		expect(tree.files.has(".gitignore")).toBe(true);
 		expect(tree.files.has("gitignore")).toBe(false);
+		expect(text(tree.files, ".dev.vars")).toBe(text(tree.files, ".env.example"));
 	});
 
 	test("app pins its tooling to the versions the package tests it with", async () => {

@@ -1,0 +1,58 @@
+/**
+ * The {{title}} form, rendered and submitted through a router, so the page middleware's
+ * checks run as they do in the Worker.
+ */
+
+import { log } from "@sdxc/logger/middleware";
+import { unwrap } from "@sdxc/result";
+import { createRouter } from "remix/router";
+import { describe, expect, test } from "vitest";
+
+import { honeypot } from "~/app/initializers/honeypot";
+import { logger } from "~/app/initializers/logger";
+import controller from "{{specifier}}";
+import routes from "{{routes}}";
+
+/** A router with this form and the log its controller is typed to read. */
+function createFormRouter() {
+	let router = createRouter({ middleware: [log(logger)] });
+	router.map(routes.{{path}}, controller);
+	return router;
+}
+
+/** Posts `form` to the form's action. */
+function submit(form: Record<string, string>) {
+	return createFormRouter().fetch(
+		new Request(new URL(routes.{{path}}.action.href(), "https://example.com"), {
+			method: "POST",
+			body: new URLSearchParams(form),
+		}),
+	);
+}
+
+describe("{{name}}", () => {
+	test("renders the form with its honeypot fields", async () => {
+		let response = await createFormRouter().fetch(
+			new URL(routes.{{path}}.index.href(), "https://example.com"),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain(`name="${honeypot.tokenField}"`);
+	});
+
+	test("refuses a submission without the honeypot fields", async () => {
+		let response = await submit({});
+
+		expect(response.status).toBe(400);
+	});
+
+	test("refuses a submission that filled the trap", async () => {
+		let { token, tokenField, trapField } = unwrap(await honeypot.issue());
+
+		let response = await submit({ [tokenField]: token, [trapField]: "https://spam.example" });
+
+		expect(response.status).toBe(400);
+	});
+
+	test.todo("saves a {{title}} submission");
+});

@@ -154,7 +154,8 @@ async function readInto(directory: string, prefix: string, tree: TemplateTree): 
  * Completes a built-in template for the project `name`: names it, pins every `@sdxc/*` package it
  * lists to the version npm calls `latest` and `remix` to the peer the kit declares, and writes
  * `.config/sdxc.jsonc` as `sdxc init` renders it with the template's formatter, so a new
- * configuration key reaches new projects.
+ * configuration key reaches new projects. It copies `.env.example` to `.dev.vars`, so the
+ * development secrets it lists are in place for the project's first `bun dev`.
  */
 export async function completeBuiltin(
 	tree: TemplateTree,
@@ -188,6 +189,8 @@ export async function completeBuiltin(
 		}
 	});
 	if (isFailure(renamed)) return renamed;
+	let example = tree.files.get(".env.example");
+	if (example !== undefined && !tree.files.has(".dev.vars")) tree.files.set(".dev.vars", example);
 	if (!tree.files.has(".config/sdxc.jsonc")) {
 		let config = renderConfig(BUILTIN_CONFIG);
 		if (isFailure(config)) return config;

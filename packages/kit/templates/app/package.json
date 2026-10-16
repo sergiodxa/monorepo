@@ -18,6 +18,7 @@
 		"@sdxc/assets-middleware": "0.0.1",
 		"@sdxc/cli": "0.0.1",
 		"@sdxc/get-client-ip": "0.0.1",
+		"@sdxc/honeypot": "0.0.1",
 		"@sdxc/jobs": "0.0.1",
 		"@sdxc/json-schema": "0.0.1",
 		"@sdxc/lazy-route": "0.0.1",

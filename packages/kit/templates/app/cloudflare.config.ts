@@ -28,6 +28,8 @@ export default defineConfig({
 			 * adapter declares the same budget for the `RateLimit` headers; keep the two in step.
 			 */
 			RATE_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } }),
+			/** Signs the honeypot fields every page form carries. */
+			HONEYPOT_SECRET: bindings.secret(),
 		},
 	},
 });

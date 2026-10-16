@@ -26,6 +26,10 @@ export default defineConfig({
 
 	test: {
 		include: ["app/**/*.test.ts?(x)", "resources/**/*.test.ts?(x)"],
+		/** Vitest runs modules in Node, so the Worker runtime's module resolves to a stand-in. */
+		alias: {
+			"cloudflare:workers": new URL("app/test/cloudflare-workers.ts", import.meta.url).pathname,
+		},
 	},
 
 	fmt: {

@@ -13,14 +13,20 @@ bun dev
 `bun cf:typegen` writes the Worker's types from `cloudflare.config.ts`; run it again after
 changing a binding.
 
+`bun dev` reads the Worker's secrets from `.dev.vars`, which `sdxc create` copies from
+`.env.example`; in a fresh clone, copy it yourself. Before the first deploy, set each secret
+`.env.example` lists with `cf workers secrets update <NAME>`, using production values.
+
 ## Routes
 
 One router serves two route contracts:
 
 - `routes/web.ts`, the pages. Each page controller declares `app/http/middleware/page.ts`, which
-  parses forms, checks cross-origin posts, sends the security headers in
-  `config/security-policy.ts` and resolves the document's assets. Name an origin in that
-  policy's Content-Security-Policy before a page loads a script, style, image or font from it.
+  parses forms, checks cross-origin posts, refuses a post without valid honeypot fields, sends
+  the security headers in `config/security-policy.ts` and resolves the document's assets. A form
+  renders the fields with `HoneypotFields` from `@sdxc/honeypot/ui`, as
+  `sdxc make controller --method form` does. Name an origin in the policy's
+  Content-Security-Policy before a page loads a script, style, image or font from it.
 - `routes/api.ts`, the endpoints machine clients call: `GET /api/health`,
   `GET /api/openapi.json` and `POST /mcp`. Each declares `app/http/middleware/api.ts` (CORS), and
   errors answer as `application/problem+json` from the catalog in `config/problems.ts`; set
