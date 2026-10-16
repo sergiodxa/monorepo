@@ -1,5 +1,5 @@
 <hero>
-<split>
+<split lean="copy">
 <split-copy>
 
 # sdxc

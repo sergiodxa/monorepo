@@ -29,7 +29,10 @@ export const TAGS = {
 	hero: { content: "blocks" },
 
 	/** Copy on one side and what it is about on the other, stacked on a narrow screen. */
-	split: { content: "blocks" },
+	split: {
+		content: "blocks",
+		attributes: s.object({ lean: s.optional(s.enum_(["copy", "media"])) }),
+	},
 
 	"split-copy": { content: "blocks" },
 

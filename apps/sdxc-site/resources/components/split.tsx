@@ -25,8 +25,11 @@ import { blocksUseGap } from "~/resources/components/block-flow";
 /** The check each item of a list in the copy is marked with, drawn as a mask the brand color fills. */
 const CHECK_MASK = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat`;
 
-/** Renders the two columns. */
-export default function Split(handle: Handle<MarkdownProps>) {
+/**
+ * Renders the two columns. The wider one goes to the media unless `lean="copy"` hands it
+ * to the copy, for a band whose sample is short enough to sit in the narrower column.
+ */
+export default function Split(handle: Handle<MarkdownProps & { lean?: "copy" | "media" }>) {
 	return () => (
 		<div
 			mix={[
@@ -40,7 +43,12 @@ export default function Split(handle: Handle<MarkdownProps>) {
 				gridTemplate({ columns: "minmax(0, 1fr)" }),
 				media(
 					"(min-width: 64rem)",
-					gridTemplate({ columns: "minmax(0, 0.85fr) minmax(0, 1.15fr)" }),
+					gridTemplate({
+						columns:
+							handle.props.lean === "copy"
+								? "minmax(0, 1.15fr) minmax(0, 0.85fr)"
+								: "minmax(0, 0.85fr) minmax(0, 1.15fr)",
+					}),
 				),
 			]}
 		>
