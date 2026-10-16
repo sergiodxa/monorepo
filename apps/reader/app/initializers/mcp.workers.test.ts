@@ -24,9 +24,29 @@ import { TOKEN_LIFETIME_MS } from "~/database/schema";
 
 const ENDPOINT = "https://reader.sergiodxa.com/mcp";
 
+/** The `MCP_RATE_LIMITER` binding's period, as `wrangler.jsonc` declares it. */
+const RATE_LIMIT_WINDOW_MS = 60_000;
+
+/**
+ * Time a burst of requests needs to finish inside one window, with room for a slow run;
+ * the whole burst normally takes under 200ms.
+ */
+const BURST_MARGIN_MS = 2_000;
+
 /** A subject no other test in this file uses, since object storage outlives a test. */
 function subject(): string {
 	return `sub-${generateUUID()}`;
+}
+
+/**
+ * Waits for the next rate-limit window when the current one ends within {@link BURST_MARGIN_MS}.
+ * The binding counts in windows aligned to the wall clock, so a burst that crosses a boundary
+ * splits its count across two windows and never reaches the limit.
+ */
+async function freshWindow() {
+	let remaining = RATE_LIMIT_WINDOW_MS - (Date.now() % RATE_LIMIT_WINDOW_MS);
+	if (remaining > BURST_MARGIN_MS) return;
+	await new Promise((resolve) => setTimeout(resolve, remaining));
 }
 
 /** The router under test, built the way the worker builds it. */
@@ -112,6 +132,7 @@ describe("the burst budget", () => {
 		let spender = await tokenFor(subject());
 		let bystander = await tokenFor(subject());
 
+		await freshWindow();
 		let refused = 0;
 		for (let attempt = 0; attempt <= AGENT_RATE_LIMIT; attempt++) {
 			let response = await router.fetch(listRequest(spender));
