@@ -1,5 +1,8 @@
 /**
- * The {{title}} policy: describe who may do what, and why the rule sits here.{{header}}
+ * The {{title}} policy: describe who may do what, and why the rule sits here.
+ *
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}
+ * @see {@link https://sdxc.dev/api/authz}{{header}}
  */
 
 /** Who an authorization rule is asked about; `null` for an anonymous visitor. */

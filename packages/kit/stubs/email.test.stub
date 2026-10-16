@@ -1,5 +1,8 @@
 /**
- * The {{title}} email.{{header}}
+ * The {{title}} email.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/send-email}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { describe, expect, test } from "vitest";

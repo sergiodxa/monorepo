@@ -1,5 +1,8 @@
 /**
- * The {{title}} MCP handler.{{header}}
+ * The {{title}} MCP handler.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { describe, expect, test } from "vitest";

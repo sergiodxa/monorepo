@@ -1,6 +1,9 @@
 /**
  * The {{title}} form, rendered and submitted through the app's router, so every middleware
- * and the page chain's checks run as they do in the Worker.{{header}}
+ * and the page chain's checks run as they do in the Worker.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { unwrap } from "@sdxc/result";

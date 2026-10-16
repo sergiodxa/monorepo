@@ -1,5 +1,8 @@
 /**
- * The `{{command}}` command, run through the app's command line.{{header}}
+ * The `{{command}}` command, run through the app's command line.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { invoke } from "@sdxc/cli/test";

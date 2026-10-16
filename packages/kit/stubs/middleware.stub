@@ -1,6 +1,8 @@
 /**
  * The {{title}} middleware: describe what it publishes on the context or which requests it
- * answers before the handler runs.{{header}}
+ * answers before the handler runs.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}{{header}}
  */
 
 import type { Middleware } from "remix/router";

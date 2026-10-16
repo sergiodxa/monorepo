@@ -1,5 +1,8 @@
 /**
- * The {{title}} email: describe who receives it and what it tells them.{{header}}
+ * The {{title}} email: describe who receives it and what it tells them.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/send-email}
+ * @see {@link https://sdxc.dev/api/mail}{{header}}
  */
 
 import type { Handle } from "remix/component";

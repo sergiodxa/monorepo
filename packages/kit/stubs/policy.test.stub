@@ -1,5 +1,8 @@
 /**
- * The {{title}} policy.{{header}}
+ * The {{title}} policy.
+ *
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { describe, expect, test } from "vitest";

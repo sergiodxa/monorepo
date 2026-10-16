@@ -1,5 +1,8 @@
 /**
- * The {{title}} factory tests seed rows with, through the same model the app writes with.{{header}}
+ * The {{title}} factory tests seed rows with, through the same model the app writes with.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/data-models}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/test-data}{{header}}
  */
 
 import { defineFactory } from "@sdxc/data-model/testing";

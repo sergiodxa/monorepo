@@ -207,7 +207,12 @@ describe("generated files", () => {
 
 		let planned = unwrap(await plan(request, root, config, defaultPackageRoot()));
 
-		expect(planned.files[0]?.content).toMatch(/^\/\*\*\n \* Charge: [^@]*?succeeds\.\n \*\/\n/);
+		let header = planned.files[0]?.content.split("*/")[0] ?? "";
+		expect(header).toMatch(/^\/\*\*\n \* Charge: /);
+		expect(header).not.toMatch(/@author|@copyright/);
+		expect(header).toMatch(
+			/result-everywhere\}\n \* @see \{@link https:\/\/sdxc\.dev\/api\/result\}\n $/,
+		);
 	});
 
 	test("a built-in template's modules credit the author and other files stay as they are", () => {

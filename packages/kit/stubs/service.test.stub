@@ -1,5 +1,8 @@
 /**
- * The {{title}} service.{{header}}
+ * The {{title}} service.
+ *
+ * @see {@link https://sdxc.dev/docs/conventions/result-everywhere}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { isSuccess } from "@sdxc/result";

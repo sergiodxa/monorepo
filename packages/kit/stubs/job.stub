@@ -1,5 +1,8 @@
 /**
- * The {{title}} job: describe what it changes and why it runs off the request.{{header}}
+ * The {{title}} job: describe what it changes and why it runs off the request.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/jobs-and-cron}
+ * @see {@link https://sdxc.dev/api/jobs}{{header}}
  */
 
 import { createJobHandler } from "@sdxc/jobs";

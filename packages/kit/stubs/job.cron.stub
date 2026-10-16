@@ -1,6 +1,9 @@
 /**
  * The scheduled {{title}} job: describe what each run sweeps or reports, and why on this
- * schedule.{{header}}
+ * schedule.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/jobs-and-cron}
+ * @see {@link https://sdxc.dev/api/jobs}{{header}}
  */
 
 import { createJobHandler } from "@sdxc/jobs";

@@ -1,6 +1,9 @@
 /**
  * The {{title}} model and its table: describe what a row records and the rules that keep it
- * consistent. Keep the columns in step with the migration that creates the table.{{header}}
+ * consistent. Keep the columns in step with the migration that creates the table.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/data-models}
+ * @see {@link https://sdxc.dev/api/data-model}{{header}}
  */
 
 import type { TableRow } from "remix/data-table";

@@ -1,5 +1,8 @@
 /**
- * The fields the {{title}} form submits, validated before anything trusts them.{{header}}
+ * The fields the {{title}} form submits, validated before anything trusts them.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/api/validate}{{header}}
  */
 
 import * as s from "remix/data-schema";

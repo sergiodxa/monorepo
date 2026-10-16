@@ -1,5 +1,8 @@
 /**
- * The {{title}} page: describe what a visitor finds here and why the route exists.{{header}}
+ * The {{title}} page: describe what a visitor finds here and why the route exists.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/interface-with-remix-ui}{{header}}
  */
 
 import { createAction } from "remix/router";

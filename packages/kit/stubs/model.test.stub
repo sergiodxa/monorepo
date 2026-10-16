@@ -1,5 +1,8 @@
 /**
- * The {{title}} model.{{header}}
+ * The {{title}} model.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/data-models}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { describe, expect, test } from "vitest";

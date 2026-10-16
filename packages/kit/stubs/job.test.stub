@@ -1,5 +1,8 @@
 /**
- * The {{title}} job.{{header}}
+ * The {{title}} job.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/jobs-and-cron}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
 import { describe, expect, test } from "vitest";

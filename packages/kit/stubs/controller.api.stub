@@ -1,6 +1,9 @@
 /**
  * The {{title}} endpoint: describe what a client sends, what it gets back and which errors it
- * should expect.{{header}}
+ * should expect.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}{{header}}
  */
 
 import { createAction } from "remix/router";
