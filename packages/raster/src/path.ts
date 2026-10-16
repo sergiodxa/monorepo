@@ -9,6 +9,10 @@
 
 import type { Font } from "@sdxc/font";
 
+import type { Raster } from "./types.js";
+
+import { tracePathData } from "./svg-path.js";
+
 /** The furthest a flattened chord may stray from its curve, in pixels. */
 const TOLERANCE = 0.1;
 
@@ -83,6 +87,18 @@ export class Path {
 			else into.close();
 		}
 		return into.close();
+	}
+
+	/**
+	 * Parses an SVG `d` attribute, arcs included. `transform` maps every point in SVG
+	 * `matrix(a b c d e f)` order, so a shape drawn in its own `viewBox` lands scaled and placed.
+	 *
+	 * @throws {RangeError} When `d` is malformed, naming the position
+	 * @example Path.fromSVG("M0 0H10V10H0Z")
+	 * @example Path.fromSVG(logo, { transform: [0.1, 0, 0, -0.1, 40, 142.4] })
+	 */
+	static fromSVG(d: string, options: Raster.PathDataOptions = {}): Path {
+		return tracePathData(d, new Path(), options.transform);
 	}
 
 	/** Starts a new contour, closing the one before it. */

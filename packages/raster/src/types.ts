@@ -21,6 +21,18 @@ export namespace Raster {
 	/** A canvas coordinate in pixels, y down. */
 	export type Point = [x: number, y: number];
 
+	/**
+	 * An affine transform in SVG `matrix(a b c d e f)` order, mapping `(x, y)` to
+	 * `(a·x + c·y + e, b·x + d·y + f)`.
+	 */
+	export type Matrix = [a: number, b: number, c: number, d: number, e: number, f: number];
+
+	/** Where SVG path data lands on the canvas. */
+	export interface PathDataOptions {
+		/** Applied to every point, so a shape drawn in its own `viewBox` can be scaled and placed. */
+		transform?: Matrix;
+	}
+
 	/** One colour stop: where along the gradient (`0–1`) the colour is reached. */
 	export type Stop = [offset: number, color: Color];
 

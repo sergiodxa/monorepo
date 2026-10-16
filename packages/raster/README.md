@@ -107,6 +107,14 @@ composite, and become bytes only on output.
 `moveTo`, `lineTo`, `quadTo`, `cubicTo` and `close`, plus `Path.rect`, `Path.roundedRect` and
 `Path.from(commands)` for `@sdxc/font` glyph outlines. An open contour fills as if closed.
 
+`Path.fromSVG(d, { transform })` parses an SVG `d` attribute, arcs included, and throws a
+`RangeError` on malformed data. `transform` is an SVG `matrix(a b c d e f)` applied to every point:
+
+```typescript
+/* A logo drawn in a 1024 viewBox, scaled to 64 px and placed at (40, 40). */
+canvas.fillPath(Path.fromSVG(d, { transform: [1 / 16, 0, 0, 1 / 16, 40, 40] }), color("#fff"));
+```
+
 ### `color(input)` / `withAlpha(color, opacity)` / `TRANSPARENT`
 
 Parses `#rgb[a]`, `#rrggbb[aa]`, `rgb()`/`rgba()` and `oklch()` into straight-alpha sRGB, clipping
