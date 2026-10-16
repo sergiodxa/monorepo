@@ -380,6 +380,18 @@ describe("the search dialog", () => {
 		expect(document.getElementById("rmx-data")?.textContent).not.toContain("SearchTrigger");
 	});
 
+	test("spaces the box and the quick links in a column of its own inside the dialog", async () => {
+		await loadPage(application());
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID);
+		let column = dialog?.firstElementChild;
+
+		expect(dialog?.children).toHaveLength(1);
+		expect(column?.tagName).toBe("DIV");
+		expect(column?.contains(input())).toBe(true);
+		expect(column?.contains(document.getElementById(SEARCH_QUICK_LINKS_ID))).toBe(true);
+	});
+
 	test("opens from a plain click on the trigger on a wide screen, in place of /search", async () => {
 		screen(true);
 		let router = application();

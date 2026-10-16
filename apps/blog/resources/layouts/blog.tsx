@@ -15,7 +15,16 @@ import { mf } from "@sdxc/microformats/ui";
 import { bg, fg, radialGradient } from "@sdxc/u/color";
 import { rounded, transition, transitionBehavior } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { flexWrap, gap, grid, gridArea, gridTemplate, hstack, items, self } from "@sdxc/u/layout";
+import {
+	flexWrap,
+	grid,
+	gridArea,
+	gridTemplate,
+	hstack,
+	items,
+	self,
+	vstack,
+} from "@sdxc/u/layout";
 import { overflow } from "@sdxc/u/overflow";
 import { light, media } from "@sdxc/u/responsive";
 import { is, m, maxBs, maxIs, mbe, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/size";
@@ -205,7 +214,6 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							closedby="any"
 							mix={[
 								p(0),
-								gap(2),
 								bg("transparent"),
 								rounded("none"),
 								overflow("visible"),
@@ -219,11 +227,13 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								raw({ marginBlock: "min(12vh, 6rem) auto" }),
 							]}
 						>
-							<Frame
-								name="search"
-								src={searchFrameSrc(routes.searchFrame.href(), searchQuery ?? "")}
-							/>
-							<SearchQuickLinks currentPath={insideSection ? undefined : activePath} />
+							<div mix={[vstack({ gap: 2 }), minBs(0)]}>
+								<Frame
+									name="search"
+									src={searchFrameSrc(routes.searchFrame.href(), searchQuery ?? "")}
+								/>
+								<SearchQuickLinks currentPath={insideSection ? undefined : activePath} />
+							</div>
 						</Dialog>
 					</header>
 					{children}
