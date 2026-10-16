@@ -123,7 +123,7 @@ export const SDXC_COMMANDS = commands({
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
 			},
-			examples: ["make controller ping --method post --path /api/ping"],
+			examples: ["make controller api/keys --routes api", "make controller ping --method post"],
 		}),
 		middleware: command({
 			description: "A middleware in app/http/middleware",

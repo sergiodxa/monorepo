@@ -6,7 +6,7 @@
 
 import { createHandler } from "@sdxc/mcp";
 
-/** The handler the `/mcp` route forwards to. */
+/** The server `app/http/controllers/mcp.ts` forwards each `/mcp` request to. */
 const mcp = createHandler({
 	name: "app",
 	version: "1.0.0",

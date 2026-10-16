@@ -5,10 +5,12 @@
 
 import { createController } from "remix/router";
 
+import page from "~/app/http/middleware/page";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "{{routes}}";
 
 export default createController(routes.{{path}}, {
+	middleware: page,
 	actions: {
 		/** Renders the form. */
 		index(ctx) {

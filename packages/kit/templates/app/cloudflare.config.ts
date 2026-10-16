@@ -23,6 +23,11 @@ export default defineConfig({
 		env: {
 			/** Where the job dispatcher enqueues; `cf queues create <name>` before the first deploy. */
 			QUEUE: bindings.queue({ name: manifest.name }),
+			/**
+			 * 100 requests per minute per client address, across every route. The router's
+			 * adapter declares the same budget for the `RateLimit` headers; keep the two in step.
+			 */
+			RATE_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } }),
 		},
 	},
 });

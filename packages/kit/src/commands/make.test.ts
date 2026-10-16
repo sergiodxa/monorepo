@@ -348,7 +348,8 @@ describe("declaring and mapping", () => {
 				["job", "digest", "--cron", "0 8 * * *"],
 				["controller", "sponsors"],
 				["controller", "admin/users", "--method", "form"],
-				["controller", "ping", "--method", "post", "--path", "/api/ping"],
+				["controller", "ping", "--method", "post", "--path", "/ping"],
+				["controller", "api/keys", "--routes", "api"],
 				["mcp", "get-post"],
 				["mcp", "article", "--resource"],
 				["middleware", "require-user"],
@@ -374,6 +375,7 @@ describe("declaring and mapping", () => {
 			let jobs = await read("app/jobs/index.ts");
 			let dispatcher = await read("app/initializers/dispatcher.ts");
 			let routes = await read("routes/web.ts");
+			let api = await read("routes/api.ts");
 			let router = await read("app/initializers/router.tsx");
 			let tools = await read("app/mcp/tools/index.ts");
 			let mcp = await read("app/mcp/resources/index.ts");
@@ -385,12 +387,25 @@ describe("declaring and mapping", () => {
 			expect(dispatcher).toContain(
 				'dispatcher.map(jobs.trials.expire, () => import("~/app/jobs/trials/expire"));\ndispatcher.map(jobs.digest, () => import("~/app/jobs/digest"));',
 			);
-			expect(routes).toContain('import { get, post, route, form } from "remix/routes";');
+			expect(routes).toContain('import { get, route, form, post } from "remix/routes";');
 			expect(routes).toContain('sponsors: get("/sponsors"),');
 			expect(routes).toContain('admin: {\n\t\tusers: form("/admin/users"),\n\t},');
-			expect(routes).toContain('ping: post("/api/ping"),');
+			expect(routes).toContain('ping: post("/ping"),');
 			expect(router).toContain(
-				'router.map(routes.admin.users, lazy(() => import("~/app/http/controllers/admin/users")));',
+				'router.map(webRoutes.admin.users, lazy(() => import("~/app/http/controllers/admin/users")));',
+			);
+			expect(api).toContain('keys: get("/api/keys"),');
+			expect(router).toContain(
+				'router.map(apiRoutes.api.keys, lazy(() => import("~/app/http/controllers/api/keys")));',
+			);
+			let page = await read("app/http/controllers/sponsors.tsx");
+			let endpoint = await read("app/http/controllers/api/keys.tsx");
+			expect(page).toContain("middleware: page,");
+			expect(endpoint).toContain("middleware: api,");
+			expect(endpoint).toContain("Response.json({})");
+			expect(endpoint).not.toContain("DocumentLayout");
+			expect(await read("app/http/controllers/api/keys.test.tsx")).toContain(
+				'test.todo("answers Keys as JSON");',
 			);
 			expect(tools).toContain('getPost: tool("get_post", {');
 			expect(mcp).toContain('article: resource("app://article", {');

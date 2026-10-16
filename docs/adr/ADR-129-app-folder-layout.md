@@ -105,7 +105,8 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
    `app/mcp/resources/`, with the declarations in each folder's `index.ts`, mapped through
    `lazy()` from `@sdxc/mcp` so a call imports only the handler it reaches.
 8. **Pages render through `render({ assets })` from `remix/middleware/render`,** with
-   `assets(...)` from `@sdxc/assets-middleware` before it in the router, so `ctx.assets`
+   `assets(...)` from `@sdxc/assets-middleware` before it in the router (or, when the router
+   also serves an API, in the page chain page controllers declare, ADR-153), so `ctx.assets`
    carries the document's stylesheets, entry script and CSP nonce. A page passes them to its
    document explicitly (`<Document assets={ctx.assets}>`); an app whose document needs its own
    renderer writes it as middleware reading `ctx.assets` (see ADR-131). Apps do not rebuild

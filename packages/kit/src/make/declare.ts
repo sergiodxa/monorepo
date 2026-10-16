@@ -191,7 +191,7 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 	let { name } = request;
 	let module = `routes/${request.routes}`;
 	let contract = await findContract(root, module);
-	let initializer = await findInitializer(root, module, null);
+	let initializer = await findInitializer(root, module, "createRouter", "required");
 	let instance = initializer === null ? "router" : instanceOf(initializer, "createRouter");
 	let local = initializer === null ? "routes" : (defaultLocal(initializer, module) ?? "routes");
 	let path = [...name.segments.slice(0, -1).map(camel), name.key];
@@ -563,13 +563,15 @@ function mapAfter(
 }
 
 /**
- * The first initializer in `app/initializers/` that imports `module`, or failing that, one that
- * calls `factory`; `null` when none does. Test files are skipped.
+ * The initializer in `app/initializers/` that imports `module` and calls `factory`, else the
+ * first that imports it, else (unless `importing` is required) one that calls `factory`; `null`
+ * when none does. Test files are skipped.
  */
 async function findInitializer(
 	root: string,
 	module: string,
 	factory: string | null,
+	importing: "required" | "preferred" = "preferred",
 ): Promise<SourceFile | null> {
 	let folder = "app/initializers";
 	let entries = await wrap(() => readdir(join(root, folder)));
@@ -583,15 +585,16 @@ async function findInitializer(
 	let tsconfig = await wrap(() => readFile(join(root, "tsconfig.json"), "utf8"));
 	let aliased = !isFailure(tsconfig) && tsconfig.data.includes('"~/app/*"');
 	for (let file of files) file.aliased = aliased;
-	let importing = files.find((file) =>
+	let calling = factory === null ? null : new RegExp(`\\b${factory}\\(`);
+	let importers = files.filter((file) =>
 		file.references.some(
 			(reference) =>
 				reference.kind === "import" && resolvesTo(reference.specifier, file.path, module),
 		),
 	);
-	if (importing !== undefined) return importing;
-	if (factory === null) return null;
-	let calling = new RegExp(`\\b${factory}\\(`);
+	let found = importers.find((file) => calling?.test(file.source) ?? true) ?? importers[0];
+	if (found !== undefined) return found;
+	if (calling === null || importing === "required") return null;
 	return files.find((file) => calling.test(file.source)) ?? null;
 }
 

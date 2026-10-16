@@ -1,0 +1,15 @@
+/**
+ * The {{title}} endpoint: describe what a client sends, what it gets back and which errors it
+ * should expect.
+ */
+
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import routes from "{{routes}}";
+
+export default createAction(routes.{{path}}, {
+	middleware: api,
+	/** Answers {{title}} as JSON; report a failure with `problem()` from `@sdxc/problem`. */
+	handler: () => Response.json({}),
+});

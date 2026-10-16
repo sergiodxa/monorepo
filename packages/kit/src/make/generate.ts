@@ -112,7 +112,8 @@ export function folderOf(kind: KindName, variant: string | null): string {
 
 /**
  * Renders the kind's stub, or its test stub, with `values`. A variant's own stub wins; a
- * variant without its own test stub uses the kind's.
+ * variant without its own test stub uses the kind's. A controller with no variant takes its
+ * contract's stub when one exists (`controller.api.stub` for `routes/api`), else the kind's.
  */
 async function renderFile(
 	request: MakeRequest,
@@ -123,6 +124,9 @@ async function renderFile(
 	packageRoot: string,
 ): Promise<Result<string, Error>> {
 	let names = [stubName(request.kind, request.variant, test)];
+	if (request.kind === "controller" && request.variant === null) {
+		names.unshift(stubName(request.kind, request.routes, test));
+	}
 	if (request.variant !== null && test) names.push(stubName(request.kind, null, true));
 	let stub = await loadStub(names, root, config.make.stubs, packageRoot);
 	if (isFailure(stub)) return stub;

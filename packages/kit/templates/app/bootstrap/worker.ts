@@ -1,7 +1,7 @@
 /**
- * The Worker's entry point. `fetch` builds the router and forwards the request to it, and
- * `queue` hands each delivered batch to the job dispatcher, so every request and every job
- * reaches the app through the initializers that configure it.
+ * The Worker's entry point. `fetch` forwards each request to the router, which serves pages
+ * and the API alike, and `queue` hands each delivered batch to the job dispatcher, so every
+ * request and every job reaches the app through the initializers that configure it.
  */
 
 import * as cloudflare from "@sdxc/jobs/cloudflare";
@@ -13,7 +13,7 @@ import { createWebRouter } from "~/app/initializers/router";
 const JOBS = cloudflare.worker(dispatcher);
 
 export default {
-	/** Answers a request through the web router. */
+	/** Answers a request through the router. */
 	async fetch(request) {
 		let router = createWebRouter();
 		return await router.fetch(request);

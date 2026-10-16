@@ -29,7 +29,9 @@ any GitHub repository.
 - **Built-in templates.** A `--template` without a slash names a template shipped in the tarball,
   from `packages/kit/templates/<name>/`; it defaults to `app`, a Remix v3 Worker in the ADR-129
   layout with `cloudflare.config.ts`, a Vite+ configuration, `.config/sdxc.jsonc`, and `sdxc` and
-  `remix` pinned to the versions that release ships with. A test materializes each built-in
+  `remix` pinned to the versions that release ships with. Its one router maps a page contract,
+  `routes/web.ts`, and an API contract, `routes/api.ts`, each with its own middleware chain
+  (ADR-153). A test materializes each built-in
   template into a temporary directory and type checks it, so one that stops compiling fails CI.
 - **Remote templates.** `--template org/repo[/path][#ref]` names a GitHub repository, optionally a
   folder inside it and a branch, tag or commit. Any repository is a template; nothing in it has

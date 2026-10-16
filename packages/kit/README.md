@@ -15,6 +15,7 @@ The package installs a command named `sdxc`. It works on projects that depend on
 ```sh
 sdxc create my-app                   # a Remix v3 app, or --template org/repo from GitHub
 sdxc make controller posts/show      # a file where the app layout puts it, with its test
+sdxc make controller api/keys --routes api  # a JSON endpoint in the API contract
 sdxc ui add dialog                   # copy a component into the project to edit it
 sdxc upgrade                         # move to the latest release and print a prompt for the code
 sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts

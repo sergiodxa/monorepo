@@ -13,6 +13,20 @@ bun dev
 `bun cf:typegen` writes the Worker's types from `cloudflare.config.ts`; run it again after
 changing a binding.
 
+## Routes
+
+One router serves two route contracts:
+
+- `routes/web.ts`, the pages. Each page controller declares `app/http/middleware/page.ts`, which
+  parses forms, checks cross-origin posts and resolves the document's assets.
+- `routes/api.ts`, the endpoints machine clients call: `GET /api/health`,
+  `GET /api/openapi.json` and `POST /mcp`. Each declares `app/http/middleware/api.ts` (CORS), and
+  errors answer as `application/problem+json`.
+
+Every request is rate limited per client address, 100 a minute, through the `RATE_LIMITER`
+binding in `cloudflare.config.ts`. Document an endpoint by adding its operation to
+`routes/api.ts` and to `app/initializers/openapi.ts`.
+
 ## Add code
 
 `sdxc make <kind> <name>` writes a file of that kind where it belongs, with a test beside it,
@@ -21,6 +35,7 @@ from `npm add -g @sdxc/kit`:
 
 ```sh
 sdxc make controller about
+sdxc make controller api/keys --routes api
 sdxc make job reports/daily --cron "0 8 * * *"
 sdxc make mcp search-posts
 ```

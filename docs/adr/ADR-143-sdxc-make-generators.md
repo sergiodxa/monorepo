@@ -75,7 +75,9 @@ the invocation's log, `lazy()`-mapped routes.
 - **One naming rule.** A kind's stub is `<kind>.stub`; a flag that changes what the generated
   file looks like selects a variant, `<kind>.<variant>.stub` (`mcp.resource.stub` for
   `--resource`, `job.cron.stub` for `--cron`, `controller.form.stub` for `--method form`); a test
-  stub is `<kind>.test.stub` or `<kind>.<variant>.test.stub`.
+  stub is `<kind>.test.stub` or `<kind>.<variant>.test.stub`. A controller with no variant takes
+  its contract's stub when one exists (`controller.api.stub` for `--routes api`, a JSON endpoint),
+  and `controller.stub`, a page, otherwise.
 - **Project stubs win.** For each stub name, `make` uses the file in `make.stubs` when it exists
   and the built-in one otherwise, so a project overrides only the stubs it cares about.
 - **`sdxc make stubs [kind...]`** copies the built-in stubs for the given kinds, or all of them,
@@ -97,7 +99,7 @@ the new handler answers as soon as the command finishes:
 | Kind             | Declaration                                                                  | Mapping                                                                                     |
 | ---------------- | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `job`            | `expire: job({ input: s.object({}) })` under `trials` in `app/jobs/index.ts` | `dispatcher.map(jobs.trials.expire, () => import("~/app/jobs/trials/expire"))`              |
-| `controller`     | `sponsors: get("/sponsors")` in `routes/web.ts`                              | `router.map(routes.sponsors, lazy(() => import("~/app/http/controllers/sponsors")))`        |
+| `controller`     | `sponsors: get("/sponsors")` in `routes/web.ts`                              | `router.map(webRoutes.sponsors, lazy(() => import("~/app/http/controllers/sponsors")))`     |
 | `mcp`            | `getPost: tool("get_post", { … })` in `app/mcp/tools/index.ts`               | `mcp.tools.map(toolset.getPost, lazy(() => import("~/app/mcp/tools/get-post")))`            |
 | `mcp --resource` | `article: resource("…", { … })` in `app/mcp/resources/index.ts`              | `mcp.resources.map(resourceset.article, lazy(() => import("~/app/mcp/resources/article")))` |
 
@@ -112,7 +114,8 @@ the new handler answers as soon as the command finishes:
   (default `make.routes`). Leading name segments of a controller nest the route under the
   `route({ … })` group with that key, created without a path prefix when missing.
 - **Which initializer.** The router initializer is the one in `app/initializers/` that imports
-  the chosen contract; the job dispatcher and the MCP handler are the initializers that import
+  the chosen contract and calls `createRouter`, since other initializers may import a contract
+  too (the OpenAPI document reads `routes/api.ts`); the job dispatcher and the MCP handler are the initializers that import
   `~/app/jobs` and `~/app/mcp/tools` (or `resources`). The new mapping follows the last mapping
   of the same declarations in that file, inside a router factory when the existing calls are
   there, or directly after the instance is created when none exist yet.

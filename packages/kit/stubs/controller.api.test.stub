@@ -1,0 +1,15 @@
+/**
+ * The {{title}} endpoint.
+ */
+
+import { describe, expect, test } from "vitest";
+
+import controller from "{{specifier}}";
+
+describe("{{name}}", () => {
+	test("exports what the router maps", () => {
+		expect(controller).toBeDefined();
+	});
+
+	test.todo("answers {{title}} as JSON");
+});

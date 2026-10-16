@@ -4,14 +4,17 @@
 
 import { createAction } from "remix/router";
 
+import page from "~/app/http/middleware/page";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "{{routes}}";
 
-/** Renders the {{title}} page. */
-export default createAction(routes.{{path}}, (ctx) =>
-	ctx.render(
-		<DocumentLayout assets={ctx.assets} title="{{title}}">
-			<h1>{{title}}</h1>
-		</DocumentLayout>,
-	),
-);
+export default createAction(routes.{{path}}, {
+	middleware: page,
+	/** Renders the {{title}} page. */
+	handler: (ctx) =>
+		ctx.render(
+			<DocumentLayout assets={ctx.assets} title="{{title}}">
+				<h1>{{title}}</h1>
+			</DocumentLayout>,
+		),
+});

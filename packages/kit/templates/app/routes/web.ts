@@ -1,12 +1,12 @@
 /**
- * The web route contract: every URL the app answers, by name. Controllers and links build
+ * The web route contract: every page the app serves, by name. Controllers and links build
  * URLs with `routes.<name>.href()`, so a pattern changes here and nowhere else.
  */
 
-import { get, post, route } from "remix/routes";
+import { get, route } from "remix/routes";
 
-/** The home page and the MCP endpoint an agent connects to. */
+/** The pages, and the 404 page for any path no other route claims. */
 export default route({
 	home: get("/"),
-	mcp: post("/mcp"),
+	notFound: "/*path",
 });
