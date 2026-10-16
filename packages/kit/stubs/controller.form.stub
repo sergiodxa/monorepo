@@ -9,7 +9,8 @@
 import { captcha } from "@sdxc/captcha/middleware";
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
-import { isSuccess, unwrap } from "@sdxc/result";
+import { unwrap } from "@sdxc/result";
+import { spam } from "@sdxc/spam/middleware";
 import { env } from "cloudflare:workers";
 import { createController } from "remix/router";
 
@@ -45,23 +46,12 @@ export default createController(routes.{{path}}, {
 		},
 
 		/**
-		 * Receives a submission that passed the honeypot and the CAPTCHA, which answers a 403
-		 * before the handler runs, refuses a message scored as spam with a 422, and sends the
-		 * visitor back to the form.
+		 * Receives a submission that passed the honeypot, the CAPTCHA (a 403 otherwise) and the
+		 * spam filter (a 422 otherwise), and sends the visitor back to the form.
 		 */
 		action: {
-			middleware: [captcha(turnstile)],
+			middleware: [captcha(turnstile), spam(spamFilter, { fields: { content: "message" } })],
 			async handler(ctx) {
-				let honeypot = ctx.honeypotOutcome;
-				let message = ctx.formData.get("message");
-				let assessment = await spamFilter.check({
-					content: typeof message === "string" ? message : "",
-					renderedAt: isSuccess(honeypot) ? honeypot.data.renderedAt : undefined,
-					author: { userAgent: ctx.request.headers.get("User-Agent") ?? undefined },
-				});
-				if (assessment.verdict === "spam") {
-					return new Response("Message refused as spam", { status: 422 });
-				}
 				// TODO: save the submission, then redirect where the visitor should land
 				return new Response(null, {
 					status: 303,

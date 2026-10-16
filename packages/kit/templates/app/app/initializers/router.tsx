@@ -8,7 +8,7 @@ import type { RouterContext } from "remix/router";
 
 import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
-import { getClientIP } from "@sdxc/get-client-ip";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
@@ -17,6 +17,7 @@ import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { userAgent } from "@sdxc/user-agent/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -58,10 +59,12 @@ export function createWebRouter() {
 			noWWW(),
 			trailingSlash(),
 			wellKnown({ "security.txt": securityTxtEntry }),
+			getClientIP(),
+			userAgent(),
 			rateLimit({
 				adapter: new CloudflareAdapter(env.RATE_LIMITER, { limit: 100, window: "1 minute" }),
 				prefix: "address",
-				key: (ctx) => addressKey(getClientIP(ctx.request)),
+				key: (ctx) => addressKey(ctx.ip),
 				onLimit: () => problems.tooManyRequests(),
 			}),
 			database(openDatabase()),

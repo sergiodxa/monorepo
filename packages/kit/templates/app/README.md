@@ -57,6 +57,8 @@ Every request, job and command can read:
   `await send()` before it. A command prints it instead of sending it.
 - `ctx.log`, with a `trace_id` shared by a request and the jobs it starts.
 - `ctx.timing`: adds entries to the `Server-Timing` header (requests only).
+- `ctx.ip` and `ctx.userAgent` (requests only): the client's address, or `null`, and its parsed
+  `User-Agent` header.
 
 Pages also get `ctx.session`, `ctx.intl` for translated copy, and forms protected by a
 honeypot, Turnstile and a spam filter. Before a page loads a script, style, image or font from

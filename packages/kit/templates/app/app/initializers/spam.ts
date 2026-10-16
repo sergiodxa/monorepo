@@ -1,7 +1,7 @@
 /**
- * The spam filter a form scores what a visitor wrote with: the local rules, which weigh links,
- * markup and how fast the form came back, and need no account or network call. Add reputation
- * checks from `@sdxc/spam` here as the app's forms attract them.
+ * The spam filter a form's action scores submissions with, through `spam(spamFilter, …)` from
+ * `@sdxc/spam/middleware`: the local rules weigh links, markup and how fast the form came back,
+ * with no account or network call. Add reputation checks here as the app's forms attract them.
  */
 
 import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";

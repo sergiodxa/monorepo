@@ -45,6 +45,7 @@
 		"@sdxc/trace-context": "0.0.1",
 		"@sdxc/trailing-slash-middleware": "0.0.1",
 		"@sdxc/ui": "0.0.1",
+		"@sdxc/user-agent": "0.0.1",
 		"@sdxc/well-known": "0.0.1",
 		"remix": "3.0.0"
 	},
