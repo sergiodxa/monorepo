@@ -8,7 +8,7 @@
  */
 
 import { stat } from "node:fs/promises";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 
 import { createCommand, ExecError, exit, failure, success } from "@sdxc/cli";
 import { isFailure, isSuccess, wrap } from "@sdxc/result";
@@ -23,8 +23,8 @@ export const CLI_ENTRY = "bootstrap/cli.ts";
 
 /**
  * Runs `bootstrap/cli.ts` under Bun for a project on Bun and under Node otherwise, with its
- * output on the terminal; the app's exit code is `sdxc run`'s, and its own messages are the only
- * ones printed when it fails.
+ * output on the terminal and the project's `node_modules/.bin` first on `PATH`, as a package
+ * script has it; the app's exit code is `sdxc run`'s, and only the app's messages print on failure.
  */
 export default createCommand(SDXC_COMMANDS.run, {
 	middleware: [project()],
@@ -44,9 +44,11 @@ export default createCommand(SDXC_COMMANDS.run, {
 			findLockFile: lockFileAtOrAbove(root),
 		});
 		let runtime = manager.name === "bun" ? "bun" : "node";
+		let bin = join(root, "node_modules", ".bin");
 		let ran = await ctx.exec([runtime, CLI_ENTRY, ...ctx.arguments.args], {
 			cwd: root,
 			stdio: "inherit",
+			env: { PATH: ctx.env.PATH === undefined ? bin : `${bin}${delimiter}${ctx.env.PATH}` },
 		});
 		if (isSuccess(ran)) return success();
 		if (ran.error instanceof ExecError && ran.error.code !== null) return exit(ran.error.code);

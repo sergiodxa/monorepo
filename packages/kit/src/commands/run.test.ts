@@ -9,9 +9,10 @@
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { delimiter, dirname, join } from "node:path";
 
 import { invoke } from "@sdxc/cli/test";
+import { success } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
@@ -60,6 +61,25 @@ describe("sdxc run", () => {
 				stdio: "inherit",
 			},
 		]);
+	});
+
+	test("puts the project's node_modules/.bin first on PATH, as a package script does", async () => {
+		let root = await project(app("bun@1.3.0"));
+
+		let seen: Record<string, string | undefined>[] = [];
+
+		await invoke(createSDXC(), ["run", "typegen"], {
+			cwd: root,
+			env: { PATH: "/usr/bin" },
+			exec: async (_command, request) => {
+				seen.push(request.env);
+				return success({ code: 0, stdout: "", stderr: "", output: "" });
+			},
+		});
+
+		expect(seen[0]).toMatchObject({
+			PATH: `${join(root, "node_modules", ".bin")}${delimiter}/usr/bin`,
+		});
 	});
 
 	test("runs under Node for a project on another package manager", async () => {
