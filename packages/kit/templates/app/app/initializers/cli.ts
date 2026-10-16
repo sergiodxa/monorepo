@@ -5,7 +5,8 @@
  */
 
 import { createCLI, lazy } from "@sdxc/cli";
-import { database } from "@sdxc/database-middleware/cli";
+import { models } from "@sdxc/data-model/cli";
+import { Database, database } from "@sdxc/database-middleware/cli";
 import i18n from "@sdxc/i18n/middleware/cli";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
@@ -17,6 +18,7 @@ import commandset from "~/app/commands";
 import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { openLocalDatabase } from "~/app/initializers/local-database";
 import { logger } from "~/app/initializers/logger";
+import registry from "~/app/models";
 import { MAIL_FROM } from "~/config/constants";
 
 import manifest from "../../package.json" with { type: "json" };
@@ -32,8 +34,8 @@ const COMMAND_LOGGER = createLogger({
 
 /**
  * The command line `bootstrap/cli.ts` runs and a command's test invokes. A command reads the
- * local database as `ctx.db`, prints the email it sends to stderr through `ctx.email`, and
- * writes its own output in the language `LANG` names through `ctx.intl`.
+ * local database as `ctx.db` and its models as `ctx.models`, prints the email it sends to stderr
+ * through `ctx.email`, and writes its output in the language `LANG` names through `ctx.intl`.
  */
 export const cli = createCLI({
 	name: manifest.name,
@@ -42,6 +44,7 @@ export const cli = createCLI({
 		log(COMMAND_LOGGER),
 		trace(),
 		database(openLocalDatabase),
+		models(registry, (ctx) => ({ db: ctx.require(Database) })),
 		mail({
 			transport: (ctx) => new PrintTransport({ write: (text) => ctx.stderr(text) }),
 			from: MAIL_FROM,

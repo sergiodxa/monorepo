@@ -1,7 +1,8 @@
 /**
  * Declares and maps what `make job`, `make controller`, `make mcp` and `make command` generate:
  * the entry in the job map, route contract, MCP or command declaration module, and the mapping
- * in the initializer that serves it, so the new handler answers as soon as the command finishes. Both edits are
+ * in the initializer that serves it, so the new handler answers as soon as the command finishes;
+ * `make model` registers the model in `app/models/index.ts` the same way. Both edits are
  * computed before anything is written; when either cannot be placed, neither is made and the
  * command prints them for the user instead, so a declaration never ships without its mapping.
  *
@@ -26,7 +27,7 @@ import { camel } from "./names.js";
 
 /** What to declare and map, as the command line asked for it. */
 export interface DeclarationRequest {
-	kind: "job" | "controller" | "mcp" | "command";
+	kind: "job" | "controller" | "mcp" | "command" | "model";
 	name: Name;
 	/** `cron` for a scheduled job, `resource` for an MCP resource, `null` otherwise. */
 	variant: string | null;
@@ -92,6 +93,7 @@ export async function declare(request: DeclarationRequest, root: string): Promis
 	if (request.kind === "job") return declareJob(request, root);
 	if (request.kind === "controller") return declareController(request, root);
 	if (request.kind === "command") return declareCommand(request, root);
+	if (request.kind === "model") return declareModel(request, root);
 	return declareMcp(request, root);
 }
 
@@ -501,6 +503,46 @@ async function declareCommand(request: DeclarationRequest, root: string): Promis
 			{ path: declarations, before: file.data.source, after: added.data.source },
 			{ path: initializer.path, before: initializer.source, after: mapped.data },
 		],
+	};
+}
+
+/**
+ * Registers a model in `app/models/index.ts`'s `createModels({ … })` under its key, as an import
+ * the registry runs on first use, so `ctx.models.<key>` reaches it on every request, job and
+ * command once the command finishes.
+ */
+async function declareModel(request: DeclarationRequest, root: string): Promise<Declared> {
+	let declarations = "app/models/index.ts";
+	let key = request.name.key;
+	let file = await readSource(root, declarations);
+	let specifier = isFailure(file)
+		? `./${request.name.segments.join("/")}`
+		: specifierFor(declarations, request.handler, staticSpecifiers(file.data), false);
+	let value = `() => import(${literal(specifier)})`;
+	let manual = (reason: string): Declared => ({
+		kind: "manual",
+		path: key,
+		reason,
+		instructions: [
+			`In ${declarations}, in createModels({ … }):`,
+			indent(`${keyText(key)}: ${value},`),
+		].join("\n"),
+	});
+	if (isFailure(file)) return manual(`${declarations} could not be read`);
+	let call = file.data.references
+		.find(
+			(reference) =>
+				reference.kind === "import" &&
+				reference.names.some((bound) => bound.imported === "createModels"),
+		)
+		?.names.find((bound) => bound.imported === "createModels")?.local;
+	if (call === undefined) return manual(`${declarations} does not import createModels()`);
+	let added = addProperty(declarations, file.data.source, { call, path: [], key, value });
+	if (isFailure(added)) return manual(added.error.message);
+	return {
+		kind: "edits",
+		path: key,
+		edits: [{ path: declarations, before: file.data.source, after: added.data.source }],
 	};
 }
 

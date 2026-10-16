@@ -418,6 +418,10 @@ describe("declaring and mapping", () => {
 				'mcp.resources.map(resourceset.article, lazy(() => import("~/app/mcp/resources/article")));',
 			);
 
+			expect(await read("app/models/index.ts")).toContain(
+				'export default createModels({\n\tpost: () => import("./post"),\n});',
+			);
+
 			let commands = await read("app/commands/index.ts");
 			let cli = await read("app/initializers/cli.ts");
 			expect(commands).toContain(
@@ -470,6 +474,20 @@ describe("declaring and mapping", () => {
 			].join("\n"),
 		);
 		expect(await readFile(join(root, "app/initializers/cli.ts"), "utf8")).toBe(initializer);
+	});
+
+	test("a model in a project without a models registry prints the entry to add", async () => {
+		let root = await project();
+
+		let result = await invoke(["model", "post", "--no-test"], root);
+
+		expect(result.stdout).toContain(
+			[
+				"Declare and map it by hand, since app/models/index.ts could not be read:",
+				"In app/models/index.ts, in createModels({ … }):",
+				'  post: () => import("./post"),',
+			].join("\n"),
+		);
 	});
 
 	test("lists an imported @sdxc package at the project's release, in the dry run too", async () => {

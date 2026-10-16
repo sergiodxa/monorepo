@@ -83,8 +83,10 @@ yours before deploying.
 ## Database
 
 `app/initializers/database.ts` opens `remix/data-table` over the `DB` D1 binding, and the router
-and the job dispatcher publish it as `ctx.db`. Write a table's migration and model with
-`sdxc make`, then apply the migrations to the local copy `bun dev` reads:
+and the job dispatcher publish it as `ctx.db`. `sdxc make model post` writes a model and
+registers it in `app/models/index.ts`, so every request, job and command reaches it bound to its
+database as `ctx.models.post`, and a new row gets a UUIDv7 id and its timestamps. Write a table's
+migration and model with `sdxc make`, then apply the migrations to the local copy `bun dev` reads:
 
 ```sh
 sdxc make migration create-posts

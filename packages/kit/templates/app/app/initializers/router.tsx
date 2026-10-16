@@ -6,6 +6,7 @@
 
 import type { RouterContext } from "remix/router";
 
+import { models } from "@sdxc/data-model/router";
 import { database } from "@sdxc/database-middleware";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { lazy } from "@sdxc/lazy-route";
@@ -25,6 +26,7 @@ import serverTiming from "~/app/http/middleware/server-timing";
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { transport } from "~/app/initializers/mail";
+import registry from "~/app/models";
 import { MAIL_FROM } from "~/config/constants";
 import problems from "~/config/problems";
 import { securityTxtEntry } from "~/config/security-txt";
@@ -63,6 +65,7 @@ export function createWebRouter() {
 				onLimit: () => problems.tooManyRequests(),
 			}),
 			database(openDatabase()),
+			models(registry, (ctx) => ({ db: ctx.db })),
 			mail({ transport, from: MAIL_FROM }),
 		],
 	});

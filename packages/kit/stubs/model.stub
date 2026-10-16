@@ -33,3 +33,5 @@ export const {{Name}} = createModel({{key}}Table, {
 		},
 	},
 });
+
+export default {{Name}};
