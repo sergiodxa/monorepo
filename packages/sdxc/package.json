@@ -303,6 +303,7 @@
 		"./spam/akismet": "./src/spam/akismet.ts",
 		"./spam/bayes": "./src/spam/bayes.ts",
 		"./spam/workers-ai": "./src/spam/workers-ai.ts",
+		"./spam/middleware": "./src/spam/middleware.ts",
 		"./strings": "./src/strings.ts",
 		"./structured-fields": "./src/structured-fields.ts",
 		"./structured-fields/schema": "./src/structured-fields/schema.ts",
