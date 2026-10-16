@@ -5,7 +5,6 @@
 	"scripts": {
 		"build": "vp build",
 		"cf:deploy": "cf deploy --prebuilt",
-		"cf:typegen": "cf workers types",
 		"check": "vp check",
 		"cli": "bun ./bootstrap/cli.ts",
 		"dev": "vp dev",

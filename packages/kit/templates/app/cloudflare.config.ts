@@ -1,6 +1,6 @@
 /**
  * Cloudflare configuration for the Worker, read by `cf` and the Vite plugin alike. Every
- * binding and trigger the app reads is declared here, so `bun cf:typegen` types `env` from
+ * binding and trigger the app reads is declared here, so `sdxc run typegen` types `env` from
  * this file and local development simulates exactly what production provides.
  */
 

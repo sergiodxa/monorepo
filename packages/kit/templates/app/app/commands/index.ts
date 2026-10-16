@@ -25,4 +25,7 @@ export default commands({
 			examples: ["db migrate", "db migrate --remote"],
 		}),
 	}),
+	typegen: command({
+		description: "Write the Worker's env types from cloudflare.config.ts",
+	}),
 });

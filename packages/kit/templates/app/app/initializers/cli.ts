@@ -69,3 +69,7 @@ cli.map(
 	commandset.db.migrate,
 	lazy(() => import("~/app/commands/db/migrate")),
 );
+cli.map(
+	commandset.typegen,
+	lazy(() => import("~/app/commands/typegen")),
+);

@@ -6,13 +6,13 @@ A Remix v3 app on Cloudflare Workers, built on the `@sdxc/*` packages.
 
 ```sh
 bun install
-bun cf:typegen
+sdxc run typegen
 sdxc run db migrate
 bun dev
 ```
 
-In a fresh clone, copy `.env.example` to `.dev.vars` first. Run `bun cf:typegen` again whenever
-you change a binding in `cloudflare.config.ts`.
+In a fresh clone, copy `.env.example` to `.dev.vars` first. Run `sdxc run typegen` again
+whenever you change a binding in `cloudflare.config.ts`.
 
 ## Everyday commands
 

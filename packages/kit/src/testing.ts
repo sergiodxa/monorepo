@@ -1,7 +1,7 @@
 /**
  * Builds a project from a built-in template the way a consumer's install would see it, for the
  * tests that type check templates and generated code: dependencies are linked from this
- * workspace instead of installed, and the Worker's types are generated as `cf:typegen` does.
+ * workspace instead of installed, and the Worker's types are generated as `sdxc run typegen` does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
