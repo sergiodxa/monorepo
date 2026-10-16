@@ -28,14 +28,6 @@ export const {{key}}Table = table({
 /** One {{title}} row as it reads back from the database. */
 export type {{Name}}Row = TableRow<typeof {{key}}Table>;
 
-export const {{Name}} = createModel({{key}}Table, {
-	optional: ["id"],
-	callbacks: {
-		/** Gives a new row a time-ordered UUID, so ids sort by creation and never repeat. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
-		},
-	},
-});
+export const {{Name}} = createModel({{key}}Table, { generateId: generateUUID });
 
 export default {{Name}};
