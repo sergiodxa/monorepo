@@ -23,7 +23,9 @@ let table: Uint32Array | undefined;
 export function crc32(bytes: Uint8Array, previous = 0): number {
 	let lookup = (table ??= buildTable());
 	let crc = ~previous;
-	for (let byte of bytes) crc = (lookup[(crc ^ byte) & 0xff] ?? 0) ^ (crc >>> 8);
+	for (let index = 0; index < bytes.length; index++) {
+		crc = (lookup[(crc ^ (bytes[index] as number)) & 0xff] as number) ^ (crc >>> 8);
+	}
 	return ~crc >>> 0;
 }
 
