@@ -1,7 +1,7 @@
 /**
- * Drives `GET /social/*path.png` through the real router: a page advertises its card URL,
- * the route renders that card from the page's own tags and keeps it in storage, and a path
- * that is not a page has no card. Storage is in memory and the fonts are read from disk.
+ * Drives `<page>.png` requests through the real router: a page advertises its card URL,
+ * the middleware renders that card from the page's own tags and keeps it in storage, a guide
+ * under a wildcard route still reaches its card, and a path that is not a page has none. Storage is in memory and the fonts are read from disk.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,7 +38,7 @@ beforeAll(async () => {
 		return { socialCardFonts: () => fonts };
 	});
 	({ fetchApp } = await import("~/app/test/router"));
-});
+}, 30_000);
 
 /** The card URL a page advertises in its `og:image` tag, as a path on this site. */
 async function advertisedCard(path: string): Promise<string> {
@@ -49,10 +49,10 @@ async function advertisedCard(path: string): Promise<string> {
 	return `${url.pathname}${url.search}`;
 }
 
-describe("GET /social/*path.png", () => {
+describe("GET <page>.png", () => {
 	test("a package page's advertised card renders, is stored, and is cached for good", async () => {
 		let card = await advertisedCard("/api/jwt");
-		expect(card).toMatch(/^\/social\/api\/jwt\.png\?v=[0-9a-z]+$/);
+		expect(card).toMatch(/^\/api\/jwt\.png\?v=[0-9a-z]+$/);
 
 		let response = await fetchApp(card);
 		expect(response.status).toBe(200);
@@ -68,18 +68,32 @@ describe("GET /social/*path.png", () => {
 
 	test("the home page's card lives under index", async () => {
 		let card = await advertisedCard("/");
-		expect(card).toMatch(/^\/social\/index\.png\?v=/);
+		expect(card).toMatch(/^\/index\.png\?v=/);
 		expect((await fetchApp(card)).status).toBe(200);
 	});
 
+	test("a guide's card wins over the docs wildcard that would claim its path", async () => {
+		let card = await advertisedCard("/docs/building-remix-apps/seo-sitemaps-and-robots");
+		expect(card).toMatch(/^\/docs\/building-remix-apps\/seo-sitemaps-and-robots\.png\?v=/);
+		let response = await fetchApp(card);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toBe("image/png");
+	});
+
+	test("a page's markdown twin still answers as markdown", async () => {
+		let response = await fetchApp("/api/jwt.md");
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("markdown");
+	});
+
 	test("a card asked for without its hash is cached briefly", async () => {
-		let response = await fetchApp("/social/docs.png");
+		let response = await fetchApp("/docs.png");
 		expect(response.status).toBe(200);
 		expect(response.headers.get("cache-control")).toBe("public, max-age=3600");
 	});
 
 	test("a path that is not a page has no card", async () => {
-		expect((await fetchApp("/social/api/not-a-package.png")).status).toBe(404);
-		expect((await fetchApp("/social/social/index.png")).status).toBe(404);
+		expect((await fetchApp("/api/not-a-package.png")).status).toBe(404);
+		expect((await fetchApp("/index.png.png")).status).toBe(404);
 	});
 });

@@ -21,6 +21,7 @@ import { userAgent } from "sdxc/user-agent/middleware";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import canonicalHost from "~/app/http/middleware/canonical-host";
+import socialCards from "~/app/http/middleware/social-cards";
 import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import routes from "~/routes/web";
@@ -40,6 +41,7 @@ export function createWebRouter() {
 			log(logger),
 			trace(),
 			canonicalHost(),
+			socialCards(),
 			formData(),
 			cop(),
 			assets(assetResolver, {
@@ -187,10 +189,6 @@ export function createWebRouter() {
 	router.map(
 		routes.mcp,
 		lazy(() => import("~/app/http/controllers/mcp")),
-	);
-	router.map(
-		routes.socialCard,
-		lazy(() => import("~/app/http/controllers/social-card")),
 	);
 	router.post(
 		routes.mcp.pattern,

@@ -42,9 +42,6 @@ export const SOCIAL_CARD_SIZE = { width: 1200, height: 630 } as const;
  */
 export const SOCIAL_CARD_TEMPLATE = "1";
 
-/** Where the image route lives; a page's path follows it. */
-const ROUTE_PREFIX = "/social";
-
 /** The segment the home page's card is stored under, since `/` leaves no name for a file. */
 const HOME_SEGMENT = "index";
 
@@ -73,12 +70,13 @@ export function socialCardContent(page: SocialCard.Page): SocialCard.Content {
 }
 
 /**
- * The absolute URL a page advertises as its `og:image`. The query names the content's
- * hash, so a platform that caches images per URL fetches again after the page changes.
+ * The absolute URL a page advertises as its `og:image`: the page's own path with `.png`
+ * added. The query names the content's hash, so a platform that caches images per URL
+ * fetches again after the page changes.
  */
 export function socialCardUrl(page: SocialCard.Page): string {
 	let segment = page.path === "/" ? `/${HOME_SEGMENT}` : page.path.replace(/\/$/, "");
-	return absoluteUrl(`${ROUTE_PREFIX}${segment}.png?v=${socialCardHash(socialCardContent(page))}`);
+	return absoluteUrl(`${segment}.png?v=${socialCardHash(socialCardContent(page))}`);
 }
 
 /** The page path a card route's `path` parameter stands for. */

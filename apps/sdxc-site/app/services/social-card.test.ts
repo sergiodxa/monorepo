@@ -83,10 +83,8 @@ describe("card addresses", () => {
 
 	test("the URL names the page path and the content's hash", () => {
 		let hash = socialCardHash(socialCardContent(page));
-		expect(socialCardUrl(page)).toBe(`https://sdxc.dev/social/api/jwt.png?v=${hash}`);
-		expect(socialCardUrl({ ...page, path: "/" })).toMatch(
-			/^https:\/\/sdxc\.dev\/social\/index\.png\?v=/,
-		);
+		expect(socialCardUrl(page)).toBe(`https://sdxc.dev/api/jwt.png?v=${hash}`);
+		expect(socialCardUrl({ ...page, path: "/" })).toMatch(/^https:\/\/sdxc\.dev\/index\.png\?v=/);
 	});
 
 	test("the hash changes with the content and is stable for the same content", () => {

@@ -48,14 +48,19 @@ platform faces cannot be redistributed; Inter is the closest open face.
   `put`, `remove`, `set`) over the `SOCIAL_CARDS` bucket binding. Keys are
   `<template>/<content hash>.png`, so a content edit or a template change writes a new
   object and old objects are never served for new content.
-- **`GET /social/*path.png`** — the image route. It renders the page at that path through
+- **`<page path>.png`** — every page's card lives at the page's own address with `.png`
+  added (`/api/jwt.png`, `/index.png` for the home page). The `socialCards()` middleware in
+  `app/http/middleware/social-cards.ts` answers it ahead of routing, because route patterns
+  rank by specificity and a page pattern such as `/docs/*slug` would claim the `.png` path
+  over any wildcard card route. It renders the page at that path through
   the site's own router and reads `og:title` and `og:description` back, so only a real page
   has a card and the card says what the page says, with no per-page wiring. It then returns
   the stored card or renders, stores (after the response) and returns it. A request whose
   `v` matches the content hash is cached for a year as `immutable`; one without it for an
-  hour. A path that is not a page is 404.
+  hour. A `.png` path naming no page continues to the router, which answers as for any
+  unknown address. The drawing code and fonts load on the first card drawn.
 - **`DocumentLayout`** sets `og.image` and `og.image:alt` for every page with a canonical
-  URL to `/social/<page path>.png?v=<hash>` (`/social/index.png` for the home page). The hash
+  URL to `<page path>.png?v=<hash>` (`/index.png` for the home page). The hash
   in the URL is what makes platforms that cache images per URL fetch the new card after an
   edit.
 
