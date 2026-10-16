@@ -440,6 +440,14 @@ describe("declaring and mapping", () => {
 			expect(ran.output).toMatch(/^Send digest\n/);
 			expect(ran.code).toBe(0);
 
+			let sitemap = join(root, "app/http/controllers/sitemap.ts");
+			await writeFile(
+				sitemap,
+				(await readFile(sitemap, "utf8")).replace(
+					"notFound: false,",
+					"notFound: false,\n\t\t\tsponsors: true,\n\t\t\tadmin: false,",
+				),
+			);
 			let checked = await typecheck(root);
 
 			expect(checked.output).toContain("Found no type errors");

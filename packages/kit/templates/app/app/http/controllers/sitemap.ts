@@ -1,20 +1,25 @@
 /**
- * `/sitemap.xml`: every public page, at its canonical URL, for search engines to find. List a
- * new page here when it should be indexed.
+ * `/sitemap.xml`: every public page, at its canonical URL, for search engines to find. Every
+ * GET route in `routes/web.ts` needs a decision here, so a new route fails to typecheck until
+ * it is listed or excluded.
  */
 
 import { xml } from "@sdxc/http/response";
-import { Sitemap } from "@sdxc/sitemap";
+import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
 
 import { seo } from "~/app/initializers/seo";
 import routes from "~/routes/web";
 
 export default createAction(routes.sitemap, {
-	/** GET /sitemap.xml, cached for an hour. */
+	/** GET /sitemap.xml, cached for an hour, with URLs on `SITE_URL` whichever host served it. */
 	handler: () => {
-		let sitemap = new Sitemap();
-		sitemap.append(new URL(seo.absolute(routes.home.href())), { priority: 1 });
+		let sitemap = fromRoutes(routes, seo.baseUrl, {
+			home: { priority: 1 },
+			robots: false,
+			sitemap: false,
+			notFound: false,
+		});
 		return xml(sitemap.toString(), { headers: { "Cache-Control": "public, max-age=3600" } });
 	},
 });

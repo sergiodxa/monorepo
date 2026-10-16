@@ -199,8 +199,8 @@ handler lets the handler run each query once and pass plain values.
 ## Current Progress
 
 - [x] Phase 1: `@sdxc/sitemap/remix`
-- [ ] Phase 2: Move the apps onto it
+- [x] Phase 2: Move the apps onto it
   - [x] blog
   - [x] uptime
   - [x] sdxc site
-  - [ ] `app` template
+  - [x] `app` template
