@@ -15,7 +15,7 @@ import { searches } from "~/database/schema";
 
 /** A reader's saved searches, listed in the order their names read. */
 export const Searches = createModel(searches, {
-	optional: ["id"],
+	generateId: () => TypeID.fromUUID("search", generateUUID()).toString(),
 
 	methods: {
 		/** Every saved search, in the order their names read, which is the order of the rail. */
@@ -26,13 +26,6 @@ export const Searches = createModel(searches, {
 		/** The saved search by that exact name, or `null`. */
 		byName(name: string) {
 			return this.findBy({ name });
-		},
-	},
-
-	callbacks: {
-		/** Mints the id the saved search's address carries. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? TypeID.fromUUID("search", generateUUID()).toString() };
 		},
 	},
 });

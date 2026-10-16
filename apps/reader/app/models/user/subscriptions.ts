@@ -24,7 +24,8 @@ export interface SubscriptionChanges extends Partial<
 
 /** A reader's subscriptions, followed or kept only to name the feed of their saved posts. */
 export const Subscriptions = createModel(feeds, {
-	optional: ["id", "cursor", "velocity", "notify", "presentation", "keep_link_parameters"],
+	generateId: () => TypeID.fromUUID("feed", generateUUID()).toString(),
+	optional: ["cursor", "velocity", "notify", "presentation", "keep_link_parameters"],
 
 	scopes: {
 		/** Subscriptions the reader still follows, which every list and sweep starts from. */
@@ -49,13 +50,6 @@ export const Subscriptions = createModel(feeds, {
 		 */
 		async write(id: string, changes: SubscriptionChanges): Promise<SelectFeed> {
 			return unwrap(await this.update(id, changes));
-		},
-	},
-
-	callbacks: {
-		/** Mints the id every post, rule and saved search holds the subscription by. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? TypeID.fromUUID("feed", generateUUID()).toString() };
 		},
 	},
 });

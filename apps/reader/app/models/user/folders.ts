@@ -18,7 +18,7 @@ import { folders } from "~/database/schema";
 
 /** A reader's folders; deleting one unfiles its subscriptions and posts in the same turn. */
 export const Folders = createModel(folders, {
-	optional: ["id"],
+	generateId: () => TypeID.fromUUID("folder", generateUUID()).toString(),
 
 	methods: {
 		/** Every folder, in the order their names read, which is the order the rail draws. */
@@ -42,11 +42,6 @@ export const Folders = createModel(folders, {
 	},
 
 	callbacks: {
-		/** Mints the id every subscription and post holds the folder by. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? TypeID.fromUUID("folder", generateUUID()).toString() };
-		},
-
 		/**
 		 * Unfiles the folder's subscriptions and their posts, so deleting a folder deletes no
 		 * post and leaves its feeds exactly as they were before anybody made it.

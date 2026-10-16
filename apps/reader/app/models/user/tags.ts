@@ -15,7 +15,7 @@ import { tags } from "~/database/schema";
 
 /** A reader's labels; deleting one removes it from every post in the same turn. */
 export const Tags = createModel(tags, {
-	optional: ["id"],
+	generateId: () => TypeID.fromUUID("tag", generateUUID()).toString(),
 
 	methods: {
 		/** Every label, in the order their names read, which is the order the picker draws. */
@@ -30,11 +30,6 @@ export const Tags = createModel(tags, {
 	},
 
 	callbacks: {
-		/** Mints the id every join row and every URL holds the label by. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? TypeID.fromUUID("tag", generateUUID()).toString() };
-		},
-
 		/** Takes the label off every post before the label goes, so no join row outlives it. */
 		async beforeDelete(tag, ctx) {
 			await ctx.models.itemTags.ofTag(tag.id).delete();

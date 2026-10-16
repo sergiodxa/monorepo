@@ -15,7 +15,8 @@ import { rules } from "~/database/schema";
 
 /** A reader's filter rules, listed in the order they were written. */
 export const Rules = createModel(rules, {
-	optional: ["id", "matches"],
+	generateId: () => TypeID.fromUUID("rule", generateUUID()).toString(),
+	optional: ["matches"],
 
 	scopes: {
 		/** The rules scoped to one subscription. */
@@ -26,13 +27,6 @@ export const Rules = createModel(rules, {
 		/** Every rule, in the order the reader wrote them, which is the list they reason about. */
 		inOrder() {
 			return this.query().orderBy("created_at", "asc").orderBy("id", "asc").all();
-		},
-	},
-
-	callbacks: {
-		/** Mints the id the rule's page and its counters are addressed by. */
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? TypeID.fromUUID("rule", generateUUID()).toString() };
 		},
 	},
 });
