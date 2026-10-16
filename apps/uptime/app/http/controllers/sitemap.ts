@@ -1,74 +1,74 @@
 /**
- * `/sitemap.xml` controller. Lists the homepage, every `/features`, `/for`,
- * `/use-cases`, and `/vs` marketing page (derived from
- * `resources/content/marketing.ts`'s content records, so a new content entry
- * is picked up automatically), the legal pages, and every documentation page,
- * then serializes them with `@sdxc/sitemap`. It exists so search engines can
- * discover the full public site.
+ * `/sitemap.xml` controller. Decides every route the site declares, listing the homepage,
+ * every marketing page in `resources/content/marketing.ts`, the legal pages and every
+ * documentation page, so search engines discover the full public site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { xml } from "@sdxc/http/response";
-import { Sitemap } from "@sdxc/sitemap";
+import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
 
 import { listDocs } from "~/app/services/docs";
 import { audiences, comparisons, features, useCases } from "~/resources/content/marketing";
 import routes from "~/routes/web";
 
-interface StaticPage {
-	path: string;
-	priority: number;
-	frequency: Sitemap.Frequency;
+/** The marketing pages one content record lists, each at its slug. */
+function marketingPages(records: object, priority: number, updatedAt: Date) {
+	return Object.keys(records).map((slug) => ({
+		params: { slug },
+		priority,
+		frequency: "monthly" as const,
+		updatedAt,
+	}));
 }
-
-const STATIC_PAGES: StaticPage[] = [
-	{ path: routes.home.href(), priority: 1, frequency: "weekly" },
-	{ path: routes.browserFlows.href(), priority: 0.9, frequency: "monthly" },
-	...Object.keys(features).map((slug) => ({
-		path: routes.marketing.feature.href({ slug }),
-		priority: 0.8,
-		frequency: "monthly" as const,
-	})),
-	...Object.keys(useCases).map((slug) => ({
-		path: routes.marketing.useCase.href({ slug }),
-		priority: 0.7,
-		frequency: "monthly" as const,
-	})),
-	...Object.keys(audiences).map((slug) => ({
-		path: routes.marketing.audience.href({ slug }),
-		priority: 0.7,
-		frequency: "monthly" as const,
-	})),
-	...Object.keys(comparisons).map((slug) => ({
-		path: routes.marketing.comparison.href({ slug }),
-		priority: 0.6,
-		frequency: "monthly" as const,
-	})),
-	{ path: routes.legal.terms.href(), priority: 0.3, frequency: "yearly" },
-	{ path: routes.legal.privacy.href(), priority: 0.3, frequency: "yearly" },
-];
 
 /** GET /sitemap.xml — the site's sitemap. */
 export default createAction(routes.sitemap, async ({ request }) => {
 	let updatedAt = new Date();
-
 	let docSections = await listDocs();
-	let docPages: StaticPage[] = docSections.flatMap((section) =>
-		section.docs.map((doc) => ({ path: doc.path, priority: 0.7, frequency: "weekly" as const })),
-	);
 
-	let sitemap = new Sitemap();
-
-	for (let page of [...STATIC_PAGES, ...docPages]) {
-		sitemap.append(new URL(page.path, request.url), {
-			updatedAt,
-			priority: page.priority,
-			frequency: page.frequency,
-		});
-	}
+	let sitemap = fromRoutes(routes, request.url, {
+		home: { priority: 1, frequency: "weekly", updatedAt },
+		healthcheck: false,
+		healthcheckAnalyticsEngine: false,
+		statusPage: false,
+		statusPageCalendar: false,
+		statusPageMaintenanceEvent: false,
+		trial: false,
+		digestUnsubscribe: false,
+		invite: false,
+		sitemap: false,
+		auth: false,
+		logout: false,
+		marketing: {
+			feature: marketingPages(features, 0.8, updatedAt),
+			audience: marketingPages(audiences, 0.7, updatedAt),
+			useCase: marketingPages(useCases, 0.7, updatedAt),
+			comparison: marketingPages(comparisons, 0.6, updatedAt),
+		},
+		browserFlows: { priority: 0.9, frequency: "monthly", updatedAt },
+		trust: false,
+		legal: {
+			privacy: { priority: 0.3, frequency: "yearly", updatedAt },
+			terms: { priority: 0.3, frequency: "yearly", updatedAt },
+		},
+		docs: {
+			index: false,
+			show: docSections.flatMap((section) =>
+				section.docs.map((doc) => ({
+					params: { slug: doc.path.replace(/^\/docs\//, "") },
+					priority: 0.7,
+					frequency: "weekly" as const,
+					updatedAt,
+				})),
+			),
+		},
+		app: false,
+		api: false,
+	});
 
 	return xml(sitemap.toString(), {
 		headers: { "Cache-Control": "public, max-age=3600, s-maxage=86400" },
