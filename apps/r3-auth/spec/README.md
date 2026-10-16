@@ -25,7 +25,7 @@ The suite talks to a live dev server on **`http://localhost:3002`**.
 
    ```sh
    cd apps/r3-auth
-   bun run db:local:migrate
+   sdxc run db migrate
    ```
 
 2. Start the app (Vite + the Cloudflare Worker on port 3002):

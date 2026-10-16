@@ -2,7 +2,7 @@
 # dependencies it cannot serve a request without are reachable: the D1 database
 # and the KV namespace. A migrated local database and a running Worker are the
 # whole precondition; without migrations it answers 500 "Database connection
-# error" instead, which is why the suite README lists `db:local:migrate` as
+# error" instead, which is why the suite README lists `sdxc run db migrate` as
 # setup.
 
 test "GET /healthcheck reports the server is live" {

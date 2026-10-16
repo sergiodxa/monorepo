@@ -3,13 +3,11 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"start": "vite preview",
+		"build": "vp build",
 		"cf:deploy": "cf deploy --prebuilt",
-		"cf:typegen": "cf workers types",
-		"db:local:migrate": "cf d1 migrations apply 1549b30f-b4ba-48b0-b08a-76b8003a37db --dir ./database/migrations --local --persist-to .cloudflare/state",
-		"db:remote:migrate": "cf d1 migrations apply 1549b30f-b4ba-48b0-b08a-76b8003a37db --dir ./database/migrations",
+		"cli": "bun ./bootstrap/cli.ts",
+		"dev": "vp dev",
+		"start": "vp preview",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -17,6 +15,7 @@
 		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/authz": "workspace:*",
 		"@sdxc/billing": "workspace:*",
+		"@sdxc/cli": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
@@ -38,6 +37,7 @@
 		"@sdxc/result": "workspace:*",
 		"@sdxc/server-timing": "workspace:*",
 		"@sdxc/session-storage-kv": "workspace:*",
+		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/user-agent": "workspace:*",
@@ -50,7 +50,8 @@
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/kit": "workspace:*",
 		"cf": "1.0.0-beta.5",
-		"vite": "^8.3.4"
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
 	}
 }

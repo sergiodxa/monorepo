@@ -51,7 +51,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   resolved through `Sessions.findByRefreshToken` ([ADR-003](../../docs/adr/r3-auth/ADR-003-session-public-id.md)).
 - MUST change the D1 schema only through a migration that keeps existing rows working,
   and MUST keep timestamp columns as integers holding epoch milliseconds
-  (`createDatabase()` sets `now: () => Date.now()` for exactly this reason).
+  (`openDatabase()` sets `now: () => Date.now()` for exactly this reason).
 - MUST keep the KV key shapes interchangeable across deployments: `authz-code:<code>`
   (10 min), `clients:<clientId>` and `clients:<clientId>:subjects:<subjectId>` (7 days).
   Own sessions live under `session:` and are this app's alone.
@@ -79,8 +79,8 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   DB-facing field names stay `snake_case`. A model owns its table's domain rules (generated
   ids and client secrets, session expiry, idempotent consent) and never touches i18n, the
   request or rendering. Writes answer `@sdxc/result` Results; reads answer `null` for a
-  missing row. Register a new model in `app/models/index.ts`, and type anything its
-  callbacks read in `config/model-context.d.ts`.
+  missing row. Register a new model in `app/models/index.ts`, in both the registry and
+  `AuthModelEntries`, the interface `ctx.models` is typed through.
 - MUST reach the models and the rate limiters off the request context — `ctx.models` and
   `ctx.limiters`, published by the global middleware in `app/initializers/router.tsx` — and
   MUST keep every other request-lifetime value (session, current subject, request log, locale) in
@@ -215,15 +215,16 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - Bindings and secrets live in `cloudflare.config.ts`. A secret declared there with
   `bindings.secret()` is what gives it a type on `env`, and only declared keys reach the
   worker from `.dev.vars`.
-- `bun run db:local:migrate` writes to `.cloudflare/state`, the directory `bun dev` reads,
-  so a local reset is `rm -rf .cloudflare/state`.
+- `sdxc run db migrate` writes to `.cloudflare/state`, the directory `bun dev` reads,
+  so a local reset is `rm -rf .cloudflare/state`; `sdxc run db migrate --remote` applies the
+  chain to production.
 - The API caches a resolved client in KV for 7 days, so a deleted client or a rotated secret
   keeps authenticating against `/api/*` until the `clients:<clientId>` key expires. A deleted
   client's grants cascade away with it, so it reads no subject in that window.
 - The session cookie is `auth:session` — deliberately not the name the previous server used,
   so a rollback finds its own untouched cookie instead of one it cannot parse.
 - MUST NOT reach into another app's source. Copy and adapt instead.
-- After a `cloudflare.config.ts` change: `bun cf:typegen`, then `bun run build`, then
+- After a `cloudflare.config.ts` change: `sdxc run typegen`, then `bun run build`, then
   `bunx cf deploy --prebuilt --dry-run`.
 
 ## Reference Files
@@ -233,6 +234,9 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   - `app/initializers/router.tsx` <- `createWebRouter`: global middleware (including `assets()`, which publishes `ctx.assets`), `cop()` bypass list, lazy route map
   - `app/initializers/dispatcher.ts` <- The job dispatcher the cron and queue handlers delegate to
   - `app/initializers/logger.ts` <- The one logger the router and the dispatcher share
+  - `bootstrap/cli.ts` <- Command-line entry `sdxc run` starts; never part of the Worker build
+  - `app/initializers/cli.ts` <- The command line: its middleware and every `app/commands/` handler
+  - `app/initializers/local-database.ts` <- The local D1 SQLite file `bun dev` and commands share
 - Configuration
   - `routes/web.ts` <- Registry of every URL this server answers
   - `config/oidc.ts` <- Issuer, token TTLs, scopes, and the discovery document

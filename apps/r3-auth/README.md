@@ -13,14 +13,36 @@ while this one is verified endpoint by endpoint. The plan, the contracts relying
 depend on, and the cutover steps live in
 [docs/adr/r3-auth/ADR-001](../../docs/adr/r3-auth/ADR-001-port-auth-to-remix-v3.md).
 
-## Development
+## Start
 
-1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run db:local:migrate` to apply migrations to the local D1 database
-3. Run `bun run dev` to start the development server at http://localhost:3002
+```sh
+bun install
+sdxc run typegen
+sdxc run db migrate
+bun dev
+```
 
-Tests run from the repo root: `bun run test`, or `vp test run --project r3-auth` for this
-app only.
+In a fresh clone, copy `.env.example` to `.dev.vars` first. The dev server answers at
+http://localhost:3002. Run `sdxc run typegen` again whenever you change a binding in
+`cloudflare.config.ts`.
+
+## Everyday commands
+
+```sh
+sdxc make controller account/devices       # a page, mapped in routes/web.ts
+sdxc make migration add-subject-locale     # then: sdxc run db migrate
+sdxc make model passkey                    # then: ctx.models.passkey
+sdxc make job sessions/notify --cron "0 8 * * *"
+sdxc make email welcome
+sdxc make command clients/rotate           # then: sdxc run clients rotate
+
+sdxc run about                             # the app's name and the versions it runs on
+sdxc run db console                        # SQL prompt over the local database
+```
+
+`sdxc` is the `@sdxc/kit` command line, installed with the project. Checks and tests run
+from the repo root: `bun check`, and `bun run test` or `vp test run --project r3-auth` for
+this app only.
 
 ## Cloudflare Services
 
@@ -273,30 +295,29 @@ leaves to the application.
 Migrations are located in `database/migrations/`.
 
 ```bash
-bun run db:local:migrate  # Apply migrations locally
-bun run db:remote:migrate # Apply migrations to production
+sdxc run db migrate           # Apply migrations to the local D1 copy `bun dev` serves
+sdxc run db migrate --remote  # Apply migrations to production
 ```
 
 ## Scripts
 
-| Script              | Description                               |
-| ------------------- | ----------------------------------------- |
-| `dev`               | Start the dev server on port 3002         |
-| `build`             | Build the worker and client bundles       |
-| `start`             | Preview the production build              |
-| `typecheck`         | Type-check the app                        |
-| `cf:typegen`        | Regenerate `.cloudflare/types/index.d.ts` |
-| `cf:deploy`         | Deploy the worker                         |
-| `db:local:migrate`  | Apply migrations to local D1              |
-| `db:remote:migrate` | Apply migrations to production D1         |
+| Script      | Description                                      |
+| ----------- | ------------------------------------------------ |
+| `dev`       | Start the dev server on port 3002                |
+| `build`     | Build the worker and client bundles              |
+| `start`     | Preview the production build                     |
+| `typecheck` | Type-check the app                               |
+| `cli`       | Run an app command, as `sdxc run <command>` does |
+| `cf:deploy` | Deploy the worker                                |
 
 ## Deployment
 
-The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI. Run
-`bun run build`, then `bun run cf:deploy`, which uploads that build output as-is.
+The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI. Build
+first, apply any pending migration, then deploy, which uploads that build output as-is.
 
 ```bash
 bun run build
+sdxc run db migrate --remote
 bun run cf:deploy
 ```
 
