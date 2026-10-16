@@ -15,7 +15,7 @@ import { listStyle } from "@sdxc/u/general";
 import { flex, gap, inlineFlex, items, shrink } from "@sdxc/u/layout";
 import { overflowX } from "@sdxc/u/overflow";
 import { startingStyle } from "@sdxc/u/responsive";
-import { bs, m, p, pi } from "@sdxc/u/size";
+import { bs, m, minBs, p, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
 import { nowrap, text, textDecoration } from "@sdxc/u/typography";
@@ -40,6 +40,8 @@ export function SearchTabs(handle: Handle<{ tabs: Array<SearchViewModel.Tab> }>)
 				flex(),
 				gap(2),
 				overflowX("auto"),
+				/** Scrolling sideways drops the strip's automatic minimum, so a full card would squeeze it to nothing. */
+				minBs(8),
 				transition("opacity, translate", { duration: 200 }),
 				startingStyle([opacity(0), translateProperty("0 -0.25rem")]),
 			]}
