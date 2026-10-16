@@ -29,6 +29,7 @@
 		"@sdxc/distill": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
 		"@sdxc/epub": "workspace:*",
+		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/font": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
