@@ -3,18 +3,25 @@
  * a submission changes and where the visitor lands afterwards.
  */
 
+import { captcha } from "@sdxc/captcha/middleware";
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { unwrap } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 import { createController } from "remix/router";
 
 import page from "~/app/http/middleware/page";
+import { turnstile } from "~/app/initializers/captcha";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "{{routes}}";
 
 export default createController(routes.{{path}}, {
 	middleware: page,
 	actions: {
-		/** Renders the form with fresh honeypot fields, which the page middleware checks on submit. */
+		/**
+		 * Renders the form with fresh honeypot fields, which the page middleware checks on submit,
+		 * and the Turnstile widget, admitted by the response's CSP nonce.
+		 */
 		async index(ctx) {
 			let fields = unwrap(await ctx.honeypot.issue());
 			return ctx.render(
@@ -22,18 +29,25 @@ export default createController(routes.{{path}}, {
 					<h1>{{title}}</h1>
 					<form method="post" action={routes.{{path}}.action.href()}>
 						<HoneypotFields {...fields} />
+						<TurnstileWidget siteKey={env.TURNSTILE_SITE_KEY} nonce={ctx.assets.nonce} />
 						<button type="submit">Send</button>
 					</form>
 				</DocumentLayout>,
 			);
 		},
 
-		/** Receives a submission and sends the visitor back to the form. */
-		action() {
-			return new Response(null, {
-				status: 303,
-				headers: { location: routes.{{path}}.index.href() },
-			});
+		/**
+		 * Receives a submission that passed the honeypot and the CAPTCHA, which answers a 403
+		 * before the handler runs, and sends the visitor back to the form.
+		 */
+		action: {
+			middleware: [captcha(turnstile)],
+			handler() {
+				return new Response(null, {
+					status: 303,
+					headers: { location: routes.{{path}}.index.href() },
+				});
+			},
 		},
 	},
 });

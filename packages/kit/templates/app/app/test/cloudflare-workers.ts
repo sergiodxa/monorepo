@@ -7,4 +7,6 @@
 /** The secrets the app reads, with the values a project starts with for development. */
 export const env = {
 	HONEYPOT_SECRET: "development-honeypot-secret",
+	TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+	TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
 } as Partial<Cloudflare.Env> as Cloudflare.Env;

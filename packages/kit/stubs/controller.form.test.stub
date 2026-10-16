@@ -31,13 +31,15 @@ function submit(form: Record<string, string>) {
 }
 
 describe("{{name}}", () => {
-	test("renders the form with its honeypot fields", async () => {
+	test("renders the form with its honeypot fields and CAPTCHA widget", async () => {
 		let response = await createFormRouter().fetch(
 			new URL(routes.{{path}}.index.href(), "https://example.com"),
 		);
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toContain(`name="${honeypot.tokenField}"`);
+		let html = await response.text();
+		expect(html).toContain(`name="${honeypot.tokenField}"`);
+		expect(html).toContain('class="cf-turnstile"');
 	});
 
 	test("refuses a submission without the honeypot fields", async () => {
@@ -52,6 +54,14 @@ describe("{{name}}", () => {
 		let response = await submit({ [tokenField]: token, [trapField]: "https://spam.example" });
 
 		expect(response.status).toBe(400);
+	});
+
+	test("refuses a submission without a CAPTCHA token", async () => {
+		let { token, tokenField } = unwrap(await honeypot.issue());
+
+		let response = await submit({ [tokenField]: token });
+
+		expect(response.status).toBe(403);
 	});
 
 	test.todo("saves a {{title}} submission");

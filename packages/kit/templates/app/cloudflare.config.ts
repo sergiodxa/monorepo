@@ -30,6 +30,10 @@ export default defineConfig({
 			RATE_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } }),
 			/** Signs the honeypot fields every page form carries. */
 			HONEYPOT_SECRET: bindings.secret(),
+			/** The Turnstile widget's site key, which a form renders. */
+			TURNSTILE_SITE_KEY: bindings.secret(),
+			/** Verifies the Turnstile token a form submits. */
+			TURNSTILE_SECRET_KEY: bindings.secret(),
 		},
 	},
 });

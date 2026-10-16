@@ -24,7 +24,8 @@ One router serves two route contracts:
 - `routes/web.ts`, the pages. Each page controller declares `app/http/middleware/page.ts`, which
   parses forms, checks cross-origin posts, refuses a post without valid honeypot fields, sends
   the security headers in `config/security-policy.ts` and resolves the document's assets. A form
-  renders the fields with `HoneypotFields` from `@sdxc/honeypot/ui`, as
+  renders the fields with `HoneypotFields` from `@sdxc/honeypot/ui`, and asks for Cloudflare
+  Turnstile by rendering `TurnstileWidget` and declaring `captcha(turnstile)` on its action, as
   `sdxc make controller --method form` does. Name an origin in the policy's
   Content-Security-Policy before a page loads a script, style, image or font from it.
 - `routes/api.ts`, the endpoints machine clients call: `GET /api/health`,

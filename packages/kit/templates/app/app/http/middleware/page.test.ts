@@ -29,6 +29,6 @@ describe("page", () => {
 	test("advertises no nonce when the page renders no inline script", async () => {
 		let response = await createPageRouter().fetch("https://example.com/");
 
-		expect(response.headers.get("content-security-policy")).toContain("script-src 'self';");
+		expect(response.headers.get("content-security-policy")).not.toContain("'nonce-");
 	});
 });
