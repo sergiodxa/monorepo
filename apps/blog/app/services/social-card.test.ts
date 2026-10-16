@@ -83,10 +83,10 @@ describe("readSocialCard", () => {
 describe("card addresses", () => {
 	test("a card URL names the page path and the version", () => {
 		expect(socialCardUrl({ path: "/articles/x", version: "abc" })).toBe(
-			"https://sergiodxa.com/social/articles/x.png?v=abc",
+			"https://sergiodxa.com/articles/x.png?v=abc",
 		);
 		expect(socialCardUrl({ path: "/", version: "abc" })).toBe(
-			"https://sergiodxa.com/social/index.png?v=abc",
+			"https://sergiodxa.com/index.png?v=abc",
 		);
 	});
 

@@ -65,9 +65,6 @@ export const SOCIAL_CARD_TEMPLATE = "1";
 /** How many of a listing's newest entries its card shows. */
 export const LISTING_ENTRIES = 3;
 
-/** Where the image route lives; a page's path follows it. */
-const ROUTE_PREFIX = "/social";
-
 /** The segment the home page's card is stored under, since `/` leaves no name for a file. */
 const HOME_SEGMENT = "index";
 
@@ -88,13 +85,13 @@ const LONG_DATE = new Intl.DateTimeFormat("en-US", {
 });
 
 /**
- * The absolute URL a page advertises as its `og:image`. The version in the query makes a
- * platform that caches images per URL fetch the card again after the page changes.
+ * The absolute URL a page advertises as its `og:image`: the page's own path with `.png`
+ * added. The version in the query makes a platform that caches images per URL fetch the
+ * card again after the page changes.
  */
 export function socialCardUrl(reference: SocialCard.Reference): string {
 	let segment = reference.path === "/" ? `/${HOME_SEGMENT}` : reference.path.replace(/\/$/, "");
-	return new URL(`${ROUTE_PREFIX}${segment}.png?v=${reference.version}`, PROFILE.canonical.origin)
-		.href;
+	return new URL(`${segment}.png?v=${reference.version}`, PROFILE.canonical.origin).href;
 }
 
 /** The page path a card route's `path` parameter stands for. */

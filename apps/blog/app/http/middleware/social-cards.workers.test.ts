@@ -1,7 +1,7 @@
 /**
- * Requests social cards through the real router over a migrated D1 and the real R2 binding:
- * a post advertises its card and the card renders and is stored, a listing's card renders,
- * and a path that is no published page has none.
+ * Requests `<page>.png` cards through the real router over a migrated D1 and the real R2
+ * binding: a post advertises its card and the card renders and is stored, a listing's and a
+ * topic's cards render, a post's other formats still answer, and a non-page has no card.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,14 +75,14 @@ beforeAll(async () => {
 	if (isFailure(created)) throw new Error(JSON.stringify(created.error.issues));
 });
 
-describe("GET /social/*path.png", () => {
+describe("GET <page>.png", () => {
 	test("a post advertises a large card that renders and is stored", async () => {
 		let page = await (await request(`/articles/${SLUG}`)).text();
 		expect(metaContent(page, "twitter:card")).toBe("summary_large_image");
 		expect(page.match(/"twitter:card"/g)).toHaveLength(1);
 
 		let card = await advertisedCard(`/articles/${SLUG}`);
-		expect(card).toMatch(new RegExp(`^/social/articles/${SLUG}\\.png\\?v=[0-9a-z]+$`));
+		expect(card).toMatch(new RegExp(`^/articles/${SLUG}\\.png\\?v=[0-9a-z]+$`));
 
 		let response = await request(card);
 		expect(response.status).toBe(200);
@@ -97,18 +97,24 @@ describe("GET /social/*path.png", () => {
 
 	test("a listing's card renders from its feed", async () => {
 		let card = await advertisedCard("/articles");
-		expect(card).toMatch(/^\/social\/articles\.png\?v=/);
+		expect(card).toMatch(/^\/articles\.png\?v=/);
 		expect((await request(card)).status).toBe(200);
 	});
 
 	test("the home page's card lives under index", async () => {
 		let card = await advertisedCard("/");
-		expect(card).toMatch(/^\/social\/index\.png\?v=/);
+		expect(card).toMatch(/^\/index\.png\?v=/);
 		expect((await request(card)).status).toBe(200);
 	});
 
+	test("a post's markdown twin still answers as markdown", async () => {
+		let response = await request(`/articles/${SLUG}.md`);
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("markdown");
+	});
+
 	test("a path that is no published page has no card", async () => {
-		expect((await request("/social/articles/no-such-post.png")).status).toBe(404);
-		expect((await request("/social/social/index.png")).status).toBe(404);
+		expect((await request("/articles/no-such-post.png")).status).toBe(404);
+		expect((await request("/index.png.png")).status).toBe(404);
 	});
 });

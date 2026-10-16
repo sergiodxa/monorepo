@@ -30,12 +30,16 @@ pages use.
 
 ### Pieces
 
-- **`GET /social/*path.png`** renders the page at that path in-process through the blog's
+- **`<page path>.png`** is every page's card, at the page's own address with `.png` added
+  (`/articles/the-remix-way.png`, `/index.png` for the home page). The `socialCards()`
+  middleware answers it ahead of routing, because the `post` and `topic` patterns take an
+  extension and rank above any wildcard card route. It renders the page at that path in-process through the blog's
   own router, with the request's environment, as an anonymous visitor asking for HTML. It
   reads the card from the page's published microformats — a listing's `h-feed` name and
   first `h-entry` children, or a post's `h-entry` date with its `og:title` and description —
-  so only a published page has a card and the card says what the page says. The route is
-  declared before `post`, whose two-segment pattern also matches a card path.
+  so only a published page has a card and the card says what the page says. A `.png` path
+  naming no published page continues to the router. The drawing code and fonts load on the
+  first card drawn.
 - **`app/services/social-card.ts`** reads the card, builds its URL and storage key, and
   hashes versions; **`app/services/social-card-image.ts`** draws it.
 - **`app/models/social-cards.ts`** is an R2 `FileStorage` over the `SOCIAL_CARDS` bucket

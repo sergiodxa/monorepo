@@ -54,6 +54,7 @@ import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
+import socialCards from "~/app/http/middleware/social-cards";
 import supportDesk from "~/app/http/middleware/support-desk";
 import { viewRenderer } from "~/app/http/middleware/view-renderer";
 import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
@@ -225,6 +226,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 				nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
 			}),
 			asyncContext(),
+			socialCards(),
 			database(createDatabase()),
 			models(),
 			jobEnqueuer(jobQueue),
@@ -372,11 +374,6 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	router.map(
 		routes.searchFrame,
 		lazy(() => import("~/app/http/controllers/search-frame")),
-	);
-	/** Mapped ahead of `post`, whose two-segment pattern also matches a card path. */
-	router.map(
-		routes.socialCard,
-		lazy(() => import("~/app/http/controllers/social-card")),
 	);
 	/** A post page negotiates to its `Article`, which `ctx.activityPub` answers. */
 	router.map(
