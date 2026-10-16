@@ -39,7 +39,8 @@ type RunResult = Promise<Result<TableRow<typeof tenantExportRuns>, Error>>;
  * @example let run = await models.tenantExportRuns.create({ tenant_id, include_credentials: false });
  */
 export const TenantExportRuns = createModel(tenantExportRuns, {
-	optional: ["id", "status", "processed"],
+	generateId: () => tenantExportRunId(generateUUID()).toString(),
+	optional: ["status", "processed"],
 
 	scopes: {
 		/**
@@ -83,7 +84,6 @@ export const TenantExportRuns = createModel(tenantExportRuns, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? tenantExportRunId(generateUUID()).toString(),
 				status: values.status ?? "queued",
 				processed: values.processed ?? 0,
 				created_at: values.created_at ?? Date.now(),

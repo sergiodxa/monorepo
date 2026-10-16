@@ -33,7 +33,7 @@ export interface AttachTenantAddonInput {
  * @example let addon = await models.tenantAddons.findBySubscriptionId(subscriptionId);
  */
 export const TenantAddons = createModel(tenantAddons, {
-	optional: ["id"],
+	generateId: () => addonId(generateUUID()).toString(),
 
 	scopes: {
 		ofTenant: (query, tenantId: string) => query.where({ tenant_id: tenantId }),
@@ -54,12 +54,6 @@ export const TenantAddons = createModel(tenantAddons, {
 				{ ...input, id: addonId(generateUUID()).toString() },
 				{ conflict: ["subscription_id"], update: {} },
 			);
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? addonId(generateUUID()).toString() };
 		},
 	},
 });

@@ -29,7 +29,7 @@ const tenantMemberInvitationId = typeid("meminv");
  * @example let invitation = await models.tenantMemberInvitations.create({ tenant_id, email, role, token_hash, invited_by, expires_at });
  */
 export const TenantMemberInvitations = createModel(tenantMemberInvitations, {
-	optional: ["id"],
+	generateId: () => tenantMemberInvitationId(generateUUID()).toString(),
 
 	scopes: {
 		/** A tenant's open invitations for one folded address. */
@@ -71,7 +71,6 @@ export const TenantMemberInvitations = createModel(tenantMemberInvitations, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? tenantMemberInvitationId(generateUUID()).toString(),
 				created_at: values.created_at ?? Date.now(),
 			};
 		},

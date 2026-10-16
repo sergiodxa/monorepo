@@ -54,7 +54,7 @@ export class LastOwnerError extends Error {
  * @example let membership = await models.memberships.findByTenantAndSubject(tenantId, subjectId);
  */
 export const Memberships = createModel(memberships, {
-	optional: ["id"],
+	generateId: () => membershipId(generateUUID()).toString(),
 
 	scopes: {
 		ofTenant: (query, tenantId: string) => query.where({ tenant_id: tenantId }),
@@ -138,12 +138,6 @@ export const Memberships = createModel(memberships, {
 				administered.push({ tenant, role: membership.role });
 			}
 			return administered;
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? membershipId(generateUUID()).toString() };
 		},
 	},
 });

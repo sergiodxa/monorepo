@@ -28,7 +28,7 @@ const attemptId = typeid("attempt");
  * @example let attempt = await models.billingCheckouts.create({ tenant_id, customer_id, product_slug: "pro", kind: "base" });
  */
 export const BillingCheckouts = createModel(billingCheckouts, {
-	optional: ["attempt_id"],
+	generateId: () => attemptId(generateUUID()).toString(),
 
 	methods: {
 		/** The attempt a `checkout.completed` delivery's provider checkout id names. */
@@ -41,7 +41,6 @@ export const BillingCheckouts = createModel(billingCheckouts, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				attempt_id: values.attempt_id ?? attemptId(generateUUID()).toString(),
 				created_at: values.created_at ?? Date.now(),
 			};
 		},

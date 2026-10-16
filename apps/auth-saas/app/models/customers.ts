@@ -25,7 +25,8 @@ const customerId = typeid("cus");
  * @example let customer = await models.customers.create({ name: "Acme, Inc." });
  */
 export const Customers = createModel(customers, {
-	optional: ["id", "provider_connection", "internal"],
+	generateId: () => customerId(generateUUID()).toString(),
+	optional: ["provider_connection", "internal"],
 
 	methods: {
 		/**
@@ -44,7 +45,6 @@ export const Customers = createModel(customers, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? customerId(generateUUID()).toString(),
 				provider_connection: values.provider_connection ?? "polar",
 				internal: values.internal ?? false,
 			};

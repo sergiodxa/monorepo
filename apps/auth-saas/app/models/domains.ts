@@ -30,7 +30,8 @@ const domainId = typeid("dom");
  * @example let domain = await models.domains.findByHostname("acme.auth.sergiodxa.com");
  */
 export const Domains = createModel(domains, {
-	optional: ["id", "status"],
+	generateId: () => domainId(generateUUID()).toString(),
+	optional: ["status"],
 
 	scopes: {
 		ofTenant: (query, tenantId: string) => query.where({ tenant_id: tenantId }),
@@ -49,7 +50,6 @@ export const Domains = createModel(domains, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? domainId(generateUUID()).toString(),
 				status: values.status ?? "pending",
 			};
 		},

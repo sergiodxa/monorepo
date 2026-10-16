@@ -25,13 +25,13 @@ const flagChangeId = typeid("fchg");
  * @example await models.flagChanges.create({ key, before, after, actor });
  */
 export const FlagChanges = createModel(flagChanges, {
-	optional: ["id", "at"],
+	generateId: () => flagChangeId(generateUUID()).toString(),
+	optional: ["at"],
 
 	callbacks: {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? flagChangeId(generateUUID()).toString(),
 				at: values.at ?? Date.now(),
 			};
 		},

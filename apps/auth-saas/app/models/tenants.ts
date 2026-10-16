@@ -51,7 +51,8 @@ export interface ProvisionedPage {
  * @example let tenant = await models.tenants.findBySlug("acme");
  */
 export const Tenants = createModel(tenants, {
-	optional: ["id", "region", "status", "plan_slug", "subscription_status", "cancel_at_period_end"],
+	generateId: () => tenantId(generateUUID()).toString(),
+	optional: ["region", "status", "plan_slug", "subscription_status", "cancel_at_period_end"],
 
 	scopes: {
 		ofCustomer: (query, customerId: string) => query.where({ customer_id: customerId }),
@@ -107,7 +108,6 @@ export const Tenants = createModel(tenants, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? tenantId(generateUUID()).toString(),
 				region: values.region ?? "wnam",
 				status: values.status ?? "active",
 				plan_slug: values.plan_slug ?? "free",

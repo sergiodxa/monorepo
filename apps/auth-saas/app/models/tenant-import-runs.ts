@@ -42,7 +42,8 @@ type RunResult = Promise<Result<TableRow<typeof tenantImportRuns>, Error>>;
  * @example let run = await models.tenantImportRuns.create({ tenant_id, mode: "validate", source_key });
  */
 export const TenantImportRuns = createModel(tenantImportRuns, {
-	optional: ["id", "status", "processed", "created", "updated", "failed", "cursor"],
+	generateId: () => tenantImportRunId(generateUUID()).toString(),
+	optional: ["status", "processed", "created", "updated", "failed", "cursor"],
 
 	scopes: {
 		/**
@@ -89,7 +90,6 @@ export const TenantImportRuns = createModel(tenantImportRuns, {
 		async beforeCreate(values) {
 			return {
 				...values,
-				id: values.id ?? tenantImportRunId(generateUUID()).toString(),
 				status: values.status ?? "queued",
 				processed: values.processed ?? 0,
 				created: values.created ?? 0,
