@@ -5,6 +5,7 @@
 
 import { createDocument } from "@sdxc/openapi";
 
+import problems from "~/config/problems";
 import { HEALTH } from "~/routes/api";
 
 /**
@@ -15,5 +16,6 @@ export function createApiDocument(origin: string) {
 	return createDocument({
 		info: { title: "App API", version: "1.0.0" },
 		servers: [{ url: origin }],
+		problems,
 	}).add(HEALTH);
 }

@@ -28,6 +28,10 @@ and the router's own middleware must be what pages and endpoints both use.
 - **Each contract owns its 404** as a catch-all route: `notFound: "/*path"` renders the 404 page,
   and `api.notFound: "/api/*path"` answers `application/problem+json`. The more specific pattern
   wins, so the router needs no default handler.
+- **One problem catalog.** `config/problems.ts` default-exports `defineProblems(...)`, with its
+  base URL taken from `PROBLEMS_URL` in `config/constants.ts`. Code imports it as `problems` and
+  answers `problems.notFound()`, `problems.tooManyRequests()` or `problems.validationError(...)`,
+  and the OpenAPI document publishes every entry.
 - **The API documents itself.** `routes/api.ts` exports an `@sdxc/openapi` operation beside each
   documented route, `app/initializers/openapi.ts` assembles the document for the origin a request
   reached, and `GET /api/openapi.json` serves it.

@@ -9,7 +9,6 @@ import type { RouterContext } from "remix/router";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
-import { problem } from "@sdxc/problem";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env } from "cloudflare:workers";
@@ -17,6 +16,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
 import { logger } from "~/app/initializers/logger";
+import problems from "~/config/problems";
 import apiRoutes from "~/routes/api";
 import webRoutes from "~/routes/web";
 
@@ -44,7 +44,7 @@ export function createWebRouter() {
 				adapter: new CloudflareAdapter(env.RATE_LIMITER, { limit: 100, window: "1 minute" }),
 				prefix: "address",
 				key: (ctx) => addressKey(getClientIP(ctx.request)),
-				onLimit: () => problem({ status: 429 }),
+				onLimit: () => problems.tooManyRequests(),
 			}),
 		],
 	});

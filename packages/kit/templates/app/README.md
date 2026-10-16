@@ -21,7 +21,8 @@ One router serves two route contracts:
   parses forms, checks cross-origin posts and resolves the document's assets.
 - `routes/api.ts`, the endpoints machine clients call: `GET /api/health`,
   `GET /api/openapi.json` and `POST /mcp`. Each declares `app/http/middleware/api.ts` (CORS), and
-  errors answer as `application/problem+json`.
+  errors answer as `application/problem+json` from the catalog in `config/problems.ts`; set
+  `PROBLEMS_URL` in `config/constants.ts` to where your docs describe them.
 
 Every request is rate limited per client address, 100 a minute, through the `RATE_LIMITER`
 binding in `cloudflare.config.ts`. Document an endpoint by adding its operation to
