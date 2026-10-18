@@ -101,11 +101,27 @@ Moves the imports and re-exports of `options.names` from `options.from` to `opti
 
 Appends `key: value` to the object literal passed as the first argument of the first call to `options.call`, or as the argument at `options.argument` for a call such as `fromRoutes(routes, origin, { … })`. `options.path` walks nested object literals by key; a value that is a call, such as `route("/prefix", { … })`, is walked through its object argument, and a missing level is created. The property follows the last one with its siblings' indentation and trailing-comma style. An existing key fails with `duplicate-key`.
 
+### `addElement(filename, source, options: AddElementOptions): Result<Edit, CodemodError>`
+
+Appends `options.value` to a list in the first call to `options.call` that has it: the call's own arguments, such as `createMiddleware(cors(), auth())`, or, with `options.path`, the array literal reached by key through the object literal the call receives at `options.argument` (the first by default), such as `createRouter({ middleware: [ … ] })`. The entry follows the list's layout: one per line with its siblings' indentation and trailing-comma style, or inline after the last entry. A missing call, key or array literal fails with `not-found`.
+
+```typescript
+let mounted = addElement("router.ts", source, {
+	call: "createRouter",
+	path: ["middleware"],
+	value: "requestId()",
+});
+```
+
 ### `insertAfterLast(filename, source, options: InsertOptions): Result<Edit, CodemodError>`
 
 Places `options.statement` on a new line after the last statement that calls `options.call`, at that statement's indentation. With no such call, it follows the variable declaration whose initializer calls `options.fallbackAfter`; with neither, it fails with `not-found`.
 
 `value` and `statement` are source text: every line after the first is indented to match the surrounding code, and nothing else about them changes. Run the project's formatter afterwards for anything beyond indentation.
+
+### `tokenize(filename: string, source: string): Result<Token[], CodemodError>`
+
+The scanner every edit reads with: each token's `type`, exact source range and text, with strings, template literals, regular expressions, comments and JSX told apart, for a tool that reads source the same way.
 
 ### `Edit`
 

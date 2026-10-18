@@ -57,7 +57,7 @@ export interface AddPropertyOptions {
 }
 
 /** One property of an object literal, as indices into `code` and its source range. */
-interface Property {
+export interface Property {
 	/** The key's value, or `null` for a computed key or a spread. */
 	key: string | null;
 	span: Span;
@@ -130,7 +130,7 @@ export function addProperty(
 }
 
 /** The properties of the object literal opening at `code[open]`. */
-function properties(structure: Structure, open: number): Property[] {
+export function properties(structure: Structure, open: number): Property[] {
 	let code = structure.code;
 	let close = closingOf(structure, open);
 	return elements(structure, open).map((span) => {
@@ -207,7 +207,7 @@ function keyText(structure: Structure, key: string): string {
  * Whether multi-line lists in the file end with a trailing comma, judged from the first list
  * whose closing bracket starts a line; `true` when there is none.
  */
-function trailingCommas(structure: Structure): boolean {
+export function trailingCommas(structure: Structure): boolean {
 	let code = structure.code;
 	for (let [index, token] of code.entries()) {
 		let closes = token.type === "punctuator" && ["}", "]", ")"].includes(token.value);
