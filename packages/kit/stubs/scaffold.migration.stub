@@ -1,0 +1,2 @@
+-- Creates the {{table}} table the {{Name}} model reads and writes.
+{{statement}}

@@ -1,0 +1,58 @@
+/**
+ * Calls the app's MCP tools the way a client does: a JSON-RPC `tools/call` posted to `/mcp`
+ * through the router, so a test runs every middleware a real call runs.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}{{header}}
+ */
+
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/api";
+
+/** What a call answered: its text, and whether the tool, or the protocol, reported a failure. */
+export interface ToolCall {
+	text: string;
+	isError: boolean;
+}
+
+/** The JSON-RPC response to a `tools/call`. */
+interface CallResponse {
+	result?: { content?: Array<{ text?: string }>; isError?: boolean };
+	error?: { message?: string };
+}
+
+/**
+ * Calls the tool `name` with `args`. A protocol error, such as arguments the tool's schema
+ * refuses, answers its message as a failure.
+ */
+export async function callTool(name: string, args: Record<string, unknown>): Promise<ToolCall> {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.mcp.href(), "https://example.com"), {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+				"Mcp-Method": "tools/call",
+				"Mcp-Name": name,
+			},
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 1,
+				method: "tools/call",
+				params: {
+					name,
+					arguments: args,
+					_meta: {
+						[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
+						[MetaKey.ClientInfo]: { name: "test", version: "1.0.0" },
+						[MetaKey.ClientCapabilities]: {},
+					},
+				},
+			}),
+		}),
+	);
+	let body = (await response.json()) as CallResponse;
+	if (body.error !== undefined) return { text: body.error.message ?? "", isError: true };
+	return { text: body.result?.content?.[0]?.text ?? "", isError: body.result?.isError === true };
+}

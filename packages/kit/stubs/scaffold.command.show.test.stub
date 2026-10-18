@@ -1,0 +1,37 @@
+/**
+ * The `{{plural}} show` command, run through the app's command line over the test database.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { invoke } from "@sdxc/cli/test";
+import { beforeAll, describe, expect, test, vi } from "vitest";
+
+import { cli } from "~/app/initializers/cli";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+
+vi.mock("~/app/initializers/local-database", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	openLocalDatabase: (await import("~/app/initializers/database")).openDatabase,
+}));
+
+beforeAll(migrate);
+
+describe("{{plural}} show", () => {
+	test("prints the {{words}} as JSON", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let run = await invoke(cli, ["{{plural}}", "show", row.id]);
+
+		expect(run.code).toBe(0);
+		expect(JSON.parse(run.stdout)).toMatchObject({ id: row.id });
+	});
+
+	test("fails for an id no {{words}} has", async () => {
+		let run = await invoke(cli, ["{{plural}}", "show", "missing"]);
+
+		expect(run.code).toBe(1);
+	});
+});

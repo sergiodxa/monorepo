@@ -1,0 +1,39 @@
+/**
+ * The `{{plural}} delete` command, run through the app's command line over the test database.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { invoke } from "@sdxc/cli/test";
+import { beforeAll, describe, expect, test, vi } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { cli } from "~/app/initializers/cli";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+
+vi.mock("~/app/initializers/local-database", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	openLocalDatabase: (await import("~/app/initializers/database")).openDatabase,
+}));
+
+beforeAll(migrate);
+
+describe("{{plural}} delete", () => {
+	test("deletes the {{words}} with the id", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let run = await invoke(cli, ["{{plural}}", "delete", row.id]);
+
+		expect(run.code).toBe(0);
+		expect(await {{Name}}.bind({ db: openDatabase() }).find(row.id)).toBeNull();
+	});
+
+	test("fails for an id no {{words}} has", async () => {
+		let run = await invoke(cli, ["{{plural}}", "delete", "missing"]);
+
+		expect(run.code).toBe(1);
+	});
+});

@@ -1,0 +1,25 @@
+/**
+ * The `list_{{pluralSnake}}` tool, called over `/mcp` as a client calls it.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { factories, migrate } from "~/app/test/database";
+import { callTool } from "~/app/test/mcp";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+
+beforeAll(migrate);
+
+describe("list_{{pluralSnake}}", () => {
+	test("answers the {{pluralWords}} there are", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let result = await callTool("list_{{pluralSnake}}", {});
+
+		expect(result.isError).toBe(false);
+		expect(result.text).toContain(row.id);
+	});
+});

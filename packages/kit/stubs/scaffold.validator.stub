@@ -1,0 +1,18 @@
+/**
+ * The {{words}} fields the new and edit forms submit, validated before a create or an update
+ * writes them. Each field matches a column of the {{Name}} model, so a valid submission is a
+ * complete row.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/api/validate}{{header}}
+ */
+
+{{schemaImports}}
+
+/** The {{words}} fields, as the form's action receives them; an unticked box reads `false`. */
+export const {{Name}}Schema = f.object({
+{{schemaFields}}
+});
+
+/** A validated {{words}} submission, ready for `create` or `update`. */
+export type {{Name}}Input = s.InferOutput<typeof {{Name}}Schema>;

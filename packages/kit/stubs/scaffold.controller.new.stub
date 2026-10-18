@@ -1,0 +1,69 @@
+/**
+ * The new {{words}} form and the action that creates one: a valid submission lands on the new
+ * {{words}}'s page, and a refused one renders the form again with each issue beside its field.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/protect-forms}{{header}}
+ */
+
+import { isFailure, unwrap } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
+import { createController } from "remix/router";
+
+import page from "~/app/http/middleware/page";
+import { {{Name}}Schema } from "~/app/http/validators/{{name}}";
+import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import { {{Name}}FormPage, submittedValues } from "~/resources/views/{{plural}}/form";
+import routes from "~/routes/web";
+
+export default createController(routes.{{pluralKey}}.new, {
+	middleware: page,
+	actions: {
+		/** Renders the empty form with fresh honeypot fields. */
+		async index(ctx) {
+			if (!authorize{{Name}}(null, "create")) return new Response(null, { status: 403 });
+			return ctx.render(
+				<{{Name}}FormPage
+					assets={ctx.assets}
+					intl={ctx.intl}
+					url={ctx.url}
+					title={ctx.intl.t("{{pluralKey}}.new.title")}
+					action={routes.{{pluralKey}}.new.action.href()}
+					values={{}}
+					honeypot={unwrap(await ctx.honeypot.issue())}
+					submit={ctx.intl.t("{{pluralKey}}.new.submit")}
+				/>,
+			);
+		},
+
+		/**
+		 * Creates the {{words}} and redirects to its page. A submission the schema or the database
+		 * refuses renders the form again as a 422, keeping what the visitor typed.
+		 */
+		async action(ctx) {
+			if (!authorize{{Name}}(null, "create")) return new Response(null, { status: 403 });
+			let input = await validate(ctx.formData, {{Name}}Schema);
+			let created = isFailure(input) ? input : await ctx.models.{{key}}.create(input.data);
+			if (isFailure(created)) {
+				return ctx.render(
+					<{{Name}}FormPage
+						assets={ctx.assets}
+						intl={ctx.intl}
+						url={ctx.url}
+						title={ctx.intl.t("{{pluralKey}}.new.title")}
+						action={routes.{{pluralKey}}.new.action.href()}
+						values={submittedValues(ctx.formData)}
+						issues={created.error.issues}
+						honeypot={unwrap(await ctx.honeypot.issue())}
+						submit={ctx.intl.t("{{pluralKey}}.new.submit")}
+					/>,
+					{ status: 422 },
+				);
+			}
+			return new Response(null, {
+				status: 303,
+				headers: { location: routes.{{pluralKey}}.show.href({ id: created.data.id }) },
+			});
+		},
+	},
+});

@@ -1,0 +1,75 @@
+/**
+ * The {{words}} form page the new and edit pages share: one field per column, filled from
+ * `values` on an edit or after a refused submission, with each refusal beside its field and the
+ * honeypot fields the page middleware checks when it is submitted.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/interface-with-remix-ui}{{header}}
+ */
+
+import type { DocumentAssets } from "@sdxc/assets-middleware";
+import type { I18n } from "@sdxc/i18n";
+import type { Handle } from "remix/component";
+
+import type { {{Name}}Row } from "~/app/models/{{name}}";
+
+{{formImports}}
+
+import DocumentLayout from "~/resources/layouts/document";
+
+/** The form's fields as text, the way a submission carries them: `"true"` for a ticked box. */
+export type {{Name}}FormValues = Readonly<Record<string, string>>;
+
+namespace {{Name}}FormPage {
+	export interface Props {
+		/** The request's document assets, translator and URL, as every page passes them on. */
+		assets: DocumentAssets;
+		intl: I18n;
+		url: URL;
+		/** The page's title and heading. */
+		title: string;
+		/** Where the form posts: the create action, or a row's update action. */
+		action: string;
+		/** What each field starts with, by the column it edits. */
+		values: {{Name}}FormValues;
+		/** Why the last submission was refused, shown beside each field it names. */
+		issues?: ReadonlyArray<Form.Issue>;
+		/** Fresh honeypot fields from `ctx.honeypot.issue()`. */
+		honeypot: HoneypotFields.Props;
+		/** The submit button's label. */
+		submit: string;
+	}
+}
+
+/** Renders the {{words}} form inside the document layout. */
+export function {{Name}}FormPage(handle: Handle<{{Name}}FormPage.Props>) {
+	return () => {
+		let { action, assets, honeypot, intl, issues, submit, title, url, values } = handle.props;
+		return (
+			<DocumentLayout assets={assets} intl={intl} url={url} title={title}>
+				<h1>{title}</h1>
+				<Form method="post" action={action} issues={issues}>
+					<HoneypotFields {...honeypot} />
+{{formFields}}
+					<Button type="submit">{submit}</Button>
+				</Form>
+			</DocumentLayout>
+		);
+	};
+}
+
+/** A {{words}}'s values as the edit form shows them. */
+export function {{key}}FormValues(row: {{Name}}Row): {{Name}}FormValues {
+	return {
+{{rowValues}}
+	};
+}
+
+/** A submission's text fields, so a refused form shows what the visitor typed. */
+export function submittedValues(form: FormData): {{Name}}FormValues {
+	let values: Record<string, string> = {};
+	for (let [name, value] of form) {
+		if (typeof value === "string") values[name] = value;
+	}
+	return values;
+}

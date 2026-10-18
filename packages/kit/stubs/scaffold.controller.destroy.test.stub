@@ -1,0 +1,55 @@
+/**
+ * Deleting a {{words}} through the app's router, so the page chain's honeypot check runs as it
+ * does in the Worker.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { unwrap } from "@sdxc/result";
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { honeypot } from "~/app/initializers/honeypot";
+import { createWebRouter } from "~/app/initializers/router";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+import routes from "~/routes/web";
+
+/**
+ * How long a test may take: its first request imports the page middleware and the `@sdxc/ui`
+ * components the page renders, which takes seconds while Vitest transforms them cold.
+ */
+const PAGE_TEST_TIMEOUT_MS = 30_000;
+
+beforeAll(migrate);
+
+/** Posts to the delete action of the {{words}} with `id`, with valid honeypot fields. */
+async function destroy(id: string) {
+	let { token, tokenField } = unwrap(await honeypot.issue());
+	return createWebRouter().fetch(
+		new Request(new URL(routes.{{pluralKey}}.destroy.href({ id }), "https://example.com"), {
+			method: "POST",
+			body: new URLSearchParams({ [tokenField]: token }),
+		}),
+	);
+}
+
+describe("{{plural}}/destroy", { timeout: PAGE_TEST_TIMEOUT_MS }, () => {
+	test("deletes the {{words}} and redirects to the index", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let response = await destroy(row.id);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.{{pluralKey}}.index.href());
+		expect(await {{Name}}.bind({ db: openDatabase() }).find(row.id)).toBeNull();
+	});
+
+	test("answers 404 for an id no {{words}} has", async () => {
+		let response = await destroy("missing");
+
+		expect(response.status).toBe(404);
+	});
+});

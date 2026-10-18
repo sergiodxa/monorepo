@@ -1,0 +1,25 @@
+/**
+ * The `create_{{snake}}` tool, called over `/mcp` as a client calls it.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { migrate } from "~/app/test/database";
+import { callTool } from "~/app/test/mcp";
+
+beforeAll(migrate);
+
+describe("create_{{snake}}", () => {
+	test("writes a {{words}} and answers it with its id", async () => {
+		let result = await callTool("create_{{snake}}", { {{jsonSample}} });
+
+		expect(result.isError).toBe(false);
+		let { id } = JSON.parse(result.text) as { id: string };
+		expect(await {{Name}}.bind({ db: openDatabase() }).find(id)).not.toBeNull();
+	});
+});

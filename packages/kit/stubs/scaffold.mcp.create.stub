@@ -1,0 +1,19 @@
+/**
+ * Answers `create_{{snake}}`: writes a {{words}} from every field and answers it as saved, id
+ * included. A write the database refuses is a tool error carrying why.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/api/mcp}{{header}}
+ */
+
+import { createTool, ToolError } from "@sdxc/mcp";
+import { isFailure } from "@sdxc/result";
+
+import toolset from "~/app/mcp/tools";
+import { {{Name}} } from "~/app/models/{{name}}";
+
+export default createTool(toolset.{{pluralKey}}.create, async (ctx) => {
+	let created = await {{Name}}.bind({ db: ctx.db }).create(ctx.input);
+	if (isFailure(created)) throw new ToolError(created.error.message);
+	return created.data;
+});

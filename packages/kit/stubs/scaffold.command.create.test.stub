@@ -1,0 +1,30 @@
+/**
+ * The `{{plural}} create` command, run through the app's command line over the test database.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { invoke } from "@sdxc/cli/test";
+import { beforeAll, describe, expect, test, vi } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { cli } from "~/app/initializers/cli";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { migrate } from "~/app/test/database";
+
+vi.mock("~/app/initializers/local-database", async (importOriginal) => ({
+	...(await importOriginal<object>()),
+	openLocalDatabase: (await import("~/app/initializers/database")).openDatabase,
+}));
+
+beforeAll(migrate);
+
+describe("{{plural}} create", () => {
+	test("writes a {{words}} from its flags and prints its id", async () => {
+		let run = await invoke(cli, ["{{plural}}", "create", {{createArgv}}]);
+
+		expect(run.code).toBe(0);
+		expect(await {{Name}}.bind({ db: openDatabase() }).find(run.stdout.trim())).not.toBeNull();
+	});
+});

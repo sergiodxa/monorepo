@@ -1,0 +1,33 @@
+/**
+ * The database a test reads and writes: the in-memory `DB` binding with every migration in
+ * `database/migrations/` applied in name order, as `sdxc run db migrate` applies them, and
+ * factories that write through the app's own models.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/test-data}{{header}}
+ */
+
+import { createFactories } from "@sdxc/data-model/testing";
+import { env } from "cloudflare:workers";
+
+import { openDatabase } from "~/app/initializers/database";
+import registry from "~/app/models";
+
+/** Every migration's SQL by path, bundled by Vite, so a test reads them without the file system. */
+const MIGRATIONS = import.meta.glob<string>("/database/migrations/*.sql", {
+	query: "?raw",
+	import: "default",
+	eager: true,
+});
+
+/**
+ * Applies every migration to the `DB` binding. Each test file starts with an empty binding, so a
+ * file runs this once, in `beforeAll`.
+ */
+export async function migrate(): Promise<void> {
+	for (let path of Object.keys(MIGRATIONS).sort()) await env.DB.exec(MIGRATIONS[path] ?? "");
+}
+
+/** Factories writing through the app's models over the `DB` binding, with values that repeat run to run. */
+export function factories() {
+	return createFactories(registry.bind({ db: openDatabase() }), { seed: 1 });
+}

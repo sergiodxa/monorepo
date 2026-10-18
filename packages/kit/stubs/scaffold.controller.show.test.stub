@@ -1,0 +1,47 @@
+/**
+ * One {{words}}'s page, rendered through the app's router.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+import routes from "~/routes/web";
+
+/**
+ * How long a test may take: its first request imports the page middleware and the `@sdxc/ui`
+ * components the page renders, which takes seconds while Vitest transforms them cold.
+ */
+const PAGE_TEST_TIMEOUT_MS = 30_000;
+
+beforeAll(migrate);
+
+/** Fetches the page of the {{words}} with `id`. */
+function show(id: string) {
+	return createWebRouter().fetch(
+		new URL(routes.{{pluralKey}}.show.href({ id }), "https://example.com"),
+	);
+}
+
+describe("{{plural}}/show", { timeout: PAGE_TEST_TIMEOUT_MS }, () => {
+	test("renders the {{words}} with links to edit and delete it", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let response = await show(row.id);
+
+		expect(response.status).toBe(200);
+		let html = await response.text();
+		expect(html).toContain(`href="${routes.{{pluralKey}}.edit.index.href({ id: row.id })}"`);
+		expect(html).toContain(`action="${routes.{{pluralKey}}.destroy.href({ id: row.id })}"`);
+	});
+
+	test("answers 404 for an id no {{words}} has", async () => {
+		let response = await show("missing");
+
+		expect(response.status).toBe(404);
+	});
+});

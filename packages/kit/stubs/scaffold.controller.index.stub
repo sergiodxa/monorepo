@@ -1,0 +1,54 @@
+/**
+ * Every {{words}}, newest first, each linking to its page, with the way to add another.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/interface-with-remix-ui}{{header}}
+ */
+
+import { Link } from "@sdxc/ui/link";
+import { LinkButton } from "@sdxc/ui/link-button";
+import { Table } from "@sdxc/ui/table";
+import { createAction } from "remix/router";
+
+import page from "~/app/http/middleware/page";
+import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import DocumentLayout from "~/resources/layouts/document";
+import routes from "~/routes/web";
+
+export default createAction(routes.{{pluralKey}}.index, {
+	middleware: page,
+	/** Lists every {{words}}; a visitor the policy refuses gets a 403. */
+	async handler(ctx) {
+		if (!authorize{{Name}}(null, "list")) return new Response(null, { status: 403 });
+		let rows = await ctx.models.{{key}}.query().orderBy("created_at", "desc").all();
+		let title = ctx.intl.t("{{pluralKey}}.index.title");
+		return ctx.render(
+			<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title={title}>
+				<h1>{title}</h1>
+				<p>
+					<LinkButton href={routes.{{pluralKey}}.new.index.href()}>
+						{ctx.intl.t("{{pluralKey}}.index.new")}
+					</LinkButton>
+				</p>
+				{rows.length === 0 ? (
+					<p>{ctx.intl.t("{{pluralKey}}.index.empty")}</p>
+				) : (
+					<Table aria-label={title}>
+						<Table.Header>
+							<Table.Row>
+{{tableColumns}}
+							</Table.Row>
+						</Table.Header>
+						<Table.Body>
+							{rows.map((row) => (
+								<Table.Row key={row.id}>
+{{tableCells}}
+								</Table.Row>
+							))}
+						</Table.Body>
+					</Table>
+				)}
+			</DocumentLayout>,
+		);
+	},
+});

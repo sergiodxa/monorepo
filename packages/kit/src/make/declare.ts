@@ -44,6 +44,21 @@ export interface DeclarationRequest {
 	tool: string;
 	uri: string;
 	title: string;
+	/** A page's sitemap decision in place of the one its pattern implies. */
+	sitemap?: string;
+	/** A tool's or a command's options in place of the empty ones `make` declares. */
+	options?: DeclarationOptions;
+}
+
+/**
+ * The options of a tool or a command whose input the caller knows: the object literal's lines,
+ * written with the local name each of `imports` is bound to in the declarations module, which
+ * gains the import when it lacks it. A tool's lines replace its description and input too.
+ */
+export interface DeclarationOptions {
+	/** The schema builder `s`, and a command's `argument` and `flag`. */
+	imports: readonly ("s" | "argument" | "flag")[];
+	lines: (locals: Readonly<Record<string, string>>) => string[];
 }
 
 /** One file's text before and after an edit, by path relative to the project root. */
@@ -208,7 +223,7 @@ async function declareController(request: DeclarationRequest, root: string): Pro
 	let statement = (lazy: string) =>
 		`${instance}.map(${local}.${path.join(".")}, ${lazy}(() => import(${literal(handler)})));`;
 	let sitemap = PAGE_HELPERS.has(helper) ? await findSitemap(root, module) : null;
-	let decision = sitemapDecision(helper, pattern);
+	let decision = request.sitemap ?? sitemapDecision(helper, pattern);
 	let manual = (reason: string): Declared => ({
 		kind: "manual",
 		path: path.join("."),
@@ -394,6 +409,7 @@ async function declareMcp(request: DeclarationRequest, root: string): Promise<De
 		if (isFailure(schema)) return manual(schema.error.message);
 		source = schema.data.source;
 		body[1] = `input: ${schema.data.local}.object({}),`;
+		if (request.options !== undefined) body = request.options.lines({ s: schema.data.local });
 	}
 	let added = addProperty(declarations, source, {
 		call: group,
@@ -511,14 +527,43 @@ async function declareCommand(request: DeclarationRequest, root: string): Promis
 			return manual(`\`${groups.slice(0, depth + 1).join(".")}\` is a command, not a group`);
 		}
 	}
-	let entry = `${keyText(leaf)}: ${builder.data.local}({ description: ${description} })`;
+	let value = `${builder.data.local}({ description: ${description} })`;
+	if (request.options !== undefined) {
+		let locals: Record<string, string> = {};
+		for (let wanted of request.options.imports) {
+			let imported =
+				wanted === "s"
+					? ensureImport(
+							declarations,
+							source,
+							{ kind: "namespace" },
+							(specifier) => specifier === "remix/data-schema",
+							"remix/data-schema",
+							"s",
+						)
+					: ensureImport(
+							declarations,
+							source,
+							{ kind: "named", name: wanted },
+							(specifier) => specifier === group.specifier,
+							group.specifier,
+							wanted,
+						);
+			if (isFailure(imported)) return manual(imported.error.message);
+			source = imported.data.source;
+			locals[wanted] = imported.data.local;
+		}
+		let lines = [`description: ${description},`, ...request.options.lines(locals)];
+		value = `${builder.data.local}({\n${indentTab(lines.join("\n"))}\n})`;
+	}
+	let entry = `${keyText(leaf)}: ${value}`;
 	let added =
 		depth === groups.length
 			? addProperty(declarations, source, {
 					call: groupLocal,
 					path: groups,
 					key: leaf,
-					value: `${builder.data.local}({ description: ${description} })`,
+					value,
 				})
 			: addProperty(declarations, source, {
 					call: groupLocal,

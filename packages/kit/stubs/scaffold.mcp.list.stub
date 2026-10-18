@@ -1,0 +1,16 @@
+/**
+ * Answers `list_{{pluralSnake}}`: the newest {{pluralWords}} first, up to `limit`, so a model sees
+ * what exists before it reads one in full with `get_{{snake}}`.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/api/mcp}{{header}}
+ */
+
+import { createTool } from "@sdxc/mcp";
+
+import toolset from "~/app/mcp/tools";
+import { {{Name}} } from "~/app/models/{{name}}";
+
+export default createTool(toolset.{{pluralKey}}.list, (ctx) =>
+	{{Name}}.bind({ db: ctx.db }).query().orderBy("created_at", "desc").limit(ctx.input.limit).all(),
+);

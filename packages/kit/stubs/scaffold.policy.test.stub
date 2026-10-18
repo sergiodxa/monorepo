@@ -1,0 +1,23 @@
+/**
+ * Who may do what with {{pluralWords}}.
+ *
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { describe, expect, test } from "vitest";
+
+import { authorize{{Name}} } from "~/app/policies/{{name}}";
+
+describe("authorize{{Name}}", () => {
+	test("lets an anonymous visitor read {{pluralWords}}", () => {
+		expect(authorize{{Name}}(null, "list")).toBe(true);
+		expect(authorize{{Name}}(null, "show")).toBe(true);
+	});
+
+	test("lets a signed-in actor take every action", () => {
+		for (let action of ["list", "show", "create", "update", "delete"] as const) {
+			expect(authorize{{Name}}({ id: "1" }, action)).toBe(true);
+		}
+	});
+});

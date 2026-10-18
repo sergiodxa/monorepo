@@ -1,0 +1,18 @@
+/**
+ * `{{plural}} list`: one line per {{words}}, newest first, its id then each field, tab-separated
+ * so `cut` and `sort` read it. It changes nothing, so it is safe to run any time.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/api/cli}{{header}}
+ */
+
+import { createCommand, success } from "@sdxc/cli";
+
+import commandset from "~/app/commands";
+import { {{Name}} } from "~/app/models/{{name}}";
+
+export default createCommand(commandset{{pluralMember}}.list, async (ctx) => {
+	let rows = await {{Name}}.bind({ db: ctx.db }).query().orderBy("created_at", "desc").all();
+	for (let row of rows) ctx.stdout(`${[row.id, {{listValues}}].join("\t")}\n`);
+	return success();
+});

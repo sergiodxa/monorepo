@@ -1,0 +1,25 @@
+/**
+ * The {{title}} model, writing to and reading from the `{{table}}` table its migration creates.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/data-models}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+
+beforeAll(migrate);
+
+describe("{{Name}}", () => {
+	test("reads back a {{words}} it created", async () => {
+		let created = await factories().create({{Name}}Factory);
+
+		let found = await {{Name}}.bind({ db: openDatabase() }).find(created.id);
+
+		expect(found).toMatchObject({ id: created.id });
+	});
+});

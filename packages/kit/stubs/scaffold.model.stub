@@ -1,0 +1,35 @@
+/**
+ * The {{title}} model over the `{{table}}` table, with a column per field `sdxc scaffold` was
+ * given. Keep the columns in step with the migrations that change the table, and add the rules
+ * that keep a {{words}} consistent as callbacks.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/data-models}
+ * @see {@link https://sdxc.dev/api/data-model}{{header}}
+ */
+
+import type { TableRow } from "remix/data-table";
+
+import { createModel } from "@sdxc/data-model";
+import { generateUUID } from "@sdxc/uuid/v7";
+import { column as c, table } from "remix/data-table";
+
+/** The `{{table}}` table, as its migration creates it. */
+export const {{key}}Table = table({
+	name: "{{table}}",
+	columns: {
+		id: c.text().primaryKey(),
+{{columns}}
+		created_at: c.integer(),
+		updated_at: c.integer(),
+	},
+	/** `create` and `update` stamp `created_at` and `updated_at` with the database's clock. */
+	timestamps: true,
+});
+
+/** One {{words}} as it reads back from the database. */
+export type {{Name}}Row = TableRow<typeof {{key}}Table>;
+
+/** {{pluralTitle}}, each created with a time-ordered id; a handler reaches them as `ctx.models.{{key}}`. */
+export const {{Name}} = createModel({{key}}Table, { generateId: generateUUID });
+
+export default {{Name}};

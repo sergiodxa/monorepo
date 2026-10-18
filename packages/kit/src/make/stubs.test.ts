@@ -21,7 +21,7 @@ const DOC_LINK = /^ \* @see \{@link https:\/\/sdxc\.dev\/(docs|api)\/[a-z0-9/-]+
 
 describe("built-in stubs", async () => {
 	let names = (await readdir(STUBS_DIR)).filter(
-		(name) => name.endsWith(".stub") && !name.startsWith("migration."),
+		(name) => name.endsWith(".stub") && !name.endsWith("migration.stub"),
 	);
 
 	test.each(names)("%s links the sdxc.dev docs before {{header}}", async (name) => {

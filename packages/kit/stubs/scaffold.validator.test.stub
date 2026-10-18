@@ -1,0 +1,26 @@
+/**
+ * The {{words}} form's validation.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { isFailure, isSuccess } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
+import { describe, expect, test } from "vitest";
+
+import { {{Name}}Schema } from "~/app/http/validators/{{name}}";
+
+describe("{{Name}}Schema", () => {
+	test("accepts a complete submission", async () => {
+		let form = new URLSearchParams({ {{formSample}} });
+
+		expect(isSuccess(await validate(form, {{Name}}Schema))).toBe(true);
+	});
+
+	test("refuses a submission with a value its field cannot take", async () => {
+		let form = new URLSearchParams({ {{invalidForm}} });
+
+		expect(isFailure(await validate(form, {{Name}}Schema))).toBe(true);
+	});
+});

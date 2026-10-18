@@ -1,0 +1,28 @@
+/**
+ * Deletes one {{words}} and sends the visitor back to the list; an id no {{words}} has is a 404.
+ * The show page's delete button posts here, with the honeypot fields the page middleware checks.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/protect-forms}{{header}}
+ */
+
+import { isFailure } from "@sdxc/result";
+import { createAction } from "remix/router";
+
+import page from "~/app/http/middleware/page";
+import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import routes from "~/routes/web";
+
+export default createAction(routes.{{pluralKey}}.destroy, {
+	middleware: page,
+	/** Deletes the {{words}}, then redirects to the index. */
+	async handler(ctx) {
+		if (!authorize{{Name}}(null, "delete")) return new Response(null, { status: 403 });
+		let deleted = await ctx.models.{{key}}.delete(ctx.params.id);
+		if (isFailure(deleted)) return new Response(null, { status: 404 });
+		return new Response(null, {
+			status: 303,
+			headers: { location: routes.{{pluralKey}}.index.href() },
+		});
+	},
+});

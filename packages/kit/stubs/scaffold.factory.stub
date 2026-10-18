@@ -1,0 +1,16 @@
+/**
+ * The {{title}} factory tests seed rows with, through the same model the app writes with. Text
+ * values carry the factory's sequence, so two {{pluralWords}} a test creates never look alike.
+ *
+ * @see {@link https://sdxc.dev/docs/data-and-background-work/data-models}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/test-data}{{header}}
+ */
+
+import { defineFactory } from "@sdxc/data-model/testing";
+
+import { {{Name}} } from "~/app/models/{{name}}";
+
+/** A complete {{words}}; a test overrides only the fields it is about. */
+export const {{Name}}Factory = defineFactory({{Name}}, {
+{{attributes}}
+});

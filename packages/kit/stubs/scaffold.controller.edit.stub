@@ -1,0 +1,88 @@
+/**
+ * The edit form of one {{words}} and the action that saves it: a valid submission lands back on
+ * the {{words}}'s page, a refused one renders the form again with each issue beside its field,
+ * and an id no {{words}} has is a 404.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/protect-forms}{{header}}
+ */
+
+import { NotFound } from "@sdxc/data-model";
+import { isFailure, unwrap } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
+import { createController } from "remix/router";
+
+import page from "~/app/http/middleware/page";
+import { {{Name}}Schema } from "~/app/http/validators/{{name}}";
+import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import DocumentLayout from "~/resources/layouts/document";
+import {
+	{{Name}}FormPage,
+	{{key}}FormValues,
+	submittedValues,
+} from "~/resources/views/{{plural}}/form";
+import routes from "~/routes/web";
+
+export default createController(routes.{{pluralKey}}.edit, {
+	middleware: page,
+	actions: {
+		/** Renders the form filled with the {{words}}'s values and fresh honeypot fields. */
+		async index(ctx) {
+			if (!authorize{{Name}}(null, "update")) return new Response(null, { status: 403 });
+			let row = await ctx.models.{{key}}.find(ctx.params.id);
+			if (row === null) {
+				let missing = ctx.intl.t("notFound.title");
+				return ctx.render(
+					<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title={missing}>
+						<h1>{missing}</h1>
+					</DocumentLayout>,
+					{ status: 404 },
+				);
+			}
+			return ctx.render(
+				<{{Name}}FormPage
+					assets={ctx.assets}
+					intl={ctx.intl}
+					url={ctx.url}
+					title={ctx.intl.t("{{pluralKey}}.edit.title")}
+					action={routes.{{pluralKey}}.edit.action.href({ id: row.id })}
+					values={{{key}}FormValues(row)}
+					honeypot={unwrap(await ctx.honeypot.issue())}
+					submit={ctx.intl.t("{{pluralKey}}.edit.submit")}
+				/>,
+			);
+		},
+
+		/**
+		 * Saves the {{words}} and redirects to its page. A submission the schema or the database
+		 * refuses renders the form again as a 422, keeping what the visitor typed.
+		 */
+		async action(ctx) {
+			if (!authorize{{Name}}(null, "update")) return new Response(null, { status: 403 });
+			let { id } = ctx.params;
+			let input = await validate(ctx.formData, {{Name}}Schema);
+			let updated = isFailure(input) ? input : await ctx.models.{{key}}.update(id, input.data);
+			if (isFailure(updated)) {
+				if (updated.error instanceof NotFound) return new Response(null, { status: 404 });
+				return ctx.render(
+					<{{Name}}FormPage
+						assets={ctx.assets}
+						intl={ctx.intl}
+						url={ctx.url}
+						title={ctx.intl.t("{{pluralKey}}.edit.title")}
+						action={routes.{{pluralKey}}.edit.action.href({ id })}
+						values={submittedValues(ctx.formData)}
+						issues={updated.error.issues}
+						honeypot={unwrap(await ctx.honeypot.issue())}
+						submit={ctx.intl.t("{{pluralKey}}.edit.submit")}
+					/>,
+					{ status: 422 },
+				);
+			}
+			return new Response(null, {
+				status: 303,
+				headers: { location: routes.{{pluralKey}}.show.href({ id }) },
+			});
+		},
+	},
+});

@@ -1,0 +1,19 @@
+/**
+ * `{{plural}} show <id>`: prints one {{words}} as JSON, every field included; an id no {{words}}
+ * has fails the run. It changes nothing, so it is safe to run any time.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/api/cli}{{header}}
+ */
+
+import { createCommand, failure, success } from "@sdxc/cli";
+
+import commandset from "~/app/commands";
+import { {{Name}} } from "~/app/models/{{name}}";
+
+export default createCommand(commandset{{pluralMember}}.show, async (ctx) => {
+	let row = await {{Name}}.bind({ db: ctx.db }).find(ctx.arguments.id);
+	if (row === null) return failure(new Error(`No {{words}} has the id ${ctx.arguments.id}`));
+	ctx.stdout(`${JSON.stringify(row, null, 2)}\n`);
+	return success();
+});

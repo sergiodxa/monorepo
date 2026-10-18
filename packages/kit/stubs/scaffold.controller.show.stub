@@ -1,0 +1,60 @@
+/**
+ * One {{words}}'s page: every field, a link to edit it and a button that deletes it. An id no
+ * {{words}} has is a 404.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/interface-with-remix-ui}{{header}}
+ */
+
+import { HoneypotFields } from "@sdxc/honeypot/ui";
+import { unwrap } from "@sdxc/result";
+import { Button } from "@sdxc/ui/button";
+import { LinkButton } from "@sdxc/ui/link-button";
+import { createAction } from "remix/router";
+
+import page from "~/app/http/middleware/page";
+import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import DocumentLayout from "~/resources/layouts/document";
+import routes from "~/routes/web";
+
+export default createAction(routes.{{pluralKey}}.show, {
+	middleware: page,
+	/** Renders the {{words}} with the delete form's honeypot fields. */
+	async handler(ctx) {
+		if (!authorize{{Name}}(null, "show")) return new Response(null, { status: 403 });
+		let row = await ctx.models.{{key}}.find(ctx.params.id);
+		if (row === null) {
+			let missing = ctx.intl.t("notFound.title");
+			return ctx.render(
+				<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title={missing}>
+					<h1>{missing}</h1>
+				</DocumentLayout>,
+				{ status: 404 },
+			);
+		}
+		let title = ctx.intl.t("{{pluralKey}}.show.title");
+		let fields = unwrap(await ctx.honeypot.issue());
+		return ctx.render(
+			<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title={title}>
+				<h1>{title}</h1>
+				<dl>
+{{detailRows}}
+				</dl>
+				<p>
+					<LinkButton href={routes.{{pluralKey}}.edit.index.href({ id: row.id })}>
+						{ctx.intl.t("{{pluralKey}}.show.edit")}
+					</LinkButton>{" "}
+					<LinkButton href={routes.{{pluralKey}}.index.href()} variant="ghost">
+						{ctx.intl.t("{{pluralKey}}.show.back")}
+					</LinkButton>
+				</p>
+				<form method="post" action={routes.{{pluralKey}}.destroy.href({ id: row.id })}>
+					<HoneypotFields {...fields} />
+					<Button type="submit" color="danger">
+						{ctx.intl.t("{{pluralKey}}.show.delete")}
+					</Button>
+				</form>
+			</DocumentLayout>,
+		);
+	},
+});

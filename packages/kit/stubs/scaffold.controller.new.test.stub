@@ -1,0 +1,64 @@
+/**
+ * The new {{words}} form, rendered and submitted through the app's router, so the page chain's
+ * honeypot check runs as it does in the Worker.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { unwrap } from "@sdxc/result";
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { honeypot } from "~/app/initializers/honeypot";
+import { createWebRouter } from "~/app/initializers/router";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
+
+/**
+ * How long a test may take: its first request imports the page middleware and the `@sdxc/ui`
+ * components the page renders, which takes seconds while Vitest transforms them cold.
+ */
+const PAGE_TEST_TIMEOUT_MS = 30_000;
+
+beforeAll(migrate);
+
+/** Posts `fields` to the create action with valid honeypot fields. */
+async function submit(fields: Record<string, string>) {
+	let { token, tokenField } = unwrap(await honeypot.issue());
+	return createWebRouter().fetch(
+		new Request(new URL(routes.{{pluralKey}}.new.action.href(), "https://example.com"), {
+			method: "POST",
+			body: new URLSearchParams({ ...fields, [tokenField]: token }),
+		}),
+	);
+}
+
+describe("{{plural}}/new", { timeout: PAGE_TEST_TIMEOUT_MS }, () => {
+	test("renders the form", async () => {
+		let response = await createWebRouter().fetch(
+			new URL(routes.{{pluralKey}}.new.index.href(), "https://example.com"),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain('name="{{firstColumn}}"');
+	});
+
+	test("creates a {{words}} and redirects to its page", async () => {
+		let response = await submit({ {{formSample}} });
+
+		let rows = await {{Name}}.bind({ db: openDatabase() }).query().all();
+		expect(response.status).toBe(303);
+		expect(rows.map((row) => routes.{{pluralKey}}.show.href({ id: row.id }))).toContain(
+			response.headers.get("location"),
+		);
+	});
+
+	test("renders the form again for a refused submission", async () => {
+		let response = await submit({ {{invalidForm}} });
+
+		expect(response.status).toBe(422);
+		expect(await response.text()).toContain('name="{{firstColumn}}"');
+	});
+});

@@ -1,0 +1,21 @@
+/**
+ * Answers `delete_{{snake}}`: deletes the {{words}} with the id and answers it as it was. An id
+ * no {{words}} has is a tool error.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/api/mcp}{{header}}
+ */
+
+import { createTool, ToolError } from "@sdxc/mcp";
+import { isFailure } from "@sdxc/result";
+
+import toolset from "~/app/mcp/tools";
+import { {{Name}} } from "~/app/models/{{name}}";
+
+export default createTool(toolset.{{pluralKey}}.delete, async (ctx) => {
+	let deleted = await {{Name}}.bind({ db: ctx.db }).delete(ctx.input.id);
+	if (isFailure(deleted)) {
+		throw new ToolError(`No {{words}} has the id ${ctx.input.id}; list_{{pluralSnake}} lists them.`);
+	}
+	return deleted.data;
+});

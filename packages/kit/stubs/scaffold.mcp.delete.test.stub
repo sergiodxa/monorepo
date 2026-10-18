@@ -1,0 +1,33 @@
+/**
+ * The `delete_{{snake}}` tool, called over `/mcp` as a client calls it.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { {{Name}} } from "~/app/models/{{name}}";
+import { factories, migrate } from "~/app/test/database";
+import { callTool } from "~/app/test/mcp";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+
+beforeAll(migrate);
+
+describe("delete_{{snake}}", () => {
+	test("deletes the {{words}} with the id", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let result = await callTool("delete_{{snake}}", { id: row.id });
+
+		expect(result.isError).toBe(false);
+		expect(await {{Name}}.bind({ db: openDatabase() }).find(row.id)).toBeNull();
+	});
+
+	test("reports an id no {{words}} has", async () => {
+		let result = await callTool("delete_{{snake}}", { id: "missing" });
+
+		expect(result.isError).toBe(true);
+	});
+});

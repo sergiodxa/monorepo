@@ -94,11 +94,12 @@ export function renderStub(
 }
 
 /**
- * Copies the built-in stubs of `kinds` (all of them when empty) into the project's `stubsDir`,
- * creating it. A stub already there is kept as it is, so a project's edits survive.
+ * Copies the built-in stubs of `kinds`, each a kind or `scaffold` (every stub when empty), into
+ * the project's `stubsDir`, creating it. A stub already there is kept as it is, so a project's
+ * edits survive.
  */
 export async function copyStubs(
-	kinds: readonly KindName[],
+	kinds: readonly string[],
 	root: string,
 	stubsDir: string,
 	packageRoot: string,

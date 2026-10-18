@@ -1,0 +1,30 @@
+/**
+ * Who may do what with {{pluralWords}}. Every visitor may take every action until the app signs
+ * people in; then pass the signed-in actor from each controller and keep only the reads in
+ * {@link ANONYMOUS_ACTIONS}.
+ *
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}
+ * @see {@link https://sdxc.dev/api/authz}{{header}}
+ */
+
+/** Who a rule is asked about; `null` for an anonymous visitor. */
+export interface Actor {
+	id: string;
+}
+
+/** What a visitor can do with {{pluralWords}}, one per page `sdxc scaffold` wrote. */
+export type {{Name}}Action = "list" | "show" | "create" | "update" | "delete";
+
+/** The actions an anonymous visitor may take. */
+const ANONYMOUS_ACTIONS: ReadonlySet<{{Name}}Action> = new Set([
+	"list",
+	"show",
+	"create",
+	"update",
+	"delete",
+]);
+
+/** Whether `actor` may take `action`; a signed-in actor may take every one. */
+export function authorize{{Name}}(actor: Actor | null, action: {{Name}}Action): boolean {
+	return actor !== null || ANONYMOUS_ACTIONS.has(action);
+}

@@ -1,0 +1,20 @@
+/**
+ * `{{plural}} delete <id>`: deletes one {{words}} and says so; an id no {{words}} has fails the
+ * run, so running it twice fails the second time.
+ *
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/your-apps-command-line}
+ * @see {@link https://sdxc.dev/api/cli}{{header}}
+ */
+
+import { createCommand, success } from "@sdxc/cli";
+import { isFailure } from "@sdxc/result";
+
+import commandset from "~/app/commands";
+import { {{Name}} } from "~/app/models/{{name}}";
+
+export default createCommand(commandset{{pluralMember}}.delete, async (ctx) => {
+	let deleted = await {{Name}}.bind({ db: ctx.db }).delete(ctx.arguments.id);
+	if (isFailure(deleted)) return deleted;
+	ctx.stdout(`Deleted ${ctx.arguments.id}\n`);
+	return success();
+});
