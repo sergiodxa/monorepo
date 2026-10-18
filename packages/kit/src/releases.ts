@@ -125,12 +125,17 @@ export function projectRelease(
 	for (let section of sections) {
 		for (let [name, range] of Object.entries(section ?? {})) {
 			if (!name.startsWith(SCOPE)) continue;
-			let version = DATED_PIN.exec(range.trim())?.[1];
-			if (version === undefined) continue;
+			let version = datedPin(range);
+			if (version === null) continue;
 			if (newest === null || compare(version, newest) > 0) newest = version;
 		}
 	}
 	return newest;
+}
+
+/** The dated version an exact pin names, `2026.10.14` from `^2026.10.14`, or `null` for any other range. */
+export function datedPin(range: string): string | null {
+	return DATED_PIN.exec(range.trim())?.[1] ?? null;
 }
 
 /** The npm package a module specifier comes from, `@sdxc/auth/issuer` from `@sdxc/auth`, or `null`. */

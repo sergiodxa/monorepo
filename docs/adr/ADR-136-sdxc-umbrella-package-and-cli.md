@@ -311,7 +311,8 @@ per location, an ambiguity error and three `init` renderers.
 
 ## Deferred
 
-- `sdxc doctor`, reporting installed `@sdxc/*` packages from different release dates.
+- `sdxc doctor`, reporting installed `@sdxc/*` packages from different release dates. Decided in
+  [ADR-160: `sdxc doctor`](./ADR-160-sdxc-doctor.md).
 
 ## References
 
