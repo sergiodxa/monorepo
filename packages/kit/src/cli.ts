@@ -58,6 +58,14 @@ export function createSDXC(
 		lazy(() => import("./commands/create.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.deploy,
+		lazy(() => import("./commands/deploy.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.doctor,
+		lazy(() => import("./commands/doctor.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.init,
 		lazy(() => import("./commands/init.js")),
 	);
@@ -120,6 +128,14 @@ export function createSDXC(
 	cli.map(
 		SDXC_COMMANDS.make.stubs,
 		lazy(() => import("./commands/make.js").then((module) => ({ default: module.stubs }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.routes,
+		lazy(() => import("./commands/routes.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.scaffold,
+		lazy(() => import("./commands/scaffold.js")),
 	);
 	cli.map(
 		SDXC_COMMANDS.run,

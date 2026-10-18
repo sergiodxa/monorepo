@@ -24,6 +24,7 @@ import { SDXC_COMMANDS } from "../contract.js";
 import { packageRoot, project } from "../middleware.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { resolveRelease, scopedPackageOf } from "../releases.js";
+import { AGENTS_FILE, planAgentsFile, writeAgentsFile } from "../upgrade/agents.js";
 import { entriesBetween } from "../upgrade/changelog.js";
 import {
 	bumpManifest,
@@ -151,19 +152,32 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 	},
 });
 
-/** Prints the prompt for this kit's release, or writes it to `output`. */
+/**
+ * Rewrites the sdxc section of the project's `AGENTS.md` from this kit's release, then prints
+ * the prompt for that release, or writes it to `output`.
+ */
 async function printPrompt(
 	ctx: UpgradeContext,
 	from: string,
 	output: string | null,
 ): Promise<Result<undefined, Error>> {
+	let agents = await planAgentsFile(ctx.project.root, ctx.packageRoot);
+	if (isFailure(agents)) return agents;
 	let prompt = await buildPrompt({
 		root: ctx.project.root,
 		packageRoot: ctx.packageRoot,
 		from,
 		remixFrom: ctx.flags.remixFrom ?? null,
+		...(agents.data === null ? {} : { agents: agents.data.status }),
 	});
 	if (isFailure(prompt)) return prompt;
+	if (agents.data !== null) {
+		let refreshed = await writeAgentsFile(ctx.project.root, agents.data);
+		if (isFailure(refreshed)) return refreshed;
+		if (agents.data.status === "refreshed") {
+			ctx.stderr(`${AGENTS_FILE}: refreshed the sdxc section\n`);
+		}
+	}
 	if (output === null) {
 		ctx.stdout(prompt.data);
 		return success();

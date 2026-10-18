@@ -20,10 +20,13 @@ import { readLock, uiEntries } from "../lock.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { scopedPackageOf } from "../releases.js";
 
+import type { AgentsStatus } from "./agents.js";
 import type { ChangelogEntry } from "./changelog.js";
 
+import { AGENTS_FILE, AGENTS_TEMPLATE } from "./agents.js";
 import { entriesBetween, fullHistoryStart, readChangelog } from "./changelog.js";
 import { projectImports, readManifest } from "./project.js";
+import { PACKAGE_FILES, RELEASE_PACKAGE } from "./registry.js";
 
 /** Where each release's GitHub Release lives, `<RELEASES>/tag/v<version>`. */
 const RELEASES = "https://github.com/sergiodxa/monorepo/releases";
@@ -61,6 +64,8 @@ export interface PromptInput {
 	components: readonly ChangedComponent[];
 	/** Each verification command, ready to run. */
 	verify: readonly string[];
+	/** Where the project's `AGENTS.md` stands; a file left as it is gets a note in the prompt. */
+	agents?: AgentsStatus;
 }
 
 /**
@@ -113,6 +118,8 @@ export function renderPrompt(input: PromptInput): string {
 			].join("\n\n"),
 		);
 	}
+	let agents = agentsNote(input);
+	if (agents !== null) sections.push(agents);
 	if (input.verify.length > 0) {
 		sections.push(
 			[
@@ -144,6 +151,7 @@ export async function buildPrompt(options: {
 	packageRoot: string;
 	from: string;
 	remixFrom: string | null;
+	agents?: AgentsStatus;
 }): Promise<Result<string, Error>> {
 	let own = await readOwnManifest(options.packageRoot);
 	if (isFailure(own)) return own;
@@ -181,6 +189,7 @@ export async function buildPrompt(options: {
 			packages: [...packages],
 			remix,
 			components: components.data,
+			...(options.agents === undefined ? {} : { agents: options.agents }),
 			verify: VERIFY_SCRIPTS.filter((name) => scripts[name] !== undefined).map((name) =>
 				[...manager.run, name].join(" "),
 			),
@@ -260,6 +269,30 @@ function olderReleases(input: PromptInput): string | null {
 			? [releases.map((release) => `- ${release}: ${RELEASES}/tag/v${release}`).join("\n")]
 			: []),
 	].join("\n\n");
+}
+
+/**
+ * The note on an `AGENTS.md` the upgrade left as it is, pointing at the release's sdxc section;
+ * `null` when the file holds the section or the status is unknown. The agent decides whether
+ * the project follows the app layout the section describes.
+ */
+function agentsNote(input: PromptInput): string | null {
+	if (input.agents === undefined || input.agents === "refreshed" || input.agents === "current") {
+		return null;
+	}
+	let url = `${PACKAGE_FILES}/${RELEASE_PACKAGE}@${input.to}/${AGENTS_TEMPLATE}`;
+	let markers = "`<!-- sdxc:start …-->` and `<!-- sdxc:end -->`";
+	let state =
+		input.agents === "missing"
+			? `This project has no \`${AGENTS_FILE}\`.`
+			: input.agents === "unmarked"
+				? `\`${AGENTS_FILE}\` has no sdxc section, so the upgrade left it as it is.`
+				: `\`${AGENTS_FILE}\` needs exactly one ${markers} line pair, so the upgrade left it as it is.`;
+	let action =
+		input.agents === "unbalanced"
+			? `Restore one pair around the sdxc section, which for release ${input.to} is in ${url}.`
+			: `When this project is an app in the sdxc layout (it has \`bootstrap/worker.ts\`), add the section from ${url}, ${markers} lines included, to \`${AGENTS_FILE}\`, creating the file if needed; \`sdxc upgrade\` then keeps it current.`;
+	return ["## Agent instructions", `${state} ${action}`].join("\n\n");
 }
 
 /** A heading and each entry under its own sub-heading with its full body. */

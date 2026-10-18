@@ -45,12 +45,16 @@ describe("help", () => {
 				"Usage: sdxc <command> [options]",
 				"",
 				"Commands:",
-				"  create   Write a new project from a built-in template or a GitHub repository",
-				"  init     Write .config/sdxc.jsonc with every default spelled out",
-				"  make     Write a controller, job, model or other file where the app layout puts it",
-				"  run      Run the project's own command line, bootstrap/cli.ts, with its runtime",
-				"  ui       Copy @sdxc/ui components into the project and keep imports on the copies",
-				"  upgrade  Move the @sdxc packages to another release and print the prompt for the code",
+				"  create    Write a new project from a built-in template or a GitHub repository",
+				"  deploy    Build, apply production migrations, then deploy the Worker with cf",
+				"  doctor    Check @sdxc release drift, the install, the remix peer and .env.example",
+				"  init      Write .config/sdxc.jsonc with every default spelled out",
+				"  make      Write a controller, job, model or other file where the app layout puts it",
+				"  routes    Print every route with its controller and the middleware that runs for it",
+				"  run       Run the project's own command line, bootstrap/cli.ts, with its runtime",
+				"  scaffold  Write a resource's model, migration, pages, tests and more, declared and mapped",
+				"  ui        Copy @sdxc/ui components into the project and keep imports on the copies",
+				"  upgrade   Move the @sdxc packages to another release and print the prompt for the code",
 				"",
 				"Options:",
 				"  --version   Print the version",
@@ -68,13 +72,13 @@ describe("help", () => {
 		let cli = createSDXC();
 
 		let none = await invoke(cli, [], { cwd: root });
-		let unknown = await invoke(cli, ["deploy"], { cwd: root });
+		let unknown = await invoke(cli, ["publish"], { cwd: root });
 		let flag = await invoke(cli, ["init", "--force"], { cwd: root });
 
 		expect(none.code).toBe(2);
 		expect(none.stderr).toContain("Usage: sdxc <command> [options]");
 		expect(unknown.code).toBe(2);
-		expect(unknown.stderr).toMatch(/^Unknown command "deploy" for sdxc\n\nUsage: sdxc <command>/);
+		expect(unknown.stderr).toMatch(/^Unknown command "publish" for sdxc\n\nUsage: sdxc <command>/);
 		expect(flag.code).toBe(2);
 		expect(flag.stderr).toMatch(
 			/^--force is not a flag of sdxc init; sdxc ui update takes it\n\nUsage: sdxc init \[options\]/,

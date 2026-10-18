@@ -104,6 +104,8 @@ describe("create", () => {
 		expect(manifest).toContain('"name": "blog"');
 		expect(await exists(join(cwd, "blog/bootstrap/worker.ts"))).toBe(true);
 		expect(await exists(join(cwd, "blog/.config/sdxc.jsonc"))).toBe(true);
+		expect(await readFile(join(cwd, "blog/AGENTS.md"), "utf8")).toContain("<!-- sdxc:end -->");
+		expect(await readFile(join(cwd, "blog/CLAUDE.md"), "utf8")).toBe("@AGENTS.md\n");
 		expect(result.exec.map((call) => call.command.join(" "))).toEqual(["git --version"]);
 	});
 

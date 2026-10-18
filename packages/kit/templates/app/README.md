@@ -24,14 +24,20 @@ sdxc make model post                       # then: ctx.models.post
 sdxc make job reports/daily --cron "0 8 * * *"
 sdxc make email welcome                    # then: ctx.email.later(new WelcomeEmail(to, copy))
 sdxc make command users/grant              # then: sdxc run users grant
+sdxc scaffold post title body:text         # model, migration, CRUD pages and tests
 
 sdxc run db console                        # SQL prompt over the local database
+sdxc routes                                # every route and its controller
+sdxc doctor                                # release drift and secrets .env.example lacks
 bun check                                  # format, lint and types
-bun test
+bun run test
 ```
 
 `sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
 right away. `sdxc` comes with the project; `npm add -g @sdxc/kit` puts it on your path.
+
+`AGENTS.md` teaches an AI coding agent these commands and conventions, and `CLAUDE.md` points
+Claude Code at it. `sdxc upgrade` keeps its sdxc section current; add your own rules below it.
 
 ## Where things go
 
@@ -78,7 +84,8 @@ another origin, add that origin to `config/security-policy.ts`. API errors use t
 
 ```sh
 bun check
-bun build
-sdxc run db migrate --remote
-bun cf:deploy
+sdxc deploy
 ```
+
+`sdxc deploy` builds, applies the pending migrations, then deploys, and asks before it changes
+production.

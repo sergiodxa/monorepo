@@ -82,6 +82,32 @@ export const SDXC_COMMANDS = commands({
 		tasks: true,
 		examples: ["create blog", "create blog --template org/repo/apps/blog#main --no-git"],
 	}),
+	deploy: command({
+		description: "Build, apply production migrations, then deploy the Worker with cf",
+		flags: {
+			yes: flag.boolean("yes", {
+				short: "y",
+				description: "Deploy without asking; required without a terminal",
+			}),
+			dryRun: flag.boolean("dry-run", {
+				description: "Build and print the plan; migrate and deploy nothing",
+			}),
+			skipBuild: flag.boolean("skip-build", {
+				description: "Deploy the output already in .cloudflare/output",
+			}),
+			skipMigrations: flag.boolean("skip-migrations", {
+				description: "Deploy without listing or applying migrations",
+			}),
+		},
+		examples: ["deploy", "deploy --dry-run", "deploy --yes --skip-build"],
+	}),
+	doctor: command({
+		description: "Check @sdxc release drift, the install, the remix peer and .env.example",
+		flags: {
+			json: flag.boolean("json", { description: "Print the report as JSON for an agent" }),
+		},
+		examples: ["doctor", "doctor --json"],
+	}),
 	init: command({
 		description: "Write .config/sdxc.jsonc with every default spelled out",
 		flags: { dryRun: flag.boolean("dry-run", { description: "Print it and write nothing" }) },
@@ -129,7 +155,16 @@ export const SDXC_COMMANDS = commands({
 			description: "A middleware in app/http/middleware",
 			tasks: true,
 			arguments: { name: nameArgument("middleware", "require-user") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: {
+				mount: flag.string("mount", {
+					valueName: "target",
+					description:
+						"Also call it last in a chain: a router initializer (router) or a chain module (page, api)",
+				}),
+				test: TEST_FLAG,
+				dryRun: DRY_RUN_FLAG,
+			},
+			examples: ["make middleware require-user --mount page"],
 		}),
 		validator: command({
 			description: "An input validator in app/http/validators",
@@ -165,6 +200,10 @@ export const SDXC_COMMANDS = commands({
 				chain: flag.string("chain", {
 					valueName: "chain",
 					description: "The chain in make.migrations (default: default)",
+				}),
+				fromModel: flag.string("from-model", {
+					valueName: "model",
+					description: "Write the SQL that brings the chain in step with app/models/<model>.ts",
 				}),
 				dryRun: DRY_RUN_FLAG,
 			},
@@ -221,12 +260,19 @@ export const SDXC_COMMANDS = commands({
 		stubs: command({
 			description: "Copy the built-in stubs into make.stubs to edit",
 			arguments: {
-				kinds: argument.variadic(s.enum_(KIND_NAMES), {
+				kinds: argument.variadic(s.enum_([...KIND_NAMES, "scaffold"]), {
 					valueName: "kind",
-					description: "The kinds whose stubs to copy; every kind when left out",
+					description: "The kinds whose stubs to copy, or scaffold; every one when left out",
 				}),
 			},
 		}),
+	}),
+	routes: command({
+		description: "Print every route with its controller and the middleware that runs for it",
+		flags: {
+			json: flag.boolean("json", { description: "Print a JSON array instead of a table" }),
+		},
+		examples: ["routes", "routes --json"],
 	}),
 	run: command({
 		description: "Run the project's own command line, bootstrap/cli.ts, with its runtime",
@@ -237,6 +283,41 @@ export const SDXC_COMMANDS = commands({
 			}),
 		},
 		examples: ["run users find ada@example.com --limit 5", "run --help"],
+	}),
+	scaffold: command({
+		description: "Write a resource's model, migration, pages, tests and more, declared and mapped",
+		tasks: true,
+		arguments: {
+			name: argument(nonEmpty("Name it"), {
+				description: "The resource's singular name, such as post or blog-post",
+				prompt: prompt.text({
+					message: "What should the resource be called?",
+					placeholder: "post",
+				}),
+			}),
+			fields: argument.variadic(s.string(), {
+				valueName: "field:type",
+				description: "Each field, typed string (the default), text, integer, boolean or date",
+			}),
+		},
+		flags: {
+			plural: flag.string("plural", {
+				valueName: "word",
+				description: "The plural the table, URLs and folders take (default: <name>s)",
+			}),
+			mcp: flag.boolean("mcp", {
+				description: "Also write MCP tools to list, get, create, update and delete",
+			}),
+			command: flag.boolean("command", {
+				description: "Also write app commands to list, show, create and delete",
+			}),
+			test: TEST_FLAG,
+			dryRun: DRY_RUN_FLAG,
+		},
+		examples: [
+			"scaffold post title:string body:text published:boolean",
+			"scaffold person name --plural people --mcp --command",
+		],
 	}),
 	ui: commands({
 		description: "Copy @sdxc/ui components into the project and keep imports on the copies",
@@ -265,12 +346,22 @@ export const SDXC_COMMANDS = commands({
 			description: "Replace copied files with the installed version",
 			tasks: true,
 			arguments: {
-				components: argument.variadic(s.string(), { min: 1, valueName: "component" }),
+				components: argument.variadic(s.string(), {
+					valueName: "component",
+					description: "The copies to update; --all updates every one instead",
+				}),
 			},
 			flags: {
+				all: flag.boolean("all", {
+					description: "Update every copy, leaving edited files unless --force",
+				}),
+				withDeps: flag.boolean("with-deps", {
+					description: "Also copy components the new versions reach and the project lacks",
+				}),
 				force: flag.boolean("force", { description: "Replace edited files without asking" }),
 				dryRun: DRY_RUN_FLAG,
 			},
+			examples: ["ui update dialog", "ui update --all --dry-run"],
 		}),
 		remove: command({
 			description: "Delete copies and point imports back at @sdxc/ui/<name>",

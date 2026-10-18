@@ -16,9 +16,16 @@ The package installs a command named `sdxc`. It works on projects that depend on
 sdxc create my-app                   # a Remix v3 app, or --template org/repo from GitHub
 sdxc make controller posts/show      # a file where the app layout puts it, with its test
 sdxc make controller api/keys --routes api  # a JSON endpoint in the API contract
+sdxc make middleware require-user --mount page  # called last in the page chain
+sdxc make migration add-slug --from-model posts  # the SQL app/models/posts.ts needs
+sdxc scaffold post title body:text published:boolean  # model, migration, pages and tests
 sdxc ui add dialog                   # copy a component into the project to edit it
+sdxc ui update --all                 # move every unedited copy to the installed @sdxc/ui
 sdxc upgrade                         # move to the latest release and print a prompt for the code
+sdxc doctor                          # report release drift and secrets .env.example leaves out
+sdxc routes --json                   # every route, its controller and middleware, for an agent
 sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts
+sdxc deploy                          # build, apply production migrations, then deploy
 ```
 
 On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
@@ -29,20 +36,25 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 
 - `sdxc create` pins each package the template lists to its `latest` version.
 - `sdxc make` and `sdxc ui add` add a package the written code imports at the project's release, and print the install command to run.
-- `sdxc upgrade [release]` moves every `@sdxc/*` package the project lists to the target release, latest when left out, and `remix` to the version that release requires, then installs and prints a prompt for an AI agent from that release's changelog.
+- `sdxc upgrade [release]` moves every `@sdxc/*` package the project lists to the target release, latest when left out, and `remix` to the version that release requires, then installs and prints a prompt for an AI agent from that release's changelog. It also rewrites the sdxc section of the project's `AGENTS.md`, between `<!-- sdxc:start … -->` and `<!-- sdxc:end -->`, from that release's template; the rest of the file stays as the project wrote it.
+- `sdxc doctor [--json]` reports, one line per check, any `@sdxc/*` pin behind its version at the project's release, an install that differs from `package.json`, a `remix` pin other than the release's peer, and a secret `cloudflare.config.ts` declares that `.env.example` leaves out, each with the command that fixes it. It exits 1 when a check fails; without the npm registry, the checks that need it report `skip`.
 
 ## API
 
 ### Commands
 
-| Command        | What it does                                                                    |
-| -------------- | ------------------------------------------------------------------------------- |
-| `sdxc create`  | Writes a new project from the built-in `app` template or a GitHub repository    |
-| `sdxc init`    | Writes `.config/sdxc.jsonc` with every key at its default                       |
-| `sdxc run`     | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime |
-| `sdxc make`    | Writes a controller, job, model, migration or other file, declared and mapped   |
-| `sdxc ui`      | Copies `@sdxc/ui` components into the project and points imports at the copies  |
-| `sdxc upgrade` | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt     |
+| Command         | What it does                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| `sdxc create`   | Writes a new project from the built-in `app` template or a GitHub repository       |
+| `sdxc init`     | Writes `.config/sdxc.jsonc` with every key at its default                          |
+| `sdxc routes`   | Prints every route with its controller and middleware; `--json` for an agent       |
+| `sdxc run`      | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime    |
+| `sdxc deploy`   | Builds, applies pending production migrations, then deploys with `cf`, after a yes |
+| `sdxc make`     | Writes a controller, job, model, migration or other file, declared and mapped      |
+| `sdxc scaffold` | Writes a resource's model, migration, CRUD pages and tests; `--mcp`, `--command`   |
+| `sdxc ui`       | Copies `@sdxc/ui` components into the project and points imports at the copies     |
+| `sdxc upgrade`  | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt        |
+| `sdxc doctor`   | Reports release drift, a stale install, a wrong `remix` and `.env.example` gaps    |
 
 `sdxc <command> --help` lists each command's arguments and flags. Commands run from the project root, the nearest directory with a `package.json`.
 
