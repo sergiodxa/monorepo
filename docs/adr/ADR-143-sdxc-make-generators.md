@@ -174,8 +174,9 @@ kind typed most often would be the longest.
 
 ## Deferred
 
-- Registering the other kinds `make` writes, such as a model in an app's model registry or
-  middleware in a router's chain.
+- Registering the other kinds `make` writes, such as a model in an app's model registry.
+  Middleware in a router's chain or a controller chain is mounted with `--mount`, recorded in
+  [ADR-157](./ADR-157-sdxc-make-middleware-mount.md).
 
 ## References
 
