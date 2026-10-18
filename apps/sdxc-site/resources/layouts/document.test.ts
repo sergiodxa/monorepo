@@ -45,6 +45,19 @@ describe("the document's asset tags", () => {
 		expect(importMap).toBeLessThan(html.indexOf('<script type="module"'));
 	});
 
+	test.each(PAGES)(
+		"%s links the stylesheet ahead of every page-specific head tag",
+		async (path) => {
+			let html = await renderPage(path);
+			let head = html.slice(html.indexOf("<head>"), html.indexOf("</head>"));
+			let viewport = head.indexOf('data-rmx-key="viewport" />');
+
+			expect(head.indexOf(`<link rel="stylesheet"`)).toBe(
+				viewport + 'data-rmx-key="viewport" />'.length,
+			);
+		},
+	);
+
 	test("names no client entry outside the manifest", async () => {
 		let html = await renderPage("/");
 

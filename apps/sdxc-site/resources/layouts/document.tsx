@@ -95,6 +95,15 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						data-rmx-key="viewport"
 					/>
 					{/*
+					 * The stylesheets lead the head, ahead of every tag that varies by page and of
+					 * the import maps and preloads the runtime appends on navigation, so the head
+					 * diff never moves their links: Safari unapplies a moved stylesheet until it
+					 * parses it again, and the page flashes unstyled meanwhile.
+					 */}
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
+					))}
+					{/*
 					 * Whichever host served the request — a preview, the workers.dev name, the
 					 * custom domain — the canonical URL names one origin, so the same page read
 					 * from two hosts is one page to a crawler and to a model.
@@ -109,9 +118,6 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<ImportMap value={script.importMap} />
 					{script.preloads.map((href) => (
 						<link key={href} rel="modulepreload" href={href} data-rmx-key={href} />
-					))}
-					{stylesheets.map((href) => (
-						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
 					))}
 				</head>
 				<body mix={[m(0), vstack({ align: "center" }), minBs("100dvh"), font("sans"), bg(), fg()]}>
