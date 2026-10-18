@@ -10,6 +10,8 @@
 import { stat } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 
+import type { Result } from "@sdxc/result";
+
 import { createCommand, ExecError, exit, failure, success } from "@sdxc/cli";
 import { isFailure, isSuccess, wrap } from "@sdxc/result";
 
@@ -20,6 +22,37 @@ import { readManifest } from "../upgrade/project.js";
 
 /** Where the app layout puts an app's command line, relative to the project root. */
 export const CLI_ENTRY = "bootstrap/cli.ts";
+
+/**
+ * `PATH` with the project's `node_modules/.bin` first, as a package script has it, so a child
+ * runs the project's own `cf` or `vp` in place of a global one.
+ *
+ * @param root - The project root
+ * @param path - The run's `PATH`
+ */
+export function projectPath(root: string, path: string | undefined): string {
+	let bin = join(root, "node_modules", ".bin");
+	return path === undefined ? bin : `${bin}${delimiter}${path}`;
+}
+
+/**
+ * The command that starts the project's command line with `args`: under Bun for a project on
+ * Bun and under Node otherwise.
+ *
+ * @param root - The project root, whose `package.json` and lock file name the package manager
+ */
+export async function commandLine(
+	root: string,
+	args: readonly string[],
+): Promise<Result<string[], Error>> {
+	let manifest = await readManifest(root);
+	if (isFailure(manifest)) return manifest;
+	let manager = await packageManager({
+		declared: manifest.data.manifest.packageManager,
+		findLockFile: lockFileAtOrAbove(root),
+	});
+	return success([manager.name === "bun" ? "bun" : "node", CLI_ENTRY, ...args]);
+}
 
 /**
  * Runs `bootstrap/cli.ts` under Bun for a project on Bun and under Node otherwise, with its
@@ -37,18 +70,12 @@ export default createCommand(SDXC_COMMANDS.run, {
 				new Error(`${CLI_ENTRY} not found in ${root}; an app's command line starts there`),
 			);
 		}
-		let manifest = await readManifest(root);
-		if (isFailure(manifest)) return manifest;
-		let manager = await packageManager({
-			declared: manifest.data.manifest.packageManager,
-			findLockFile: lockFileAtOrAbove(root),
-		});
-		let runtime = manager.name === "bun" ? "bun" : "node";
-		let bin = join(root, "node_modules", ".bin");
-		let ran = await ctx.exec([runtime, CLI_ENTRY, ...ctx.arguments.args], {
+		let command = await commandLine(root, ctx.arguments.args);
+		if (isFailure(command)) return command;
+		let ran = await ctx.exec(command.data, {
 			cwd: root,
 			stdio: "inherit",
-			env: { PATH: ctx.env.PATH === undefined ? bin : `${bin}${delimiter}${ctx.env.PATH}` },
+			env: { PATH: projectPath(root, ctx.env.PATH) },
 		});
 		if (isSuccess(ran)) return success();
 		if (ran.error instanceof ExecError && ran.error.code !== null) return exit(ran.error.code);
