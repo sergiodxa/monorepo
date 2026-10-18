@@ -29,7 +29,9 @@ import type { MakeRequest, PlannedFile } from "./generate.js";
 import type { KindName } from "./kinds.js";
 
 import { declare } from "./declare.js";
+import { modelMigration } from "./from-model.js";
 import { folderOf, plan, resourceScheme } from "./generate.js";
+import { mount } from "./mount.js";
 import { parseName } from "./names.js";
 
 /** One file to make, as the command line or the prompts gave it. */
@@ -51,6 +53,10 @@ export interface MakeInput {
 	resource?: boolean | undefined;
 	/** `make migration`: the chain in `make.migrations`. */
 	chain?: string | undefined;
+	/** `make migration`: the model whose tables the migration brings the chain in step with. */
+	fromModel?: string | undefined;
+	/** `make middleware`: the router initializer or chain module to call it last in. */
+	mount?: string | undefined;
 }
 
 /** What `make` writes through: the command's output, child processes and tasks. */
@@ -109,8 +115,25 @@ export async function make(
 		);
 	}
 	let overrides: Record<string, string> = declared === null ? {} : { path: declared.path };
+	if (kind === "middleware" && input.mount !== undefined) {
+		let handler = `${folderOf(kind, null)}/${request.name.segments.join("/")}`;
+		let mounted = await mount({ name: request.name, target: input.mount, handler }, root);
+		if (isFailure(mounted)) return mounted;
+		declared = mounted.data;
+	}
+	let modelSql: string | null = null;
+	if (kind === "migration" && input.fromModel !== undefined) {
+		let sql = await modelMigration(ctx, project, input.fromModel, input.chain, request.name);
+		if (isFailure(sql)) return sql;
+		if (sql.data === null) return success(undefined);
+		modelSql = sql.data;
+	}
 	let planned = await plan(request, root, config, packageRoot, overrides);
 	if (isFailure(planned)) return planned;
+	if (modelSql !== null) {
+		let content = modelSql;
+		planned.data.files = planned.data.files.map((file) => ({ ...file, content }));
+	}
 	let edits = declared?.kind === "edits" ? [...declared.edits] : [];
 	let dependencies = await missingDependencies(root, [
 		...planned.data.files,
@@ -124,7 +147,7 @@ export async function make(
 			ctx.stdout(`Would write ${file.path}:\n\n${file.content}\n`);
 		}
 		for (let edit of edits) ctx.stdout(unifiedDiff(edit.path, edit.before, edit.after));
-		if (declared?.kind === "manual") ctx.stdout(manualNote(declared));
+		if (declared?.kind === "manual") ctx.stdout(manualNote(kind, declared));
 		return success(undefined);
 	}
 	let written = await writeFiles(root, planned.data.files);
@@ -147,14 +170,18 @@ export async function make(
 		let added = dependencies.data.added.map(({ name, version }) => `${name}@${version}`);
 		ctx.stdout(`Added ${added.join(", ")} to package.json; run ${manager.install.join(" ")}\n`);
 	}
-	if (declared?.kind === "manual") ctx.stdout(manualNote(declared));
+	if (declared?.kind === "manual") ctx.stdout(manualNote(kind, declared));
 	let changed = [...paths, ...edits.map((edit) => edit.path)];
 	return formatFiles(ctx, config.format, changed, root);
 }
 
-/** What `make` prints when a declaration and its mapping are left for the user to make. */
-function manualNote(declared: Extract<Declared, { kind: "manual" }>): string {
-	return `Declare and map it by hand, since ${declared.reason}:\n${declared.instructions}\n`;
+/**
+ * What `make` prints when a declaration and its mapping, or a middleware's mount, are left for
+ * the user to make.
+ */
+function manualNote(kind: KindName, declared: Extract<Declared, { kind: "manual" }>): string {
+	let action = kind === "middleware" ? "Mount it" : "Declare and map it";
+	return `${action} by hand, since ${declared.reason}:\n${declared.instructions}\n`;
 }
 
 /** The stub variant a request's flags select, or `null` for the kind's own stub. */

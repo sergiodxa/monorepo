@@ -76,12 +76,13 @@ export const mcp = createCommand(SDXC_COMMANDS.make.mcp, {
 /** `sdxc make migration`, numbered within its chain. */
 export const migration = createCommand(SDXC_COMMANDS.make.migration, {
 	middleware: MAKE_MIDDLEWARE,
-	/** `--chain` picks one of `make.migrations`. */
+	/** `--chain` picks one of `make.migrations`; `--from-model` writes the SQL a model needs. */
 	handler: (ctx) =>
 		run(ctx, {
 			kind: "migration",
 			name: ctx.arguments.name,
 			chain: ctx.flags.chain,
+			fromModel: ctx.flags.fromModel,
 			test: false,
 			dryRun: ctx.flags.dryRun,
 		}),
@@ -101,15 +102,7 @@ export const factory = createCommand(SDXC_COMMANDS.make.factory, {
  * @param kind - The kind it writes
  */
 function plain<
-	Kind extends
-		| "middleware"
-		| "validator"
-		| "model"
-		| "service"
-		| "policy"
-		| "initializer"
-		| "email"
-		| "command",
+	Kind extends "validator" | "model" | "service" | "policy" | "initializer" | "email" | "command",
 >(kind: Kind) {
 	return createCommand(SDXC_COMMANDS.make[kind], {
 		middleware: MAKE_MIDDLEWARE,
@@ -124,8 +117,19 @@ function plain<
 	});
 }
 
-/** `sdxc make middleware`. */
-export const middleware = plain("middleware");
+/** `sdxc make middleware`, which mounts the middleware on a chain under `--mount`. */
+export const middleware = createCommand(SDXC_COMMANDS.make.middleware, {
+	middleware: MAKE_MIDDLEWARE,
+	/** `--mount` names a router initializer or a chain module the project has. */
+	handler: (ctx) =>
+		run(ctx, {
+			kind: "middleware",
+			name: ctx.arguments.name,
+			mount: ctx.flags.mount,
+			test: ctx.flags.test,
+			dryRun: ctx.flags.dryRun,
+		}),
+});
 
 /** `sdxc make validator`. */
 export const validator = plain("validator");
