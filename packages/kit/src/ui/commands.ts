@@ -162,7 +162,22 @@ export async function planAdd(
 		}
 		added.push(entry);
 	}
-	let copies = copiedComponents(context, added);
+	let copied = await copyComponents(context, plan, added, copiedComponents(context, added));
+	if (isFailure(copied)) return copied;
+	return success(plan);
+}
+
+/**
+ * Adds to `plan` the files and lock entries of `added`, each pointing its imports at `copies`,
+ * and points every other project file's imports of `added` at the new copies. A file in the
+ * way that the lock does not list stops the plan, so a copy never overwrites the project's own.
+ */
+async function copyComponents(
+	context: UIContext,
+	plan: Plan,
+	added: readonly RegistryEntry[],
+	copies: readonly CopiedComponent[],
+): Promise<Result<void, Error>> {
 	for (let entry of added) {
 		let files: Record<string, null> = {};
 		for (let file of registryFiles(entry, context.config.ui.tests)) {
@@ -181,11 +196,10 @@ export async function planAdd(
 		plan.record.push({ name: entry.name, release: context.registry.release, files });
 		plan.report.push(`Copied ${entry.name} to ${copyPath(context.layout, entry.source.path)}`);
 	}
-	let rewritten = await rewriteProject(context, plan, (file, source) =>
+	if (added.length === 0) return success(undefined);
+	return rewriteProject(context, plan, (file, source) =>
 		pointAtCopies(file, source, copiedComponents(context, added, false), context.layout),
 	);
-	if (isFailure(rewritten)) return rewritten;
-	return success(plan);
 }
 
 /**
@@ -214,20 +228,39 @@ export async function diffComponent(
 	return success(output);
 }
 
+/** How `planUpdate` treats edited files and the components an update newly reaches. */
+export interface UpdateOptions {
+	/** Answers whether to replace an edited file; a `false` leaves it and reports it. */
+	overwrite: (path: string) => Promise<Result<boolean, Error>>;
+	/** Copies every uncopied component the updated ones reach, as `add --with-deps` does. */
+	withDeps: boolean;
+}
+
+/** One copied file `planUpdate` replaces with the installed version, or leaves when edited. */
+interface UpdateFile {
+	file: RegistryEntry["source"];
+	path: string;
+	local: string | null;
+	keep: boolean;
+}
+
 /**
  * Replaces each file of each copy whose hash still matches the lock with the installed version.
  * An edited file is replaced only when `overwrite` answers yes for it, and otherwise left alone
  * and reported; the entry moves to the installed release only when every file was replaced.
+ * A component a behind copy now reaches and the project lacks is reported, or copied with
+ * `withDeps`, so the new version's imports land on copies whenever the project has them.
  */
 export async function planUpdate(
 	context: UIContext,
 	names: readonly string[],
-	options: { overwrite: (path: string) => Promise<Result<boolean, Error>> },
+	options: UpdateOptions,
 ): Promise<Result<Plan, Error>> {
 	let unknown = uncopiedNames(context, names);
 	if (unknown !== null) return failure(unknown);
 	let plan = emptyPlan();
-	let copies = copiedComponents(context, []);
+	let planned: { name: string; copied: UILockEntry; files: UpdateFile[] }[] = [];
+	let reaching: string[] = [];
 	for (let name of new Set(names)) {
 		let copied = uiEntry(context.lock, name);
 		let entry = context.registry.entries.get(name);
@@ -240,22 +273,40 @@ export async function planUpdate(
 		}
 		let withTest =
 			context.config.ui.tests || (entry.test !== null && entry.test.path in copied.files);
-		let files: Record<string, string | null> = { ...copied.files };
-		let skipped = 0;
-		let replaced = 0;
+		let files: UpdateFile[] = [];
 		for (let file of registryFiles(entry, withTest)) {
 			let path = copyPath(context.layout, file.path);
 			let local = await readProjectFile(context.root, path);
 			let recorded = copied.files[file.path];
 			let untouched = local === null || (recorded !== undefined && hashContent(local) === recorded);
+			let keep = false;
 			if (!untouched) {
 				let overwrite = await options.overwrite(path);
 				if (isFailure(overwrite)) return overwrite;
-				if (!overwrite.data) {
-					skipped += 1;
-					plan.report.push(`${path} is edited; left as it is (--force replaces it)`);
-					continue;
-				}
+				keep = !overwrite.data;
+			}
+			files.push({ file, path, local, keep });
+		}
+		planned.push({ name, copied, files });
+		let behind = compare(copied.release, entry.changedIn) < 0;
+		if (behind && files.some((file) => !file.keep)) reaching.push(name);
+	}
+	let lacking = withDependencies(context.registry, reaching).filter(
+		(name) => uiEntry(context.lock, name) === undefined,
+	);
+	let added = options.withDeps
+		? lacking.flatMap((name) => context.registry.entries.get(name) ?? [])
+		: [];
+	let copies = copiedComponents(context, added);
+	for (let { name, copied, files: updates } of planned) {
+		let files: Record<string, string | null> = { ...copied.files };
+		let skipped = 0;
+		let replaced = 0;
+		for (let { file, path, local, keep } of updates) {
+			if (keep) {
+				skipped += 1;
+				plan.report.push(`${path} is edited; left as it is (--force replaces it)`);
+				continue;
 			}
 			let content = pointAtCopies(path, file.content, copies, context.layout);
 			if (isFailure(content)) return content;
@@ -275,6 +326,17 @@ export async function planUpdate(
 				: `Updated ${replaced} file${replaced === 1 ? "" : "s"} of ${name}`,
 		);
 	}
+	if (!options.withDeps && lacking.length > 0) {
+		let one = lacking.length === 1;
+		let reachers = reaching.filter((name) =>
+			withDependencies(context.registry, [name]).some((reached) => lacking.includes(reached)),
+		);
+		plan.report.push(
+			`${reachers.join(", ")} now ${reachers.length === 1 ? "reaches" : "reach"} ${lacking.join(", ")} on @sdxc/ui; sdxc ui add ${lacking.join(" ")} copies ${one ? "it" : "them"}, as does --with-deps`,
+		);
+	}
+	let copiedNew = await copyComponents(context, plan, added, copies);
+	if (isFailure(copiedNew)) return copiedNew;
 	return success(plan);
 }
 

@@ -57,7 +57,7 @@ written by the CLI (ADR-136), so that record needs a file of its own.
 | `sdxc ui list`                             | Every component in the installed registry, marking the ones copied and whether each copy is edited or behind the installed version                                                                      |
 | `sdxc ui add <component...> [--with-deps]` | Copies the components (and their tests with `ui.tests`) and points the app's imports of them at the copies; `--with-deps` also copies every component they reach through other components, transitively |
 | `sdxc ui diff <component>`                 | Shows how the local copy differs from the component in the installed version                                                                                                                            |
-| `sdxc ui update <component...> [--force]`  | Replaces each copied file whose hash still matches the recorded one with the installed version; an edited file is left alone and reported unless `--force`                                              |
+| `sdxc ui update <component...> [--force]`  | Replaces each copied file whose hash still matches the recorded one with the installed version; an edited file is left alone and reported unless `--force`; `--all` updates every copy (see below)      |
 | `sdxc ui remove <component...>`            | Deletes the copies, drops them from the lock file, and points the app's imports of them back at `sdxc/ui/<name>`                                                                                        |
 
 - **Only components are vendored.** A component is a file under `@sdxc/ui`'s `src/components/`.
@@ -81,6 +81,23 @@ written by the CLI (ADR-136), so that record needs a file of its own.
   writes the new version and points its imports at the copies the lock file lists. A default or
   namespace import of `sdxc/ui` cannot be split by name; the command reports each one with its
   file and line for the user to change.
+
+### Updating every copy
+
+`sdxc ui update --all` updates every component the lock file lists, so moving the project's copies
+to a new `@sdxc/ui` is one command after upgrading. It is built to run unattended:
+
+- **Edited copies are skipped.** An edited file is left as it is and named in the output, without
+  a prompt even on a terminal; the copy keeps its recorded release until every file is replaced.
+  `--force` replaces edited files, as it does for named components.
+- **Names or `--all`.** `update` needs one or the other; neither, or both, is a usage error, so a
+  typo in a script never widens into an update of everything. With nothing copied, `--all`
+  reports so and exits 0.
+- **New dependencies.** When a copy that is behind the installed version reaches a component the
+  project has not copied, the update leaves its import on `@sdxc/ui/<name>` and reports it with
+  the `sdxc ui add` that copies it. `--with-deps` copies those components instead, with the same
+  rules as `add --with-deps`: the updated copy imports the new copy, and so does the app.
+- **`--dry-run`** prints the diff of every copy, new copy and lock line, and writes nothing.
 
 ### State
 
