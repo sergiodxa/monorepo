@@ -82,7 +82,7 @@ Emails get a registry shaped like the others:
 ## Current Progress
 
 - [x] `@sdxc/mail`: `email`, `emails`, `createEmail`, `createMail`, `lazy`, `send`/`later`/`queue`/`deliver` by declaration, `EMAIL_DELIVERY`, `./middleware/jobs`
-- [ ] `sdxc make email` with fields, and the app template wired to the registry
+- [x] `sdxc make email` with fields, and the app template wired to the registry
 - [ ] Development preview route and a preview command
 - [ ] `sdxc doctor` checks for unmapped emails and missing tests
 - [ ] Apps moved onto the registry: demo, r3-auth, reader, blog, uptime, auth-saas

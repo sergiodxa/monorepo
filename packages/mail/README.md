@@ -44,37 +44,6 @@ if (isFailure(result)) console.warn(result.error.message);
 
 The plain-text part is derived from the HTML, so every message ships both.
 
-### Define an email
-
-```tsx
-import { defineEmail, Email } from "@sdxc/mail";
-
-interface TeamInvite {
-	team: string;
-	url: string;
-}
-
-export const TeamInviteEmail = defineEmail<TeamInvite>({
-	subject: (invite) => `Join ${invite.team}`,
-	body: (handle) => () => (
-		<Email.Layout preview={`Join ${handle.props.team}`} title="Invite">
-			<Email.Heading>You have been invited</Email.Heading>
-			<Email.Text>Join {handle.props.team} to start collaborating.</Email.Text>
-			<Email.Button href={handle.props.url}>Accept invite</Email.Button>
-			<Email.Footer>You received this because someone invited you to a team.</Email.Footer>
-		</Email.Layout>
-	),
-});
-
-await mailer.send(new TeamInviteEmail(invite.email, invite));
-```
-
-`defineEmail()` returns a class built with the recipient (a string, an `Address` or a list) and
-the props; `replyTo`, `headers`, `unsubscribe`, `list` and `calendar` are optional functions of
-the props. The subject arrives as a string, already in the recipient's language. Any object
-with `to`, `subject` and `body()` also satisfies the `Email` contract, for an email whose
-addressing needs more than its props.
-
 ### Declare emails in a registry
 
 An app declares every email it sends, and the schema of its props, in one map. Importing the
@@ -144,25 +113,61 @@ export default createJobHandler(jobs.email, async (ctx) => {
 });
 ```
 
+### An email outside the registry
+
+Mail that is no declared email, such as a message to the app's own inbox, can be an email
+object: `defineEmail()` builds its class from props, a subject and a body.
+
+```tsx
+import { defineEmail, Email } from "@sdxc/mail";
+
+interface TeamInvite {
+	team: string;
+	url: string;
+}
+
+export const TeamInviteEmail = defineEmail<TeamInvite>({
+	subject: (invite) => `Join ${invite.team}`,
+	body: (handle) => () => (
+		<Email.Layout preview={`Join ${handle.props.team}`} title="Invite">
+			<Email.Heading>You have been invited</Email.Heading>
+			<Email.Text>Join {handle.props.team} to start collaborating.</Email.Text>
+			<Email.Button href={handle.props.url}>Accept invite</Email.Button>
+			<Email.Footer>You received this because someone invited you to a team.</Email.Footer>
+		</Email.Layout>
+	),
+});
+
+await mailer.send(new TeamInviteEmail(invite.email, invite));
+```
+
+`defineEmail()` returns a class built with the recipient (a string, an `Address` or a list) and
+the props; `replyTo`, `headers`, `unsubscribe`, `list` and `calendar` are optional functions of
+the props. The subject arrives as a string, already in the recipient's language. Any object
+with `to`, `subject` and `body()` also satisfies the `Email` contract, for an email whose
+addressing needs more than its props.
+
 ### Publish a mailer on the request context
 
 ```typescript
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
-import mail from "@sdxc/mail/middleware";
+import mailer from "@sdxc/mail/middleware";
 import { env } from "cloudflare:workers";
 import { createRouter } from "remix/router";
 
 let router = createRouter({
 	middleware: [
-		mail({
+		mailer({
 			transport: new CloudflareTransport(env.EMAIL),
 			from: { email: "no-reply@example.com", name: "Example" },
+			mail,
+			queue,
 		}),
 	],
 });
 
 router.post("/invites", async (context) => {
-	context.email.later(new TeamInviteEmail(invite.email, invite));
+	context.email.later(emails.teams.invite, { to: invite.email, props: invite });
 	return new Response(null, { status: 204 });
 });
 ```
@@ -173,17 +178,16 @@ is produced, and each outcome lands on the invocation's log.
 ### Test against the memory transport
 
 ```typescript
-import { Mailer } from "@sdxc/mail";
+import { isComposedEmail, Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 
 let transport = new MemoryTransport();
-let mailer = new Mailer({ transport, from: { email: "no-reply@example.com" } });
+let mailer = new Mailer({ transport, from: { email: "no-reply@example.com" }, mail });
 
-await mailer.send(new TeamInviteEmail(invite.email, invite));
+await mailer.send(emails.teams.invite, { to: invite.email, props: invite });
 
-expect(transport.messages).toHaveLength(1);
-expect(transport.last?.email).toBeInstanceOf(TeamInviteEmail);
-expect(transport.last?.text).toContain(invite.url);
+let sent = transport.find((message) => isComposedEmail(message.email, emails.teams.invite));
+expect(sent?.text).toContain(invite.url);
 ```
 
 Recorded messages are the normalized ones a provider receives: defaults applied, address
@@ -384,7 +388,7 @@ binding.
 
 Publishes a request-scoped `Mailer` as `context.email` and flushes its queue after `next()`.
 `options` takes `transport` (a `Transport`, or `(context) => Transport` per request), `from`,
-`replyTo?` and `headers?`. Each deferred send logs `mail.sent` or a `mail.send_failed` warning
+`replyTo?`, `headers?`, and `mail?` (the `createMail()` registry) with `queue?` for declared emails. Each deferred send logs `mail.sent` or a `mail.send_failed` warning
 on the current log. It publishes under the `CurrentMailer` context key, exported here and from
 `./middleware/cli`, so `ctx.get(CurrentMailer)` reads the same mailer in a route or a command.
 
@@ -452,18 +456,19 @@ send must not fail the request.
 import { isFailure } from "@sdxc/result";
 
 router.post("/password-reset", async (context) => {
-	let result = await context.email.send(new PasswordResetEmail(user));
+	let result = await context.email.send(emails.passwordReset, { to: user.email, props: { url } });
 	if (isFailure(result)) return new Response("Could not send the email", { status: 502 });
 	return new Response(null, { status: 204 });
 });
 
 router.post("/invites", async (context) => {
-	context.email.later(new TeamInviteEmail(invite.email, invite)); // sent after the response, failures logged
+	context.email.later(emails.teams.invite, { to: invite.email, props: invite }); // after the response, failures logged
 	return new Response(null, { status: 204 });
 });
 ```
 
-Outside the middleware, call `mailer.flush()` yourself, for example at the end of a job.
+Use `queue()` when the email must survive a failed send: a job delivers it and retries. Outside
+the middleware, call `mailer.flush()` yourself.
 
 ## Pattern: One-Click Unsubscribe For Bulk Mail
 
