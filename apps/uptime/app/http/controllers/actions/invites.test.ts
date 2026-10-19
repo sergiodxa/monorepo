@@ -13,8 +13,10 @@ import type { Route } from "remix/routes";
 
 import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
+import { isComposedEmail, Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -23,9 +25,10 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import emails from "~/app/emails";
 import { MAIL_FROM } from "~/app/emails/sender";
-import { TeamInviteEmail } from "~/app/emails/team-invite";
 import models from "~/app/http/middleware/models";
+import { mail as emailRegistry } from "~/app/initializers/mail";
 import { createTestDatabase } from "~/app/test/db";
 import { useMailServerDns } from "~/app/test/mail-servers";
 import { invites, memberships, teams } from "~/database/schema";
@@ -69,7 +72,7 @@ let { intl } = createTranslator({
 
 /**
  * Middleware that seeds `ctx.team`/`ctx.membership` in place of
- * `requireTeam`/`requireRole`, plus the translator the invite email is built with.
+ * `requireTeam`/`requireRole`, plus the translator the page's own copy is written with.
  */
 function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
@@ -98,7 +101,17 @@ async function send(
 			database(db),
 			models(),
 			formData() as Middleware,
-			mail({ transport, from: MAIL_FROM }),
+			mail({
+				transport,
+				from: MAIL_FROM,
+				mail: emailRegistry,
+				/** Delivers a queued email at once, as the `email` job would, onto the same transport. */
+				async queue(delivery) {
+					unwrap(
+						await new Mailer({ transport, from: MAIL_FROM, mail: emailRegistry }).deliver(delivery),
+					);
+				},
+			}),
 		],
 	});
 	router.map(route, {
@@ -144,7 +157,9 @@ describe("createInvite", () => {
 		expect(invite?.accepted_at).toBeNull();
 
 		expect(transport.messages).toHaveLength(1);
-		expect(transport.find((message) => message.email instanceof TeamInviteEmail)).toBeDefined();
+		expect(
+			transport.find((message) => isComposedEmail(message.email, emails.teams.invite)),
+		).toBeDefined();
 		expect(transport.last?.to).toEqual([{ email: "new-member@example.com" }]);
 		expect(transport.last?.text).toContain(routes.invite.href({ inviteId: invite?.id ?? "" }));
 	});

@@ -10,16 +10,16 @@
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyInput } from "~/app/jobs";
 
-import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/test/db";
+import { testMailer } from "~/app/test/mail";
 
 interface NotifyCall {
 	helper: "tcp" | "dns" | "cron" | "flow" | "ssl" | "registration";
@@ -78,7 +78,6 @@ vi.doMock("~/app/services/alerts/dispatch", () => ({
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let notify = (await import("./notify")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
 
@@ -95,9 +94,7 @@ async function runJob(db: Database, input: NotifyInput) {
 	let ctx = createJobContext(jobs.notify, { id: "message-1", attempts: 1, input, log });
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
-	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(new MemoryTransport()), { property: "email" });
 
 	try {
 		await notify(ctx);

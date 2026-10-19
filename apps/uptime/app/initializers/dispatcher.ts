@@ -15,17 +15,20 @@ import { database } from "@sdxc/database-middleware/jobs";
 import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { createJobDispatcher } from "@sdxc/jobs";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
+import mailer from "@sdxc/mail/middleware/jobs";
 import { env } from "cloudflare:workers";
 
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { openDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { queue, transport } from "~/app/initializers/mail-transport";
 import { jobQueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { admin } from "~/app/jobs/middleware/admin";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { destinations } from "~/app/jobs/middleware/destinations";
-import { mailer } from "~/app/jobs/middleware/mailer";
 import { models } from "~/app/jobs/middleware/models";
 
 /** Reports a completed run to the monitor watching it. The token resolves per call. */
@@ -88,7 +91,7 @@ export const dispatcher = createJobDispatcher({
 		costLedger(),
 		database(openDatabase),
 		models(),
-		mailer(),
+		mailer({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO, mail, queue }),
 		destinations(),
 		admin(),
 		featureFlags(flags, { context: (ctx) => ({ targetingKey: ctx.name }) }),
@@ -121,6 +124,7 @@ dispatcher.map(jobs.sendTeamDailyDigests, () => import("~/app/jobs/send-team-dai
 dispatcher.map(jobs.sendTeamWeeklyDigests, () => import("~/app/jobs/send-team-weekly-digests"));
 dispatcher.map(jobs.notify, () => import("~/app/jobs/notify"));
 dispatcher.map(jobs.deliverAlert, () => import("~/app/jobs/deliver-alert"));
+dispatcher.map(jobs.email, () => import("~/app/jobs/email"));
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {

@@ -17,7 +17,7 @@ import { env } from "cloudflare:workers";
 import type { TrialDailyCounters } from "~/app/models/trial-daily-stats";
 import type { SelectTrialConversion } from "~/database/schema";
 
-import { FunnelReportEmail } from "~/app/emails/funnel-report";
+import emails from "~/app/emails";
 import jobs from "~/app/jobs";
 import { getYesterdayDateUtc, utcDayBounds } from "~/app/models/monitor-daily-stats";
 import { trialConversionUrls } from "~/app/models/trial-conversions";
@@ -105,9 +105,9 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 	let totals = await ctx.models.trialDailyStats.totalsBetween(startOfTotals(date), date);
 
 	recordCost("emailSent");
-	let sent = await ctx.mailer.send(
-		new FunnelReportEmail({
-			to,
+	let sent = await ctx.email.send(emails.funnelReport, {
+		to,
+		props: {
 			date,
 			counters,
 			totals,
@@ -118,8 +118,8 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 			 * itemised once, under the outcome that matters.
 			 */
 			signups: signups.filter((row) => row.paid_at === null).map(toConversion),
-		}),
-	);
+		},
+	});
 
 	if (isFailure(sent)) {
 		ctx.log.warn("funnel.email_failed", { error: sent.error.message });
@@ -132,15 +132,15 @@ function startOfTotals(date: string): string {
 	return toDayKey(subDays(new Date(`${date}T00:00:00.000Z`), FUNNEL_TOTALS_DAYS - 1), "UTC");
 }
 
-/** A stored conversion as the email itemises it, with its instants read out of the integers. */
-function toConversion(row: SelectTrialConversion): FunnelReportEmail.Conversion {
+/** A stored conversion as the email itemises it, its instants the epoch milliseconds stored. */
+function toConversion(row: SelectTrialConversion) {
 	return {
 		urls: trialConversionUrls(row),
 		watchCount: row.watch_count,
 		emailsSent: row.emails_sent,
-		leadCreatedAt: new Date(row.lead_created_at),
-		signedUpAt: new Date(row.signed_up_at),
-		paidAt: row.paid_at === null ? null : new Date(row.paid_at),
+		leadCreatedAt: row.lead_created_at,
+		signedUpAt: row.signed_up_at,
+		paidAt: row.paid_at,
 		attribution: describeAttribution(row),
 	};
 }

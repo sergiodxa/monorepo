@@ -1,73 +1,37 @@
 /**
- * Yesterday's public-trial funnel, as one internal email: the five counters for the
- * day, every conversion itemised, and thirty days of context, addressed to whoever
- * configured the deployment. It carries no unsubscribe link or RFC 8058 headers, since
- * this recipient set up the reporting themselves, and no translation, since it has
- * exactly one reader whose language is already known.
+ * Yesterday's public-trial funnel, as one internal email to whoever configured the
+ * deployment: the day's five counters, every conversion itemised, and thirty days of context.
+ * It carries no unsubscribe and no translation, since its one reader set it up themselves.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Address, EmailTableRow } from "@sdxc/mail";
-import type { Handle, RemixElement } from "remix/component";
+import type { EmailInput, EmailPropsOutput, EmailTableRow } from "@sdxc/mail";
+import type { Handle } from "remix/component";
 
 import { diffInDays, formatDate, formatDateTime } from "@sdxc/dates";
-import { Email } from "@sdxc/mail";
+import { createEmail, Email } from "@sdxc/mail";
 
 import type { TrialDailyCounters } from "~/app/models/trial-daily-stats";
+
+import emails from "~/app/emails";
 
 /** The language and zone the report is written in; see the module docblock on both. */
 const REPORT_LOCALE = "en";
 const REPORT_ZONE = "UTC";
 
-export namespace FunnelReportEmail {
-	/** One account that came through the trial, as the report itemises it. */
-	export interface Conversion {
-		/** The distinct URLs they tried, as recorded at sign-up. */
-		urls: string[];
-		/** How many times they used the form, which can exceed the number of URLs. */
-		watchCount: number;
-		/** How many trial emails they had received by the time they signed up. */
-		emailsSent: number;
-		/** When they first handed over an address. */
-		leadCreatedAt: Date;
-		/** When they signed in and became an account. */
-		signedUpAt: Date;
-		/** When their first payment landed, or `null` for a free signup. */
-		paidAt: Date | null;
-		/**
-		 * Where they first arrived, or `null` when the session never carried it, kept so the
-		 * report can name which outreach link produced a conversion. Printed as "unknown" to
-		 * keep a blocked cookie distinct from a direct visit.
-		 */
-		attribution: string | null;
-	}
+/** What every member of the template reads: the day's report, with the locale and `t` unused. */
+type Report = EmailInput<EmailPropsOutput<typeof emails.funnelReport>>;
 
-	/** Everything the report shows; all of it already counted by the job. */
-	export interface Data {
-		/** The internal address this goes to, from the worker's `FUNNEL_REPORT_TO`. */
-		to: string;
-		/** The reported UTC day, as `YYYY-MM-DD`. */
-		date: string;
-		/** That day's five counters. */
-		counters: TrialDailyCounters;
-		/** The same five summed over the trailing window, for context. */
-		totals: TrialDailyCounters;
-		/** How many days {@link totals} covers, so the heading can say so. */
-		totalDays: number;
-		/** Accounts whose first payment landed on the reported day. */
-		paid: Conversion[];
-		/** Accounts that signed up free on the reported day and have not paid. */
-		signups: Conversion[];
-	}
-}
+/** One account that came through the trial, as the report itemises it. */
+type Conversion = Report["paid"][number];
 
 namespace ConversionSection {
 	/** Props accepted by {@link ConversionSection}. */
 	export interface Props {
 		/** The account being itemised. */
-		conversion: FunnelReportEmail.Conversion;
+		conversion: Conversion;
 	}
 }
 
@@ -109,54 +73,15 @@ function ConversionSection(handle: Handle<ConversionSection.Props>) {
 	};
 }
 
-/**
- * The morning-after report on the public trial, addressed to whoever operates it.
- *
- * @example await mailer.send(new FunnelReportEmail({ to, date, counters, totals, ... }));
- */
-export class FunnelReportEmail implements Email {
-	/** The day this email reports; nothing is loaded while rendering. */
-	#report: FunnelReportEmail.Data;
-
-	/**
-	 * Creates the email.
-	 *
-	 * @param report - The day's counters, its conversions, and the trailing totals.
-	 */
-	constructor(report: FunnelReportEmail.Data) {
-		this.#report = report;
-	}
-
-	/** The internal recipient the deployment names; there is never more than one. */
-	get to(): Address {
-		return { email: this.#report.to };
-	}
-
-	/**
-	 * The headline, in the subject, because the day this is worth opening is the exception.
-	 * Leads, signups and paid conversions and not all five counters: URLs and emails are how
-	 * the work was done, while these three are the funnel itself.
-	 */
-	get subject(): string {
-		let { date, counters } = this.#report;
-
-		return (
-			`Uptime trial ${date} — ` +
-			[
-				plural(counters.newLeads, "lead"),
-				plural(counters.freeSignups, "signup"),
-				`${counters.paidConversions} paid`,
-			].join(", ")
-		);
-	}
-
-	/** Body tree: the day's table, each conversion itemised, then the trailing totals. */
-	body(): RemixElement {
-		let { date, counters, totals, totalDays, paid, signups } = this.#report;
+export default createEmail(emails.funnelReport, {
+	subject: (report) => subject(report),
+	/** The day's table, each conversion itemised, then the trailing totals. */
+	body: (handle) => () => {
+		let { date, counters, totals, totalDays, paid, signups } = handle.props;
 		let heading = `Trial funnel — ${formatDate(utcDay(date), { locale: REPORT_LOCALE, timeZone: REPORT_ZONE })}`;
 
 		return (
-			<Email.Layout lang={REPORT_LOCALE} title={heading} preview={this.subject}>
+			<Email.Layout lang={REPORT_LOCALE} title={heading} preview={subject(handle.props)}>
 				<Email.Heading>{heading}</Email.Heading>
 				<Email.Text muted size={14}>
 					Counted over the UTC day.
@@ -185,7 +110,41 @@ export class FunnelReportEmail implements Email {
 				<Email.Table rows={counterRows(totals)} />
 			</Email.Layout>
 		);
-	}
+	},
+	preview: () => ({
+		date: "2026-08-01",
+		counters: { newLeads: 3, urlsChecked: 4, emailsSent: 11, freeSignups: 1, paidConversions: 1 },
+		totals: { newLeads: 40, urlsChecked: 52, emailsSent: 130, freeSignups: 9, paidConversions: 5 },
+		totalDays: 30,
+		paid: [
+			{
+				urls: ["https://ada.example"],
+				watchCount: 2,
+				emailsSent: 8,
+				leadCreatedAt: Date.UTC(2026, 6, 26, 9),
+				signedUpAt: Date.UTC(2026, 6, 31, 9),
+				paidAt: Date.UTC(2026, 7, 1, 9),
+				attribution: null,
+			},
+		],
+		signups: [],
+	}),
+});
+
+/**
+ * The headline, in the subject, because the day this is worth opening is the exception.
+ * Leads, signups and paid conversions and not all five counters: URLs and emails are how
+ * the work was done, while these three are the funnel itself.
+ */
+function subject({ date, counters }: Report): string {
+	return (
+		`Uptime trial ${date} — ` +
+		[
+			plural(counters.newLeads, "lead"),
+			plural(counters.freeSignups, "signup"),
+			`${counters.paidConversions} paid`,
+		].join(", ")
+	);
 }
 
 /** The five counters as a table, in funnel order so the drop-off reads down the column. */
@@ -204,7 +163,7 @@ function counterRows(counters: TrialDailyCounters): EmailTableRow[] {
  * the report is given no identifier it could use — deliberately, since nothing that names a
  * person belongs in an operational email.
  */
-function conversionKey(conversion: FunnelReportEmail.Conversion): string {
+function conversionKey(conversion: Conversion): string {
 	return `${conversion.signedUpAt.getTime()}:${conversion.urls[0] ?? ""}`;
 }
 

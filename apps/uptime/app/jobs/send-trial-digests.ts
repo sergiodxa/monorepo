@@ -8,7 +8,7 @@
  */
 
 import type { CurrentJobContext } from "@sdxc/jobs";
-import type { Mailer } from "@sdxc/mail";
+import type { EmailPropsOutput, Mailer } from "@sdxc/mail";
 
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -17,8 +17,7 @@ import type { TrialStats } from "~/app/emails/shared/trial";
 import type { TrialWatchDigestEntry } from "~/app/models/trial-watches";
 import type { SelectLead, SelectTrialWatchResult } from "~/database/schema";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
+import emails from "~/app/emails";
 import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
 import { isHealthyTrialStatus } from "~/app/models/trial-watches";
@@ -29,6 +28,9 @@ import { formatUptime } from "~/app/services/reports/uptime";
 import { segmentsOver } from "~/app/services/trial/report";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
+
+/** One watched URL's day, as the digest's props carry it. */
+type DigestTarget = EmailPropsOutput<typeof emails.trial.dailyDigest>["targets"][number];
 
 /**
  * How many hours one digest reports, one segment of its bar per hour: a rolling
@@ -55,7 +57,7 @@ export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
 	let concurrency = await ctx.flags.get(features.sweepConcurrency);
 	let settled = await mapWithConcurrency(
 		leads,
-		(lead) => digest(ctx, ctx.mailer, lead, now),
+		(lead) => digest(ctx, ctx.email, lead, now),
 		concurrency,
 	);
 
@@ -103,18 +105,12 @@ async function digest(
 		return false;
 	}
 
-	let { locale, t } = emailTranslator(lead.locale);
-
 	recordCost("emailSent");
-	let result = await mailer.send(
-		new TrialDailyDigestEmail({
-			to: lead.email,
-			targets,
-			unsubscribeToken: lead.unsubscribe_token,
-			locale,
-			t,
-		}),
-	);
+	let result = await mailer.send(emails.trial.dailyDigest, {
+		to: lead.email,
+		locale: lead.locale,
+		props: { targets, unsubscribeToken: lead.unsubscribe_token },
+	});
 
 	if (isFailure(result)) {
 		ctx.log.warn("digests.email_failed", { "lead.id": lead.id, error: result.error.message });
@@ -146,10 +142,7 @@ async function digest(
  * never completed a check and so has no honest status to print. A target with no
  * checks in the window still gets a section, since an all-empty bar is itself the report.
  */
-function toTarget(
-	entry: TrialWatchDigestEntry,
-	since: number,
-): TrialDailyDigestEmail.Target | null {
+function toTarget(entry: TrialWatchDigestEntry, since: number): DigestTarget | null {
 	/** The last check of the window, falling back to the watch's own cached last status. */
 	let status = entry.results.at(-1)?.status ?? entry.watch.last_status;
 	if (status === null) return null;

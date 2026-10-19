@@ -17,21 +17,21 @@ import type { Transport } from "@sdxc/mail";
 import { Database as JobDatabase } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { Mailer, MailError } from "@sdxc/mail";
+import { isComposedEmail, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
 
-import { MAIL_FROM } from "~/app/emails/sender";
-import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
+import emails from "~/app/emails";
 import jobs from "~/app/jobs";
-import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTrialDigests from "~/app/jobs/send-trial-digests";
 import { createTestDatabase } from "~/app/test/db";
 import { installFlags } from "~/app/test/flags";
+import { testMailer } from "~/app/test/mail";
 import { bindModels, publishModels } from "~/app/test/models";
 import { leads, trialWatches } from "~/database/schema";
 
@@ -55,9 +55,7 @@ async function runJob(db: Database, options: { transport?: Transport } = {}) {
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
-	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(options.transport ?? transport), { property: "email" });
 
 	await sendTrialDigests(ctx);
 	log.emit();
@@ -129,7 +127,9 @@ function noteOf(record: Record<string, unknown>, name: string): Log.Note | undef
 
 /** Every daily digest the run handed the transport. */
 function digests() {
-	return transport.messages.filter((message) => message.email instanceof TrialDailyDigestEmail);
+	return transport.messages.filter((message) =>
+		isComposedEmail(message.email, emails.trial.dailyDigest),
+	);
 }
 
 beforeEach(() => {

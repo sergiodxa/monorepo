@@ -10,12 +10,14 @@
  */
 
 import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
+import type { AnyEmailDeclaration } from "@sdxc/mail";
 
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
+import { isComposedEmail } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -23,11 +25,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { HttpCheckOptions, HttpCheckResult } from "~/app/services/http-check";
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
 
-import { MAIL_FROM } from "~/app/emails/sender";
-import { TrialChangeEmail } from "~/app/emails/trial-change";
-import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
+import emails from "~/app/emails";
 import { createTestDatabase } from "~/app/test/db";
 import { installFlags } from "~/app/test/flags";
+import { testMailer } from "~/app/test/mail";
 import { trialWatches } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -78,7 +79,6 @@ vi.doMock("~/app/services/http-check", () => ({
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let { bindModels, publishModels } = await import("~/app/test/models");
 let checkTrialWatches = (await import("./check-trial-watches")).default;
 
@@ -92,7 +92,7 @@ async function runJob(db: Database) {
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
-	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
+	ctx.set(CurrentMailer, testMailer(transport), { property: "email" });
 
 	await checkTrialWatches(ctx);
 	log.emit();
@@ -161,10 +161,8 @@ function answering(status: MonitorStatus, responseTimeMs: number | null = 120) {
 }
 
 /** Every email of one kind the sweep handed the transport. */
-function sentOf(kind: unknown): number {
-	return transport.messages.filter(
-		(message) => message.email instanceof (kind as new (...args: never[]) => object),
-	).length;
+function sentOf(kind: AnyEmailDeclaration): number {
+	return transport.messages.filter((message) => isComposedEmail(message.email, kind)).length;
 }
 
 beforeEach(() => {
@@ -270,7 +268,7 @@ describe("checkTrialWatches change notifications", () => {
 
 		let record = await runJob(db);
 
-		expect(sentOf(TrialChangeEmail)).toBe(1);
+		expect(sentOf(emails.trial.change)).toBe(1);
 		expect(transport.last?.to).toEqual([{ email: "visitor@example.com" }]);
 
 		let updated = await bindModels(db).trialWatches.find(watch.id);
@@ -319,7 +317,7 @@ describe("checkTrialWatches change notifications", () => {
 			await runJob(db);
 		}
 
-		expect(sentOf(TrialChangeEmail)).toBe(1);
+		expect(sentOf(emails.trial.change)).toBe(1);
 		expect(await bindModels(db).trialWatchResults.listByWatch(watch.id)).toHaveLength(5);
 	});
 
@@ -334,7 +332,7 @@ describe("checkTrialWatches change notifications", () => {
 
 		await runJob(db);
 
-		expect(sentOf(TrialChangeEmail)).toBe(1);
+		expect(sentOf(emails.trial.change)).toBe(1);
 	});
 });
 
@@ -354,7 +352,7 @@ describe("checkTrialWatches wrap-up", () => {
 		let record = await runJob(db);
 
 		expect(probes).toHaveLength(0);
-		expect(sentOf(TrialWeeklyDigestEmail)).toBe(1);
+		expect(sentOf(emails.trial.weeklyDigest)).toBe(1);
 
 		let updated = await bindModels(db).trialWatches.find(watch.id);
 		expect(updated?.summary_sent_at).not.toBeNull();
@@ -380,7 +378,7 @@ describe("checkTrialWatches wrap-up", () => {
 
 		await runJob(db);
 
-		expect(transport.last?.email).toBeInstanceOf(TrialWeeklyDigestEmail);
+		expect(isComposedEmail(transport.last?.email, emails.trial.weeklyDigest)).toBe(true);
 
 		expect(watch.report_token).toBeTruthy();
 		expect(transport.last?.html).toContain(routes.trial.report.href({ token: watch.report_token }));
@@ -398,7 +396,7 @@ describe("checkTrialWatches wrap-up", () => {
 		await runJob(db);
 		await runJob(db);
 
-		expect(sentOf(TrialWeeklyDigestEmail)).toBe(1);
+		expect(sentOf(emails.trial.weeklyDigest)).toBe(1);
 		expect(probes).toHaveLength(0);
 	});
 
@@ -568,7 +566,7 @@ describe("checkTrialWatches funnel events", () => {
 		answering("up");
 
 		let second = await runJob(db);
-		expect(sentOf(TrialChangeEmail)).toBe(2);
+		expect(sentOf(emails.trial.change)).toBe(2);
 		expect(funnelNotes(second, "first_trial_alert_sent")).toHaveLength(0);
 	});
 

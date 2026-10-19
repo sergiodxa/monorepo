@@ -1,23 +1,34 @@
 /**
- * Tests the daily team digest as a value. Two things carry the email: a subject that names the
- * team and how much of it was fine, because a member of three teams decides from the inbox which
- * one this is about, and a monitor list ordered so whatever might need somebody this morning is
- * the first row.
+ * Tests the weekly team digest as a value. It carries the same subject and the same monitor list
+ * as the daily one, plus what only a full week can show: the team's week as seven segments, each
+ * the worst status any monitor reported that day, captioned with the two ends of the window.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailPropsOutput } from "@sdxc/mail";
+
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { TeamDigestMonitor } from "~/app/emails/shared/team-digest";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-/** Where the digest sends a reader who wants the detail it leaves out. */
+/** Fill of a day every check passed; `--ui-color-success-600`. */
+let UP = "#107f04";
+
+/** Fill of a day that came back degraded; `--ui-color-warning-600`. */
+let DEGRADED = "#925d00";
+
+/** Fill of a day something failed; `--ui-color-danger-600`. */
+let DOWN = "#ba2b2e";
+
+/** Where the digest sends a reader who wants the full detail behind the summary. */
 let DASHBOARD_URL = "https://uptime.test/acme";
 
 /** The reader's own email settings, anchored at the switches. */
@@ -26,7 +37,17 @@ let PREFERENCES_URL = "https://uptime.test/acme/account#emails";
 /** The member's signed one-click unsubscribe endpoint for this digest. */
 let UNSUBSCRIBE_URL = "https://uptime.test/digests/unsubscribe/tok-abc123";
 
-/** One monitor's day, clean and HTTP unless the test says otherwise. */
+/**
+ * How many of the bar's own segments carry `fill`, or how many there are in total.
+ *
+ * Matched on both the segment cell's height and its color, since the monitor list's status
+ * column reuses the same palette and only the cell height tells the two apart.
+ */
+function days(html: string, fill = ""): number {
+	return html.split(`height:32px;background-color:${fill}`).length - 1;
+}
+
+/** One monitor's week, defaulting to clean and HTTP; `overrides` covers every other case. */
 function monitor(
 	name: string,
 	status: UptimeBar.Status = "up",
@@ -35,7 +56,7 @@ function monitor(
 	return { id: name.toLowerCase(), name, type: "http", status, uptime: "100", ...overrides };
 }
 
-/** A team whose day went four different ways, which is what the list has to sort. */
+/** A team whose week went four different ways, which is what the list has to sort. */
 function mixedTeam(): TeamDigestMonitor[] {
 	return [
 		monitor("Website"),
@@ -50,24 +71,30 @@ function order(text: string, names: string[]): string[] {
 	return [...names].sort((left, right) => text.indexOf(left) - text.indexOf(right));
 }
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TeamDailyDigestEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TeamDailyDigestEmail({
-		to: "member@example.com",
-		teamName: "Acme",
-		date: "2026-08-02",
-		monitors: mixedTeam(),
-		dashboardUrl: DASHBOARD_URL,
-		preferencesUrl: PREFERENCES_URL,
-		unsubscribeUrl: UNSUBSCRIBE_URL,
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(
+	overrides: Partial<EmailPropsOutput<typeof emails.teams.weeklyDigest>> = {},
+) {
+	return unwrap(
+		await mail.compose(emails.teams.weeklyDigest, {
+			to: "member@example.com",
+			props: {
+				teamName: "Acme",
+				since: "2026-07-27",
+				until: "2026-08-02",
+				segments: ["up", "up", "down", "up", "degraded", "up", "up"],
+				uptime: "98.2",
+				monitors: mixedTeam(),
+				dashboardUrl: DASHBOARD_URL,
+				preferencesUrl: PREFERENCES_URL,
+				unsubscribeUrl: UNSUBSCRIBE_URL,
+				...overrides,
+			},
+		}),
+	);
 }
 
-describe("TeamDailyDigestEmail", () => {
+describe("teams.weeklyDigest email", () => {
 	test("goes to the one member this copy is for, not to the team", async () => {
 		let email = await makeEmail();
 
@@ -80,26 +107,22 @@ describe("TeamDailyDigestEmail", () => {
 				monitors: [monitor("Website"), monitor("API"), monitor("Cache")],
 			});
 
-			expect(email.subject).toBe("Acme: all 3 monitors up yesterday");
+			expect(email.subject).toBe("Acme: all 3 monitors up all week");
 		});
 
 		test("names the team and counts the healthy ones when one was not", async () => {
 			let email = await makeEmail();
 
-			expect(email.subject).toBe("Acme: 1 of 4 monitors up yesterday");
+			expect(email.subject).toBe("Acme: 1 of 4 monitors up all week");
 		});
 
-		/**
-		 * One monitor is the state every team starts in, so the singular is the wording most of
-		 * this mail is read in — and "all 1 monitors" is what a counted sentence with no plural
-		 * rule behind it says.
-		 */
-		test("speaks of the one monitor in the singular, either way it went", async () => {
+		/** See the daily digest's own singular case: one monitor is where every team starts. */
+		test("speaks of the one monitor in the singular, either way its week went", async () => {
 			let clean = await makeEmail({ monitors: [monitor("Website")] });
 			let broken = await makeEmail({ monitors: [monitor("Website", "down", { uptime: "0" })] });
 
-			expect(clean.subject).toBe("Acme: the monitor was up yesterday");
-			expect(broken.subject).toBe("Acme: the monitor needs a look");
+			expect(clean.subject).toBe("Acme: the monitor was up all week");
+			expect(broken.subject).toBe("Acme: the monitor had a bad day this week");
 		});
 	});
 
@@ -112,24 +135,28 @@ describe("TeamDailyDigestEmail", () => {
 
 		expect(email.unsubscribe).toEqual({ url: UNSUBSCRIBE_URL });
 		expect(email.unsubscribe?.url).not.toBe(PREFERENCES_URL);
-		expect(email.list).toEqual({ id: "team-daily-digest.uptime.sergiodxa.com" });
+		expect(email.list).toEqual({ id: "team-weekly-digest.uptime.sergiodxa.com" });
 	});
 
 	describe("body", () => {
-		test("names the day the numbers were measured over", async () => {
+		test("plots the team's week as one segment per day, from the palette the web bar uses", async () => {
+			let email = await makeEmail();
+
+			let { html } = await render(email.body());
+
+			expect(days(html)).toBe(7);
+			expect(days(html, UP)).toBe(5);
+			expect(days(html, DOWN)).toBe(1);
+			expect(days(html, DEGRADED)).toBe(1);
+		});
+
+		test("captions the bar with the two ends of the window as dates", async () => {
 			let email = await makeEmail();
 
 			let { text } = await render(email.body());
 
-			expect(text).toContain("1 of 4 monitors were up on Aug 2, 2026.");
-		});
-
-		test("says it in the singular for a team with one monitor", async () => {
-			let email = await makeEmail({ monitors: [monitor("Website")] });
-
-			let { text } = await render(email.body());
-
-			expect(text).toContain("The team's monitor was up on Aug 2, 2026.");
+			expect(text).toContain("Jul 27, 2026");
+			expect(text).toContain("Aug 2, 2026");
 		});
 
 		test("lists every monitor of the team", async () => {
@@ -138,22 +165,6 @@ describe("TeamDailyDigestEmail", () => {
 			let { text } = await render(email.body());
 
 			for (let name of ["Website", "API", "Backup", "Cache"]) expect(text).toContain(name);
-		});
-
-		/**
-		 * Flows are listed like every other kind, and sort by how they went rather than by kind,
-		 * so a broken flow is the first row a reader lands on.
-		 */
-		test("lists a flow monitor, sorted by its window like any other", async () => {
-			let email = await makeEmail({
-				monitors: [monitor("Website"), monitor("Checkout", "down", { type: "flow", uptime: "50" })],
-			});
-
-			let { text } = await render(email.body());
-
-			expect(text).toContain("Checkout");
-			expect(text).toContain("Down 50%");
-			expect(order(text, ["Website", "Checkout"])).toEqual(["Checkout", "Website"]);
 		});
 
 		test("puts the worst news first: down, degraded, unchecked, then up", async () => {
@@ -183,16 +194,6 @@ describe("TeamDailyDigestEmail", () => {
 			let { text } = await render(email.body());
 
 			expect(text).toContain(`Open the dashboard (${DASHBOARD_URL})`);
-		});
-
-		test("ships the dark counterpart of the colours it paints the statuses in", async () => {
-			let email = await makeEmail();
-
-			let { html } = await render(email.body());
-
-			expect(html).toContain(".uptime-ink-down{color:#f87171 !important;}");
-			expect(html).toContain('class="uptime-ink-down mail-rule"');
-			expect(html).toContain('class="mail-muted mail-rule"');
 		});
 
 		test("names the team in the footer and links to the switches that stop the email", async () => {

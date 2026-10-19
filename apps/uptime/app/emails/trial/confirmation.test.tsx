@@ -7,29 +7,37 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailPropsOutput } from "@sdxc/mail";
+
 import { Mailer, render } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TrialConfirmationEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TrialConfirmationEmail({
-		to: "visitor@example.com",
-		url: "https://example.com",
-		status: "up",
-		responseStatus: 200,
-		responseTimeMs: 143,
-		checkedAt: new Date("2026-08-01T10:00:00.000Z"),
-		watchUntil: new Date("2026-08-08T10:00:00.000Z"),
-		unsubscribeToken: "tok-abc123",
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(
+	overrides: Partial<EmailPropsOutput<typeof emails.trial.confirmation>> = {},
+	delivery: { to?: string; locale?: string } = {},
+) {
+	return unwrap(
+		await mail.compose(emails.trial.confirmation, {
+			to: delivery.to ?? "visitor@example.com",
+			locale: delivery.locale,
+			props: {
+				url: "https://example.com",
+				status: "up",
+				responseStatus: 200,
+				responseTimeMs: 143,
+				checkedAt: Date.parse("2026-08-01T10:00:00.000Z"),
+				watchUntil: Date.parse("2026-08-08T10:00:00.000Z"),
+				unsubscribeToken: "tok-abc123",
+				...overrides,
+			},
+		}),
+	);
 }
 
 /**
@@ -41,7 +49,7 @@ function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
 }
 
-describe("TrialConfirmationEmail", () => {
+describe("trial.confirmation email", () => {
 	test("answers the address the visitor handed over", async () => {
 		let email = await makeEmail();
 
@@ -123,8 +131,7 @@ describe("TrialConfirmationEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = emailTranslator("ja");
-		let email = await makeEmail({ locale, t });
+		let email = await makeEmail({}, { locale: "ja" });
 
 		expect(email.subject).not.toBe("We are now checking example.com every hour");
 		expect(email.subject).toContain("example.com");

@@ -15,8 +15,8 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -25,9 +25,9 @@ import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/servic
 import type { DnsRecordType } from "~/app/services/dns/record-value";
 import type { NotifyMessage } from "~/app/services/notify-queue";
 
-import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testMailer } from "~/app/test/mail";
 import { dnsMonitors } from "~/database/schema";
 
 /** One answered `(name, type)` query: this is the whole RRset, and it is trustworthy. */
@@ -112,7 +112,6 @@ let {
 let jobs = (await import("~/app/jobs")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("~/app/jobs/check-dns")).default;
 
 async function seedMonitor(db: Database, domain: string, teamId = "team-1") {
@@ -429,9 +428,7 @@ describe("scheduled and on-demand checks", () => {
 		let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1 });
 		ctx.set(JobDatabase, db, { property: "db" });
 		publishModels(ctx, db);
-		ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
-			property: "mailer",
-		});
+		ctx.set(CurrentMailer, testMailer(new MemoryTransport()), { property: "email" });
 		await checkDns(ctx);
 
 		let run = await runDnsCheck(bindModels(db), onDemand.id, onDemand.domain);

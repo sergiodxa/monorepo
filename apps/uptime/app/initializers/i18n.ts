@@ -7,6 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
+
 import { supportedLanguages } from "~/database/schema";
 import de from "~/resources/locales/de";
 import en from "~/resources/locales/en";
@@ -23,3 +26,17 @@ export const FALLBACK_LANGUAGE = "en";
 
 /** The message bundles, one per supported language. */
 export const RESOURCES = { en, es, de, ja, fr, it };
+
+/**
+ * Translates outside a request, such as in a job or an email, into the reader's language:
+ * `translate(lead.locale).t("emails.trial.daily.footer")`. An unsupported language binds the
+ * fallback, one translator is kept per language, and a broken message is a warning on the log.
+ */
+export const translate = createTranslator({
+	resources: RESOURCES,
+	supportedLanguages: SUPPORTED_LANGUAGES,
+	fallbackLanguage: FALLBACK_LANGUAGE,
+	onError(error, key) {
+		currentLog()?.warn("i18n.error", { key, type: error.name, message: error.message });
+	},
+});

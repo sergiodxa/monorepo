@@ -14,8 +14,8 @@ import { createEnv, createKVNamespace, createQueue } from "@sdxc/cloudflare-mock
 import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -25,8 +25,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { InsertDnsMonitor } from "~/database/schema";
 
-import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/test/db";
+import { testMailer } from "~/app/test/mail";
 
 /** One `notify` message as it travels: the job it names, and the transition under `body`. */
 interface NotifyEnvelope {
@@ -49,7 +49,6 @@ vi.doMock("cloudflare:workers", () => ({
 let jobs = (await import("~/app/jobs")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDomainRegistrations = (await import("./check-domain-registrations")).default;
 
 const server = setupServer();
@@ -106,9 +105,7 @@ async function runJob(db: Database) {
 	let ctx = createJobContext(jobs.checkDomainRegistrations, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
-	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(new MemoryTransport()), { property: "email" });
 
 	await checkDomainRegistrations(ctx);
 	log.emit();

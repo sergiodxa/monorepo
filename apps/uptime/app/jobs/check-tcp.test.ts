@@ -15,8 +15,8 @@ import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -25,10 +25,10 @@ import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";
 
-import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { installFlags } from "~/app/test/flags";
+import { testMailer } from "~/app/test/mail";
 import { tcpMonitors, teams } from "~/database/schema";
 
 let checkTcpConnectionMock = vi.fn(
@@ -79,7 +79,6 @@ vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: bi
 let jobs = (await import("~/app/jobs")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkTcp = (await import("./check-tcp")).default;
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
@@ -95,9 +94,7 @@ async function runJob(db: Database) {
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
-	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(new MemoryTransport()), { property: "email" });
 
 	await checkTcp(ctx);
 	log.emit();

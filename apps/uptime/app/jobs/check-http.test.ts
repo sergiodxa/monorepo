@@ -23,8 +23,8 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
@@ -34,7 +34,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 
 import type { GeoFetchDO } from "~/app/test/geo-fetch";
 
-import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/test/billing";
 import {
 	applyMigrations,
@@ -42,6 +41,7 @@ import {
 	createSqliteDatabaseAdapter,
 	createTestDatabase,
 } from "~/app/test/db";
+import { testMailer } from "~/app/test/mail";
 import {
 	alertEvents,
 	alerts,
@@ -103,7 +103,6 @@ vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: bi
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkHttp = (await import("./check-http")).default;
 /**
  * Imported dynamically, after the `cloudflare:workers` mock above, since the models reach
@@ -131,9 +130,7 @@ function makeContext(db: Database, monitorId: string, options: { jobId?: string 
 	});
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
-	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(new MemoryTransport()), { property: "email" });
 
 	return {
 		ctx,

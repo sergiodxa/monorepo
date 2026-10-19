@@ -20,9 +20,7 @@ import type { ClaimedTrialWatch } from "~/app/models/trial-watches";
 import type { HttpCheckResult } from "~/app/services/http-check";
 import type { MonitorStatus, SelectLead } from "~/database/schema";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialChangeEmail } from "~/app/emails/trial-change";
-import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
+import emails from "~/app/emails";
 import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
 import {
@@ -85,7 +83,7 @@ export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
 	let concurrency = await ctx.flags.get(features.sweepConcurrency);
 	let settled = await mapWithConcurrency(
 		watches,
-		(watch) => check(ctx, ctx.mailer, watch, now),
+		(watch) => check(ctx, ctx.email, watch, now),
 		concurrency,
 	);
 
@@ -268,23 +266,20 @@ async function sendChange(
 		return false;
 	}
 
-	let { locale, t } = emailTranslator(lead.locale);
-
 	recordCost("emailSent");
-	let sent = await mailer.send(
-		new TrialChangeEmail({
-			to: lead.email,
+	let sent = await mailer.send(emails.trial.change, {
+		to: lead.email,
+		locale: lead.locale,
+		props: {
 			url: watch.url,
 			status: result.status,
 			previousStatus,
 			responseStatus: result.outcome.responseStatus,
 			responseTimeMs: result.outcome.responseTimeMs,
-			changedAt: new Date(now),
+			changedAt: now,
 			unsubscribeToken: lead.unsubscribe_token,
-			locale,
-			t,
-		}),
-	);
+		},
+	});
 
 	if (isFailure(sent)) {
 		ctx.log.warn("trial.change_email_failed", {
@@ -321,8 +316,6 @@ async function sendSummary(
 		row.created_at,
 		row.expires_at,
 	);
-	let { locale, t } = emailTranslator(lead.locale);
-
 	/**
 	 * Built inside the request: signing in is what turns a watched target into a real
 	 * monitor, and `trialWatches.listConvertibleByLead` runs on the sign-in path, so the
@@ -331,9 +324,10 @@ async function sendSummary(
 	let subscribeUrl = `${APP_ORIGIN}${routes.app.index.href()}`;
 
 	recordCost("emailSent");
-	let sent = await mailer.send(
-		new TrialWeeklyDigestEmail({
-			to: lead.email,
+	let sent = await mailer.send(emails.trial.weeklyDigest, {
+		to: lead.email,
+		locale: lead.locale,
+		props: {
 			url: row.url,
 			segments: segmentsOver(results, row.created_at, DAY_MS, TRIAL_WATCH_DURATION_DAYS),
 			stats: watchStats(row),
@@ -345,10 +339,8 @@ async function sendSummary(
 			 */
 			reportToken: row.report_token,
 			unsubscribeToken: lead.unsubscribe_token,
-			locale,
-			t,
-		}),
-	);
+		},
+	});
 
 	if (isFailure(sent)) {
 		ctx.log.warn("trial.summary_email_failed", {

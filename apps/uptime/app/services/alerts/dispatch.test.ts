@@ -13,7 +13,7 @@ import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { Transport } from "@sdxc/mail";
 
 import { createQueue } from "@sdxc/cloudflare-mocks";
-import { Mailer, MailError } from "@sdxc/mail";
+import { isComposedEmail, Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -32,8 +32,9 @@ import type {
 	SelectTcpMonitor,
 } from "~/database/schema";
 
-import { AlertEmail } from "~/app/emails/alert";
+import emails from "~/app/emails";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
+import { mail } from "~/app/initializers/mail";
 
 /** The JSON form of a queued message, as the delivery job receives it. */
 interface QueuedMessage {
@@ -133,7 +134,7 @@ function makeAlert(overrides: Partial<SelectAlert> = {}): SelectAlert {
  * test asserts on the message a provider would have received instead of on a mocked SDK.
  */
 function makeMailer(transport: Transport = new MemoryTransport()): Mailer {
-	return new Mailer({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO });
+	return new Mailer({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO, mail });
 }
 
 /** A transport that refuses every delivery, which is how a provider reports a bad address. */
@@ -950,7 +951,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(transport.find((message) => message.email instanceof AlertEmail)).toBeDefined();
+		expect(transport.find((message) => isComposedEmail(message.email, emails.alert))).toBeDefined();
 	});
 
 	test("reports the monitor, the snapshot, and the dashboard link in both body parts", async () => {

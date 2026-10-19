@@ -1,8 +1,8 @@
 /**
  * Form actions for creating and revoking team invites. Requires
  * `requireAbility(abilities.invites.write)`. Creating an invite for an email that already has a pending
- * invite resends it instead of creating a duplicate row, and queues the invite email
- * for after the response, because a mail provider having a bad minute must not cost
+ * invite resends it instead of creating a duplicate row, and hands the invite email to the
+ * `email` job, which retries it, because a mail provider having a bad minute must not cost
  * the admin the invite they just created.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -16,8 +16,7 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
-import { TeamInviteEmail } from "~/app/emails/team-invite";
+import emails from "~/app/emails";
 import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/invite";
 import { recordCost } from "~/app/services/cost";
 import { checkEmailAddress } from "~/app/services/email-address";
@@ -74,15 +73,13 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 
 	recordCost("emailSent");
 
-	ctx.email.later(
-		new TeamInviteEmail({
-			team: ctx.team.name,
-			email,
-			url,
-			locale: DEFAULT_EMAIL_LOCALE,
-			t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
-		}),
-	);
+	let queued = await ctx.email.queue(emails.teams.invite, {
+		to: email,
+		props: { team: ctx.team.name, url },
+	});
+	if (isFailure(queued)) {
+		ctx.log.warn("invites.email_queue_failed", { error: queued.error.message });
+	}
 
 	session?.flash("toast", { intent: "success", message: `Invite sent to ${email}.` });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {

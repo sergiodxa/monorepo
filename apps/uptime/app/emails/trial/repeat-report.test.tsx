@@ -9,13 +9,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailPropsOutput } from "@sdxc/mail";
+
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
 /** Fill of a passing day; `--ui-color-success-600`. */
 let UP = "#107f04";
@@ -25,24 +28,29 @@ function partialWeek(): UptimeBar.Status[] {
 	return ["up", "up", "up", null, null, null, null];
 }
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TrialRepeatReportEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TrialRepeatReportEmail({
-		to: "visitor@example.com",
-		url: "https://example.com",
-		watchingSince: new Date(Date.UTC(2026, 6, 30, 9, 15)),
-		segments: partialWeek(),
-		stats: { checks: 72, uptime: "98.6", slowestResponseMs: 1400 },
-		subscribeUrl: "https://uptime.test/app",
-		unsubscribeToken: "tok-abc123",
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(
+	overrides: Partial<EmailPropsOutput<typeof emails.trial.repeatReport>> = {},
+	delivery: { to?: string; locale?: string } = {},
+) {
+	return unwrap(
+		await mail.compose(emails.trial.repeatReport, {
+			to: delivery.to ?? "visitor@example.com",
+			locale: delivery.locale,
+			props: {
+				url: "https://example.com",
+				watchingSince: Date.UTC(2026, 6, 30, 9, 15),
+				segments: partialWeek(),
+				stats: { checks: 72, uptime: "98.6", slowestResponseMs: 1400 },
+				subscribeUrl: "https://uptime.test/app",
+				unsubscribeToken: "tok-abc123",
+				...overrides,
+			},
+		}),
+	);
 }
 
-describe("TrialRepeatReportEmail", () => {
+describe("trial.repeatReport email", () => {
 	/**
 	 * A repeat submission means real measurements already exist for the URL, so the
 	 * durable report page is the reachable record. It can arrive on day two of a week
@@ -73,7 +81,7 @@ describe("TrialRepeatReportEmail", () => {
 	});
 
 	test("addresses the spelling the submission came from", async () => {
-		let email = await makeEmail({ to: "hello+news@sergiodxa.com" });
+		let email = await makeEmail({}, { to: "hello+news@sergiodxa.com" });
 
 		expect(email.to).toEqual({ email: "hello+news@sergiodxa.com" });
 	});
@@ -161,8 +169,7 @@ describe("TrialRepeatReportEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = emailTranslator("de");
-		let email = await makeEmail({ locale, t });
+		let email = await makeEmail({}, { locale: "de" });
 
 		expect(email.subject).toBe("Was wir bisher zu example.com gefunden haben");
 	});

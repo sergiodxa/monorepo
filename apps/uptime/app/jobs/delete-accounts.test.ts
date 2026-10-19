@@ -21,22 +21,22 @@ import {
 import { Database as JobDatabase } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { Mailer, MailError } from "@sdxc/mail";
+import { isComposedEmail, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
 
-import { MAIL_FROM } from "~/app/emails/sender";
-import { TeamDeletedEmail } from "~/app/emails/team-deleted";
+import emails from "~/app/emails";
 import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
 import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
-import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
+import { testMailer } from "~/app/test/mail";
 import { bindModels, publishModels } from "~/app/test/models";
 import { memberships, monitors, teams } from "~/database/schema";
 
@@ -111,10 +111,10 @@ function fakeAdmin(): ManagementClient {
 	} as unknown as ManagementClient;
 }
 
-/** The addresses every `TeamDeletedEmail` this run produced was sent to. */
+/** The addresses every `teams.deleted` email this run produced was sent to. */
 function notifiedAddresses(messages: readonly NormalizedMessage[]) {
 	return messages
-		.filter((message) => message.email instanceof TeamDeletedEmail)
+		.filter((message) => isComposedEmail(message.email, emails.teams.deleted))
 		.flatMap((message) => message.to.map((address) => address.email))
 		.sort();
 }
@@ -172,9 +172,7 @@ async function runJob(db: Database, mailTransport: Transport = transport) {
 	let ctx = createJobContext(jobs.deleteAccounts, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
-	ctx.set(JobMailer, new Mailer({ transport: mailTransport, from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(mailTransport), { property: "email" });
 	ctx.set(JobAdmin, fakeAdmin(), { property: "admin" });
 
 	await deleteAccounts(ctx);
@@ -401,7 +399,7 @@ describe("deleteAccounts", () => {
 
 		expect(notifiedAddresses(transport.messages)).toEqual(["one@example.com", "two@example.com"]);
 
-		let notice = transport.find((message) => message.email instanceof TeamDeletedEmail);
+		let notice = transport.find((message) => isComposedEmail(message.email, emails.teams.deleted));
 		expect(notice?.subject).toBe("Acme has been deleted on Uptime");
 		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 	});
@@ -488,7 +486,9 @@ describe("deleteAccounts", () => {
 		addresses.set("colleague-1", "one@example.com");
 		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
-		let selective = new SelectiveTransport((message) => message.email instanceof TeamDeletedEmail);
+		let selective = new SelectiveTransport((message) =>
+			isComposedEmail(message.email, emails.teams.deleted),
+		);
 		let record = await runJob(db, selective);
 
 		expect(notifiedAddresses(selective.messages)).toEqual(["one@example.com"]);

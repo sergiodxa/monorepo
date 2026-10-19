@@ -37,8 +37,7 @@ import type {
 	RegistrationStatus,
 } from "~/database/schema";
 
-import { AlertEmail } from "~/app/emails/alert";
-import { emailTranslator } from "~/app/emails/locale";
+import emails from "~/app/emails";
 import { enqueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { alertMessage } from "~/app/services/alerts/message";
@@ -93,8 +92,8 @@ function scopeOf(kind: AlertMonitorKind): MonitorScopeType {
 export interface DispatchAlertsParams {
 	models: UptimeModels;
 	/**
-	 * Mailer the email strategy delivers through. Request paths pass `ctx.email`;
-	 * background ones resolve the container's mailer, since they have no request.
+	 * Mailer the email strategy delivers through: `ctx.email`, from the request or the job
+	 * that dispatches, configured with the app's email registry.
 	 */
 	mailer: Mailer;
 	teamId: string;
@@ -266,24 +265,19 @@ async function deliverEmail(
 ): Promise<Result<SentMessage, Error>> {
 	recordCost("emailSent");
 
-	let translation = wrap(() => emailTranslator());
-	if (isFailure(translation)) return translation;
-
-	return await params.mailer.send(
-		new AlertEmail({
-			to: config.to,
+	return await params.mailer.send(emails.alert, {
+		to: config.to,
+		props: {
 			subjectPrefix: config.subjectPrefix,
 			monitorName: params.monitorName,
 			monitorType: params.monitorType,
 			eventType: params.eventType,
 			snapshot: params.snapshot,
 			dashboardUrl: params.dashboardUrl,
-			occurredAt: new Date(),
+			occurredAt: Date.now(),
 			incident,
-			locale: translation.data.locale,
-			t: translation.data.t,
-		}),
-	);
+		},
+	});
 }
 
 /**

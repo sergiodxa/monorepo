@@ -1,7 +1,7 @@
 /**
  * The sweep behind both team digests: for every member of every team owed one, a single
  * email covering that team's monitors over the window their schedule reports.
- * The daily and weekly digests differ only in window length, stamp, and email class, and
+ * The daily and weekly digests differ only in window length, stamp, and email, and
  * each is its own job, since a cron-job monitor watches one schedule. The membership, not
  * the subject, is the unit of delivery, and the per-period stamp on `memberships` keeps a
  * redelivered run from sending the same digest twice.
@@ -10,9 +10,9 @@
  */
 
 import type { ManagementClient } from "@sdxc/auth/management-client";
-import type { Translate } from "@sdxc/i18n";
 import type { CurrentJobContext } from "@sdxc/jobs";
-import type { Mailer } from "@sdxc/mail";
+import type { Mailer, MailError, SentMessage } from "@sdxc/mail";
+import type { Result } from "@sdxc/result";
 
 import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
@@ -22,14 +22,12 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/models/team-digests";
 import type { OptionalEmail, SelectTeam, SelectUserPreferences } from "~/database/schema";
 
-import { emailTranslator } from "~/app/emails/locale";
+import emails from "~/app/emails";
 import {
 	teamDigestDashboardUrl,
 	teamDigestPreferencesUrl,
 	teamDigestUnsubscribeUrl,
 } from "~/app/emails/shared/team-digest";
-import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
-import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import { features } from "~/app/initializers/flags";
 import {
 	listDigestMonitors,
@@ -130,7 +128,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	let settled = await mapWithConcurrency(
 		[...byTeam],
 		([teamId, members]) =>
-			digestTeam(ctx, ctx.mailer, {
+			digestTeam(ctx, ctx.email, {
 				period,
 				window: reported,
 				now,
@@ -244,10 +242,6 @@ async function digestTeam(
 			continue;
 		}
 
-		let { locale, t } = emailTranslator(
-			preferences.get(member.subjectId)?.preferred_language ?? undefined,
-		);
-
 		/**
 		 * Every digest carries a one-click unsubscribe, so a token that cannot be signed is a
 		 * send this run skips, unstamped, rather than a digest mailed without its way out.
@@ -268,17 +262,14 @@ async function digestTeam(
 
 		/** Counted before the send, because a rejected send is still a billed one. */
 		recordCost("emailSent");
-		let result = await mailer.send(
-			email({
-				period,
-				context,
-				to: profile.emailAddress,
-				unsubscribeUrl: teamDigestUnsubscribeUrl(token.data),
-				window: reported,
-				locale,
-				t,
-			}),
-		);
+		let result = await sendDigest(mailer, {
+			period,
+			context,
+			to: profile.emailAddress,
+			unsubscribeUrl: teamDigestUnsubscribeUrl(token.data),
+			window: reported,
+			locale: preferences.get(member.subjectId)?.preferred_language ?? undefined,
+		});
 
 		if (isFailure(result)) {
 			skipped++;
@@ -298,38 +289,41 @@ async function digestTeam(
 	return { sent, skipped };
 }
 
-/** The email one member gets, which is the only place the two periods produce different mail. */
-function email(send: {
-	period: DigestPeriod;
-	context: TeamDigestContext;
-	to: string;
-	unsubscribeUrl: string;
-	window: DigestWindow;
-	locale: string;
-	t: Translate;
-}) {
-	let { period, context, to, unsubscribeUrl, window: reported, locale, t } = send;
+/** Sends the email one member gets, which is the only place the two periods produce different mail. */
+async function sendDigest(
+	mailer: Mailer,
+	send: {
+		period: DigestPeriod;
+		context: TeamDigestContext;
+		to: string;
+		unsubscribeUrl: string;
+		window: DigestWindow;
+		locale: string | undefined;
+	},
+): Promise<Result<SentMessage, MailError>> {
+	let { period, context, to, unsubscribeUrl, window: reported, locale } = send;
 	let { team, monitors, segments, uptime } = context;
 
 	let shared = {
-		to,
 		teamName: team.name,
 		monitors,
 		dashboardUrl: teamDigestDashboardUrl(team.slug),
 		preferencesUrl: teamDigestPreferencesUrl(team.slug),
 		unsubscribeUrl,
-		locale,
-		t,
 	};
 
-	if (period === "daily") return new TeamDailyDigestEmail({ ...shared, date: reported.until });
+	if (period === "daily") {
+		return await mailer.send(emails.teams.dailyDigest, {
+			to,
+			locale,
+			props: { ...shared, date: reported.until },
+		});
+	}
 
-	return new TeamWeeklyDigestEmail({
-		...shared,
-		since: reported.since,
-		until: reported.until,
-		segments,
-		uptime,
+	return await mailer.send(emails.teams.weeklyDigest, {
+		to,
+		locale,
+		props: { ...shared, since: reported.since, until: reported.until, segments, uptime },
 	});
 }
 

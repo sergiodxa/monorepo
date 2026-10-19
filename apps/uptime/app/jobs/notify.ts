@@ -64,7 +64,7 @@ export default createJobHandler(jobs.notify, async (ctx) => {
 	ctx.log.set({ monitor: { id: ctx.input.monitorId, type: ctx.input.monitorType } });
 
 	try {
-		let dispatched = await dispatch(ctx, ctx.mailer);
+		let dispatched = await dispatch(ctx, ctx.email);
 
 		if (!dispatched) {
 			ctx.log.note("monitors.not_found");

@@ -19,9 +19,7 @@ import { Session } from "remix/session";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { SupportedLanguage } from "~/database/schema";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
-import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
+import emails from "~/app/emails";
 import { renderTrialPage } from "~/app/http/controllers/trial/index";
 import {
 	TRIAL_PROBE,
@@ -157,11 +155,12 @@ export default createAction(routes.trial.lead, async (ctx) => {
 
 		/** Counted before the send, because a rejected send is a billed one. */
 		recordCost("emailSent");
-		let report = await ctx.email.send(
-			new TrialRepeatReportEmail({
-				to: lead.email,
+		let report = await ctx.email.send(emails.trial.repeatReport, {
+			to: lead.email,
+			locale,
+			props: {
 				url: existing.url,
-				watchingSince: new Date(existing.created_at),
+				watchingSince: existing.created_at,
 				/**
 				 * Anchored to when the watch itself started, so the bar reads as the promised
 				 * week. Days not yet reached come back as `null` and draw as "no data".
@@ -176,10 +175,8 @@ export default createAction(routes.trial.lead, async (ctx) => {
 				 */
 				reportToken: existing.report_token,
 				unsubscribeToken: lead.unsubscribe_token,
-				locale,
-				t: emailTranslator(locale).t,
-			}),
-		);
+			},
+		});
 
 		if (isFailure(report)) {
 			ctx.log.warn("trial.repeat_report_email_failed", { message: report.error.message });
@@ -228,26 +225,24 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	/** Counted before the send, because a rejected send is a billed one. */
 	recordCost("emailSent");
 
-	let checkedAt = new Date(probe.checkedAt);
 	/**
 	 * Awaited directly so the funnel counts only emails actually received: the mail
 	 * middleware flushes any queued send before the handler returns anyway, so
 	 * awaiting here costs nothing extra.
 	 */
-	let sent = await ctx.email.send(
-		new TrialConfirmationEmail({
-			to: lead.email,
+	let sent = await ctx.email.send(emails.trial.confirmation, {
+		to: lead.email,
+		locale,
+		props: {
 			url: probe.url,
 			status: probe.status,
 			responseStatus: probe.responseStatus,
 			responseTimeMs: probe.responseTimeMs,
-			checkedAt,
-			watchUntil: new Date(probe.checkedAt + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY),
+			checkedAt: probe.checkedAt,
+			watchUntil: probe.checkedAt + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY,
 			unsubscribeToken: lead.unsubscribe_token,
-			locale,
-			t: emailTranslator(locale).t,
-		}),
-	);
+		},
+	});
 
 	if (isFailure(sent)) {
 		ctx.log.warn("trial.confirmation_email_failed", { message: sent.error.message });

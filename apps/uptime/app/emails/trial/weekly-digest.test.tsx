@@ -7,13 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailPropsOutput } from "@sdxc/mail";
+
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
 /** Fill of a passing day; `--ui-color-success-600`. */
 let UP = "#107f04";
@@ -26,23 +29,28 @@ function goodWeek(): UptimeBar.Status[] {
 	return Array.from({ length: 7 }, () => "up" as const);
 }
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TrialWeeklyDigestEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TrialWeeklyDigestEmail({
-		to: "visitor@example.com",
-		url: "https://example.com",
-		segments: goodWeek(),
-		stats: { checks: 168, uptime: "99.4", slowestResponseMs: 2100 },
-		subscribeUrl: "https://uptime.test/signup?target=https%3A%2F%2Fexample.com",
-		unsubscribeToken: "tok-abc123",
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(
+	overrides: Partial<EmailPropsOutput<typeof emails.trial.weeklyDigest>> = {},
+	delivery: { to?: string; locale?: string } = {},
+) {
+	return unwrap(
+		await mail.compose(emails.trial.weeklyDigest, {
+			to: delivery.to ?? "visitor@example.com",
+			locale: delivery.locale,
+			props: {
+				url: "https://example.com",
+				segments: goodWeek(),
+				stats: { checks: 168, uptime: "99.4", slowestResponseMs: 2100 },
+				subscribeUrl: "https://uptime.test/signup?target=https%3A%2F%2Fexample.com",
+				unsubscribeToken: "tok-abc123",
+				...overrides,
+			},
+		}),
+	);
 }
 
-describe("TrialWeeklyDigestEmail", () => {
+describe("trial.weeklyDigest email", () => {
 	test("addresses the watcher of the URL whose week ended", async () => {
 		let email = await makeEmail();
 
@@ -163,8 +171,7 @@ describe("TrialWeeklyDigestEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = emailTranslator("it");
-		let email = await makeEmail({ locale, t });
+		let email = await makeEmail({}, { locale: "it" });
 
 		expect(email.subject).toBe("Rapporto di sette giorni: example.com");
 	});

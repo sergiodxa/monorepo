@@ -9,14 +9,17 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { EmailPropsOutput } from "@sdxc/mail";
 
-import { render } from "@sdxc/mail";
+import { createMail, render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { AlertEventSnapshot } from "~/database/schema";
 
-import { AlertEmail } from "~/app/emails/alert";
-import { emailTranslator } from "~/app/emails/locale";
+import emails from "~/app/emails";
+import template from "~/app/emails/alert";
+import { mail } from "~/app/initializers/mail";
 
 /** A minimal HTTP snapshot fixture, the shape every default below reports. */
 let httpSnapshot: AlertEventSnapshot = {
@@ -57,23 +60,42 @@ function keyRecorder() {
 	return { calls, t };
 }
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<AlertEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new AlertEmail({
-		to: "ops@example.com",
-		subjectPrefix: "",
-		monitorName: "Homepage",
-		monitorType: "http",
-		eventType: "down",
-		snapshot: httpSnapshot,
-		dashboardUrl: "https://uptime.test/app/team-1/monitors/monitor-1",
-		occurredAt: new Date("2026-08-01T10:00:00.000Z"),
-		incident: null,
-		locale,
-		t,
-		...overrides,
-	});
+/** The props a test overrides, plus a translator standing in for the app's. */
+interface Overrides extends Partial<EmailPropsOutput<typeof emails.alert>> {
+	t?: Translate;
+}
+
+/**
+ * Composes the email with a real translator, so a missing locale key fails the test; a test
+ * that hands in its own `t` composes through a registry bound to that one instead.
+ */
+async function makeEmail(overrides: Overrides = {}, locale?: string) {
+	let { t, ...props } = overrides;
+	let registry = t === undefined ? mail : recording(t);
+	return unwrap(
+		await registry.compose(emails.alert, {
+			to: "ops@example.com",
+			locale,
+			props: {
+				subjectPrefix: "",
+				monitorName: "Homepage",
+				monitorType: "http",
+				eventType: "down",
+				snapshot: httpSnapshot,
+				dashboardUrl: "https://uptime.test/app/team-1/monitors/monitor-1",
+				occurredAt: Date.parse("2026-08-01T10:00:00.000Z"),
+				incident: null,
+				...props,
+			},
+		}),
+	);
+}
+
+/** A registry that renders the alert with `t`, whatever language a delivery asks for. */
+function recording(t: Translate) {
+	let registry = createMail({ translator: (locale) => ({ locale: locale ?? "en", t }) });
+	registry.map(emails.alert, template);
+	return registry;
 }
 
 /**
@@ -85,7 +107,7 @@ function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
 }
 
-describe("AlertEmail", () => {
+describe("alert email", () => {
 	test("addresses the mailbox the alert is configured with", async () => {
 		let email = await makeEmail();
 
@@ -510,8 +532,7 @@ describe("AlertEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = emailTranslator("de");
-		let email = await makeEmail({ locale, t });
+		let email = await makeEmail({}, "de");
 
 		expect(email.subject).not.toBe("[Uptime Alert] Homepage is DOWN");
 		expect(email.subject).toContain("Homepage");

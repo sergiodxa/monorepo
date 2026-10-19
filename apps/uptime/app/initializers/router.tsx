@@ -25,12 +25,10 @@ import { jobEnqueuer } from "@sdxc/jobs/router";
 import { lazy } from "@sdxc/lazy-route";
 import { currentLog } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
-import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
 import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
-import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -54,6 +52,8 @@ import { polar } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
+import { mail as emailRegistry } from "~/app/initializers/mail";
+import { queue, transport } from "~/app/initializers/mail-transport";
 import { jobQueue } from "~/app/initializers/queue";
 import abilities from "~/app/policies/abilities";
 import { SECURITY_POLICY } from "~/config/security-policy";
@@ -194,11 +194,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * cron-job ping endpoint dispatches alerts too. Sits after the log so
 			 * failures from its deferred flush queue can still reach `ctx.log`.
 			 */
-			mail({
-				transport: () => new CloudflareTransport(env.EMAIL),
-				from: MAIL_FROM,
-				replyTo: MAIL_REPLY_TO,
-			}),
+			mail({ transport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO, mail: emailRegistry, queue }),
 			formData(),
 			methodOverride(),
 			/**

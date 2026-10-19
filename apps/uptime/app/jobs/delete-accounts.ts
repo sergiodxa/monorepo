@@ -19,9 +19,7 @@ import { isFailure } from "@sdxc/result";
 import type { DeletedTeamNotice } from "~/app/services/account-erasure";
 import type { SelectAccountDeletion } from "~/database/schema";
 
-import { AccountDeletedEmail } from "~/app/emails/account-deleted";
-import { emailTranslator } from "~/app/emails/locale";
-import { TeamDeletedEmail } from "~/app/emails/team-deleted";
+import emails from "~/app/emails";
 import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
 import { eraseAccount } from "~/app/services/account-erasure";
@@ -41,7 +39,7 @@ export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 	 */
 	for (let request of pending) {
 		try {
-			if (await erase(ctx, ctx.mailer, ctx.admin, request)) deleted++;
+			if (await erase(ctx, ctx.email, ctx.admin, request)) deleted++;
 			else errorCount++;
 		} catch (error) {
 			errorCount++;
@@ -96,11 +94,9 @@ async function erase(
 		});
 	}
 
-	let { locale, t } = emailTranslator();
-
 	/** Counted before the send, because a rejected send is still a billed one. */
 	recordCost("emailSent");
-	let sent = await mailer.send(new AccountDeletedEmail({ email: request.email, locale, t }));
+	let sent = await mailer.send(emails.accountDeleted, { to: request.email, props: {} });
 
 	if (isFailure(sent)) {
 		/**
@@ -167,15 +163,13 @@ async function notifyFormerMembers(
 				continue;
 			}
 
-			let { locale, t } = emailTranslator(
-				preferences.get(subjectId)?.preferred_language ?? undefined,
-			);
-
 			/** Counted before the send, because a rejected send is still a billed one. */
 			recordCost("emailSent");
-			let sent = await mailer.send(
-				new TeamDeletedEmail({ team: team.teamName, email: profile.emailAddress, locale, t }),
-			);
+			let sent = await mailer.send(emails.teams.deleted, {
+				to: profile.emailAddress,
+				locale: preferences.get(subjectId)?.preferred_language ?? undefined,
+				props: { team: team.teamName },
+			});
 
 			if (isFailure(sent)) {
 				skipped++;

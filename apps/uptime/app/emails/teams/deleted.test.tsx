@@ -1,6 +1,6 @@
 /**
- * Tests the team-deleted notice as a value: it addresses the former member it was constructed
- * with, takes its copy from the locale files, and names the team in both body parts. The privacy
+ * Tests the team-deleted notice as the registry composes it: it addresses the former member
+ * it was sent to, takes its copy from the locale files, and names the team in both body parts. The privacy
  * assertion matters most: the notice states that the owner deleted their account while keeping
  * that person's own address out of the copy, since it is being erased.
  *
@@ -9,24 +9,18 @@
  */
 
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TeamDeletedEmail } from "~/app/emails/team-deleted";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TeamDeletedEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TeamDeletedEmail({
-		team: "Acme",
-		email: "colleague@example.com",
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(props: { team: string } = { team: "Acme" }) {
+	return unwrap(await mail.compose(emails.teams.deleted, { to: "colleague@example.com", props }));
 }
 
-describe("TeamDeletedEmail", () => {
+describe("teams.deleted email", () => {
 	test("addresses the former member it was built for", async () => {
 		let email = await makeEmail();
 

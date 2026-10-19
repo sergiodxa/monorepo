@@ -29,6 +29,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { teamAccess } from "~/app/http/middleware/access";
+import { mail as emailRegistry } from "~/app/initializers/mail";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
@@ -150,7 +151,7 @@ async function send(
 			models(),
 			billing({ provider: () => testBilling }),
 			formData() as Middleware,
-			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
+			mail({ transport: new MemoryTransport(), from: MAIL_FROM, mail: emailRegistry }),
 		],
 	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });

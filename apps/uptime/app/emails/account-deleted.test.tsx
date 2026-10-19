@@ -1,6 +1,6 @@
 /**
- * Tests the deletion confirmation as a value: it addresses the account it was constructed
- * for, takes its copy from the locale files, and puts all four retention facts into the
+ * Tests the deletion confirmation as the registry composes it: it addresses the account it
+ * was sent to, takes its copy from the locale files, and puts all four retention facts into the
  * plain-text alternative as well as the HTML, since that honesty is the substance of the
  * message and the text part is where a lot of people read it.
  *
@@ -9,18 +9,18 @@
  */
 
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { AccountDeletedEmail } from "~/app/emails/account-deleted";
-import { emailTranslator } from "~/app/emails/locale";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
+/** Composes the email with a real translator, so a missing locale key fails the test. */
 async function makeEmail() {
-	let { locale, t } = emailTranslator();
-	return new AccountDeletedEmail({ email: "ada@example.com", locale, t });
+	return unwrap(await mail.compose(emails.accountDeleted, { to: "ada@example.com", props: {} }));
 }
 
-describe("AccountDeletedEmail", () => {
+describe("accountDeleted email", () => {
 	test("addresses the account that asked to be deleted", async () => {
 		let email = await makeEmail();
 

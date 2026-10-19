@@ -10,6 +10,7 @@
  */
 
 import { job, jobs } from "@sdxc/jobs";
+import { EMAIL_DELIVERY } from "@sdxc/mail";
 import { MESSAGE_SCHEMA } from "@sdxc/messaging";
 import * as s from "remix/data-schema";
 
@@ -168,4 +169,6 @@ export default jobs({
 	 * own delivery, so a slow or rate-limited channel never holds up the check that fired it.
 	 */
 	deliverAlert: job({ input: DeliverAlertSchema }),
+	/** Delivers what `ctx.email.queue()` handed the queue, for every declared email. */
+	email: job({ input: EMAIL_DELIVERY }),
 });

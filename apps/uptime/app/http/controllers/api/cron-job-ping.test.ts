@@ -27,6 +27,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { mail as emailRegistry } from "~/app/initializers/mail";
 import { encodeId } from "~/app/services/typed-id";
 import { billedEvents, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -168,7 +169,7 @@ async function dispatch(db: Db, request: Request) {
 			log() as Middleware,
 			getClientIP(),
 			billing({ provider: () => testBilling }),
-			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
+			mail({ transport: new MemoryTransport(), from: MAIL_FROM, mail: emailRegistry }),
 		],
 	});
 	router.map(routes.api.cronJobPing, cronJobPing);

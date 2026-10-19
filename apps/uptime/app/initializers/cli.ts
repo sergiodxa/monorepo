@@ -24,6 +24,7 @@ import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { openLocalDatabase } from "~/app/initializers/local-database";
 import { logger } from "~/app/initializers/logger";
+import { mail as emailRegistry } from "~/app/initializers/mail";
 import { models as registry } from "~/app/models";
 
 import manifest from "../../package.json" with { type: "json" };
@@ -70,6 +71,7 @@ export const cli = createCLI({
 			transport: (ctx) => new PrintTransport({ write: (text) => ctx.stderr(text) }),
 			from: MAIL_FROM,
 			replyTo: MAIL_REPLY_TO,
+			mail: emailRegistry,
 		}),
 		i18n({
 			resources: RESOURCES,

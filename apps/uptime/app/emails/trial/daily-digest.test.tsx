@@ -7,14 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailPropsOutput } from "@sdxc/mail";
+
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { TrialStatus } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
 /** Fill of a passing hour; `--ui-color-success-600`. */
 let UP = "#107f04";
@@ -27,12 +30,11 @@ function goodDay(): UptimeBar.Status[] {
 	return Array.from({ length: 24 }, () => "up" as const);
 }
 
+/** One watched URL's day, as the digest's props carry it. */
+type Target = EmailPropsOutput<typeof emails.trial.dailyDigest>["targets"][number];
+
 /** One target with a full clean day behind it, overridable per test. */
-function target(
-	url: string,
-	status: TrialStatus = "up",
-	overrides: Partial<TrialDailyDigestEmail.Target> = {},
-): TrialDailyDigestEmail.Target {
+function target(url: string, status: TrialStatus = "up", overrides: Partial<Target> = {}): Target {
 	return {
 		url,
 		status,
@@ -42,20 +44,25 @@ function target(
 	};
 }
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TrialDailyDigestEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TrialDailyDigestEmail({
-		to: "visitor@example.com",
-		targets: [target("https://example.com")],
-		unsubscribeToken: "tok-abc123",
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(
+	overrides: Partial<EmailPropsOutput<typeof emails.trial.dailyDigest>> = {},
+	delivery: { to?: string; locale?: string } = {},
+) {
+	return unwrap(
+		await mail.compose(emails.trial.dailyDigest, {
+			to: delivery.to ?? "visitor@example.com",
+			locale: delivery.locale,
+			props: {
+				targets: [target("https://example.com")],
+				unsubscribeToken: "tok-abc123",
+				...overrides,
+			},
+		}),
+	);
 }
 
-describe("TrialDailyDigestEmail", () => {
+describe("trial.dailyDigest email", () => {
 	test("goes to the lead rather than to a URL", async () => {
 		let email = await makeEmail();
 
@@ -206,8 +213,7 @@ describe("TrialDailyDigestEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = emailTranslator("de");
-		let email = await makeEmail({ locale, t });
+		let email = await makeEmail({}, { locale: "de" });
 
 		expect(email.subject).toBe("Täglicher Bericht: example.com");
 	});

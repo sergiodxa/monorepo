@@ -14,8 +14,9 @@ import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { Database as JobDatabase } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { Mailer, MailError } from "@sdxc/mail";
+import { isComposedEmail, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { failure, isSuccess, success, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -26,16 +27,14 @@ import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 import type { DigestPeriod } from "~/app/models/team-digests";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
-import { MAIL_FROM } from "~/app/emails/sender";
-import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
-import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
+import emails from "~/app/emails";
 import jobs from "~/app/jobs";
 import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
-import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
 import { createTestDatabase } from "~/app/test/db";
 import { installFlags } from "~/app/test/flags";
+import { testMailer } from "~/app/test/mail";
 import { bindModels, publishModels } from "~/app/test/models";
 import { UNSUBSCRIBE_SECRET_VALUE } from "~/app/test/unsubscribe-secret";
 import {
@@ -108,9 +107,7 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
-	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
-		property: "mailer",
-	});
+	ctx.set(CurrentMailer, testMailer(options.transport ?? transport), { property: "email" });
 	ctx.set(JobAdmin, fakeAdmin(), { property: "admin" });
 
 	await handler(ctx);
@@ -248,12 +245,16 @@ function namesTeam(text: string | undefined, teamName: string): boolean {
 
 /** Every daily digest the run handed the transport. */
 function dailyDigests() {
-	return transport.messages.filter((message) => message.email instanceof TeamDailyDigestEmail);
+	return transport.messages.filter((message) =>
+		isComposedEmail(message.email, emails.teams.dailyDigest),
+	);
 }
 
 /** Every weekly one. */
 function weeklyDigests() {
-	return transport.messages.filter((message) => message.email instanceof TeamWeeklyDigestEmail);
+	return transport.messages.filter((message) =>
+		isComposedEmail(message.email, emails.teams.weeklyDigest),
+	);
 }
 
 beforeEach(() => {

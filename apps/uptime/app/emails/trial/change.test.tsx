@@ -7,28 +7,36 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailPropsOutput } from "@sdxc/mail";
+
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { TrialChangeEmail } from "~/app/emails/trial-change";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-/** Builds the email with a real translator, so a missing locale key fails the test. */
-async function makeEmail(overrides: Partial<TrialChangeEmail.Data> = {}) {
-	let { locale, t } = emailTranslator();
-	return new TrialChangeEmail({
-		to: "visitor@example.com",
-		url: "https://example.com",
-		status: "down",
-		previousStatus: "up",
-		responseStatus: 503,
-		responseTimeMs: 4200,
-		changedAt: new Date("2026-08-03T14:32:00.000Z"),
-		unsubscribeToken: "tok-abc123",
-		locale,
-		t,
-		...overrides,
-	});
+/** Composes the email with a real translator, so a missing locale key fails the test. */
+async function makeEmail(
+	overrides: Partial<EmailPropsOutput<typeof emails.trial.change>> = {},
+	delivery: { to?: string; locale?: string } = {},
+) {
+	return unwrap(
+		await mail.compose(emails.trial.change, {
+			to: delivery.to ?? "visitor@example.com",
+			locale: delivery.locale,
+			props: {
+				url: "https://example.com",
+				status: "down",
+				previousStatus: "up",
+				responseStatus: 503,
+				responseTimeMs: 4200,
+				changedAt: Date.parse("2026-08-03T14:32:00.000Z"),
+				unsubscribeToken: "tok-abc123",
+				...overrides,
+			},
+		}),
+	);
 }
 
 /**
@@ -40,7 +48,7 @@ function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
 }
 
-describe("TrialChangeEmail", () => {
+describe("trial.change email", () => {
 	test("addresses the account-less watcher of the URL", async () => {
 		let email = await makeEmail();
 
@@ -106,8 +114,7 @@ describe("TrialChangeEmail", () => {
 	});
 
 	test("writes the copy in the language it was constructed for", async () => {
-		let { locale, t } = emailTranslator("fr");
-		let email = await makeEmail({ locale, t });
+		let email = await makeEmail({}, { locale: "fr" });
 
 		expect(email.subject).toBe("example.com est HORS LIGNE");
 	});

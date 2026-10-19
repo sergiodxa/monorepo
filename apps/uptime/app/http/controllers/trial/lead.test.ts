@@ -16,6 +16,7 @@ import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
+import { isComposedEmail } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { unwrap } from "@sdxc/result";
@@ -30,15 +31,15 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 
+import emails from "~/app/emails";
 import { MAIL_FROM } from "~/app/emails/sender";
-import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
-import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
 import {
 	TRIAL_PROBE,
 	TRIAL_WATCH_REPEATED,
 	TRIAL_WATCH_STARTED,
 } from "~/app/http/controllers/trial/session";
 import i18n from "~/app/http/middleware/i18n";
+import { mail as emailRegistry } from "~/app/initializers/mail";
 import { hasMarketingConsent } from "~/app/models/leads";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
@@ -133,7 +134,7 @@ async function submit(
 				ctx.set(Session, session, { property: "session" });
 				return next();
 			}) as Middleware,
-			mail({ transport, from: MAIL_FROM }),
+			mail({ transport, from: MAIL_FROM, mail: emailRegistry }),
 			i18n as Middleware,
 			formData() as Middleware,
 			testHoneypot(),
@@ -307,7 +308,7 @@ describe("POST /try/lead free-watch cap", () => {
 		await submitTwice({ email: "reader@example.com", url: "https://probed.example/" }, {});
 
 		expect(transport.messages).toHaveLength(1);
-		expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
+		expect(isComposedEmail(transport.last?.email, emails.trial.repeatReport)).toBe(true);
 	});
 
 	/**
@@ -360,7 +361,7 @@ describe("POST /try/lead free-watch cap", () => {
 		);
 
 		expect(await allWatches(db)).toHaveLength(1);
-		expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
+		expect(isComposedEmail(transport.last?.email, emails.trial.repeatReport)).toBe(true);
 	});
 
 	test("caps a resubmission whose query parameters were reordered", async () => {
@@ -387,7 +388,7 @@ describe("POST /try/lead free-watch cap", () => {
 
 			let lead = await bindModels(db).leads.findByEmail("hello@sergiodxa.com");
 			expect(await bindModels(db).trialWatches.listByLead(lead!.id)).toHaveLength(1);
-			expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
+			expect(isComposedEmail(transport.last?.email, emails.trial.repeatReport)).toBe(true);
 		},
 	);
 
@@ -414,7 +415,7 @@ describe("POST /try/lead free-watch cap", () => {
 		);
 
 		expect(await allWatches(db)).toHaveLength(2);
-		expect(transport.last?.email).toBeInstanceOf(TrialConfirmationEmail);
+		expect(isComposedEmail(transport.last?.email, emails.trial.confirmation)).toBe(true);
 	});
 
 	test("starts a normal watch for a different URL from the same address", async () => {
@@ -429,7 +430,7 @@ describe("POST /try/lead free-watch cap", () => {
 			"https://probed.example/",
 		]);
 		expect(session.get(TRIAL_WATCH_STARTED)).toBe("https://other.example/");
-		expect(transport.last?.email).toBeInstanceOf(TrialConfirmationEmail);
+		expect(isComposedEmail(transport.last?.email, emails.trial.confirmation)).toBe(true);
 	});
 
 	test("counts the report against the emails the lead has received", async () => {

@@ -199,7 +199,7 @@ async function notify(
 	status: MonitorStatus,
 ): Promise<void> {
 	try {
-		await notifyHttpResult(ctx.models, ctx.mailer, monitor, previousStatus, {
+		await notifyHttpResult(ctx.models, ctx.email, monitor, previousStatus, {
 			status,
 			responseStatus: outcome.responseStatus ?? 0,
 			responseTimeMs: outcome.responseTimeMs ?? 0,

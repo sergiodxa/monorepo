@@ -8,12 +8,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Email } from "@sdxc/mail";
+import type { Email, EmailPropsOutput } from "@sdxc/mail";
 
 import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { FunnelReportEmail } from "~/app/emails/funnel-report";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
+
+/** The props the report is sent with. */
+type Report = EmailPropsOutput<typeof emails.funnelReport>;
 
 const NO_COUNTERS = {
 	newLeads: 0,
@@ -24,13 +29,13 @@ const NO_COUNTERS = {
 };
 
 /** A paid conversion that took six days and eight emails. */
-const PAID: FunnelReportEmail.Conversion = {
+const PAID = {
 	urls: ["https://ada.example", "https://lovelace.example"],
 	watchCount: 3,
 	emailsSent: 8,
-	leadCreatedAt: new Date("2026-07-26T09:00:00.000Z"),
-	signedUpAt: new Date("2026-07-31T09:00:00.000Z"),
-	paidAt: new Date("2026-08-01T09:00:00.000Z"),
+	leadCreatedAt: Date.parse("2026-07-26T09:00:00.000Z"),
+	signedUpAt: Date.parse("2026-07-31T09:00:00.000Z"),
+	paidAt: Date.parse("2026-08-01T09:00:00.000Z"),
 	attribution: "outreach/agencies-august → /for/agencies",
 };
 
@@ -38,19 +43,19 @@ const PAID: FunnelReportEmail.Conversion = {
  * A signup that has not paid, whose blank attribution is the ordinary case
  * for a session that never carried a campaign, printed as "unknown".
  */
-const FREE: FunnelReportEmail.Conversion = {
+const FREE = {
 	urls: ["https://grace.example"],
 	watchCount: 1,
 	emailsSent: 2,
-	leadCreatedAt: new Date("2026-07-30T09:00:00.000Z"),
-	signedUpAt: new Date("2026-08-01T09:00:00.000Z"),
+	leadCreatedAt: Date.parse("2026-07-30T09:00:00.000Z"),
+	signedUpAt: Date.parse("2026-08-01T09:00:00.000Z"),
 	paidAt: null,
 	attribution: null,
 };
 
-function makeEmail(overrides: Partial<FunnelReportEmail.Data> = {}) {
-	return new FunnelReportEmail({
-		to: "ops@example.com",
+/** Composes the report through the registry, as the job that sends it does. */
+async function makeEmail(overrides: Partial<Report> = {}) {
+	let props = {
 		date: "2026-08-01",
 		counters: {
 			...NO_COUNTERS,
@@ -65,7 +70,8 @@ function makeEmail(overrides: Partial<FunnelReportEmail.Data> = {}) {
 		paid: [PAID],
 		signups: [FREE],
 		...overrides,
-	});
+	};
+	return unwrap(await mail.compose(emails.funnelReport, { to: "ops@example.com", props }));
 }
 
 /**
@@ -77,23 +83,23 @@ function instants(text: string): string {
 	return text.replace(/(\d{1,2}, \d{4}), (\d{1,2}:\d{2})/g, "$1 at $2");
 }
 
-describe("FunnelReportEmail", () => {
-	test("goes to the one internal address it was given", () => {
-		expect(makeEmail().to).toEqual({ email: "ops@example.com" });
+describe("funnelReport email", () => {
+	test("goes to the one internal address it was given", async () => {
+		expect((await makeEmail()).to).toEqual({ email: "ops@example.com" });
 	});
 
-	test("carries the headline in the subject, so the common day needs no opening", () => {
-		expect(makeEmail().subject).toBe("Uptime trial 2026-08-01 — 3 leads, 1 signup, 1 paid");
+	test("carries the headline in the subject, so the common day needs no opening", async () => {
+		expect((await makeEmail()).subject).toBe("Uptime trial 2026-08-01 — 3 leads, 1 signup, 1 paid");
 	});
 
-	test("says one lead rather than 1 leads", () => {
-		let email = makeEmail({ counters: { ...NO_COUNTERS, newLeads: 1 } });
+	test("says one lead rather than 1 leads", async () => {
+		let email = await makeEmail({ counters: { ...NO_COUNTERS, newLeads: 1 } });
 
 		expect(email.subject).toBe("Uptime trial 2026-08-01 — 1 lead, 0 signups, 0 paid");
 	});
 
 	test("tabulates the day in funnel order", async () => {
-		let { text } = await render(makeEmail().body());
+		let { text } = await render((await makeEmail()).body());
 
 		expect(text).toContain("New leads 3");
 		expect(text).toContain("URLs checked 4");
@@ -103,7 +109,7 @@ describe("FunnelReportEmail", () => {
 	});
 
 	test("itemises a paid conversion with the days and the emails it took", async () => {
-		let { text } = await render(makeEmail().body());
+		let { text } = await render((await makeEmail()).body());
 
 		expect(text).toContain("Paid conversions");
 		expect(text).toContain("https://ada.example, https://lovelace.example");
@@ -114,7 +120,7 @@ describe("FunnelReportEmail", () => {
 	});
 
 	test("itemises a free signup more lightly, with no payment dates to give", async () => {
-		let { text } = await render(makeEmail({ paid: [] }).body());
+		let { text } = await render((await makeEmail({ paid: [] })).body());
 
 		expect(text).toContain("Free signups");
 		expect(text).toContain("Days to signing up 2");
@@ -122,14 +128,14 @@ describe("FunnelReportEmail", () => {
 	});
 
 	test("closes with the trailing totals, saying how many days they cover", async () => {
-		let { text } = await render(makeEmail().body());
+		let { text } = await render((await makeEmail()).body());
 
 		expect(text).toContain("Last 30 days");
 		expect(text).toContain("New leads 40");
 	});
 
 	test("leaves out a section it has nothing to put in", async () => {
-		let { text } = await render(makeEmail({ paid: [], signups: [] }).body());
+		let { text } = await render((await makeEmail({ paid: [], signups: [] })).body());
 
 		expect(text).not.toContain("https://ada.example");
 		expect(text).not.toContain("https://grace.example");
@@ -137,12 +143,11 @@ describe("FunnelReportEmail", () => {
 	});
 
 	/**
-	 * Internal mail: the opt-out the other four carry would be nonsense here. `email` is
-	 * typed as `Email`, since the class itself declares no `headers` member — reading it
-	 * as `undefined` here is the assertion the test makes.
+	 * Internal mail: the opt-out the other four carry would be nonsense here, so the template
+	 * declares no headers and reading them as `undefined` is the assertion the test makes.
 	 */
 	test("carries no unsubscribe header and no unsubscribe link", async () => {
-		let email: Email = makeEmail();
+		let email: Email = await makeEmail();
 		let { html } = await render(email.body());
 
 		expect(email.headers).toBeUndefined();

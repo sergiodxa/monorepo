@@ -16,15 +16,16 @@
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
+import { isComposedEmail } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { FunnelReportEmail } from "~/app/emails/funnel-report";
-import { MAIL_FROM } from "~/app/emails/sender";
+import emails from "~/app/emails";
 import { createTestDatabase } from "~/app/test/db";
+import { testMailer } from "~/app/test/mail";
 import { leads, trialWatches } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -52,7 +53,6 @@ vi.doMock("cloudflare:workers", () => ({
 let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
 
@@ -83,7 +83,7 @@ async function runJob() {
 	let ctx = createJobContext(jobs.sendFunnelReport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
-	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
+	ctx.set(CurrentMailer, testMailer(transport), { property: "email" });
 
 	await sendFunnelReport(ctx);
 	log.emit();
@@ -113,7 +113,9 @@ async function seedSubmission(email: string, at: number = duringYesterday()) {
 
 /** The one report this run produced, or `undefined` when it stayed quiet. */
 function reports() {
-	return transport.messages.filter((message) => message.email instanceof FunnelReportEmail);
+	return transport.messages.filter((message) =>
+		isComposedEmail(message.email, emails.funnelReport),
+	);
 }
 
 describe("staying quiet", () => {
