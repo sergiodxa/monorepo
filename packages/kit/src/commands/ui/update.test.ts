@@ -294,4 +294,34 @@ describe("components a new version reaches", () => {
 			["button  copied from 2026.10.20", "dialog  copied from 2026.10.20", ""].join("\n"),
 		);
 	});
+
+	test("copied with --with-deps leave a copy outside the update untouched when they repoint it", async () => {
+		let dialog = { ...DIALOG, changedIn: "2026.10.10" };
+		let older = await kitPackage("2026.10.10", [
+			BUTTON,
+			dialog,
+			{ ...TABS, changedIn: "2026.10.10" },
+		]);
+		let newer = await kitPackage("2026.10.20", [
+			BUTTON,
+			dialog,
+			changed(TABS, "2026.10.20", { dependencies: ["button"] }),
+		]);
+		let root = await project();
+		await invoke(["add", "dialog", "tabs"], root, older);
+
+		await invoke(["update", "tabs", "--with-deps"], root, newer);
+
+		expect(await read(root, "resources/components/ui/dialog.tsx")).toContain(
+			'import { Button } from "./button";',
+		);
+		expect((await invoke(["list"], root, newer)).stdout).toBe(
+			[
+				"button  copied from 2026.10.20",
+				"dialog  copied from 2026.10.10",
+				"tabs    copied from 2026.10.20",
+				"",
+			].join("\n"),
+		);
+	});
 });

@@ -117,8 +117,13 @@ never edited by hand. Each line is one entry:
 - **Hashed after formatting.** The hash is taken once `format` (ADR-136) has run, so a copy the
   project's formatter rewrote still counts as untouched. When `format` fails, the hash is of the
   file as written, and the command says so.
+- **The import rewrite keeps copies untouched.** When `add`, `update --with-deps` or `remove`
+  points an untouched copy's imports at a new copy or back at `sdxc/ui`, the copy's line records
+  the rewritten file's hash, so it still reads as untouched and `diff` shows it matching. A copy
+  that was already edited keeps its recorded hash and stays edited.
 - **One line per change.** `ui add` inserts a line, `ui update` replaces that line, and `ui remove`
-  deletes it; no other line changes, so a diff and a review show exactly the components touched.
+  deletes it; the only other lines that change are those of copies whose imports the rewrite
+  repointed, so a diff and a review show exactly the components touched.
 - **Sorted.** Lines are kept sorted by `kind` then `name`, so the file is deterministic. Two
   branches that add components next to each other in that order still conflict, as adjacent
   lines do in any merge; the conflict holds two whole entries, resolved by keeping both.

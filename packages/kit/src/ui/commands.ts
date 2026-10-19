@@ -513,7 +513,8 @@ async function settleLock(
 
 /**
  * Runs `transform` over every project source outside the plan's own files, adding each file it
- * changes to the plan and reporting each import it could not rewrite.
+ * changes to the plan and reporting each import it could not rewrite. An untouched copy it
+ * rewrites is hashed again once written, so the kit's own edit keeps it reading as untouched.
  */
 async function rewriteProject(
 	context: UIContext,
@@ -525,6 +526,7 @@ async function rewriteProject(
 ): Promise<Result<void, Error>> {
 	let sources = await projectSources(context.root);
 	if (isFailure(sources)) return sources;
+	let copies = lockedFiles(context, plan);
 	for (let file of sources.data) {
 		if (plan.files.has(file)) continue;
 		let source = await readProjectFile(context.root, file);
@@ -533,6 +535,10 @@ async function rewriteProject(
 		if (isFailure(rewritten)) return failure(new Error(`${file}: ${rewritten.error.message}`));
 		if (rewritten.data.source !== source) {
 			plan.files.set(file, { before: source, after: rewritten.data.source });
+			let copy = copies.get(file);
+			if (copy !== undefined && copy.entry.files[copy.file] === hashContent(source)) {
+				rehash(plan, copy.entry, copy.file);
+			}
 		}
 		for (let location of rewritten.data.unhandled) {
 			plan.report.push(
@@ -541,6 +547,37 @@ async function rewriteProject(
 		}
 	}
 	return success(undefined);
+}
+
+/**
+ * Each file of each copy the lock lists and the plan keeps, by its path from the project root,
+ * with its entry and its name relative to `ui.directory`.
+ */
+function lockedFiles(
+	context: UIContext,
+	plan: Plan,
+): Map<string, { entry: UILockEntry; file: string }> {
+	let files = new Map<string, { entry: UILockEntry; file: string }>();
+	for (let entry of uiEntries(context.lock)) {
+		if (plan.forget.includes(entry.name)) continue;
+		for (let file of Object.keys(entry.files)) {
+			files.set(copyPath(context.layout, file), { entry, file });
+		}
+	}
+	return files;
+}
+
+/**
+ * Marks `file` of the copy `entry` to be hashed once written, in the plan's pending entry for
+ * that copy when it has one, or in a new one at the release the copy came from.
+ */
+function rehash(plan: Plan, entry: UILockEntry, file: string): void {
+	let pending = plan.record.find((record) => record.name === entry.name);
+	if (pending === undefined) {
+		pending = { name: entry.name, release: entry.release, files: { ...entry.files } };
+		plan.record.push(pending);
+	}
+	pending.files[file] = null;
 }
 
 /**

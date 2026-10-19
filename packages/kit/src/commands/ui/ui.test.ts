@@ -385,6 +385,46 @@ describe("sdxc ui remove", () => {
 	});
 });
 
+describe("copies the import rewrite reaches", () => {
+	test("stay untouched when a later add or remove points their imports at another copy", async () => {
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG]);
+		let root = await project();
+		let dialog = "resources/components/ui/dialog.tsx";
+		await invoke(["add", "dialog"], root, sdxc);
+
+		await invoke(["add", "button"], root, sdxc);
+		let afterAdd = await read(root, dialog);
+		let listedAfterAdd = await invoke(["list"], root, sdxc);
+		let diffAfterAdd = await invoke(["diff", "dialog"], root, sdxc);
+		await invoke(["remove", "button"], root, sdxc);
+
+		expect(afterAdd).toContain('from "./button"');
+		expect(listedAfterAdd.stdout).toBe(
+			["button  copied from 2026.10.14", "dialog  copied from 2026.10.14", ""].join("\n"),
+		);
+		expect(diffAfterAdd.stdout).toBe("dialog matches release 2026.10.14\n");
+		expect(await read(root, dialog)).toContain('from "@sdxc/ui/button"');
+		expect((await invoke(["list"], root, sdxc)).stdout).toBe(
+			["button", "dialog  copied from 2026.10.14", ""].join("\n"),
+		);
+	});
+
+	test("an edited copy still reads as edited after its imports are rewritten", async () => {
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG]);
+		let root = await project();
+		let dialog = "resources/components/ui/dialog.tsx";
+		await invoke(["add", "dialog"], root, sdxc);
+		await writeFile(join(root, dialog), `${await read(root, dialog)}// mine\n`);
+
+		await invoke(["add", "button"], root, sdxc);
+
+		expect(await read(root, dialog)).toContain('from "./button"');
+		expect((await invoke(["list"], root, sdxc)).stdout).toBe(
+			["button  copied from 2026.10.14", "dialog  copied from 2026.10.14, edited", ""].join("\n"),
+		);
+	});
+});
+
 describe("prompts", () => {
 	test("add with no names searches the registry on a terminal, and is a usage error without one", async () => {
 		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
