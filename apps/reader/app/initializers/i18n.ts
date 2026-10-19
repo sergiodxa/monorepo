@@ -7,6 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
+
 import en from "~/resources/locales/en";
 import es from "~/resources/locales/es";
 
@@ -18,3 +21,17 @@ export const FALLBACK_LANGUAGE = "en";
 
 /** The dictionaries, one per supported language. */
 export const RESOURCES = { en, es };
+
+/**
+ * Translates where there is no request to detect a language from: a notification, in the
+ * language a device was registered in, or an email. Instances are cached per language, and
+ * a broken message is reported on the log of whichever invocation is translating.
+ */
+export const translate = createTranslator({
+	resources: RESOURCES,
+	supportedLanguages: SUPPORTED_LANGUAGES,
+	fallbackLanguage: FALLBACK_LANGUAGE,
+	onError(error, key) {
+		currentLog()?.warn("i18n.error", { key, message: error.message });
+	},
+});

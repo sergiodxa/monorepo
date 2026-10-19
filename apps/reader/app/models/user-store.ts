@@ -67,6 +67,7 @@ import type {
 
 import { features, flagsFor } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
 import { KEYS_PER_BULK_READ, readHeads } from "~/app/models/feed-head";
 import { feedStore } from "~/app/models/feed-store";
 import { registerFeed } from "~/app/models/registry";
@@ -3575,6 +3576,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return new Mailer({
 			transport: new CloudflareTransport(this.env.EMAIL),
 			from: { email: this.env.EMAIL_FROM },
+			mail,
 		});
 	}
 

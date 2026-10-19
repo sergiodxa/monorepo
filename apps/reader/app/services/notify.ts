@@ -19,8 +19,10 @@ import { WebPush } from "@sdxc/web-push";
 import type { UserModels } from "~/app/models/user";
 import type { SelectPushSubscription, SelectSettings } from "~/database/schema";
 
-import { NotificationEmail, textFrom, translationFor } from "~/app/emails/notification";
+import emails from "~/app/emails";
+import { translate } from "~/app/initializers/i18n";
 import { vapidKeys } from "~/app/initializers/vapid";
+import { textFrom } from "~/app/services/notification-text";
 import { unsubscribeUrl } from "~/app/services/unsubscribe";
 import { NOTIFY_FEED_TITLES, PUSH_FAILURE_LIMIT } from "~/database/schema";
 import routes from "~/routes/web";
@@ -41,12 +43,6 @@ export const EMAIL_GAP_MS = 4 * 60 * 60 * 1000;
 
 /** The zone quiet hours are computed in when nothing has said which one the reader is in. */
 export const DEFAULT_TIME_ZONE = "UTC";
-
-/**
- * The language an email is written in. A message goes to one address rather than to one
- * browser, so there is no device whose language it could take instead.
- */
-export const DEFAULT_EMAIL_LANGUAGE = "en";
 
 /**
  * The posts this check has to have written before anybody is interrupted. One, because a
@@ -392,7 +388,7 @@ async function deliverTo(
 	let { models, now, record } = input;
 	let started = Date.now();
 
-	let { t } = translationFor(device.locale);
+	let { t } = translate(device.locale);
 
 	let payload = JSON.stringify({
 		...textFrom(t, summary),
@@ -479,24 +475,21 @@ async function deliverEmail(input: NotifyInput, summary: Summary): Promise<boole
 	let { mailer, row, appUrl, record, subject } = input;
 	if (mailer === null || appUrl === null || !row.email) return false;
 
-	let { t } = translationFor(DEFAULT_EMAIL_LANGUAGE);
-
 	/** A link that cannot be signed leaves the settings page as the way out, and is recorded. */
 	let unsubscribe = await unsubscribeUrl(subject, appUrl);
 
-	let sent = await mailer.send(
-		new NotificationEmail(
-			row.email,
-			textFrom(t, summary),
-			new URL(routes.reading.index.href(), appUrl).toString(),
-			{
-				reason: t("notifications.email.footer"),
-				unsubscribeUrl: isFailure(unsubscribe) ? null : unsubscribe.data,
-				unsubscribeLabel: t("notifications.email.unsubscribe"),
-				listName: t("notifications.email.listName"),
-			},
-		),
-	);
+	/**
+	 * A message goes to one address rather than to one browser, so there is no device whose
+	 * language it could take: it is written in the app's fallback language.
+	 */
+	let sent = await mailer.send(emails.notification, {
+		to: row.email,
+		props: {
+			...summary,
+			url: new URL(routes.reading.index.href(), appUrl).toString(),
+			unsubscribeUrl: isFailure(unsubscribe) ? null : unsubscribe.data,
+		},
+	});
 	let ok = !isFailure(sent);
 
 	record("alarm", {

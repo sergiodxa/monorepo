@@ -16,7 +16,8 @@ import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
-import { NotificationEmail } from "~/app/emails/notification";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 import { unsubscribeUrl, unsubscribingReader } from "~/app/services/unsubscribe";
 import { UNSUBSCRIBE_SECRET, UNSUBSCRIBE_SECRET_VALUE } from "~/app/test/unsubscribe-secret";
 
@@ -129,21 +130,18 @@ describe("the notification email", () => {
 	/** Sends one notification through a mailer that records rather than delivers. */
 	async function sent(unsubscribe: string | null) {
 		let transport = new MemoryTransport();
-		let mailer = new Mailer({ transport, from: { email: "reader@example.test" } });
+		let mailer = new Mailer({ transport, from: { email: "reader@example.test" }, mail });
 
-		let result = await mailer.send(
-			new NotificationEmail(
-				"someone@example.com",
-				{ title: "3 new posts", body: "From Example." },
-				`${APP_URL}/reading`,
-				{
-					reason: "You asked for these.",
-					unsubscribeUrl: unsubscribe,
-					unsubscribeLabel: "Stop these emails.",
-					listName: "Reader notifications",
-				},
-			),
-		);
+		let result = await mailer.send(emails.notification, {
+			to: "someone@example.com",
+			props: {
+				posts: 3,
+				feeds: 1,
+				titles: ["Example"],
+				url: `${APP_URL}/reading`,
+				unsubscribeUrl: unsubscribe,
+			},
+		});
 
 		unwrap(result);
 		return { message: transport.last };
