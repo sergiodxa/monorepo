@@ -236,6 +236,27 @@ describe("arguments and commands", () => {
 		);
 	});
 
+	test("names three commands that take a flag and counts the rest", async () => {
+		let kinds = commands({
+			make: commands({
+				model: command({}),
+				job: command({ flags: { force: flag.boolean("force") } }),
+				service: command({ flags: { force: flag.boolean("force") } }),
+				policy: command({ flags: { force: flag.boolean("force") } }),
+				email: command({ flags: { force: flag.boolean("force") } }),
+				command: command({ flags: { force: flag.boolean("force") } }),
+			}),
+		});
+		let cli = createCLI({ name: "prog", commands: kinds });
+		cli.map(kinds.make.model, () => success());
+		let run = await invoke(cli, ["make", "model", "--force"]);
+
+		expect(run.code).toBe(2);
+		expect(run.stderr).toContain(
+			"--force is not a flag of prog make model; prog make job, prog make service, prog make policy and 2 more take it",
+		);
+	});
+
 	test("suggests the closest command and flag", async () => {
 		let command = await parse(["ui", "ad"]);
 		let flagged = await parse(["run", "--forse"]);

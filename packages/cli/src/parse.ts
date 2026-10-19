@@ -222,6 +222,12 @@ function skipValue(argv: readonly string[], index: number): number {
 }
 
 /**
+ * How many commands declaring a misplaced flag its usage error names; past it the rest are
+ * counted, so a flag every member of a large group shares still fits on one line.
+ */
+const NAMED_OWNERS = 3;
+
+/**
  * The message for a flag `entry` does not declare: the commands that do declare it, or the
  * closest name it does declare.
  */
@@ -237,7 +243,9 @@ function unknownFlag(tree: Tree, entry: Entry, token: string): string {
 		let listed =
 			titles.length === 1
 				? (titles[0] as string)
-				: `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) as string}`;
+				: titles.length > NAMED_OWNERS
+					? `${titles.slice(0, NAMED_OWNERS).join(", ")} and ${titles.length - NAMED_OWNERS} more`
+					: `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) as string}`;
 		return `${spelled} is not a flag of ${entry.title}; ${listed} ${titles.length === 1 ? "takes" : "take"} it`;
 	}
 	let candidates: string[] = [];
