@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -32,7 +33,7 @@ import {
 } from "~/app/http/openapi/subjects";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** An identifier named in a route's own path or body that this subject does not hold. */
@@ -86,11 +87,11 @@ function addIdentifierFailure(result: Exclude<AddIdentifierResult, { ok: true }>
  */
 export function createSubjectIdentifiersAddAction(options: ManagementControllerOptions) {
 	return createAction(routes.subjectIdentifiersAdd, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.identifiers.add),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let input = await SUBJECT_IDENTIFIERS_ADD.parse(ctx.request, ctx.params);
@@ -131,11 +132,11 @@ function verifyIdentifierFailure(result: Exclude<VerifyIdentifierResult, { ok: t
  */
 export function createSubjectIdentifiersVerifyAction(options: ManagementControllerOptions) {
 	return createAction(routes.subjectIdentifiersVerify, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.identifiers.verify),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let input = await SUBJECT_IDENTIFIERS_VERIFY.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 
@@ -170,11 +171,11 @@ function setPrimaryIdentifierFailure(
  */
 export function createSubjectIdentifiersSetPrimaryAction(options: ManagementControllerOptions) {
 	return createAction(routes.subjectIdentifiersSetPrimary, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.identifiers.setPrimary),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let input = await SUBJECT_IDENTIFIERS_SET_PRIMARY.parse(ctx.request, ctx.params);
@@ -210,11 +211,11 @@ function removeIdentifierFailure(result: Exclude<RemoveIdentifierResult, { ok: t
  */
 export function createSubjectIdentifiersRemoveAction(options: ManagementControllerOptions) {
 	return createAction(routes.subjectIdentifiersRemove, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.identifiers.remove),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 			let input = await SUBJECT_IDENTIFIERS_REMOVE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);

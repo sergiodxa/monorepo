@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -24,7 +25,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { PERMISSIONS_DEFINE, PERMISSIONS_REMOVE } from "~/app/http/openapi/roles";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -49,11 +50,11 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
  */
 export function createPermissionsListAction(options: ManagementControllerOptions) {
 	return createAction(routes.permissionsList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.roles.permissions.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let result = await ctx.tenantStub.listPermissions();
 
 			return json(result.permissions, { status: 200 });
@@ -86,11 +87,11 @@ function definePermissionFailure(result: Exclude<DefinePermissionResult, { ok: t
  */
 export function createPermissionsDefineAction(options: ManagementControllerOptions) {
 	return createAction(routes.permissionsDefine, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.roles.permissions.define),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let input = await PERMISSIONS_DEFINE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 
@@ -122,11 +123,11 @@ function removePermissionFailure(result: Exclude<RemovePermissionResult, { ok: t
  */
 export function createPermissionsRemoveAction(options: ManagementControllerOptions) {
 	return createAction(routes.permissionsRemove, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.roles.permissions.remove),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let input = await PERMISSIONS_REMOVE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

@@ -24,6 +24,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -35,8 +36,8 @@ import {
 } from "~/app/http/controllers/management/subjects/shared";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
-import { requireScope } from "~/app/http/require-scope";
 import { mintTransferDownloadTicket } from "~/app/models/transfer-storage";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -56,11 +57,9 @@ export function createSubjectsExportStatusAction(options: ManagementControllerOp
 				resolveDashboardSubjectId: options.resolveDashboardSubjectId,
 			}),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.subjects.export.status),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "export:read");
-			if (refused) return refused;
-
 			let runId = exportRunIdParam(ctx);
 			let run = await ctx.models.tenantExportRuns.find(runId);
 			if (!run || run.tenant_id !== ctx.managementCaller.tenantId) return exportRunNotFound();
@@ -74,7 +73,7 @@ export function createSubjectsExportStatusAction(options: ManagementControllerOp
 			};
 
 			let canDownload =
-				!run.include_credentials || requireScope(ctx, "export:credentials") === null;
+				!run.include_credentials || ctx.access.can(abilities.subjects.export.credentials);
 
 			if (run.status === "completed" && run.report_key !== null && canDownload) {
 				let ticket = await mintTransferDownloadTicket(ctx.db, {

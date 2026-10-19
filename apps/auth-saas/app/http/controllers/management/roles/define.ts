@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -21,7 +22,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { ROLES_DEFINE } from "~/app/http/openapi/roles";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `defineRole` refusal onto its own `problem+json` response. */
@@ -56,11 +57,9 @@ export function createRolesDefineAction(options: ManagementControllerOptions) {
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.roles.define),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let input = await ROLES_DEFINE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

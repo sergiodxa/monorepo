@@ -13,6 +13,7 @@
 		"@pitlane/assets": "0.1.0",
 		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/auth": "workspace:*",
+		"@sdxc/authz": "workspace:*",
 		"@sdxc/backoff": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/captcha": "workspace:*",

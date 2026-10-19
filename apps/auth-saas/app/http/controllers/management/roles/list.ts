@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -17,7 +18,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { ROLES_LIST } from "~/app/http/openapi/roles";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -38,11 +39,9 @@ export function createRolesListAction(options: ManagementControllerOptions) {
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.roles.list),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let input = await ROLES_LIST.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

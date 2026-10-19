@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -24,7 +25,7 @@ import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { WEBHOOK_ENDPOINT_BODY_SCHEMA } from "~/app/http/openapi/webhook-endpoints";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `updateWebhookEndpoint` refusal onto its own `problem+json` response. */
@@ -54,11 +55,9 @@ export function createWebhookEndpointsUpdateAction(options: ManagementController
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.webhookEndpoints.update),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "webhooks:write");
-			if (refused) return refused;
-
 			let endpointId = endpointIdParam(ctx);
 
 			let current = await ctx.tenantStub.readWebhookEndpoint({ endpointId });

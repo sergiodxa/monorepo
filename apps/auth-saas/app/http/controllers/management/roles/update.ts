@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -23,7 +24,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { ROLE_PATCH } from "~/app/http/openapi/roles";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `updateRole` refusal onto its own `problem+json` response. */
@@ -54,11 +55,9 @@ export function createRolesUpdateAction(options: ManagementControllerOptions) {
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.roles.update),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let roleId = roleIdParam(ctx);
 
 			let parsed = await readPatchBody(ctx.request, ROLE_PATCH);

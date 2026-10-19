@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -22,7 +23,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { AUDIT_EVENTS_LIST } from "~/app/http/openapi/audit";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -43,6 +44,7 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.audit.list),
 		],
 		/**
 		 * Answers one page, or `badCursor` for a cursor minted under another ordering. The
@@ -50,9 +52,6 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 		 * reachable through the RPC type.
 		 */
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "audit:read");
-			if (refused) return refused;
-
 			let input = await AUDIT_EVENTS_LIST.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 			let query = input.data.query;

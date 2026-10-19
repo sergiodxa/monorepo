@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -25,8 +26,8 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { AGENT_CLIENTS_REGISTER } from "~/app/http/openapi/agent-clients";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
 import { platformTenantStub } from "~/app/initializers/platform-tenant";
+import abilities from "~/app/policies/abilities";
 import { seedManagementScopes } from "~/app/services/management-scopes";
 import routes from "~/routes/management";
 
@@ -63,11 +64,9 @@ export function createAgentClientsRegisterAction(options: ManagementControllerOp
 			}),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.agentClients.register),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "clients:write");
-			if (refused) return refused;
-
 			let input = await AGENT_CLIENTS_REGISTER.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

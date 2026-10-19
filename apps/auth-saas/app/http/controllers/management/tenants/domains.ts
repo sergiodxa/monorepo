@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { HostnameApiError } from "@sdxc/hostname";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
@@ -30,10 +31,10 @@ import {
 	serializeDomain,
 	serializeDomainVerification,
 } from "~/app/http/controllers/management/tenants/shared";
-import { managementEntitlement } from "~/app/http/middleware/management-entitlement";
+import { managementDenied } from "~/app/http/middleware/management-auth";
 import { TENANT_DOMAINS_ATTACH } from "~/app/http/openapi/tenants";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import { attachCustomDomain, removeDomain } from "~/app/services/domain";
 import routes from "~/routes/management";
 
@@ -59,11 +60,11 @@ async function findOwnDomain(
  */
 export function createTenantDomainsListAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantDomainsList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.tenant.domains.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let domains = await ctx.models.domains.ofTenant(ctx.managementCaller.tenantId).all();
 
 			return json(domains.map(serializeDomain), { status: 200 });
@@ -84,12 +85,12 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
 	return createAction(routes.tenantDomainsAttach, {
 		middleware: [
 			...mountedMiddleware(options, "write"),
-			...managementEntitlement("custom_domain", customDomainNotAllowed),
+			requireAbility(abilities.tenant.domains.attach, {
+				onDenied: (ctx, decision) =>
+					decision.cause === "denied" ? customDomainNotAllowed() : managementDenied(ctx, decision),
+			}),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let input = await TENANT_DOMAINS_ATTACH.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 			let body = input.data.body;
@@ -122,11 +123,11 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
  */
 export function createTenantDomainsVerificationAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantDomainsVerification, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.tenant.domains.verification),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let domainId = domainIdParam(ctx);
 			let domain = await findOwnDomain(ctx.models, ctx.managementCaller.tenantId, domainId);
 			if (!domain) return domainNotFound();
@@ -147,11 +148,11 @@ export function createTenantDomainsVerificationAction(options: ManagementControl
  */
 export function createTenantDomainsRemoveAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantDomainsRemove, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.tenant.domains.remove),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let domainId = domainIdParam(ctx);
 			let domain = await findOwnDomain(ctx.models, ctx.managementCaller.tenantId, domainId);
 			if (!domain) return domainNotFound();

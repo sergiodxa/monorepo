@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -21,7 +22,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { PASSWORD_FORCE_RESET } from "~/app/http/openapi/credentials";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `forcePasswordReset` refusal onto its own `problem+json` response. */
@@ -51,11 +52,9 @@ export function createPasswordForceResetAction(options: ManagementControllerOpti
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.subjects.password.forceReset),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let input = await PASSWORD_FORCE_RESET.parse(ctx.request, ctx.params);

@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -18,7 +19,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SUBJECT_ACCESS_READ } from "~/app/http/openapi/roles";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -39,11 +40,9 @@ export function createSubjectAccessReadAction(options: ManagementControllerOptio
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.subjects.access.read),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let input = await SUBJECT_ACCESS_READ.parse(ctx.request, ctx.params);

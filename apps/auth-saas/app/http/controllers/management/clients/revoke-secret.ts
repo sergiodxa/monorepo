@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -17,7 +18,7 @@ import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Parses and requires the `:clientId`/`:secretId` path params this route matches. */
@@ -62,11 +63,9 @@ export function createClientsRevokeSecretAction(options: ManagementControllerOpt
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.clients.revokeSecret),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "clients:write");
-			if (refused) return refused;
-
 			let { clientId, secretId } = secretParams(ctx);
 
 			let result = await ctx.tenantStub.revokeClientSecret({ clientId, secretId });

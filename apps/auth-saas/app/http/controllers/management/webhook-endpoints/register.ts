@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -23,7 +24,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { WEBHOOK_ENDPOINTS_REGISTER } from "~/app/http/openapi/webhook-endpoints";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `registerWebhookEndpoint` refusal onto its own `problem+json` response. */
@@ -53,11 +54,9 @@ export function createWebhookEndpointsRegisterAction(options: ManagementControll
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.webhookEndpoints.register),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "webhooks:write");
-			if (refused) return refused;
-
 			let input = await WEBHOOK_ENDPOINTS_REGISTER.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

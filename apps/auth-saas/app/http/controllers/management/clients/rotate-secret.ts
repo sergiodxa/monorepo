@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -22,7 +23,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { CLIENTS_ROTATE_SECRET } from "~/app/http/openapi/clients";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `rotateClientSecret` refusal onto its own `problem+json` response. */
@@ -57,11 +58,9 @@ export function createClientsRotateSecretAction(options: ManagementControllerOpt
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.clients.rotateSecret),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "clients:write");
-			if (refused) return refused;
-
 			let clientId = clientIdParam(ctx);
 
 			let input = await CLIENTS_ROTATE_SECRET.parse(ctx.request, ctx.params);

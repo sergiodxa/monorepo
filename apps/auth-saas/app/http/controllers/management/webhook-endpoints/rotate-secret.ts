@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -20,7 +21,7 @@ import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -45,11 +46,9 @@ export function createWebhookEndpointsRotateSecretAction(options: ManagementCont
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.webhookEndpoints.rotateSecret),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "webhooks:write");
-			if (refused) return refused;
-
 			let endpointId = endpointIdParam(ctx);
 
 			let result = await ctx.tenantStub.rotateEndpointSecret({

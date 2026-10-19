@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -19,7 +20,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { API_KEYS_LIST } from "~/app/http/openapi/api-keys";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -40,11 +41,9 @@ export function createApiKeysListAction(options: ManagementControllerOptions) {
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.apiKeys.list),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "keys:write");
-			if (refused) return refused;
-
 			let input = await API_KEYS_LIST.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

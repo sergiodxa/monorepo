@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
@@ -16,7 +17,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { API_KEYS_REVOKE } from "~/app/http/openapi/api-keys";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -37,11 +38,9 @@ export function createApiKeysRevokeAction(options: ManagementControllerOptions) 
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.apiKeys.revoke),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "keys:write");
-			if (refused) return refused;
-
 			let keyId = keyIdParam(ctx);
 
 			let input = await API_KEYS_REVOKE.parse(ctx.request, ctx.params);

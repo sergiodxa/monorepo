@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -27,7 +28,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { API_KEYS_ROTATE } from "~/app/http/openapi/api-keys";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `rotateApiKey` refusal onto its own `problem+json` response. */
@@ -58,11 +59,9 @@ export function createApiKeysRotateAction(options: ManagementControllerOptions) 
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.apiKeys.rotate),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "keys:write");
-			if (refused) return refused;
-
 			let keyId = keyIdParam(ctx);
 
 			let input = await API_KEYS_ROTATE.parse(ctx.request, ctx.params);

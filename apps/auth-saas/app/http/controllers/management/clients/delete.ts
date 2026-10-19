@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -14,7 +15,7 @@ import { clientIdParam, clientNotFound } from "~/app/http/controllers/management
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -35,11 +36,9 @@ export function createClientsDeleteAction(options: ManagementControllerOptions) 
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.clients.delete),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "clients:write");
-			if (refused) return refused;
-
 			let clientId = clientIdParam(ctx);
 
 			let result = await ctx.tenantStub.deleteClient({ clientId });

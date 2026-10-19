@@ -16,19 +16,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { managementAuth } from "~/app/http/middleware/management-auth";
+import { managementAuth, managementDenied } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SUBJECTS_EXPORT_BEGIN } from "~/app/http/openapi/subjects";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -50,19 +51,17 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 			managementRateLimit(options.limiter, { bucket: "import_export" }),
 			managementTenant(options.resolveStub),
 			managementIdempotency,
+			requireAbility(abilities.subjects.export.begin),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "export:read");
-			if (refused) return refused;
-
 			let input = await SUBJECTS_EXPORT_BEGIN.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let includeCredentials = input.data.body?.includeCredentials ?? false;
 
 			if (includeCredentials) {
-				let refusedCredentials = requireScope(ctx, "export:credentials");
-				if (refusedCredentials) return refusedCredentials;
+				let credentials = ctx.access.check(abilities.subjects.export.credentials);
+				if (!credentials.allowed) return managementDenied(ctx, credentials);
 			}
 
 			let tenantId = ctx.managementCaller.tenantId;

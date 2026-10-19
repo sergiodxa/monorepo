@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -14,7 +15,7 @@ import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/manageme
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -35,11 +36,9 @@ export function createSubjectsDeleteAction(options: ManagementControllerOptions)
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.subjects.delete),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let result = await ctx.tenantStub.deleteSubject({ subjectId });

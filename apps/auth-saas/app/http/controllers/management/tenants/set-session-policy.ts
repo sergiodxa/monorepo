@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -16,14 +17,13 @@ import { createAction } from "remix/router";
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { SetSessionPolicyResult } from "~/app/models/tenant/object";
 
-import { managementAuth } from "~/app/http/middleware/management-auth";
-import { managementEntitlement } from "~/app/http/middleware/management-entitlement";
+import { managementAuth, managementDenied } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { TENANT_SESSION_POLICY_SET } from "~/app/http/openapi/tenants";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** A caller whose tenant's plan does not include customizing session lifetimes. */
@@ -61,12 +61,14 @@ export function createTenantSessionPolicySetAction(options: ManagementController
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
-			...managementEntitlement("session_policy", sessionPolicyNotEntitled),
+			requireAbility(abilities.tenant.sessionPolicy.set, {
+				onDenied: (ctx, decision) =>
+					decision.cause === "denied"
+						? sessionPolicyNotEntitled()
+						: managementDenied(ctx, decision),
+			}),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let input = await TENANT_SESSION_POLICY_SET.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

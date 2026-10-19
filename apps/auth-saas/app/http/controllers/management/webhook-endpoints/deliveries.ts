@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
@@ -21,7 +22,7 @@ import { managementIdempotency } from "~/app/http/middleware/management-idempote
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -53,11 +54,11 @@ function deliveryNotFound(): Response {
  */
 export function createWebhookDeliveriesListAction(options: ManagementControllerOptions) {
 	return createAction(routes.webhookDeliveriesList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.webhookEndpoints.deliveries.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "webhooks:write");
-			if (refused) return refused;
-
 			let endpointId = endpointIdParam(ctx);
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
@@ -102,11 +103,12 @@ function deliveryIdParam(ctx: { params: Record<string, string | undefined> }): s
  */
 export function createWebhookDeliveriesReplayAction(options: ManagementControllerOptions) {
 	return createAction(routes.webhookDeliveriesReplay, {
-		middleware: [...mountedMiddleware(options, "write"), managementIdempotency],
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			managementIdempotency,
+			requireAbility(abilities.webhookEndpoints.deliveries.replay),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "webhooks:write");
-			if (refused) return refused;
-
 			let deliveryId = deliveryIdParam(ctx);
 
 			let result = await ctx.tenantStub.replayDelivery({

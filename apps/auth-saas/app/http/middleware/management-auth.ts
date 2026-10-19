@@ -2,16 +2,18 @@
  * Resolves a management API request's caller into a tenant id and a scope set,
  * from either a bearer token issued by the platform tenant's own token endpoint
  * or a dashboard session naming a member of the tenant the URL's `:tenantId`
- * segment addresses. Answers only who is calling and with what scopes; a route
- * checks its own required scope itself.
+ * segment addresses, then binds that caller as `ctx.access` against the management
+ * policy, so a route's `requireAbility` refuses with the scope it needs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { BearerChallenge } from "@sdxc/auth/bearer-challenge";
+import type { Refusal } from "@sdxc/authz";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { access } from "@sdxc/authz/middleware/router";
 import { JWK } from "@sdxc/jwt";
 import { createContextKey } from "remix/router";
 
@@ -21,7 +23,8 @@ import { managementProblem } from "~/app/http/problem";
 import { managementResourceServer } from "~/app/initializers/management-resource";
 import { platformTenantIssuer, platformTenantStub } from "~/app/initializers/platform-tenant";
 import { AccessToken } from "~/app/models/tenant/tokens";
-import { scopesForRole } from "~/app/services/management-scopes";
+import policy, { scopeOfAbility, scopeRoles, scopesForRole } from "~/app/policies/policy";
+import { tenantFeatures } from "~/app/services/billing/tenant-features";
 
 /** Who is calling, and the scopes that credential resolved to. */
 export interface ManagementCaller {
@@ -51,14 +54,18 @@ const CALLER_PROPERTY = { property: "managementCaller" } as const;
 const API_PROPERTY = { property: "managementApi" } as const;
 
 /** Why a request was refused, in the RFC 6750 terms its `WWW-Authenticate` challenge carries. */
-type Refusal = Pick<Partial<BearerChallenge>, "error" | "scope">;
+type ChallengeRefusal = Pick<Partial<BearerChallenge>, "error" | "scope">;
 
 /**
  * A `401` whose challenge points at the resource metadata (RFC 9728 §5.1), so a client
  * holding nothing but the API URL learns where to get a token. A request that presented
  * no token gets a challenge with no `error`, per RFC 6750 §3.1.
  */
-function unauthorized(api: ManagementResourceServer, detail: string, refusal?: Refusal): Response {
+function unauthorized(
+	api: ManagementResourceServer,
+	detail: string,
+	refusal?: ChallengeRefusal,
+): Response {
 	return managementProblem(
 		"unauthorized",
 		{ detail },
@@ -85,6 +92,36 @@ export function forbidden(
 		{ detail },
 		{ headers: { "WWW-Authenticate": api.challenge({ error: "insufficient_scope", scope }) } },
 	);
+}
+
+/**
+ * Answers a management refusal: an unpaid feature or a missing scope is a `403` whose
+ * challenge names the scope the ability needs, and an undecidable check is a `500`.
+ * A route selling a paid feature answers its own `entitlement:*` refusal first.
+ *
+ * @param ctx - A request `managementAuth` resolved, carrying the management API.
+ * @param decision - The refusal `requireAbility` or a handler's own check reached.
+ * @returns The `problem+json` refusal.
+ * @example
+ * let decision = ctx.access.check(abilities.subjects.export.credentials);
+ * if (!decision.allowed) return managementDenied(ctx, decision);
+ */
+export function managementDenied(
+	ctx: { managementApi: ManagementResourceServer },
+	decision: Refusal,
+): Response {
+	if (decision.cause === "error") return new Response("Internal Server Error", { status: 500 });
+
+	let scope = scopeOfAbility(decision.ability);
+	if (scope === null) return forbidden(ctx.managementApi, "This caller may not do this.");
+	return forbidden(ctx.managementApi, `This route requires the "${scope}" scope.`, [scope]);
+}
+
+/** A resolved caller, and the roles and consent ceiling the policy binds it with. */
+interface ResolvedCaller {
+	caller: ManagementCaller;
+	roles: string[];
+	within?: string[];
 }
 
 export interface ManagementAuthOptions {
@@ -143,7 +180,7 @@ async function resolveBearerCaller(
 	api: ManagementResourceServer,
 	pathTenantId: string | null,
 	token: string,
-): Promise<ManagementCaller | { error: Response }> {
+): Promise<ResolvedCaller | { error: Response }> {
 	let verified = await verifyManagementBearerToken(token);
 	if (verified === null) {
 		return {
@@ -156,9 +193,12 @@ async function resolveBearerCaller(
 	let binding = await ctx.models.agentClientBindings.find(verified.clientId);
 	if (binding) {
 		return {
-			tenantId: binding.tenant_id,
-			scopes,
-			actor: { type: "client", id: verified.clientId },
+			caller: {
+				tenantId: binding.tenant_id,
+				scopes,
+				actor: { type: "client", id: verified.clientId },
+			},
+			roles: scopeRoles(scopes),
 		};
 	}
 
@@ -180,9 +220,13 @@ async function resolveBearerCaller(
 	let grantedScopes = scopes.filter((scope) => roleScopes.includes(scope));
 
 	return {
-		tenantId: pathTenantId,
-		scopes: grantedScopes,
-		actor: { type: "member", id: verified.subject },
+		caller: {
+			tenantId: pathTenantId,
+			scopes: grantedScopes,
+			actor: { type: "member", id: verified.subject },
+		},
+		roles: [membership.role],
+		within: scopeRoles(scopes),
 	};
 }
 
@@ -192,7 +236,9 @@ async function resolveBearerCaller(
  * the same per-route placement `scimGate` already uses — rather than the
  * router's global chain, where params from a route not yet matched are not
  * there to read. Publishes the management API's resource server as
- * `ctx.managementApi`, so a route's own scope refusal carries the same challenge.
+ * `ctx.managementApi`, and binds `ctx.access`: an agent client holds its scopes' roles,
+ * a person their membership role cut to their token's consent, a dashboard session its
+ * role. The `billing` fact loads only when a paid ability is checked.
  *
  * @param options - The management API's own issuer, and how to resolve a dashboard
  * session's subject id.
@@ -205,6 +251,18 @@ async function resolveBearerCaller(
  */
 export function managementAuth(options: ManagementAuthOptions): Middleware {
 	let api = managementResourceServer(options.issuer);
+
+	/** Binds the resolved caller and continues to the route. */
+	function bind(resolved: ResolvedCaller): Middleware {
+		return access(policy, {
+			roles: resolved.roles,
+			...(resolved.within === undefined ? {} : { within: resolved.within }),
+			facts: {
+				billing: (ctx: RequestContext) => tenantFeatures(ctx.models, resolved.caller.tenantId),
+			},
+			onDenied: managementDenied,
+		});
+	}
 
 	return async (ctx, next) => {
 		ctx.set(ManagementApiContext, api, API_PROPERTY);
@@ -219,12 +277,12 @@ export function managementAuth(options: ManagementAuthOptions): Middleware {
 			let resolved = await resolveBearerCaller(ctx, api, pathTenantId, token);
 			if ("error" in resolved) return resolved.error;
 
-			if (pathTenantId !== null && pathTenantId !== resolved.tenantId) {
+			if (pathTenantId !== null && pathTenantId !== resolved.caller.tenantId) {
 				return forbidden(api, "This credential is bound to a different tenant.");
 			}
 
-			ctx.set(ManagementCallerContext, resolved, CALLER_PROPERTY);
-			return next();
+			ctx.set(ManagementCallerContext, resolved.caller, CALLER_PROPERTY);
+			return bind(resolved)(ctx, next);
 		}
 
 		if (pathTenantId === null) {
@@ -239,16 +297,13 @@ export function managementAuth(options: ManagementAuthOptions): Middleware {
 		let membership = await ctx.models.memberships.findByTenantAndSubject(pathTenantId, subjectId);
 		if (!membership) return forbidden(api, "This member does not belong to this tenant.");
 
-		ctx.set(
-			ManagementCallerContext,
-			{
-				tenantId: pathTenantId,
-				scopes: scopesForRole(membership.role),
-				actor: { type: "member", id: subjectId },
-			},
-			CALLER_PROPERTY,
-		);
+		let caller: ManagementCaller = {
+			tenantId: pathTenantId,
+			scopes: scopesForRole(membership.role),
+			actor: { type: "member", id: subjectId },
+		};
+		ctx.set(ManagementCallerContext, caller, CALLER_PROPERTY);
 
-		return next();
+		return bind({ caller, roles: [membership.role] })(ctx, next);
 	};
 }

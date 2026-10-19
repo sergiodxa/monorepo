@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { json } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -28,7 +29,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { TENANT_MEMBERS_INVITE } from "~/app/http/openapi/tenants";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import { foldIdentifier } from "~/app/services/tenant/subject-identifiers";
 import routes from "~/routes/management";
 
@@ -61,11 +62,9 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 			...mountedMiddleware(options, "write"),
 			managementTenant(options.resolveStub),
 			managementIdempotency,
+			requireAbility(abilities.tenant.members.invite),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let input = await TENANT_MEMBERS_INVITE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 			let body = input.data.body;

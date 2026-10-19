@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -17,7 +18,7 @@ import {
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -38,11 +39,9 @@ export function createWebhookEndpointsDeleteAction(options: ManagementController
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.webhookEndpoints.delete),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "webhooks:write");
-			if (refused) return refused;
-
 			let endpointId = endpointIdParam(ctx);
 
 			let result = await ctx.tenantStub.deleteWebhookEndpoint({

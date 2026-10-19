@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -20,7 +21,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SUBJECTS_CREATE } from "~/app/http/openapi/subjects";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `createSubject` refusal onto its own `problem+json` response. */
@@ -62,11 +63,9 @@ export function createSubjectsCreateAction(options: ManagementControllerOptions)
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
 			managementIdempotency,
+			requireAbility(abilities.subjects.create),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let input = await SUBJECTS_CREATE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 

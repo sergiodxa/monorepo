@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -18,7 +19,7 @@ import {
 	serializeTenant,
 	tenantNotFound,
 } from "~/app/http/controllers/management/tenants/shared";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -32,11 +33,8 @@ import routes from "~/routes/management";
  */
 export function createTenantReadAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantRead, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [...mountedMiddleware(options, "read"), requireAbility(abilities.tenant.read)],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let tenant = await ctx.models.tenants.find(ctx.managementCaller.tenantId);
 			if (!tenant) return tenantNotFound();
 

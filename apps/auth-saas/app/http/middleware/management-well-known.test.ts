@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { parse as parseChallenges } from "@sdxc/auth/bearer-challenge";
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { database } from "@sdxc/database-middleware";
@@ -25,10 +26,10 @@ import type { Models } from "~/app/models";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
-import { requireScope } from "~/app/http/require-scope";
 import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";
 import TenantObject from "~/app/models/tenant/object";
 import { AccessToken } from "~/app/models/tenant/tokens";
+import abilities from "~/app/policies/abilities";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
 
@@ -69,8 +70,11 @@ function buildRouter() {
 		middleware: [database(db), modelsMiddleware(), managementWellKnown(ISSUER)],
 	});
 	router.get("/tenants/:tenantId/probe", {
-		middleware: [managementAuth({ issuer: ISSUER, resolveDashboardSubjectId: async () => null })],
-		handler: (ctx) => requireScope(ctx, "audit:read") ?? new Response(null, { status: 204 }),
+		middleware: [
+			managementAuth({ issuer: ISSUER, resolveDashboardSubjectId: async () => null }),
+			requireAbility(abilities.audit.list),
+		],
+		handler: () => new Response(null, { status: 204 }),
 	});
 	return router;
 }

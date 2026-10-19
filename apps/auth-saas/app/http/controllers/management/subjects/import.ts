@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import * as JSONL from "@sdxc/jsonl";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -22,8 +23,8 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
 import { writeTransferFile } from "~/app/models/transfer-storage";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Narrows a `mode` query value to the two modes an import run accepts. */
@@ -106,11 +107,9 @@ export function createSubjectsImportBeginAction(options: ManagementControllerOpt
 				resolveDashboardSubjectId: options.resolveDashboardSubjectId,
 			}),
 			managementRateLimit(options.limiter, { bucket: "import_export" }),
+			requireAbility(abilities.subjects.import.begin),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let mode = ctx.url.searchParams.get("mode");
 			if (!isImportMode(mode)) return invalidMode();
 

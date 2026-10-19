@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -20,7 +21,7 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -41,11 +42,9 @@ export function createTenantSessionPolicyDescribeAction(options: ManagementContr
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.tenant.sessionPolicy.describe),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "tenant:write");
-			if (refused) return refused;
-
 			let result = await ctx.tenantStub.describeSessionPolicy();
 			let { cost: _cost, ...body } = result;
 

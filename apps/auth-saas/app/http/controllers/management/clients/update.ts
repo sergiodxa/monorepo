@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -26,7 +27,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { CLIENT_BODY_SCHEMA } from "~/app/http/openapi/clients";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /** Maps every `updateClient` refusal onto its own `problem+json` response. */
@@ -60,11 +61,9 @@ export function createClientsUpdateAction(options: ManagementControllerOptions) 
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			requireAbility(abilities.clients.update),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "clients:write");
-			if (refused) return refused;
-
 			let clientId = clientIdParam(ctx);
 
 			let current = await ctx.tenantStub.readClient({ clientId });

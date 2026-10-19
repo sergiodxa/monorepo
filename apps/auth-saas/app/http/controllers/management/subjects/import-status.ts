@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -21,8 +22,8 @@ import {
 } from "~/app/http/controllers/management/subjects/shared";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
-import { requireScope } from "~/app/http/require-scope";
 import { mintTransferDownloadTicket } from "~/app/models/transfer-storage";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -42,11 +43,9 @@ export function createSubjectsImportStatusAction(options: ManagementControllerOp
 				resolveDashboardSubjectId: options.resolveDashboardSubjectId,
 			}),
 			managementRateLimit(options.limiter, { bucket: "read" }),
+			requireAbility(abilities.subjects.import.status),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:read");
-			if (refused) return refused;
-
 			let runId = importRunIdParam(ctx);
 			let run = await ctx.models.tenantImportRuns.find(runId);
 			if (!run || run.tenant_id !== ctx.managementCaller.tenantId) return importRunNotFound();

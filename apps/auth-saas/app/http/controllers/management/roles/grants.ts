@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
@@ -22,7 +23,7 @@ import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -47,11 +48,11 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
  */
 export function createSubjectGrantsListAction(options: ManagementControllerOptions) {
 	return createAction(routes.subjectGrantsList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.subjects.grants.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:read");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
@@ -103,11 +104,11 @@ function grantNotFound(): Response {
  */
 export function createSubjectGrantsRevokeAction(options: ManagementControllerOptions) {
 	return createAction(routes.subjectGrantsRevoke, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.grants.revoke),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 			let clientId = clientIdParam(ctx);
 

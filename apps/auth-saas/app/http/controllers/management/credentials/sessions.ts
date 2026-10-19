@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -27,7 +28,7 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SESSIONS_REVOKE, SESSIONS_REVOKE_ALL } from "~/app/http/openapi/credentials";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -52,11 +53,11 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
  */
 export function createSessionsListAction(options: ManagementControllerOptions) {
 	return createAction(routes.sessionsList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.subjects.sessions.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "sessions:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
@@ -99,11 +100,11 @@ export function createSessionsListAction(options: ManagementControllerOptions) {
  */
 export function createSessionsRevokeAction(options: ManagementControllerOptions) {
 	return createAction(routes.sessionsRevoke, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.sessions.revoke),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "sessions:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 			let sessionId = sessionIdParam(ctx);
 
@@ -134,11 +135,11 @@ export function createSessionsRevokeAction(options: ManagementControllerOptions)
  */
 export function createSessionsRevokeAllAction(options: ManagementControllerOptions) {
 	return createAction(routes.sessionsRevokeAll, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.sessions.revokeAll),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "sessions:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let input = await SESSIONS_REVOKE_ALL.parse(ctx.request, ctx.params);

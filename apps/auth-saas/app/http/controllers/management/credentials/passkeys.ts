@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
@@ -26,7 +27,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { PASSKEY_PATCH } from "~/app/http/openapi/credentials";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -51,11 +52,11 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
  */
 export function createPasskeysListAction(options: ManagementControllerOptions) {
 	return createAction(routes.passkeysList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.subjects.passkeys.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let result = await ctx.tenantStub.listPasskeys({ subjectId });
@@ -76,11 +77,11 @@ export function createPasskeysListAction(options: ManagementControllerOptions) {
  */
 export function createPasskeysRenameAction(options: ManagementControllerOptions) {
 	return createAction(routes.passkeysRename, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.passkeys.rename),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 			let credentialId = credentialIdParam(ctx);
 
@@ -117,11 +118,11 @@ function revokePasskeyFailure(result: Exclude<RevokePasskeyResult, { ok: true }>
  */
 export function createPasskeysRevokeAction(options: ManagementControllerOptions) {
 	return createAction(routes.passkeysRevoke, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.subjects.passkeys.revoke),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 			let credentialId = credentialIdParam(ctx);
 

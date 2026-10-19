@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { NotFound } from "@sdxc/data-model";
 import { json } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -28,7 +29,7 @@ import {
 import { TENANT_MEMBERS_CREATE, TENANT_MEMBERS_UPDATE_ROLE } from "~/app/http/openapi/tenants";
 import { operationInputProblem } from "~/app/http/parse-body";
 import { managementProblem } from "~/app/http/problem";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 /**
@@ -62,11 +63,11 @@ function lastOwner(): Response {
  */
 export function createTenantMembersListAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantMembersList, {
-		middleware: mountedMiddleware(options, "read"),
+		middleware: [
+			...mountedMiddleware(options, "read"),
+			requireAbility(abilities.tenant.members.list),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let memberships = await ctx.models.memberships.ofTenant(ctx.managementCaller.tenantId).all();
 
 			return json(memberships.map(serializeMembership), { status: 200 });
@@ -85,11 +86,11 @@ export function createTenantMembersListAction(options: ManagementControllerOptio
  */
 export function createTenantMembersCreateAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantMembersCreate, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.tenant.members.create),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let input = await TENANT_MEMBERS_CREATE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 			let body = input.data.body;
@@ -118,11 +119,11 @@ export function createTenantMembersCreateAction(options: ManagementControllerOpt
  */
 export function createTenantMembersUpdateRoleAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantMembersUpdateRole, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.tenant.members.updateRole),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let membershipId = membershipIdParam(ctx);
 
 			let input = await TENANT_MEMBERS_UPDATE_ROLE.parse(ctx.request, ctx.params);
@@ -157,11 +158,11 @@ export function createTenantMembersUpdateRoleAction(options: ManagementControlle
  */
 export function createTenantMembersRemoveAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantMembersRemove, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			requireAbility(abilities.tenant.members.remove),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "members:write");
-			if (refused) return refused;
-
 			let membershipId = membershipIdParam(ctx);
 
 			let existing = await findOwnMembership(

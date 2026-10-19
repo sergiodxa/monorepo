@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -28,7 +29,7 @@ import { managementRateLimit } from "~/app/http/middleware/management-rate-limit
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SECOND_FACTOR_RESET } from "~/app/http/openapi/credentials";
 import { operationInputProblem } from "~/app/http/parse-body";
-import { requireScope } from "~/app/http/require-scope";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions) {
@@ -53,11 +54,11 @@ function mountedMiddleware(options: ManagementControllerOptions) {
  */
 export function createSecondFactorResetAction(options: ManagementControllerOptions) {
 	return createAction(routes.secondFactorReset, {
-		middleware: mountedMiddleware(options),
+		middleware: [
+			...mountedMiddleware(options),
+			requireAbility(abilities.subjects.secondFactor.reset),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 
 			let input = await SECOND_FACTOR_RESET.parse(ctx.request, ctx.params);
@@ -89,11 +90,11 @@ export function createSecondFactorResetAction(options: ManagementControllerOptio
  */
 export function createSecondFactorTrustedDevicesRevokeAction(options: ManagementControllerOptions) {
 	return createAction(routes.secondFactorTrustedDevicesRevoke, {
-		middleware: mountedMiddleware(options),
+		middleware: [
+			...mountedMiddleware(options),
+			requireAbility(abilities.subjects.secondFactor.revokeTrustedDevices),
+		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx, "subjects:write");
-			if (refused) return refused;
-
 			let subjectId = subjectIdParam(ctx);
 			let deviceId = deviceIdParam(ctx);
 
