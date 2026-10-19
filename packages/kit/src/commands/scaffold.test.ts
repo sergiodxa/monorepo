@@ -181,6 +181,50 @@ describe("scaffold", () => {
 		expect(await files(root)).toEqual(before);
 	});
 
+	test(
+		"--skip writes pages for a model make model wrote, and the app type checks",
+		{ timeout: 120_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+			let model = await invokeCLI(createSDXC(), ["make", "model", "post", "title", "body"], {
+				cwd: root,
+				interactive: false,
+				exec: projectExec(root),
+			});
+			expect(model.code, model.stderr + model.stdout).toBe(0);
+			let migrations = (await files(root)).filter((path) => path.endsWith(".sql"));
+
+			let result = await invoke(
+				["post", "title", "body", "--skip", "model,migration,factory"],
+				root,
+				{ exec: projectExec(root) },
+			);
+
+			expect(result.code, result.stderr).toBe(0);
+			expect(result.stdout).not.toContain("Wrote app/models/post.ts");
+			expect(result.stdout).toContain("Wrote app/http/controllers/posts/index.tsx");
+			expect((await files(root)).filter((path) => path.endsWith(".sql"))).toEqual(migrations);
+			let checked = await typecheck(root);
+			expect(checked.output).toContain("Found no type errors");
+		},
+	);
+
+	test("--skip refuses to leave out a piece the rest reads and the project lacks", async () => {
+		let root = unwrap(await materialize("app"));
+		DIRECTORIES.push(dirname(root));
+		let before = await files(root);
+
+		let model = await invoke(["post", "title", "--skip", "model"], root);
+		let policy = await invoke(["post", "title", "--skip", "policy"], root);
+
+		expect(model.stderr).toBe(
+			"--skip model needs app/models/post.ts, which the pages, tools and commands read; drop model from --skip\n",
+		);
+		expect(policy.stderr).toContain("run sdxc make policy post or drop policy from --skip");
+		expect(await files(root)).toEqual(before);
+	});
+
 	test("refuses a taken name, writing nothing", { timeout: 60_000 }, async () => {
 		let root = unwrap(await materialize("app"));
 		DIRECTORIES.push(dirname(root));

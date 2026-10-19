@@ -51,18 +51,6 @@ const API_ACTIONS: Readonly<Record<string, ActionRoute>> = {
 	destroy: { method: "delete", suffix: "/:id", ability: "delete" },
 };
 
-/** Every action `--actions` accepts in either contract, and `all`. */
-export const ACTION_NAMES = [
-	"all",
-	"index",
-	"new",
-	"show",
-	"edit",
-	"create",
-	"update",
-	"destroy",
-] as const;
-
 /** The contract whose controllers answer JSON, so its actions are the endpoints. */
 const API_CONTRACT = "api";
 

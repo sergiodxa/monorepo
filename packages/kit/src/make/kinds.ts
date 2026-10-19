@@ -150,6 +150,31 @@ export const MODEL_COMPANIONS = ["migration", "factory"] as const;
 /** One of {@link MODEL_COMPANIONS}. */
 export type ModelCompanion = (typeof MODEL_COMPANIONS)[number];
 
+/** Every action `--actions` accepts in either contract, and `all`. */
+export const ACTION_NAMES = [
+	"all",
+	"index",
+	"new",
+	"show",
+	"edit",
+	"create",
+	"update",
+	"destroy",
+] as const;
+
+/** The pieces `--skip` can leave out of a scaffold. */
+export const SCAFFOLD_PIECES = [
+	"model",
+	"migration",
+	"factory",
+	"validator",
+	"policy",
+	"pages",
+] as const;
+
+/** One piece of a scaffold. */
+export type ScaffoldPiece = (typeof SCAFFOLD_PIECES)[number];
+
 /** Where `make mcp --resource` writes, beside the tools. */
 export const MCP_RESOURCES_FOLDER = "app/mcp/resources";
 

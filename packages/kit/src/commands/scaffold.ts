@@ -26,6 +26,7 @@ export default createCommand(SDXC_COMMANDS.scaffold, {
 			command: ctx.flags.command,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
+			skip: ctx.flags.skip,
 		});
 		if (isFailure(made)) return made;
 		return success();

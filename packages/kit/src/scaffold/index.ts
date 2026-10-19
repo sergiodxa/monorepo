@@ -18,13 +18,14 @@ import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import type { DeclarationRequest, FileEdit } from "../make/declare.js";
 import type { PlannedFile } from "../make/generate.js";
 import type { MakeContext } from "../make/index.js";
+import type { ScaffoldPiece } from "../make/kinds.js";
 import type { Project } from "../middleware.js";
 
 import { headerTags, resolveAuthor } from "../author.js";
 import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
-import { declare } from "../make/declare.js";
+import { declare, declaresAbilities } from "../make/declare.js";
 import { chainFolder, nextMigrationFile } from "../make/migrations.js";
 import { parseName } from "../make/names.js";
 import { loadStub, renderStub } from "../make/stubs.js";
@@ -48,6 +49,8 @@ export interface ScaffoldInput {
 	/** Whether to write tests; `undefined` takes `make.tests`. */
 	test: boolean | undefined;
 	dryRun: boolean;
+	/** The pieces to leave out, each one the project already has or does without. */
+	skip?: readonly ScaffoldPiece[];
 }
 
 /** One file the scaffold renders: the stub it comes from and where it goes. */
@@ -81,15 +84,20 @@ export async function scaffold(
 	let resource = parseResource(input);
 	if (isFailure(resource)) return resource;
 	let tests = input.test ?? config.make.tests;
+	let skip = new Set(input.skip ?? []);
+	let missing = await skippedButNeeded(root, resource.data, input, skip, tests);
+	if (isFailure(missing)) return missing;
 
-	let pieces = piecesOf(resource.data, input, tests);
+	let pieces = piecesOf(resource.data, input, tests, skip);
 	let folder = chainFolder(config.make.migrations, undefined);
 	if (isFailure(folder)) return folder;
 	let migrationName = parseName(`create-${resource.data.plural.base}`);
 	if (isFailure(migrationName)) return migrationName;
 	let migration = await nextMigrationFile(root, folder.data, migrationName.data);
 	if (isFailure(migration)) return migration;
-	pieces.push({ stub: "scaffold.migration.stub", path: `${folder.data}/${migration.data}.sql` });
+	if (!skip.has("migration")) {
+		pieces.push({ stub: "scaffold.migration.stub", path: `${folder.data}/${migration.data}.sql` });
+	}
 
 	let planned: PlannedFile[] = [];
 	let header = headerTags(await resolveAuthor(root));
@@ -107,12 +115,12 @@ export async function scaffold(
 		planned.push({ path: piece.path, content: content.data });
 	}
 
-	let requests = declarationsOf(resource.data, input, config.make.routes);
+	let requests = declarationsOf(resource.data, input, config.make.routes, skip);
 	if (isFailure(requests)) return requests;
 	let staged = await stageDeclarations(root, requests.data, planned);
 	if (isFailure(staged)) return staged;
 	let edits = [...staged.data.edits];
-	let locales = await localeEdits(root, resource.data);
+	let locales = skip.has("pages") ? success([]) : await localeEdits(root, resource.data);
 	if (isFailure(locales)) return locales;
 	edits.push(...locales.data);
 	let dependencies = await missingDependencies(root, [
@@ -196,8 +204,56 @@ function parseResource(input: ScaffoldInput): Result<Resource, Error> {
 	return success({ singular: singular.data, plural: plural.data, fields: fields.data });
 }
 
-/** Every file the scaffold writes but its migration, each test right after the file it covers. */
-function piecesOf(resource: Resource, input: ScaffoldInput, tests: boolean): Piece[] {
+/**
+ * Refuses a skip that leaves the scaffold reading a file the project lacks: the model every other
+ * piece reads, the validator the pages submit through, the factory the tests seed rows with, and
+ * the abilities the pages and tools check.
+ */
+async function skippedButNeeded(
+	root: string,
+	resource: Resource,
+	input: ScaffoldInput,
+	skip: ReadonlySet<ScaffoldPiece>,
+	tests: boolean,
+): Promise<Result<void, Error>> {
+	let name = resource.singular.base;
+	let has = async (path: string) => isSuccess(await wrap(() => stat(join(root, path))));
+	let pages = !skip.has("pages");
+	let readers = pages || input.mcp || input.command;
+	let needs: Array<[ScaffoldPiece, boolean, string, string]> = [
+		["model", readers, `app/models/${name}.ts`, "the pages, tools and commands read"],
+		["validator", pages, `app/http/validators/${name}.ts`, "the pages submit through"],
+		["factory", tests && readers, `database/factories/${name}.ts`, "the tests seed rows with"],
+	];
+	for (let [piece, needed, path, reader] of needs) {
+		if (!skip.has(piece) || !needed || (await has(path))) continue;
+		return failure(
+			new Error(`--skip ${piece} needs ${path}, which ${reader}; drop ${piece} from --skip`),
+		);
+	}
+	if (skip.has("policy") && (pages || input.mcp)) {
+		let key = resource.singular.key;
+		if (!(await declaresAbilities(root, [key]))) {
+			return failure(
+				new Error(
+					`--skip policy needs the ${key} abilities in app/policies/abilities.ts, which the pages and tools check; run sdxc make policy ${name} or drop policy from --skip`,
+				),
+			);
+		}
+	}
+	return success(undefined);
+}
+
+/**
+ * Every file the scaffold writes but its migration, each test right after the file it covers,
+ * leaving out the pieces in `skip`.
+ */
+function piecesOf(
+	resource: Resource,
+	input: ScaffoldInput,
+	tests: boolean,
+	skip: ReadonlySet<ScaffoldPiece>,
+): Piece[] {
 	let { singular, plural } = resource;
 	let name = singular.base;
 	let pieces: Piece[] = [];
@@ -208,13 +264,17 @@ function piecesOf(resource: Resource, input: ScaffoldInput, tests: boolean): Pie
 			pieces.push({ stub: `scaffold.${stub}.test.stub`, path: test });
 		}
 	};
-	add("model", `app/models/${name}.ts`, true);
-	add("factory", `database/factories/${name}.ts`, false);
-	add("validator", `app/http/validators/${name}.ts`, true);
-	if (tests) pieces.push({ stub: "policy.test.stub", path: `app/policies/${name}.test.ts` });
-	add("form", `resources/views/${plural.base}/form.tsx`, false);
-	for (let action of ["index", "new", "show", "edit", "destroy"]) {
-		add(`controller.${action}`, `app/http/controllers/${plural.base}/${action}.tsx`, true);
+	if (!skip.has("model")) add("model", `app/models/${name}.ts`, true);
+	if (!skip.has("factory")) add("factory", `database/factories/${name}.ts`, false);
+	if (!skip.has("validator")) add("validator", `app/http/validators/${name}.ts`, true);
+	if (tests && !skip.has("policy")) {
+		pieces.push({ stub: "policy.test.stub", path: `app/policies/${name}.test.ts` });
+	}
+	if (!skip.has("pages")) {
+		add("form", `resources/views/${plural.base}/form.tsx`, false);
+		for (let action of ["index", "new", "show", "edit", "destroy"]) {
+			add(`controller.${action}`, `app/http/controllers/${plural.base}/${action}.tsx`, true);
+		}
 	}
 	if (input.mcp) {
 		for (let action of ["list", "get", "create", "update", "delete"]) {
@@ -248,27 +308,31 @@ function declarationsOf(
 	resource: Resource,
 	input: ScaffoldInput,
 	routes: string,
+	skip: ReadonlySet<ScaffoldPiece>,
 ): Result<DeclarationRequest[], Error> {
 	let { singular, plural, fields } = resource;
 	let words = singular.title.toLowerCase();
 	let pluralWords = plural.title.toLowerCase();
 	let base = { variant: null, method: "get", routes, tool: "", uri: "" };
-	let requests: DeclarationRequest[] = [
-		{
+	let requests: DeclarationRequest[] = [];
+	if (!skip.has("model")) {
+		requests.push({
 			...base,
 			kind: "model",
 			name: singular,
 			handler: `app/models/${singular.base}`,
 			title: singular.title,
-		},
-		{
+		});
+	}
+	if (!skip.has("policy")) {
+		requests.push({
 			...base,
 			kind: "policy",
 			name: singular,
 			handler: `app/policies/${singular.base}`,
 			title: singular.title,
-		},
-	];
+		});
+	}
 	let pages: Array<[string, string, string, string | undefined]> = [
 		["index", "get", `/${plural.base}`, undefined],
 		["new", "form", `/${plural.base}/new`, "false"],
@@ -276,7 +340,7 @@ function declarationsOf(
 		["edit", "form", `/${plural.base}/:id/edit`, "false"],
 		["destroy", "post", `/${plural.base}/:id/destroy`, undefined],
 	];
-	for (let [action, method, pattern, sitemap] of pages) {
+	for (let [action, method, pattern, sitemap] of skip.has("pages") ? [] : pages) {
 		let name = parseName(`${plural.base}/${action}`);
 		if (isFailure(name)) return name;
 		requests.push({

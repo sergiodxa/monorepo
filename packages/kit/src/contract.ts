@@ -12,8 +12,7 @@ import * as s from "remix/data-schema";
 
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
 import { DEPLOY_STEPS } from "./deploy/plan.js";
-import { ACTION_NAMES } from "./make/actions.js";
-import { KINDS, MODEL_COMPANIONS } from "./make/kinds.js";
+import { ACTION_NAMES, KINDS, MODEL_COMPANIONS, SCAFFOLD_PIECES } from "./make/kinds.js";
 import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
 
 /** Route methods `make controller --method` accepts; `form` declares a GET page with a POST action. */
@@ -450,12 +449,20 @@ export const SDXC_COMMANDS = commands({
 			command: flag.boolean("command", {
 				description: "Also write app commands to list, show, create and delete",
 			}),
+			skip: flag
+				.string("skip", {
+					valueName: "piece",
+					schema: s.enum_(SCAFFOLD_PIECES),
+					description: `Leave out pieces the project already has: ${SCAFFOLD_PIECES.join(", ")}; repeat it or list them`,
+				})
+				.list(),
 			test: TEST_FLAG,
 			dryRun: DRY_RUN_FLAG,
 		},
 		examples: [
 			"scaffold post title body published_at featured view_count:integer",
 			"scaffold person name email website 'bio?' born_on --plural people --mcp --command",
+			"scaffold post title body --skip model,migration,factory",
 		],
 	}),
 	ui: commands({
