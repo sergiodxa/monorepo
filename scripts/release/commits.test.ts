@@ -14,9 +14,13 @@ import type { Commit } from "./commits.js";
 import {
 	attributeCommits,
 	attributeCorrections,
+	hasLowercaseSummary,
 	isMissingBody,
 	messageBody,
+	messageSubject,
 	parseCommits,
+	parseSubject,
+	releaseSummary,
 } from "./commits.js";
 import { packageFromManifest } from "./workspace.js";
 
@@ -219,6 +223,46 @@ describe("messageBody", () => {
 	test("is empty for a subject-only message", () => {
 		expect(messageBody("chore: sweep")).toBe("");
 		expect(messageBody("chore: sweep\n")).toBe("");
+	});
+});
+
+describe("releaseSummary", () => {
+	test("uppercases a lowercase title and keeps a capitalized one", () => {
+		expect(releaseSummary("add ES512 signing keys")).toBe("Add ES512 signing keys");
+		expect(releaseSummary("Add ES512 signing keys")).toBe("Add ES512 signing keys");
+	});
+
+	test("leaves a title opening with code or an empty title as it is", () => {
+		expect(releaseSummary("`exp` is checked")).toBe("`exp` is checked");
+		expect(releaseSummary("")).toBe("");
+	});
+
+	test("prints the summary of an old lowercase and a new capitalized subject alike", () => {
+		let old = parseSubject("feat(jwt)!: drop HS256");
+		let current = parseSubject("feat(jwt)!: Drop HS256");
+		expect(old).toEqual({ type: "feat", scope: "jwt", breaking: true, title: "drop HS256" });
+		expect(releaseSummary(old.title)).toBe(releaseSummary(current.title));
+	});
+});
+
+describe("hasLowercaseSummary", () => {
+	test("flags a Conventional subject whose summary starts lowercase", () => {
+		expect(hasLowercaseSummary("feat(jwt): add keys")).toBe(true);
+		expect(hasLowercaseSummary("fix!: émettre la clé")).toBe(true);
+	});
+
+	test("accepts a capitalized summary, one opening with code, and other subjects", () => {
+		expect(hasLowercaseSummary("feat(jwt): Add keys")).toBe(false);
+		expect(hasLowercaseSummary("fix(kit): `sdxc upgrade` reads the changelog")).toBe(false);
+		expect(hasLowercaseSummary("fixup! feat(jwt): add keys")).toBe(false);
+		expect(hasLowercaseSummary("Merge branch 'main'")).toBe(false);
+	});
+});
+
+describe("messageSubject", () => {
+	test("skips leading blank and comment lines", () => {
+		expect(messageSubject("\n# comment\nfeat(jwt): Add keys\n\nBody.")).toBe("feat(jwt): Add keys");
+		expect(messageSubject("")).toBe("");
 	});
 });
 

@@ -49,7 +49,7 @@ describe("buildChangelog", () => {
 				package: "@sdxc/jwt",
 				type: "feat",
 				breaking: false,
-				title: "title aaa1111",
+				title: "Title aaa1111",
 				body: "body aaa1111",
 			},
 			{
@@ -57,7 +57,7 @@ describe("buildChangelog", () => {
 				package: "@sdxc/markdown",
 				type: "feat",
 				breaking: false,
-				title: "title aaa1111",
+				title: "Title aaa1111",
 				body: "body aaa1111",
 			},
 			{
@@ -65,7 +65,7 @@ describe("buildChangelog", () => {
 				package: "@sdxc/jwt",
 				type: "fix",
 				breaking: false,
-				title: "title bbb2222",
+				title: "Title bbb2222",
 				body: "body bbb2222",
 			},
 		]);
@@ -88,7 +88,7 @@ describe("buildChangelog", () => {
 		expect(entries).toEqual([
 			expect.objectContaining({
 				release: "2026.10.1",
-				title: "title 1234567890abcdef",
+				title: "Title 1234567890abcdef",
 				body: "the corrected note",
 			}),
 		]);
@@ -100,7 +100,7 @@ describe("buildChangelog", () => {
 			[release("2026.10.2", { "@sdxc/jwt": [correction] })],
 			"2026.10.2",
 		);
-		expect(entries.map((entry) => entry.title)).toEqual(["title fedcba0"]);
+		expect(entries.map((entry) => entry.title)).toEqual(["Title fedcba0"]);
 	});
 
 	test("keeps only breaking entries from releases older than twelve months", () => {
@@ -115,9 +115,9 @@ describe("buildChangelog", () => {
 			"2026.10.14",
 		);
 		expect(entries.map((entry) => entry.title)).toEqual([
-			"title old0002",
-			"title edge001",
-			"title new0001",
+			"Title old0002",
+			"Title edge001",
+			"Title new0001",
 		]);
 	});
 });

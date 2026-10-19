@@ -19,7 +19,7 @@ import type { Commit } from "./commits.js";
 import type { Package } from "./workspace.js";
 
 import { run } from "./command.js";
-import { attributeCommits, attributeCorrections, parseCommits } from "./commits.js";
+import { attributeCommits, attributeCorrections, parseCommits, releaseSummary } from "./commits.js";
 import { commitFiles, commitLog } from "./git.js";
 import { HISTORY_PACKAGE } from "./plan.js";
 import { REPO_ROOT } from "./workspace.js";
@@ -41,6 +41,7 @@ export interface ChangelogEntry {
 	package: string;
 	type: string;
 	breaking: boolean;
+	/** The summary without its `type(scope):` prefix, first letter uppercased for older commits. */
 	title: string;
 	/** The release note, already replaced by its latest `Release-Note-For` correction. */
 	body: string;
@@ -83,7 +84,7 @@ export function buildChangelog(releases: ReleaseCommits[], built: string): Chang
 					package: name,
 					type: commit.type,
 					breaking: commit.breaking,
-					title: commit.title,
+					title: releaseSummary(commit.title),
 					body: corrections.get(commit.sha) ?? commit.body,
 				});
 			}

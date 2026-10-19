@@ -46,20 +46,20 @@ cat packages/*/package.json | grep '"name"'
 
 ```bash
 # Single package change - scope from package name
-git commit -m "feat(<app-name>): add search functionality"
-git commit -m "fix(<package-name>): resolve timeout issue"
+git commit -m "feat(<app-name>): Add search functionality"
+git commit -m "fix(<package-name>): Resolve timeout issue"
 
 # Root-level changes
-git commit -m "chore(root): add pre-commit hook"
-git commit -m "chore(root): update workspace dependencies"
+git commit -m "chore(root): Add pre-commit hook"
+git commit -m "chore(root): Update workspace dependencies"
 
 # Tooling configuration
-git commit -m "feat(<tool-name>): enable import sorting"
+git commit -m "feat(<tool-name>): Enable import sorting"
 
 # Global changes across multiple packages - no scope
-git commit -m "refactor: sort imports across codebase"
-git commit -m "chore: update dependencies in all packages"
-git commit -m "style: apply new formatting rules"
+git commit -m "refactor: Sort imports across codebase"
+git commit -m "chore: Update dependencies in all packages"
+git commit -m "style: Apply new formatting rules"
 ```
 
 ## Bad: Missing or Incorrect Format
@@ -71,19 +71,19 @@ git commit -m "add search"
 # Bad: No colon after scope
 git commit -m "feat(<scope>) add search"
 
-# Bad: Capitalized description
-git commit -m "feat(<scope>): Add search functionality"
+# Bad: Lowercase description
+git commit -m "feat(<scope>): add search functionality"
 
 # Bad: Period at end
-git commit -m "feat(<scope>): add search functionality."
+git commit -m "feat(<scope>): Add search functionality."
 
 # Bad: Missing scope for single-package change
-git commit -m "feat: add search"  # Should include scope if only one package changed
+git commit -m "feat: Add search"  # Should include scope if only one package changed
 
 # Bad: Using wildcards or invented scopes for global changes
-git commit -m "refactor(*): sort imports"    # Should omit scope
-git commit -m "chore(all): update deps"      # Should omit scope
-git commit -m "chore(global): apply format"  # Should omit scope
+git commit -m "refactor(*): Sort imports"    # Should omit scope
+git commit -m "chore(all): Update deps"      # Should omit scope
+git commit -m "chore(global): Apply format"  # Should omit scope
 ```
 
 ## Commit Types
@@ -110,33 +110,33 @@ Omit the scope when changes affect multiple apps/packages across the monorepo:
 
 ```bash
 # Good: No scope for cross-cutting changes
-refactor: apply new code style across codebase
-chore: update TypeScript version in all packages
-style: sort imports with new configuration
+refactor: Apply new code style across codebase
+chore: Update TypeScript version in all packages
+style: Sort imports with new configuration
 
 # Bad: Don't invent scopes for global changes
-refactor(*): apply new code style
-chore(all): update TypeScript
-chore(global): sort imports
-chore(monorepo): update dependencies
+refactor(*): Apply new code style
+chore(all): Update TypeScript
+chore(global): Sort imports
+chore(monorepo): Update dependencies
 ```
 
 ## Description Guidelines
 
 The description should:
 
-- Start with lowercase
+- Start with a capital letter (release notes print it without the `type(scope):` prefix)
 - Use imperative mood ("add" not "added" or "adds")
 - Be concise (under 72 characters)
 - No period at the end
 
 ```bash
 # Good
-feat(<scope>): add search functionality
-fix(<scope>): resolve session timeout issue
+feat(<scope>): Add search functionality
+fix(<scope>): Resolve session timeout issue
 
 # Bad
-feat(<scope>): Added search functionality  # Not imperative, capitalized
+feat(<scope>): added search functionality  # Not imperative, lowercase
 fix(<scope>): Fixes session timeout.       # Not imperative, has period
 ```
 
@@ -145,14 +145,14 @@ fix(<scope>): Fixes session timeout.       # Not imperative, has period
 Use `!` after the scope for breaking changes:
 
 ```bash
-feat(<scope>)!: remove deprecated login method
-refactor(<scope>)!: change API response format
+feat(<scope>)!: Remove deprecated login method
+refactor(<scope>)!: Change API response format
 ```
 
 Or add `BREAKING CHANGE:` in the commit body:
 
 ```bash
-git commit -m "feat(<scope>): update authentication flow
+git commit -m "feat(<scope>): Update authentication flow
 
 BREAKING CHANGE: removed support for API key authentication"
 ```
@@ -162,6 +162,6 @@ BREAKING CHANGE: removed support for API key authentication"
 1. Every commit MUST follow format: `<type>(<scope>): <description>` or `<type>: <description>`
 2. Scope is derived from the package name or use `root` for root-level changes
 3. Omit scope when changes affect multiple packages across the monorepo
-4. Description MUST start lowercase, use imperative mood
+4. Description MUST start with a capital letter, use imperative mood
 5. No period at end of description
 6. Use `!` for breaking changes

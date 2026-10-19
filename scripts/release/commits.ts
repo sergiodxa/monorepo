@@ -23,6 +23,9 @@ const FIELD_SEPARATOR = String.fromCharCode(0x1f);
 const CONVENTIONAL_SUBJECT =
 	/^(?<type>[A-Za-z][\w-]*)(?:\((?<scope>[^()]*)\))?(?<breaking>!)?:\s+(?<title>.+)$/;
 
+/** A summary whose first letter is lowercase, the style older commits were written in. */
+const LOWERCASE_SUMMARY = /^\p{Ll}/u;
+
 /** A git trailer line, `Token: value`; a final paragraph made only of these is metadata, not prose. */
 const TRAILER_LINE = /^[A-Za-z0-9-]+:(?:\s|$)/;
 
@@ -122,7 +125,13 @@ export function touchedPackages(files: string[], packages: Package[]): Set<strin
 	return touched;
 }
 
-function parseSubject(subject: string): Pick<Commit, "type" | "scope" | "breaking" | "title"> {
+/**
+ * A subject split into its Conventional parts; a subject without the `type(scope)!: title`
+ * shape is a `chore` titled with the whole subject, and the title keeps the case it was written in.
+ */
+export function parseSubject(
+	subject: string,
+): Pick<Commit, "type" | "scope" | "breaking" | "title"> {
 	let trimmed = subject.trim();
 	let groups = CONVENTIONAL_SUBJECT.exec(trimmed)?.groups;
 	if (groups === undefined) return { type: "chore", scope: null, breaking: false, title: trimmed };
@@ -132,6 +141,39 @@ function parseSubject(subject: string): Pick<Commit, "type" | "scope" | "breakin
 		breaking: groups.breaking === "!",
 		title: (groups.title ?? "").trim(),
 	};
+}
+
+/**
+ * The title as release notes print it, without the `type(scope):` prefix: its first letter is
+ * uppercased, so an older lowercase title reads like a capitalized one.
+ *
+ * @example releaseSummary("add ES512 signing keys") // "Add ES512 signing keys"
+ */
+export function releaseSummary(title: string): string {
+	let first = title.codePointAt(0);
+	if (first === undefined) return title;
+	let char = String.fromCodePoint(first);
+	return `${char.toUpperCase()}${title.slice(char.length)}`;
+}
+
+/**
+ * Whether a Conventional subject's summary starts with a lowercase letter, which a new commit may
+ * not have; a summary opening with code, a digit or punctuation passes, as does any other subject.
+ */
+export function hasLowercaseSummary(subject: string): boolean {
+	let trimmed = subject.trim();
+	if (!CONVENTIONAL_SUBJECT.test(trimmed)) return false;
+	return isLowercaseSummary(parseSubject(trimmed).title);
+}
+
+/** Whether a title, the summary after `type(scope):`, starts with a lowercase letter. */
+export function isLowercaseSummary(title: string): boolean {
+	return LOWERCASE_SUMMARY.test(title);
+}
+
+/** The subject line of a commit message: its first line that is neither blank nor a `#` comment. */
+export function messageSubject(message: string): string {
+	return message.split("\n").find((line) => line.trim() !== "" && !line.startsWith("#")) ?? "";
 }
 
 /**

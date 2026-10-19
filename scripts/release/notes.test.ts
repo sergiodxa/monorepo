@@ -83,9 +83,9 @@ describe("renderNotes", () => {
 		expect(notes).toBe(
 			[
 				"## @sdxc/jwt",
-				"- feat: add ES512 signing keys",
+				"- Add ES512 signing keys",
 				"\tBody paragraphs of the commit, indented with a tab.",
-				"- fix: reject tokens whose `exp` already passed",
+				"- Reject tokens whose `exp` already passed",
 				"",
 				"## @sdxc/spec",
 				"Republished because `@sdxc/jwt` changed.",
@@ -136,7 +136,7 @@ describe("renderNotes", () => {
 		expect(notes).toBe(
 			[
 				"## @sdxc/jwt",
-				"- feat!: drop HS256",
+				"- **Breaking:** Drop HS256",
 				"\tFirst paragraph.",
 				"",
 				"\tSecond paragraph.",
@@ -176,9 +176,37 @@ describe("renderNotes", () => {
 		});
 
 		expect(notes).toBe(
-			["## @sdxc/dates", "Republished.", "", "## @sdxc/xml", "- feat: add the writer", ""].join(
-				"\n",
-			),
+			["## @sdxc/dates", "Republished.", "", "## @sdxc/xml", "- Add the writer", ""].join("\n"),
+		);
+	});
+
+	test("lists a package's breaking commits before its other commits", () => {
+		let notes = renderNotes({
+			version: "2026.9.3",
+			previousTag: null,
+			members: [{ name: "@sdxc/jwt", reason: "changed" }],
+			commitsByPackage: new Map([
+				[
+					"@sdxc/jwt",
+					[
+						commit({ type: "fix", title: "Reject expired tokens" }),
+						commit({ breaking: true, title: "Drop HS256" }),
+						commit({ title: "Add ES512 signing keys" }),
+					],
+				],
+			]),
+			packages: PACKAGES,
+			repoUrl: REPO_URL,
+		});
+
+		expect(notes).toBe(
+			[
+				"## @sdxc/jwt",
+				"- **Breaking:** Drop HS256",
+				"- Reject expired tokens",
+				"- Add ES512 signing keys",
+				"",
+			].join("\n"),
 		);
 	});
 
@@ -195,7 +223,7 @@ describe("renderNotes", () => {
 			repoUrl: REPO_URL,
 		});
 
-		expect(notes).toBe("## @sdxc/jwt\n- feat: add keys\n\tAdds keys.\n");
+		expect(notes).toBe("## @sdxc/jwt\n- Add keys\n\tAdds keys.\n");
 		expect(notes).not.toContain("Co-Authored-By");
 	});
 });

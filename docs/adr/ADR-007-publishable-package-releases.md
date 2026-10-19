@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-09-03
+**Accepted** - 2026-09-03 (release-note entries amended by [ADR-166](./ADR-166-capitalized-summaries-in-release-notes.md))
 
 ## Background
 
@@ -243,13 +243,14 @@ An `E401` or `E404` at publish time is reported with the package name and the tr
 
 ### Release Notes
 
-Notes come from the same commit range. Packages appear in alphabetical order, commits oldest first:
+Notes come from the same commit range. Packages appear in alphabetical order, breaking commits first and then the rest, each group oldest first:
 
 ```
 ## @sdxc/jwt
-- feat: add ES512 signing keys
+- **Breaking:** Drop HS256
+- Add ES512 signing keys
 	Body paragraphs of the commit, indented with a tab.
-- fix: reject tokens whose `exp` already passed
+- Reject tokens whose `exp` already passed
 
 ## @sdxc/spec
 Republished because `@sdxc/sample` changed.
@@ -260,7 +261,7 @@ First release.
 
 | Input                                       | Rendering                                                                                                         |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `type(scope): title`, `type(scope)!: title` | `- type: title`, `- type!: title`                                                                                 |
+| `type(scope): Title`, `type(scope)!: Title` | `- Title`, `- **Breaking:** Title`; the first letter is uppercased for older lowercase titles                     |
 | Commit body                                 | Paragraphs indented with a tab under the entry; git trailers such as `Co-Authored-By:` are dropped                |
 | A commit touching several packages          | Listed under each of them                                                                                         |
 | A member reached through the cascade alone  | `Republished because \`@sdxc/<dependency>\` changed.`                                                             |

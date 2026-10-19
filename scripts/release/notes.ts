@@ -10,6 +10,8 @@ import type { Commit } from "./commits.js";
 import type { Member } from "./plan.js";
 import type { DependencyNode } from "./workspace.js";
 
+import { releaseSummary } from "./commits.js";
+
 export interface NotesInput {
 	version: string;
 	previousTag: string | null;
@@ -20,9 +22,9 @@ export interface NotesInput {
 }
 
 /**
- * Markdown for the GitHub Release: packages alphabetical, commits oldest first as
- * `- type: title` with the body indented by a tab, one line explaining a package that ships
- * without commits, and a compare link to the previous tag when there is one.
+ * Markdown for the GitHub Release: packages alphabetical, breaking commits first and each group
+ * oldest first, as `- Summary` (`- **Breaking:** Summary`) with the body indented by a tab, one
+ * line explaining a package that ships without commits, and a compare link to the previous tag.
  */
 export function renderNotes(input: NotesInput): string {
 	let memberNames = new Set(input.members.map((member) => member.name));
@@ -51,7 +53,11 @@ function renderSection(
 ): string {
 	let lines = [`## ${member.name}`];
 	if (commits.length > 0) {
-		for (let commit of commits) lines.push(...renderCommit(commit));
+		let ordered = [
+			...commits.filter((commit) => commit.breaking),
+			...commits.filter((commit) => !commit.breaking),
+		];
+		for (let commit of ordered) lines.push(...renderCommit(commit));
 	} else if (member.reason === "new") {
 		lines.push("First release.");
 	} else if (member.reason === "dependency") {
@@ -64,9 +70,13 @@ function renderSection(
 	return lines.join("\n");
 }
 
-/** The commit as a list item, its body lines tabbed in and its blank lines kept empty. */
+/**
+ * The commit as a list item headed by its summary, the `type(scope):` prefix left to git: a
+ * reader of one package's notes needs the change, and a breaking one says so in words.
+ */
 function renderCommit(commit: Commit): string[] {
-	let lines = [`- ${commit.type}${commit.breaking ? "!" : ""}: ${commit.title}`];
+	let marker = commit.breaking ? "**Breaking:** " : "";
+	let lines = [`- ${marker}${releaseSummary(commit.title)}`];
 	if (commit.body !== "") {
 		for (let line of commit.body.split("\n")) lines.push(line.trim() === "" ? "" : `\t${line}`);
 	}
