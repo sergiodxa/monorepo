@@ -196,6 +196,7 @@
 		"./mail/print": "./src/mail/print.ts",
 		"./mail/middleware": "./src/mail/middleware.ts",
 		"./mail/middleware/cli": "./src/mail/middleware/cli.ts",
+		"./mail/middleware/jobs": "./src/mail/middleware/jobs.ts",
 		"./mail/unsubscribe": "./src/mail/unsubscribe.ts",
 		"./markdown": "./src/markdown.ts",
 		"./markdown/html": "./src/markdown/html.ts",
