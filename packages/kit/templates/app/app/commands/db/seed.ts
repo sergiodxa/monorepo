@@ -1,23 +1,26 @@
 /**
- * `db seed`: runs the seeders `database/seeders/index.ts` lists on the local database, through
- * the app's models and factories. It writes rows as often as it runs, so a database seeds once
- * through `db prepare` and is reseeded from empty with `db fresh --seed`.
+ * `db seed`: runs the steps of `database/seed.ts` on the local database, through the app's
+ * models and factories. It writes rows as often as it runs, so a database seeds once through
+ * `db prepare` and is reseeded from empty with `db fresh --seed`.
  */
 
 import { createCommand, failure, success } from "@sdxc/cli";
+import { isFailure } from "@sdxc/result";
 
 import commandset from "~/app/commands";
-import { runSeeders } from "~/app/services/seeders";
-import SEEDERS from "~/database/seeders";
+import seeder from "~/database/seed";
 
-/** Prints each seeder's name as it finishes; production rows come from the app itself. */
+/** Prints each step's name once it ran; production rows come from the app itself. */
 export default createCommand(commandset.db.seed, async (ctx) => {
 	if (ctx.flags.remote) {
 		return failure(new Error("db seed writes only to the local database"));
 	}
-	if (Object.keys(SEEDERS).length === 0) {
-		ctx.stdout("No seeders listed in database/seeders/index.ts\n");
+	if (Object.keys(seeder.steps).length === 0) {
+		ctx.stdout("No seed steps in database/seed.ts\n");
 		return success();
 	}
-	return runSeeders(SEEDERS, ctx.db, (name) => ctx.stdout(`Seeded ${name}\n`));
+	let ran = await seeder.run({ db: ctx.db });
+	if (isFailure(ran)) return ran;
+	ctx.stdout(ran.data.map((name) => `Seeded ${name}\n`).join(""));
+	return success();
 });

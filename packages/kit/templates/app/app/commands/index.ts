@@ -50,7 +50,7 @@ export default commands({
 			examples: ["db prepare"],
 		}),
 		seed: command({
-			description: "Run the seeders in database/seeders on the local database",
+			description: "Run the steps in database/seed.ts on the local database",
 			flags: { remote: LOCAL_ONLY },
 			examples: ["db seed"],
 		}),

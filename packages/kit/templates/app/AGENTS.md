@@ -50,10 +50,10 @@ bun run test                       # every test, under Vitest
   `remove-slug-from-posts slug` (`create-posts title …` creates one). After changing a model's
   columns, write its migration with `sdxc make migration <name> --from-model <model>`; read its
   warnings before applying it. Apply migrations with `sdxc run db migrate`.
-- Seed the local database from `database/seeders/`: one file per seeder, default-exporting a
-  `Seeder` (`app/services/seeders.ts`) that writes through `factories` (`database/factories/`)
-  or `models`, listed in run order in `database/seeders/index.ts`. `sdxc run db seed` runs
-  them; `db seed`, `db fresh` and `db prepare` refuse `--remote`.
+- Seed the local database from `database/seed.ts`: a `defineSeed(registry, { … })` from
+  `@sdxc/data-model/seed`, whose named steps run in order and write through `models` for fixed
+  rows or `factories` (`database/factories/`) for generated ones. `db seed`, `db fresh` and
+  `db prepare` refuse `--remote`.
 - Read `sdxc routes --json` to find the controller and middleware behind a URL; narrow it with
   `-g <text>`, `-c <controller>`, `--method`, `--contract`, and `--unused` for what no router maps.
 - Run `sdxc doctor` after an upgrade or a structural change; each finding names its fix.
@@ -77,7 +77,7 @@ bun run test                       # every test, under Vitest
 | is business logic across models, or a rule about none                                                    | `app/services/`                                                    |
 | is an authorization rule                                                                                 | `app/policies/`                                                    |
 | is a view, component, layout, stylesheet or translation                                                  | `resources/` (`resources/locales/` for translations)               |
-| is a route contract, a migration, a test factory, a seeder                                               | `routes/`, `database/{migrations,factories,seeders}/`              |
+| is a route contract, a migration, a test factory, the seed                                               | `routes/`, `database/{migrations,factories}/`, `database/seed.ts`  |
 | is static configuration (site constants, security policy, security.txt, API problems)                    | `config/`                                                          |
 | is any other test helper                                                                                 | `app/test/`                                                        |
 

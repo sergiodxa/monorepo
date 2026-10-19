@@ -29,7 +29,7 @@ sdxc scaffold post title body:text         # model, migration, CRUD pages and te
 
 sdxc run db console                        # SQL prompt over the local database
 sdxc run console                           # Bun's REPL with db and models loaded
-sdxc run db seed                           # run database/seeders on the local database
+sdxc run db seed                           # run database/seed.ts on the local database
 sdxc run db fresh --seed                   # drop every local table, migrate, seed
 sdxc routes                                # every route and its controller (-g, -c, --unused)
 sdxc doctor                                # release drift, secrets, migrations and wiring
@@ -56,7 +56,7 @@ Claude Code at it. `sdxc upgrade` keeps its sdxc section current; add your own r
 | `app/initializers/`    | The one instance of each service: database, mailer, router… |
 | `resources/`           | Layouts, components and translations (`resources/locales/`) |
 | `database/migrations/` | SQL migrations                                              |
-| `database/seeders/`    | The rows `sdxc run db seed` writes into the local database  |
+| `database/seed.ts`     | The rows `sdxc run db seed` writes into the local database  |
 | `config/`              | Site settings, security policy, security.txt, API problems  |
 
 ## What a handler gets

@@ -6,20 +6,13 @@ import { invoke } from "@sdxc/cli/test";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { describe, expect, test, vi } from "vitest";
 
-import type { Seeder } from "~/app/services/seeders";
-
-import { useTemporaryProject } from "~/app/test/local-database";
+import { postsSeed, useTemporaryProject } from "~/app/test/local-database";
 
 let project = useTemporaryProject({
 	"0001_CreatePosts.sql": "CREATE TABLE posts (id TEXT PRIMARY KEY);",
 });
 
-/** A seeder writing one post, to show `--seed` ran on the emptied table. */
-const posts: Seeder = async ({ db }) => {
-	await db.exec("INSERT INTO posts (id) VALUES ('seeded')");
-};
-
-vi.doMock("~/database/seeders", () => ({ default: { posts } }));
+vi.doMock("~/database/seed", () => ({ default: postsSeed("seeded") }));
 
 let { cli } = await import("~/app/initializers/cli");
 
