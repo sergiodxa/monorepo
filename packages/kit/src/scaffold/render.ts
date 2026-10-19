@@ -9,7 +9,7 @@
 
 import type { Name } from "../make/names.js";
 
-import { memberAccess } from "../make/generate.js";
+import { literal, memberAccess } from "../make/generate.js";
 import { createTableStatement } from "../make/schema.js";
 
 import type { Field, FieldType } from "./fields.js";
@@ -64,8 +64,8 @@ export function placeholders(resource: Resource, header: string): Record<string,
 			.filter((line) => line !== null)
 			.join("\n"),
 		schemaFields: lines(fields, 1, (field) => `${field.column}: ${formSchema(field)},`),
-		formSample: entries(fields, (field) => JSON.stringify(typeOf(field).formSample)),
-		invalidForm: entries(fields, (field) => JSON.stringify(typeOf(field).invalidSample)),
+		formSample: entries(fields, (field) => literal(typeOf(field).formSample)),
+		invalidForm: entries(fields, (field) => literal(typeOf(field).invalidSample)),
 		jsonSample: entries(fields, (field) => typeOf(field).jsonSample),
 		changedJson: changed === undefined ? "" : `${changed.column}: ${typeOf(changed).changedSample}`,
 		formImports: [
@@ -123,8 +123,8 @@ export function placeholders(resource: Resource, header: string): Record<string,
 		createArgv: fields
 			.map((field) =>
 				field.type === "boolean"
-					? JSON.stringify(`--${field.flag}`)
-					: `${JSON.stringify(`--${field.flag}`)}, ${JSON.stringify(typeOf(field).flagSample)}`,
+					? literal(`--${field.flag}`)
+					: `${literal(`--${field.flag}`)}, ${literal(typeOf(field).flagSample)}`,
 			)
 			.join(", "),
 	};
@@ -168,10 +168,10 @@ export function jsonProperties(fields: readonly Field[], s: string, optional: bo
 /** A command flag per field, one line each, written with the contract's `flag` local. */
 export function flagProperties(fields: readonly Field[], flag: string): string[] {
 	return fields.map((field) => {
-		let options = `{ description: ${JSON.stringify(field.label)} }`;
-		let required = `{ required: true, description: ${JSON.stringify(field.label)} }`;
+		let options = `{ description: ${literal(field.label)} }`;
+		let required = `{ required: true, description: ${literal(field.label)} }`;
 		let kind = typeOf(field).flag;
-		let declared = `${flag}.${kind}(${JSON.stringify(field.flag)}, ${kind === "boolean" || field.nullable ? options : required})`;
+		let declared = `${flag}.${kind}(${literal(field.flag)}, ${kind === "boolean" || field.nullable ? options : required})`;
 		return `\t${field.key}: ${declared},`;
 	});
 }
@@ -190,7 +190,7 @@ function formSchema(field: Field): string {
 	if (field.type === "boolean") return "f.field(s.defaulted(coerce.boolean(), false))";
 	let { test, convert } = typeOf(field);
 	let refine = (expression: string, message: string) =>
-		`.refine((value) => ${expression}, ${JSON.stringify(message)})`;
+		`.refine((value) => ${expression}, ${literal(message)})`;
 	if (!field.nullable) {
 		let checked = test === null ? "" : refine(test.expression, test.message);
 		let converted = convert === null ? "" : `.transform((value) => ${convert})`;
