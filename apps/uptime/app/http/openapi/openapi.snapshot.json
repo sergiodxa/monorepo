@@ -1801,7 +1801,7 @@
     "/api/v1/backfill-daily-stats": {
       "post": {
         "operationId": "backfillDailyStatsCreate",
-        "summary": "Queue a daily-stats rollup",
+        "summary": "Re-run the daily-stats rollup for every team, as the operator",
         "tags": [
           "HTTP monitors"
         ],
@@ -1860,9 +1860,7 @@
         },
         "security": [
           {
-            "apiKey": [
-              "monitors:write"
-            ]
+            "apiKey": []
           }
         ]
       }

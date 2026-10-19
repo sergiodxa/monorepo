@@ -1,9 +1,8 @@
 /**
- * Tests `POST /api/v1/backfill-daily-stats`: enqueues an `aggregateDailyStats`
- * queue message and returns 202, gated by `requireApiKey("monitors:write")`
- * like every other `/api/v1/*` endpoint. `env.QUEUE` is an in-memory queue
- * installed via `vi.doMock("cloudflare:workers", ...)` since the controller
- * reads `env` at module load, so assertions read what actually landed on it.
+ * Tests `POST /api/v1/backfill-daily-stats`: the operator's key, the one set as
+ * `UPTIME_CRON_API_KEY`, enqueues an `aggregateDailyStats` message for every team and gets 202,
+ * and every team's key is refused whatever its scopes. `env` is mocked so the test reads what
+ * landed on the in-memory queue and decides which key is the operator's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,11 +30,14 @@ const CONFORMANCE = checkConformance({ backfillDailyStatsCreate: null });
  */
 let queue = createQueue({ name: "uptime" });
 
-vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+/** The Worker's environment; each test sets `UPTIME_CRON_API_KEY` to the operator's key. */
+let testEnv = createEnv<Env>({ QUEUE: queue, UPTIME_CRON_API_KEY: "" });
+
+vi.doMock("cloudflare:workers", () => ({ env: testEnv }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { createTestDatabase } = await import("~/app/test/db");
-let { teams } = await import("~/database/schema");
+let { apiKeyScopes, teams } = await import("~/database/schema");
 let { backfillDailyStatsCreate } = await import("./backfill-daily-stats");
 let { jobQueue } = await import("~/app/initializers/queue");
 let { bindModels } = await import("~/app/test/models");
@@ -82,13 +84,15 @@ function post(key: string | null) {
 
 beforeEach(() => {
 	queue.reset();
+	testEnv.UPTIME_CRON_API_KEY = "";
 });
 
 describe("POST /api/v1/backfill-daily-stats", () => {
-	test("enqueues an aggregateDailyStats message and returns 202", async () => {
+	test("enqueues an aggregateDailyStats message for the operator's key and returns 202", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let key = await createApiKey(db, team.id, ["cron-jobs:ping"]);
+		testEnv.UPTIME_CRON_API_KEY = key;
 
 		let response = await dispatch(db, post(key));
 		expect(response.status).toBe(202);
@@ -99,6 +103,34 @@ describe("POST /api/v1/backfill-daily-stats", () => {
 		expect(queue.sent).toHaveLength(1);
 		expect(queue.sent[0]?.body).toEqual({ job: "aggregateDailyStats" });
 		expect(queue.sent[0]?.contentType).toBe("json");
+	});
+
+	/**
+	 * The rollup rewrites every team's stats, so a key from team A queueing it would be acting
+	 * on team B's monitors. Any scope used to be enough with `monitors:write` among them.
+	 */
+	test("refuses a team's key holding every scope, leaving other teams' stats alone", async () => {
+		let { db } = createTestDatabase();
+		let operatorTeam = await createTeamRow(db);
+		let teamA = await createTeamRow(db);
+		testEnv.UPTIME_CRON_API_KEY = await createApiKey(db, operatorTeam.id, ["cron-jobs:ping"]);
+		let key = await createApiKey(db, teamA.id, [...apiKeyScopes]);
+
+		let response = await dispatch(db, post(key));
+
+		expect(response.status).toBe(403);
+		expect(queue.sent).toHaveLength(0);
+	});
+
+	test("refuses every key while the operator's key is unset", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+
+		let response = await dispatch(db, post(key));
+
+		expect(response.status).toBe(403);
+		expect(queue.sent).toHaveLength(0);
 	});
 
 	test("returns 401 for a missing Authorization header", async () => {
@@ -112,16 +144,6 @@ describe("POST /api/v1/backfill-daily-stats", () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, post("not-a-real-key"));
 		expect(response.status).toBe(401);
-		expect(queue.sent).toHaveLength(0);
-	});
-
-	test("returns 403 for a key missing the monitors:write scope", async () => {
-		let { db } = createTestDatabase();
-		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["monitors:read"]);
-
-		let response = await dispatch(db, post(key));
-		expect(response.status).toBe(403);
 		expect(queue.sent).toHaveLength(0);
 	});
 });

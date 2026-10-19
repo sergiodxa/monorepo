@@ -119,7 +119,6 @@ describe("apiAccess", () => {
 
 	test.each([
 		[abilities.monitors.write, "monitors:write"],
-		[abilities.stats.backfill, "monitors:write"],
 		[abilities.ping.trigger, "ping:trigger"],
 	] as const)("refuses %s with a challenge naming %s", async (ability, scope) => {
 		let response = await serve([asKey(["monitors:read"]), apiAccess], ability);

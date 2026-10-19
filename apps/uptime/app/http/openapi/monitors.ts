@@ -363,7 +363,7 @@ const BACKFILL_DAILY_STATS_CREATE = defineOperation(
 	"backfillDailyStatsCreate",
 	routes.api.v1.backfillDailyStats,
 	{
-		summary: "Queue a daily-stats rollup",
+		summary: "Re-run the daily-stats rollup for every team, as the operator",
 		tags: TAGS,
 		responses: {
 			202: {
@@ -372,7 +372,7 @@ const BACKFILL_DAILY_STATS_CREATE = defineOperation(
 			},
 		},
 		problems: AUTH_PROBLEMS,
-		security: [{ apiKey: ["monitors:write"] }],
+		security: [{ apiKey: [] }],
 	},
 );
 

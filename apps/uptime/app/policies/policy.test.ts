@@ -134,9 +134,24 @@ describe("uptime's policy", () => {
 		});
 
 		expect(key.can(abilities.monitors.write)).toBe(true);
-		expect(key.can(abilities.stats.backfill)).toBe(true);
 		expect(key.check(abilities.monitors.read)).toMatchObject({ cause: "outOfScope" });
 		expect(key.can(abilities.team.delete)).toBe(false);
+	});
+
+	test("keeps the cross-team stats backfill to the operator", () => {
+		let operator = testAccess(policy, { roles: ["operator"], facts: active });
+		let owner = testAccess(policy, { roles: ["owner"], facts: active });
+		let admin = testAccess(policy, { roles: ["admin"], facts: active });
+		let key = testAccess(policy, {
+			roles: ["owner"],
+			within: [scopeRole("monitors:write")],
+			facts: active,
+		});
+
+		expect(operator.can(abilities.stats.backfill)).toBe(true);
+		expect(owner.can(abilities.stats.backfill)).toBe(false);
+		expect(admin.can(abilities.stats.backfill)).toBe(false);
+		expect(key.can(abilities.stats.backfill)).toBe(false);
 	});
 
 	test("closes the ad-hoc ping API while its switch is off for the team", () => {

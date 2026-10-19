@@ -5538,7 +5538,7 @@ export default {
 							"monitors:read":
 								"HTTP-Monitore, ihre Prüfergebnisse, ihre Verfügbarkeitsstatistiken und den Gesamtstatus des Teams lesen.",
 							"monitors:write":
-								"HTTP-Monitore erstellen und ändern sowie ihre Inhaltsprüfungen hinzufügen und entfernen. Zusätzlich lässt sich damit ein Neuaufbau der Tagesstatistiken einreihen.",
+								"HTTP-Monitore erstellen und ändern sowie ihre Inhaltsprüfungen hinzufügen und entfernen.",
 							"maintenance:read": "Die Wartungsfenster des Teams auflisten und lesen.",
 							"maintenance:write":
 								"Wartungsfenster erstellen, ändern, vorzeitig beenden und löschen. Ein laufendes Fenster kann Benachrichtigungen für die abgedeckten Monitore unterdrücken.",

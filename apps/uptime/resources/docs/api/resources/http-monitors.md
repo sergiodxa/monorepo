@@ -527,7 +527,10 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/stats \
 
 ## Backfill Daily Stats
 
-Enqueue a daily-stats aggregation job for your team's monitors.
+Re-run yesterday's daily-stats rollup, which writes the uptime bars and reports of every team
+at once. The rollup already runs every day at 01:00 UTC, so this endpoint exists for the
+operator of the service to repeat a missed run; a team's API key gets `403 Forbidden`,
+whatever its scopes.
 
 The job runs in the background, so the response confirms that it was queued rather than
 that it has finished.
@@ -543,7 +546,7 @@ POST /api/v1/backfill-daily-stats
 ```bash
 curl https://uptime.sergiodxa.com/api/v1/backfill-daily-stats \
   -X POST \
-  -H "Authorization: Bearer uptime_your_api_key"
+  -H "Authorization: Bearer uptime_operator_api_key"
 ```
 
 ### Response

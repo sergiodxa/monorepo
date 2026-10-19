@@ -5503,7 +5503,7 @@ export default {
 							"monitors:read":
 								"Legge i monitor HTTP, i loro risultati di controllo, le statistiche di disponibilità e lo stato complessivo del team.",
 							"monitors:write":
-								"Crea e aggiorna i monitor HTTP, e aggiunge e rimuove i loro controlli sul contenuto. Consente anche di accodare una ricostruzione delle statistiche giornaliere.",
+								"Crea e aggiorna i monitor HTTP, e aggiunge e rimuove i loro controlli sul contenuto.",
 							"maintenance:read": "Elenca e legge le finestre di manutenzione del team.",
 							"maintenance:write":
 								"Crea, aggiorna, termina in anticipo ed elimina le finestre di manutenzione. Una finestra in corso può sospendere gli avvisi dei monitor che copre.",

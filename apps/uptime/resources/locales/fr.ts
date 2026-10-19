@@ -5526,7 +5526,7 @@ export default {
 							"monitors:read":
 								"Lire les moniteurs HTTP, leurs résultats de vérification, leurs statistiques de disponibilité et le statut global de l'équipe.",
 							"monitors:write":
-								"Créer et modifier les moniteurs HTTP, et ajouter ou retirer leurs vérifications de contenu. Permet aussi de mettre en file une reconstruction des statistiques quotidiennes.",
+								"Créer et modifier les moniteurs HTTP, et ajouter ou retirer leurs vérifications de contenu.",
 							"maintenance:read": "Lister et lire les fenêtres de maintenance de l'équipe.",
 							"maintenance:write":
 								"Créer, modifier, terminer par anticipation et supprimer des fenêtres de maintenance. Une fenêtre en cours peut suspendre les alertes des moniteurs qu'elle couvre.",

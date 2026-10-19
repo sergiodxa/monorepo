@@ -5505,7 +5505,7 @@ export default {
 							"monitors:read":
 								"List and read HTTP monitors, their check results, their uptime stats and the team's overall status.",
 							"monitors:write":
-								"Create and update HTTP monitors, and add and remove their content checks. It can also queue a rebuild of the daily stats.",
+								"Create and update HTTP monitors, and add and remove their content checks.",
 							"maintenance:read": "List and read the team's maintenance windows.",
 							"maintenance:write":
 								"Create, update, end early and delete maintenance windows. A running window can suppress alerts for the monitors it covers.",

@@ -40,6 +40,13 @@ describe("expandReference", () => {
 		expect(result.data).toMatch(/After\.$/);
 	});
 
+	test("names the operator's key for an endpoint no scope grants", () => {
+		let result = expandReference("<!-- operation: backfillDailyStatsCreate -->");
+		if (isFailure(result)) return expect.unreachable(result.error.message);
+
+		expect(result.data).toContain("**Authentication:** the operator's API key");
+	});
+
 	test("renders the problem-types table", () => {
 		let result = expandReference("<!-- problem-types -->");
 		if (isFailure(result)) return expect.unreachable(result.error.message);

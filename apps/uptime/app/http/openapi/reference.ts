@@ -76,6 +76,20 @@ export function expandReference(content: string): Result<string, ReferenceError>
 }
 
 /**
+ * The line naming what an endpoint asks of its caller: the scopes a key needs, an API key
+ * granted by no scope, which only the operator holds, or nothing at all.
+ *
+ * @param keyed - Whether the endpoint takes an API key.
+ * @param scopes - The scopes the key must carry.
+ */
+function authentication(keyed: boolean, scopes: string[]): string {
+	if (scopes.length > 0) {
+		return `**Required scope:** ${scopes.map((scope) => `\`${scope}\``).join(", ")}`;
+	}
+	return keyed ? "**Authentication:** the operator's API key" : "**Authentication:** none";
+}
+
+/**
  * One endpoint's generated reference: its required scope, the problems it answers with,
  * and the JSON Schema of its request and response bodies.
  *
@@ -84,14 +98,9 @@ export function expandReference(content: string): Result<string, ReferenceError>
 function renderOperation(operation: Operation): string {
 	let parts: string[] = [];
 
-	let scopes = (operation.spec.security ?? []).flatMap((requirement) =>
-		Object.values(requirement).flat(),
-	);
-	parts.push(
-		scopes.length === 0
-			? "**Authentication:** none"
-			: `**Required scope:** ${scopes.map((scope) => `\`${scope}\``).join(", ")}`,
-	);
+	let security = operation.spec.security ?? [];
+	let scopes = security.flatMap((requirement) => Object.values(requirement).flat());
+	parts.push(authentication(security.length > 0, scopes));
 
 	let errors = errorRows(operation.spec.problems ?? []);
 	if (errors.length > 0) {

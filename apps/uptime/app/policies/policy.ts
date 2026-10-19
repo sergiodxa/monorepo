@@ -1,7 +1,8 @@
 /**
  * Who may do what in uptime: `member` runs the team's monitoring, `admin` also deletes monitors
- * and manages the team, its members, invites, domains and API keys, and `owner` holds everything.
- * An API key acts as the owner capped by one `scope:<name>` role per scope it carries.
+ * and manages the team, its members, invites, domains and API keys, and `owner` holds everything
+ * of its team. `operator` runs the app, across every team. An API key acts as the owner capped by
+ * one `scope:<name>` role per scope it carries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,7 +32,7 @@ export const API_SCOPES: Record<ApiKeyScope, UptimeAbility[]> = {
 	"team-domains:read": ["domains.read"],
 	"team-domains:write": ["domains.write"],
 	"monitors:read": ["monitors.read"],
-	"monitors:write": ["monitors.write", "stats.backfill"],
+	"monitors:write": ["monitors.write"],
 	"monitors:delete": ["monitors.delete"],
 	"maintenance:read": ["maintenance.read"],
 	"maintenance:write": ["maintenance.write"],
@@ -137,7 +138,8 @@ const policy = definePolicy(abilities, {
 				),
 			],
 		},
-		owner: [allow("*", { id: "owner" })],
+		owner: [allow("*", { id: "owner", except: ["stats.backfill"] })],
+		operator: [allow("stats.backfill", { id: "operator" })],
 		...Object.fromEntries(
 			Object.entries(API_SCOPES).map(([scope, granted]) => [
 				scopeRole(scope as ApiKeyScope),

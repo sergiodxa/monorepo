@@ -80,6 +80,8 @@ export default abilities({
 		api: ability({ description: "Reach the ad-hoc ping API while its switch is on" }),
 	},
 	stats: {
-		backfill: ability({ description: "Enqueue the daily-stats rollup for every team" }),
+		backfill: ability({
+			description: "Re-run yesterday's daily-stats rollup for every team, as the operator",
+		}),
 	},
 });
