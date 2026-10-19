@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { redirect } from "@sdxc/http/response";
 import { badGateway, notFound } from "@sdxc/http/response/json";
 import * as s from "remix/data-schema";
@@ -15,8 +16,9 @@ import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { dashboardRole } from "~/app/http/middleware/dashboard-role";
+import { dashboardAccess } from "~/app/http/middleware/dashboard-access";
 import { polar } from "~/app/initializers/billing";
+import abilities from "~/app/policies/abilities";
 import { openCheckout } from "~/app/services/billing-checkout";
 import routes from "~/routes/web";
 
@@ -52,7 +54,7 @@ function checkoutReturnUrl(requestUrl: string): string {
  * router.map(routes.billing.checkout, checkout);
  */
 export default createAction(routes.billing.checkout, {
-	middleware: [dashboardRole("owner")],
+	middleware: [dashboardAccess(), requireAbility(abilities.billing.manage)],
 	handler: async (ctx) => {
 		let { tenantId } = s.parse(Params, ctx.params);
 		let submitted = s.parse(CheckoutForm, ctx.formData);

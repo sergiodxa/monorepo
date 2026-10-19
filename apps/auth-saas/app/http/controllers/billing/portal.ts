@@ -9,13 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { redirect } from "@sdxc/http/response";
 import { badGateway, notFound } from "@sdxc/http/response/json";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { dashboardRole } from "~/app/http/middleware/dashboard-role";
+import { dashboardAccess } from "~/app/http/middleware/dashboard-access";
 import { polar } from "~/app/initializers/billing";
+import abilities from "~/app/policies/abilities";
 import { openPortal } from "~/app/services/billing-portal";
 import routes from "~/routes/web";
 
@@ -32,7 +34,7 @@ let Params = s.object({ tenantId: s.string() });
  * router.map(routes.billing.portal, portal);
  */
 export default createAction(routes.billing.portal, {
-	middleware: [dashboardRole("owner")],
+	middleware: [dashboardAccess(), requireAbility(abilities.billing.manage)],
 	handler: async (ctx) => {
 		let { tenantId } = s.parse(Params, ctx.params);
 
