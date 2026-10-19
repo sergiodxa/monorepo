@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one
@@ -19,15 +19,15 @@ pages the list, [`@sdxc/rate-limit`](/api/rate-limit) counts the calls, and
 [`@sdxc/get-client-ip`](/api/get-client-ip) names the caller they are counted against.
 
 ```bash
-npm add @sdxc/get-client-ip @sdxc/http @sdxc/pagination @sdxc/problem @sdxc/rate-limit \
-	@sdxc/result @sdxc/validate remix
+npm add @sdxc/get-client-ip @sdxc/http @sdxc/lazy-route @sdxc/pagination @sdxc/problem \
+	@sdxc/rate-limit @sdxc/result @sdxc/validate remix
 ```
 
 The handlers read the database as `ctx.db`, published by middleware as described in
 [Wire the router](/docs/building-remix-apps/wire-the-router), and hang on three routes in
-the app's route table:
+the API's own route contract, beside the pages':
 
-```typescript {% title="routes/web.ts" %}
+```typescript {% title="routes/api.ts" %}
 import { get, post, route } from "remix/routes";
 
 export default route({
@@ -41,17 +41,27 @@ export default route({
 });
 ```
 
+An app from `sdxc create` already has this contract, and
+[`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) writes a whole resource into it, with its
+model, its endpoints and their OpenAPI operations:
+
+```bash
+sdxc scaffold book title author year:integer 'summary?' --api
+```
+
+This guide writes each piece by hand, so you can see what the scaffold's endpoints do.
+
 ## Declare the problem catalog
 
 A client branches on a problem's `type`, so every failure the API can answer with deserves a
 stable URI. `defineProblems` writes each one once: the slug, the status and the title. Every
 entry becomes a builder, so a handler supplies only what differs per occurrence.
 
-```typescript {% title="app/services/problems.ts" %}
+```typescript {% title="config/problems.ts" %}
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
 import * as s from "remix/data-schema";
 
-export const problems = defineProblems("https://books.example.com/docs/errors/", {
+export default defineProblems("https://books.example.com/docs/errors/", {
 	badRequest: {
 		slug: "bad-request",
 		status: 400,
@@ -89,7 +99,7 @@ their own so every handler and the later guides import the same values. A path p
 that only accepts the shape your ids have lets a malformed id answer `404` without a query,
 since no book can have it.
 
-```typescript {% title="app/http/schemas/books.ts" %}
+```typescript {% title="app/http/validators/books.ts" %}
 import * as s from "remix/data-schema";
 import { max, maxLength, min, minLength } from "remix/data-schema/checks";
 
@@ -118,11 +128,11 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
-import { BOOK_INPUT } from "~/app/http/schemas/books";
-import { problems } from "~/app/services/problems";
-import routes from "~/routes/web";
+import { BOOK_INPUT } from "~/app/http/validators/books";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
 
-export const create = createAction(routes.api.books.create, async (ctx) => {
+export default createAction(routes.api.books.create, async (ctx) => {
 	let input = await validate(ctx.request, BOOK_INPUT);
 	if (isFailure(input)) {
 		let errors = issuesFrom(input.error);
@@ -166,11 +176,11 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
-import { BOOK_PARAMS } from "~/app/http/schemas/books";
-import { problems } from "~/app/services/problems";
-import routes from "~/routes/web";
+import { BOOK_PARAMS } from "~/app/http/validators/books";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
 
-export const show = createAction(routes.api.books.show, async (ctx) => {
+export default createAction(routes.api.books.show, async (ctx) => {
 	let params = await validate(ctx.params, BOOK_PARAMS);
 	if (isFailure(params))
 		return problems.notFound({ detail: "No book has that id." });
@@ -201,13 +211,13 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { serializeBook } from "~/app/models/book";
-import { problems } from "~/app/services/problems";
+import problems from "~/config/problems";
 import { books } from "~/database/schema";
-import routes from "~/routes/web";
+import routes from "~/routes/api";
 
 const paging = createPaging({ perPage: 25, maxPerPage: 100 });
 
-export const index = createAction(routes.api.books.index, async (ctx) => {
+export default createAction(routes.api.books.index, async (ctx) => {
 	let params = paging.parse(ctx.url.searchParams);
 	if (isFailure(params)) {
 		let errors = issuesFrom(params.error);
@@ -255,7 +265,7 @@ import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
-import { problems } from "~/app/services/problems";
+import problems from "~/config/problems";
 
 export function apiRateLimit() {
 	let limit = { limit: 100, window: "1 minute" } as const;
@@ -280,25 +290,34 @@ without a parseable header shares the `"unknown"` budget. Once your API authenti
 callers, key on the caller's identity instead of the address, so one client cannot spend
 another's budget.
 
-Mount the limiter once over the three actions, so they share one budget per caller. The
-`createWebRouter()` below shows only that mapping; the app's own router also runs the global
-middleware that publishes `ctx.db`:
+Each controller default-exports its action, and the router maps each one through `lazy()`, so a
+request imports only the controller it reaches. The limiter goes in `lazy()`'s second argument,
+so a caller over budget is answered before any controller loads, and the three actions share one
+budget per caller. The `createWebRouter()` below shows only that mapping; the app's own router
+also runs the global middleware that publishes `ctx.db`:
 
 ```typescript {% title="app/initializers/router.tsx" %}
+import { lazy } from "@sdxc/lazy-route";
 import { createRouter } from "remix/router";
 
-import { create } from "~/app/http/controllers/api/books/create";
-import { index } from "~/app/http/controllers/api/books/index";
-import { show } from "~/app/http/controllers/api/books/show";
 import { apiRateLimit } from "~/app/http/middleware/api-rate-limit";
-import routes from "~/routes/web";
+import routes from "~/routes/api";
 
 export function createWebRouter() {
 	let router = createRouter();
-	router.map(routes.api.books, {
-		middleware: [apiRateLimit()],
-		actions: { index, create, show },
-	});
+	let limit = [apiRateLimit()];
+	router.map(
+		routes.api.books.index,
+		lazy(() => import("~/app/http/controllers/api/books/index"), limit),
+	);
+	router.map(
+		routes.api.books.create,
+		lazy(() => import("~/app/http/controllers/api/books/create"), limit),
+	);
+	router.map(
+		routes.api.books.show,
+		lazy(() => import("~/app/http/controllers/api/books/show"), limit),
+	);
 	return router;
 }
 ```

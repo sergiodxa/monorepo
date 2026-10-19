@@ -20,8 +20,8 @@ onto them, and middleware that publishes services onto a typed context. At the e
 typed into a form.
 
 ```bash
-npm add @sdxc/cron @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/messaging @sdxc/result \
-	@sdxc/trace-context remix
+npm add @sdxc/cron @sdxc/database-middleware @sdxc/http @sdxc/jobs @sdxc/logger \
+	@sdxc/messaging @sdxc/result @sdxc/trace-context remix
 ```
 
 ## Declare the jobs
@@ -60,7 +60,7 @@ import { expireBefore } from "~/app/models/posting";
 const LIFETIME_MS = 30 * 86_400_000;
 
 export default createJobHandler(jobs.expirePostings, async (ctx) => {
-	let closed = await expireBefore(ctx.database, Date.now() - LIFETIME_MS);
+	let closed = await expireBefore(ctx.db, Date.now() - LIFETIME_MS);
 	ctx.log.set({ postings: { expired: closed } });
 });
 ```
@@ -80,33 +80,37 @@ never-returning call only through a `const` name and `ctx` is a parameter.
 
 ## Publish services onto the job context
 
-`ctx.database` above came from job middleware, the same way `ctx.db` comes from request
-middleware. A test hands in its own source, and the handler never touches a binding:
+`ctx.db` above came from job middleware, the same way it comes from request middleware.
+`database()` from `@sdxc/database-middleware/jobs` publishes it, taking the database or a
+function that opens one per run, so a test hands in its own and the handler never touches a
+binding.
 
-```typescript {% title="app/jobs/middleware/database.ts" %}
+A service of your own is published the same way. The middleware sets a context key under a
+property name, and its effect type names what it publishes, so the dispatcher folds it out of
+its chain to type the property on every handler:
+
+```typescript {% title="app/jobs/middleware/search.ts" %}
 import type { JobMiddleware } from "@sdxc/jobs";
-import type { Database as DataTable } from "remix/data-table";
 
 import { createContextKey } from "remix/router";
 
-export const Database = createContextKey<DataTable>();
+import type { SearchIndex } from "~/app/services/search";
 
-interface DatabaseEffect {
-	key: typeof Database;
-	value: DataTable;
-	property: "database";
+export const Search = createContextKey<SearchIndex>();
+
+interface SearchEffect {
+	key: typeof Search;
+	value: SearchIndex;
+	property: "search";
 }
 
-export function database(source: () => DataTable): JobMiddleware<DatabaseEffect> {
+export function search(index: SearchIndex): JobMiddleware<SearchEffect> {
 	return async (ctx, next) => {
-		ctx.set(Database, source(), { property: "database" });
+		ctx.set(Search, index, { property: "search" });
 		await next();
 	};
 }
 ```
-
-The effect type names what the middleware publishes, and the dispatcher folds it out of its chain
-to type `ctx.database` on every handler.
 
 ## Share one queue
 
@@ -133,13 +137,13 @@ maps each job to a loader so a handler module is imported only once a message fo
 import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { queue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { database } from "~/app/jobs/middleware/database";
 
 interface DispatcherOptions {
 	queue?: JobQueue;
@@ -162,13 +166,11 @@ export function createDispatcher(options: DispatcherOptions = {}) {
 export const dispatcher = createDispatcher();
 ```
 
-The worker uses the one instance built at module scope. An augmentation of `JobTypes` is what
-gives every handler the context this chain produces:
+The worker uses the one instance built at module scope. An augmentation of `JobTypes` at the end
+of the same module is what gives every handler the context this chain produces:
 
-```typescript {% title="app/jobs/types.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import type { JobDispatcherContext } from "@sdxc/jobs";
-
-import type { dispatcher } from "~/app/initializers/dispatcher";
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {
@@ -177,7 +179,8 @@ declare module "@sdxc/jobs" {
 }
 ```
 
-The block names `@sdxc/jobs`, the module that declares `JobTypes`.
+The block names `@sdxc/jobs`, the module that declares `JobTypes`, and keeping it beside the
+dispatcher means importing the dispatcher is what registers it.
 
 The factory's options exist for tests: the defaults are what production runs.
 
@@ -287,8 +290,19 @@ both produces to and consumes:
 }
 ```
 
+In `cloudflare.config.ts`, the same schedule is a `triggers.scheduled({ schedule: "0 3 * * *" })`
+entry in `worker.triggers`. `sdxc make job` declares, maps and tests a scheduled job and adds that
+trigger in one step, and `sdxc schedule` pairs every scheduled job with the trigger that fires it:
+
+```bash
+sdxc make job expire-postings --cron "0 3 * * *"
+sdxc schedule
+```
+
 `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test comparing it
 against your configuration catches a job whose trigger was never added.
+[Make a job](/docs/sdxc/make-job) covers the generated files, and
+[Inspect a project](/docs/sdxc/inspect-a-project) reads the schedule.
 
 ## Alert a channel when a job gives up
 

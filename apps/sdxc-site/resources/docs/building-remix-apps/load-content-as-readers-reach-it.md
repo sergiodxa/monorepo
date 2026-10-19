@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 10
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 This guide builds a job board. The list of postings continues as the reader scrolls, in both
@@ -31,7 +31,7 @@ to resolve it. An `import.meta.glob` over the app's own directories cannot reach
 `node_modules`, so a package's islands get an explicit map keyed by that specifier. Keep the
 map in a module of its own, so a test can read it without starting the runtime:
 
-```typescript {% title="bootstrap/client-modules.ts" %}
+```typescript {% title="config/client-modules.ts" %}
 export const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 };
@@ -46,7 +46,7 @@ export const CLIENT_MODULES = import.meta.glob([
 ```typescript {% title="bootstrap/browser.ts" %}
 import { run } from "remix/component";
 
-import { CLIENT_MODULES, PACKAGE_MODULES } from "./client-modules";
+import { CLIENT_MODULES, PACKAGE_MODULES } from "~/config/client-modules";
 
 run({
 	async loadModule(moduleUrl, exportName) {
@@ -346,8 +346,10 @@ that what comes back is a piece and not a page, and that the page names the isla
 ```tsx {% title="app/http/controllers/jobs/index.test.tsx" %}
 import { expect, test } from "vitest";
 
-import { router } from "~/app/router";
-import { CLIENT_MODULES, PACKAGE_MODULES } from "~/bootstrap/client-modules";
+import { createWebRouter } from "~/app/initializers/router";
+import { CLIENT_MODULES, PACKAGE_MODULES } from "~/config/client-modules";
+
+let router = createWebRouter();
 
 function get(path: string) {
 	return router.fetch(new Request(new URL(path, "https://app.com")));

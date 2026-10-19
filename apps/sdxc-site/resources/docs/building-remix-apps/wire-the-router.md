@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Every request your Worker serves passes through one router, and the router's global middleware
@@ -13,12 +13,13 @@ decides what a handler can count on before it runs: a log, a trace, the user age
 own services. This guide adds [`@sdxc/http`](/api/http), [`@sdxc/logger`](/api/logger),
 [`@sdxc/trace-context`](/api/trace-context) and [`@sdxc/user-agent`](/api/user-agent) to that
 chain in a single composition root, then publishes a database opened through
-[`@sdxc/data-table-d1`](/api/data-table-d1) as `ctx.db`, so handlers read it and a test
+[`@sdxc/data-table-d1`](/api/data-table-d1) as `ctx.db` with
+[`@sdxc/database-middleware`](/api/database-middleware), so handlers read it and a test
 replaces it without touching a handler.
 
 ```bash
-npm add @sdxc/data-table-d1 @sdxc/http @sdxc/lazy-route @sdxc/logger @sdxc/trace-context \
-	@sdxc/user-agent remix
+npm add @sdxc/data-table-d1 @sdxc/database-middleware @sdxc/http @sdxc/lazy-route \
+	@sdxc/logger @sdxc/trace-context @sdxc/user-agent remix
 ```
 
 The logger, the trace and `asyncContext()` all keep per-request state in `AsyncLocalStorage`,
@@ -109,34 +110,7 @@ middleware adds. Each package also augments `RequestContext` in `remix/router`, 
 ## Publishing a service
 
 A service a handler needs, such as the database, belongs on the context rather than in an
-import. Middleware creates a context key, declares the property on `RequestContext`, and sets
-the value per request.
-
-```typescript {% title="app/http/middleware/database.ts" %}
-import type { Database as DataTable } from "remix/data-table";
-import type { Middleware } from "remix/router";
-
-import { createContextKey } from "remix/router";
-
-export const Database = createContextKey<DataTable>();
-
-declare module "remix/router" {
-	interface RequestContext {
-		db: DataTable;
-	}
-}
-
-export default function database(source: () => DataTable): Middleware {
-	return (ctx, next) => {
-		ctx.set(Database, source(), { property: "db" });
-		return next();
-	};
-}
-```
-
-The middleware takes a function that opens the database, not the database itself. The
-production source reads the D1 binding at request time, so each request uses the binding it
-was served with:
+import. The database opens from the D1 binding:
 
 ```typescript {% title="app/initializers/database.ts" %}
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
@@ -148,12 +122,39 @@ export function openDatabase(): Database {
 }
 ```
 
-A test hands in a source of its own. Pass it through the composition root, defaulting to the
-production one:
+`database(db)` from `@sdxc/database-middleware` publishes it as `ctx.db`, typed on every
+request context. A service of your own follows the same pattern: a context key, a `db`-style
+property declared on `RequestContext`, and middleware that sets the value per request:
+
+```typescript
+import type { Middleware } from "remix/router";
+
+import { createContextKey } from "remix/router";
+
+export const Billing = createContextKey<BillingClient>();
+
+declare module "remix/router" {
+	interface RequestContext {
+		billing: BillingClient;
+	}
+}
+
+export function billing(client: BillingClient): Middleware {
+	return (ctx, next) => {
+		ctx.set(Billing, client, { property: "billing" });
+		return next();
+	};
+}
+```
+
+A test hands in a database of its own. Pass it through the composition root, defaulting to the
+production one. Since the router is built per request, so is the database, and each request
+uses the binding it was served with:
 
 ```tsx {% title="app/initializers/router.tsx" %}
 import type { Database as DataTable } from "remix/data-table";
 
+import { database } from "@sdxc/database-middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -163,13 +164,12 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import database from "~/app/http/middleware/database";
 import { openDatabase } from "~/app/initializers/database";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
 
-export function createWebRouter(openDb: () => DataTable = openDatabase) {
+export function createWebRouter(db: DataTable = openDatabase()) {
 	let router = createRouter({
 		middleware: [
 			headRequests(),
@@ -177,7 +177,7 @@ export function createWebRouter(openDb: () => DataTable = openDatabase) {
 			log(logger),
 			trace(),
 			userAgent(),
-			database(openDb),
+			database(db),
 			// …then cop(), formData() and a renderer, as before
 		],
 		defaultHandler,
@@ -237,7 +237,7 @@ import { createTestDatabase } from "~/app/test/database";
 
 test("the home page lists projects", async () => {
 	let db = await createTestDatabase();
-	let router = createWebRouter(() => db);
+	let router = createWebRouter(db);
 
 	let response = await router.fetch(new Request("https://app.test/"));
 

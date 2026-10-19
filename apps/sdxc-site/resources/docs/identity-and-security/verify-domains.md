@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 9
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A customer who types `shop.example.com` into your settings page is making a claim. Before your
@@ -160,7 +160,7 @@ import { dispatcher } from "~/app/initializers/dispatcher";
 const recheck = createBackoff({ base: "1 minute", max: "15 minutes" });
 
 export default createJobHandler(jobs.domains.verify, async (ctx) => {
-	let domain = await Domains.find(ctx.database, ctx.input.domainId);
+	let domain = await Domains.find(ctx.db, ctx.input.domainId);
 	if (domain === null) return ctx.exit("The domain was removed");
 	if (domain.verifiedAt !== null) return ctx.ack("Already verified");
 
@@ -177,7 +177,7 @@ export default createJobHandler(jobs.domains.verify, async (ctx) => {
 		});
 	}
 
-	await Domains.markVerified(ctx.database, domain.id);
+	await Domains.markVerified(ctx.db, domain.id);
 	await dispatcher.enqueue(jobs.domains.activate, { domainId: domain.id });
 });
 ```
@@ -236,7 +236,7 @@ import jobs from "~/app/jobs";
 import { hostnameClient } from "~/app/initializers/hostnames";
 
 export default createJobHandler(jobs.domains.activate, async (ctx) => {
-	let domain = await Domains.find(ctx.database, ctx.input.domainId);
+	let domain = await Domains.find(ctx.db, ctx.input.domainId);
 	if (domain === null) return ctx.exit("The domain was removed");
 
 	let client = hostnameClient();
@@ -248,7 +248,7 @@ export default createJobHandler(jobs.domains.activate, async (ctx) => {
 
 	let certificate = HostnameClient.getValidationTxtRecord(hostname);
 	let message = await setupMessage(hostname);
-	await Domains.recordHostname(ctx.database, domain.id, {
+	await Domains.recordHostname(ctx.db, domain.id, {
 		hostname,
 		certificate,
 		message,

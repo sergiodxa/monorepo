@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) gives
@@ -22,7 +22,7 @@ queries is `remix/data-table`'s own API, and its documentation covers it; everyt
 with whatever tables you already have.
 
 ```bash
-npm add @sdxc/data-table-d1 @sdxc/data-table-sqlstorage remix
+npm add @sdxc/data-table-d1 @sdxc/data-table-sqlstorage @sdxc/database-middleware remix
 npm add -D @sdxc/cloudflare-mocks
 ```
 
@@ -54,34 +54,28 @@ endpoint whose query plan changed.
 ## Publish it on `ctx.db`
 
 Handlers should read the database off the context rather than open it themselves. That keeps the
-binding out of your controllers, and it gives a test one place to hand in its own database:
+binding out of your controllers, and it gives a test one place to hand in its own database.
+[`@sdxc/database-middleware`](/api/database-middleware) publishes it:
 
-```typescript {% title="app/http/middleware/database.ts" %}
-import type { Database as DataTable } from "remix/data-table";
-import type { Middleware } from "remix/router";
+```typescript {% title="app/initializers/router.ts" %}
+import { database } from "@sdxc/database-middleware";
+import { createRouter } from "remix/router";
 
-import { createContextKey } from "remix/router";
+import { openDatabase } from "~/app/initializers/database";
 
-export const Database = createContextKey<DataTable>();
-
-declare module "remix/router" {
-	interface RequestContext {
-		db: DataTable;
-	}
-}
-
-export default function database(source: () => DataTable): Middleware {
-	return (ctx, next) => {
-		ctx.set(Database, source(), { property: "db" });
-		return next();
-	};
+export function createWebRouter(db = openDatabase()) {
+	return createRouter({
+		middleware: [database(db)],
+	});
 }
 ```
 
-Register it as `database(openDatabase)` in the router's middleware list. The `property` option
-installs the value as `ctx.db`, and the `declare module` block is what types it everywhere. A
-handler then passes `ctx.db` to its queries, and a query written against `Database` runs unchanged
-on either driver.
+`database(db)` installs the instance as `ctx.db`, typed on every request context, and under the
+`Database` key the package exports, for code that holds a context whose chain it does not know.
+A handler then passes `ctx.db` to its queries, and a query written against `Database` runs
+unchanged on either driver. The `@sdxc/database-middleware/jobs` and
+`@sdxc/database-middleware/cli` entry points publish the same `ctx.db` to an
+[`@sdxc/jobs`](/api/jobs) dispatcher and an [`@sdxc/cli`](/api/cli) command line.
 
 ## Write what D1 can commit
 
@@ -116,7 +110,7 @@ between the read and the write for another request to land in.
 A SQLite-backed Durable Object exposes its database as `ctx.storage.sql`. Build the driver once
 per instance, since the handle outlives every request the object serves:
 
-```typescript {% title="bootstrap/do/tenant.ts" %}
+```typescript {% title="app/models/tenant.ts" %}
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
@@ -148,7 +142,8 @@ The adapter's `executeScript` takes a whole migration file and runs it one state
 `createD1Database()` from `@sdxc/cloudflare-mocks` is a D1 binding over an in-memory SQLite
 database. It executes real SQL and autocommits each statement the way D1 does, so a malformed
 query or an unbound value fails in the test instead of after a deploy. Apply the migration you
-ship and hand the database to the router through the same `source` the middleware takes:
+ship and hand the database to the router the middleware publishes it from, such as
+`createWebRouter(await createTestDatabase())`:
 
 ```typescript {% title="app/test/database.ts" %}
 import { readFileSync } from "node:fs";

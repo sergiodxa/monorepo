@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 5
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 [Build a JSON API with problem details](/docs/http-apis/json-apis) pages its book list by
@@ -52,7 +52,7 @@ The parameters arrive as untrusted text, and the names you parse must be the nam
 `Link` URLs advertise. `createPaging` binds both, together with the default and the largest
 page size, so every list in the app agrees:
 
-```typescript {% title="app/http/paging.ts" %}
+```typescript {% title="app/http/validators/paging.ts" %}
 import { createPaging } from "@sdxc/pagination";
 
 export const paging = createPaging({
@@ -84,10 +84,10 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { serializeInvoice } from "~/app/models/invoice";
-import { paging } from "~/app/http/paging";
-import { problems } from "~/app/services/problems";
+import { paging } from "~/app/http/validators/paging";
+import problems from "~/config/problems";
 import { invoices } from "~/database/schema";
-import routes from "~/routes/web";
+import routes from "~/routes/api";
 
 export default createAction(routes.api.invoices.index, async (ctx) => {
 	let params = paging.parse(ctx.url.searchParams);
@@ -242,7 +242,7 @@ import { Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { paging } from "~/app/http/paging";
+import { paging } from "~/app/http/validators/paging";
 import { invoices } from "~/database/schema";
 import Layout from "~/resources/layouts/app";
 import { InvoiceTable } from "~/resources/views/invoice-table";
@@ -295,7 +295,7 @@ import { isFailure } from "@sdxc/result";
 import { Pagination } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import { paging } from "~/app/http/paging";
+import { paging } from "~/app/http/validators/paging";
 import { events } from "~/database/schema";
 import Layout from "~/resources/layouts/app";
 import { EventList } from "~/resources/views/event-list";

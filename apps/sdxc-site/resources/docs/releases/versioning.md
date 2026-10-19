@@ -5,7 +5,7 @@ section:
     title: Releases
     order: 10
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Releases here are dated rather than semantic. A version is the UTC date it was published,
@@ -42,3 +42,17 @@ A caret or tilde range reads the date as major, minor and patch. `^2026.9.21` th
 `2026.12.31` — every later release in the same year — over a scheme where the number carries no
 compatibility meaning for that acceptance to rest on. A range is asking for a promise the
 version was never making; the date you pin is the one you trust.
+
+## Read what changed
+
+Each day's release is published as one set of notes, grouped by package, and the Changelog
+page beside this one shows every release. An entry is one change, headed by a
+sentence that says what changed for you, such as "Add ES512 signing keys", and followed by its
+release note: a new feature says how to use it with a short example, a fix states the behavior
+before and after and whether you need to act, and a breaking change lists every migration step
+with the code before and after. Breaking changes lead each package's section, marked
+**Breaking:**.
+
+The same notes are what [`sdxc upgrade`](/docs/sdxc/upgrade) reads when it moves your pins to a
+newer date, so the prompt it hands an AI agent carries every change between the release you
+have and the one you take.

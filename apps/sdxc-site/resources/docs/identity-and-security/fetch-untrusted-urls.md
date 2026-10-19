@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 11
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 The moment your app fetches a URL someone typed, a calendar to subscribe to, an avatar to copy,
@@ -169,7 +169,7 @@ import { downloadCalendar } from "~/app/services/calendar-download";
 const MAX_ATTEMPTS = 4;
 
 export default createJobHandler(jobs.calendars.refresh, async (ctx) => {
-	let calendar = await Calendars.find(ctx.database, ctx.input.calendarId);
+	let calendar = await Calendars.find(ctx.db, ctx.input.calendarId);
 	if (calendar === null) return ctx.exit("The calendar was removed");
 
 	let download = await downloadCalendar(calendar.url);
@@ -179,12 +179,12 @@ export default createJobHandler(jobs.calendars.refresh, async (ctx) => {
 		if (retryable && ctx.attempts < MAX_ATTEMPTS) {
 			return ctx.retry({ delay: "15 minutes", cause: download.error });
 		}
-		await Calendars.markBroken(ctx.database, calendar.id, code);
+		await Calendars.markBroken(ctx.db, calendar.id, code);
 		return;
 	}
 
 	let { bytes, text, url } = download.data;
-	await Calendars.store(ctx.database, calendar.id, { url: url.href, text });
+	await Calendars.store(ctx.db, calendar.id, { url: url.href, text });
 	ctx.log.set({ calendar: { bytes } });
 });
 ```

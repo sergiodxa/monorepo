@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 10
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Sooner or later a customer asks for a rule your code does not have: notify me only when a
@@ -256,11 +256,11 @@ import { alertContext } from "~/app/services/alert-context";
 import { notify } from "~/app/services/notify";
 
 export default createJobHandler(jobs.alerts.route, async (ctx) => {
-	let result = await CheckResults.find(ctx.database, ctx.input.resultId);
+	let result = await CheckResults.find(ctx.db, ctx.input.resultId);
 	if (result === null) return ctx.exit("The result was deleted");
 
-	let rules = await AlertRules.forTeam(ctx.database, result.teamId);
-	let filters = await Filters.forTeam(ctx.database, result.teamId);
+	let rules = await AlertRules.forTeam(ctx.db, result.teamId);
+	let filters = await Filters.forTeam(ctx.db, result.teamId);
 	let context = alertContext(result);
 	let notified = 0;
 

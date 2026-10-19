@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A webhook endpoint is a public URL that accepts `POST`s from anyone, so its signature check is
@@ -186,18 +186,18 @@ import jobs from "~/app/jobs";
 import { Orders } from "~/app/models/orders";
 
 export default createJobHandler(jobs.orders.fulfil, async (ctx) => {
-	let order = await Orders.find(ctx.database, ctx.input.orderId);
+	let order = await Orders.find(ctx.db, ctx.input.orderId);
 	if (order === null) return ctx.exit("Order no longer exists");
 
 	if (order.status === "paid") return ctx.ack("Already fulfilled");
-	await Orders.markPaid(ctx.database, order.id);
+	await Orders.markPaid(ctx.db, order.id);
 });
 ```
 
 `ctx.input` is parsed against the job's schema before the handler runs. Checking the order's
 state first is what keeps a repeated message harmless: `ctx.ack` finishes the run as completed.
 `ctx.exit` gives up for good on a message that can never succeed, so it is not retried forever.
-`ctx.database` is published by job middleware, the same way `ctx.db` is on a request.
+`ctx.db` is published by job middleware, as it is on a request.
 
 ## Send webhooks of your own
 
@@ -220,8 +220,8 @@ import { Events } from "~/app/models/events";
 const retryBackoff = createBackoff({ base: "1 minute", max: "6 hours", jitter: 0.2 });
 
 export default createJobHandler(jobs.webhooks.deliver, async (ctx) => {
-	let endpoint = await Endpoints.find(ctx.database, ctx.input.endpointId);
-	let event = await Events.find(ctx.database, ctx.input.eventId);
+	let endpoint = await Endpoints.find(ctx.db, ctx.input.endpointId);
+	let event = await Events.find(ctx.db, ctx.input.eventId);
 	if (endpoint === null || event === null)
 		return ctx.exit("Endpoint or event is gone");
 

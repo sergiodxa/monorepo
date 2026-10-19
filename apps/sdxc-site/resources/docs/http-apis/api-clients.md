@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 4
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A client is where an API's contract meets code that trusts it. This guide writes one for the
@@ -32,8 +32,8 @@ the client's own manifest too when it lives in its own package.
 
 The server's problem catalog and its response schemas are the contract, so the client imports
 them rather than restating them. Move them into modules both sides import:
-`contract/problems.ts` holds the catalog from `app/services/problems.ts`, and
-`contract/books.ts` the schemas from `app/http/schemas/books.ts` in the form
+`contract/problems.ts` holds the catalog from `config/problems.ts`, and
+`contract/books.ts` the schemas from `app/http/validators/books.ts` in the form
 [Describe your API with OpenAPI](/docs/http-apis/openapi) gives them, with the `BOOK`
 response schema.
 `contract/` is a directory in one repository, or a package the client installs. A slug renamed

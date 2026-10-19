@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 7
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A few small decisions around the router pay off across every route: which spelling of a URL
@@ -139,7 +139,7 @@ make every caller check, or end the request itself. The router only reads the va
 returns, so a thrown `Response` escapes as a rejected promise and becomes a `500`.
 `catchResponse()` catches it and answers with it, which makes the second way work:
 
-```typescript {% title="app/http/require-user.ts" %}
+```typescript {% title="app/http/middleware/require-user.ts" %}
 import { redirect } from "@sdxc/http/response";
 
 import { currentUser } from "~/app/http/session";
@@ -159,7 +159,7 @@ Every call site gets a user, with no branch of its own:
 ```tsx {% title="app/http/controllers/billing.tsx" %}
 import { createAction } from "remix/router";
 
-import { requireUser } from "~/app/http/require-user";
+import { requireUser } from "~/app/http/middleware/require-user";
 import { Invoices } from "~/app/models/invoices";
 import { BillingPage } from "~/resources/views/billing";
 import routes from "~/routes/web";

@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Writes fail in two quiet ways. A `POST` times out and the client cannot tell whether the book
@@ -29,12 +29,12 @@ Both features refuse requests, and those refusals should carry your API's proble
 every other failure. `IDEMPOTENCY_PROBLEM_ENTRIES` holds the four entries the middleware
 answers with, keyed by the builder names it calls.
 
-```typescript {% title="app/services/problems.ts" %}
+```typescript {% title="config/problems.ts" %}
 import { IDEMPOTENCY_PROBLEM_ENTRIES } from "@sdxc/idempotency";
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
 import * as s from "remix/data-schema";
 
-export const problems = defineProblems("https://books.example.com/docs/errors/", {
+export default defineProblems("https://books.example.com/docs/errors/", {
 	badRequest: {
 		slug: "bad-request",
 		status: 400,
@@ -85,7 +85,7 @@ well as Durable Object SQLite.
 import { DataTableStore } from "@sdxc/idempotency/data-table";
 import { idempotency } from "@sdxc/idempotency/middleware";
 
-import { problems } from "~/app/services/problems";
+import problems from "~/config/problems";
 
 export const idempotent = idempotency({
 	store: (ctx) => new DataTableStore(ctx.db),
@@ -118,11 +118,11 @@ import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
 import { idempotent } from "~/app/http/middleware/idempotency";
-import { BOOK_INPUT } from "~/app/http/schemas/books";
-import { problems } from "~/app/services/problems";
-import routes from "~/routes/web";
+import { BOOK_INPUT } from "~/app/http/validators/books";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
 
-export const create = createAction(routes.api.books.create, {
+export default createAction(routes.api.books.create, {
 	middleware: [idempotent],
 	handler: async (ctx) => {
 		let input = await validate(ctx.request, BOOK_INPUT);
@@ -141,7 +141,8 @@ export const create = createAction(routes.api.books.create, {
 });
 ```
 
-The rate limiter wraps every action in the first guide's `router.map`, so it runs first and
+The rate limiter the first guide passes to every `lazy()` runs before the action's own
+middleware, so it runs first and
 a replay still spends budget. A request without the header runs unprotected; pass
 `required: true` to answer `400` instead.
 The same key sent while the first request is still running gets `409` with `Retry-After`, and
@@ -202,10 +203,10 @@ import { isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
-import { problems } from "~/app/services/problems";
-import routes from "~/routes/web";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
 
-export const show = createAction(routes.api.books.show, async (ctx) => {
+export default createAction(routes.api.books.show, async (ctx) => {
 	let book = await Book.find(ctx.db, ctx.params.bookId);
 	if (book === null) return problems.notFound({ detail: "No book has that id." });
 
@@ -223,8 +224,8 @@ with `If-None-Match` before every reuse, and gets the body again only when it ch
 
 ## Accept a merge patch
 
-Add `update: patch("/api/books/:bookId")` to the route table, and `update` to the
-`actions` the first guide's `createWebRouter()` maps. A merge patch is written in the shape of
+Add `update: patch("/api/books/:bookId")` to `routes/api.ts`, and map its controller in the
+first guide's `createWebRouter()` through `lazy()` with the same limiter. A merge patch is written in the shape of
 the resource: it lists only the members that change, and `null` removes one.
 
 The patch applies to the book's writable members as the API spells them, with unset ones
@@ -260,11 +261,11 @@ import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
 import { writableBook } from "~/app/http/controllers/api/books/writable-book";
-import { BOOK_INPUT } from "~/app/http/schemas/books";
-import { problems } from "~/app/services/problems";
-import routes from "~/routes/web";
+import { BOOK_INPUT } from "~/app/http/validators/books";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
 
-export const update = createAction(routes.api.books.update, async (ctx) => {
+export default createAction(routes.api.books.update, async (ctx) => {
 	let book = await Book.find(ctx.db, ctx.params.bookId);
 	if (book === null) return problems.notFound({ detail: "No book has that id." });
 

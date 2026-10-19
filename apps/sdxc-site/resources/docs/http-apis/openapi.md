@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 An API reference written by hand drifts from the code the day after it is published. This
@@ -30,7 +30,7 @@ module from the first guide changes the import and the checks' subpath, and ever
 that imports it keeps working. It also adds `integer()`, which a reference can state and a
 `number()` cannot, and a `BOOK` schema for the response the API answers with.
 
-```typescript {% title="app/http/schemas/books.ts" %}
+```typescript {% title="app/http/validators/books.ts" %}
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 
@@ -62,7 +62,7 @@ export const BOOK_PARAMS = s.object({
 `@sdxc/json-schema/checks` both validates and adds its keyword (`minLength`, `maximum`), so a
 limit is written once.
 
-Make the same change in the problem catalog, `app/services/problems.ts`: import `s` from
+Make the same change in the problem catalog, `config/problems.ts`: import `s` from
 `@sdxc/json-schema` instead of `remix/data-schema`, so the `validationFailed` extensions can
 be described. The document describes every problem type, and a schema without a JSON Schema
 form fails the build.
@@ -70,16 +70,30 @@ form fails the build.
 ## Declare the operations
 
 An operation binds one route to what it reads and what it answers. The first argument
-becomes the `operationId`, which must be unique across the document.
+becomes the `operationId`, which must be unique across the document. Declare the operations in
+`routes/api.ts`, after the contract they describe, where
+[`sdxc scaffold --api`](/docs/sdxc/scaffold-a-resource) writes its own:
 
-```typescript {% title="app/http/openapi/operations.ts" %}
+```typescript {% title="routes/api.ts" %}
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import * as coerce from "@sdxc/json-schema/coerce";
 import { defineOperation } from "@sdxc/openapi";
+import { get, post, route } from "remix/routes";
 
-import { BOOK, BOOK_INPUT, BOOK_PARAMS } from "~/app/http/schemas/books";
-import routes from "~/routes/web";
+import { BOOK, BOOK_INPUT, BOOK_PARAMS } from "~/app/http/validators/books";
+
+const routes = route({
+	api: {
+		books: {
+			index: get("/api/books"),
+			create: post("/api/books"),
+			show: get("/api/books/:bookId"),
+		},
+	},
+});
+
+export default routes;
 
 export const LIST_BOOKS = defineOperation("listBooks", routes.api.books.index, {
 	summary: "List books",
@@ -120,8 +134,9 @@ catalog lacks fails to compile. `params` must name exactly the pattern's variabl
 schema for `/api/books/:bookId` without `bookId` is a type error. `tags` and `description`
 group and explain an operation in the rendered reference.
 
-Keep this module free of handlers. It holds only schemas, so building the document never
-loads a controller.
+Keep this module free of handlers. It holds only routes and schemas, so building the document
+never loads a controller, and a controller imports its operation from the contract it already
+reads its route from.
 
 ## Parse through the operation
 
@@ -136,11 +151,10 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import Book, { serializeBook } from "~/app/models/book";
-import { CREATE_BOOK } from "~/app/http/openapi/operations";
-import { problems } from "~/app/services/problems";
-import routes from "~/routes/web";
+import problems from "~/config/problems";
+import routes, { CREATE_BOOK } from "~/routes/api";
 
-export const create = createAction(routes.api.books.create, async (ctx) => {
+export default createAction(routes.api.books.create, async (ctx) => {
 	let input = await CREATE_BOOK.parse(ctx.request, ctx.params);
 	if (isFailure(input)) {
 		let errors = issuesFrom(input.error);
@@ -173,12 +187,12 @@ limits, so keep the two side by side. A client reads that header with
 cannot express, or a schema without a JSON Schema form. A conversion failure names the
 combinator with an RFC 6901 pointer from [`@sdxc/json-pointer`](/api/json-pointer).
 
-```typescript {% title="app/http/openapi/document.ts" %}
+```typescript {% title="app/initializers/openapi.ts" %}
 import { createDocument } from "@sdxc/openapi";
 import { bearer } from "@sdxc/openapi/security";
 
-import { CREATE_BOOK, LIST_BOOKS, SHOW_BOOK } from "~/app/http/openapi/operations";
-import { problems } from "~/app/services/problems";
+import problems from "~/config/problems";
+import { CREATE_BOOK, LIST_BOOKS, SHOW_BOOK } from "~/routes/api";
 
 export function buildApiDocument() {
 	return createDocument({
@@ -197,14 +211,15 @@ problems are `$ref`s to those responses. An operation that requires a key declar
 `security: [{ apiKey: ["books:write"] }]`, and `builder.scopes()` lists every scope the
 document requires, for OAuth protected-resource metadata.
 
-Add `openapi: get("/api/openapi.json")` to the route table, then serve it:
+Add `openapi: get("/api/openapi.json")` to the `api` group of the route contract, then serve
+it:
 
 ```typescript {% title="app/http/controllers/api/openapi.ts" %}
 import { openapiHandler } from "@sdxc/openapi/router";
 import { createAction } from "remix/router";
 
-import { buildApiDocument } from "~/app/http/openapi/document";
-import routes from "~/routes/web";
+import { buildApiDocument } from "~/app/initializers/openapi";
+import routes from "~/routes/api";
 
 export default createAction(
 	routes.api.openapi,
@@ -216,19 +231,20 @@ The handler builds on the first request and reuses the outcome, which keeps the 
 the Worker's global scope. It answers JSON by default and YAML for `?format=yaml` or an `Accept`
 preferring `application/yaml`, each with a strong `ETag` and `Cache-Control: public,
 max-age=300`, so a client revalidates with a `304`. A build failure answers `500` with a
-problem document.
+problem document. An app from `sdxc create` serves `/api/openapi.json` this way already, from a
+`createApiDocument(origin)` that names the origin the request reached as the server.
 
 ## Keep it honest in tests
 
 Commit the serialized document, so every contract change arrives as a reviewable diff in the
 commit that makes it:
 
-```typescript {% title="app/http/openapi/document.test.ts" %}
+```typescript {% title="app/initializers/openapi.test.ts" %}
 import { stringify } from "@sdxc/openapi";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { buildApiDocument } from "~/app/http/openapi/document";
+import { buildApiDocument } from "~/app/initializers/openapi";
 
 test("the document builds and matches the committed snapshot", async () => {
 	let document = unwrap(buildApiDocument().build());
@@ -248,7 +264,7 @@ import { checkResponse } from "@sdxc/openapi/testing";
 import { isFailure } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { buildApiDocument } from "~/app/http/openapi/document";
+import { buildApiDocument } from "~/app/initializers/openapi";
 import { createWebRouter } from "~/app/initializers/router";
 
 let router = createWebRouter();

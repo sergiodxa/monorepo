@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 9
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A fixed retry delay is wrong in both directions. Ten minutes is too slow for a blip that
@@ -113,7 +113,7 @@ import { waitAfter } from "~/app/services/previews/retry-after";
 const MAX_BYTES = 1024 * 1024;
 
 export default createJobHandler(jobs.previews.fetch, async (ctx) => {
-	let preview = await Previews.find(ctx.database, ctx.input.previewId);
+	let preview = await Previews.find(ctx.db, ctx.input.previewId);
 	if (preview === null) return ctx.exit("The preview was removed");
 
 	let followed = await follow(preview.url, { timeout: "8 seconds" });
@@ -138,7 +138,7 @@ export default createJobHandler(jobs.previews.fetch, async (ctx) => {
 		return ctx.retry({ delay, cause: body.error });
 	}
 
-	await Previews.store(ctx.database, preview.id, body.data.text);
+	await Previews.store(ctx.db, preview.id, body.data.text);
 });
 ```
 
@@ -218,13 +218,13 @@ const REFRESH_EVERY_MS = 60 * 60_000;
 
 export default createJobHandler(jobs.feeds.sweep, async (ctx) => {
 	let now = Date.now();
-	let due = await Feeds.due(ctx.database, now);
+	let due = await Feeds.due(ctx.db, now);
 
 	for (let feed of due) {
 		let fetched = await fetchFeed(feed.url);
 		if (isFailure(fetched)) {
 			let failures = feed.failures + 1;
-			await Feeds.recordFailure(ctx.database, feed.id, {
+			await Feeds.recordFailure(ctx.db, feed.id, {
 				failures,
 				nextAttemptAt: feedBackoff.at(failures, now),
 				error: fetched.error.message,
@@ -232,7 +232,7 @@ export default createJobHandler(jobs.feeds.sweep, async (ctx) => {
 			continue;
 		}
 
-		await Feeds.recordSuccess(ctx.database, feed.id, {
+		await Feeds.recordSuccess(ctx.db, feed.id, {
 			entries: fetched.data,
 			nextAttemptAt: now + REFRESH_EVERY_MS,
 		});

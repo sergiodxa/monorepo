@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Once an app has more than a few tables, the code around them settles into a pattern: a module
@@ -17,12 +17,12 @@ member runs there.
 
 This guide defines a model, publishes the app's models as `ctx.models`, dispatches side effects
 only after a write lands, keeps several record types in one table, stores open-ended attributes
-in a key/value table, and builds test data with factories. Your tables stay as you declared
+in a key/value table, builds test data with factories, and seeds a new database. Your tables stay as you declared
 them; the database setup is the one from
 [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases).
 
 ```bash
-npm add @sdxc/data-model @sdxc/jobs @sdxc/pagination @sdxc/result @sdxc/uuid remix
+npm add @sdxc/data-model @sdxc/database-middleware @sdxc/jobs @sdxc/pagination @sdxc/result @sdxc/uuid remix
 ```
 
 ## Define a model
@@ -120,7 +120,8 @@ query that already orders.
 
 A registry lists the models under the names handlers read them by. An entry can be an import,
 which loads the module on its first call in each request, so a request evaluates only the
-models it touches:
+models it touches, or a `createModel(...)` call written inline, typed exactly like a model
+declared in its own variable:
 
 ```typescript {% title="app/models/index.ts" %}
 import { createModels } from "@sdxc/data-model";
@@ -139,16 +140,17 @@ middleware published, such as the database on `ctx.db`:
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { models as modelsMiddleware } from "@sdxc/data-model/router";
+import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
 
-import database from "~/app/http/middleware/database";
 import { openDatabase } from "~/app/initializers/database";
 import { models } from "~/app/models";
+import routes from "~/routes/web";
 
 export function createWebRouter() {
 	let router = createRouter({
 		middleware: [
-			database(openDatabase),
+			database(openDatabase()),
 			modelsMiddleware(models, (ctx) => ({ db: ctx.db })),
 		],
 	});
@@ -168,21 +170,24 @@ An MCP tool mounted on the router runs on the same request context, so it reads
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
 import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
+import { Database, database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
-import { Database, database } from "~/app/jobs/middleware/database";
+import { openDatabase } from "~/app/initializers/database";
 import { models } from "~/app/models";
 
 export const dispatcher = createJobDispatcher({
 	middleware: [
-		database(),
+		database(openDatabase),
 		modelsMiddleware(models, (ctx) => ({ db: ctx.require(Database) })),
 	],
 });
 ```
 
-A job's middleware sees the bare job context, so it reads the database by its key rather than
-through `ctx.database`, which only the job's handler sees.
+A job's middleware sees the bare job context, so it reads the database by the `Database` key
+`database()` sets it under, while the job's handler reads it as `ctx.db`. A command line built with
+[`@sdxc/cli`](/api/cli) takes the same middleware from `@sdxc/data-model/cli`, so a command
+handler reads `ctx.models` too.
 
 ## Dispatch side effects after commit
 
@@ -524,6 +529,37 @@ let models = publishModels(ctx, registry, { db });
 
 `publishModels` binds a registry and publishes it as `ctx.models`, for a test that calls a job
 handler with a context it built by hand.
+
+## Seed a new database
+
+`@sdxc/data-model/seed` declares the rows a new database starts with as named steps over the
+registry. Each step writes fixed rows through `models` or generated ones through `factories`, so
+every write runs the models' callbacks and constraints:
+
+```typescript {% title="database/seed.ts" %}
+import { defineSeed } from "@sdxc/data-model/seed";
+
+import { ArticleFactory } from "~/database/factories";
+import { models } from "~/app/models";
+
+export default defineSeed(models, {
+	admin: ({ models }) =>
+		models.users.create({ email: "admin@example.com", name: "Admin" }),
+	articles: ({ factories }) => factories.createMany(ArticleFactory, 10),
+});
+```
+
+```typescript
+import seeder from "~/database/seed";
+
+let ran = await seeder.run({ db }); // success(["admin", "articles"])
+```
+
+`run(context, options?)` binds the registry with `context`, runs the steps in order, and answers
+the names that ran, or a failure naming the step that threw. Factory values come from
+`options.seed`, 1 unless you pass another, so the same seed writes the same rows. Like
+`./testing`, it needs `@sdxc/sample` installed. An app from `sdxc create` runs it with
+`sdxc run db seed`, and `sdxc run db fresh --seed` rebuilds the local database and seeds it.
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 7
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 ActivityPub is the protocol Mastodon, Misskey, GoToSocial, Pixelfed and the rest of the
@@ -401,7 +401,7 @@ import { dispatcher } from "~/app/initializers/dispatcher";
 import { createFederation } from "~/app/services/federation";
 
 export default createJobHandler(jobs.federation.process, async (ctx) => {
-	let federation = createFederation({ db: ctx.database, jobs: dispatcher });
+	let federation = createFederation({ db: ctx.db, jobs: dispatcher });
 	if (isFailure(federation)) return ctx.exit(federation.error.message);
 
 	let processed = await federation.data.process(ctx.input, {
@@ -421,7 +421,7 @@ export default createJobHandler(jobs.federation.process, async (ctx) => {
 `ctx.retry` takes as it is. The job runs inside the dispatcher, so it enqueues through
 `dispatcher` rather than `ctx.jobs`; [Background jobs and
 cron](/docs/data-and-background-work/jobs-and-cron) builds both, and the `database()` job
-middleware that publishes `ctx.database`.
+middleware that publishes `ctx.db`.
 
 ## Handle follows, undos and replies
 
@@ -625,13 +625,13 @@ import { activityOf } from "~/app/services/federated-posts";
 import { createFederation } from "~/app/services/federation";
 
 export default createJobHandler(jobs.federation.publish, async (ctx) => {
-	let post = await findPost(ctx.database, ctx.input.postId);
+	let post = await findPost(ctx.db, ctx.input.postId);
 	if (post === null) return ctx.ack("The post no longer exists");
 
 	let activity = activityOf(post, new Date());
 	if (activity === null) return ctx.ack("The post never federated");
 
-	let federation = createFederation({ db: ctx.database, jobs: dispatcher });
+	let federation = createFederation({ db: ctx.db, jobs: dispatcher });
 	if (isFailure(federation)) return ctx.exit(federation.error.message);
 
 	let published = await federation.data.publish(activity);
@@ -640,7 +640,7 @@ export default createJobHandler(jobs.federation.publish, async (ctx) => {
 		return ctx.exit(published.error.message);
 	}
 
-	await markFederated(ctx.database, post.id);
+	await markFederated(ctx.db, post.id);
 });
 ```
 

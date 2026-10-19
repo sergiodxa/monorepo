@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 13
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Signing someone in answers who is asking. Every route after that asks a second question: may
@@ -23,8 +23,16 @@ synchronously from facts loaded once per request. Its conditions are
 imports.
 
 ```bash
-npm add @sdxc/authz @sdxc/billing @sdxc/flags @sdxc/http @sdxc/jobs @sdxc/lazy-route \
-	@sdxc/mcp @sdxc/result remix
+npm add @sdxc/authz @sdxc/billing @sdxc/database-middleware @sdxc/flags @sdxc/http @sdxc/jobs \
+	@sdxc/lazy-route @sdxc/mcp @sdxc/result remix
+```
+
+An app from `sdxc create` starts with the catalog, the policy and the request binding this
+guide writes, each empty, and [`sdxc make policy`](/docs/sdxc/make-policy) adds a resource's
+`create`, `read`, `update` and `delete` abilities with their grants:
+
+```bash
+sdxc make policy project
 ```
 
 ## Name what people do
@@ -81,7 +89,7 @@ import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
-export default definePolicy(abilities, {
+const policy = definePolicy(abilities, {
 	facts: {
 		actor: fact<{ id: string; teamId: string }>(),
 	},
@@ -110,6 +118,14 @@ export default definePolicy(abilities, {
 		}),
 	],
 });
+
+declare module "@sdxc/authz" {
+	interface AuthzTypes {
+		policy: typeof policy;
+	}
+}
+
+export default policy;
 ```
 
 A fact is anything a condition reads beyond the check's own context, here the signed-in
@@ -121,7 +137,9 @@ Holding two roles is their union, so giving someone another role never takes any
 A member updates the name and description of projects they own, and an admin updates any field
 of any project, because `allow("*")` covers every ability with every field. The guard is what
 keeps a team's projects inside the team, and it refuses an admin too: a guard is the one thing
-no role outranks. `as: "notFound"` makes its refusal answer as a missing project.
+no role outranks. `as: "notFound"` makes its refusal answer as a missing project. Grants
+listed under `everyone`, beside `roles`, hold for every principal, a guest included, such as
+reading a published record.
 
 Nothing compiles when the module loads. The first check compiles the policy once, and
 `policy.compile()` answers a `Result` that names the first mistake by grant: an ability, field,
@@ -135,19 +153,10 @@ the compiler requires it, so a guest is refused cleanly rather than failing the 
 people write rules in a form, `parseCondition("ctx.project.ownerId == ctx.actor.id")` reads
 the text form into this JSON.
 
-Register the policy once, and `ctx.access` is typed from it in every controller:
-
-```typescript {% title="app/policies/types.ts" %}
-import type policy from "~/app/policies/policy";
-
-declare module "@sdxc/authz" {
-	interface AuthzTypes {
-		policy: typeof policy;
-	}
-}
-```
-
-The block names `@sdxc/authz`, the module that declares `AuthzTypes`.
+The `AuthzTypes` block at the end of the module registers the policy, so `ctx.access` and every
+check are typed from it in every controller, job and tool. It names `@sdxc/authz`, the module
+that declares `AuthzTypes`, and keeping it beside the policy means importing the policy is what
+registers it.
 
 ## Bind the person on each request
 
@@ -327,7 +336,7 @@ import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
-export default definePolicy(abilities, {
+const policy = definePolicy(abilities, {
 	facts: {
 		actor: fact<{ id: string; teamId: string }>(),
 		billing: fact<BillingFacts>(),
@@ -345,6 +354,8 @@ export default definePolicy(abilities, {
 		}),
 	],
 });
+
+// the AuthzTypes block and the default export as before
 ```
 
 Bind it with `fromEntitlements()` in the `access()` facts, after the billing middleware in
@@ -385,7 +396,7 @@ import { definePolicy, deny, fact } from "@sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
-export default definePolicy(abilities, {
+const policy = definePolicy(abilities, {
 	facts: {
 		// actor and billing as before
 		flags: fact<{ reportsExport: boolean }>(),
@@ -399,6 +410,8 @@ export default definePolicy(abilities, {
 		}),
 	],
 });
+
+// the AuthzTypes block and the default export as before
 ```
 
 The fact declares the flags the policy reads, by their property names in your `features`
@@ -429,11 +442,11 @@ it typed from the registered policy:
 ```typescript {% title="app/initializers/dispatcher.ts" %}
 import { authz } from "@sdxc/authz/middleware/dispatcher";
 import { fromFlags } from "@sdxc/authz/facts/flags";
+import { database } from "@sdxc/database-middleware/jobs";
 import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { createJobDispatcher } from "@sdxc/jobs";
 
 import policy from "~/app/policies/policy";
-import { database } from "~/app/jobs/middleware/database";
 import { queue } from "~/app/initializers/queue";
 import { openDatabase } from "~/app/initializers/database";
 import { features, flags } from "~/app/initializers/flags";
@@ -464,14 +477,14 @@ import { Members } from "~/app/models/members";
 
 export default createJobHandler(jobs.reports.export, async (ctx) => {
 	let { teamId, userId } = ctx.input;
-	let member = await Members.find(ctx.database, teamId, userId);
+	let member = await Members.find(ctx.db, teamId, userId);
 	if (member === null) return ctx.exit("Member left the team");
 
 	let bound = ctx.authz.for({
 		roles: [member.role],
 		facts: {
 			actor: { id: userId, teamId },
-			billing: () => Entitlements.facts(ctx.database, teamId),
+			billing: () => Entitlements.facts(ctx.db, teamId),
 		},
 	});
 	if (isFailure(bound)) return ctx.exit(bound.error.message);
@@ -500,7 +513,7 @@ import { allow, definePolicy } from "@sdxc/authz";
 
 import abilities from "~/app/policies/abilities";
 
-export default definePolicy(abilities, {
+const policy = definePolicy(abilities, {
 	// facts, conditions and guards as before
 	roles: {
 		// viewer, member and admin as before
@@ -508,6 +521,8 @@ export default definePolicy(abilities, {
 		"agent:write": [allow(["agent", "project"])],
 	},
 });
+
+// the AuthzTypes block and the default export as before
 ```
 
 The MCP route binds its own `access()`, with the token's scope as the ceiling and the agent
@@ -659,7 +674,8 @@ case matched, until the table reaches them all; a grant without an `id` is named
 position, like `roles.member.1`. `testAccess` throws the `AuthzError` of a policy that does
 not compile, which fails the test that bound it.
 
-To review a change to the policy, `diffPolicies(before, after, cases)` decides each case under
+To review a change to the policy, `diffPolicies(before, after, cases)` from
+`@sdxc/authz/testing` decides each case under
 both and answers the ones whose decisions differ. `policy.definition` is the policy as plain
 JSON, so the previous version can be derived from it, or kept beside it.
 

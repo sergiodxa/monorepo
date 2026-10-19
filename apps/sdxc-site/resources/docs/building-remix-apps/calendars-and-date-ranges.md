@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 12
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Three date screens come up in almost every app: a month calendar with events on it, a report
@@ -31,7 +31,7 @@ through it.
 Read the month from the query string, falling back to the current one, and work out the
 neighbours the pager links to:
 
-```typescript {% title="app/calendar/month.ts" %}
+```typescript {% title="app/services/calendar/month.ts" %}
 import type { MonthGridDay, TimeZone, Weekday } from "@sdxc/dates";
 
 import { addMonths, endOfDay, fromDayKey, monthGrid, toDayKey } from "@sdxc/dates";
@@ -91,7 +91,7 @@ viewer's zone. An event at 23:30 in New York is on the 14th there and the 15th i
 ```tsx {% title="app/http/controllers/calendar.tsx" %}
 import { createAction } from "remix/router";
 
-import { calendarMonth } from "~/app/calendar/month";
+import { calendarMonth } from "~/app/services/calendar/month";
 import { Events } from "~/app/models/events";
 import { viewerOf } from "~/app/http/viewer";
 import { CalendarPage } from "~/resources/views/calendar";
@@ -114,7 +114,7 @@ import { fg } from "@sdxc/u/color";
 import { grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { LinkButton } from "@sdxc/ui";
 
-import type { CalendarMonth } from "~/app/calendar/month";
+import type { CalendarMonth } from "~/app/services/calendar/month";
 import type { Event } from "~/app/models/events";
 import type { Viewer } from "~/app/http/viewer";
 
@@ -208,7 +208,7 @@ A report covers a run of whole days. A `DayRange` is two `"YYYY-MM-DD"` keys, bo
 included, so it travels through a URL and a form as written, and it reads the same in every
 zone. Offer presets, and hold a hand-picked range to the same rules:
 
-```typescript {% title="app/reports/range.ts" %}
+```typescript {% title="app/services/reports/range.ts" %}
 import type { DayRange, TimeZone } from "@sdxc/dates";
 
 import {
@@ -259,7 +259,7 @@ day, and `lastNDaysRange(30, …)` is the thirty days ending on `from`, that day
 `validateDayRange` answers a `Result`, and its failure is an `InvalidDayRangeError` whose
 `problem` names the first rule the range breaks, which maps straight to a message:
 
-```typescript {% title="app/reports/messages.ts" %}
+```typescript {% title="resources/views/reports/messages.ts" %}
 import type { DayRangeProblem } from "@sdxc/dates";
 
 export const RANGE_PROBLEMS: Record<DayRangeProblem, string> = {

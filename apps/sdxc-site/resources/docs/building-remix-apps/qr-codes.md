@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 9
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 This guide puts a QR code on a meetup ticket: the attendee shows it at the door, a volunteer's
@@ -24,7 +24,7 @@ npm add @sdxc/http @sdxc/logger @sdxc/qr @sdxc/result remix
 
 `QR.encode` picks the smallest symbol that holds the data and answers a `Result`:
 
-```typescript {% title="app/tickets/qr.ts" %}
+```typescript {% title="app/services/tickets/qr.ts" %}
 import { QR } from "@sdxc/qr";
 
 const CHECK_IN_ORIGIN = "HTTPS://EXAMPLE.COM/C/";
@@ -54,7 +54,7 @@ since that extra correction costs nothing. The symbol reports what it got: `vers
 A code drawn at a fixed size gets harder to scan as its version grows, because each module gets
 smaller. `maxVersion` caps it, and data that needs more fails with `too-long` instead:
 
-```typescript {% title="app/tickets/badge-code.ts" %}
+```typescript {% title="app/services/tickets/badge-code.ts" %}
 import { QR } from "@sdxc/qr";
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
@@ -86,7 +86,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import Tickets from "~/app/models/ticket";
-import { checkInCode } from "~/app/tickets/qr";
+import { checkInCode } from "~/app/services/tickets/qr";
 import { TicketPage } from "~/resources/views/ticket";
 import routes from "~/routes/web";
 
@@ -170,7 +170,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import Tickets from "~/app/models/ticket";
-import { checkInCode } from "~/app/tickets/qr";
+import { checkInCode } from "~/app/services/tickets/qr";
 import routes from "~/routes/web";
 
 export default createAction(routes.tickets.qr, async (ctx) => {

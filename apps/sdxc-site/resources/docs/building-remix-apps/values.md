@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 6
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Every app handles the same handful of values: the ids its records carry, the slugs and
@@ -31,7 +31,7 @@ A bare UUID says nothing about what it identifies, so one pasted into a support 
 be tried against every table. A TypeID puts the answer in the string, `post_01h455vb4pex5…`,
 and keeps the UUID recoverable. Bind each prefix once, in one module:
 
-```typescript {% title="app/ids.ts" %}
+```typescript {% title="app/services/ids.ts" %}
 import type { TypeID } from "@sdxc/typeid";
 
 import { typeid } from "@sdxc/typeid";
@@ -101,7 +101,7 @@ branch on.
 A slug typed into a form and a slug a background job derives from the same title must agree,
 or the published URL moves. Put the derivation in one function and call it from both:
 
-```typescript {% title="app/posts/derive.ts" %}
+```typescript {% title="app/services/posts/derive.ts" %}
 import { createTitleizer, excerpt, slugify, wordCount } from "@sdxc/strings";
 
 const titleize = createTitleizer({ special: ["Remix", "Cloudflare", "SQLite"] });
@@ -145,8 +145,8 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { Posts } from "~/app/models/posts";
-import { newPostId } from "~/app/ids";
-import { derivePost } from "~/app/posts/derive";
+import { newPostId } from "~/app/services/ids";
+import { derivePost } from "~/app/services/posts/derive";
 import { NewPostPage } from "~/resources/views/admin/new-post";
 import routes from "~/routes/web";
 

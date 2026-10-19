@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 18
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A help center needs a search box long before it needs a search service. SQLite ships FTS5, a
@@ -225,7 +225,7 @@ import jobs from "~/app/jobs";
 import { ARTICLE_SEARCH } from "~/app/models/search/articles";
 
 export default createJobHandler(jobs.reindexArticleSearch, async (ctx) => {
-	let progress = await ARTICLE_SEARCH.reindex(ctx.database, {
+	let progress = await ARTICLE_SEARCH.reindex(ctx.db, {
 		after: ctx.input.after,
 		limit: 500,
 	});
@@ -244,7 +244,7 @@ export default createJobHandler(jobs.reindexArticleSearch, async (ctx) => {
 Enqueue it with `{ after: null }` to start from the first row. Articles written while it runs
 stay current through the triggers, whichever side of the batch they fall on.
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers the dispatcher
-and the `ctx.database` middleware.
+and the `ctx.db` middleware.
 
 ## Parse what the reader typed
 

@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 7
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Charging for an app is mostly bookkeeping around a payment platform: linking your accounts to its
@@ -417,7 +417,7 @@ export default createJobHandler(jobs.reconcileBilling, async (ctx) => {
 			let id = subscription.customerId;
 			if (id === null) continue;
 
-			let synced = await syncEntitlements(ctx.database, billing, { id });
+			let synced = await syncEntitlements(ctx.db, billing, { id });
 			if (isFailure(synced)) {
 				ctx.log.warn("billing.sync_failed", { customer: id });
 			}

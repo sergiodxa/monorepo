@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 5
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A "save for later" button looks like one line of work: fetch the URL, keep the article. The
@@ -116,7 +116,7 @@ import { Links } from "~/app/models/links";
 const USER_AGENT = "Shelf/1.0 (+https://shelf.example/about/bot)";
 
 export default createJobHandler(jobs.links.read, async (ctx) => {
-	let link = await Links.find(ctx.database, ctx.input.linkId);
+	let link = await Links.find(ctx.db, ctx.input.linkId);
 	if (link === null) return ctx.exit("The link was deleted");
 
 	let robots = await fetchRobots(link.url, { userAgent: USER_AGENT });
@@ -128,13 +128,13 @@ export default createJobHandler(jobs.links.read, async (ctx) => {
 		if (outcome === "timeout" && ctx.attempts < 3) {
 			return ctx.retry({ delay: "15 minutes" });
 		}
-		await Links.markUnreadable(ctx.database, link.id, outcome);
+		await Links.markUnreadable(ctx.db, link.id, outcome);
 		return;
 	}
 
 	let { byline, html, mayCache, title, url } = article.data;
 	let excerpt = excerptOf(html);
-	await Links.markRead(ctx.database, link.id, {
+	await Links.markRead(ctx.db, link.id, {
 		url,
 		title,
 		byline,
@@ -154,8 +154,8 @@ that long instead of asking on every run.
 Every failure carries an `outcome` your interface can have copy for: `refused` (the site said
 no, by status or by `robots.txt`), `timeout` (time, bytes or hops ran out) and `empty` (the page
 arrived with no article in it). Only a timeout is worth trying again, and only a few times;
-the other two would give the same answer. `ctx.database` is published by job middleware,
-the same way `ctx.db` is on a request.
+the other two would give the same answer. `ctx.db` is published by job middleware,
+as it is on a request.
 
 On success, `url` is the article's canonical address, so two links to one article can be
 recognized as one. `mayCache` is `false` when the response's `X-Robots-Tag` says `noarchive`:
@@ -283,7 +283,7 @@ sanitizing without a fetch, which is how to test the job's extraction without th
 ## Where to go next
 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
-  the queue and the middleware behind `ctx.database`.
+  the queue and the middleware behind `ctx.db`.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — the policy for
   the page that renders someone else's article.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — publish the

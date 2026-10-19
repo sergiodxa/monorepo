@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 11
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 An inbox someone works through all day earns keys: `j` and `k` to move between messages,
@@ -29,7 +29,7 @@ A combo is a string such as `"mod+k"`, `"escape"`, `"?"` or `"j"`, and the same 
 is both matched against a keystroke and printed as the hint. Keep the page's shortcuts in
 one list, so the bindings and the panel read from the same place:
 
-```typescript {% title="app/inbox/shortcuts.ts" %}
+```typescript {% title="resources/views/inbox/shortcuts.ts" %}
 export const INBOX_SHORTCUTS = [
 	{ combo: "j", label: "Next message" },
 	{ combo: "k", label: "Previous message" },
@@ -90,7 +90,7 @@ import { keymap } from "@sdxc/ui/mixins";
 import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry } from "remix/component";
 
-import { INBOX_SHORTCUTS } from "~/app/inbox/shortcuts";
+import { INBOX_SHORTCUTS } from "~/resources/views/inbox/shortcuts";
 
 export type InboxMessage = {
 	id: string;
@@ -261,7 +261,7 @@ something the person has to hear now, such as a failed archive.
 Where the bindings come from a `ref` callback or plain script, `bindKeymap` takes the same
 map and follows the same stand-down rules:
 
-```typescript {% title="app/browser/shortcuts.ts" %}
+```typescript {% title="resources/scripts/reader-shortcuts.ts" %}
 import { bindKeymap } from "@sdxc/ui/mixins";
 
 export function bindReaderKeys(scope: Element, signal: AbortSignal) {

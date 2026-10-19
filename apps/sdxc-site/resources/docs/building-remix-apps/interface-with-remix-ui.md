@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A page in a Remix v3 app is `remix/component` JSX rendered on the server. This guide builds a
@@ -15,7 +15,7 @@ holding a form. It lays them out with [`@sdxc/u`](/api/u) mixins, adds glyphs fr
 that is the only part of the page the platform cannot do on its own.
 
 ```bash
-npm add @sdxc/icons @sdxc/u @sdxc/ui remix
+npm add @pitlane/assets @sdxc/assets-middleware @sdxc/icons @sdxc/u @sdxc/ui remix
 ```
 
 The page works with no client JavaScript at all. The dialog opens, the form submits and the
@@ -39,6 +39,7 @@ the import order as the cascade order.
 ```
 
 ```tsx {% title="resources/layouts/document.tsx" %}
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import "@sdxc/ui/reset.css";
@@ -47,7 +48,7 @@ import "@sdxc/ui/theme.css";
 
 interface Props {
 	title: string;
-	stylesheets: string[];
+	assets: DocumentAssets;
 	children: RemixNode;
 }
 
@@ -57,7 +58,7 @@ export default function DocumentLayout(handle: Handle<Props>) {
 			<head>
 				<meta charSet="utf-8" />
 				<title>{handle.props.title}</title>
-				{handle.props.stylesheets.map((href) => (
+				{handle.props.assets.stylesheets.map((href) => (
 					<link key={href} rel="stylesheet" href={href} />
 				))}
 			</head>
@@ -69,23 +70,39 @@ export default function DocumentLayout(handle: Handle<Props>) {
 
 A build renames those files whenever their contents change, so the document links the names
 the build reports. With [Pitlane's Vite plugin](https://pitlane.tools/guides/assets), they come
-from its asset manifest:
+from its asset manifest, through one resolver the app builds once:
 
-```typescript {% title="app/assets.ts" %}
+```typescript {% title="app/initializers/assets.ts" %}
 import { createAssetResolver } from "@pitlane/assets";
 import manifest from "@pitlane/assets/manifest";
 
-const ASSETS = createAssetResolver(manifest);
-
-export function documentStylesheets() {
-	return ASSETS.getStylesheets("resources/layouts/document.tsx");
-}
+export const assetResolver = createAssetResolver(manifest);
 ```
 
-Await it where the request renders the document and pass the list as `stylesheets`: a Worker
-runs no async work at module scope, so the lookup belongs to the request. Put the class
-`system` on `<html>` and the theme follows the visitor's `prefers-color-scheme`, with no
-script deciding the scheme and nothing flashing on first paint.
+`assets()` from [`@sdxc/assets-middleware`](/api/assets-middleware) resolves the document's
+stylesheets and the browser entry per request, before the page renders, and publishes them as
+`ctx.assets`. List it in the middleware every page runs, ahead of `render()`:
+
+```typescript {% title="app/http/middleware/page.ts" %}
+import { assets } from "@sdxc/assets-middleware";
+import { render } from "remix/middleware/render";
+import { createMiddleware } from "remix/router";
+
+import { assetResolver } from "~/app/initializers/assets";
+
+export default createMiddleware(
+	assets(assetResolver, {
+		stylesheets: "resources/layouts/document.tsx",
+		script: "bootstrap/browser.ts",
+	}),
+	render({ assets: assetResolver }),
+);
+```
+
+A page passes them on as `<DocumentLayout assets={ctx.assets} title="Projects">`. A Worker runs
+no async work at module scope, so the lookup belongs to the request, and the middleware is
+where it happens. Put the class `system` on `<html>` and the theme follows the visitor's
+`prefers-color-scheme`, with no script deciding the scheme and nothing flashing on first paint.
 
 ## Compose a card
 

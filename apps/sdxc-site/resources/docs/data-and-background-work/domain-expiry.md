@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 16
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A domain that lapses takes everything on it down at once: the site stops resolving, mail
@@ -255,7 +255,7 @@ import { expiryOutcome } from "~/app/services/domains/expiry";
 const PER_REGISTRY = 2;
 
 export default createJobHandler(jobs.sweepDomainExpiry, async (ctx) => {
-	let due = await Domains.due(ctx.database, Date.now(), 200);
+	let due = await Domains.due(ctx.db, Date.now(), 200);
 
 	let groups = new Map<string, TrackedDomain[]>();
 	for (let domain of due) {
@@ -269,9 +269,9 @@ export default createJobHandler(jobs.sweepDomainExpiry, async (ctx) => {
 	async function check(domain: TrackedDomain) {
 		let now = Date.now();
 		let patch = expiryOutcome(domain, await rdap.domain(domain.name), now);
-		await Domains.recordExpiry(ctx.database, domain.id, patch);
+		await Domains.recordExpiry(ctx.db, domain.id, patch);
 		if (needsAlert(patch, now)) {
-			await Domains.alertExpiry(ctx.database, domain.id, patch);
+			await Domains.alertExpiry(ctx.db, domain.id, patch);
 			alerts += 1;
 		}
 	}
@@ -296,8 +296,8 @@ patch to its row. A new row starts with `nextCheckAt` at zero, so the next tick 
 one tick inside the dispatcher's timeout, and whatever is left over waits for the next tick.
 
 Map the handler on the dispatcher and add `0 * * * *` to the Worker's cron triggers, as
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) sets up. `ctx.database`
-is the job middleware from that guide.
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) sets up. `ctx.db`
+comes from the job middleware that guide installs.
 
 ## Test the decisions
 

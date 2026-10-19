@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 13
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 This guide tells a team when their nightly sync fails. Each team connects the places it
@@ -20,7 +20,8 @@ Telegram HTML, a PagerDuty event) and sending it with one `fetch`. [`@sdxc/jobs`
 runs the delivery and [`@sdxc/backoff`](/api/backoff) spaces out its retries.
 
 ```bash
-npm add @sdxc/backoff @sdxc/jobs @sdxc/messaging @sdxc/result @sdxc/webhooks remix
+npm add @sdxc/backoff @sdxc/database-middleware @sdxc/jobs @sdxc/messaging @sdxc/result \
+	@sdxc/webhooks remix
 ```
 
 ## Write the message once
@@ -258,13 +259,13 @@ import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
 import type { DestinationFactory } from "~/app/jobs/middleware/destinations";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { queue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { database } from "~/app/jobs/middleware/database";
 import { destinations } from "~/app/jobs/middleware/destinations";
 import { destinationFor } from "~/app/services/notifications/destinations";
 
@@ -311,7 +312,7 @@ const RETRY_BACKOFF = createBackoff({
 });
 
 export default createJobHandler(jobs.deliverMessage, async (ctx) => {
-	let channel = await Channels.find(ctx.database, ctx.input.channelId);
+	let channel = await Channels.find(ctx.db, ctx.input.channelId);
 	if (!channel) return ctx.exit("The channel was removed");
 
 	let destination = ctx.destinations(channel.config);
@@ -327,7 +328,7 @@ export default createJobHandler(jobs.deliverMessage, async (ctx) => {
 	}
 
 	if (error.code === "gone") {
-		await Channels.markBroken(ctx.database, channel.id, error.message);
+		await Channels.markBroken(ctx.db, channel.id, error.message);
 	}
 	return ctx.exit(error.message, { cause: error });
 });

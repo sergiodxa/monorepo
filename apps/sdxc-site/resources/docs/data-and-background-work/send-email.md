@@ -24,7 +24,8 @@ sending reputation; [Run a newsletter list](/docs/data-and-background-work/newsl
 readers on one.
 
 ```bash
-npm add @sdxc/http @sdxc/i18n @sdxc/jobs @sdxc/logger @sdxc/mail @sdxc/result remix
+npm add @sdxc/database-middleware @sdxc/http @sdxc/i18n @sdxc/jobs @sdxc/logger @sdxc/mail \
+	@sdxc/result remix
 ```
 
 [`sdxc make email`](/docs/sdxc/make-email) writes the declaration, the template, its mapping
@@ -215,6 +216,7 @@ import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Transport } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import mailer from "@sdxc/mail/middleware/jobs";
 
@@ -224,7 +226,6 @@ import { mail } from "~/app/initializers/mail";
 import { queue as mailQueue, transport } from "~/app/initializers/mail-transport";
 import { queue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { database } from "~/app/jobs/middleware/database";
 import { MAIL_FROM } from "~/config/constants";
 
 interface DispatcherOptions {
@@ -355,17 +356,27 @@ sends them once the handler returns, logging each outcome.
 
 ## Preview an email
 
-An app from `sdxc create` lists every email at `/_emails` while `bun dev` runs, with an HTML and
-a text link for each supported language, and renders one from its template's `preview` props.
-The router mounts it from `@sdxc/mail/previews`, serving it only in development:
+An app from `sdxc create` serves an inbox of its emails at `/_emails` while `bun dev` runs: every
+mapped email listed with its subject and opening lines in the language you pick, and the one you
+open shown beside the list, as HTML or as its text part, rendered from its template's `preview`
+props. The router mounts it from `@sdxc/mail/previews`, serving it only in development, and links
+the document's stylesheets so the inbox wears the app's theme:
 
 ```typescript {% title="app/initializers/router.tsx" %}
-previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+previews(mail, {
+	locales: SUPPORTED_LANGUAGES,
+	enabled: import.meta.env.DEV,
+	stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+}),
 ```
+
+Keep it a single entry in the router's middleware with `enabled` deciding, so the router's typed
+context keeps everything the rest of the chain publishes. Each email also renders on its own at
+`/_emails/<name>?locale=es&format=html`, or `format=text`.
 
 The same email prints in a terminal, its subject and text part, or the HTML with `--html`:
 
-```sh
+```bash
 sdxc run emails preview postings.published --locale es
 ```
 
@@ -385,7 +396,8 @@ let names = mail.mapped.map((email) => email.name);
 
 `mail.preview("postings.published")` takes the name as well. `mail.render(email, { locale,
 props })` renders any props you pass. Both answer a `Result` holding the `subject`, `html` and
-`text`, and a template with no `preview` answers a failure from `preview()`.
+`text`, and a template with no `preview` answers a failure from `preview()`. `mail.hasPreview(email)`
+reports whether an email's template has `preview`, loading it without rendering anything.
 
 ## Test with the memory transport
 
