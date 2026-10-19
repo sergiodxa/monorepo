@@ -1,6 +1,6 @@
 ---
 title: Make a controller
-description: Write a page, a form or a JSON endpoint with sdxc make controller, its route declared in a contract, mapped on the router and decided in the sitemap.
+description: Write a page, a form or a JSON endpoint with sdxc make controller, its route declared in a contract, mapped on the router, decided in the sitemap and guarded by a resource's abilities.
 section:
     title: The sdxc command
     order: 2
@@ -33,6 +33,7 @@ Reach for it whenever a feature needs a new URL: a page, a form with its action,
 | `--method <method>`   | `get`         | `get`, `post`, `put`, `patch`, `delete`, or `form` for a page and its action |
 | `--path <path>`       | `/<name>`     | the route's pattern, params included                                         |
 | `--routes <contract>` | `make.routes` | the contract in `routes/` the route is declared in                           |
+| `--resource <name>`   |               | check the resource's ability the method implies; see below                   |
 | `--test`, `--no-test` | `make.tests`  | write the test beside it, or skip it                                         |
 | `--dry-run`           |               | print the files and the diffs, and change nothing                            |
 
@@ -43,17 +44,21 @@ sdxc make controller ping --method post --path /api/ping
 sdxc make controller posts/show --path "/posts/:slug"
 sdxc make controller signup --method form
 sdxc make controller api/keys --routes api
+sdxc make controller posts/archive --resource post --method delete
 ```
 
 ## What it writes
 
 The file comes from the stub that fits the route:
 
-| Stub                   | Written for                                   | What it is                                                 |
-| ---------------------- | --------------------------------------------- | ---------------------------------------------------------- |
-| `controller.stub`      | any method on a contract without its own stub | a page rendered in the document layout with the page chain |
-| `controller.form.stub` | `--method form`                               | a page with a form and the action that receives it         |
-| `controller.api.stub`  | `--routes api`                                | a JSON endpoint with the API chain                         |
+| Stub                            | Written for                                   | What it is                                                 |
+| ------------------------------- | --------------------------------------------- | ---------------------------------------------------------- |
+| `controller.stub`               | any method on a contract without its own stub | a page rendered in the document layout with the page chain |
+| `controller.form.stub`          | `--method form`                               | a page with a form and the action that receives it         |
+| `controller.api.stub`           | `--routes api`                                | a JSON endpoint with the API chain                         |
+| `controller.resource.stub`      | `--resource`                                  | the page, checking the resource's ability first            |
+| `controller.resource.form.stub` | `--resource` with `--method form`             | the form, checking the ability in both actions             |
+| `controller.api.resource.stub`  | `--resource` with `--routes api`              | the JSON endpoint, checking the ability first              |
 
 A contract with a stub named after it, `controller.<contract>.stub`, takes that stub, so a
 project can add `controller.admin.stub` for `--routes admin`. `--method` sets the route helper
@@ -91,6 +96,51 @@ export default createAction(routes.sponsors, {
 honeypot fields and Turnstile widget, and `action` receives the submission behind the CAPTCHA
 and spam checks, then redirects back with a `303`. `--routes api` writes a `createAction` with
 the API chain that answers `Response.json({})`.
+
+## Guard it with a resource's abilities
+
+`--resource <name>` checks the request's access against the abilities
+[`sdxc make policy <name>`](/docs/sdxc/make-policy) declares, the way a scaffolded controller
+does. `--method` picks the ability:
+
+| `--method`     | Ability                 | Refused, or the row hidden or missing                |
+| -------------- | ----------------------- | ---------------------------------------------------- |
+| `get`          | `<name>.read`           | `404`; a page renders the not-found page             |
+| `form`, `post` | `<name>.create`         | `403`                                                |
+| `put`, `patch` | `<name>.read`, `update` | `404` when the read is refused, `403` for the update |
+| `delete`       | `<name>.read`, `delete` | `404` when the read is refused, `403` for the delete |
+
+A read, update or delete checks one row, so its route defaults to `/<controller>/:id`, and a
+`--path` must hold `:id`. When `app/models/<name>.ts` exports its row type, the row comes from
+`ctx.models`, so a missing one is a 404 like a hidden one; otherwise it is `{ id: ctx.params.id }`
+for you to replace. `sdxc make controller posts/archive --resource post --method delete` starts
+its handler with:
+
+```tsx {% title="app/http/controllers/posts/archive.tsx" %}
+let row = await ctx.models.post.find(ctx.params.id);
+if (row === null || !ctx.access.can(abilities.post.read, { post: row })) {
+	let missing = ctx.intl.t("notFound.title");
+	return ctx.render(
+		<DocumentLayout
+			assets={ctx.assets}
+			intl={ctx.intl}
+			url={ctx.url}
+			title={missing}
+		>
+			<h1>{missing}</h1>
+		</DocumentLayout>,
+		{ status: 404 },
+	);
+}
+if (!ctx.access.can(abilities.post.delete, { post: row })) {
+	return new Response(null, { status: 403 });
+}
+```
+
+Run `sdxc make policy <name>` first; when `app/policies/abilities.ts` does not declare the
+resource yet, `make` writes the controller and prints a note saying so. A nested name checks the
+nested group: `--resource billing/invoice` checks `abilities.billing.invoice.*` against
+`{ invoice: row }`.
 
 ## What it edits
 
@@ -179,7 +229,7 @@ bun run test app/http/controllers/signup.test.tsx
 - Read and write data through `ctx.models`, which [`sdxc make model`](/docs/sdxc/make-model)
   registers.
 - Validate a form or a body with a schema from [`sdxc make validator`](/docs/sdxc/make-validator).
-- Decide who may reach it by checking `ctx.access` against the abilities
+- Decide who may reach it with `--resource`, or by checking `ctx.access` against the abilities
   [`sdxc make policy`](/docs/sdxc/make-policy) adds.
 - Add a check every page needs with [`sdxc make middleware --mount page`](/docs/sdxc/make-middleware).
 

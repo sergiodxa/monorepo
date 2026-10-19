@@ -170,6 +170,6 @@ answering a refusal, and [`@sdxc/authz`](/api/authz) the whole API.
 
 - [Scaffold a resource](/docs/sdxc/scaffold-a-resource) — pages, tools and tests that check these
   abilities, written together.
-- [Make a controller](/docs/sdxc/make-controller) — where most abilities are checked.
+- [Make a controller](/docs/sdxc/make-controller) — `--resource` checks these abilities in a new controller.
 - [Generate files](/docs/sdxc/generate-files) — the flags, configuration and stubs every kind
   shares.
