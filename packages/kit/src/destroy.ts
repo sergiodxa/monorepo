@@ -198,6 +198,11 @@ async function undecideSitemap(
 	}
 }
 
+/** `text` matched literally inside a regular expression, every syntax character escaped. */
+function escapeRegExp(text: string): string {
+	return text.replace(/[\\^$.*+?()[\]{}|/-]/g, "\\$&");
+}
+
 /**
  * Whether `name` is used in the code of `source` outside its import declarations: as an
  * identifier that is no property name, or in JSX markup. Comments and strings never count, and a
@@ -207,7 +212,7 @@ function usedOutsideImports(filename: string, source: string, name: string): boo
 	let tokens = tokenize(filename, source);
 	if (isFailure(tokens)) return true;
 	let code = tokens.data.filter((token) => token.type !== "comment");
-	let markup = new RegExp(`(?<![\\w$])${name.replace(/[$]/g, "\\$")}(?![\\w$])`);
+	let markup = new RegExp(`(?<![\\w$])${escapeRegExp(name)}(?![\\w$])`);
 	for (let index = 0; index < code.length; index += 1) {
 		let token = code[index] as Token;
 		let previous = code[index - 1];
