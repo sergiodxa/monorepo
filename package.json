@@ -18,6 +18,7 @@
 		"release": "bun scripts/release/main.ts",
 		"release:bootstrap": "bun scripts/release/bootstrap.ts",
 		"sdxc:generate": "bun scripts/sdxc/generate.ts",
+		"kit:reference": "bun scripts/sdxc/kit-reference.ts",
 		"kit:registry": "bun scripts/sdxc/kit-registry.ts",
 		"test": "vp test run",
 		"typecheck": "vp check --no-fmt --no-lint",
