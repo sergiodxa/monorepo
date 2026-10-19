@@ -113,6 +113,14 @@ let mounted = addElement("router.ts", source, {
 });
 ```
 
+### `removeProperty(filename, source, options: RemovePropertyOptions): Result<Edit, CodemodError>`
+
+Removes `options.key` from the object literal `addProperty` would add it to, with its comma and, when it sits on its own line, the line; a group the removal leaves empty is removed from its parent. A missing call, path or key fails with `not-found`.
+
+### `findStatements(filename, source, { specifier })` and `removeStatements(filename, source, { specifier })`
+
+The innermost statements holding a string literal equal to `specifier`, such as the `router.map(…, lazy(() => import("…")))` that loads a module, and `source` without them and their lines.
+
 ### `insertAfterLast(filename, source, options: InsertOptions): Result<Edit, CodemodError>`
 
 Places `options.statement` on a new line after the last statement that calls `options.call`, at that statement's indentation. With no such call, it follows the variable declaration whose initializer calls `options.fallbackAfter`; with neither, it fails with `not-found`.

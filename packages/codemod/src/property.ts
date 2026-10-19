@@ -166,7 +166,7 @@ export function properties(structure: Structure, open: number): Property[] {
  * The object literal a property's value is: the literal itself, or the first object-literal
  * argument of a call such as `route("/prefix", { … })`; -1 for anything else.
  */
-function objectIn(structure: Structure, property: Property): number {
+export function objectIn(structure: Structure, property: Property): number {
 	let code = structure.code;
 	let start = property.value;
 	let last = property.span.end - 1;

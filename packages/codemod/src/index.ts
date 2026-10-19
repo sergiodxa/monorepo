@@ -12,6 +12,7 @@ export type { CodemodErrorCode } from "./errors.js";
 export type { InsertOptions } from "./insert.js";
 export type { MoveOptions } from "./move.js";
 export type { AddPropertyOptions } from "./property.js";
+export type { FoundStatement, RemovePropertyOptions, StatementOptions } from "./remove.js";
 export type {
 	BoundName,
 	FindOptions,
@@ -26,6 +27,7 @@ export { CodemodError } from "./errors.js";
 export { insertAfterLast } from "./insert.js";
 export { moveImports } from "./move.js";
 export { addProperty } from "./property.js";
+export { findStatements, removeProperty, removeStatements } from "./remove.js";
 export { findModuleReferences } from "./references.js";
 export { rewriteSpecifiers } from "./rewrite.js";
 export { tokenize } from "./tokenize.js";
