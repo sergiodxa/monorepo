@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { I18n, Messages } from "@sdxc/i18n";
+import type { Messages } from "@sdxc/i18n";
 
-import { createI18n } from "@sdxc/i18n";
+import { createTranslator } from "@sdxc/i18n";
 
 import en from "~/resources/locales/en.json";
 import es from "~/resources/locales/es.json";
@@ -23,7 +23,12 @@ export const FALLBACK_LANGUAGE = "en";
 /** Message bundles, one per supported language. */
 export const RESOURCES: Record<string, Messages> = { en, es };
 
-/** Builds a translator fixed to one language, for code running outside a request. */
-export function translatorFor(locale: string): I18n {
-	return createI18n({ locale, fallbackLanguage: FALLBACK_LANGUAGE, resources: RESOURCES });
-}
+/**
+ * Translates outside a request, such as in an email, into the reader's language; an
+ * unsupported language binds the fallback.
+ */
+export const translate = createTranslator({
+	resources: RESOURCES,
+	supportedLanguages: SUPPORTED_LANGUAGES,
+	fallbackLanguage: FALLBACK_LANGUAGE,
+});

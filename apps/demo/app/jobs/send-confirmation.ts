@@ -10,9 +10,7 @@
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import { PostingPublishedEmail } from "~/app/emails/posting-published";
-import { translatorFor } from "~/app/initializers/i18n";
-import { mailer } from "~/app/initializers/mail";
+import emails from "~/app/emails";
 import jobs from "~/app/jobs";
 
 export default createJobHandler(jobs.sendConfirmation, async (ctx) => {
@@ -22,16 +20,11 @@ export default createJobHandler(jobs.sendConfirmation, async (ctx) => {
 		return;
 	}
 
-	let intl = translatorFor(ctx.input.locale);
-
-	let sent = await mailer.send(
-		new PostingPublishedEmail(posting.contact_email, {
-			subject: intl.t("email.subject", { title: posting.title }),
-			heading: intl.t("email.heading"),
-			body: intl.t("email.body", { title: posting.title, company: posting.company }),
-			footer: intl.t("email.footer"),
-		}),
-	);
+	let sent = await ctx.email.send(emails.postingPublished, {
+		to: posting.contact_email,
+		locale: ctx.input.locale,
+		props: { title: posting.title, company: posting.company },
+	});
 
 	if (isFailure(sent)) {
 		ctx.log.fail(sent.error);

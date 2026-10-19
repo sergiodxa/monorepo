@@ -16,19 +16,31 @@ import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as memory from "@sdxc/jobs/memory";
+import mailer from "@sdxc/mail/middleware/jobs";
 
 import { logger } from "~/app/initializers/logger";
+import { mail, outbox } from "~/app/initializers/mail";
 import jobs from "~/app/jobs";
 import registry from "~/app/models";
+import { MAIL_FROM } from "~/config/constants";
 
 /** The models a job reads as `ctx.models`, bound to the database the chain opened. */
 function modelsMiddleware() {
 	return models(registry, (ctx) => ({ db: ctx.require(Database) }));
 }
 
+/** The mailer a job reads as `ctx.email`, delivering into the outbox. */
+function mailerMiddleware() {
+	return mailer({ transport: outbox, from: MAIL_FROM, mail });
+}
+
 /** The dispatcher the board's jobs run through, carrying what its chain publishes. */
 export type Dispatcher = JobDispatcher<
-	readonly [ReturnType<typeof database>, ReturnType<typeof modelsMiddleware>]
+	readonly [
+		ReturnType<typeof database>,
+		ReturnType<typeof modelsMiddleware>,
+		ReturnType<typeof mailerMiddleware>,
+	]
 >;
 
 /** A dispatcher and the queue it writes to, so a caller can run what it just enqueued. */
@@ -55,7 +67,7 @@ export function createDispatcher(openDatabase: () => DataTable): JobRuntime {
 	let dispatcher = createJobDispatcher({
 		logger,
 		queue,
-		middleware: [database(openDatabase), modelsMiddleware()] as const,
+		middleware: [database(openDatabase), modelsMiddleware(), mailerMiddleware()] as const,
 		timeout: "30 seconds",
 	});
 

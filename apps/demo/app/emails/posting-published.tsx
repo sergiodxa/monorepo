@@ -7,28 +7,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { defineEmail, Email } from "@sdxc/mail";
+import { createEmail, Email } from "@sdxc/mail";
 
-/** What the confirmation says, in the language the submission was made in. */
-export interface PostingPublishedCopy {
-	subject: string;
-	heading: string;
-	body: string;
-	footer: string;
-}
+import emails from "~/app/emails";
 
-/** The confirmation sent to the address a posting listed as its contact. */
-export const PostingPublishedEmail = defineEmail<PostingPublishedCopy>({
-	subject: (copy) => copy.subject,
+export default createEmail(emails.postingPublished, {
+	subject: ({ title, t }) => t("email.subject", { title }),
 	body: (handle) => () => {
-		let { body, footer, heading } = handle.props;
+		let { company, locale, t, title } = handle.props;
+		let heading = t("email.heading");
 
 		return (
-			<Email.Layout preview={heading} title={heading}>
+			<Email.Layout lang={locale} preview={heading} title={heading}>
 				<Email.Heading>{heading}</Email.Heading>
-				<Email.Text>{body}</Email.Text>
-				<Email.Footer>{footer}</Email.Footer>
+				<Email.Text>{t("email.body", { title, company })}</Email.Text>
+				<Email.Footer>{t("email.footer")}</Email.Footer>
 			</Email.Layout>
 		);
 	},
+	preview: () => ({ title: "Senior Remix Engineer", company: "Acme" }),
 });
