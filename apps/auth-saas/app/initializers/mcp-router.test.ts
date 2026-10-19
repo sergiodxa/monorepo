@@ -58,7 +58,7 @@ async function signMachineToken(scope = "subjects:read"): Promise<string> {
 		postLogoutRedirectUris: [],
 		grantTypes: ["client_credentials"],
 		responseTypes: [],
-		scopes: ["subjects:read"],
+		scopes: scope.split(" "),
 		tokenEndpointAuthMethod: "client_secret_basic",
 		requireConsent: false,
 	});
@@ -337,7 +337,7 @@ describe("tools/call", () => {
 						unknown: true,
 					},
 				},
-				await signMachineToken(),
+				await signMachineToken("subjects:write"),
 			),
 		);
 		let body = (await response.json()) as { result: { isError?: boolean } };
@@ -351,6 +351,20 @@ describe("tools/call", () => {
 			profile: { name: null, givenName: "Jane" },
 			attributes: { tier: "gold" },
 		});
+	});
+
+	test("refuses a tool outside the token's scopes before any request is forwarded", async () => {
+		let response = await mcpRouter.fetch(
+			callToolRequest(
+				"subjectsDelete",
+				{ params: { tenantId, subjectId: "sub_1" } },
+				await signMachineToken("subjects:read"),
+			),
+		);
+		let body = (await response.json()) as { error?: { message?: string } };
+
+		expect(body.error?.message).toContain("subjects.delete is not permitted");
+		expect(dispatchCalls).toHaveLength(0);
 	});
 
 	test("refuses arguments outside the nested shape before any request is forwarded", async () => {
