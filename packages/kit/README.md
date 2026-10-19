@@ -248,9 +248,7 @@ An initializer in app/initializers
 
 #### `sdxc make email <name> [field[:type][?]...]`
 
-An email template in app/emails, its props declared and the template mapped. Fields are typed as
-`make model` types them and become the props `app/emails/index.ts` declares; the first text prop
-is the subject and heading. Without fields it declares `heading` and `body`.
+An email template in app/emails, its props declared and the template mapped
 
 | Flag        | Does                                                                          |
 | ----------- | ----------------------------------------------------------------------------- |
