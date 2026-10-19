@@ -26,6 +26,28 @@ import {
 } from "./fields.js";
 
 describe("parseFields", () => {
+	test("reads :index and :unique after the name or the type, with ? on any part", () => {
+		let fields = unwrap(
+			parseFields(["slug:unique", "email:email:unique", "rank:index", "code?:index"]),
+		);
+
+		expect(fields.map((field) => [field.column, field.type, field.index, field.nullable])).toEqual([
+			["slug", "string", "unique", false],
+			["email", "email", "unique", false],
+			["rank", "integer", "index", false],
+			["code", "string", "index", true],
+		]);
+		expect(columnSource(fields[0] as never, "posts")).toBe("c.text().unique()");
+	});
+
+	test("refuses two types or two modifiers", () => {
+		let doubled = parseFields(["slug:string:text"]);
+		let both = parseFields(["slug:index:unique"]);
+
+		expect(isFailure(doubled) && doubled.error.message).toContain("name:type:unique");
+		expect(isFailure(both) && both.error.message).toContain("name:type:unique");
+	});
+
 	test("spells each name as a column, a label, a flag and a key", () => {
 		let fields = unwrap(parseFields(["title", "publishedOn:date", "view-count:integer"]));
 
@@ -37,6 +59,7 @@ describe("parseFields", () => {
 				key: "title",
 				type: "string",
 				nullable: false,
+				index: null,
 			},
 			{
 				column: "published_on",
@@ -45,6 +68,7 @@ describe("parseFields", () => {
 				key: "publishedOn",
 				type: "date",
 				nullable: false,
+				index: null,
 			},
 			{
 				column: "view_count",
@@ -53,6 +77,7 @@ describe("parseFields", () => {
 				key: "viewCount",
 				type: "integer",
 				nullable: false,
+				index: null,
 			},
 		]);
 	});

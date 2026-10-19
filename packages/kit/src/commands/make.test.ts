@@ -558,6 +558,34 @@ describe("make", () => {
 	});
 });
 
+describe("field modifiers", () => {
+	test("make model writes a unique column and the indexes its migration creates", async () => {
+		let root = await project();
+
+		await invoke(["model", "post", "slug:unique", "rank:index"], root);
+
+		let model = await readFile(join(root, "app/models/post.ts"), "utf8");
+		let [migration = ""] = (await files(root)).filter((path) => path.endsWith(".sql"));
+		let sql = await readFile(join(root, migration), "utf8");
+		expect(model).toContain("slug: c.text().unique(),");
+		expect(sql).toContain('CREATE UNIQUE INDEX "posts_slug_unique" ON "posts" ("slug");');
+		expect(sql).toContain('CREATE INDEX "posts_rank_index" ON "posts" ("rank");');
+	});
+
+	test("make migration adds a column with its index", async () => {
+		let root = await project();
+		await invoke(["migration", "create-posts", "title"], root);
+
+		await invoke(["migration", "add-slug-to-posts", "slug?:unique", "code?:index"], root);
+
+		let [, added = ""] = (await files(root)).filter((path) => path.endsWith(".sql"));
+		let sql = await readFile(join(root, added), "utf8");
+		expect(sql).toContain('ALTER TABLE "posts" ADD COLUMN "slug" TEXT;');
+		expect(sql).toContain('CREATE UNIQUE INDEX "posts_slug_unique" ON "posts" ("slug");');
+		expect(sql).toContain('CREATE INDEX "posts_code_index" ON "posts" ("code");');
+	});
+});
+
 describe("make test", () => {
 	test("writes the test a kind gets beside an existing file that has none", async () => {
 		let root = await project();

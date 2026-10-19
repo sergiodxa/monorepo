@@ -48,7 +48,7 @@ function fieldsArgument(references: boolean) {
 	let reference = references ? ", *_id references" : "";
 	return argument.variadic(s.string(), {
 		valueName: "field[:type][?]",
-		description: `name, name:type or name? (nullable); a bare name is typed by convention: *_at timestamp, *_on date, is_* and published boolean, *_count integer, email, *_url url, body text${reference}, else string; types: ${types.join(", ")}`,
+		description: `name, name:type or name? (nullable), each with :index or :unique to index the column; a bare name is typed by convention: *_at timestamp, *_on date, is_* and published boolean, *_count integer, email, *_url url, body text${reference}, else string; types: ${types.join(", ")}`,
 	});
 }
 

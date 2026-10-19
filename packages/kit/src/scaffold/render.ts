@@ -14,7 +14,7 @@ import { createTableStatement } from "../make/schema.js";
 
 import type { Field, FieldType } from "./fields.js";
 
-import { columnSource, factorySource, FIELD_TYPES, fieldsTable } from "./fields.js";
+import { columnSource, factorySource, fieldIndexes, FIELD_TYPES, fieldsTable } from "./fields.js";
 
 /** The resource a scaffold writes: its singular and plural names, and its fields. */
 export interface Resource {
@@ -53,7 +53,10 @@ export function placeholders(resource: Resource, header: string): Record<string,
 		pluralWords: plural.title.toLowerCase(),
 		pluralMember: memberAccess([plural.base]),
 		table: plural.snake,
-		statement: createTableStatement(fieldsTable(table, fields)),
+		statement: [
+			createTableStatement(fieldsTable(table, fields)),
+			...fieldIndexes(table, fields),
+		].join("\n\n"),
 		firstColumn: fields[0]?.column ?? "id",
 		columns: lines(fields, 2, (field) => `${field.column}: ${columnSource(field, table)},`),
 		attributes: lines(fields, 1, (field) => `${field.column}: ${factorySource(field)},`),

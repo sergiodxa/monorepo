@@ -15,14 +15,20 @@ import { column, table } from "remix/data-table";
 
 import type { Field } from "../scaffold/fields.js";
 
-import { buildColumn, fieldsTable, parseFields, resolveReferences } from "../scaffold/fields.js";
+import {
+	buildColumn,
+	fieldIndexes,
+	fieldsTable,
+	parseFields,
+	resolveReferences,
+} from "../scaffold/fields.js";
 
 import type { Name } from "./names.js";
 import type { TableShape } from "./schema.js";
 
 import { readChain } from "./from-model.js";
 import { replayChain } from "./schema-diff.js";
-import { columnClause, createTableStatement, quote, tableShape } from "./schema.js";
+import { columnClause, createTableStatement, quote, tableShape, uniqueIndex } from "./schema.js";
 
 /** What a migration's name says it does, and to which table. */
 export interface MigrationIntent {
@@ -101,17 +107,26 @@ async function statementsOf(
 	if (intent.action === "create") {
 		return success({
 			summary: `creates the ${name} table`,
-			statements: createTableStatement(fieldsTable(name, fields)).split("\n\n"),
+			statements: [
+				...createTableStatement(fieldsTable(name, fields)).split("\n\n"),
+				...fieldIndexes(name, fields),
+			],
 		});
 	}
 	let shape = addedColumns(name, fields);
 	if (isFailure(shape)) return shape;
 	return success({
 		summary: `adds ${fields.map((field) => field.column).join(", ")} to ${name}`,
-		statements: fields.map(
-			(field) =>
-				`ALTER TABLE ${quote(name)} ADD COLUMN ${columnClause(shape.data, field.column, shape.data.columns[field.column] as ColumnDefinition, { constraints: true })};`,
-		),
+		statements: [
+			...fields.map(
+				(field) =>
+					`ALTER TABLE ${quote(name)} ADD COLUMN ${columnClause(shape.data, field.column, shape.data.columns[field.column] as ColumnDefinition, { constraints: true })};`,
+			),
+			...fields
+				.filter((field) => field.index === "unique")
+				.map((field) => uniqueIndex(shape.data, field.column)),
+			...fieldIndexes(name, fields),
+		],
 	});
 }
 

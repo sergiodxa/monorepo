@@ -1,6 +1,6 @@
 /**
- * The fields `sdxc scaffold` and `sdxc make model` take as `name`, `name:type` or `name?`, the
- * type a bare name takes by convention, and what each type becomes in the layers that read it as
+ * The fields `sdxc scaffold` and `sdxc make model` take as `name`, `name:type` or `name?`, with
+ * an `:index` or `:unique` modifier, the type a bare name takes by convention, and what each type becomes in the layers that read it as
  * data: the table column, the form and tool schemas, and the samples a test fills it with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -15,6 +15,8 @@ import type { AnyTable, ColumnBuilder, ColumnNamespace } from "remix/data-table"
 
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 import { column, table } from "remix/data-table";
+
+import { quote } from "../make/schema.js";
 
 /** A field type `sdxc scaffold` and `sdxc make model` know. */
 export type FieldTypeName =
@@ -52,7 +54,18 @@ export interface Field {
 	nullable: boolean;
 	/** Set on a `references` field only. */
 	reference?: Reference;
+	/**
+	 * `:index` adds an index to the table's migration; `:unique` makes the column unique, which
+	 * the model declares and the migration enforces with a unique index.
+	 */
+	index: FieldModifier | null;
 }
+
+/** A modifier a field may carry after its name or type. */
+export type FieldModifier = "index" | "unique";
+
+/** Every modifier, in the order the help lists them. */
+export const FIELD_MODIFIERS: readonly FieldModifier[] = ["index", "unique"];
 
 /** What one field type is in the layers that read it as data. */
 export interface FieldType {
@@ -299,8 +312,8 @@ export function conventionalType(words: readonly string[]): FieldTypeName {
 }
 
 /**
- * Parses `specs` into fields. Each spec is a name with an optional `:type`, and a trailing `?` on
- * either part makes the field nullable; a bare name takes {@link conventionalType}, and an
+ * Parses `specs` into fields. Each spec is a name with an optional `:type` and an optional
+ * `:index` or `:unique`, and a trailing `?` on any part makes the field nullable; a bare name takes {@link conventionalType}, and an
  * explicit type always wins. `author:references` and a bare `author_id` both write `author_id`,
  * pointing at the `authors` table until {@link resolveReferences} reads the model's own table.
  * A reserved, repeated or invalid name, an unknown type, a nullable box and a password column are
@@ -309,11 +322,24 @@ export function conventionalType(words: readonly string[]): FieldTypeName {
 export function parseFields(specs: readonly string[]): Result<Field[], Error> {
 	let fields: Field[] = [];
 	for (let spec of specs) {
-		let [rawName = "", rawType, ...rest] = spec.split(":");
-		if (rest.length > 0) return failure(new Error(`"${spec}" is not a field; write name:type`));
-		let nullable = rawName.endsWith("?") || (rawType?.endsWith("?") ?? false);
+		let [rawName = "", ...parts] = spec.split(":");
+		let nullable = [rawName, ...parts].some((part) => part.endsWith("?"));
 		let name = rawName.replace(/\?$/, "");
-		let explicit = rawType?.replace(/\?$/, "");
+		let explicit: string | undefined;
+		let index: FieldModifier | null = null;
+		for (let part of parts.map((raw) => raw.replace(/\?$/, ""))) {
+			if (FIELD_MODIFIERS.includes(part as FieldModifier) && index === null) {
+				index = part as FieldModifier;
+			} else if (explicit === undefined && !FIELD_MODIFIERS.includes(part as FieldModifier)) {
+				explicit = part;
+			} else {
+				return failure(
+					new Error(
+						`"${spec}" is not a field; write name, name:type, name:index or name:type:unique`,
+					),
+				);
+			}
+		}
 		let words = name
 			.replace(/([a-z0-9])([A-Z])/g, "$1 $2")
 			.split(/[\s_-]+/)
@@ -354,6 +380,7 @@ export function parseFields(specs: readonly string[]): Result<Field[], Error> {
 			key: first + others.map(capitalize).join(""),
 			type,
 			nullable,
+			index,
 		};
 		if (type === "references") {
 			let model = words.slice(0, -1);
@@ -409,13 +436,15 @@ export async function resolveReferences(root: string, fields: readonly Field[]):
 
 /**
  * The `remix/data-table` column source of `field` in the table `table`: its type's builder, a
- * reference's foreign key named `<table>_<column>_fkey`, and `.nullable()` after a `?`.
+ * reference's foreign key named `<table>_<column>_fkey`, `.unique()` after `:unique`, and
+ * `.nullable()` after a `?`.
  */
 export function columnSource(field: Field, table: string): string {
 	let source =
 		field.reference === undefined
 			? FIELD_TYPES[field.type as keyof typeof FIELD_TYPES].column
 			: `c.${field.reference.key}().references(${JSON.stringify(field.reference.table)}, ${JSON.stringify(`${table}_${field.column}_fkey`)})`;
+	if (field.index === "unique") source = `${source}.unique()`;
 	return field.nullable ? `${source}.nullable()` : source;
 }
 
@@ -425,7 +454,22 @@ export function buildColumn(field: Field, table: string, c: ColumnNamespace): Co
 		field.reference === undefined
 			? FIELD_TYPES[field.type as keyof typeof FIELD_TYPES].build(c)
 			: c[field.reference.key]().references(field.reference.table, `${table}_${field.column}_fkey`);
+	if (field.index === "unique") builder = builder.unique();
 	return field.nullable ? builder.nullable() : builder;
+}
+
+/**
+ * One `CREATE INDEX` per `:index` field of `table`, named `<table>_<column>_index`. The model
+ * declares no plain index, so the migration is where it lives; a `:unique` field's index comes
+ * from its column instead.
+ */
+export function fieldIndexes(table: string, fields: readonly Field[]): string[] {
+	return fields
+		.filter((field) => field.index === "index")
+		.map(
+			(field) =>
+				`CREATE INDEX ${quote(`${table}_${field.column}_index`)} ON ${quote(table)} (${quote(field.column)});`,
+		);
 }
 
 /**
