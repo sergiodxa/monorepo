@@ -355,9 +355,26 @@ sends them once the handler returns, logging each outcome.
 
 ## Preview an email
 
+An app from `sdxc create` lists every email at `/_emails` while `bun dev` runs, with an HTML and
+a text link for each supported language, and renders one from its template's `preview` props.
+The router mounts it from `@sdxc/mail/previews`, serving it only in development:
+
+```typescript {% title="app/initializers/router.tsx" %}
+previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+```
+
+The same email prints in a terminal, its subject and text part, or the HTML with `--html`:
+
+```sh
+sdxc run emails preview postings.published --locale es
+```
+
+`sdxc doctor` fails on an email `app/emails/index.ts` declares and nothing maps, and warns on a
+template without a test or without `preview`.
+
 `mail.preview()` renders an email with its template's `preview` props, in the language you
-name, and `mail.mapped` lists every declaration the registry maps, so a development page can
-show each email in each language. `emails` is the map from `app/emails/index.ts`:
+name, and `mail.mapped` lists every declaration the registry maps, for code of your own that
+shows them. `emails` is the map from `app/emails/index.ts`:
 
 ```typescript
 import { mail } from "~/app/initializers/mail";
