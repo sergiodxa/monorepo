@@ -28,21 +28,21 @@ writes and how to fill it in.
 
 ## Kinds
 
-| Kind                                         | File                                      | Test | Also edits                                              |
-| -------------------------------------------- | ----------------------------------------- | ---- | ------------------------------------------------------- |
-| [`controller`](/docs/sdxc/make-controller)   | `app/http/controllers/<name>.tsx`         | yes  | the route contract, the router, the sitemap             |
-| [`middleware`](/docs/sdxc/make-middleware)   | `app/http/middleware/<name>.ts`           | yes  | a chain, with `--mount`                                 |
-| [`validator`](/docs/sdxc/make-validator)     | `app/http/validators/<name>.ts`           | yes  |                                                         |
-| [`job`](/docs/sdxc/make-job)                 | `app/jobs/<name>.ts`                      | yes  | `app/jobs/index.ts`, the dispatcher                     |
-| [`model`](/docs/sdxc/make-model)             | `app/models/<name>.ts`                    | yes  | `app/models/index.ts`; writes its migration and factory |
-| [`migration`](/docs/sdxc/make-migration)     | `database/migrations/<number>_<Name>.sql` | no   |                                                         |
-| [`factory`](/docs/sdxc/make-factory)         | `database/factories/<name>.ts`            | no   |                                                         |
-| [`service`](/docs/sdxc/make-service)         | `app/services/<name>.ts`                  | yes  |                                                         |
-| [`policy`](/docs/sdxc/make-policy)           | `app/policies/<name>.test.ts`             | yes  | `app/policies/abilities.ts`, `app/policies/policy.ts`   |
-| [`initializer`](/docs/sdxc/make-initializer) | `app/initializers/<name>.ts`              | yes  |                                                         |
-| [`email`](/docs/sdxc/make-email)             | `app/emails/<name>.tsx`                   | yes  |                                                         |
-| [`mcp`](/docs/sdxc/make-mcp)                 | `app/mcp/tools/<name>.ts`                 | yes  | `app/mcp/tools/index.ts`, the MCP handler               |
-| [`command`](/docs/sdxc/make-command)         | `app/commands/<name>.ts`                  | yes  | `app/commands/index.ts`, the command line               |
+| Kind                                         | File                                      | Test | Also edits                                                                                       |
+| -------------------------------------------- | ----------------------------------------- | ---- | ------------------------------------------------------------------------------------------------ |
+| [`controller`](/docs/sdxc/make-controller)   | `app/http/controllers/<name>.tsx`         | yes  | the route contract, the router, the sitemap                                                      |
+| [`middleware`](/docs/sdxc/make-middleware)   | `app/http/middleware/<name>.ts`           | yes  | a chain, with `--mount`                                                                          |
+| [`validator`](/docs/sdxc/make-validator)     | `app/http/validators/<name>.ts`           | yes  |                                                                                                  |
+| [`job`](/docs/sdxc/make-job)                 | `app/jobs/<name>.ts`                      | yes  | `app/jobs/index.ts`, the dispatcher; with `--cron`, the Worker trigger in `cloudflare.config.ts` |
+| [`model`](/docs/sdxc/make-model)             | `app/models/<name>.ts`                    | yes  | `app/models/index.ts`; writes its migration and factory                                          |
+| [`migration`](/docs/sdxc/make-migration)     | `database/migrations/<number>_<Name>.sql` | no   |                                                                                                  |
+| [`factory`](/docs/sdxc/make-factory)         | `database/factories/<name>.ts`            | no   |                                                                                                  |
+| [`service`](/docs/sdxc/make-service)         | `app/services/<name>.ts`                  | yes  |                                                                                                  |
+| [`policy`](/docs/sdxc/make-policy)           | `app/policies/<name>.test.ts`             | yes  | `app/policies/abilities.ts`, `app/policies/policy.ts`                                            |
+| [`initializer`](/docs/sdxc/make-initializer) | `app/initializers/<name>.ts`              | yes  |                                                                                                  |
+| [`email`](/docs/sdxc/make-email)             | `app/emails/<name>.tsx`                   | yes  | `app/emails/index.ts`, the mail registry                                                         |
+| [`mcp`](/docs/sdxc/make-mcp)                 | `app/mcp/tools/<name>.ts`                 | yes  | `app/mcp/tools/index.ts`, the MCP handler                                                        |
+| [`command`](/docs/sdxc/make-command)         | `app/commands/<name>.ts`                  | yes  | `app/commands/index.ts`, the command line                                                        |
 
 `sdxc make` alone asks for the kind and the name on a terminal. Without one, a missing kind or
 name is a usage error that lists the kinds, so a script always names both. `sdxc make <kind>
@@ -131,8 +131,8 @@ Migrations and factories never get a test, and a policy's test comes with its ab
 
 ## Declared and mapped
 
-A controller, a job, a model, an MCP tool or resource and a command each need an entry in a
-declaration module and a mapping before the app reaches them, and `make` adds both:
+A controller, a job, a model, an MCP tool or resource, a command and an email each need an
+entry in a declaration module and a mapping before the app reaches them, and `make` adds both:
 
 | Kind         | Declaration                                                            | Mapping                                |
 | ------------ | ---------------------------------------------------------------------- | -------------------------------------- |
@@ -141,11 +141,19 @@ declaration module and a mapping before the app reaches them, and `make` adds bo
 | `model`      | `post: () => import("./post")` in `app/models/index.ts`                | read as `ctx.models.post`              |
 | `mcp`        | `searchPosts: tool("search_posts", { … })` in `app/mcp/tools/index.ts` | `mcp.tools.map(…, lazy(…))`            |
 | `command`    | `grant: command({ … })` in `app/commands/index.ts`                     | `cli.map(…, lazy(() => import(…)))`    |
+| `email`      | `invite: email({ props: s.object({ … }) })` in `app/emails/index.ts`   | `mail.map(…, lazy(() => import(…)))`   |
 
 `make` finds the initializer that serves each one by reading `app/initializers/`: the one that
-imports the declaration module and calls `createRouter`, `createJobDispatcher`, `createHandler`
-or `createCLI`. The new mapping goes after the last mapping already there, and imports follow
+imports the declaration module and calls `createRouter`, `createJobDispatcher`, `createHandler`,
+`createCLI` or `createMail`. The new mapping goes after the last mapping already there, and imports follow
 the form the file already uses, `~/app/…` or relative.
+
+Two kinds declare without a mapping: `make policy` adds the resource's `create`, `read`,
+`update` and `delete` abilities to `app/policies/abilities.ts` and grants them in
+`app/policies/policy.ts`, reads to everyone and writes to members, and `make job --cron` adds
+`triggers.scheduled({ schedule })` to `cloudflare.config.ts`, since a scheduled job runs only
+when a trigger delivers its expression. [`sdxc destroy`](/docs/sdxc/undo-generated-files)
+removes every declaration and mapping but a policy's again.
 
 ## When an edit cannot be placed
 
