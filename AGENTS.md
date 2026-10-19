@@ -32,6 +32,9 @@ vp lint <path>                  # Scope a static check to one workspace while it
 bun run doctor                  # Run `sdxc doctor` from this checkout's kit in every app; CI
                                  # runs it after typegen and fails when any app fails. Extra
                                  # flags reach every run (`bun run doctor --only migrations`)
+bun run kit:reference           # Rewrite the command reference in packages/kit/README.md from
+                                 # the sdxc contract; the kit's tests fail until it runs after a
+                                 # command, argument or flag changes
 bun run kit:registry            # Write sdxc ui's component registry into packages/kit, so a
                                  # kit run from this checkout (a global `sdxc` linked to
                                  # packages/kit/src/bin.ts) can list and copy components
