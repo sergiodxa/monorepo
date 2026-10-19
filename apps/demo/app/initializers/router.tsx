@@ -75,7 +75,11 @@ export function createWebRouter(
 			getClientIP(),
 			database(openDb()),
 			models(registry, (ctx) => ({ db: ctx.db })),
-			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+			previews(mail, {
+				locales: SUPPORTED_LANGUAGES,
+				enabled: import.meta.env.DEV,
+				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+			}),
 			jobs(openDb),
 			formData(),
 			cop(),
