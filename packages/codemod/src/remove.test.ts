@@ -23,6 +23,14 @@ describe("removeProperty", () => {
 		expect(edit.changed).toBe(true);
 	});
 
+	test("leaves an empty object as {} once its only property is gone", () => {
+		let source = 'export default createModels({\n\tpost: () => import("./post"),\n});\n';
+
+		let edit = unwrap(removeProperty("index.ts", source, { call: "createModels", key: "post" }));
+
+		expect(edit.source).toBe("export default createModels({});\n");
+	});
+
 	test("removes an inline property, and the last one with the comma before it", () => {
 		let source = "let a = jobs({ one: 1, two: 2, three: 3 });\n";
 

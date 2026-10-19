@@ -20,6 +20,7 @@ import { CodemodError } from "./errors.js";
 import { objectIn, properties } from "./property.js";
 import {
 	analyze,
+	closingOf,
 	cook,
 	crossesLine,
 	elements,
@@ -60,8 +61,8 @@ export interface StatementOptions {
 
 /**
  * `source` without `options.key` in the object literal `options.call` receives after walking
- * `options.path`, its comma and its line included. A group the removal leaves empty is removed
- * from its parent in turn. A missing call, path or key is a failure.
+ * `options.path`, its comma and its line included; the last property leaves `{}`. A group the
+ * removal leaves empty is removed from its parent in turn. A missing call, path or key is a failure.
  *
  * @example removeProperty("index.ts", source, { call: "jobs", path: ["trials"], key: "expire" })
  */
@@ -160,9 +161,12 @@ function removeOne(
 		);
 	}
 	let brace = structure.code[object.data];
+	let close = structure.code[closingOf(structure, object.data)];
 	let multiline = brace !== undefined && crossesLine(source, brace.end, property.start);
 	let replacement: Replacement;
-	if (multiline) {
+	if (list.length === 1 && brace !== undefined && close !== undefined) {
+		replacement = { start: brace.end, end: close.start, text: "" };
+	} else if (multiline) {
 		let end = property.comma?.end ?? property.end;
 		let lineEnd = source.indexOf("\n", end);
 		replacement = {
