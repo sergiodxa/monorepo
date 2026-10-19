@@ -29,6 +29,7 @@ sdxc make command users/grant              # then: sdxc run users grant
 
 sdxc run db console                        # SQL prompt over the local database
 sdxc run about                             # the app's name and the versions it runs on
+sdxc run emails preview bookmarks.digest   # print an email from its preview(); /_emails in bun dev
 ```
 
 `sdxc make` writes the file where it belongs with a test beside it, and maps it so it works

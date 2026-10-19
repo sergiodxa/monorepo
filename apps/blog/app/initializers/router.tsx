@@ -26,6 +26,7 @@ import { redirect } from "@sdxc/http/response";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { noWWW } from "@sdxc/no-www-middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
@@ -63,6 +64,7 @@ import { loginFor } from "~/app/http/return-path";
 import { assetResolver } from "~/app/initializers/assets";
 import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
 import { jobQueue } from "~/app/initializers/queue";
 import registry from "~/app/models";
 import { PROFILE } from "~/config/profile";
@@ -241,6 +243,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			socialCards(),
 			database(createDatabase()),
 			models(registry, (ctx) => ({ db: ctx.db })),
+			previews(mail, { enabled: import.meta.env.DEV }),
 			jobEnqueuer(jobQueue),
 			workersCache({ cache: () => platformCache }),
 			/**

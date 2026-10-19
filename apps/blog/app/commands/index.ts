@@ -7,8 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { command, commands, flag } from "@sdxc/cli";
+import { argument, command, commands, flag } from "@sdxc/cli";
 import { DB_COMMAND } from "@sdxc/database-middleware/cli";
+import * as s from "remix/data-schema";
 
 /** The blog's commands; `sdxc make command <name>` declares one here and maps its handler. */
 export default commands({
@@ -29,6 +30,21 @@ export default commands({
 				}),
 			},
 			examples: ["db migrate", "db migrate --remote", "db migrate --remote --pending"],
+		}),
+	}),
+	emails: commands({
+		preview: command({
+			description: "Print a declared email rendered from its template's preview() props",
+			arguments: {
+				name: argument(s.string(), { description: "The email's name, such as bookmarks.digest" }),
+			},
+			flags: {
+				locale: flag.string("locale", {
+					description: "The language to render it in; the fallback language without one",
+				}),
+				html: flag.boolean("html", { description: "Print the HTML part instead of the text" }),
+			},
+			examples: ["emails preview bookmarks.digest", "emails preview bookmarks.digest --html"],
 		}),
 	}),
 	deploy: command({
