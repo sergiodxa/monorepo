@@ -97,7 +97,7 @@ renders: `subject`, `body` and the other members receive the props with `locale`
 them, from the registry's `translator` (`createTranslator()` from `@sdxc/i18n` fits). Augment
 `MailTypes` with `translate` so `t()` checks message keys. `preview()` is optional and only feeds
 `mail.preview()`, which `previews(mail, { locales })` from `@sdxc/mail/previews` serves at
-`/_emails` as development middleware.
+`/_emails` while developing.
 
 `queue()` hands the delivery, as plain JSON, to the mailer's `queue` option. One job delivers
 every queued email:
@@ -398,8 +398,8 @@ on the current log. It publishes under the `CurrentMailer` context key, exported
 #### `previews(mail: Mail, options?: PreviewsOptions): Middleware` (also the default export)
 
 Lists every mapped email in each of `options.locales` at `options.path` (default `/_emails`), and
-renders one from its `preview()` at `<path>/<name>?locale=&format=html|text`. Mount it only in
-development.
+renders one from its `preview()` at `<path>/<name>?locale=&format=html|text`. Serve it only in
+development with `enabled: import.meta.env.DEV`, which passes every request on otherwise.
 
 ### `@sdxc/mail/middleware/cli`
 
