@@ -54,7 +54,11 @@ export const webRouter = createRouter({
 		getClientIP(),
 		trace(),
 		asyncContext(),
-		previews(mail, { locales: [FALLBACK_LANGUAGE], enabled: import.meta.env.DEV }),
+		previews(mail, {
+			locales: [FALLBACK_LANGUAGE],
+			enabled: import.meta.env.DEV,
+			stylesheets: () => assetResolver.getStylesheets("resources/views/hosted/document.tsx"),
+		}),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry }),
 		database(openDatabase()),
