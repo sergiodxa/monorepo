@@ -146,6 +146,24 @@ unticked, `NOT NULL DEFAULT 0`; every other field, a reference included, is adde
 slug needs a value for the rows posts already holds; write slug? to add it nullable, or declare it in the model and run make migration --from-model, which rebuilds the table
 ```
 
+A field's `:unique` or `:index` indexes the column it adds, after every `ADD COLUMN`:
+
+```bash
+sdxc make migration add-slug-to-posts 'slug?:unique' 'code?:index'
+```
+
+```sql {% title="database/migrations/0002_AddSlugToPosts.sql" %}
+-- AddSlugToPosts: adds slug, code to posts.
+
+ALTER TABLE "posts" ADD COLUMN "slug" TEXT;
+
+ALTER TABLE "posts" ADD COLUMN "code" TEXT;
+
+CREATE UNIQUE INDEX "posts_slug_unique" ON "posts" ("slug");
+
+CREATE INDEX "posts_code_index" ON "posts" ("code");
+```
+
 ### Drop columns
 
 ```bash

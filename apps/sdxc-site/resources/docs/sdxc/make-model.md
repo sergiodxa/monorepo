@@ -59,8 +59,9 @@ exists, or a table the chain already creates, stops the run with the project as 
 
 ## Fields
 
-A field is `name`, `name:type` or `name?`. A bare name takes its type from its name, an explicit
-type always wins, and a trailing `?` on either part makes the column nullable:
+A field is `name`, `name:type` or `name?`, with an optional `:index` or `:unique`. A bare name
+takes its type from its name, an explicit type always wins, and a trailing `?` on any part
+makes the column nullable:
 
 ```bash
 sdxc make model post title 'subtitle?' views:integer
@@ -92,9 +93,22 @@ with a text id when the project has no such model. The foreign key is named
 author_id: c.text().references("authors", "posts_author_id_fkey"),
 ```
 
+### Indexes
+
+`:unique` or `:index` after the name or the type indexes the column:
+
+```bash
+sdxc make model post title slug:unique rank:index 'code?:index'
+```
+
+A unique column is declared on the model, `slug: c.text().unique()`, and its migration creates
+`posts_slug_unique`. A plain index lives in the migration alone, as
+`CREATE INDEX "posts_rank_index" ON "posts" ("rank");`, since the model declares none.
+
 Some names are refused, each with the reason:
 
 - `id`, `created_at` and `updated_at`, which every table already has.
+- Two types or two modifiers in one field, such as `slug:index:unique`.
 - A name listed twice, or one that does not start with a letter.
 - A nullable box, `is_public?`: a box is ticked or not.
 - A column holding a password as typed; name it `password_hash` or `password_digest`.

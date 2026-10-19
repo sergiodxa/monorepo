@@ -79,7 +79,8 @@ the install command to run.
 
 ## Fields
 
-Each field is `name` or `name:type`, either with a trailing `?` to make it nullable. Quote a
+Each field is `name` or `name:type`, with an optional `:index` or `:unique`, and a trailing `?`
+on any part makes it nullable. Quote a
 `?` field in zsh, which reads `?` as a pattern:
 
 ```bash
@@ -103,7 +104,15 @@ explicit type always wins, as in `email:string`:
 
 The rules read the name's words, so `published_at` is a timestamp and `published` a box, and a
 camelCase name such as `publishedOn` becomes the column `published_on`. An `email` field gets no
-unique index; add one in the migration when the column must be unique.
+unique index by itself; `email:unique` gives it one.
+
+`:unique` or `:index` after the name or the type indexes the column: a unique one is declared on
+the model and enforced by the migration's `CREATE UNIQUE INDEX`, and a plain one lives in the
+migration alone.
+
+```bash
+sdxc scaffold person name email:unique 'nickname?:index'
+```
 
 A nullable field is nullable everywhere it appears: the column is `.nullable()`, the form field
 is optional and a blank answer is stored as `null`, the MCP tool's input takes `null`, and the
