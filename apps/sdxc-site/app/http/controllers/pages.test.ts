@@ -42,7 +42,8 @@ describe("GET /docs/releases/changelog", () => {
 		expect(response.status).toBe(200);
 		expect(body).toContain("2026.9.17");
 		expect(body).toContain("September 17, 2026");
-		expect(body).toContain("the thing that shipped");
+		expect(body).toContain("The thing that shipped");
+		expect(body).not.toContain("feat:");
 	});
 
 	test("keeps answering when GitHub refuses the call", async () => {

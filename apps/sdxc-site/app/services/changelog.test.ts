@@ -18,6 +18,7 @@ import {
 	MINIMUM_TTL_SECONDS,
 	parseNotes,
 	readChangelog,
+	withoutCommitTypes,
 } from "~/app/services/changelog";
 
 /** What the page reads, as GitHub sends it. */
@@ -167,5 +168,22 @@ describe("parseNotes", () => {
 	test("reports nothing for a release that carries no notes", () => {
 		expect(parseNotes("")).toBeNull();
 		expect(parseNotes("   \n")).toBeNull();
+	});
+});
+
+describe("withoutCommitTypes", () => {
+	test("prints an old prefixed item as its capitalized summary", () => {
+		expect(
+			withoutCommitTypes("## @sdxc/jwt\n- feat: add keys\n\tAdds keys.\n- fix(jwt): reject `exp`"),
+		).toBe("## @sdxc/jwt\n- Add keys\n\tAdds keys.\n- Reject `exp`");
+	});
+
+	test("marks a breaking item in words", () => {
+		expect(withoutCommitTypes("- feat!: drop HS256")).toBe("- **Breaking:** Drop HS256");
+	});
+
+	test("leaves a current item, an indented body line and a capitalized lookalike alone", () => {
+		let notes = "- **Breaking:** Drop HS256\n- Note: keys rotate\n\t- fix: in a body";
+		expect(withoutCommitTypes(notes)).toBe(notes);
 	});
 });

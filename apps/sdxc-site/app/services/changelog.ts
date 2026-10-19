@@ -52,6 +52,13 @@ export const MINIMUM_TTL_SECONDS = 60;
 /** A dated release tag, which is the only tag this page has an entry for. */
 const DATED_TAG = /^v(\d{4})\.(\d{1,2})\.(\d{1,2})$/;
 
+/**
+ * A commit's list item as older releases printed it, `- type!: summary`. Only the
+ * Conventional types match, lowercase as they are written, so a summary such as `Note: …` stays.
+ */
+const PREFIXED_ITEM =
+	/^- (?:feat|fix|perf|refactor|docs|test|chore|build|ci|style|revert)(?:\([^()]*\))?(?<breaking>!)?: (?<summary>.+)$/gmu;
+
 /** One release, as the page lists it. */
 export interface Release {
 	/** The dated version, `YYYY.M.D`, which is what every package published that day carries. */
@@ -212,11 +219,26 @@ function toReleases(payload: s.InferOutput<typeof releasesSchema>): Release[] {
 export function parseNotes(notes: string): Markdown.Document | null {
 	if (notes.trim() === "") return null;
 
-	let parsed = Markdown.parse(notes);
+	let parsed = Markdown.parse(withoutCommitTypes(notes));
 	if (isFailure(parsed)) return null;
 
 	let painted = Markdown.walk(parsed.data.document, { ...highlight });
 	if (isFailure(painted)) return null;
 
 	return painted.data;
+}
+
+/**
+ * The notes with every commit item in the shape releases print today: the summary alone,
+ * capitalized, and `**Breaking:**` before a breaking one, so the oldest release on the page
+ * reads like the newest.
+ *
+ * @example withoutCommitTypes("- feat!: drop HS256") // "- **Breaking:** Drop HS256"
+ */
+export function withoutCommitTypes(notes: string): string {
+	return notes.replace(PREFIXED_ITEM, (...match: unknown[]) => {
+		let groups = match.at(-1) as { breaking?: string; summary: string };
+		let summary = `${groups.summary.charAt(0).toUpperCase()}${groups.summary.slice(1)}`;
+		return `- ${groups.breaking === "!" ? "**Breaking:** " : ""}${summary}`;
+	});
 }
