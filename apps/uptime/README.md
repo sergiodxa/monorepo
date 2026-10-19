@@ -79,12 +79,10 @@ From the repo root: `bun check` (format, lint and type check in one pass) and `b
 
 Before deploying, run the full verification suite from the repo root: `bun typecheck`,
 `bun lint`, `bun run test`, `bun format`, `bun run --cwd apps/uptime build`,
-and a Cloudflare dry run with `bunx wrangler deploy --dry-run` from this app.
+and a Cloudflare dry run with `sdxc run deploy --dry-run` from this app.
 
 ```sh
-bun run --cwd apps/uptime build
-sdxc run db migrate --remote   # from apps/uptime, when the release adds migrations
-bun run --cwd apps/uptime cf:deploy
+sdxc deploy   # from apps/uptime: build, apply pending migrations, then wrangler deploy
 ```
 
 Read `docs/adr/uptime/AUTONOMOUS-SESSION-DECISIONS.md` before production work;
