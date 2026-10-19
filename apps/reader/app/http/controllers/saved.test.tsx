@@ -184,3 +184,26 @@ describe("GET /saved", () => {
 		expect(store.savedQueue).toHaveBeenCalledWith({ cursor: null, limit: 25 });
 	});
 });
+
+describe("labels on the kept posts", () => {
+	test("draws every row's labels and the field for adding one on a paid plan", async () => {
+		kept();
+
+		let body = await (await get(routes.saved.href())).text();
+
+		expect(body).toContain(`action="${routes.tags.apply.href({ itemId: "item-1" })}"`);
+		expect(store.listTags).toHaveBeenCalledOnce();
+	});
+
+	/** Labels are sold on a paid plan, so a free reader sees the posts they kept and no labels. */
+	test("shows a free reader the same rows without labels", async () => {
+		kept();
+		store.labelling.mockResolvedValue({ ok: false, reason: "not-entitled" });
+
+		let body = await (await get(routes.saved.href())).text();
+
+		expect(readsAs(body)).toContain("Markdown and the web");
+		expect(body).not.toContain(routes.tags.apply.href({ itemId: "item-1" }));
+		expect(store.listTags).not.toHaveBeenCalled();
+	});
+});

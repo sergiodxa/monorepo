@@ -121,10 +121,11 @@ export default createAction(routes.saved, {
 		if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
 		/**
-		 * Labels can be turned off on their own, which leaves this list exactly what it was
-		 * before they existed: the same rows, without the strip beneath their titles.
+		 * Labels are part of a paid plan and can be turned off on their own; either way this
+		 * list stays exactly what it was before they existed: the same rows, without the strip
+		 * beneath their titles. A lapsed plan hides labels and deletes none.
 		 */
-		let labelling = await ctx.flags.get(features.tags);
+		let labelling = (await store.labelling()).ok;
 
 		/** The list gathers every feed, so a row names the one its post came from. */
 		let entries = timelineEntries(

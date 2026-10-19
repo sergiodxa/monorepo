@@ -130,6 +130,15 @@ describe("the plan a reader's tier carries", () => {
 		});
 	});
 
+	/** The pages showing labels ask this, so a lapsed plan hides labels and deletes none. */
+	test("answers labelling as allowed on a paid plan and not entitled on the free one", async () => {
+		let paid = await createReader("paid");
+		let free = await createReader("free");
+
+		expect(await paid.user.labelling()).toEqual({ ok: true });
+		expect(await free.user.labelling()).toEqual({ ok: false, reason: "not-entitled" });
+	});
+
 	test("hands a page every claim as plain booleans", async () => {
 		let { user } = await createReader("paid");
 
@@ -188,6 +197,7 @@ describe("a switch turned off", () => {
 			reason: "switched-off",
 		});
 		expect((await user.entitlement()).can.tags.label).toBe(false);
+		expect(await user.labelling()).toEqual({ ok: false, reason: "switched-off" });
 	});
 
 	test("refuses writing and applying rules as switched off", async () => {

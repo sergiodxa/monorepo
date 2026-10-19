@@ -45,7 +45,7 @@ import {
 
 import type { FeedStore } from "~/app/models/feed-store";
 import type { UserModels } from "~/app/models/user";
-import type { ReaderClaims } from "~/app/policies/access";
+import type { ReaderClaims, RefusalReason } from "~/app/policies/access";
 import type { LimitRefusal, Tier, TierLimits, TierSource } from "~/app/services/entitlement";
 import type {
 	AgentScope,
@@ -352,6 +352,9 @@ export namespace UserStore {
 
 	/** What a limit refused, as a caller renders the sentence about it. */
 	export type Limit = LimitRefusal;
+
+	/** Whether the reader may label posts right now, and the code a page refuses with when not. */
+	export type Labelling = { ok: true } | { ok: false; reason: RefusalReason };
 
 	/** What the reader is entitled to, and where they stand against it. */
 	export interface Entitlement {
@@ -2249,6 +2252,16 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		});
 
 		return { ok: true, folder: folder === null ? null : toFolder(folder), moved };
+	}
+
+	/**
+	 * Whether the reader's plan carries labels and the switch has them on, which the pages
+	 * that show labels ask before reading any: a reader whose plan lapsed keeps every label,
+	 * and sees them again the moment the plan comes back.
+	 */
+	async labelling(): Promise<UserStore.Labelling> {
+		let decision = await this.#decide(abilities.tags.label);
+		return decision.allowed ? { ok: true } : { ok: false, reason: refusalReason(decision) };
 	}
 
 	/**

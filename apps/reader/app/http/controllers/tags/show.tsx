@@ -34,6 +34,8 @@ import { attrs } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import type { RefusalReason } from "~/app/policies/access";
+
 import { chrome } from "~/app/http/controllers/chrome";
 import { placePage } from "~/app/http/controllers/list-paging";
 import { NAME_FIELD, TAG_PARAM } from "~/app/http/controllers/tags/create";
@@ -108,6 +110,19 @@ function tagUrl(tagId: string, cursor: string | null, extra: Record<string, stri
 	return query.length === 0 ? base : `${base}?${query}`;
 }
 
+/**
+ * Where a reader who may not label lands: the posts they kept, carrying the upgrade note
+ * when their plan is what refused.
+ *
+ * @param reason - The code the reader's object refused labelling with.
+ */
+function savedRefusal(reason: RefusalReason): string {
+	if (reason !== "not-entitled") return routes.saved.href();
+
+	let query = new URLSearchParams({ [TAG_PARAM]: reason });
+	return `${routes.saved.href()}?${query}`;
+}
+
 /** The `id` the rename form's popover answers to, which its trigger names in `commandfor`. */
 function renameMenuId(tagId: string): string {
 	return `rename-tag-${tagId}`;
@@ -130,17 +145,18 @@ export default createAction(routes.tag, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		/**
-		 * Labels can be turned off, and this list is the whole of what they are for: with them
-		 * off there is nothing here to show and no way to put anything here, so a reader
-		 * following a bookmark is sent to the posts they kept rather than shown an empty list.
-		 */
-		if (!(await ctx.flags.get(features.tags))) {
-			return redirect(routes.saved.href(), { status: redirect.Status.SeeOther });
-		}
-
 		let { tag: tagId } = s.parse(Params, ctx.params);
 		let store = userStore(viewer.id);
+
+		/**
+		 * This list is the whole of what labels are for, so a reader who may not label is sent
+		 * to the posts they kept: with the note a refused label action shows when their plan
+		 * lacks labels, and plainly when labels are turned off for everybody.
+		 */
+		let labelling = await store.labelling();
+		if (!labelling.ok) {
+			return redirect(savedRefusal(labelling.reason), { status: redirect.Status.SeeOther });
+		}
 
 		let tag = await store.getTag(tagId);
 

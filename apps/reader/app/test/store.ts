@@ -47,6 +47,7 @@ export interface UserStoreDouble {
 	deleteFolder: ReturnType<typeof vi.fn>;
 	fileFeed: ReturnType<typeof vi.fn>;
 	folderTimeline: ReturnType<typeof vi.fn>;
+	labelling: ReturnType<typeof vi.fn>;
 	listTags: ReturnType<typeof vi.fn>;
 	getTag: ReturnType<typeof vi.fn>;
 	createTag: ReturnType<typeof vi.fn>;
@@ -227,6 +228,8 @@ export function createUserStoreDouble(): UserStoreDouble {
 		setVelocity: vi.fn(async () => ({ ok: false, reason: "not-following" })),
 		saveItem: vi.fn(async () => ({ ok: true, saved: true })),
 		openPost: vi.fn(async () => null),
+		/** Allowed, so a page showing labels draws them unless a test is about the refusal. */
+		labelling: vi.fn(async () => ({ ok: true })),
 		listTags: vi.fn(async () => NO_TAGS),
 		getTag: vi.fn(async () => null),
 		createTag: vi.fn(async () => ({ ok: false, reason: "tag-name-invalid" })),
