@@ -82,6 +82,7 @@
 		"./data-model/cli": "./src/data-model/cli.ts",
 		"./data-model/jobs": "./src/data-model/jobs.ts",
 		"./data-model/router": "./src/data-model/router.ts",
+		"./data-model/seed": "./src/data-model/seed.ts",
 		"./data-model/testing": "./src/data-model/testing.ts",
 		"./data-table-d1": "./src/data-table-d1.ts",
 		"./data-table-sqlstorage": "./src/data-table-sqlstorage.ts",
