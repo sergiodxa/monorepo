@@ -96,7 +96,8 @@ The props are parsed by the declared schema first, and copy is translated when t
 renders: `subject`, `body` and the other members receive the props with `locale` and `t` beside
 them, from the registry's `translator` (`createTranslator()` from `@sdxc/i18n` fits). Augment
 `MailTypes` with `translate` so `t()` checks message keys. `preview()` is optional and only feeds
-`mail.preview()`.
+`mail.preview()`, which `previews(mail, { locales })` from `@sdxc/mail/previews` serves at
+`/_emails` as development middleware.
 
 `queue()` hands the delivery, as plain JSON, to the mailer's `queue` option. One job delivers
 every queued email:
@@ -242,7 +243,7 @@ Pairs a template with its declaration: `subject`, `body`, and optional `replyTo`
 ### `createMail(options?: MailOptions): Mail`
 
 The registry: `map(email, template | lazy(load))`, `mapped`, `compose()`, `render(email, { locale, props })`,
-`preview(email, locale?)` and `validate(email, props)`. It holds no transport, so a command run
+`preview(email, locale?)`, `hasPreview(email)` and `validate(email, props)`. It holds no transport, so a command run
 on Bun and the Worker share it.
 
 ### `EMAIL_DELIVERY`
@@ -391,6 +392,14 @@ Publishes a request-scoped `Mailer` as `context.email` and flushes its queue aft
 `replyTo?`, `headers?`, and `mail?` (the `createMail()` registry) with `queue?` for declared emails. Each deferred send logs `mail.sent` or a `mail.send_failed` warning
 on the current log. It publishes under the `CurrentMailer` context key, exported here and from
 `./middleware/cli`, so `ctx.get(CurrentMailer)` reads the same mailer in a route or a command.
+
+### `@sdxc/mail/previews`
+
+#### `previews(mail: Mail, options?: PreviewsOptions): Middleware` (also the default export)
+
+Lists every mapped email in each of `options.locales` at `options.path` (default `/_emails`), and
+renders one from its `preview()` at `<path>/<name>?locale=&format=html|text`. Mount it only in
+development.
 
 ### `@sdxc/mail/middleware/cli`
 

@@ -375,4 +375,12 @@ describe("Mail", () => {
 
 		expect(isFailure(rendered) && rendered.error.message).toContain("has no preview");
 	});
+
+	test("reports which mapped templates have a preview", async () => {
+		let { mail } = setup();
+
+		expect(await mail.hasPreview(EMAILS.teams.invite)).toBe(true);
+		expect(await mail.hasPreview("welcome")).toBe(false);
+		expect(await mail.hasPreview("billing.receipt")).toBe(false);
+	});
 });

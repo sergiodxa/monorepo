@@ -243,6 +243,18 @@ export class Mail {
 	}
 
 	/**
+	 * Reports whether the template mapped for an email has a `preview()`, loading it without
+	 * rendering, so a preview list marks the emails it cannot show.
+	 *
+	 * @param email - The declared email, or its name.
+	 * @returns `false` for an unmapped email or a template that failed to load, too.
+	 */
+	async hasPreview(email: AnyEmailDeclaration | string): Promise<boolean> {
+		let loaded = await this.#load(email);
+		return !isFailure(loaded) && loaded.data.template.preview !== undefined;
+	}
+
+	/**
 	 * Parses props with the declared schema without rendering anything, which is how a mailer
 	 * refuses a queued delivery where its caller wrote it.
 	 *

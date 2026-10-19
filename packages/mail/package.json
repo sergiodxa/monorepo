@@ -13,6 +13,7 @@
 		"./middleware": "./src/middleware.ts",
 		"./middleware/cli": "./src/cli.ts",
 		"./middleware/jobs": "./src/jobs.ts",
+		"./previews": "./src/previews.tsx",
 		"./unsubscribe": "./src/unsubscribe.ts"
 	},
 	"scripts": {
