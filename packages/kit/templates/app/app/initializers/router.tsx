@@ -25,6 +25,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
 import serverTiming from "~/app/http/middleware/server-timing";
+import { assetResolver } from "~/app/initializers/assets";
 import { openDatabase } from "~/app/initializers/database";
 import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
@@ -73,7 +74,11 @@ export function createWebRouter() {
 			}),
 			database(openDatabase()),
 			models(registry, (ctx) => ({ db: ctx.db })),
-			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+			previews(mail, {
+				locales: SUPPORTED_LANGUAGES,
+				enabled: import.meta.env.DEV,
+				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+			}),
 			mailer({ transport, from: MAIL_FROM, mail, queue }),
 		],
 	});
