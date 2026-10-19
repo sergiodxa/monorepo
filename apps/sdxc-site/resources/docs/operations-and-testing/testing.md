@@ -8,6 +8,10 @@ order: 3
 lastUpdated: 2026-10-15
 ---
 
+For the tests `sdxc make` writes and how to run one file or one case, start with
+[Test your app](/docs/operations-and-testing/test-your-app); this guide covers the configuration
+under them.
+
 A Remix v3 app on Workers has three kinds of behavior worth testing: what the router answers,
 what it does to its bindings, and what it sends to the outside world. This guide sets up a
 test suite that covers all three without a hand-written fake in sight. Vitest runs through
