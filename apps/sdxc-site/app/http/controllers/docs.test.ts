@@ -14,6 +14,30 @@ import { listGuides } from "~/app/services/docs";
 import { listPackages } from "~/app/services/packages";
 import { fetchApp } from "~/app/test/router";
 
+/**
+ * Every guide's slug, read once so each guide becomes its own test: one test per guide keeps
+ * each within the time limit however many guides the site holds, and names the guide that broke.
+ */
+const GUIDE_SLUGS = (await listGuides()).flatMap((section) =>
+	section.guides.map((guide) => guide.slug),
+);
+
+/** Rendered guides by slug, so the link checks render each target page once across tests. */
+const RENDERED = new Map<string, Promise<{ status: number; body: string }>>();
+
+/** The guide at `slug` as the router answers it, rendered on first use and shared after. */
+function renderGuide(slug: string): Promise<{ status: number; body: string }> {
+	let rendered = RENDERED.get(slug);
+	if (rendered === undefined) {
+		rendered = fetchApp(`/docs/${slug}`).then(async (response) => ({
+			status: response.status,
+			body: await response.text(),
+		}));
+		RENDERED.set(slug, rendered);
+	}
+	return rendered;
+}
+
 describe("GET /docs", () => {
 	test("routes by intent, one card per guide section", async () => {
 		let sections = await listGuides();
@@ -24,37 +48,29 @@ describe("GET /docs", () => {
 		expect(body).toContain("Browse the packages");
 	});
 
-	test("every guide parses and renders", async () => {
-		let sections = await listGuides();
-
-		for (let guide of sections.flatMap((section) => section.guides)) {
-			let response = await fetchApp(`/docs/${guide.slug}`);
-			expect(response.status, guide.slug).toBe(200);
-		}
+	test.each(GUIDE_SLUGS)("guide %s parses and renders", async (slug) => {
+		expect((await renderGuide(slug)).status).toBe(200);
 	});
 
-	test("every link between guides reaches a guide and a heading on it", async () => {
-		let slugs = (await listGuides()).flatMap((section) =>
-			section.guides.map((guide) => guide.slug),
-		);
-		let pages = new Map<string, string>();
-		for (let slug of slugs) pages.set(slug, await (await fetchApp(`/docs/${slug}`)).text());
-
-		let broken: string[] = [];
-		for (let [slug, body] of pages) {
+	test.each(GUIDE_SLUGS)(
+		"every link in guide %s reaches a guide and a heading on it",
+		async (slug) => {
+			let body = (await renderGuide(slug)).body;
 			let article = body.slice(body.indexOf("<article"), body.indexOf("</article>"));
-			for (let [, target, fragment] of article.matchAll(/href="\/docs\/([^"#?]+)(?:#([^"]+))?"/g)) {
-				if (target?.endsWith(".md")) continue;
-				let page = pages.get(target ?? "");
-				if (page === undefined) broken.push(`${slug} → /docs/${target}`);
-				else if (fragment && !page.includes(`id="${fragment}"`)) {
-					broken.push(`${slug} → /docs/${target}#${fragment}`);
+			let broken: string[] = [];
+			for (let [, target = "", fragment] of article.matchAll(
+				/href="\/docs\/([^"#?]+)(?:#([^"]+))?"/g,
+			)) {
+				if (target.endsWith(".md")) continue;
+				if (!GUIDE_SLUGS.includes(target)) broken.push(`/docs/${target}`);
+				else if (fragment && !(await renderGuide(target)).body.includes(`id="${fragment}"`)) {
+					broken.push(`/docs/${target}#${fragment}`);
 				}
 			}
-		}
 
-		expect(broken).toEqual([]);
-	});
+			expect(broken).toEqual([]);
+		},
+	);
 
 	test("every card leads somewhere that answers", async () => {
 		let sections = await listGuides();
