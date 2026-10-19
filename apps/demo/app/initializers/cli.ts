@@ -68,6 +68,10 @@ cli.map(
 	lazy(() => import("~/app/commands/deploy")),
 );
 cli.map(
+	commandset.emails.preview,
+	lazy(() => import("~/app/commands/emails/preview")),
+);
+cli.map(
 	commandset.typegen,
 	lazy(() => import("~/app/commands/typegen")),
 );

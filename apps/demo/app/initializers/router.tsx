@@ -19,6 +19,7 @@ import getClientIP from "@sdxc/get-client-ip/middleware";
 import i18n from "@sdxc/i18n/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -33,6 +34,7 @@ import { captchaProvider } from "~/app/initializers/captcha";
 import { openDatabase } from "~/app/initializers/database";
 import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
 import registry from "~/app/models";
 import routes from "~/routes/web";
 
@@ -73,6 +75,7 @@ export function createWebRouter(
 			getClientIP(),
 			database(openDb()),
 			models(registry, (ctx) => ({ db: ctx.db })),
+			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
 			jobs(openDb),
 			formData(),
 			cop(),

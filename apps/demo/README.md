@@ -28,6 +28,7 @@ sdxc make command postings/close           # then: sdxc run postings close
 
 sdxc run db console                        # SQL prompt over the local database
 sdxc run about                             # the versions the board is built on
+sdxc run emails preview postingPublished   # print an email from its preview(); /_emails in bun dev
 bun check                                  # format, lint and types, from the repo root
 ```
 
