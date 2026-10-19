@@ -1,7 +1,8 @@
 /**
  * `sdxc destroy <kind> <name>`: the reverse of `sdxc make`. It removes the file, its test and,
- * for a model, its factory, then the mapping that loads the file and the declaration that
- * mapping names. Every other reference is listed for the user to remove.
+ * for a model, its factory, then the mapping that loads the file, the declaration that mapping
+ * names and the Worker trigger of a schedule no other job runs on. Every other reference is
+ * listed for the user to remove.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,6 +24,8 @@ import { listFiles } from "./doctor/files.js";
 import { exists, folderOf } from "./make/generate.js";
 import { KINDS } from "./make/kinds.js";
 import { parseName } from "./make/names.js";
+import { planUntrigger } from "./make/trigger.js";
+import { declaredJobs, normalized } from "./schedule.js";
 
 /** The builder call each declared kind's declarations module passes its object to. */
 const DECLARATION_CALLS: Partial<Record<KindName, string>> = {
@@ -304,7 +307,19 @@ export async function planDestroy(
 
 	let edits: FileEdit[] = [];
 	let notes: string[] = [];
+	let scheduled = input.kind === "job" ? await declaredJobs(root) : [];
 	let declared = await unmap(root, input.kind, file, input.resource, edits, notes);
+	let job = declared?.split(".").slice(1).join(".");
+	let cron = scheduled.find((entry) => entry.job === job)?.cron;
+	let shared = scheduled.some(
+		(entry) =>
+			entry.job !== job && cron !== undefined && normalized(entry.cron) === normalized(cron),
+	);
+	if (cron !== undefined && !shared) {
+		let untrigger = await planUntrigger(root, cron);
+		if (untrigger.edit !== null) edits.push(untrigger.edit);
+		if (untrigger.note !== null) notes.push(untrigger.note);
+	}
 	if (input.kind === "model") {
 		await unregisterModel(root, file, edits);
 		notes.push(

@@ -21,7 +21,7 @@ import { Project } from "./routes/modules.js";
 const JOBS_MODULE = "app/jobs/index.ts";
 
 /** The files a Worker's cron triggers are declared in, `cloudflare.config.ts` first. */
-const TRIGGER_FILES = ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.json"];
+export const TRIGGER_FILES = ["cloudflare.config.ts", "wrangler.jsonc", "wrangler.json"];
 
 /** One scheduled job. */
 export interface ScheduledJob {
@@ -68,7 +68,7 @@ function cronJobs(
 }
 
 /** The scheduled jobs the project's job declarations hold, in source order. */
-async function declaredJobs(root: string): Promise<Array<{ job: string; cron: string }>> {
+export async function declaredJobs(root: string): Promise<Array<{ job: string; cron: string }>> {
 	let project = new Project(root);
 	let module = await project.load(JOBS_MODULE);
 	if (module === null) return [];
@@ -89,7 +89,7 @@ async function declaredJobs(root: string): Promise<Array<{ job: string; cron: st
 }
 
 /** Every cron expression a trigger file declares, by file. */
-async function triggerCrons(root: string): Promise<Array<{ cron: string; file: string }>> {
+export async function triggerCrons(root: string): Promise<Array<{ cron: string; file: string }>> {
 	let crons: Array<{ cron: string; file: string }> = [];
 	for (let file of TRIGGER_FILES) {
 		let text = await wrap(() => readFile(join(root, file), "utf8"));
@@ -108,7 +108,7 @@ async function triggerCrons(root: string): Promise<Array<{ cron: string; file: s
 }
 
 /** `cron` as `@sdxc/cron` prints it, so `0 9 * * MON-FRI` and `0 9 * * 1-5` compare equal. */
-function normalized(cron: string): string {
+export function normalized(cron: string): string {
 	let parsed = Schedule.parse(cron);
 	return isFailure(parsed) ? cron.trim() : parsed.data.toString();
 }

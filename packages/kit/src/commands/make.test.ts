@@ -824,6 +824,9 @@ describe("declaring and mapping", () => {
 			expect(jobs).toContain('import * as s from "remix/data-schema";');
 			expect(jobs).toContain("trials: {\n\t\texpire: job({ input: s.object({}) }),\n\t},");
 			expect(jobs).toContain('digest: job({ cron: "0 8 * * *" }),');
+			expect(await read("cloudflare.config.ts")).toContain(
+				'triggers: [triggers.queue({ name: manifest.name }), triggers.scheduled({ schedule: "0 8 * * *" })],',
+			);
 			expect(dispatcher).toContain('import jobs from "~/app/jobs";');
 			expect(dispatcher).toContain(
 				'dispatcher.map(jobs.trials.expire, () => import("~/app/jobs/trials/expire"));\ndispatcher.map(jobs.digest, () => import("~/app/jobs/digest"));',
@@ -1104,6 +1107,40 @@ describe("declaring and mapping", () => {
 		);
 		expect(await readFile(join(root, "app/jobs/activitypub/receive.ts"), "utf8")).toContain(
 			"createJobHandler(jobs.activityPub.receive,",
+		);
+	});
+
+	test("a cron job's trigger is added once, and printed where the config takes no edit", async () => {
+		let config = (triggers: string) =>
+			`import { defineConfig, triggers } from "cf/config";\n\nexport default defineConfig({\n\tworker: {\n\t\tname: "blog",${triggers}\n\t},\n});\n`;
+		let listed = await project();
+		await writeFile(
+			join(listed, "cloudflare.config.ts"),
+			config('\n\t\ttriggers: [triggers.scheduled({ schedule: "0 9 * * 1-5" })],'),
+		);
+		let unlisted = await project();
+		await writeFile(join(unlisted, "cloudflare.config.ts"), config(""));
+		let wrangler = await project();
+		await writeFile(join(wrangler, "wrangler.jsonc"), '{ "name": "blog" }\n');
+
+		let added = await invoke(["job", "digest", "--cron", "0 8 * * *", "--no-test"], listed);
+		let same = await invoke(["job", "weekdays", "--cron", "0 9 * * MON-FRI", "--no-test"], listed);
+		let missing = await invoke(["job", "digest", "--cron", "0 8 * * *", "--no-test"], unlisted);
+		let manual = await invoke(["job", "digest", "--cron", "0 8 * * *", "--no-test"], wrangler);
+
+		expect(added.stdout).toContain("Edited cloudflare.config.ts\n");
+		expect(await readFile(join(listed, "cloudflare.config.ts"), "utf8")).toBe(
+			config(
+				'\n\t\ttriggers: [triggers.scheduled({ schedule: "0 9 * * 1-5" }), triggers.scheduled({ schedule: "0 8 * * *" })],',
+			),
+		);
+		expect(same.stdout).not.toContain("cloudflare.config.ts");
+		expect(await readFile(join(unlisted, "cloudflare.config.ts"), "utf8")).toBe(config(""));
+		expect(missing.stdout).toMatch(
+			/Add its trigger by hand, since cloudflare.config.ts has no worker.triggers list:\nIn cloudflare.config.ts, in worker.triggers:\n {2}triggers.scheduled\(\{ schedule: "0 8 \* \* \*" \}\),\n$/,
+		);
+		expect(manual.stdout).toMatch(
+			/Add its trigger by hand, since wrangler.jsonc configures the Worker:\nIn wrangler.jsonc, in triggers.crons:\n {2}"0 8 \* \* \*"\n$/,
 		);
 	});
 

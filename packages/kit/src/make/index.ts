@@ -49,6 +49,7 @@ import { KINDS } from "./kinds.js";
 import { chainFolder } from "./migrations.js";
 import { mount } from "./mount.js";
 import { parseName } from "./names.js";
+import { planTrigger } from "./trigger.js";
 
 /** One file to make, as the command line or the prompts gave it. */
 export interface MakeInput {
@@ -314,6 +315,11 @@ export async function makeUnformatted(
 		}
 	}
 	let edits = declared?.kind === "edits" ? [...declared.edits] : [];
+	if (kind === "job" && input.cron !== undefined && !replacing) {
+		let trigger = await planTrigger(root, input.cron);
+		if (trigger.edit !== null) edits.push(trigger.edit);
+		if (trigger.note !== null) notes.push(trigger.note);
+	}
 	let dependencies = await missingDependencies(root, [
 		...planned.data.files,
 		...edits.map((edit) => ({ path: edit.path, content: edit.after })),

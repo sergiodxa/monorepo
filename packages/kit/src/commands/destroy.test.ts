@@ -60,6 +60,7 @@ const EDITED = [
 	"app/commands/index.ts",
 	"app/initializers/cli.ts",
 	"app/models/index.ts",
+	"cloudflare.config.ts",
 ];
 
 describe("destroy", () => {
@@ -74,6 +75,7 @@ describe("destroy", () => {
 			let made = [
 				["controller", "sponsors"],
 				["job", "trials/expire"],
+				["job", "digest", "--cron", "0 8 * * *"],
 				["mcp", "get-post"],
 				["command", "users/grant"],
 				["model", "post", "title"],
@@ -89,6 +91,41 @@ describe("destroy", () => {
 			expect(await Promise.all(EDITED.map(read))).toEqual(before);
 		},
 	);
+
+	test("keeps a trigger while another job runs on its schedule", async () => {
+		let root = unwrap(await materialize("app"));
+		DIRECTORIES.push(dirname(root));
+		let config = () => readFile(join(root, "cloudflare.config.ts"), "utf8");
+		let before = await config();
+		await run(["make", "job", "digest", "--cron", "0 9 * * MON-FRI"], root);
+		await run(["make", "job", "reports/daily", "--cron", "0 9 * * 1-5"], root);
+		let scheduled = await config();
+
+		let first = await run(["destroy", "job", "digest", "--yes"], root);
+		let kept = await config();
+		let second = await run(["destroy", "job", "reports/daily", "--yes"], root);
+
+		expect(scheduled).toContain('triggers.scheduled({ schedule: "0 9 * * MON-FRI" })');
+		expect(scheduled.match(/triggers\.scheduled/g)).toHaveLength(1);
+		expect(first.stdout).not.toContain("cloudflare.config.ts");
+		expect(kept).toBe(scheduled);
+		expect(second.stdout).toContain("Edited cloudflare.config.ts\n");
+		expect(await config()).toBe(before);
+	});
+
+	test("names the wrangler.jsonc trigger to remove by hand", async () => {
+		let root = unwrap(await materialize("app"));
+		DIRECTORIES.push(dirname(root));
+		await rm(join(root, "cloudflare.config.ts"));
+		await writeFile(join(root, "wrangler.jsonc"), '{ "triggers": { "crons": ["0 8 * * *"] } }\n');
+		await run(["make", "job", "digest", "--cron", "0 8 * * *"], root);
+
+		let destroyed = await run(["destroy", "job", "digest", "--yes"], root);
+
+		expect(destroyed.stdout).toContain(
+			'Remove its trigger by hand, since no other job runs on its schedule:\nIn wrangler.jsonc, in triggers.crons:\n  "0 8 * * *"\n',
+		);
+	});
 
 	test("needs --yes without a terminal, and --dry-run changes nothing", async () => {
 		let root = unwrap(await materialize("app"));

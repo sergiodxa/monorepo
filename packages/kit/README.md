@@ -178,12 +178,12 @@ An input validator in app/http/validators
 
 A background job in app/jobs, declared and mapped
 
-| Flag                  | Does                                                                          |
-| --------------------- | ----------------------------------------------------------------------------- |
-| `--cron <expression>` | A scheduled job instead of one with input                                     |
-| `--test`              | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run`           | Print what would be written and change nothing                                |
-| `--force`             | Replace the file and its test when they exist, keeping their declaration      |
+| Flag                  | Does                                                                             |
+| --------------------- | -------------------------------------------------------------------------------- |
+| `--cron <expression>` | A scheduled job instead of one with input, with the Worker trigger that fires it |
+| `--test`              | Write a test beside the file, or skip it with --no-test (default: make.tests)    |
+| `--dry-run`           | Print what would be written and change nothing                                   |
+| `--force`             | Replace the file and its test when they exist, keeping their declaration         |
 
 #### `sdxc make model <name> [field[:type][?]...]`
 

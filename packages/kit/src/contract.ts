@@ -273,7 +273,8 @@ export const SDXC_COMMANDS = commands({
 			flags: {
 				cron: flag.string("cron", {
 					valueName: "expression",
-					description: "A scheduled job instead of one with input",
+					description:
+						"A scheduled job instead of one with input, with the Worker trigger that fires it",
 				}),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
