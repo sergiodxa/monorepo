@@ -26,6 +26,7 @@ import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
 import { declare, declaresAbilities } from "../make/declare.js";
+import { SCAFFOLD_PIECES } from "../make/kinds.js";
 import { chainFolder, nextMigrationFile } from "../make/migrations.js";
 import { parseName } from "../make/names.js";
 import { loadStub, renderStub } from "../make/stubs.js";
@@ -154,6 +155,12 @@ export async function scaffold(
 		edits.splice(0, edits.length, ...documented.data.edits);
 		staged.data.manual.push(...documented.data.manual);
 	}
+	let skippedNote =
+		skip.size === 0
+			? []
+			: [
+					`Wrote no ${SCAFFOLD_PIECES.filter((piece) => skip.has(piece)).join(", ")}, as --skip asked\n`,
+				];
 	let notes = staged.data.manual.map(
 		(manual) =>
 			`Declare and map ${manual.path} by hand, since ${manual.reason}:\n${manual.instructions}\n`,
@@ -162,7 +169,7 @@ export async function scaffold(
 	if (input.dryRun) {
 		for (let file of planned) ctx.stdout(`Would write ${file.path}:\n\n${file.content}\n`);
 		for (let edit of edits) ctx.stdout(unifiedDiff(edit.path, edit.before, edit.after));
-		for (let note of notes) ctx.stdout(note);
+		for (let note of [...notes, ...skippedNote]) ctx.stdout(note);
 		return success(undefined);
 	}
 	let written = await wrap(async () => {
@@ -187,9 +194,10 @@ export async function scaffold(
 		let added = dependencies.data.added.map(({ name, version }) => `${name}@${version}`);
 		ctx.stdout(`Added ${added.join(", ")} to package.json; run ${manager.install.join(" ")}\n`);
 	}
-	for (let note of notes) ctx.stdout(note);
 	let changed = [...planned.map((file) => file.path), ...edits.map((edit) => edit.path)];
-	return formatFiles(ctx, config.format, changed, root);
+	let formatted = await formatFiles(ctx, config.format, changed, root);
+	for (let note of [...notes, ...skippedNote]) ctx.stdout(note);
+	return formatted;
 }
 
 /**

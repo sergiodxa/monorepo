@@ -106,24 +106,48 @@ export async function make(
 	packageRoot: string,
 	input: MakeInput,
 ): Promise<Result<void, Error>> {
-	let changed = await makeUnformatted(ctx, project, packageRoot, input);
-	if (isFailure(changed)) return changed;
-	if (changed.data.length === 0) return success(undefined);
-	return formatFiles(ctx, project.config.format, changed.data, project.root);
+	let made = await makeUnformatted(ctx, project, packageRoot, input);
+	if (isFailure(made)) return made;
+	return finish(ctx, project, made.data);
+}
+
+/** What a run wrote and edited, and the notes it prints once the files are formatted. */
+export interface Made {
+	changed: string[];
+	/**
+	 * Each edit left for the user to make and each piece left out, printed after the formatter's
+	 * own output, so a long run ends with what still needs the user.
+	 */
+	notes: string[];
+}
+
+/** Formats every changed path once, then prints the notes, which end the run's output. */
+export async function finish(
+	ctx: MakeContext,
+	project: Project,
+	made: Made,
+): Promise<Result<void, Error>> {
+	let formatted =
+		made.changed.length === 0
+			? success(undefined)
+			: await formatFiles(ctx, project.config.format, made.changed, project.root);
+	for (let note of made.notes) ctx.stdout(note);
+	return formatted;
 }
 
 /**
- * {@link make} up to the project's `format`, which the caller runs once over every path it
- * answers, so a command making several files formats them together.
+ * {@link make} up to the project's `format` and its notes, which the caller runs and prints
+ * once with {@link finish}, so a command making several files formats them together.
  *
- * @returns Every path written or edited; none under `dryRun`
+ * @returns Every path written or edited and the notes to print; none of either under `dryRun`,
+ * which prints its notes itself
  */
 export async function makeUnformatted(
 	ctx: MakeContext,
 	project: Project,
 	packageRoot: string,
 	input: MakeInput,
-): Promise<Result<string[], Error>> {
+): Promise<Result<Made, Error>> {
 	let { root, config } = project;
 	let { kind } = input;
 	let name = parseName(input.name);
@@ -233,7 +257,7 @@ export async function makeUnformatted(
 	if (kind === "migration" && input.fromModel !== undefined) {
 		let sql = await modelMigration(ctx, project, input.fromModel, input.chain, request.name);
 		if (isFailure(sql)) return sql;
-		if (sql.data === null) return success([]);
+		if (sql.data === null) return success({ changed: [], notes: [] });
 		migrationSql = sql.data;
 	}
 	if (kind === "migration" && specs.length > 0) {
@@ -269,6 +293,15 @@ export async function makeUnformatted(
 		if (isFailure(companions)) return companions;
 		planned.data.files.push(...companions.data.files);
 		notes.push(...companions.data.notes);
+		let skipped = (input.skip ?? []).filter((companion) => companion !== "migration" || !replacing);
+		if (skipped.length > 0) {
+			notes.push(`Wrote no ${skipped.join(" or ")}, as --skip asked\n`);
+		}
+		if (replacing && !(input.skip ?? []).includes("migration")) {
+			notes.push(
+				`Wrote no migration, since the model existed; add its new columns with sdxc make migration add-<columns>-to-${tableOf(model?.content) ?? table}\n`,
+			);
+		}
 	}
 	let edits = declared?.kind === "edits" ? [...declared.edits] : [];
 	let dependencies = await missingDependencies(root, [
@@ -285,7 +318,7 @@ export async function makeUnformatted(
 		for (let edit of edits) ctx.stdout(unifiedDiff(edit.path, edit.before, edit.after));
 		if (declared?.kind === "manual") ctx.stdout(manualNote(kind, declared));
 		for (let note of notes) ctx.stdout(note);
-		return success([]);
+		return success({ changed: [], notes: [] });
 	}
 	let replaced = new Set<string>();
 	for (let file of planned.data.files) {
@@ -311,10 +344,9 @@ export async function makeUnformatted(
 		let added = dependencies.data.added.map(({ name, version }) => `${name}@${version}`);
 		ctx.stdout(`Added ${added.join(", ")} to package.json; run ${manager.install.join(" ")}\n`);
 	}
-	if (declared?.kind === "manual") ctx.stdout(manualNote(kind, declared));
-	for (let note of notes) ctx.stdout(note);
+	let printed = declared?.kind === "manual" ? [manualNote(kind, declared), ...notes] : notes;
 	let changed = [...paths, ...edits.map((edit) => edit.path)];
-	return success(changed);
+	return success({ changed, notes: printed });
 }
 
 /**

@@ -252,6 +252,9 @@ describe("scaffold", () => {
 
 			expect(result.code, result.stderr).toBe(0);
 			expect(result.stdout).not.toContain("Wrote app/models/post.ts");
+			expect(result.stdout.trimEnd().split("\n").at(-1)).toBe(
+				"Wrote no model, migration, factory, as --skip asked",
+			);
 			expect(result.stdout).toContain("Wrote app/http/controllers/posts/index.tsx");
 			expect((await files(root)).filter((path) => path.endsWith(".sql"))).toEqual(migrations);
 			let checked = await typecheck(root);

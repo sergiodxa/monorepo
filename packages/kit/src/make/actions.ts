@@ -9,11 +9,9 @@
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure } from "@sdxc/result";
 
 import type { Project } from "../middleware.js";
-
-import { formatFiles } from "../format.js";
 
 import type { ResourceAction } from "./guard.js";
 
@@ -22,7 +20,7 @@ import { parseName } from "./names.js";
 
 import type { MakeContext, MakeInput } from "./index.js";
 
-import { makeUnformatted } from "./index.js";
+import { finish, makeUnformatted } from "./index.js";
 
 /** One action's controller: the method its route answers, its pattern and its ability. */
 interface ActionRoute {
@@ -97,6 +95,7 @@ export async function makeActions(
 		}
 	}
 	let changed: string[] = [];
+	let notes: string[] = [];
 	for (let action of ordered) {
 		let route = table[action] as ActionRoute;
 		let guarded = input.guardedBy !== undefined && route.ability !== null;
@@ -111,13 +110,13 @@ export async function makeActions(
 			ability: guarded ? (route.ability ?? undefined) : undefined,
 		});
 		if (isFailure(made)) return made;
-		changed.push(...made.data.filter((path) => !changed.includes(path)));
+		changed.push(...made.data.changed.filter((path) => !changed.includes(path)));
+		notes.push(...made.data.notes.filter((note) => !notes.includes(note)));
 	}
 	if (input.guardedBy !== undefined && ordered.includes("index")) {
-		ctx.stdout(
+		notes.push(
 			`${folder}/index lists rows, so it checks no single one; show each row a visitor may read with ctx.access.can(abilities.<resource>.read, { <resource>: row })\n`,
 		);
 	}
-	if (changed.length === 0) return success(undefined);
-	return formatFiles(ctx, project.config.format, changed, project.root);
+	return finish(ctx, project, { changed, notes });
 }

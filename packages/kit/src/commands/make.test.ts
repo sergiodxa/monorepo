@@ -432,6 +432,9 @@ describe("make", () => {
 		let migrations = (await files(root)).filter((path) => path.startsWith("database/migrations/"));
 		expect(migrations).toHaveLength(1);
 		expect(await readFile(join(root, "app/models/post.ts"), "utf8")).toContain("body");
+		expect(result.stdout.trimEnd().split("\n").at(-1)).toBe(
+			"Wrote no migration, since the model existed; add its new columns with sdxc make migration add-<columns>-to-posts",
+		);
 	});
 
 	test("a project stub replaces the built-in one; an unknown placeholder names the stub", async () => {
@@ -656,6 +659,19 @@ describe("field modifiers", () => {
 		expect(sql).toContain('ALTER TABLE "posts" ADD COLUMN "slug" TEXT;');
 		expect(sql).toContain('CREATE UNIQUE INDEX "posts_slug_unique" ON "posts" ("slug");');
 		expect(sql).toContain('CREATE INDEX "posts_code_index" ON "posts" ("code");');
+	});
+});
+
+describe("skipped pieces", () => {
+	test("make model --skip says what it left out, after every path it wrote", async () => {
+		let root = await project();
+
+		let result = await invoke(["model", "post", "title", "--skip", "migration,factory"], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout.trimEnd().split("\n").at(-1)).toBe(
+			"Wrote no migration or factory, as --skip asked",
+		);
 	});
 });
 
