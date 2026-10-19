@@ -32,7 +32,7 @@ async function run(ctx: ChainContext<typeof MAKE_MIDDLEWARE>, input: MakeInput) 
 /** `sdxc make controller`, which declares the route and maps the controller. */
 export const controller = createCommand(SDXC_COMMANDS.make.controller, {
 	middleware: MAKE_MIDDLEWARE,
-	/** Asks for the method on a terminal, with `get` preselected. */
+	/** Asks for the method on a terminal, with `get` preselected; `--resource` guards the route. */
 	handler: (ctx) =>
 		run(ctx, {
 			kind: "controller",
@@ -40,6 +40,7 @@ export const controller = createCommand(SDXC_COMMANDS.make.controller, {
 			method: ctx.flags.method,
 			path: ctx.flags.path,
 			routes: ctx.flags.routes,
+			guardedBy: ctx.flags.resource,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
 		}),

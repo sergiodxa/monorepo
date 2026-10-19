@@ -781,6 +781,26 @@ async function declarePolicy(request: DeclarationRequest, root: string): Promise
 }
 
 /**
+ * Whether `app/policies/abilities.ts` declares a group at `path` in its `abilities({ … })`, as
+ * `make policy` does for a resource. An unreadable catalog, or one without the call, declares none.
+ */
+export async function declaresAbilities(root: string, path: readonly string[]): Promise<boolean> {
+	let catalog = "app/policies/abilities.ts";
+	let file = await readSource(root, catalog);
+	if (isFailure(file)) return false;
+	let call = importOf(file.data, "abilities");
+	if (call === null) return false;
+	let [key = "", ...rest] = [...path].reverse();
+	let probe = addProperty(catalog, file.data.source, {
+		call: call.local,
+		path: rest.reverse(),
+		key,
+		value: "{}",
+	});
+	return isFailure(probe) && probe.error.code === "duplicate-key";
+}
+
+/**
  * `source` with `value` appended to the first of `lists` the policy's options hold, each a key
  * path in `definePolicy`'s second argument; with none of them, the first is created holding it.
  */
@@ -812,7 +832,10 @@ function grant(
  * The row type a resource's model exports, `PostRow` from `app/models/post.ts`, or `null` when
  * the resource has no model or its model exports no such type.
  */
-async function findRow(root: string, name: Name): Promise<{ path: string; type: string } | null> {
+export async function findRow(
+	root: string,
+	name: Name,
+): Promise<{ path: string; type: string } | null> {
 	let path = `app/models/${name.segments.join("/")}`;
 	let type = `${name.pascal}Row`;
 	for (let extension of [".ts", ".tsx"]) {

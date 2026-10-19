@@ -70,8 +70,9 @@ export async function loadStub(
 }
 
 /**
- * `stub`'s text with every placeholder replaced by its value. A placeholder without a value is
- * a failure naming the stub, the placeholder and the ones the kind accepts.
+ * `stub`'s text with every placeholder replaced by its value. A multi-line value standing alone
+ * on an indented line takes that indentation on every line, so a block lands at its depth. A
+ * placeholder without a value is a failure naming the stub, the placeholder and the ones accepted.
  */
 export function renderStub(
 	stub: Stub,
@@ -90,7 +91,17 @@ export function renderStub(
 			),
 		);
 	}
-	return success(stub.text.replace(PLACEHOLDER, (_, name: string) => values[name] ?? ""));
+	return success(
+		stub.text.replace(PLACEHOLDER, (match: string, name: string, offset: number) => {
+			let value = values[name] ?? "";
+			let start = stub.text.lastIndexOf("\n", offset - 1) + 1;
+			let indent = stub.text.slice(start, offset);
+			let end = stub.text.indexOf("\n", offset);
+			let rest = stub.text.slice(offset + match.length, end === -1 ? undefined : end);
+			if (!/^[ \t]+$/.test(indent) || rest.trim() !== "") return value;
+			return value.replaceAll(/\n(?=.)/g, `\n${indent}`);
+		}),
+	);
 }
 
 /**

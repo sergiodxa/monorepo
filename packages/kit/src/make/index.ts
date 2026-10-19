@@ -37,10 +37,11 @@ import type { Declared } from "./declare.js";
 import type { MakeRequest, PlannedFile } from "./generate.js";
 import type { KindName, ModelCompanion } from "./kinds.js";
 
-import { declare } from "./declare.js";
+import { declare, declaresAbilities, findRow } from "./declare.js";
 import { fieldMigration } from "./from-fields.js";
 import { modelMigration } from "./from-model.js";
 import { folderOf, plan, resourceScheme } from "./generate.js";
+import { planGuard } from "./guard.js";
 import { chainFolder } from "./migrations.js";
 import { mount } from "./mount.js";
 import { parseName } from "./names.js";
@@ -60,6 +61,8 @@ export interface MakeInput {
 	path?: string | undefined;
 	/** `make controller`: the route contract in `routes/`; `undefined` takes `make.routes`. */
 	routes?: string | undefined;
+	/** `make controller`: the resource whose ability the method implies guards every handler. */
+	guardedBy?: string | undefined;
 	/** `make mcp`: a resource instead of a tool. */
 	resource?: boolean | undefined;
 	/** `make migration`: the chain in `make.migrations`. */
@@ -98,10 +101,34 @@ export async function make(
 	let name = parseName(input.name);
 	if (isFailure(name)) return name;
 	let method = input.method ?? "get";
+	let pattern = input.path;
+	let overrides: Record<string, string> = {};
+	let notes: string[] = [];
+	if (kind === "controller" && input.guardedBy !== undefined) {
+		let resource = parseName(input.guardedBy);
+		if (isFailure(resource)) return resource;
+		let model = (await findRow(root, resource.data)) !== null;
+		let guard = planGuard(name.data, resource.data, method, pattern, model);
+		if (isFailure(guard)) return guard;
+		pattern = guard.data.pattern;
+		overrides.ability = guard.data.ability;
+		overrides.access = guard.data.access;
+		overrides.pageAccess = guard.data.pageAccess;
+		if (!(await declaresAbilities(root, guard.data.catalogPath))) {
+			notes.push(
+				`app/policies/abilities.ts declares no ${guard.data.catalogPath.join(".")} abilities yet; run sdxc make policy ${resource.data.segments.join("/")} so ${guard.data.ability} exists\n`,
+			);
+		}
+	}
 	let request: MakeRequest = {
 		kind,
 		name: name.data,
-		variant: variantOf(kind, { cron: input.cron, method, resource: input.resource }),
+		variant: variantOf(kind, {
+			cron: input.cron,
+			method,
+			resource: input.resource,
+			guarded: input.guardedBy !== undefined,
+		}),
 		tests: input.test ?? config.make.tests,
 		chain: input.chain,
 		routes: input.routes ?? config.make.routes,
@@ -123,7 +150,7 @@ export async function make(
 				variant: request.variant,
 				cron: input.cron,
 				method,
-				pattern: input.path,
+				pattern,
 				routes: request.routes,
 				handler: `${folderOf(kind, request.variant)}/${segments.join("/")}`,
 				tool: segments.map((segment) => segment.replaceAll("-", "_")).join("_"),
@@ -133,7 +160,7 @@ export async function make(
 			root,
 		);
 	}
-	let overrides: Record<string, string> = declared === null ? {} : { path: declared.path };
+	if (declared !== null) overrides.path = declared.path;
 	let columns: string | null = null;
 	let fields: Field[] = [];
 	let table = pluralize(name.data.snake);
@@ -187,7 +214,6 @@ export async function make(
 		let content = migrationSql;
 		planned.data.files = planned.data.files.map((file) => ({ ...file, content }));
 	}
-	let notes: string[] = [];
 	if (kind === "model") {
 		let companions = await modelCompanions(project, packageRoot, {
 			request,
@@ -253,12 +279,23 @@ function manualNote(kind: KindName, declared: Extract<Declared, { kind: "manual"
 	return `${action} by hand, since ${declared.reason}:\n${declared.instructions}\n`;
 }
 
-/** The stub variant a request's flags select, or `null` for the kind's own stub. */
+/**
+ * The stub variant a request's flags select, or `null` for the kind's own stub. A controller
+ * guarded by a resource's abilities takes `resource`, or `resource.form` for a form.
+ */
 function variantOf(
 	kind: KindName,
-	flags: { cron: string | undefined; method: string; resource: boolean | undefined },
+	flags: {
+		cron: string | undefined;
+		method: string;
+		resource: boolean | undefined;
+		guarded: boolean;
+	},
 ): string | null {
 	if (kind === "job" && flags.cron !== undefined) return "cron";
+	if (kind === "controller" && flags.guarded) {
+		return flags.method === "form" ? "resource.form" : "resource";
+	}
 	if (kind === "controller" && flags.method === "form") return "form";
 	if (kind === "mcp" && flags.resource === true) return "resource";
 	return null;

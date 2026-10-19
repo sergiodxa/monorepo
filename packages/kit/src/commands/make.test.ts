@@ -204,6 +204,144 @@ describe("make", () => {
 		expect(job).toContain("The scheduled Digest job");
 	});
 
+	test("--resource guards the controller with the ability its method implies", async () => {
+		let root = await project();
+		await mkdir(join(root, "app/models"), { recursive: true });
+		await writeFile(
+			join(root, "app/models/post.ts"),
+			"export type PostRow = { id: string; title: string };\n",
+		);
+
+		let show = await invoke(["controller", "posts/show", "--resource", "post"], root, {
+			exec: UNFORMATTED,
+		});
+		await invoke(
+			["controller", "posts/archive", "--resource", "post", "--method", "delete"],
+			root,
+			{
+				exec: UNFORMATTED,
+			},
+		);
+		await invoke(["controller", "posts/new", "--resource", "post", "--method", "form"], root, {
+			exec: UNFORMATTED,
+		});
+		await invoke(
+			[
+				"controller",
+				"invoices",
+				"--resource",
+				"billing/invoice",
+				"--method",
+				"put",
+				"--routes",
+				"api",
+			],
+			root,
+			{ exec: UNFORMATTED },
+		);
+
+		let read = (path: string) => readFile(join(root, path), "utf8");
+		let page = await read("app/http/controllers/posts/show.tsx");
+		expect(page).toContain('import abilities from "~/app/policies/abilities";');
+		expect(page).toContain(
+			[
+				"\tasync handler(ctx) {",
+				"\t\tlet row = await ctx.models.post.find(ctx.params.id);",
+				"\t\tif (row === null || !ctx.access.can(abilities.post.read, { post: row })) {",
+				'\t\t\tlet missing = ctx.intl.t("notFound.title");',
+			].join("\n"),
+		);
+		expect(page).toContain("\t\t\t\t{ status: 404 },\n\t\t\t);\n\t\t}\n\t\treturn ctx.render(");
+		expect(show.stdout).toContain('  show: get("/posts/show/:id"),');
+		expect(show.stdout).toContain(
+			"app/policies/abilities.ts declares no post abilities yet; run sdxc make policy post so post.read exists\n",
+		);
+		expect(await read("app/http/controllers/posts/show.test.tsx")).toContain(
+			'test.todo("answers the Show page");',
+		);
+
+		let archive = await read("app/http/controllers/posts/archive.tsx");
+		expect(archive).toContain(
+			[
+				"\t\tif (row === null || !ctx.access.can(abilities.post.read, { post: row })) {",
+				"\t\t\tlet missing",
+			].join("\n"),
+		);
+		expect(archive).toContain(
+			"\t\tif (!ctx.access.can(abilities.post.delete, { post: row })) {\n\t\t\treturn new Response(null, { status: 403 });\n\t\t}",
+		);
+
+		let form = await read("app/http/controllers/posts/new.tsx");
+		expect(form).toContain(
+			"\t\tasync index(ctx) {\n\t\t\tif (!ctx.access.can(abilities.post.create)) {\n\t\t\t\treturn new Response(null, { status: 403 });\n\t\t\t}\n",
+		);
+		expect(form).toContain(
+			"\t\t\tasync handler(ctx) {\n\t\t\t\tif (!ctx.access.can(abilities.post.create)) {",
+		);
+		expect(form).not.toContain("ctx.params.id");
+
+		let endpoint = await read("app/http/controllers/invoices.tsx");
+		expect(endpoint).toContain("middleware: api,");
+		expect(endpoint).toContain(
+			[
+				"\t\tlet row = { id: ctx.params.id };",
+				"\t\tif (!ctx.access.can(abilities.billing.invoice.read, { invoice: row })) {",
+				"\t\t\treturn new Response(null, { status: 404 });",
+				"\t\t}",
+				"\t\tif (!ctx.access.can(abilities.billing.invoice.update, { invoice: row })) {",
+			].join("\n"),
+		);
+		expect(await read("app/http/controllers/invoices.test.tsx")).toContain(
+			'test.todo("answers Invoices as JSON");',
+		);
+	});
+
+	test("--resource refuses a row check on a --path without :id, writing nothing", async () => {
+		let root = await project();
+
+		let result = await invoke(
+			["controller", "posts/show", "--resource", "post", "--path", "/posts/show/"],
+			root,
+		);
+
+		expect(result.code).toBe(1);
+		expect(result.stderr).toContain(
+			"--resource post checks post.read against one post, so the route needs an :id param; pass a --path holding one, such as /posts/show/:id",
+		);
+		expect(await files(root)).toEqual([]);
+	});
+
+	test("--resource prints no note once the catalog declares the resource", async () => {
+		let root = await project();
+		await mkdir(join(root, "app/policies"), { recursive: true });
+		await writeFile(
+			join(root, "app/policies/abilities.ts"),
+			'import { abilities, ability } from "@sdxc/authz";\n\nexport default abilities({\n\tbilling: { invoice: { create: ability() } },\n});\n',
+		);
+
+		let declared = await invoke(
+			[
+				"controller",
+				"invoices/new",
+				"--resource",
+				"billing/invoice",
+				"--method",
+				"post",
+				"--dry-run",
+			],
+			root,
+		);
+		let missing = await invoke(
+			["controller", "posts/new", "--resource", "post", "--method", "post", "--dry-run"],
+			root,
+		);
+
+		expect(declared.code).toBe(0);
+		expect(declared.stdout).toContain("if (!ctx.access.can(abilities.billing.invoice.create)) {");
+		expect(declared.stdout).not.toContain("make policy");
+		expect(missing.stdout).toContain("run sdxc make policy post so post.create exists");
+	});
+
 	test("make.tests off skips tests unless --test asks for one", async () => {
 		let root = await project('{ "make": { "tests": false } }');
 
@@ -432,6 +570,10 @@ describe("declaring and mapping", () => {
 				["migration", "add-slug-to-posts", "slug?", "pinned"],
 				["service", "billing/charge"],
 				["policy", "post"],
+				["controller", "posts/show", "--resource", "post"],
+				["controller", "posts/archive", "--resource", "post", "--method", "delete"],
+				["controller", "posts/new", "--resource", "post", "--method", "form"],
+				["controller", "api/posts", "--routes", "api", "--resource", "post", "--method", "patch"],
 				["initializer", "cache"],
 				["email", "welcome"],
 				["command", "users/grant"],
@@ -460,7 +602,7 @@ describe("declaring and mapping", () => {
 			expect(dispatcher).toContain(
 				'dispatcher.map(jobs.trials.expire, () => import("~/app/jobs/trials/expire"));\ndispatcher.map(jobs.digest, () => import("~/app/jobs/digest"));',
 			);
-			expect(routes).toContain('import { get, route, form, post } from "remix/routes";');
+			expect(routes).toContain('import { get, route, form, post, del } from "remix/routes";');
 			expect(routes).toContain('sponsors: get("/sponsors"),');
 			expect(routes).toContain('admin: {\n\t\tusers: form("/admin/users"),\n\t},');
 			expect(routes).toContain('ping: post("/ping"),');
@@ -526,6 +668,15 @@ describe("declaring and mapping", () => {
 			expect(ran.output).toMatch(/^Send digest\n/);
 			expect(ran.code).toBe(0);
 
+			expect(routes).toContain('show: get("/posts/show/:id"),');
+			expect(routes).toContain('archive: del("/posts/archive/:id"),');
+			expect(api).toContain('posts: patch("/api/posts/:id"),');
+			expect(await read("app/http/controllers/posts/show.tsx")).toContain(
+				"if (row === null || !ctx.access.can(abilities.post.read, { post: row })) {",
+			);
+			expect(await read("app/http/controllers/api/posts.tsx")).toContain(
+				"if (!ctx.access.can(abilities.post.update, { post: row })) {",
+			);
 			let sitemap = await read("app/http/controllers/sitemap.ts");
 			expect(sitemap).toContain("\t\t\tsponsors: true,\n");
 			expect(sitemap).toContain("\t\t\tadmin: {\n\t\t\t\tusers: { index: true },\n\t\t\t},\n");
@@ -621,7 +772,7 @@ describe("declaring and mapping", () => {
 	});
 
 	test(
-		"a policy's test passes in the app template, typed by its model's row or by an id",
+		"a policy's test and its guarded controllers pass in the app template, typed by its model's row or by an id",
 		{ timeout: 180_000 },
 		async () => {
 			let root = unwrap(await materialize("app"));
@@ -632,6 +783,8 @@ describe("declaring and mapping", () => {
 				["model", "article", "title"],
 				["policy", "article"],
 				["policy", "billing/invoice"],
+				["controller", "articles/show", "--resource", "article"],
+				["controller", "invoices", "--resource", "billing/invoice", "--method", "put"],
 			]) {
 				let result = await invoke(argv, root, { exec });
 				expect(result.code, argv.join(" ")).toBe(0);
@@ -641,6 +794,9 @@ describe("declaring and mapping", () => {
 			let catalog = await readFile(join(root, "app/policies/abilities.ts"), "utf8");
 			expect(catalog).toContain("context<{ article: ArticleRow }>");
 			expect(catalog).toContain("context<{ invoice: { id: string } }>");
+			expect(await readFile(join(root, "app/http/controllers/invoices.tsx"), "utf8")).toContain(
+				"let row = { id: ctx.params.id };",
+			);
 			let checked = await typecheck(root);
 			expect(checked.output).toContain("Found no type errors");
 			let tested = await testProject(root);

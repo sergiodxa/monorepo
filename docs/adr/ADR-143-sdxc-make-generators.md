@@ -116,7 +116,9 @@ the invocation's log, `lazy()`-mapped routes.
   `--resource`, `job.cron.stub` for `--cron`, `controller.form.stub` for `--method form`); a test
   stub is `<kind>.test.stub` or `<kind>.<variant>.test.stub`. A controller with no variant takes
   its contract's stub when one exists (`controller.api.stub` for `--routes api`, a JSON endpoint),
-  and `controller.stub`, a page, otherwise.
+  and `controller.stub`, a page, otherwise. `--resource` selects the `resource` variant the same
+  way (`controller.api.resource.stub`, `controller.resource.stub`, `controller.resource.form.stub`
+  for a form), whose `{{access}}` and `{{pageAccess}}` place the access check at their depth.
 - **Project stubs win.** For each stub name, `make` uses the file in `make.stubs` when it exists
   and the built-in one otherwise, so a project overrides only the stubs it cares about.
 - **`sdxc make stubs [kind...]`** copies the built-in stubs for the given kinds, or all of them,

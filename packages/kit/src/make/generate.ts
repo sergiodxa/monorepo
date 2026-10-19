@@ -32,7 +32,10 @@ import { loadStub, renderStub, stubName } from "./stubs.js";
 export interface MakeRequest {
 	kind: KindName;
 	name: Name;
-	/** The stub variant a flag selects: `form`, `cron` or `resource`. */
+	/**
+	 * The stub variant a flag selects: `form`, `cron`, `resource` (an MCP resource, or a
+	 * controller guarded by a resource's abilities) or `resource.form`.
+	 */
 	variant: string | null;
 	/** Whether to write a test beside the file. */
 	tests: boolean;
@@ -120,7 +123,8 @@ export function folderOf(kind: KindName, variant: string | null): string {
 /**
  * Renders the kind's stub, or its test stub, with `values`. A variant's own stub wins; a
  * variant without its own test stub uses the kind's. A controller with no variant takes its
- * contract's stub when one exists (`controller.api.stub` for `routes/api`), else the kind's.
+ * contract's stub when one exists (`controller.api.stub` for `routes/api`), else the kind's, and
+ * a guarded one its contract's `resource` stub (`controller.api.resource.stub`) the same way.
  */
 async function renderFile(
 	request: MakeRequest,
@@ -131,8 +135,13 @@ async function renderFile(
 	packageRoot: string,
 ): Promise<Result<string, Error>> {
 	let names = [stubName(request.kind, request.variant, test)];
-	if (request.kind === "controller" && request.variant === null) {
-		names.unshift(stubName(request.kind, request.routes, test));
+	let contractual = request.variant === null || request.variant === "resource";
+	if (request.kind === "controller" && contractual) {
+		let variant = [request.routes, request.variant].filter((part) => part !== null).join(".");
+		names.unshift(stubName(request.kind, variant, test));
+	}
+	if (request.kind === "controller" && request.variant?.startsWith("resource") && test) {
+		names.push(stubName(request.kind, request.routes, true));
 	}
 	if (request.variant !== null && test) names.push(stubName(request.kind, null, true));
 	let stub = await loadStub(names, root, config.make.stubs, packageRoot);
@@ -171,6 +180,9 @@ async function placeholders(
 		words: name.segments.map((segment) => literal(segment)).join(", "),
 		table: pluralize(name.snake),
 		attributes: "",
+		ability: "",
+		access: "",
+		pageAccess: "",
 	};
 	let values: Record<string, string> = {};
 	for (let key of [...COMMON_PLACEHOLDERS, ...KINDS[request.kind].placeholders]) {

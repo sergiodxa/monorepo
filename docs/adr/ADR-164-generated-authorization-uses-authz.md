@@ -82,8 +82,10 @@ nested name nests the group: `billing/invoice` declares `billing.invoice.*`.
 
 ### Neutral
 
-- `make controller` does not yet take a resource to check; a controller checks `ctx.access`
-  by hand.
+- `make controller --resource <name>` checks the ability its `--method` implies the way a
+  scaffolded controller does: `get` reads (a 404 when hidden or missing), `form` and `post`
+  create, `put` and `patch` update, `delete` deletes (each a 403). A read, update or delete route
+  takes `/<controller>/:id`, and a missing catalog entry prints a note to run `make policy` first.
 
 ## References
 

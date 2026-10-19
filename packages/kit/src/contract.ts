@@ -175,10 +175,19 @@ export const SDXC_COMMANDS = commands({
 					valueName: "contract",
 					description: "The route contract in routes/ (default: make.routes)",
 				}),
+				resource: flag.string("resource", {
+					valueName: "name",
+					description:
+						"Check the resource's ability the method implies (get reads, form and post create, put and patch update, delete deletes); a read, update or delete route takes /<name>/:id",
+				}),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
 			},
-			examples: ["make controller api/keys --routes api", "make controller ping --method post"],
+			examples: [
+				"make controller api/keys --routes api",
+				"make controller ping --method post",
+				"make controller posts/archive --resource post --method delete",
+			],
 		}),
 		middleware: command({
 			description: "A middleware in app/http/middleware",
