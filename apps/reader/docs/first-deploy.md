@@ -98,14 +98,12 @@ bunx wrangler secret put CLIENT_ID
 ## 5. Build, migrate, deploy
 
 ```bash
-bun run build
-sdxc run db migrate --remote
-bun run cf:deploy
+sdxc deploy
 ```
 
-Build first so the deploy follows the migration with no wait, and migrate before deploying so
-the code never runs against a catalog without its tables. Every later deploy is these three
-commands.
+It builds, lists the catalog migrations production lacks and asks before going on, applies
+them, then uploads the Worker, so the code never runs against a catalog without its tables.
+Every later deploy is this one command.
 
 ## 6. Check it works
 

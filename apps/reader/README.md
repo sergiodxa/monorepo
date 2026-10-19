@@ -155,7 +155,6 @@ to exist before the first deploy.
 | `build`     | Build for production               |
 | `start`     | Preview the production build       |
 | `cli`       | The command line `sdxc run` starts |
-| `cf:deploy` | Deploy to Cloudflare               |
 | `typecheck` | Type check with `tsc`              |
 
 ## Commands
@@ -166,6 +165,7 @@ to exist before the first deploy.
 | `sdxc run typegen`             | Generate the Cloudflare binding types           |
 | `sdxc run db migrate`          | Apply the feed catalog migrations locally       |
 | `sdxc run db migrate --remote` | Apply the feed catalog migrations to production |
+| `sdxc run deploy`              | Upload the built Worker with `wrangler deploy`  |
 | `sdxc run db console`          | Run SQL against the local feed catalog          |
 
 ## Database
@@ -185,10 +185,10 @@ sdxc run db migrate --remote
 ## Deployment
 
 ```bash
-bun run build
-sdxc run db migrate --remote
-bun run cf:deploy
+sdxc deploy
 ```
+
+It builds, applies the feed catalog migrations production lacks, then runs `sdxc run deploy`.
 
 ## Documentation
 
