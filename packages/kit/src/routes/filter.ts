@@ -1,7 +1,7 @@
 /**
  * Narrows a route listing to what `sdxc routes` was asked about: a search across names, patterns,
- * methods and controllers, one controller, one method, one contract, or the routes no router maps.
- * Filters compose, and they run before any output, so the table and `--json` agree.
+ * methods and controllers, one controller, one method, one contract, paths to leave out, or the
+ * routes no router maps, then sorts it. Both run before any output, so the table and `--json` agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,7 +29,15 @@ export interface RouteFilters {
 	contract?: string;
 	/** Keeps the routes a contract declares and no router maps. */
 	unused?: boolean;
+	/** Leaves out the routes whose pattern starts with any of these, as `/api` or `/mcp`. */
+	exceptPath?: readonly string[];
 }
+
+/** What `--sort` orders the routes by. */
+export const ROUTE_SORTS = ["name", "pattern", "method", "controller"] as const;
+
+/** One of {@link ROUTE_SORTS}. */
+export type RouteSort = (typeof ROUTE_SORTS)[number];
 
 /** Whether any filter is set, so the command can tell an empty project from an empty result. */
 export function hasFilters(filters: RouteFilters): boolean {
@@ -38,7 +46,8 @@ export function hasFilters(filters: RouteFilters): boolean {
 		filters.controller !== undefined ||
 		filters.method !== undefined ||
 		filters.contract !== undefined ||
-		filters.unused === true
+		filters.unused === true ||
+		(filters.exceptPath ?? []).length > 0
 	);
 }
 
@@ -90,6 +99,9 @@ function matches(
 	search: ((value: string) => boolean) | null,
 ): boolean {
 	if (filters.unused === true && route.controller !== null) return false;
+	if ((filters.exceptPath ?? []).some((prefix) => pathStartsWith(route.pattern, prefix))) {
+		return false;
+	}
 	if (filters.method !== undefined) {
 		let method = filters.method.toUpperCase();
 		if (route.method !== method && route.method !== "ANY") return false;
@@ -124,6 +136,30 @@ function matcher(pattern: string): (value: string) => boolean {
 	let compiled = wrap(() => new RegExp(pattern, "i"));
 	let expression = isSuccess(compiled) ? compiled.data : null;
 	return (value) => value.toLowerCase().includes(text) || (expression?.test(value) ?? false);
+}
+
+/**
+ * Whether `pattern` is `prefix` or sits under it by whole segments, so `/api` leaves out
+ * `/api/posts` and keeps `/apiary`.
+ */
+function pathStartsWith(pattern: string, prefix: string): boolean {
+	let base = `/${prefix.trim().replace(/^\/+|\/+$/g, "")}`;
+	if (base === "/") return true;
+	return pattern === base || pattern.startsWith(`${base}/`);
+}
+
+/**
+ * The listing with its routes ordered by `sort`, ties kept in declaration order; a route no
+ * router maps sorts last by controller. Without `sort` the listing comes back as it is.
+ */
+export function sortRoutes(listing: RouteListing, sort: RouteSort | undefined): RouteListing {
+	if (sort === undefined) return listing;
+	let key = (route: RouteEntry): string => {
+		if (sort === "controller") return route.controller?.file ?? "\uffff";
+		return route[sort];
+	};
+	let routes = [...listing.routes].sort((a, b) => key(a).localeCompare(key(b)));
+	return { ...listing, routes };
 }
 
 /** Whether the controller `file` is `wanted` or sits in the folder `wanted` names. */

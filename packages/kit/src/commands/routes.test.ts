@@ -213,6 +213,34 @@ describe("sdxc routes", () => {
 			]);
 		});
 
+		test("--except-path leaves out whole path segments, and --sort orders what is left", async () => {
+			let root = await filtered();
+
+			expect(await names(root, ["--except-path", "/api/posts"])).toEqual([
+				"ping",
+				"home",
+				"login.index",
+				"login.action",
+			]);
+			expect(await names(root, ["--except-path", "/api", "--except-path", "/log"])).toEqual([
+				"home",
+				"login.index",
+				"login.action",
+			]);
+			expect(await names(root, ["--except-path", "/api,/login", "--sort", "name"])).toEqual([
+				"home",
+			]);
+			expect(await names(root, ["--sort", "name"])).toEqual([
+				"home",
+				"login.action",
+				"login.index",
+				"ping",
+				"posts.create",
+				"posts.destroy",
+				"posts.show",
+			]);
+		});
+
 		test("--unused lists unmapped routes and reports controllers no route maps", async () => {
 			let root = await filtered();
 

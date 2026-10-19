@@ -13,6 +13,7 @@ import * as s from "remix/data-schema";
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
 import { DEPLOY_STEPS } from "./deploy/plan.js";
 import { ACTION_NAMES, KINDS, MODEL_COMPANIONS, SCAFFOLD_PIECES } from "./make/kinds.js";
+import { ROUTE_SORTS } from "./routes/filter.js";
 import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
 
 /** Route methods `make controller --method` accepts; `form` declares a GET page with a POST action. */
@@ -406,6 +407,18 @@ export const SDXC_COMMANDS = commands({
 			unused: flag.boolean("unused", {
 				description: "Keep routes no router maps, and report controllers no route maps",
 			}),
+			exceptPath: flag
+				.string("except-path", {
+					valueName: "path",
+					description: "Leave out routes under a path, as /api or /mcp; repeat it or list them",
+				})
+				.multiple()
+				.list(),
+			sort: flag.string("sort", {
+				valueName: "field",
+				schema: s.enum_(ROUTE_SORTS),
+				description: `Order routes by ${ROUTE_SORTS.join(", ")} instead of declaration order`,
+			}),
 		},
 		examples: [
 			"routes",
@@ -413,6 +426,7 @@ export const SDXC_COMMANDS = commands({
 			"routes -g posts",
 			"routes -c admin/users --method post",
 			"routes --unused",
+			"routes --except-path /api,/mcp --sort pattern",
 		],
 	}),
 	run: command({

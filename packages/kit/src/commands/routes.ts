@@ -13,7 +13,7 @@ import type { RouteFilters } from "../routes/filter.js";
 
 import { SDXC_COMMANDS } from "../contract.js";
 import { project } from "../middleware.js";
-import { filterRoutes, hasFilters, unmappedControllers } from "../routes/filter.js";
+import { filterRoutes, hasFilters, sortRoutes, unmappedControllers } from "../routes/filter.js";
 import { formatExpanded, formatJSON, formatTable } from "../routes/format.js";
 import { listRoutes, unimportedControllers } from "../routes/index.js";
 
@@ -33,8 +33,9 @@ export default createCommand(SDXC_COMMANDS.routes, {
 			method: ctx.flags.method,
 			contract: ctx.flags.contract,
 			unused: ctx.flags.unused,
+			exceptPath: ctx.flags.exceptPath,
 		};
-		let filtered = filterRoutes(listing, filters);
+		let filtered = sortRoutes(filterRoutes(listing, filters), ctx.flags.sort);
 		if (ctx.flags.json) ctx.stdout(formatJSON(filtered));
 		else if (filtered.routes.length === 0 && hasFilters(filters)) {
 			ctx.stdout(filters.unused ? "No unused routes found.\n" : "No routes match.\n");
