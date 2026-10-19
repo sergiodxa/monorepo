@@ -174,7 +174,7 @@ const CRON_JOB_DESTROY = defineOperation("cronJobDestroy", routes.api.v1.cronJob
 		200: { description: "The cron job is deleted", body: envelope({ deleted: s.literal(true) }) },
 	},
 	problems: ["validationError", ...AUTH_PROBLEMS, "notFound"],
-	security: [{ apiKey: ["cron-jobs:write"] }],
+	security: [{ apiKey: ["cron-jobs:delete"] }],
 });
 
 const CRON_JOB_PING = defineOperation("cronJobPing", routes.api.cronJobPing, {

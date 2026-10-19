@@ -703,7 +703,7 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 	test("deletes the monitor and its check history", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let key = await createApiKey(db, team.id, ["flow-monitors:delete"]);
 		let monitor = unwrap(
 			await bindModels(db).flowMonitors.create({
 				team_id: team.id,
@@ -747,7 +747,7 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let key = await createApiKey(db, team.id, ["flow-monitors:delete"]);
 		let monitor = unwrap(
 			await bindModels(db).flowMonitors.create({
 				team_id: otherTeam.id,
@@ -765,6 +765,31 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 		});
 
 		expect(response.status).toBe(404);
+		expect(await db.findOne(flowMonitors, { where: { id: monitor.id } })).not.toBeNull();
+	});
+
+	test("returns 403 for a key lacking flow-monitors:delete, leaving the monitor alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Ours",
+				source: validSource(),
+			}),
+		);
+
+		let response = await dispatch(db, {
+			method: "DELETE",
+			path: routes.api.v1.flowMonitors.destroy.href({
+				flowMonitorId: encodeId("flow", monitor.id),
+			}),
+			key,
+		});
+
+		expect(response.status).toBe(403);
+		expect(response.headers.get("WWW-Authenticate")).toContain("flow-monitors:delete");
 		expect(await db.findOne(flowMonitors, { where: { id: monitor.id } })).not.toBeNull();
 	});
 });
@@ -1101,7 +1126,7 @@ describe("one flow monitor's routes", () => {
 	let itemRoutes = [
 		["GET", "show", "flow-monitors:read"],
 		["PUT", "update", "flow-monitors:write"],
-		["DELETE", "destroy", "flow-monitors:write"],
+		["DELETE", "destroy", "flow-monitors:delete"],
 		["GET", "results", "flow-monitors:read"],
 	] as const;
 

@@ -37,7 +37,7 @@ Anything else is refused. Nothing is rounded to the nearest allowed value — a 
 
 ## Scopes
 
-Flow monitors are read with `flow-monitors:read` and written with `flow-monitors:write`.
+Flow monitors are read with `flow-monitors:read`, written with `flow-monitors:write` and deleted with `flow-monitors:delete`.
 
 ## The flow monitor object
 

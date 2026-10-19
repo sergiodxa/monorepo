@@ -5503,19 +5503,19 @@ export default {
 							"monitors:read":
 								"Legge i monitor HTTP, i loro risultati di controllo, le statistiche di disponibilità e lo stato complessivo del team.",
 							"monitors:write":
-								"Crea, aggiorna ed elimina i monitor HTTP e i loro controlli sul contenuto. Consente anche di accodare una ricostruzione delle statistiche giornaliere.",
+								"Crea e aggiorna i monitor HTTP, e aggiunge e rimuove i loro controlli sul contenuto. Consente anche di accodare una ricostruzione delle statistiche giornaliere.",
 							"maintenance:read": "Elenca e legge le finestre di manutenzione del team.",
 							"maintenance:write":
 								"Crea, aggiorna, termina in anticipo ed elimina le finestre di manutenzione. Una finestra in corso può sospendere gli avvisi dei monitor che copre.",
 							"dns-monitors:read":
 								"Elenca e legge i monitor DNS e i risultati di risoluzione registrati.",
-							"dns-monitors:write": "Crea, aggiorna ed elimina i monitor DNS.",
+							"dns-monitors:write": "Crea e aggiorna i monitor DNS.",
 							"tcp-monitors:read":
 								"Elenca e legge i monitor TCP e i risultati di connessione registrati.",
-							"tcp-monitors:write": "Crea, aggiorna ed elimina i monitor TCP.",
+							"tcp-monitors:write": "Crea e aggiorna i monitor TCP.",
 							"flow-monitors:read":
 								"Elenca e legge i monitor di flusso e i risultati delle loro esecuzioni. Il codice del flusso non viene mai restituito, poiché contiene le credenziali con cui il flusso accede.",
-							"flow-monitors:write": "Crea, aggiorna ed elimina i monitor di flusso.",
+							"flow-monitors:write": "Crea e aggiorna i monitor di flusso.",
 							"alerts:read":
 								"Elenca e legge gli avvisi e gli eventi che hanno generato. Gli URL dei webhook e gli altri segreti dei canali non vengono mai restituiti.",
 							"alerts:write":
@@ -5525,8 +5525,7 @@ export default {
 							"status-pages:write":
 								"Crea, aggiorna ed elimina le pagine di stato e sostituisce l'insieme di monitor e cron job che una pagina mostra pubblicamente.",
 							"cron-jobs:read": "Elenca e legge i cron job del team e le loro pianificazioni.",
-							"cron-jobs:write":
-								"Crea, aggiorna ed elimina i cron job. Eliminandone uno, il suo URL di ping non viene più accettato.",
+							"cron-jobs:write": "Crea e aggiorna i cron job.",
 							"cron-jobs:ping":
 								"Presente per l'URL di ping dei cron job, che è pubblico e non verifica alcun ambito. Concederlo non dà alla chiave alcun accesso che non abbia già.",
 							"api-keys:read":
@@ -5537,6 +5536,16 @@ export default {
 								"Esegue controlli HTTP, DNS e TCP estemporanei senza creare un monitor. Ogni controllo viene fatturato come un ping e richiede un abbonamento attivo.",
 							"reports:read":
 								"Scaricare i report di disponibilità del team: un riepilogo per monitor e la disponibilità giornaliera, per qualsiasi intervallo di giorni.",
+							"monitors:delete":
+								"Elimina i monitor HTTP e la loro cronologia dei controlli. Eliminare un monitor spetta a un amministratore, quindi conceda questo ambito solo a una chiave che agisce per uno di loro.",
+							"dns-monitors:delete":
+								"Elimina i monitor DNS e la loro cronologia delle risoluzioni.",
+							"tcp-monitors:delete":
+								"Elimina i monitor TCP e la loro cronologia delle connessioni.",
+							"flow-monitors:delete":
+								"Elimina i monitor di flusso e la cronologia delle loro esecuzioni.",
+							"cron-jobs:delete":
+								"Elimina i cron job. Eliminandone uno, il suo URL di ping non viene più accettato.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

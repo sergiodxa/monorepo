@@ -132,6 +132,15 @@ export const apiKeyScopes = [
 	 * `reports:write`. The API-key form lists scopes in this array's order, newest last.
 	 */
 	"reports:read",
+	/**
+	 * Deleting a monitor is an admin's call, so a key needs one of these beside the kind's
+	 * `:write` scope to delete; only an admin creates keys, so only an admin grants them.
+	 */
+	"monitors:delete",
+	"dns-monitors:delete",
+	"tcp-monitors:delete",
+	"flow-monitors:delete",
+	"cron-jobs:delete",
 ] as const;
 
 export type ApiKeyScope = (typeof apiKeyScopes)[number];

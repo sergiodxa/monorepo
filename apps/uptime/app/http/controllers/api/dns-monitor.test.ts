@@ -394,7 +394,7 @@ describe("DELETE /api/v1/dns-monitors/:dnsMonitorId", () => {
 	test("deletes the DNS monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let key = await createApiKey(db, team.id, ["dns-monitors:delete"]);
 		let monitor = await createDnsMonitorRow(db, team.id);
 
 		let response = await dispatch(
@@ -418,10 +418,10 @@ describe("DELETE /api/v1/dns-monitors/:dnsMonitorId", () => {
 		expect(response.status).toBe(401);
 	});
 
-	test("returns 403 when the key lacks the dns-monitors:write scope", async () => {
+	test("returns 403 when the key lacks the dns-monitors:delete scope", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
 		let monitor = await createDnsMonitorRow(db, team.id);
 
 		let response = await dispatch(
@@ -429,13 +429,14 @@ describe("DELETE /api/v1/dns-monitors/:dnsMonitorId", () => {
 			destroyRequest(monitor.id, { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(403);
+		expect(response.headers.get("WWW-Authenticate")).toContain("dns-monitors:delete");
 	});
 
 	test("404s when the monitor doesn't belong to the team, without deleting it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let key = await createApiKey(db, team.id, ["dns-monitors:delete"]);
 		let monitor = await createDnsMonitorRow(db, otherTeam.id);
 
 		let response = await dispatch(
@@ -569,7 +570,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 describe("malformed DNS monitor ids", () => {
 	test.each([
 		["GET", "show", "dns-monitors:read"],
-		["DELETE", "destroy", "dns-monitors:write"],
+		["DELETE", "destroy", "dns-monitors:delete"],
 		["GET", "results", "dns-monitors:read"],
 	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
 		let { db } = createTestDatabase();

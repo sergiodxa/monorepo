@@ -33,6 +33,7 @@ Admins have broad access to manage day-to-day operations but cannot perform dest
 Admins can:
 
 - Access and modify all monitors, alerts, and status pages
+- Delete monitors of every kind: HTTP, DNS, TCP, flow, and cron jobs
 - Create and revoke API keys
 - Invite and remove team members
 - Change member roles (promote to Admin or demote to Member)
@@ -50,13 +51,14 @@ Members can work with monitors and status pages but have limited access to team-
 
 Members can:
 
-- View, create, edit, and delete monitors
+- View, create, and edit monitors
 - Manage alerts and notification preferences
 - Create and manage status pages
 - View team member list
 
 Members cannot:
 
+- Delete monitors; the delete buttons appear only for Admins and the Owner
 - Access or create API keys
 - Invite or remove team members
 - Change team settings

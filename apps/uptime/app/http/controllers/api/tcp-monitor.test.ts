@@ -263,7 +263,7 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 	test("deletes a TCP monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:delete"]);
 		let monitor = await createTcpMonitorRow(db, team.id);
 
 		let response = await dispatch(db, {
@@ -279,7 +279,7 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 	test("404s when the TCP monitor doesn't belong to the team, without deleting it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:delete"]);
 
 		let otherTeam = await createTeamRow(db);
 		let otherMonitor = await createTcpMonitorRow(db, otherTeam.id, "Not yours");
@@ -296,10 +296,10 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 		expect(await db.findOne(tcpMonitors, { where: { id: otherMonitor.id } })).not.toBeNull();
 	});
 
-	test("returns 403 for a key without the tcp-monitors:write scope", async () => {
+	test("returns 403 for a key without the tcp-monitors:delete scope", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["tcp-monitors:read"]);
+		let key = await createApiKey(db, team.id, ["tcp-monitors:write"]);
 		let monitor = await createTcpMonitorRow(db, team.id);
 
 		let response = await dispatch(db, {
@@ -308,6 +308,7 @@ describe("DELETE /api/v1/tcp-monitors/:tcpMonitorId", () => {
 			key,
 		});
 		expect(response.status).toBe(403);
+		expect(response.headers.get("WWW-Authenticate")).toContain("tcp-monitors:delete");
 	});
 });
 
@@ -415,7 +416,7 @@ describe("malformed TCP monitor ids", () => {
 	test.each([
 		["GET", "show", "tcp-monitors:read"],
 		["PUT", "update", "tcp-monitors:write"],
-		["DELETE", "destroy", "tcp-monitors:write"],
+		["DELETE", "destroy", "tcp-monitors:delete"],
 		["GET", "results", "tcp-monitors:read"],
 	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
 		let { db } = createTestDatabase();

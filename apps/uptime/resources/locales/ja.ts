@@ -5430,18 +5430,18 @@ export default {
 							"monitors:read":
 								"HTTPモニター、そのチェック結果、稼働率の統計、およびチームの全体ステータスを読み取ります。",
 							"monitors:write":
-								"HTTPモニターとそのコンテンツチェックを作成・更新・削除します。日次統計の再集計をキューに入れることもできます。",
+								"HTTPモニターを作成・更新し、そのコンテンツチェックを追加・削除します。日次統計の再集計をキューに入れることもできます。",
 							"maintenance:read": "チームのメンテナンスウィンドウを一覧表示して読み取ります。",
 							"maintenance:write":
 								"メンテナンスウィンドウを作成・更新・早期終了・削除します。実行中のウィンドウは、対象モニターのアラートを抑制できます。",
 							"dns-monitors:read":
 								"DNSモニターと記録された名前解決の結果を一覧表示して読み取ります。",
-							"dns-monitors:write": "DNSモニターを作成・更新・削除します。",
+							"dns-monitors:write": "DNSモニターを作成・更新します。",
 							"tcp-monitors:read": "TCPモニターと記録された接続結果を一覧表示して読み取ります。",
-							"tcp-monitors:write": "TCPモニターを作成・更新・削除します。",
+							"tcp-monitors:write": "TCPモニターを作成・更新します。",
 							"flow-monitors:read":
 								"フローモニターと各実行の結果を一覧表示して読み取ります。フローのソースにはログインに使う認証情報が含まれるため、返されることはありません。",
-							"flow-monitors:write": "フローモニターを作成・更新・削除します。",
+							"flow-monitors:write": "フローモニターを作成・更新します。",
 							"alerts:read":
 								"アラートと発生したイベントを一覧表示して読み取ります。WebhookのURLなどチャネルの秘密情報が返されることはありません。",
 							"alerts:write":
@@ -5451,8 +5451,7 @@ export default {
 							"status-pages:write":
 								"ステータスページを作成・更新・削除し、ページが公開するモニターとCronジョブの組み合わせを差し替えます。",
 							"cron-jobs:read": "チームのCronジョブとそのスケジュールを一覧表示して読み取ります。",
-							"cron-jobs:write":
-								"Cronジョブを作成・更新・削除します。削除すると、そのping URLは受け付けられなくなります。",
+							"cron-jobs:write": "Cronジョブを作成・更新します。",
 							"cron-jobs:ping":
 								"CronジョブのpingURLのために用意されていますが、このURLは公開でスコープを確認しません。付与しても、キーの権限は変わりません。",
 							"api-keys:read":
@@ -5463,6 +5462,13 @@ export default {
 								"モニターを作成せずに、単発のHTTP・DNS・TCPチェックを実行します。1回のチェックにつき1pingとして課金され、有効なサブスクリプションが必要です。",
 							"reports:read":
 								"チームの稼働率レポートをダウンロードします。任意の日付範囲について、モニターごとの概要と日別の稼働率を取得できます。",
+							"monitors:delete":
+								"HTTPモニターとそのチェック履歴を削除します。モニターの削除は管理者の判断なので、管理者の代わりに動くキーにだけ付与してください。",
+							"dns-monitors:delete": "DNSモニターとその名前解決の履歴を削除します。",
+							"tcp-monitors:delete": "TCPモニターとその接続履歴を削除します。",
+							"flow-monitors:delete": "フローモニターとその実行履歴を削除します。",
+							"cron-jobs:delete":
+								"Cronジョブを削除します。削除すると、そのping URLは受け付けられなくなります。",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

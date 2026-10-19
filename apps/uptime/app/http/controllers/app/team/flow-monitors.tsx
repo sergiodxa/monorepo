@@ -25,9 +25,11 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import { badgeVariant } from "~/resources/components/badge";
 import RowMenu from "~/resources/components/row-menu";
 import AppShell from "~/resources/layouts/app-shell";
@@ -50,10 +52,13 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
  * label stays on one line since a button breaking mid-phrase reads as broken.
  */
 export default createAction(routes.app.team.flowMonitors.index, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		await ctx.access.load(abilities.flowMonitors.delete);
+		let canDelete = ctx.access.can(abilities.flowMonitors.delete);
 
 		let monitors = await ctx.models.flowMonitors
 			.inTeam(ctx.team.id)
@@ -209,49 +214,59 @@ export default createAction(routes.app.team.flowMonitors.index, {
 																<PencilIcon size={16} strokeWidth={1.5} />
 																{ctx.intl.t("page.flowMonitors.table.actions.edit")}
 															</Menu.Item>
-															<Menu.Separator />
-															<Menu.Item danger commandfor={deleteDialogId} command="show-modal">
-																<TrashIcon size={16} strokeWidth={1.5} />
-																{ctx.intl.t("page.flowMonitors.table.actions.delete")}
-															</Menu.Item>
+															{canDelete ? (
+																<>
+																	<Menu.Separator />
+																	<Menu.Item
+																		danger
+																		commandfor={deleteDialogId}
+																		command="show-modal"
+																	>
+																		<TrashIcon size={16} strokeWidth={1.5} />
+																		{ctx.intl.t("page.flowMonitors.table.actions.delete")}
+																	</Menu.Item>
+																</>
+															) : null}
 														</RowMenu>
 
-														<AlertDialog
-															id={deleteDialogId}
-															aria-labelledby={titleId}
-															aria-describedby={descriptionId}
-														>
-															<AlertDialog.Header>
-																<AlertDialog.Title id={titleId}>
-																	{ctx.intl.t(
-																		"page.flowMonitors.table.actions.confirmation.delete",
-																		{
-																			name: monitor.name,
-																		},
-																	)}
-																</AlertDialog.Title>
-																<AlertDialog.Description id={descriptionId}>
-																	{ctx.intl.t("page.editFlowMonitor.danger.description")}
-																</AlertDialog.Description>
-															</AlertDialog.Header>
-															<form
-																method="post"
-																action={routes.actions.monitor.flow.delete.href({
-																	team: ctx.team.slug,
-																})}
+														{canDelete ? (
+															<AlertDialog
+																id={deleteDialogId}
+																aria-labelledby={titleId}
+																aria-describedby={descriptionId}
 															>
-																<input type="hidden" name="_method" value="DELETE" />
-																<input type="hidden" name="monitor_id" value={monitor.id} />
-																<AlertDialog.Footer>
-																	<AlertDialog.Cancel type="button" commandfor={deleteDialogId}>
-																		{ctx.intl.t("page.editFlowMonitor.form.cancel")}
-																	</AlertDialog.Cancel>
-																	<Button type="submit" color="danger">
-																		{ctx.intl.t("page.flowMonitors.table.actions.delete")}
-																	</Button>
-																</AlertDialog.Footer>
-															</form>
-														</AlertDialog>
+																<AlertDialog.Header>
+																	<AlertDialog.Title id={titleId}>
+																		{ctx.intl.t(
+																			"page.flowMonitors.table.actions.confirmation.delete",
+																			{
+																				name: monitor.name,
+																			},
+																		)}
+																	</AlertDialog.Title>
+																	<AlertDialog.Description id={descriptionId}>
+																		{ctx.intl.t("page.editFlowMonitor.danger.description")}
+																	</AlertDialog.Description>
+																</AlertDialog.Header>
+																<form
+																	method="post"
+																	action={routes.actions.monitor.flow.delete.href({
+																		team: ctx.team.slug,
+																	})}
+																>
+																	<input type="hidden" name="_method" value="DELETE" />
+																	<input type="hidden" name="monitor_id" value={monitor.id} />
+																	<AlertDialog.Footer>
+																		<AlertDialog.Cancel type="button" commandfor={deleteDialogId}>
+																			{ctx.intl.t("page.editFlowMonitor.form.cancel")}
+																		</AlertDialog.Cancel>
+																		<Button type="submit" color="danger">
+																			{ctx.intl.t("page.flowMonitors.table.actions.delete")}
+																		</Button>
+																	</AlertDialog.Footer>
+																</form>
+															</AlertDialog>
+														) : null}
 													</Table.Cell>
 												</Table.Row>
 											);

@@ -165,7 +165,7 @@ export default createController(tcpMonitorRoutes, {
 
 		/** DELETE /api/v1/tcp-monitors/:tcpMonitorId — deletes a TCP monitor. */
 		tcpMonitorDestroy: {
-			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.write)],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.delete)],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.tcpMonitors

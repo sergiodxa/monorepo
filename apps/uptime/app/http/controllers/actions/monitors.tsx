@@ -158,11 +158,6 @@ export const deleteMonitor = createAction(routes.actions.monitor.http.delete, as
 		});
 	}
 
-	await ctx.access.load(abilities.monitors.delete);
-	if (!ctx.access.can(abilities.monitors.delete)) {
-		return notFound("Not Found");
-	}
-
 	let existing = await ctx.models.monitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 

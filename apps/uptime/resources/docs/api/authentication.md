@@ -50,7 +50,8 @@ API keys have scopes that control which resources they can access. When creating
 | Scope                | Description                                           |
 | -------------------- | ----------------------------------------------------- |
 | `monitors:read`      | View monitors and their check results                 |
-| `monitors:write`     | Create, update, and delete monitors                   |
+| `monitors:write`     | Create and update monitors                            |
+| `monitors:delete`    | Delete monitors                                       |
 | `alerts:read`        | View alert channels and notification history          |
 | `alerts:write`       | Create, update, and delete alert channels             |
 | `status-pages:read`  | View status pages and incidents                       |

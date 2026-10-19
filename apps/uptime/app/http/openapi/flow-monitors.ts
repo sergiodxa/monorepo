@@ -211,7 +211,7 @@ const FLOW_MONITOR_DESTROY = defineOperation(
 			},
 		},
 		problems: ["validationError", ...AUTH_PROBLEMS, "notFound"],
-		security: [{ apiKey: ["flow-monitors:write"] }],
+		security: [{ apiKey: ["flow-monitors:delete"] }],
 	},
 );
 

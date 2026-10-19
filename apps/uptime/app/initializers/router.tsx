@@ -115,8 +115,8 @@ const MACHINE_PATH_PREFIXES = [API_PATH_PREFIX, WEBHOOK_PATH_PREFIX];
 const MEMBER_GUARDS: Middleware[] = [requireUser, requireTeam, teamAccess];
 
 /**
- * The member chain plus one ability, for the actions that change the team itself; a member
- * without it gets the 403 page before the action's module loads.
+ * The member chain plus one ability, for the actions only an admin performs: changing the team
+ * itself or deleting a monitor. A member without it gets the 403 page before the module loads.
  *
  * @param ability - The ability the action performs.
  */
@@ -688,7 +688,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			),
 			delete: lazy(
 				() => import("~/app/http/controllers/actions/monitors").then((it) => it.deleteMonitor),
-				MEMBER_GUARDS,
+				adminGuards(abilities.monitors.delete),
 			),
 			play: lazy(
 				() => import("~/app/http/controllers/actions/monitors").then((it) => it.playMonitor),
@@ -734,7 +734,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			delete: lazy(
 				() =>
 					import("~/app/http/controllers/actions/dns-monitors").then((it) => it.deleteDnsMonitor),
-				MEMBER_GUARDS,
+				adminGuards(abilities.dnsMonitors.delete),
 			),
 			check: lazy(
 				() =>
@@ -777,7 +777,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			delete: lazy(
 				() =>
 					import("~/app/http/controllers/actions/tcp-monitors").then((it) => it.deleteTcpMonitor),
-				MEMBER_GUARDS,
+				adminGuards(abilities.tcpMonitors.delete),
 			),
 			check: lazy(
 				() =>
@@ -801,7 +801,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			delete: lazy(
 				() =>
 					import("~/app/http/controllers/actions/flow-monitors").then((it) => it.deleteFlowMonitor),
-				MEMBER_GUARDS,
+				adminGuards(abilities.flowMonitors.delete),
 			),
 			check: lazy(
 				() =>
@@ -822,7 +822,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			),
 			delete: lazy(
 				() => import("~/app/http/controllers/actions/cron-jobs").then((it) => it.deleteCronJob),
-				MEMBER_GUARDS,
+				adminGuards(abilities.cronJobs.delete),
 			),
 		},
 	});

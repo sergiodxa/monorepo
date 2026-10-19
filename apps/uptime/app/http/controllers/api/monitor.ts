@@ -182,7 +182,7 @@ export default createController(monitorRoutes, {
 
 		/** DELETE /api/v1/monitors/:monitorId — deletes an HTTP monitor. */
 		monitorDestroy: {
-			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write)],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.delete)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);

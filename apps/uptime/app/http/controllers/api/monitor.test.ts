@@ -351,7 +351,7 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 	test("deletes the monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let key = await createApiKey(db, team.id, ["monitors:delete"]);
 		let monitor = await createMonitorRow(db, team.id);
 
 		let response = await dispatch(
@@ -371,7 +371,7 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let key = await createApiKey(db, team.id, ["monitors:delete"]);
 		let monitor = await createMonitorRow(db, otherTeam.id);
 
 		let response = await dispatch(
@@ -399,10 +399,10 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 		expect(response.status).toBe(401);
 	});
 
-	test("returns 403 for a key lacking monitors:write", async () => {
+	test("returns 403 for a key lacking monitors:delete", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["monitors:read"]);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
 		let monitor = await createMonitorRow(db, team.id);
 
 		let response = await dispatch(
@@ -414,6 +414,7 @@ describe("DELETE /api/v1/monitors/:monitorId", () => {
 			),
 		);
 		expect(response.status).toBe(403);
+		expect(response.headers.get("WWW-Authenticate")).toContain("monitors:delete");
 	});
 });
 
@@ -683,7 +684,7 @@ describe("GET /api/v1/monitors/:monitorId/alert-events", () => {
 
 describe("malformed monitor ids", () => {
 	test.each([
-		["DELETE", "destroy", "monitors:write"],
+		["DELETE", "destroy", "monitors:delete"],
 		["GET", "itemStats", "monitors:read"],
 		["GET", "alertEvents", "alerts:read"],
 	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {

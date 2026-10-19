@@ -313,7 +313,7 @@ const DNS_MONITOR_DESTROY = defineOperation(
 			200: { description: "The monitor is deleted", body: envelope({ deleted: s.literal(true) }) },
 		},
 		problems: ["validationError", ...AUTH_PROBLEMS, "notFound"],
-		security: [{ apiKey: ["dns-monitors:write"] }],
+		security: [{ apiKey: ["dns-monitors:delete"] }],
 	},
 );
 

@@ -25,9 +25,11 @@ import { createAction } from "remix/router";
 
 import type { SelectMonitor, SelectMonitorContentCheck } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -319,10 +321,13 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 
 /** GET /app/:team/monitors/:monitorId/edit — a monitor's edit form. */
 export default createAction(routes.app.team.monitors.edit, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		await ctx.access.load(abilities.monitors.delete);
+		let canDelete = ctx.access.can(abilities.monitors.delete);
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
@@ -422,62 +427,66 @@ export default createAction(routes.app.team.monitors.edit, {
 
 							<SslSettingsSection team={ctx.team} monitor={monitor} intl={ctx.intl} />
 
-							<SettingsSection
-								id="danger"
-								tone="danger"
-								title={ctx.intl.t("page.editMonitor.dangerZone.title")}
-								description={ctx.intl.t("page.editMonitor.dangerZone.description")}
-							>
-								<SettingsSection.Card tone="danger">
-									<SettingsSection.Body>
-										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.intl.t("page.editMonitor.dangerZone.warning")}
-										</p>
-									</SettingsSection.Body>
-									<SettingsSection.Footer tone="danger">
-										<Button
-											type="button"
-											color="danger"
-											commandfor="delete-monitor"
-											command="show-modal"
-										>
-											{ctx.intl.t("page.editMonitor.dangerZone.delete")}
-										</Button>
-									</SettingsSection.Footer>
-								</SettingsSection.Card>
-							</SettingsSection>
+							{canDelete ? (
+								<>
+									<SettingsSection
+										id="danger"
+										tone="danger"
+										title={ctx.intl.t("page.editMonitor.dangerZone.title")}
+										description={ctx.intl.t("page.editMonitor.dangerZone.description")}
+									>
+										<SettingsSection.Card tone="danger">
+											<SettingsSection.Body>
+												<p mix={[m(0), fontSize("sm"), fg("danger")]}>
+													{ctx.intl.t("page.editMonitor.dangerZone.warning")}
+												</p>
+											</SettingsSection.Body>
+											<SettingsSection.Footer tone="danger">
+												<Button
+													type="button"
+													color="danger"
+													commandfor="delete-monitor"
+													command="show-modal"
+												>
+													{ctx.intl.t("page.editMonitor.dangerZone.delete")}
+												</Button>
+											</SettingsSection.Footer>
+										</SettingsSection.Card>
+									</SettingsSection>
 
-							<AlertDialog
-								id="delete-monitor"
-								aria-labelledby={deleteMonitorTitleId}
-								aria-describedby={deleteMonitorDescriptionId}
-							>
-								<AlertDialog.Header>
-									<AlertDialog.Title id={deleteMonitorTitleId}>
-										{ctx.intl.t("page.httpMonitors.table.confirmation.delete", {
-											name: monitor.name,
-										})}
-									</AlertDialog.Title>
-									<AlertDialog.Description id={deleteMonitorDescriptionId}>
-										{ctx.intl.t("page.httpMonitors.table.confirmation.deleteDescription")}
-									</AlertDialog.Description>
-								</AlertDialog.Header>
-								<form
-									method="post"
-									action={routes.actions.monitor.http.delete.href({ team: ctx.team.slug })}
-								>
-									<input type="hidden" name="_method" value="DELETE" />
-									<input type="hidden" name="monitor_id" value={monitor.id} />
-									<AlertDialog.Footer>
-										<AlertDialog.Cancel type="button" commandfor="delete-monitor">
-											{ctx.intl.t("page.editMonitor.form.cancel")}
-										</AlertDialog.Cancel>
-										<Button type="submit" color="danger">
-											{ctx.intl.t("page.httpMonitors.table.actions.delete")}
-										</Button>
-									</AlertDialog.Footer>
-								</form>
-							</AlertDialog>
+									<AlertDialog
+										id="delete-monitor"
+										aria-labelledby={deleteMonitorTitleId}
+										aria-describedby={deleteMonitorDescriptionId}
+									>
+										<AlertDialog.Header>
+											<AlertDialog.Title id={deleteMonitorTitleId}>
+												{ctx.intl.t("page.httpMonitors.table.confirmation.delete", {
+													name: monitor.name,
+												})}
+											</AlertDialog.Title>
+											<AlertDialog.Description id={deleteMonitorDescriptionId}>
+												{ctx.intl.t("page.httpMonitors.table.confirmation.deleteDescription")}
+											</AlertDialog.Description>
+										</AlertDialog.Header>
+										<form
+											method="post"
+											action={routes.actions.monitor.http.delete.href({ team: ctx.team.slug })}
+										>
+											<input type="hidden" name="_method" value="DELETE" />
+											<input type="hidden" name="monitor_id" value={monitor.id} />
+											<AlertDialog.Footer>
+												<AlertDialog.Cancel type="button" commandfor="delete-monitor">
+													{ctx.intl.t("page.editMonitor.form.cancel")}
+												</AlertDialog.Cancel>
+												<Button type="submit" color="danger">
+													{ctx.intl.t("page.httpMonitors.table.actions.delete")}
+												</Button>
+											</AlertDialog.Footer>
+										</form>
+									</AlertDialog>
+								</>
+							) : null}
 						</div>
 					</FormPage>
 				</AppShell>

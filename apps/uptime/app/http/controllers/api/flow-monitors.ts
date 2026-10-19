@@ -265,7 +265,7 @@ export default createController(flowMonitorsRoutes, {
 
 		/** DELETE /api/v1/flow-monitors/:flowMonitorId — deletes a flow monitor. */
 		flowMonitorDestroy: {
-			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.write)],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.delete)],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.flowMonitors

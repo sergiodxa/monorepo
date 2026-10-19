@@ -1,7 +1,7 @@
 /**
- * Who may do what in uptime: `member` runs the team's monitoring, `admin` also manages the team,
- * its members, invites, domains and API keys, and `owner` holds everything. An API key acts as
- * the owner capped by one `scope:<name>` role per scope it carries, so it never exceeds them.
+ * Who may do what in uptime: `member` runs the team's monitoring, `admin` also deletes monitors
+ * and manages the team, its members, invites, domains and API keys, and `owner` holds everything.
+ * An API key acts as the owner capped by one `scope:<name>` role per scope it carries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,20 +32,25 @@ export const API_SCOPES: Record<ApiKeyScope, UptimeAbility[]> = {
 	"team-domains:write": ["domains.write"],
 	"monitors:read": ["monitors.read"],
 	"monitors:write": ["monitors.write", "stats.backfill"],
+	"monitors:delete": ["monitors.delete"],
 	"maintenance:read": ["maintenance.read"],
 	"maintenance:write": ["maintenance.write"],
 	"dns-monitors:read": ["dnsMonitors.read"],
 	"dns-monitors:write": ["dnsMonitors.write"],
+	"dns-monitors:delete": ["dnsMonitors.delete"],
 	"tcp-monitors:read": ["tcpMonitors.read"],
 	"tcp-monitors:write": ["tcpMonitors.write"],
+	"tcp-monitors:delete": ["tcpMonitors.delete"],
 	"flow-monitors:read": ["flowMonitors.read"],
 	"flow-monitors:write": ["flowMonitors.write"],
+	"flow-monitors:delete": ["flowMonitors.delete"],
 	"alerts:read": ["alerts.read"],
 	"alerts:write": ["alerts.write"],
 	"status-pages:read": ["statusPages.read"],
 	"status-pages:write": ["statusPages.write"],
 	"cron-jobs:read": ["cronJobs.read"],
 	"cron-jobs:write": ["cronJobs.write"],
+	"cron-jobs:delete": ["cronJobs.delete"],
 	"cron-jobs:ping": ["cronJobs.ping"],
 	"reports:read": ["reports.read"],
 	"api-keys:read": ["apiKeys.read"],
@@ -92,9 +97,12 @@ const policy = definePolicy(abilities, {
 				[
 					"monitors.read",
 					"monitors.write",
-					"dnsMonitors",
-					"tcpMonitors",
-					"flowMonitors",
+					"dnsMonitors.read",
+					"dnsMonitors.write",
+					"tcpMonitors.read",
+					"tcpMonitors.write",
+					"flowMonitors.read",
+					"flowMonitors.write",
 					"cronJobs.read",
 					"cronJobs.write",
 					"alerts",
@@ -112,9 +120,21 @@ const policy = definePolicy(abilities, {
 		admin: {
 			inherits: ["member"],
 			grants: [
-				allow(["monitors.delete", "team.update", "members", "invites", "domains", "apiKeys"], {
-					id: "admin",
-				}),
+				allow(
+					[
+						"monitors.delete",
+						"dnsMonitors.delete",
+						"tcpMonitors.delete",
+						"flowMonitors.delete",
+						"cronJobs.delete",
+						"team.update",
+						"members",
+						"invites",
+						"domains",
+						"apiKeys",
+					],
+					{ id: "admin" },
+				),
 			],
 		},
 		owner: [allow("*", { id: "owner" })],

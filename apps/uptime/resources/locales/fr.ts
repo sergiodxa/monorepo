@@ -5526,19 +5526,19 @@ export default {
 							"monitors:read":
 								"Lire les moniteurs HTTP, leurs résultats de vérification, leurs statistiques de disponibilité et le statut global de l'équipe.",
 							"monitors:write":
-								"Créer, modifier et supprimer les moniteurs HTTP et leurs vérifications de contenu. Permet aussi de mettre en file une reconstruction des statistiques quotidiennes.",
+								"Créer et modifier les moniteurs HTTP, et ajouter ou retirer leurs vérifications de contenu. Permet aussi de mettre en file une reconstruction des statistiques quotidiennes.",
 							"maintenance:read": "Lister et lire les fenêtres de maintenance de l'équipe.",
 							"maintenance:write":
 								"Créer, modifier, terminer par anticipation et supprimer des fenêtres de maintenance. Une fenêtre en cours peut suspendre les alertes des moniteurs qu'elle couvre.",
 							"dns-monitors:read":
 								"Lister et lire les moniteurs DNS et les résultats de résolution qu'ils ont enregistrés.",
-							"dns-monitors:write": "Créer, modifier et supprimer des moniteurs DNS.",
+							"dns-monitors:write": "Créer et modifier des moniteurs DNS.",
 							"tcp-monitors:read":
 								"Lister et lire les moniteurs TCP et les résultats de connexion qu'ils ont enregistrés.",
-							"tcp-monitors:write": "Créer, modifier et supprimer des moniteurs TCP.",
+							"tcp-monitors:write": "Créer et modifier des moniteurs TCP.",
 							"flow-monitors:read":
 								"Lister et lire les moniteurs de flux et les résultats de leurs exécutions. Le code du flux n'est jamais renvoyé, car il contient les identifiants avec lesquels le flux se connecte.",
-							"flow-monitors:write": "Créer, modifier et supprimer des moniteurs de flux.",
+							"flow-monitors:write": "Créer et modifier des moniteurs de flux.",
 							"alerts:read":
 								"Lister et lire les alertes et les événements qu'elles ont déclenchés. Les URL de webhook et autres secrets de canal ne sont jamais renvoyés.",
 							"alerts:write":
@@ -5549,8 +5549,7 @@ export default {
 								"Créer, modifier et supprimer des pages de statut, et remplacer l'ensemble des moniteurs et tâches Cron qu'une page affiche publiquement.",
 							"cron-jobs:read":
 								"Lister et lire les tâches Cron de l'équipe et leurs planifications.",
-							"cron-jobs:write":
-								"Créer, modifier et supprimer des tâches Cron. En supprimer une fait cesser l'acceptation de son URL de ping.",
+							"cron-jobs:write": "Créer et modifier des tâches Cron.",
 							"cron-jobs:ping":
 								"Présente pour l'URL de ping des tâches Cron, qui est publique et ne vérifie aucune portée. L'accorder ne donne à une clé aucun accès qu'elle n'a déjà.",
 							"api-keys:read":
@@ -5561,6 +5560,16 @@ export default {
 								"Exécuter des vérifications HTTP, DNS et TCP ponctuelles sans créer de moniteur. Chaque vérification est facturée comme un ping et nécessite un abonnement actif.",
 							"reports:read":
 								"Télécharger les rapports de disponibilité de l'équipe : un résumé par moniteur et la disponibilité quotidienne, sur n'importe quelle période.",
+							"monitors:delete":
+								"Supprimer des moniteurs HTTP et leur historique de vérifications. Supprimer un moniteur revient à un administrateur : n'accordez cette portée qu'à une clé qui agit pour l'un d'eux.",
+							"dns-monitors:delete":
+								"Supprimer des moniteurs DNS et leur historique de résolutions.",
+							"tcp-monitors:delete":
+								"Supprimer des moniteurs TCP et leur historique de connexions.",
+							"flow-monitors:delete":
+								"Supprimer des moniteurs de flux et l'historique de leurs exécutions.",
+							"cron-jobs:delete":
+								"Supprimer des tâches Cron. En supprimer une fait cesser l'acceptation de son URL de ping.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

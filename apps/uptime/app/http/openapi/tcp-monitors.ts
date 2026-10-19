@@ -180,7 +180,7 @@ const TCP_MONITOR_DESTROY = defineOperation(
 			200: { description: "The monitor is deleted", body: envelope({ deleted: s.literal(true) }) },
 		},
 		problems: ["validationError", ...AUTH_PROBLEMS, "notFound"],
-		security: [{ apiKey: ["tcp-monitors:write"] }],
+		security: [{ apiKey: ["tcp-monitors:delete"] }],
 	},
 );
 

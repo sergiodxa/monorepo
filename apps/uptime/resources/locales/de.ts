@@ -5538,19 +5538,19 @@ export default {
 							"monitors:read":
 								"HTTP-Monitore, ihre Prüfergebnisse, ihre Verfügbarkeitsstatistiken und den Gesamtstatus des Teams lesen.",
 							"monitors:write":
-								"HTTP-Monitore und ihre Inhaltsprüfungen erstellen, ändern und löschen. Zusätzlich lässt sich damit ein Neuaufbau der Tagesstatistiken einreihen.",
+								"HTTP-Monitore erstellen und ändern sowie ihre Inhaltsprüfungen hinzufügen und entfernen. Zusätzlich lässt sich damit ein Neuaufbau der Tagesstatistiken einreihen.",
 							"maintenance:read": "Die Wartungsfenster des Teams auflisten und lesen.",
 							"maintenance:write":
 								"Wartungsfenster erstellen, ändern, vorzeitig beenden und löschen. Ein laufendes Fenster kann Benachrichtigungen für die abgedeckten Monitore unterdrücken.",
 							"dns-monitors:read":
 								"DNS-Monitore und die von ihnen aufgezeichneten Auflösungsergebnisse auflisten und lesen.",
-							"dns-monitors:write": "DNS-Monitore erstellen, ändern und löschen.",
+							"dns-monitors:write": "DNS-Monitore erstellen und ändern.",
 							"tcp-monitors:read":
 								"TCP-Monitore und die von ihnen aufgezeichneten Verbindungsergebnisse auflisten und lesen.",
-							"tcp-monitors:write": "TCP-Monitore erstellen, ändern und löschen.",
+							"tcp-monitors:write": "TCP-Monitore erstellen und ändern.",
 							"flow-monitors:read":
 								"Flow-Monitore und die Ergebnisse ihrer Läufe auflisten und lesen. Der Quelltext des Flows wird nie zurückgegeben, da er die Zugangsdaten enthält, mit denen sich der Flow anmeldet.",
-							"flow-monitors:write": "Flow-Monitore erstellen, ändern und löschen.",
+							"flow-monitors:write": "Flow-Monitore erstellen und ändern.",
 							"alerts:read":
 								"Benachrichtigungen und die von ihnen ausgelösten Ereignisse auflisten und lesen. Webhook-URLs und andere Kanal-Geheimnisse werden nie zurückgegeben.",
 							"alerts:write":
@@ -5560,8 +5560,7 @@ export default {
 							"status-pages:write":
 								"Statusseiten erstellen, ändern und löschen sowie festlegen, welche Monitore und Cron Jobs eine Seite öffentlich zeigt.",
 							"cron-jobs:read": "Die Cron Jobs des Teams und ihre Zeitpläne auflisten und lesen.",
-							"cron-jobs:write":
-								"Cron Jobs erstellen, ändern und löschen. Wird einer gelöscht, wird seine Ping-URL nicht mehr angenommen.",
+							"cron-jobs:write": "Cron Jobs erstellen und ändern.",
 							"cron-jobs:ping":
 								"Aufgeführt wegen der Ping-URL der Cron Jobs, die öffentlich ist und keinen Bereich prüft. Die Vergabe verschafft einem Schlüssel keinen Zugriff, den er nicht ohnehin hat.",
 							"api-keys:read":
@@ -5572,6 +5571,13 @@ export default {
 								"Einmalige HTTP-, DNS- und TCP-Prüfungen ausführen, ohne einen Monitor anzulegen. Jede Prüfung wird als ein Ping abgerechnet und erfordert ein aktives Abonnement.",
 							"reports:read":
 								"Die Verfügbarkeitsberichte des Teams herunterladen: eine Zusammenfassung pro Monitor und die tägliche Verfügbarkeit für einen beliebigen Zeitraum.",
+							"monitors:delete":
+								"HTTP-Monitore samt ihrem Prüfverlauf löschen. Das Löschen eines Monitors ist Sache eines Admins, vergeben Sie diesen Bereich daher nur an einen Schlüssel, der für einen Admin handelt.",
+							"dns-monitors:delete": "DNS-Monitore samt ihrem Auflösungsverlauf löschen.",
+							"tcp-monitors:delete": "TCP-Monitore samt ihrem Verbindungsverlauf löschen.",
+							"flow-monitors:delete": "Flow-Monitore samt dem Verlauf ihrer Durchläufe löschen.",
+							"cron-jobs:delete":
+								"Cron Jobs löschen. Wird einer gelöscht, wird seine Ping-URL nicht mehr angenommen.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

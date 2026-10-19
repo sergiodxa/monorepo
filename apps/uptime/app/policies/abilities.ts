@@ -21,8 +21,8 @@ export interface TeamMember extends MemberTarget {
 }
 
 /**
- * Monitor deletes sit apart from writes for HTTP monitors alone, which an admin deletes; every
- * other kind is deleted by whoever may write it. `checks.run` is every check billed on demand.
+ * Every monitor kind's delete sits apart from its write, so an admin alone deletes a monitor
+ * and an API key needs that kind's `:delete` scope. `checks.run` is every check billed on demand.
  */
 export default abilities({
 	monitors: {
@@ -30,12 +30,25 @@ export default abilities({
 		write: ability(),
 		delete: ability({ description: "Delete an HTTP monitor" }),
 	},
-	dnsMonitors: { read: ability(), write: ability() },
-	tcpMonitors: { read: ability(), write: ability() },
-	flowMonitors: { read: ability(), write: ability() },
+	dnsMonitors: {
+		read: ability(),
+		write: ability(),
+		delete: ability({ description: "Delete a DNS monitor" }),
+	},
+	tcpMonitors: {
+		read: ability(),
+		write: ability(),
+		delete: ability({ description: "Delete a TCP monitor" }),
+	},
+	flowMonitors: {
+		read: ability(),
+		write: ability(),
+		delete: ability({ description: "Delete a flow monitor" }),
+	},
 	cronJobs: {
 		read: ability(),
 		write: ability(),
+		delete: ability({ description: "Delete a cron job" }),
 		ping: ability({ description: "Report a cron job's run to its ping endpoint" }),
 	},
 	alerts: { read: ability(), write: ability() },

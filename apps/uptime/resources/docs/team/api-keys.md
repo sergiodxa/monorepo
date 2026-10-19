@@ -31,22 +31,29 @@ Scopes control what actions an API key can perform. Choose only the scopes your 
 
 ### Monitoring
 
-| Scope                | Description                                   |
-| -------------------- | --------------------------------------------- |
-| `monitors:read`      | List and view HTTP monitors and their results |
-| `monitors:write`     | Create, update, and delete HTTP monitors      |
-| `dns-monitors:read`  | List and view DNS monitors and their results  |
-| `dns-monitors:write` | Create, update, and delete DNS monitors       |
-| `tcp-monitors:read`  | List and view TCP monitors and their results  |
-| `tcp-monitors:write` | Create, update, and delete TCP monitors       |
+| Scope                  | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `monitors:read`        | List and view HTTP monitors and their results |
+| `monitors:write`       | Create and update HTTP monitors               |
+| `monitors:delete`      | Delete HTTP monitors                          |
+| `dns-monitors:read`    | List and view DNS monitors and their results  |
+| `dns-monitors:write`   | Create and update DNS monitors                |
+| `dns-monitors:delete`  | Delete DNS monitors                           |
+| `tcp-monitors:read`    | List and view TCP monitors and their results  |
+| `tcp-monitors:write`   | Create and update TCP monitors                |
+| `tcp-monitors:delete`  | Delete TCP monitors                           |
+| `flow-monitors:read`   | List and view flow monitors and their runs    |
+| `flow-monitors:write`  | Create and update flow monitors               |
+| `flow-monitors:delete` | Delete flow monitors                          |
 
 ### Scheduled Tasks
 
-| Scope             | Description                                         |
-| ----------------- | --------------------------------------------------- |
-| `cron-jobs:read`  | List and view cron jobs and their execution history |
-| `cron-jobs:write` | Create, update, and delete cron jobs                |
-| `cron-jobs:ping`  | Record pings for the team's cron job monitors       |
+| Scope              | Description                                         |
+| ------------------ | --------------------------------------------------- |
+| `cron-jobs:read`   | List and view cron jobs and their execution history |
+| `cron-jobs:write`  | Create and update cron jobs                         |
+| `cron-jobs:delete` | Delete cron jobs                                    |
+| `cron-jobs:ping`   | Record pings for the team's cron job monitors       |
 
 ### Alerts & Status
 

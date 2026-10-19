@@ -260,7 +260,7 @@ const MONITOR_DESTROY = defineOperation("monitorDestroy", routes.api.v1.monitors
 		200: { description: "The monitor is deleted", body: envelope({ deleted: s.literal(true) }) },
 	},
 	problems: ["validationError", ...AUTH_PROBLEMS, "notFound"],
-	security: [{ apiKey: ["monitors:write"] }],
+	security: [{ apiKey: ["monitors:delete"] }],
 });
 
 const MONITOR_STATS = defineOperation("monitorStats", routes.api.v1.monitors.itemStats, {

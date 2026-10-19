@@ -257,10 +257,7 @@ describe("updateMonitor", () => {
 describe("deleteMonitor", () => {
 	test("deletes the monitor and redirects to the HTTP monitors list", async () => {
 		let { db, team } = await createFixture();
-		/**
-		 * `deleteMonitor` itself gates on owner/admin — the default fixture membership is
-		 * a plain member, so this needs its own admin membership rather than a member's.
-		 */
+		/** The router admits only an admin to a delete, so the one deleting here is an admin. */
 		let membership = await db.create(
 			memberships,
 			{ id: generateUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
@@ -293,38 +290,6 @@ describe("deleteMonitor", () => {
 		);
 
 		expect(await db.findOne(monitors, { where: { id: monitor.id } })).toBeNull();
-	});
-
-	test("responds 404 for a member with no admin role deleting someone else's monitor", async () => {
-		let { db, team } = await createFixture();
-		let otherMembership = await db.create(
-			memberships,
-			{ id: generateUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
-			{ touch: true, returnRow: true },
-		);
-		let monitor = unwrap(
-			await bindModels(db).monitors.create({
-				id: generateUUID(),
-				team_id: team.id,
-				author_id: "member-1",
-				enabled_at: Date.now(),
-				name: "Not mine",
-				url: "https://example.com",
-			}),
-		);
-
-		let response = await send(
-			db,
-			team,
-			otherMembership,
-			routes.actions.monitor.http.delete,
-			deleteMonitor as RequestHandler<any>,
-			"DELETE",
-			{ monitor_id: monitor.id },
-		);
-
-		expect(response.status).toBe(404);
-		expect(await db.findOne(monitors, { where: { id: monitor.id } })).not.toBeNull();
 	});
 
 	test("responds 404 for a monitor that doesn't belong to the team", async () => {

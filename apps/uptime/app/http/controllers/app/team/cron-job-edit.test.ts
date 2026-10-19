@@ -21,6 +21,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { frameFailures } from "~/app/http/middleware/frame-failures";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
@@ -79,6 +80,7 @@ async function send(
 	router.map(routes.app.team.cronJobs.edit, {
 		middleware: [
 			seedTeam(team, membership),
+			teamAccess,
 			i18n,
 			testAssets(),
 			render({ assets: assetResolver }),
@@ -230,5 +232,35 @@ describe("cronJobEdit", () => {
 
 		/** UTC is offered as its own leading option, so the default keeps matching. */
 		expect(selectedTimezones(body)).toEqual(["UTC"]);
+	});
+
+	test("offers the delete control to an admin alone", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			cronJobMonitors,
+			{
+				id: generateUUID(),
+				team_id: team.id,
+				name: "Nightly Backup",
+				cron_expression: "0 0 * * *",
+				timezone: "UTC",
+				grace_period_seconds: 300,
+				status: "new",
+				enabled_at: Date.now(),
+			},
+			{ touch: true, returnRow: true },
+		);
+		let admin = await db.create(
+			memberships,
+			{ id: generateUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
+			{ touch: true, returnRow: true },
+		);
+		let deleteAction = routes.actions.cronJob.delete.href({ team: team.slug });
+
+		let asMember = await (await send(db, team, membership, monitor.id)).text();
+		let asAdmin = await (await send(db, team, admin, monitor.id)).text();
+
+		expect(asMember).not.toContain(deleteAction);
+		expect(asAdmin).toContain(deleteAction);
 	});
 });

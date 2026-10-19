@@ -202,7 +202,7 @@ export default createController(cronJobRoutes, {
 
 		/** DELETE /api/v1/cron-jobs/:cronJobId — deletes a cron-job monitor. */
 		cronJobDestroy: {
-			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.write)],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.delete)],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.cronJobMonitors

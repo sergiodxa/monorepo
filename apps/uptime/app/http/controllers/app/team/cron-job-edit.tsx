@@ -18,9 +18,11 @@ import { AlertDialog, Button, LinkButton, Select, Switch, TextField } from "@sdx
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { DEFAULT_TIMEZONE } from "~/config/timezones";
 import Field from "~/resources/components/field";
@@ -43,10 +45,13 @@ const GRACE_PERIOD_INPUT_ID = "cron-job-grace-period-seconds";
  * among the runtime's known zones, keeping the save from switching zones.
  */
 export default createAction(routes.app.team.cronJobs.edit, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		await ctx.access.load(abilities.cronJobs.delete);
+		let canDelete = ctx.access.can(abilities.cronJobs.delete);
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 		let monitor = await ctx.models.cronJobMonitors
@@ -230,58 +235,62 @@ export default createAction(routes.app.team.cronJobs.edit, {
 								</SettingsSection>
 							</form>
 
-							<SettingsSection
-								id="danger"
-								tone="danger"
-								title={t("danger.title")}
-								description={t("danger.description")}
-							>
-								<SettingsSection.Card tone="danger">
-									<SettingsSection.Body>
-										<p mix={[m(0), fontSize("sm"), fg("danger")]}>{t("danger.warning")}</p>
-									</SettingsSection.Body>
-									<SettingsSection.Footer tone="danger">
-										<Button
-											type="button"
-											color="danger"
-											commandfor={DELETE_DIALOG_ID}
-											command="show-modal"
-										>
-											{t("danger.delete.trigger")}
-										</Button>
-									</SettingsSection.Footer>
-								</SettingsSection.Card>
-							</SettingsSection>
+							{canDelete ? (
+								<>
+									<SettingsSection
+										id="danger"
+										tone="danger"
+										title={t("danger.title")}
+										description={t("danger.description")}
+									>
+										<SettingsSection.Card tone="danger">
+											<SettingsSection.Body>
+												<p mix={[m(0), fontSize("sm"), fg("danger")]}>{t("danger.warning")}</p>
+											</SettingsSection.Body>
+											<SettingsSection.Footer tone="danger">
+												<Button
+													type="button"
+													color="danger"
+													commandfor={DELETE_DIALOG_ID}
+													command="show-modal"
+												>
+													{t("danger.delete.trigger")}
+												</Button>
+											</SettingsSection.Footer>
+										</SettingsSection.Card>
+									</SettingsSection>
 
-							<AlertDialog
-								id={DELETE_DIALOG_ID}
-								aria-labelledby={`${DELETE_DIALOG_ID}-title`}
-								aria-describedby={`${DELETE_DIALOG_ID}-description`}
-							>
-								<AlertDialog.Header>
-									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{t("danger.delete.confirmTitle")}
-									</AlertDialog.Title>
-									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{t("danger.delete.confirmDescription")}
-									</AlertDialog.Description>
-								</AlertDialog.Header>
-								<form
-									method="post"
-									action={routes.actions.cronJob.delete.href({ team: ctx.team.slug })}
-								>
-									<input type="hidden" name="_method" value="DELETE" />
-									<input type="hidden" name="monitor_id" value={monitor.id} />
-									<AlertDialog.Footer>
-										<AlertDialog.Cancel commandfor={DELETE_DIALOG_ID}>
-											{t("form.cancel")}
-										</AlertDialog.Cancel>
-										<Button type="submit" color="danger">
-											{t("danger.delete.confirm")}
-										</Button>
-									</AlertDialog.Footer>
-								</form>
-							</AlertDialog>
+									<AlertDialog
+										id={DELETE_DIALOG_ID}
+										aria-labelledby={`${DELETE_DIALOG_ID}-title`}
+										aria-describedby={`${DELETE_DIALOG_ID}-description`}
+									>
+										<AlertDialog.Header>
+											<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
+												{t("danger.delete.confirmTitle")}
+											</AlertDialog.Title>
+											<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
+												{t("danger.delete.confirmDescription")}
+											</AlertDialog.Description>
+										</AlertDialog.Header>
+										<form
+											method="post"
+											action={routes.actions.cronJob.delete.href({ team: ctx.team.slug })}
+										>
+											<input type="hidden" name="_method" value="DELETE" />
+											<input type="hidden" name="monitor_id" value={monitor.id} />
+											<AlertDialog.Footer>
+												<AlertDialog.Cancel commandfor={DELETE_DIALOG_ID}>
+													{t("form.cancel")}
+												</AlertDialog.Cancel>
+												<Button type="submit" color="danger">
+													{t("danger.delete.confirm")}
+												</Button>
+											</AlertDialog.Footer>
+										</form>
+									</AlertDialog>
+								</>
+							) : null}
 						</div>
 					</FormPage>
 				</AppShell>

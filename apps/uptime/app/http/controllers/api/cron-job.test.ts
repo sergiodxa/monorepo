@@ -336,7 +336,7 @@ describe("DELETE /api/v1/cron-jobs/:cronJobId", () => {
 	test("deletes the cron-job monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let key = await createApiKey(db, team.id, ["cron-jobs:delete"]);
 		let cronJob = await createCronJobRow(db, team.id);
 
 		let response = await dispatch(
@@ -360,10 +360,10 @@ describe("DELETE /api/v1/cron-jobs/:cronJobId", () => {
 		expect(response.status).toBe(401);
 	});
 
-	test("returns 403 when the key lacks the cron-jobs:write scope", async () => {
+	test("returns 403 when the key lacks the cron-jobs:delete scope", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
+		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
 		let cronJob = await createCronJobRow(db, team.id);
 
 		let response = await dispatch(
@@ -371,13 +371,14 @@ describe("DELETE /api/v1/cron-jobs/:cronJobId", () => {
 			destroyRequest(cronJob.id, { Authorization: `Bearer ${key}` }),
 		);
 		expect(response.status).toBe(403);
+		expect(response.headers.get("WWW-Authenticate")).toContain("cron-jobs:delete");
 	});
 
 	test("404s when the cron job doesn't belong to the team, without deleting it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
-		let key = await createApiKey(db, team.id, ["cron-jobs:write"]);
+		let key = await createApiKey(db, team.id, ["cron-jobs:delete"]);
 		let cronJob = await createCronJobRow(db, otherTeam.id);
 
 		let response = await dispatch(
@@ -396,7 +397,7 @@ describe("malformed cron job ids", () => {
 	test.each([
 		["GET", "show", "cron-jobs:read"],
 		["PUT", "update", "cron-jobs:write"],
-		["DELETE", "destroy", "cron-jobs:write"],
+		["DELETE", "destroy", "cron-jobs:delete"],
 	] as const)("%s %s answers validation-error for a raw UUID", async (method, leaf, scope) => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

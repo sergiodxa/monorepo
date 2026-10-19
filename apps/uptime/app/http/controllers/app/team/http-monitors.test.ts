@@ -31,6 +31,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
@@ -101,6 +102,7 @@ async function send(
 	router.map(routes.app.team.monitors.index, {
 		middleware: [
 			seedTeam(team, membership),
+			teamAccess,
 			i18n,
 			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -185,5 +187,31 @@ describe("httpMonitors", () => {
 		expect(body).toContain("Degraded");
 		expect(body).toContain("842ms");
 		expect(body).not.toContain("Never");
+	});
+
+	test("offers the delete control to an admin alone", async () => {
+		let { db, team, membership } = await createFixture();
+		unwrap(
+			await bindModels(db).monitors.create({
+				id: generateUUID(),
+				team_id: team.id,
+				author_id: membership.subject_id,
+				enabled_at: Date.now(),
+				name: "Homepage",
+				url: "https://example.com",
+			}),
+		);
+		let admin = await db.create(
+			memberships,
+			{ id: generateUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
+			{ touch: true, returnRow: true },
+		);
+		let deleteAction = routes.actions.monitor.http.delete.href({ team: team.slug });
+
+		let asMember = await (await send(db, team, membership)).text();
+		let asAdmin = await (await send(db, team, admin)).text();
+
+		expect(asMember).not.toContain(deleteAction);
+		expect(asAdmin).toContain(deleteAction);
 	});
 });

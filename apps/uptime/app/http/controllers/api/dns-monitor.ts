@@ -151,7 +151,7 @@ export default createController(dnsMonitorRoutes, {
 
 		/** DELETE /api/v1/dns-monitors/:dnsMonitorId — deletes a DNS monitor. */
 		dnsMonitorDestroy: {
-			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.write)],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.delete)],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.dnsMonitors

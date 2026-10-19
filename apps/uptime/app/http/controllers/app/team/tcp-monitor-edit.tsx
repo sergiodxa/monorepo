@@ -20,9 +20,11 @@ import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
 import AppShell from "~/resources/layouts/app-shell";
@@ -35,10 +37,13 @@ const DELETE_DIALOG_ID = "delete-tcp-monitor";
 
 /** GET /app/:team/tcp/:monitorId/edit — a TCP monitor's edit form. */
 export default createAction(routes.app.team.tcpMonitors.edit, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
+
+		await ctx.access.load(abilities.tcpMonitors.delete);
+		let canDelete = ctx.access.can(abilities.tcpMonitors.delete);
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 		let monitor = await ctx.models.tcpMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first();
@@ -102,62 +107,66 @@ export default createAction(routes.app.team.tcpMonitors.edit, {
 								</SettingsSection>
 							</form>
 
-							<SettingsSection
-								id="danger"
-								tone="danger"
-								title={ctx.intl.t("page.editTcpMonitor.danger.title")}
-								description={ctx.intl.t("page.editTcpMonitor.danger.sectionDescription")}
-							>
-								<SettingsSection.Card tone="danger">
-									<SettingsSection.Body>
-										<p mix={[m(0), fontSize("sm"), fg("danger")]}>
-											{ctx.intl.t("page.editTcpMonitor.danger.warning")}
-										</p>
-									</SettingsSection.Body>
-									<SettingsSection.Footer tone="danger">
-										<Button
-											type="button"
-											color="danger"
-											commandfor={DELETE_DIALOG_ID}
-											command="show-modal"
-										>
-											{ctx.intl.t("page.editTcpMonitor.danger.cta")}
-										</Button>
-									</SettingsSection.Footer>
-								</SettingsSection.Card>
-							</SettingsSection>
+							{canDelete ? (
+								<>
+									<SettingsSection
+										id="danger"
+										tone="danger"
+										title={ctx.intl.t("page.editTcpMonitor.danger.title")}
+										description={ctx.intl.t("page.editTcpMonitor.danger.sectionDescription")}
+									>
+										<SettingsSection.Card tone="danger">
+											<SettingsSection.Body>
+												<p mix={[m(0), fontSize("sm"), fg("danger")]}>
+													{ctx.intl.t("page.editTcpMonitor.danger.warning")}
+												</p>
+											</SettingsSection.Body>
+											<SettingsSection.Footer tone="danger">
+												<Button
+													type="button"
+													color="danger"
+													commandfor={DELETE_DIALOG_ID}
+													command="show-modal"
+												>
+													{ctx.intl.t("page.editTcpMonitor.danger.cta")}
+												</Button>
+											</SettingsSection.Footer>
+										</SettingsSection.Card>
+									</SettingsSection>
 
-							<AlertDialog
-								id={DELETE_DIALOG_ID}
-								aria-labelledby={`${DELETE_DIALOG_ID}-title`}
-								aria-describedby={`${DELETE_DIALOG_ID}-description`}
-							>
-								<AlertDialog.Header>
-									<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
-										{ctx.intl.t("page.tcpMonitors.table.actions.confirmation.delete", {
-											name: monitor.name,
-										})}
-									</AlertDialog.Title>
-									<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
-										{ctx.intl.t("page.editTcpMonitor.danger.description")}
-									</AlertDialog.Description>
-								</AlertDialog.Header>
-								<form
-									method="post"
-									action={routes.actions.monitor.tcp.delete.href({ team: ctx.team.slug })}
-								>
-									<input type="hidden" name="_method" value="DELETE" />
-									<input type="hidden" name="monitor_id" value={monitor.id} />
-									<AlertDialog.Footer>
-										<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
-											{ctx.intl.t("page.editTcpMonitor.form.cancel")}
-										</AlertDialog.Cancel>
-										<Button type="submit" color="danger">
-											{ctx.intl.t("page.tcpMonitors.table.actions.delete")}
-										</Button>
-									</AlertDialog.Footer>
-								</form>
-							</AlertDialog>
+									<AlertDialog
+										id={DELETE_DIALOG_ID}
+										aria-labelledby={`${DELETE_DIALOG_ID}-title`}
+										aria-describedby={`${DELETE_DIALOG_ID}-description`}
+									>
+										<AlertDialog.Header>
+											<AlertDialog.Title id={`${DELETE_DIALOG_ID}-title`}>
+												{ctx.intl.t("page.tcpMonitors.table.actions.confirmation.delete", {
+													name: monitor.name,
+												})}
+											</AlertDialog.Title>
+											<AlertDialog.Description id={`${DELETE_DIALOG_ID}-description`}>
+												{ctx.intl.t("page.editTcpMonitor.danger.description")}
+											</AlertDialog.Description>
+										</AlertDialog.Header>
+										<form
+											method="post"
+											action={routes.actions.monitor.tcp.delete.href({ team: ctx.team.slug })}
+										>
+											<input type="hidden" name="_method" value="DELETE" />
+											<input type="hidden" name="monitor_id" value={monitor.id} />
+											<AlertDialog.Footer>
+												<AlertDialog.Cancel type="button" commandfor={DELETE_DIALOG_ID}>
+													{ctx.intl.t("page.editTcpMonitor.form.cancel")}
+												</AlertDialog.Cancel>
+												<Button type="submit" color="danger">
+													{ctx.intl.t("page.tcpMonitors.table.actions.delete")}
+												</Button>
+											</AlertDialog.Footer>
+										</form>
+									</AlertDialog>
+								</>
+							) : null}
 						</div>
 					</FormPage>
 				</AppShell>

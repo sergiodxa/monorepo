@@ -41,6 +41,42 @@ describe("uptime's policy", () => {
 		expect(member.can(abilities.apiKeys.write)).toBe(false);
 	});
 
+	test.each([
+		["an HTTP monitor", abilities.monitors.delete],
+		["a DNS monitor", abilities.dnsMonitors.delete],
+		["a TCP monitor", abilities.tcpMonitors.delete],
+		["a flow monitor", abilities.flowMonitors.delete],
+		["a cron job", abilities.cronJobs.delete],
+	] as const)("lets an admin delete %s, and refuses a member", (_, ability) => {
+		let member = testAccess(policy, { roles: ["member"], facts: active });
+		let admin = testAccess(policy, { roles: ["admin"], facts: active });
+
+		expect(member.can(ability)).toBe(false);
+		expect(admin.can(ability)).toBe(true);
+	});
+
+	test.each([
+		["monitors", abilities.monitors.delete],
+		["dns-monitors", abilities.dnsMonitors.delete],
+		["tcp-monitors", abilities.tcpMonitors.delete],
+		["flow-monitors", abilities.flowMonitors.delete],
+		["cron-jobs", abilities.cronJobs.delete],
+	] as const)("lets an API key delete %s only with the :delete scope", (kind, ability) => {
+		let writer = testAccess(policy, {
+			roles: ["owner"],
+			within: [scopeRole(`${kind}:write`)],
+			facts: active,
+		});
+		let deleter = testAccess(policy, {
+			roles: ["owner"],
+			within: [scopeRole(`${kind}:delete`)],
+			facts: active,
+		});
+
+		expect(writer.check(ability)).toMatchObject({ cause: "outOfScope" });
+		expect(deleter.can(ability)).toBe(true);
+	});
+
 	test("lets an admin manage the team but not delete it or its billing", () => {
 		let admin = testAccess(policy, { roles: ["admin"], facts: active });
 

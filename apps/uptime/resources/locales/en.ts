@@ -5505,19 +5505,19 @@ export default {
 							"monitors:read":
 								"List and read HTTP monitors, their check results, their uptime stats and the team's overall status.",
 							"monitors:write":
-								"Create, update and delete HTTP monitors and their content checks. It can also queue a rebuild of the daily stats.",
+								"Create and update HTTP monitors, and add and remove their content checks. It can also queue a rebuild of the daily stats.",
 							"maintenance:read": "List and read the team's maintenance windows.",
 							"maintenance:write":
 								"Create, update, end early and delete maintenance windows. A running window can suppress alerts for the monitors it covers.",
 							"dns-monitors:read":
 								"List and read DNS monitors and the resolution results they recorded.",
-							"dns-monitors:write": "Create, update and delete DNS monitors.",
+							"dns-monitors:write": "Create and update DNS monitors.",
 							"tcp-monitors:read":
 								"List and read TCP monitors and the connection results they recorded.",
-							"tcp-monitors:write": "Create, update and delete TCP monitors.",
+							"tcp-monitors:write": "Create and update TCP monitors.",
 							"flow-monitors:read":
 								"List and read flow monitors and the results of their runs. The spec source is never returned, since it carries the credentials the flow signs in with.",
-							"flow-monitors:write": "Create, update and delete flow monitors.",
+							"flow-monitors:write": "Create and update flow monitors.",
 							"alerts:read":
 								"List and read alerts and the events they fired. Webhook URLs and other channel secrets are never returned.",
 							"alerts:write":
@@ -5527,8 +5527,7 @@ export default {
 							"status-pages:write":
 								"Create, update and delete status pages, and replace the set of monitors and cron jobs a page shows publicly.",
 							"cron-jobs:read": "List and read the team's cron jobs and their schedules.",
-							"cron-jobs:write":
-								"Create, update and delete cron jobs. Deleting one stops its ping URL from being accepted.",
+							"cron-jobs:write": "Create and update cron jobs.",
 							"cron-jobs:ping":
 								"Listed for the cron job ping URL, which is public and checks no scope. Granting it gives a key no access it doesn't already have.",
 							"api-keys:read":
@@ -5539,6 +5538,13 @@ export default {
 								"Run one-off HTTP, DNS and TCP checks without creating a monitor. Each check is billed as one ping and needs an active subscription.",
 							"reports:read":
 								"Download the team's uptime reports: a summary per monitor and daily uptime, over any range of days.",
+							"monitors:delete":
+								"Delete HTTP monitors and their check history. Deleting a monitor is an admin's call, so grant it only to a key acting for one.",
+							"dns-monitors:delete": "Delete DNS monitors and their resolution history.",
+							"tcp-monitors:delete": "Delete TCP monitors and their connection history.",
+							"flow-monitors:delete": "Delete flow monitors and the history of their runs.",
+							"cron-jobs:delete":
+								"Delete cron jobs. Deleting one stops its ping URL from being accepted.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

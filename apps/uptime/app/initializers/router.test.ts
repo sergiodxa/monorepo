@@ -1,7 +1,8 @@
 /**
  * Proves every team action is mapped behind its guards through the real router: an anonymous
  * request is sent to sign in, a viewer outside the team gets a 404, and a plain member gets a
- * 403 from each admin action. Action tests seed the team themselves, so only this one notices a dropped guard.
+ * 403 from each admin action and each monitor delete. Action tests seed the team themselves, so
+ * only this one notices a dropped guard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,6 +62,11 @@ await db.create(
 	{ id: generateUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 	{ touch: true },
 );
+await db.create(
+	memberships,
+	{ id: generateUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
+	{ touch: true },
+);
 
 /** Every leaf route under a route-map group, with its dotted name for the test title. */
 function leaves(group: object, prefix: string): Array<[string, Route]> {
@@ -88,6 +94,15 @@ async function send(route: Route): Promise<Response> {
 let memberActions = leaves(routes.actions, "actions");
 let adminActions = leaves(routes.teamAdminActions, "teamAdminActions");
 
+/** Deleting a monitor of any kind is an admin's call, though it sits among the member actions. */
+let monitorDeletes: Array<[string, Route]> = [
+	["actions.monitor.http.delete", routes.actions.monitor.http.delete],
+	["actions.monitor.dns.delete", routes.actions.monitor.dns.delete],
+	["actions.monitor.tcp.delete", routes.actions.monitor.tcp.delete],
+	["actions.monitor.flow.delete", routes.actions.monitor.flow.delete],
+	["actions.cronJob.delete", routes.actions.cronJob.delete],
+];
+
 describe("team action guards", () => {
 	test.each([...memberActions, ...adminActions])(
 		"%s sends an anonymous visitor to sign in",
@@ -112,12 +127,24 @@ describe("team action guards", () => {
 		},
 	);
 
-	test.each(adminActions)("%s refuses a plain member with 403", async (_, route) => {
-		viewer = { id: "member-1", name: "", email: "", avatar: "" };
+	test.each([...adminActions, ...monitorDeletes])(
+		"%s refuses a plain member with 403",
+		async (_, route) => {
+			viewer = { id: "member-1", name: "", email: "", avatar: "" };
+
+			let response = await send(route);
+
+			expect(response.status).toBe(403);
+			expect(await response.text()).toContain("You do not have permission to perform this action.");
+		},
+	);
+
+	test.each(monitorDeletes)("%s admits an admin to the action", async (_, route) => {
+		viewer = { id: "admin-1", name: "", email: "", avatar: "" };
 
 		let response = await send(route);
 
-		expect(response.status).toBe(403);
-		expect(await response.text()).toContain("You do not have permission to perform this action.");
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).not.toBe(routes.home.href());
 	});
 });
