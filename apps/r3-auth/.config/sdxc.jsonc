@@ -18,6 +18,14 @@
 		// Stubs here replace the built-in ones; `sdxc make stubs` copies them out
 		"stubs": ".config/sdxc/stubs",
 	},
+	"doctor": {
+		// Folder of the project's own checks, each module run by `sdxc doctor`
+		"checks": ".config/sdxc/checks",
+		"migrations": {
+			// Migration errors `sdxc doctor` steps past, each a file that already ran and the column its error names
+			"accept": [{ "file": "20250526073731_plain_toro.sql", "column": "display_name" }],
+		},
+	},
 	// Command run on every file the CLI writes or edits, paths appended
 	// "format": ["bunx", "vp", "fmt"],
 	// Where the CLI keeps its state; commit it with the project
