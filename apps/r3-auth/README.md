@@ -308,17 +308,15 @@ sdxc run db migrate --remote  # Apply migrations to production
 | `start`     | Preview the production build                     |
 | `typecheck` | Type-check the app                               |
 | `cli`       | Run an app command, as `sdxc run <command>` does |
-| `cf:deploy` | Deploy the worker                                |
 
 ## Deployment
 
-The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI. Build
-first, apply any pending migration, then deploy, which uploads that build output as-is.
+The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
+`sdxc deploy` builds, applies any pending migration with `sdxc run db migrate --remote`, then
+uploads that build output as-is with `sdxc run deploy` (`cf deploy --prebuilt`).
 
 ```bash
-bun run build
-sdxc run db migrate --remote
-bun run cf:deploy
+sdxc deploy
 ```
 
 Secrets are set with `cf workers secrets update`.

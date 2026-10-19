@@ -225,7 +225,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   so a rollback finds its own untouched cookie instead of one it cannot parse.
 - MUST NOT reach into another app's source. Copy and adapt instead.
 - After a `cloudflare.config.ts` change: `sdxc run typegen`, then `bun run build`, then
-  `bunx cf deploy --prebuilt --dry-run`.
+  `sdxc run deploy --dry-run`.
 
 ## Reference Files
 
