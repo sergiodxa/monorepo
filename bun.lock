@@ -1363,17 +1363,21 @@
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/uuid": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
       },
       "devDependencies": {
         "@sdxc/cli": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
         "remix": "3.0.0",
       },
       "peerDependencies": {
         "@sdxc/cli": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
         "remix": "3.0.0",
       },
       "optionalPeers": [
         "@sdxc/cli",
+        "@sdxc/jobs",
       ],
     },
     "packages/markdown": {

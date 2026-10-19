@@ -14,6 +14,8 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 
+import type { AnyEmailDeclaration } from "./emails.js";
+import type { DeliveryFor, EmailDelivery, Mail, QueuedEmail } from "./mail.js";
 import type {
 	Address,
 	Email,
@@ -23,6 +25,7 @@ import type {
 	Transport,
 } from "./types.js";
 
+import { isEmailDeclaration } from "./emails.js";
 import { MailError } from "./errors.js";
 import { isValidAddress, toAddressList } from "./lib/address.js";
 import { htmlToText } from "./lib/html-to-text.js";
@@ -53,14 +56,20 @@ export interface MailerOptions {
 	replyTo?: Address | Address[];
 	/** Headers added to every message, with per-message headers winning. */
 	headers?: Record<string, string>;
+	/**
+	 * The app's `createMail()` instance, which resolves a declared email to its template; what
+	 * lets `send()`, `later()` and `queue()` take a declaration.
+	 */
+	mail?: Mail;
+	/**
+	 * Hands a declared email's delivery to the app's queue, which is what `queue()` calls; the
+	 * job that receives it sends it with `ctx.email.deliver(ctx.input)`.
+	 */
+	queue?: (delivery: QueuedEmail) => Promise<void>;
 }
 
-/** A message handed to `later()`, kept with its overrides until the queue is flushed. */
-interface QueuedMessage {
-	input: Message | Email;
-	/** Overrides recorded at queue time, applied when the queue is flushed. */
-	overrides?: SendOptions;
-}
+/** A send handed to `later()`, held as the call that performs it until the queue is flushed. */
+type DeferredSend = () => Promise<Result<SentMessage, MailError>>;
 
 /**
  * Reports whether a value is an `Email` rather than a plain `Message`.
@@ -131,6 +140,13 @@ function validate(message: NormalizedMessage): Result<NormalizedMessage, MailErr
 	return success(message);
 }
 
+/** The failure a declared email meets on a mailer opened without the app's mail instance. */
+function noRegistry(): MailError {
+	return new MailError(
+		"This mailer sends declared emails only when configured with the app's `createMail()` instance.",
+	);
+}
+
 /**
  * Sends mail through a transport, applying one app's sender identity to every
  * message. The instance is request-scoped when `later()` is used, because the
@@ -140,8 +156,8 @@ export class Mailer {
 	/** Configuration shared by every message this mailer sends. */
 	#options: MailerOptions;
 
-	/** Messages queued by `later()`, drained by `flush()`. */
-	#queue: QueuedMessage[] = [];
+	/** Sends deferred by `later()`, drained by `flush()`. */
+	#queue: DeferredSend[] = [];
 
 	/**
 	 * Creates a mailer.
@@ -162,16 +178,24 @@ export class Mailer {
 	 * render failure, an invalid message, a rejected delivery, and a transport
 	 * that throws all arrive as a `MailError` failure for the caller to inspect.
 	 *
-	 * @param input - A plain message, or an email object that renders its own body.
-	 * @param overrides - Fields that replace what the input provides for this send.
+	 * @param input - A declared email, a plain message, or an email object that renders its own body.
+	 * @param overrides - For a declared email, the delivery: recipient, locale and props; otherwise
+	 *   fields that replace what the input provides for this send.
 	 * @returns The provider's identifier on success, a `MailError` on failure.
-	 * @example let result = await mailer.send(new TeamInviteEmail(invite.email, invite));
+	 * @example let result = await ctx.email.send(emails.teams.invite, { to, locale, props: { team, url } });
 	 */
+	send<Declaration extends AnyEmailDeclaration>(
+		input: Declaration,
+		delivery: DeliveryFor<Declaration>,
+	): Promise<Result<SentMessage, MailError>>;
+	send(input: Message | Email, overrides?: SendOptions): Promise<Result<SentMessage, MailError>>;
 	async send(
-		input: Message | Email,
-		overrides?: SendOptions,
+		input: Message | Email | AnyEmailDeclaration,
+		overrides?: SendOptions | EmailDelivery,
 	): Promise<Result<SentMessage, MailError>> {
-		let prepared = await this.#normalize(input, overrides);
+		if (isEmailDeclaration(input))
+			return await this.#sendDeclared(input, overrides as EmailDelivery);
+		let prepared = await this.#normalize(input, overrides as SendOptions | undefined);
 		if (isFailure(prepared)) return prepared;
 
 		let message = prepared.data;
@@ -192,12 +216,69 @@ export class Mailer {
 	 * failure must not affect the response gets a defined lifetime. Nothing is
 	 * rendered or validated yet; that happens at flush time.
 	 *
-	 * @param input - A plain message, or an email object that renders its own body.
-	 * @param overrides - Fields that replace what the input provides for this send.
-	 * @example ctx.email.later(new PasswordResetEmail(user));
+	 * @param input - A declared email, a plain message, or an email object that renders its own body.
+	 * @param overrides - For a declared email, the delivery; otherwise fields that replace what
+	 *   the input provides for this send.
+	 * @example ctx.email.later(emails.passwordReset, { to: user.email, locale, props: { url } });
 	 */
-	later(input: Message | Email, overrides?: SendOptions): void {
-		this.#queue.push({ input, overrides });
+	later<Declaration extends AnyEmailDeclaration>(
+		input: Declaration,
+		delivery: DeliveryFor<Declaration>,
+	): void;
+	later(input: Message | Email, overrides?: SendOptions): void;
+	later(
+		input: Message | Email | AnyEmailDeclaration,
+		overrides?: SendOptions | EmailDelivery,
+	): void {
+		this.#queue.push(() =>
+			isEmailDeclaration(input)
+				? this.#sendDeclared(input, overrides as EmailDelivery)
+				: this.send(input, overrides as SendOptions | undefined),
+		);
+	}
+
+	/**
+	 * Hands a declared email to the app's queue, so a job sends it with retries on its own
+	 * schedule. The props are validated here, so a caller learns about bad props where it wrote
+	 * them; they render, translated, when the job delivers them.
+	 *
+	 * @param email - The declared email.
+	 * @param delivery - The recipient, the locale and the props, all plain JSON.
+	 * @returns Success once the queue accepted the delivery; an `EmailRefusedError` for props the
+	 *   schema refuses, or a `MailError` when no queue is configured or it threw.
+	 * @example await ctx.email.queue(emails.teams.invite, { to, locale, props: { team, url } });
+	 */
+	async queue<Declaration extends AnyEmailDeclaration>(
+		email: Declaration,
+		delivery: DeliveryFor<Declaration>,
+	): Promise<Result<void, MailError>> {
+		let { mail, queue } = this.#options;
+		if (mail === undefined) return failure(noRegistry());
+		if (queue === undefined) {
+			return failure(new MailError("This mailer has no `queue` to hand deliveries to."));
+		}
+		let props = await mail.validate(email, delivery.props);
+		if (isFailure(props)) return props;
+		let queued = await wrap(() => queue({ ...delivery, email: email.name }));
+		if (isFailure(queued)) {
+			return failure(
+				new MailError(`Failed to queue the "${email.name}" email.`, { cause: queued.error }),
+			);
+		}
+		return success(undefined);
+	}
+
+	/**
+	 * Sends a delivery `queue()` handed to the app's queue, which is the whole of the job that
+	 * receives it. An `EmailRefusedError` means no retry can send it; any other failure can.
+	 *
+	 * @param queued - The delivery as the job received it.
+	 * @returns The provider's identifier on success, a `MailError` on failure.
+	 * @example let sent = await ctx.email.deliver(ctx.input);
+	 */
+	async deliver(queued: QueuedEmail): Promise<Result<SentMessage, MailError>> {
+		let { email, ...delivery } = queued;
+		return await this.#sendDeclared(email, delivery);
 	}
 
 	/**
@@ -209,7 +290,26 @@ export class Mailer {
 	 */
 	async flush(): Promise<Result<SentMessage, MailError>[]> {
 		let queued = this.#queue.splice(0, this.#queue.length);
-		return await Promise.all(queued.map((entry) => this.send(entry.input, entry.overrides)));
+		return await Promise.all(queued.map((deferred) => deferred()));
+	}
+
+	/**
+	 * Composes a declared email through the app's mail instance and sends it, with the
+	 * delivery's sender and copies applied over the mailer's.
+	 */
+	async #sendDeclared(
+		email: AnyEmailDeclaration | string,
+		delivery: EmailDelivery,
+	): Promise<Result<SentMessage, MailError>> {
+		let mail = this.#options.mail;
+		if (mail === undefined) return failure(noRegistry());
+		let composed = await mail.compose(email, delivery);
+		if (isFailure(composed)) return composed;
+		let overrides: SendOptions = {};
+		if (delivery.from !== undefined) overrides.from = delivery.from;
+		if (delivery.cc !== undefined) overrides.cc = delivery.cc;
+		if (delivery.bcc !== undefined) overrides.bcc = delivery.bcc;
+		return await this.send(composed.data, overrides);
 	}
 
 	/**

@@ -75,6 +75,75 @@ the props. The subject arrives as a string, already in the recipient's language.
 with `to`, `subject` and `body()` also satisfies the `Email` contract, for an email whose
 addressing needs more than its props.
 
+### Declare emails in a registry
+
+An app declares every email it sends, and the schema of its props, in one map. Importing the
+map costs the schemas alone, so a sender never loads the module that renders an email:
+
+```tsx
+// app/emails/index.ts
+import { email, emails } from "@sdxc/mail";
+import * as s from "remix/data-schema";
+
+export default emails({
+	teams: { invite: email({ props: s.object({ team: s.string(), url: s.string() }) }) },
+});
+
+// app/emails/teams/invite.tsx
+import { createEmail, Email } from "@sdxc/mail";
+
+export default createEmail(emails.teams.invite, {
+	subject: ({ team, t }) => t("emails.teamInvite.subject", { team }),
+	body: (handle) => () => (
+		<Email.Layout lang={handle.props.locale} title={handle.props.team}>
+			<Email.Button href={handle.props.url}>
+				{handle.props.t("emails.teamInvite.action")}
+			</Email.Button>
+		</Email.Layout>
+	),
+	preview: () => ({ team: "Acme", url: "https://example.com/invite/1" }),
+});
+
+// app/initializers/mail.ts
+import { createMail, lazy } from "@sdxc/mail";
+
+export const mail = createMail({ translator: translate });
+mail.map(
+	emails.teams.invite,
+	lazy(() => import("~/app/emails/teams/invite")),
+);
+```
+
+A mailer configured with the registry as `mail` sends a declared email by its declaration, with
+the recipient, the reader's language and the props:
+
+```typescript
+await ctx.email.send(emails.teams.invite, { to, locale, props: { team, url } });
+ctx.email.later(emails.teams.invite, { to, locale, props: { team, url } });
+await ctx.email.queue(emails.teams.invite, { to, locale, props: { team, url } });
+```
+
+The props are parsed by the declared schema first, and copy is translated when the email
+renders: `subject`, `body` and the other members receive the props with `locale` and `t` beside
+them, from the registry's `translator` (`createTranslator()` from `@sdxc/i18n` fits). Augment
+`MailTypes` with `translate` so `t()` checks message keys. `preview()` is optional and only feeds
+`mail.preview()`.
+
+`queue()` hands the delivery, as plain JSON, to the mailer's `queue` option. One job delivers
+every queued email:
+
+```typescript
+// app/jobs/index.ts
+export default jobs({ email: job({ input: EMAIL_DELIVERY }) });
+
+// app/jobs/email.ts
+export default createJobHandler(jobs.email, async (ctx) => {
+	let sent = await ctx.email.deliver(ctx.input);
+	if (isFailure(sent) && sent.error instanceof EmailRefusedError) ctx.exit(sent.error.message);
+	if (isFailure(sent)) ctx.retry({ cause: sent.error });
+});
+```
+
 ### Publish a mailer on the request context
 
 ```typescript
@@ -145,6 +214,41 @@ calls it for you.
 ### `mailer.pending: number`
 
 How many messages wait for the next `flush()`.
+
+### `mailer.queue(email, delivery): Promise<Result<void, MailError>>`
+
+Validates a declared email's props and hands the delivery, with the email's name, to the
+`queue` option. Fails without a `mail` registry or a `queue`.
+
+### `mailer.deliver(queued: QueuedEmail): Promise<Result<SentMessage, MailError>>`
+
+Sends a delivery `queue()` produced. An `EmailRefusedError` (unmapped name, refused props) means
+no retry can send it.
+
+### `email({ props })` and `emails(tree)`
+
+Declare emails by the schema of their props; each declaration is named by its path
+(`teams.invite`), which a queued delivery carries.
+
+### `createEmail(email, options): EmailTemplate`
+
+Pairs a template with its declaration: `subject`, `body`, and optional `replyTo`, `headers`,
+`unsubscribe`, `list`, `calendar` and `preview`.
+
+### `createMail(options?: MailOptions): Mail`
+
+The registry: `map(email, template | lazy(load))`, `mapped`, `compose()`, `render(email, { locale, props })`,
+`preview(email, locale?)` and `validate(email, props)`. It holds no transport, so a command run
+on Bun and the Worker share it.
+
+### `EMAIL_DELIVERY`
+
+The input schema of the job that delivers queued email.
+
+### `isComposedEmail(email, declaration?)`
+
+Whether a sent message's `email` was composed from a declaration, for picking it out of a
+memory transport in a test.
 
 ### `render(element: RemixElement): Promise<RenderedEmail>`
 
@@ -311,6 +415,14 @@ let cli = createCLI({
 	],
 });
 ```
+
+### `@sdxc/mail/middleware/jobs`
+
+#### `mail(options: MailJobOptions): JobMiddleware` (default export)
+
+Publishes a `Mailer` as `ctx.email` on every [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs)
+run, with the router entry's options and `transport` a `Transport` or `(ctx) => Transport`. The
+queue flushes after the handler; a failed deferred send is a `mail.send_failed` warning.
 
 ### `@sdxc/mail/unsubscribe`
 

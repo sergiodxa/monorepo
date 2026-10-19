@@ -1,6 +1,7 @@
 /**
  * The errors the mail package reports inside a `Result`: `MailError` for every
- * send failure — invalid message, failed render, rejected delivery — and
+ * send failure — invalid message, failed render, rejected delivery — its subclass
+ * `EmailRefusedError` for a declared email no retry can send, and
  * `InvalidUnsubscribeTokenError` for a token the unsubscribe endpoint refuses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -23,6 +24,14 @@ export class MailError extends Error {
 	constructor(message: string, options?: ErrorOptions) {
 		super(message, options);
 	}
+}
+
+/**
+ * A declared email that cannot be sent however often it is retried: its name is not mapped,
+ * or its props fail its schema. A queued delivery's job gives up on it instead of retrying.
+ */
+export class EmailRefusedError extends MailError {
+	override name = "EmailRefusedError";
 }
 
 /**

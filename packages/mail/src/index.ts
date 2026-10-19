@@ -1,8 +1,8 @@
 /**
- * Transport-agnostic transactional mail: the message contract, the mailer that
- * normalizes and delivers it, the rendering layer that turns a `remix/component` tree into
- * both body parts, and the unbranded layout kit for authoring one. Transports live
- * behind their own subpaths so importing one never pulls another's dependency.
+ * Transport-agnostic transactional mail: the message contract, the email registry that maps
+ * declared emails onto their templates, the mailer that normalizes and delivers them, the
+ * rendering layer for a `remix/component` tree, and the layout kit for authoring one.
+ * Transports live behind their own subpaths so importing one never pulls another's dependency.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,6 +23,35 @@ export type {
 	Unsubscribe,
 } from "./types.js";
 export type { DefinedEmail, EmailClass, EmailDefinition } from "./define.js";
+export type {
+	AnyEmailDeclaration,
+	EmailDeclaration,
+	EmailLeaf,
+	EmailMap,
+	EmailPropsInput,
+	EmailPropsOutput,
+	EmailTree,
+} from "./emails.js";
+export type { Lazy } from "./lazy.js";
+export type {
+	ComposedEmail,
+	DeliveryFor,
+	EmailDelivery,
+	EmailTranslator,
+	MailOptions,
+	QueuedEmail,
+	RenderInput,
+	RenderedDeclaredEmail,
+} from "./mail.js";
+export type {
+	AnyEmailTemplate,
+	EmailInput,
+	EmailLocale,
+	EmailTemplate,
+	EmailTemplateOptions,
+	EmailTranslate,
+	MailTypes,
+} from "./template.js";
 export type { MailerOptions, SendOptions } from "./mailer.js";
 export type { RenderedEmail } from "./render.js";
 
@@ -37,7 +66,11 @@ export type EmailTableRow = EmailComponents.Table.Row;
 export type EmailFont = EmailComponents.Font;
 
 export { defineEmail } from "./define.js";
-export { MailError } from "./errors.js";
+export { email, emails, isEmailDeclaration } from "./emails.js";
+export { EmailRefusedError, MailError } from "./errors.js";
+export { lazy } from "./lazy.js";
+export { createMail, EMAIL_DELIVERY, isComposedEmail, Mail } from "./mail.js";
+export { createEmail } from "./template.js";
 export { formatAddress, toAddressList } from "./lib/address.js";
 export { htmlToText } from "./lib/html-to-text.js";
 export { isEmail, Mailer } from "./mailer.js";

@@ -12,6 +12,7 @@
 		"./print": "./src/print.ts",
 		"./middleware": "./src/middleware.ts",
 		"./middleware/cli": "./src/cli.ts",
+		"./middleware/jobs": "./src/jobs.ts",
 		"./unsubscribe": "./src/unsubscribe.ts"
 	},
 	"scripts": {
@@ -23,18 +24,24 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"@sdxc/uuid": "workspace:*"
+		"@sdxc/uuid": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
 		"@sdxc/cli": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
 		"@sdxc/cli": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/cli": {
+			"optional": true
+		},
+		"@sdxc/jobs": {
 			"optional": true
 		}
 	}

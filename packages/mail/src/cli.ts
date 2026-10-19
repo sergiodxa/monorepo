@@ -51,6 +51,8 @@ export default function mail(
 			from: options.from,
 			replyTo: options.replyTo,
 			headers: options.headers,
+			mail: options.mail,
+			queue: options.queue,
 		});
 
 		ctx.set(CurrentMailer, mailer, { property: "email" });

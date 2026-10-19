@@ -14,6 +14,7 @@ import type { Middleware, RequestContext } from "remix/router";
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
+import type { Mail, QueuedEmail } from "./mail.js";
 import type { Address, Transport } from "./types.js";
 
 import { CurrentMailer } from "./context.js";
@@ -49,6 +50,10 @@ export interface MailMiddlewareOptions {
 	replyTo?: Address | Address[];
 	/** Headers added to every message the request sends. */
 	headers?: Record<string, string>;
+	/** The app's `createMail()` instance, which lets `ctx.email` send its declared emails. */
+	mail?: Mail;
+	/** Hands a declared email's delivery to the app's queue for `ctx.email.queue()`. */
+	queue?: (delivery: QueuedEmail) => Promise<void>;
 }
 
 /**
@@ -59,7 +64,7 @@ export interface MailMiddlewareOptions {
  * @param options - Transport and sender configuration; see {@link MailMiddlewareOptions}.
  * @returns A middleware that populates `context.email`.
  * @example
- * router.use(mail({ transport: new CloudflareTransport(env.EMAIL), from: SENDER }));
+ * router.use(mailer({ transport: new CloudflareTransport(env.EMAIL), from: SENDER, mail }));
  */
 export default function mail(options: MailMiddlewareOptions): Middleware {
 	return async (context, next) => {
@@ -71,6 +76,8 @@ export default function mail(options: MailMiddlewareOptions): Middleware {
 			from: options.from,
 			replyTo: options.replyTo,
 			headers: options.headers,
+			mail: options.mail,
+			queue: options.queue,
 		});
 
 		context.set(CurrentMailer, mailer, { property: "email" });
