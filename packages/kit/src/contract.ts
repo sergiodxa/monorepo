@@ -151,6 +151,11 @@ export const SDXC_COMMANDS = commands({
 		description: "Write .config/sdxc.jsonc with every default spelled out",
 		flags: { dryRun: flag.boolean("dry-run", { description: "Print it and write nothing" }) },
 	}),
+	initializers: command({
+		description: "List the initializers in app/initializers, their exports and what builds them",
+		flags: { json: flag.boolean("json", { description: "Print a JSON array instead of a table" }) },
+		examples: ["initializers", "initializers --json"],
+	}),
 	make: commands({
 		description: "Write a controller, job, model or other file where the app layout puts it",
 		arguments: {
@@ -378,6 +383,11 @@ export const SDXC_COMMANDS = commands({
 				}),
 			},
 		}),
+	}),
+	middleware: command({
+		description: "Print each router's global middleware and every chain in app/http/middleware",
+		flags: { json: flag.boolean("json", { description: "Print the chains as JSON" }) },
+		examples: ["middleware", "middleware --json"],
 	}),
 	notes: command({
 		description: "List the TODO, FIXME, HACK and OPTIMIZE comments in the app's code",
