@@ -422,6 +422,24 @@ describe("make", () => {
 		expect(await readFile(join(root, "app/http/controllers/about.tsx"), "utf8")).not.toBe("edited");
 	});
 
+	test("--force keeps the abilities and grants a policy already has", async () => {
+		let root = unwrap(await materialize("app"));
+		DIRECTORIES.push(dirname(root));
+		await invoke(["policy", "post"], root, { exec: UNFORMATTED });
+		let abilities = await readFile(join(root, "app/policies/abilities.ts"), "utf8");
+		let policy = await readFile(join(root, "app/policies/policy.ts"), "utf8");
+		await writeFile(join(root, "app/policies/post.test.ts"), "edited");
+
+		let result = await invoke(["policy", "post", "--force"], root, { exec: UNFORMATTED });
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Replaced app/policies/post.test.ts\n");
+		expect(result.stdout).toContain("Kept the declaration, mapping and mount post already has");
+		expect(result.stdout).not.toContain("by hand");
+		expect(await readFile(join(root, "app/policies/abilities.ts"), "utf8")).toBe(abilities);
+		expect(await readFile(join(root, "app/policies/policy.ts"), "utf8")).toBe(policy);
+	});
+
 	test("--force on an existing model writes no second migration", async () => {
 		let root = await project();
 		await invoke(["model", "post", "title"], root);

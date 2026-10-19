@@ -48,7 +48,7 @@ import { planGuard } from "./guard.js";
 import { KINDS } from "./kinds.js";
 import { chainFolder } from "./migrations.js";
 import { mount } from "./mount.js";
-import { parseName } from "./names.js";
+import { camel, parseName } from "./names.js";
 import { planTrigger } from "./trigger.js";
 
 /** One file to make, as the command line or the prompts gave it. */
@@ -507,9 +507,16 @@ function writeFiles(root: string, files: readonly PlannedFile[], replace: boolea
 	});
 }
 
-/** Whether the file `request` names exists, so a `--force` run replaces it. */
+/**
+ * Whether what `request` names exists already, so a `--force` run replaces its files and keeps
+ * its declarations: the file itself, or for a policy, its abilities in the catalog.
+ */
 async function existsAlready(root: string, request: MakeRequest): Promise<boolean> {
 	let kind = KINDS[request.kind];
+	if (request.kind === "policy") {
+		let { segments, key } = request.name;
+		return declaresAbilities(root, [...segments.slice(0, -1).map(camel), key]);
+	}
 	if (request.kind === "migration" || kind.testOnly === true) return false;
 	let file = `${folderOf(request.kind, request.variant)}/${request.name.segments.join("/")}`;
 	return exists(root, `${file}${kind.extension}`);
