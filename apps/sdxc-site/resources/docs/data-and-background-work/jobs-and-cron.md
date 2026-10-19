@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 4
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Some work should not happen while a visitor waits: sending an email, calling a slow API, sweeping
@@ -34,9 +34,7 @@ import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 export default jobs({
-	sendConfirmation: job({
-		input: s.object({ postingId: s.string(), locale: s.string() }),
-	}),
+	indexPosting: job({ input: s.object({ postingId: s.string() }) }),
 	expirePostings: job({ cron: "0 3 * * *" }),
 });
 ```
@@ -156,10 +154,7 @@ export function createDispatcher(options: DispatcherOptions = {}) {
 		timeout: "2 minutes",
 	});
 
-	dispatcher.map(
-		jobs.sendConfirmation,
-		() => import("~/app/jobs/send-confirmation"),
-	);
+	dispatcher.map(jobs.indexPosting, () => import("~/app/jobs/index-posting"));
 	dispatcher.map(jobs.expirePostings, () => import("~/app/jobs/expire-postings"));
 	return dispatcher;
 }
@@ -222,10 +217,7 @@ import routes from "~/routes/web";
 
 export default createAction(routes.postings.create, async (ctx) => {
 	let posting = await publishPosting(ctx.formData);
-	await ctx.jobs.enqueue(jobs.sendConfirmation, {
-		postingId: posting.id,
-		locale: ctx.locale,
-	});
+	await ctx.jobs.enqueue(jobs.indexPosting, { postingId: posting.id });
 
 	return redirect(routes.postings.index.href(), {
 		status: redirect.Status.SeeOther,
@@ -233,8 +225,12 @@ export default createAction(routes.postings.create, async (ctx) => {
 });
 ```
 
-`publishPosting` is your own model function, and `ctx.locale` is the language the
-[`@sdxc/i18n`](/api/i18n) middleware detected, so the email can be written in it.
+`publishPosting` is your own model function, and `index-posting.ts` is a handler like the sweep
+above, adding the posting to your search index off the request.
+
+Email needs no job of its own. `ctx.email.queue(emails.postings.published, { to, locale, props })`
+hands a declared email to the one `email` job that delivers every queued email, with the same
+retries; [Send email](/docs/data-and-background-work/send-email) wires it.
 
 A job with no `input` is enqueued with no second argument, and `enqueueMany` writes one message
 per input in a single call. When the queue refuses a send, `enqueue` raises the backend's
@@ -410,7 +406,8 @@ calls to find the user schedules that are due.
 
 ## Where to go next
 
-- [Send email](/docs/data-and-background-work/send-email) — the confirmation job, written out.
+- [Send email](/docs/data-and-background-work/send-email) — queue a declared email for the job
+  that delivers every queued email.
 - [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — a
   delivery job that retries Slack, Discord and PagerDuty sends.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the database the
