@@ -1,0 +1,41 @@
+/**
+ * `GET /api/{{plural}}/:id` through the app's router, so the API chain and its access checks run
+ * as they do in the Worker.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import "~/app/http/controllers/api/{{plural}}/show";
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+import routes from "~/routes/api";
+
+beforeAll(migrate);
+
+/** Fetches the {{words}} with `id`. */
+function show(id: string) {
+	return createWebRouter().fetch(
+		new URL(routes.api.{{pluralKey}}.show.href({ id }), "https://example.com"),
+	);
+}
+
+describe("api/{{plural}}/show", () => {
+	test("answers the {{words}} as data", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let response = await show(row.id);
+
+		expect(response.status).toBe(200);
+		expect(((await response.json()) as { data: { id: string } }).data.id).toBe(row.id);
+	});
+
+	test("answers the notFound problem for an id no {{words}} has", async () => {
+		let response = await show("missing");
+
+		expect(response.status).toBe(404);
+	});
+});

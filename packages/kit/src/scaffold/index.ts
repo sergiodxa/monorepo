@@ -32,10 +32,17 @@ import { loadStub, renderStub } from "../make/stubs.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { readManifest } from "../upgrade/project.js";
 
-import type { Resource } from "./render.js";
+import type { OperationLocals, Resource } from "./render.js";
 
 import { parseFields, pluralize } from "./fields.js";
-import { flagProperties, jsonProperties, localeBlock, placeholders } from "./render.js";
+import {
+	apiOperationNames,
+	apiOperations,
+	flagProperties,
+	jsonProperties,
+	localeBlock,
+	placeholders,
+} from "./render.js";
 
 /** One scaffold, as the command line gave it. */
 export interface ScaffoldInput {
@@ -46,6 +53,8 @@ export interface ScaffoldInput {
 	plural: string | undefined;
 	mcp: boolean;
 	command: boolean;
+	/** JSON endpoints in the `api` contract, with their OpenAPI operations, instead of pages. */
+	api?: boolean;
 	/** Whether to write tests; `undefined` takes `make.tests`. */
 	test: boolean | undefined;
 	dryRun: boolean;
@@ -60,6 +69,15 @@ interface Piece {
 	/** Written only when the project has no such file, as a shared test helper. */
 	shared?: boolean;
 }
+
+/** The endpoints `--api` writes, in the order the contract declares them. */
+const API_ACTIONS = ["index", "show", "create", "update", "destroy"];
+
+/** The route contract `--api` declares its endpoints in, whose module holds their operations. */
+const API_CONTRACT = "api";
+
+/** The module that builds the OpenAPI document from the contract's operations. */
+const OPENAPI_INITIALIZER = "app/initializers/openapi.ts";
 
 /** What the project folders the declarations read are copied from, relative to the root. */
 const STAGED = ["app", "routes", "tsconfig.json"];
@@ -120,7 +138,8 @@ export async function scaffold(
 	let staged = await stageDeclarations(root, requests.data, planned);
 	if (isFailure(staged)) return staged;
 	let edits = [...staged.data.edits];
-	let locales = skip.has("pages") ? success([]) : await localeEdits(root, resource.data);
+	let withPages = !skip.has("pages") && input.api !== true;
+	let locales = withPages ? await localeEdits(root, resource.data) : success([]);
 	if (isFailure(locales)) return locales;
 	edits.push(...locales.data);
 	let dependencies = await missingDependencies(root, [
@@ -129,6 +148,12 @@ export async function scaffold(
 	]);
 	if (isFailure(dependencies)) return dependencies;
 	if (dependencies.data !== null) edits.push(dependencies.data);
+	if (input.api === true && !skip.has("pages")) {
+		let documented = await operationEdits(root, resource.data, edits);
+		if (isFailure(documented)) return documented;
+		edits.splice(0, edits.length, ...documented.data.edits);
+		staged.data.manual.push(...documented.data.manual);
+	}
 	let notes = staged.data.manual.map(
 		(manual) =>
 			`Declare and map ${manual.path} by hand, since ${manual.reason}:\n${manual.instructions}\n`,
@@ -218,8 +243,9 @@ async function skippedButNeeded(
 ): Promise<Result<void, Error>> {
 	let name = resource.singular.base;
 	let has = async (path: string) => isSuccess(await wrap(() => stat(join(root, path))));
-	let pages = !skip.has("pages");
-	let readers = pages || input.mcp || input.command;
+	let endpoints = !skip.has("pages");
+	let pages = endpoints && input.api !== true;
+	let readers = endpoints || input.mcp || input.command;
 	let needs: Array<[ScaffoldPiece, boolean, string, string]> = [
 		["model", readers, `app/models/${name}.ts`, "the pages, tools and commands read"],
 		["validator", pages, `app/http/validators/${name}.ts`, "the pages submit through"],
@@ -231,7 +257,7 @@ async function skippedButNeeded(
 			new Error(`--skip ${piece} needs ${path}, which ${reader}; drop ${piece} from --skip`),
 		);
 	}
-	if (skip.has("policy") && (pages || input.mcp)) {
+	if (skip.has("policy") && (endpoints || input.mcp)) {
 		let key = resource.singular.key;
 		if (!(await declaresAbilities(root, [key]))) {
 			return failure(
@@ -266,11 +292,17 @@ function piecesOf(
 	};
 	if (!skip.has("model")) add("model", `app/models/${name}.ts`, true);
 	if (!skip.has("factory")) add("factory", `database/factories/${name}.ts`, false);
-	if (!skip.has("validator")) add("validator", `app/http/validators/${name}.ts`, true);
+	if (!skip.has("validator") && input.api !== true) {
+		add("validator", `app/http/validators/${name}.ts`, true);
+	}
 	if (tests && !skip.has("policy")) {
 		pieces.push({ stub: "policy.test.stub", path: `app/policies/${name}.test.ts` });
 	}
-	if (!skip.has("pages")) {
+	if (!skip.has("pages") && input.api === true) {
+		for (let action of API_ACTIONS) {
+			add(`api.${action}`, `app/http/controllers/api/${plural.base}/${action}.tsx`, true);
+		}
+	} else if (!skip.has("pages")) {
 		add("form", `resources/views/${plural.base}/form.tsx`, false);
 		for (let action of ["index", "new", "show", "edit", "destroy"]) {
 			add(`controller.${action}`, `app/http/controllers/${plural.base}/${action}.tsx`, true);
@@ -340,7 +372,29 @@ function declarationsOf(
 		["edit", "form", `/${plural.base}/:id/edit`, "false"],
 		["destroy", "post", `/${plural.base}/:id/destroy`, undefined],
 	];
-	for (let [action, method, pattern, sitemap] of skip.has("pages") ? [] : pages) {
+	let endpoints: Array<[string, string, string]> = [
+		["index", "get", `/api/${plural.base}`],
+		["show", "get", `/api/${plural.base}/:id`],
+		["create", "post", `/api/${plural.base}`],
+		["update", "patch", `/api/${plural.base}/:id`],
+		["destroy", "delete", `/api/${plural.base}/:id`],
+	];
+	for (let [action, method, pattern] of skip.has("pages") || input.api !== true ? [] : endpoints) {
+		let name = parseName(`api/${plural.base}/${action}`);
+		if (isFailure(name)) return name;
+		requests.push({
+			...base,
+			kind: "controller",
+			name: name.data,
+			method,
+			pattern,
+			routes: API_CONTRACT,
+			handler: `app/http/controllers/api/${plural.base}/${action}`,
+			title: `${plural.title} ${action}`,
+		});
+	}
+	let pagesWritten = !skip.has("pages") && input.api !== true;
+	for (let [action, method, pattern, sitemap] of pagesWritten ? pages : []) {
 		let name = parseName(`${plural.base}/${action}`);
 		if (isFailure(name)) return name;
 		requests.push({
@@ -498,6 +552,112 @@ async function stageDeclarations(
 	});
 	await rm(stage.data, { recursive: true, force: true });
 	return result;
+}
+
+/**
+ * `edits` with the resource's OpenAPI operations appended to `routes/api.ts`, after the routes
+ * the staged declarations added, and added to the document `app/initializers/openapi.ts` builds.
+ * A file laid out otherwise, such as one with no `@sdxc/json-schema` import, gets the code
+ * printed for the user to place instead.
+ */
+async function operationEdits(
+	root: string,
+	resource: Resource,
+	edits: readonly FileEdit[],
+): Promise<Result<{ edits: FileEdit[]; manual: Staged["manual"] }, Error>> {
+	let result = [...edits];
+	let manual: Staged["manual"] = [];
+	/** The file's text as the edits so far leave it, recording the edit that changes it next. */
+	let current = async (path: string) => {
+		let edit = result.find((entry) => entry.path === path);
+		if (edit !== undefined) return edit.after;
+		let read = await wrap(() => readFile(join(root, path), "utf8"));
+		return isFailure(read) ? null : read.data;
+	};
+	let write = async (path: string, after: string) => {
+		let index = result.findIndex((entry) => entry.path === path);
+		if (index !== -1) {
+			result[index] = { ...(result[index] as FileEdit), after };
+			return;
+		}
+		let before = await wrap(() => readFile(join(root, path), "utf8"));
+		if (isFailure(before)) return;
+		result.push({ path, before: before.data, after });
+	};
+	let contract = `routes/${API_CONTRACT}.ts`;
+	let names = apiOperationNames(resource);
+	let source = await current(contract);
+	let locals = source === null ? null : operationLocals(source);
+	let code = apiOperations(
+		resource,
+		locals ?? { s: "s", defineOperation: "defineOperation", routes: "ROUTES" },
+	);
+	if (source === null || locals === null) {
+		manual.push({
+			path: contract,
+			reason: `${contract} does not import @sdxc/json-schema, defineOperation and a default export the operations can use`,
+			instructions: `At the end of ${contract}:
+${code}`,
+		});
+	} else {
+		await write(
+			contract,
+			`${source.trimEnd()}
+
+${code}
+`,
+		);
+	}
+	let initializer = await current(OPENAPI_INITIALIZER);
+	let added = initializer === null ? null : addOperations(initializer, names);
+	if (added === null) {
+		manual.push({
+			path: OPENAPI_INITIALIZER,
+			reason: `${OPENAPI_INITIALIZER} has no createDocument(…).add(…) call importing from ~/routes/${API_CONTRACT}`,
+			instructions: `Import ${names.join(", ")} from "~/routes/${API_CONTRACT}" and pass them to the document's .add(…)`,
+		});
+	} else {
+		await write(OPENAPI_INITIALIZER, added);
+	}
+	return success({ edits: result, manual });
+}
+
+/**
+ * The names `source` imports `@sdxc/json-schema`'s namespace, `defineOperation` and its own
+ * default export under, or `null` when it lacks one of them.
+ */
+function operationLocals(source: string): OperationLocals | null {
+	let s = /import \* as (\w+) from "@sdxc\/json-schema";/.exec(source)?.[1];
+	let imported = /import \{([^}]*)\} from "@sdxc\/openapi";/.exec(source)?.[1] ?? "";
+	let defineOperation = /\bdefineOperation(?:\s+as\s+(\w+))?\b/.exec(imported);
+	let routes = /export default (\w+);/.exec(source)?.[1];
+	if (s === undefined || defineOperation === null || routes === undefined) return null;
+	return { s, defineOperation: defineOperation[1] ?? "defineOperation", routes };
+}
+
+/**
+ * `source` with `names` imported from the API contract and passed to its document's `.add(…)`,
+ * or `null` when it has no named import from `~/routes/api` and no `.add(` call to extend.
+ */
+function addOperations(source: string, names: readonly string[]): string | null {
+	let specifier = `~/routes/${API_CONTRACT}`;
+	let importPattern = new RegExp(
+		`import \\{([^}]*)\\} from "${specifier.replaceAll("/", "\\/")}";`,
+	);
+	let imported = importPattern.exec(source);
+	let add = /\.add\(([^)]*)\)/.exec(source);
+	if (imported === null || add === null) return null;
+	let existing = (imported[1] ?? "")
+		.split(",")
+		.map((name) => name.trim())
+		.filter((name) => name !== "");
+	let importLine = `import { ${[...existing, ...names].join(", ")} } from "${specifier}";`;
+	let args = (add[1] ?? "")
+		.split(",")
+		.map((arg) => arg.trim())
+		.filter((arg) => arg !== "");
+	let withImport = source.replace(imported[0], importLine);
+	return withImport.replace(/\.add\(([^)]*)\)/, `.add(${[...args, ...names].join(", ")})`);
 }
 
 /**

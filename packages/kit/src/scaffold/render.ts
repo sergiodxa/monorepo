@@ -38,6 +38,8 @@ export function placeholders(resource: Resource, header: string): Record<string,
 	let labelled = types.has("text") || types.has("timestamp");
 	return {
 		header,
+		CONSTANT: singular.snake.toUpperCase(),
+		PLURAL_CONSTANT: plural.snake.toUpperCase(),
 		name: singular.base,
 		key: singular.key,
 		path: singular.key,
@@ -132,6 +134,125 @@ export function placeholders(resource: Resource, header: string): Record<string,
 			)
 			.join(", "),
 	};
+}
+
+/** The local names `routes/api.ts` imports what the operations are written with under. */
+export interface OperationLocals {
+	/** `@sdxc/json-schema`'s namespace. */
+	s: string;
+	defineOperation: string;
+	/** The contract's default export. */
+	routes: string;
+}
+
+/**
+ * The OpenAPI operations `scaffold --api` appends to `routes/api.ts`: the schema of a row as the
+ * API answers it, then one operation per endpoint, typing each body the endpoint parses and
+ * each response it sends, so `/api/openapi.json` documents exactly what the handlers do.
+ */
+export function apiOperations(resource: Resource, locals: OperationLocals): string {
+	let { singular, plural, fields } = resource;
+	let { s, defineOperation, routes } = locals;
+	let one = singular.snake.toUpperCase();
+	let many = plural.snake.toUpperCase();
+	let words = singular.title.toLowerCase();
+	let pluralWords = plural.title.toLowerCase();
+	let schema = `${one}_SCHEMA`;
+	let route = `${routes}.api.${plural.key}`;
+	let tags = `tags: [${literal(plural.title)}],`;
+	let params = `params: ${s}.object({ id: ${s}.string() }),`;
+	let data = (inner: string) => `${s}.object({ data: ${inner} })`;
+	let body = (optional: boolean) => [
+		`body: ${s}.object({`,
+		...jsonProperties(fields, s, optional),
+		"}),",
+	];
+	let operation = (name: string, id: string, action: string, doc: string, lines: string[]) =>
+		[
+			`/** ${doc} */`,
+			`export const ${name} = ${defineOperation}(${literal(id)}, ${route}.${action}, {`,
+			...lines.map((line) => `\t${line}`),
+			"});",
+		].join("\n");
+	let row = [
+		`/** A ${words} as the API answers it. */`,
+		`export const ${schema} = ${s}`,
+		"\t.object({",
+		`\t\tid: ${s}.string(),`,
+		...jsonProperties(fields, s, false).map((line) => `\t${line}`),
+		`\t\tcreated_at: ${s}.integer(),`,
+		`\t\tupdated_at: ${s}.integer(),`,
+		"\t})",
+		`\t.meta({ id: ${literal(singular.pascal)} });`,
+	].join("\n");
+	return [
+		row,
+		operation(
+			`${many}_INDEX`,
+			`${plural.key}Index`,
+			"index",
+			`Every ${words} the caller may read, newest first.`,
+			[
+				`summary: ${literal(`List ${pluralWords}`)},`,
+				tags,
+				`responses: { 200: { description: ${literal(`The ${pluralWords}`)}, body: ${data(`${s}.array(${schema})`)} } },`,
+			],
+		),
+		operation(`${one}_SHOW`, `${singular.key}Show`, "show", `One ${words} by its id.`, [
+			`summary: ${literal(`Show a ${words}`)},`,
+			tags,
+			params,
+			`responses: { 200: { description: ${literal(`The ${words}`)}, body: ${data(schema)} } },`,
+			'problems: ["notFound"],',
+		]),
+		operation(
+			`${one}_CREATE`,
+			`${singular.key}Create`,
+			"create",
+			`A new ${words} from every field.`,
+			[
+				`summary: ${literal(`Create a ${words}`)},`,
+				tags,
+				...body(false),
+				`responses: { 201: { description: ${literal(`The created ${words}`)}, body: ${data(schema)} } },`,
+				'problems: ["validationError"],',
+			],
+		),
+		operation(
+			`${one}_UPDATE`,
+			`${singular.key}Update`,
+			"update",
+			`The fields the body names on one ${words}; the rest keep their values.`,
+			[
+				`summary: ${literal(`Update a ${words}`)},`,
+				tags,
+				params,
+				...body(true),
+				`responses: { 200: { description: ${literal(`The saved ${words}`)}, body: ${data(schema)} } },`,
+				'problems: ["validationError", "notFound"],',
+			],
+		),
+		operation(
+			`${one}_DESTROY`,
+			`${singular.key}Destroy`,
+			"destroy",
+			`Deletes one ${words} by its id.`,
+			[
+				`summary: ${literal(`Delete a ${words}`)},`,
+				tags,
+				params,
+				`responses: { 204: { description: ${literal(`The ${words} is gone`)} } },`,
+				'problems: ["notFound"],',
+			],
+		),
+	].join("\n\n");
+}
+
+/** The operation names `apiOperations` exports, in the order it writes them. */
+export function apiOperationNames(resource: Resource): string[] {
+	let one = resource.singular.snake.toUpperCase();
+	let many = resource.plural.snake.toUpperCase();
+	return [`${many}_INDEX`, `${one}_SHOW`, `${one}_CREATE`, `${one}_UPDATE`, `${one}_DESTROY`];
 }
 
 /**

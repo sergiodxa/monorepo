@@ -1,0 +1,27 @@
+/**
+ * `GET /api/{{plural}}/:id`: one {{words}}, as the `{{CONSTANT}}_SHOW` operation in
+ * `routes/api.ts` documents it. An id no {{words}} has, and one `{{path}}.read` hides, is the
+ * `notFound` problem.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import abilities from "~/app/policies/abilities";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
+
+export default createAction(routes.api.{{pluralKey}}.show, {
+	middleware: api,
+	/** Answers the {{words}} as `data`. */
+	async handler(ctx) {
+		let row = await ctx.models.{{key}}.find(ctx.params.id);
+		if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
+			return problems.notFound();
+		}
+		return Response.json({ data: row });
+	},
+});

@@ -1,0 +1,31 @@
+/**
+ * `GET /api/{{plural}}` through the app's router, so the API chain and its access checks run as
+ * they do in the Worker.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import "~/app/http/controllers/api/{{plural}}/index";
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+import routes from "~/routes/api";
+
+beforeAll(migrate);
+
+describe("api/{{plural}}/index", () => {
+	test("answers every {{words}} the caller may read as data", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let response = await createWebRouter().fetch(
+			new URL(routes.api.{{pluralKey}}.index.href(), "https://example.com"),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: Array<{ id: string }> };
+		expect(body.data.map((item) => item.id)).toContain(row.id);
+	});
+});

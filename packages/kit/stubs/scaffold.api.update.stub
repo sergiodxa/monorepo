@@ -1,0 +1,44 @@
+/**
+ * `PATCH /api/{{plural}}/:id`: changes the fields the JSON body names, typed by the
+ * `{{CONSTANT}}_UPDATE` operation in `routes/api.ts`; the others keep their values. An id no
+ * {{words}} has, or one `{{path}}.read` hides, is the `notFound` problem, a refused body the
+ * `validationError` one, and a caller `{{path}}.update` refuses gets a 403.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { NotFound } from "@sdxc/data-model";
+import { issuesFrom } from "@sdxc/problem";
+import { isFailure } from "@sdxc/result";
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import abilities from "~/app/policies/abilities";
+import problems from "~/config/problems";
+import routes, { {{CONSTANT}}_UPDATE } from "~/routes/api";
+
+export default createAction(routes.api.{{pluralKey}}.update, {
+	middleware: api,
+	/** Answers the saved {{words}} as `data`. */
+	async handler(ctx) {
+		let { id } = ctx.params;
+		let row = await ctx.models.{{key}}.find(id);
+		if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
+			return problems.notFound();
+		}
+		if (!ctx.access.can(abilities.{{path}}.update, { {{key}}: row })) {
+			return new Response(null, { status: 403 });
+		}
+		let input = await {{CONSTANT}}_UPDATE.parse(ctx.request, ctx.params);
+		if (isFailure(input)) {
+			return problems.validationError({ extensions: { errors: issuesFrom(input.error) } });
+		}
+		let updated = await ctx.models.{{key}}.update(id, input.data.body);
+		if (isFailure(updated)) {
+			if (updated.error instanceof NotFound) return problems.notFound();
+			return problems.validationError({ extensions: { errors: issuesFrom(updated.error) } });
+		}
+		return Response.json({ data: updated.data });
+	},
+});

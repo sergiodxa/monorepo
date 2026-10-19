@@ -1,0 +1,34 @@
+/**
+ * `POST /api/{{plural}}`: creates a {{words}} from the JSON body the `{{CONSTANT}}_CREATE`
+ * operation in `routes/api.ts` types. A body the operation or the model refuses is the
+ * `validationError` problem, and a caller `{{path}}.create` refuses gets a 403.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { issuesFrom } from "@sdxc/problem";
+import { isFailure } from "@sdxc/result";
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import abilities from "~/app/policies/abilities";
+import problems from "~/config/problems";
+import routes, { {{CONSTANT}}_CREATE } from "~/routes/api";
+
+export default createAction(routes.api.{{pluralKey}}.create, {
+	middleware: api,
+	/** Answers the created {{words}} as `data` with a 201. */
+	async handler(ctx) {
+		if (!ctx.access.can(abilities.{{path}}.create)) return new Response(null, { status: 403 });
+		let input = await {{CONSTANT}}_CREATE.parse(ctx.request, ctx.params);
+		if (isFailure(input)) {
+			return problems.validationError({ extensions: { errors: issuesFrom(input.error) } });
+		}
+		let created = await ctx.models.{{key}}.create(input.data.body);
+		if (isFailure(created)) {
+			return problems.validationError({ extensions: { errors: issuesFrom(created.error) } });
+		}
+		return Response.json({ data: created.data }, { status: 201 });
+	},
+});

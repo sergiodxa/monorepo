@@ -449,6 +449,10 @@ export const SDXC_COMMANDS = commands({
 			command: flag.boolean("command", {
 				description: "Also write app commands to list, show, create and delete",
 			}),
+			api: flag.boolean("api", {
+				description:
+					"JSON endpoints in routes/api.ts with their OpenAPI operations, instead of pages",
+			}),
 			skip: flag
 				.string("skip", {
 					valueName: "piece",
@@ -463,6 +467,7 @@ export const SDXC_COMMANDS = commands({
 			"scaffold post title body published_at featured view_count:integer",
 			"scaffold person name email website 'bio?' born_on --plural people --mcp --command",
 			"scaffold post title body --skip model,migration,factory",
+			"scaffold post title body --api",
 		],
 	}),
 	ui: commands({

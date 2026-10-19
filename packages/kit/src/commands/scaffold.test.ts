@@ -166,6 +166,55 @@ describe("scaffold", () => {
 		},
 	);
 
+	test(
+		"--api writes JSON endpoints and their operations the app template type checks and tests green",
+		{ timeout: 300_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+
+			let result = await invoke(
+				["post", "title", "body", "published", "views:integer", "subtitle?", "--api"],
+				root,
+				{ exec: projectExec(root) },
+			);
+
+			expect(result.code, result.stderr).toBe(0);
+			expect(result.stdout).not.toContain("by hand");
+			expect(await files(join(root, "app/http/controllers/api/posts"))).toEqual([
+				"create.test.tsx",
+				"create.tsx",
+				"destroy.test.tsx",
+				"destroy.tsx",
+				"index.test.tsx",
+				"index.tsx",
+				"show.test.tsx",
+				"show.tsx",
+				"update.test.tsx",
+				"update.tsx",
+			]);
+			let written = await files(root);
+			expect(written).not.toContain("app/http/validators/post.ts");
+			expect(written).not.toContain("resources/views/posts/form.tsx");
+			let read = (path: string) => readFile(join(root, path), "utf8");
+			let routes = await read("routes/api.ts");
+			expect(routes).toContain('export const POST_CREATE = defineOperation("postCreate"');
+			expect(routes).toContain('.meta({ id: "Post" });');
+			let openapi = await read("app/initializers/openapi.ts");
+			expect(openapi).toContain(
+				".add(HEALTH, POSTS_INDEX, POST_SHOW, POST_CREATE, POST_UPDATE, POST_DESTROY)",
+			);
+
+			let checked = await typecheck(root);
+			expect(checked.output).toContain("Found no type errors");
+			let formatted = await checkFormatting(root);
+			expect(formatted.output).not.toContain("Format issues found");
+			let tested = await testProject(root);
+			expect(tested.output).toMatch(/Tests {2}\d+ passed/);
+			expect(tested.code).toBe(0);
+		},
+	);
+
 	test("--dry-run prints every file and edit and writes nothing", { timeout: 60_000 }, async () => {
 		let root = unwrap(await materialize("app"));
 		DIRECTORIES.push(dirname(root));

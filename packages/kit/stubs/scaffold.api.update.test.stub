@@ -1,0 +1,46 @@
+/**
+ * `PATCH /api/{{plural}}/:id` through the app's router. The API binds every caller as a guest
+ * until it authenticates them, and the policy grants a guest reads alone, so the write answers 403.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import "~/app/http/controllers/api/{{plural}}/update";
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { {{Name}}Factory } from "~/database/factories/{{name}}";
+import routes from "~/routes/api";
+
+beforeAll(migrate);
+
+/** Sends `body` as JSON to the endpoint of the {{words}} with `id`. */
+function submit(id: string, body: Record<string, unknown>) {
+	return createWebRouter().fetch(
+		new Request(new URL(routes.api.{{pluralKey}}.update.href({ id }), "https://example.com"), {
+			method: "PATCH",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+		}),
+	);
+}
+
+describe("api/{{plural}}/update", () => {
+	test("answers 403 to a guest, who may only read", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let response = await submit(row.id, { {{changedJson}} });
+
+		expect(response.status).toBe(403);
+	});
+
+	test("answers the notFound problem for an id no {{words}} has", async () => {
+		let response = await submit("missing", { {{changedJson}} });
+
+		expect(response.status).toBe(404);
+	});
+
+	test.todo("changes the {{words}} for a caller {{path}}.update admits");
+});

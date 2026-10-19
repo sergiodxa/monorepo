@@ -1,0 +1,23 @@
+/**
+ * `GET /api/{{plural}}`: every {{words}} `{{path}}.read` admits, newest first, as the
+ * `{{PLURAL_CONSTANT}}_INDEX` operation in `routes/api.ts` documents it.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import abilities from "~/app/policies/abilities";
+import routes from "~/routes/api";
+
+export default createAction(routes.api.{{pluralKey}}.index, {
+	middleware: api,
+	/** Lists the {{pluralWords}} the caller may read, so a hidden one is left out of `data`. */
+	async handler(ctx) {
+		let all = await ctx.models.{{key}}.query().orderBy("created_at", "desc").all();
+		let data = all.filter((row) => ctx.access.can(abilities.{{path}}.read, { {{key}}: row }));
+		return Response.json({ data });
+	},
+});

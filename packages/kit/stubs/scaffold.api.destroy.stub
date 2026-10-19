@@ -1,0 +1,34 @@
+/**
+ * `DELETE /api/{{plural}}/:id`: deletes the {{words}} and answers 204, as the
+ * `{{CONSTANT}}_DESTROY` operation in `routes/api.ts` documents it. An id no {{words}} has, or
+ * one `{{path}}.read` hides, is the `notFound` problem; a caller `{{path}}.delete` refuses gets
+ * a 403.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { isFailure } from "@sdxc/result";
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import abilities from "~/app/policies/abilities";
+import problems from "~/config/problems";
+import routes from "~/routes/api";
+
+export default createAction(routes.api.{{pluralKey}}.destroy, {
+	middleware: api,
+	/** Answers an empty 204 once the {{words}} is gone. */
+	async handler(ctx) {
+		let row = await ctx.models.{{key}}.find(ctx.params.id);
+		if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
+			return problems.notFound();
+		}
+		if (!ctx.access.can(abilities.{{path}}.delete, { {{key}}: row })) {
+			return new Response(null, { status: 403 });
+		}
+		let deleted = await ctx.models.{{key}}.delete(ctx.params.id);
+		if (isFailure(deleted)) return problems.notFound();
+		return new Response(null, { status: 204 });
+	},
+});

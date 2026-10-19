@@ -1,0 +1,37 @@
+/**
+ * `POST /api/{{plural}}` through the app's router. The API binds every caller as a guest until
+ * it authenticates them, and the policy grants a guest reads alone, so the write answers 403.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ */
+
+import { beforeAll, describe, expect, test } from "vitest";
+
+import "~/app/http/controllers/api/{{plural}}/create";
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/api";
+
+beforeAll(migrate);
+
+/** Posts `body` as JSON to the endpoint. */
+function submit(body: Record<string, unknown>) {
+	return createWebRouter().fetch(
+		new Request(new URL(routes.api.{{pluralKey}}.create.href(), "https://example.com"), {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+		}),
+	);
+}
+
+describe("api/{{plural}}/create", () => {
+	test("answers 403 to a guest, who may only read", async () => {
+		let response = await submit({ {{jsonSample}} });
+
+		expect(response.status).toBe(403);
+	});
+
+	test.todo("creates the {{words}} for a caller {{path}}.create admits");
+});
