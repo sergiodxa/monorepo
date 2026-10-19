@@ -28,7 +28,9 @@ bun check                                  # format, lint and types, from the re
 ```
 
 `sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
-right away. Tests run from the repository root with `vp test run --project sdxc-site`.
+right away. `sdxc doctor` also runs `.config/sdxc/checks/guides-match-cli.ts`, which checks
+every `sdxc …` line the guides show against the CLI in this checkout: a line the CLI refuses
+fails, and a command or flag no guide in `resources/docs/sdxc/` shows is a warning. Tests run from the repository root with `vp test run --project sdxc-site`.
 
 ## Cloudflare Services
 

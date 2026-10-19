@@ -375,7 +375,7 @@ export default defineConfig({
 				},
 				test: {
 					name: "sdxc-site",
-					include: ["**/*.test.ts?(x)"],
+					include: ["**/*.test.ts?(x)", ".config/sdxc/checks/*.test.ts"],
 					globalSetup: ["scripts/catalogue.setup.ts"],
 					pool: "threads",
 					/**
