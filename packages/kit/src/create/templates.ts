@@ -37,9 +37,10 @@ const RENAMED_FILES = new Map([["gitignore", ".gitignore"]]);
 
 /**
  * The configuration every built-in template ships beyond `sdxc init`'s defaults: each one checks
- * with Vite+, so the files `make` and `ui add` write are formatted as `vp check` expects.
+ * with Vite+, so the files `make` and `ui add` write are formatted as `vp check` expects. A run
+ * that wrote only files `vp fmt` has no formatter for, such as a migration, succeeds.
  */
-const BUILTIN_CONFIG = { format: ["bunx", "vp", "fmt"] };
+const BUILTIN_CONFIG = { format: ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"] };
 
 /** Where a template comes from, as `--template` spells it. */
 export type TemplateSource =

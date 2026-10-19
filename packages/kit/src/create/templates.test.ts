@@ -112,7 +112,7 @@ describe("built-in templates", () => {
 		expect(manifest.dependencies?.sdxc).toBeUndefined();
 		expect(manifest.dependencies?.remix).toBe(own.peerDependencies?.remix);
 		expect(text(tree.files, ".config/sdxc.jsonc")).toBe(
-			unwrap(renderConfig({ format: ["bunx", "vp", "fmt"] })),
+			unwrap(renderConfig({ format: ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"] })),
 		);
 		expect(manifest.devDependencies?.["vite-plus"]).toBeDefined();
 		expect(tree.files.has(".gitignore")).toBe(true);
