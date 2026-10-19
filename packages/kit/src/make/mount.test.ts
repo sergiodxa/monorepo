@@ -223,7 +223,7 @@ describe("make middleware --mount", () => {
 
 			let read = (path: string) => readFile(join(root, path), "utf8");
 			expect(await read("app/initializers/router.tsx")).toContain(
-				"\t\t\tmail({ transport, from: MAIL_FROM }),\n\t\t\trequestId(),\n\t\t],",
+				"\t\t\tmailer({ transport, from: MAIL_FROM, mail, queue }),\n\t\t\trequestId(),\n\t\t],",
 			);
 			expect(await read("app/http/middleware/page.ts")).toContain(
 				'import requireUser from "~/app/http/middleware/require-user";',

@@ -1,27 +1,27 @@
 /**
- * The app's mail transport, delivering into the in-memory `send_email` stand-in tests receive
- * as the `EMAIL` binding.
+ * The email registry: every declared email has a template mapped, so a send never fails for
+ * an email `sdxc make email` declared but nothing maps.
  */
 
-import { Mailer } from "@sdxc/mail";
-import { env } from "cloudflare:workers";
+import type { AnyEmailDeclaration } from "@sdxc/mail";
+
+import { isEmailDeclaration } from "@sdxc/mail";
 import { describe, expect, test } from "vitest";
 
-import { transport } from "~/app/initializers/mail";
-import { MAIL_FROM } from "~/config/constants";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-describe("transport", () => {
-	test("delivers a message through the EMAIL binding", async () => {
-		let mailer = new Mailer({ transport, from: MAIL_FROM });
+/** Every declaration in the map, walking its groups. */
+function declared(tree: object): AnyEmailDeclaration[] {
+	return Object.values(tree).flatMap((value: object) =>
+		isEmailDeclaration(value) ? [value] : declared(value),
+	);
+}
 
-		await mailer.send({
-			to: { email: "ada@example.com" },
-			subject: "Welcome",
-			html: "<p>Hello.</p>",
-		});
+describe("mail", () => {
+	test("maps a template for every declared email", () => {
+		let names = declared(emails).map((email) => email.name);
 
-		expect(env.EMAIL).toMatchObject({
-			messages: [expect.objectContaining({ subject: "Welcome" })],
-		});
+		expect(mail.mapped.map((email) => email.name).sort()).toEqual(names.sort());
 	});
 });

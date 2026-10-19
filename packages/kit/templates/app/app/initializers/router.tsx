@@ -11,7 +11,7 @@ import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
-import mail from "@sdxc/mail/middleware";
+import mailer from "@sdxc/mail/middleware";
 import { noWWW } from "@sdxc/no-www-middleware";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
@@ -26,7 +26,8 @@ import { createRouter } from "remix/router";
 import serverTiming from "~/app/http/middleware/server-timing";
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
-import { transport } from "~/app/initializers/mail";
+import { mail } from "~/app/initializers/mail";
+import { queue, transport } from "~/app/initializers/mail-transport";
 import registry from "~/app/models";
 import { MAIL_FROM } from "~/config/constants";
 import problems from "~/config/problems";
@@ -69,7 +70,7 @@ export function createWebRouter() {
 			}),
 			database(openDatabase()),
 			models(registry, (ctx) => ({ db: ctx.db })),
-			mail({ transport, from: MAIL_FROM }),
+			mailer({ transport, from: MAIL_FROM, mail, queue }),
 		],
 	});
 

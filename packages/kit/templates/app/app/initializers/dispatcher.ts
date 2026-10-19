@@ -11,11 +11,16 @@ import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
+import mailer from "@sdxc/mail/middleware/jobs";
 import { env } from "cloudflare:workers";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { queue, transport } from "~/app/initializers/mail-transport";
+import jobs from "~/app/jobs";
 import registry from "~/app/models";
+import { MAIL_FROM } from "~/config/constants";
 
 /** The dispatcher `bootstrap/worker.ts` hands queue batches and cron triggers to. */
 export const dispatcher = createJobDispatcher({
@@ -24,12 +29,15 @@ export const dispatcher = createJobDispatcher({
 	middleware: [
 		database(openDatabase),
 		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+		mailer({ transport, from: MAIL_FROM, mail, queue }),
 	] as const,
 	timeout: "5 minutes",
 });
 
+dispatcher.map(jobs.email, () => import("~/app/jobs/email"));
+
 declare module "@sdxc/jobs" {
-	/** Types every job handler's `ctx` with what the dispatcher's middleware publishes: `ctx.db` and `ctx.models`. */
+	/** Types every job handler's `ctx` with what the dispatcher's middleware publishes: `ctx.db`, `ctx.models` and `ctx.email`. */
 	interface JobTypes {
 		context: JobDispatcherContext<typeof dispatcher>;
 	}

@@ -1,11 +1,19 @@
 /**
- * Where the app's email goes: Cloudflare's `send_email` binding, which `bun dev` simulates and
- * a deploy delivers through Email Routing. The router publishes a mailer over it as `ctx.email`;
- * a job builds its own with `new Mailer({ transport, from: MAIL_FROM })` and awaits `send()`.
+ * The email registry: every email `app/emails/index.ts` declares, mapped onto its template
+ * through `lazy()`, so a send imports only the template it renders. It holds no transport, so
+ * the Worker's mailers and the command line share it; `sdxc make email` adds the mapping.
  */
 
-import { CloudflareTransport } from "@sdxc/mail/cloudflare";
-import { env } from "cloudflare:workers";
+import { createMail } from "@sdxc/mail";
 
-/** Sends through the `EMAIL` binding, from an address on a domain Email Routing verified. */
-export const transport = new CloudflareTransport(env.EMAIL);
+import { translate } from "~/app/initializers/i18n";
+
+/** The registry the router, the job dispatcher and the command line hand their mailers. */
+export const mail = createMail({ translator: translate });
+
+declare module "@sdxc/mail" {
+	/** Types the `t()` every template receives with the keys of the app's message bundles. */
+	interface MailTypes {
+		translate: ReturnType<typeof translate>["t"];
+	}
+}
