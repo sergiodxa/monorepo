@@ -1,6 +1,6 @@
 /**
- * Tests the preview middleware through a router: the list of every mapped email in every
- * locale, one email rendered as HTML or text in the locale asked for, 404s for an unmapped
+ * Tests the preview middleware through a router: the inbox of every mapped email, the one the
+ * query opens, one email rendered as HTML or text in the locale asked for, 404s for an unmapped
  * email and one without `preview()`, and every other request passed on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -64,15 +64,36 @@ function router() {
 }
 
 describe("previews", () => {
-	test("lists every mapped email in every locale, and those without a preview", async () => {
+	test("lists every mapped email with its subject, opening the first previewable one", async () => {
 		let response = await router().fetch("https://example.com/_emails");
 		let html = await response.text();
 
 		expect(response.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
-		expect(html).toContain("<code>teams.invite</code>");
-		expect(html).toContain('href="/_emails/teams.invite?locale=es"');
-		expect(html).toContain('href="/_emails/teams.invite?locale=en&amp;format=text"');
-		expect(html).toMatch(/<code>welcome<\/code><\/td><td colspan="2">No preview/i);
+		expect(html).toContain("Join Acme");
+		expect(html).toContain('href="/_emails?email=teams.invite&amp;locale=es"');
+		expect(html).toContain('src="/_emails/teams.invite?locale=en"');
+		expect(html).toMatch(/>welcome<\/span>.*No preview/s);
+	});
+
+	test("opens the email and locale the query names, and its text part in the text view", async () => {
+		let response = await router().fetch(
+			"https://example.com/_emails?email=teams.invite&locale=es&view=text",
+		);
+		let html = await response.text();
+
+		expect(html).toContain("Únete a Acme");
+		expect(html).toMatch(/<pre[^>]*>[^<]*Welcome to Acme/);
+		expect(html).toContain('href="/_emails/teams.invite?locale=es&amp;format=text"');
+	});
+
+	test("says so when the query names an email nothing maps or one without a preview", async () => {
+		let unmapped = await (
+			await router().fetch("https://example.com/_emails?email=billing.receipt")
+		).text();
+		let none = await (await router().fetch("https://example.com/_emails?email=welcome")).text();
+
+		expect(unmapped).toContain('No template is mapped for the "billing.receipt" email.');
+		expect(none).toContain("has no preview()");
 	});
 
 	test("renders an email's HTML from its preview props in the locale asked for", async () => {
@@ -120,12 +141,23 @@ describe("previews", () => {
 		expect((await app.fetch("https://example.com/_emails")).status).toBe(418);
 	});
 
-	test("lists each email once without locales, linking the translator's fallback", async () => {
+	test("renders in the translator's fallback without locales, under a custom path", async () => {
 		let app = createRouter({ middleware: [previews(registry(), { path: "/dev/mail/" })] });
 
 		let html = await (await app.fetch("https://example.com/dev/mail")).text();
 
-		expect(html).toContain("Default locale");
-		expect(html).toContain('href="/dev/mail/teams.invite"');
+		expect(html).not.toContain('aria-label="Language"');
+		expect(html).toContain('href="/dev/mail?email=teams.invite"');
+		expect(html).toContain('src="/dev/mail/teams.invite"');
+	});
+
+	test("links the stylesheets the app hands it, so the components wear its theme", async () => {
+		let app = createRouter({
+			middleware: [previews(registry(), { stylesheets: async () => ["/app.css"] })],
+		});
+
+		let html = await (await app.fetch("https://example.com/_emails")).text();
+
+		expect(html).toContain('<link rel="stylesheet" href="/app.css"');
 	});
 });

@@ -1362,6 +1362,8 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/u": "workspace:*",
+        "@sdxc/ui": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },

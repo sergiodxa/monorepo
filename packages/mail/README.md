@@ -379,8 +379,12 @@ on the current log. It publishes under the `CurrentMailer` context key, exported
 
 #### `previews(mail: Mail, options?: PreviewsOptions): Middleware` (also the default export)
 
-Lists every mapped email in each of `options.locales` at `options.path` (default `/_emails`), and
-renders one from its `preview()` at `<path>/<name>?locale=&format=html|text`. Serve it only in
+Shows every mapped email as an inbox at `options.path` (default `/_emails`): each one's subject and
+opening lines in the locale picked from `options.locales`, and the one `?email=` names open beside
+the list as HTML or text (`?view=text`). The raw render of one email answers at
+`<path>/<name>?locale=&format=html|text`. The page is built from `@sdxc/ui`; pass the app's document
+stylesheets as `stylesheets` so it wears the app's theme:
+`stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx")`. Serve it only in
 development with `enabled: import.meta.env.DEV`, which passes every request on otherwise.
 
 ### `@sdxc/mail/middleware/cli`
