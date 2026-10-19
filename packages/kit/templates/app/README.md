@@ -7,11 +7,12 @@ A Remix v3 app on Cloudflare Workers, built on the `@sdxc/*` packages.
 ```sh
 bun install
 sdxc run typegen
-sdxc run db migrate
+sdxc run db prepare
 bun dev
 ```
 
-In a fresh clone, copy `.env.example` to `.dev.vars` first. Run `sdxc run typegen` again
+In a fresh clone, copy `.env.example` to `.dev.vars` first. `db prepare` applies the pending
+migrations, and seeds a database that had none applied. Run `sdxc run typegen` again
 whenever you change a binding in `cloudflare.config.ts`.
 
 ## Everyday commands
@@ -27,6 +28,9 @@ sdxc make command users/grant              # then: sdxc run users grant
 sdxc scaffold post title body:text         # model, migration, CRUD pages and tests
 
 sdxc run db console                        # SQL prompt over the local database
+sdxc run console                           # Bun's REPL with db and models loaded
+sdxc run db seed                           # run database/seeders on the local database
+sdxc run db fresh --seed                   # drop every local table, migrate, seed
 sdxc routes                                # every route and its controller (-g, -c, --unused)
 sdxc doctor                                # release drift, secrets, migrations and wiring
 bun check                                  # format, lint and types
@@ -52,6 +56,7 @@ Claude Code at it. `sdxc upgrade` keeps its sdxc section current; add your own r
 | `app/initializers/`    | The one instance of each service: database, mailer, router… |
 | `resources/`           | Layouts, components and translations (`resources/locales/`) |
 | `database/migrations/` | SQL migrations                                              |
+| `database/seeders/`    | The rows `sdxc run db seed` writes into the local database  |
 | `config/`              | Site settings, security policy, security.txt, API problems  |
 
 ## What a handler gets

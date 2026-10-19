@@ -36,6 +36,7 @@
 		"@sdxc/rate-limit": "0.0.1",
 		"@sdxc/result": "0.0.1",
 		"@sdxc/robots": "0.0.1",
+		"@sdxc/sample": "0.0.1",
 		"@sdxc/security-headers": "0.0.1",
 		"@sdxc/seo": "0.0.1",
 		"@sdxc/server-timing": "0.0.1",

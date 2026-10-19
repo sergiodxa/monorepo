@@ -62,12 +62,28 @@ cli.map(
 	lazy(() => import("~/app/commands/about")),
 );
 cli.map(
+	commandset.console,
+	lazy(() => import("~/app/commands/console")),
+);
+cli.map(
 	commandset.db.console,
 	lazy(() => import("~/app/commands/db/console")),
 );
 cli.map(
 	commandset.db.migrate,
 	lazy(() => import("~/app/commands/db/migrate")),
+);
+cli.map(
+	commandset.db.fresh,
+	lazy(() => import("~/app/commands/db/fresh")),
+);
+cli.map(
+	commandset.db.prepare,
+	lazy(() => import("~/app/commands/db/prepare")),
+);
+cli.map(
+	commandset.db.seed,
+	lazy(() => import("~/app/commands/db/seed")),
 );
 cli.map(
 	commandset.deploy,

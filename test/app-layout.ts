@@ -61,8 +61,8 @@ export const APP_FOLDERS = new Set([
 	"test",
 ]);
 
-/** What `bootstrap/` may hold: the Worker, browser and command-line entry points. */
-export const BOOTSTRAP_ENTRIES = new Set(["browser.ts", "cli.ts", "worker.ts"]);
+/** What `bootstrap/` may hold: the Worker, browser, command-line and REPL entry points. */
+export const BOOTSTRAP_ENTRIES = new Set(["browser.ts", "cli.ts", "console.ts", "worker.ts"]);
 
 /** Root-level folders the layout check skips: dependencies, build output, local state. */
 export function isIgnoredRootFolder(name: string): boolean {
@@ -72,7 +72,7 @@ export function isIgnoredRootFolder(name: string): boolean {
 /** Whether a `bootstrap/` entry is allowed, counting an entry point's own test beside it. */
 export function isBootstrapEntry(name: string): boolean {
 	if (BOOTSTRAP_ENTRIES.has(name)) return true;
-	return /^(worker|browser|cli)\.(workers\.)?test\.tsx?$/.test(name);
+	return /^(worker|browser|cli|console)\.(workers\.)?test\.tsx?$/.test(name);
 }
 
 /**

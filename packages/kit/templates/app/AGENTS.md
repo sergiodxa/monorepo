@@ -23,6 +23,9 @@ sdxc ui add <component>            # copy an @sdxc/ui component into the app to 
 sdxc routes --json                 # every route, its controller and the middleware it runs
 sdxc doctor --json                 # release drift, installs, secrets, migrations and wiring
 sdxc run <command>                 # the app's own command line: db migrate, db console, typegen
+sdxc run db prepare                # migrate the local database, seeding it when it is new
+sdxc run db fresh --seed           # drop every local table, apply every migration, seed
+sdxc run console                   # Bun's REPL with the local db and models on globalThis
 sdxc upgrade                       # move every @sdxc package to the latest release
 sdxc deploy --dry-run              # build and print the deploy plan, changing nothing
 bun check                          # format, lint and type check
@@ -47,6 +50,10 @@ bun run test                       # every test, under Vitest
   `remove-slug-from-posts slug` (`create-posts title …` creates one). After changing a model's
   columns, write its migration with `sdxc make migration <name> --from-model <model>`; read its
   warnings before applying it. Apply migrations with `sdxc run db migrate`.
+- Seed the local database from `database/seeders/`: one file per seeder, default-exporting a
+  `Seeder` (`app/services/seeders.ts`) that writes through `factories` (`database/factories/`)
+  or `models`, listed in run order in `database/seeders/index.ts`. `sdxc run db seed` runs
+  them; `db seed`, `db fresh` and `db prepare` refuse `--remote`.
 - Read `sdxc routes --json` to find the controller and middleware behind a URL; narrow it with
   `-g <text>`, `-c <controller>`, `--method`, `--contract`, and `--unused` for what no router maps.
 - Run `sdxc doctor` after an upgrade or a structural change; each finding names its fix.
@@ -59,7 +66,7 @@ bun run test                       # every test, under Vitest
 
 | If the code…                                                                                             | It goes in                                                         |
 | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| is the Worker, browser or command-line entry point                                                       | `bootstrap/worker.ts`, `bootstrap/browser.ts`, `bootstrap/cli.ts`  |
+| is the Worker, browser, command-line or REPL entry point                                                 | `bootstrap/` (`worker.ts`, `browser.ts`, `cli.ts`, `console.ts`)   |
 | is a Durable Object class                                                                                | `app/models/` when it owns stored state, `app/services/` otherwise |
 | builds the one instance of something (logger, router, dispatcher, MCP handler, database, mailer, assets) | `app/initializers/`                                                |
 | handles HTTP: controllers, middleware, input validators                                                  | `app/http/{controllers,middleware,validators}/`                    |
@@ -70,7 +77,7 @@ bun run test                       # every test, under Vitest
 | is business logic across models, or a rule about none                                                    | `app/services/`                                                    |
 | is an authorization rule                                                                                 | `app/policies/`                                                    |
 | is a view, component, layout, stylesheet or translation                                                  | `resources/` (`resources/locales/` for translations)               |
-| is a route contract, a migration, a test factory                                                         | `routes/`, `database/migrations/`, `database/factories/`           |
+| is a route contract, a migration, a test factory, a seeder                                               | `routes/`, `database/{migrations,factories,seeders}/`              |
 | is static configuration (site constants, security policy, security.txt, API problems)                    | `config/`                                                          |
 | is any other test helper                                                                                 | `app/test/`                                                        |
 

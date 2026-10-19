@@ -6,7 +6,12 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { applyMigrations, pendingMigrations } from "~/app/services/migrations";
+import {
+	applyMigrations,
+	dropTables,
+	hasAppliedMigrations,
+	pendingMigrations,
+} from "~/app/services/migrations";
 
 /** Two migrations, given out of order to show the runner sorts them. */
 const MIGRATIONS = [
@@ -55,5 +60,33 @@ describe("pendingMigrations", () => {
 		expect(database.query("SELECT count(*) AS applied FROM d1_migrations").all()).toEqual([
 			{ applied: 1 },
 		]);
+	});
+});
+
+describe("dropTables", () => {
+	test("drops the migrations' tables and views, and the journal, so the chain runs again", () => {
+		let database = openDatabase(":memory:");
+		unwrap(applyMigrations(database, MIGRATIONS));
+		database.exec(
+			"CREATE TABLE comments (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id TEXT REFERENCES posts (id)); CREATE VIEW titles AS SELECT title FROM posts;",
+		);
+
+		let dropped = unwrap(dropTables(database));
+
+		expect(dropped.toSorted()).toEqual(["comments", "d1_migrations", "posts"]);
+		expect(
+			database.query("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").all(),
+		).toEqual([]);
+		expect(unwrap(applyMigrations(database, MIGRATIONS))).toHaveLength(2);
+	});
+});
+
+describe("hasAppliedMigrations", () => {
+	test("tells a new database from one a migration ran on", () => {
+		let database = openDatabase(":memory:");
+		let before = hasAppliedMigrations(database);
+		unwrap(applyMigrations(database, MIGRATIONS));
+
+		expect([before, hasAppliedMigrations(database)]).toEqual([false, true]);
 	});
 });

@@ -4,9 +4,6 @@
  * against the production database. Safe to run twice: an applied migration is skipped.
  */
 
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
-
 import type { AnyCommandContext } from "@sdxc/cli";
 import type { Result } from "@sdxc/result";
 
@@ -17,10 +14,12 @@ import * as s from "remix/data-schema";
 
 import commandset from "~/app/commands";
 import { DATABASE_ID, LOCAL_DATABASE_FILE, PROJECT_ROOT } from "~/app/initializers/local-database";
-import { applyMigrations, pendingMigrations } from "~/app/services/migrations";
-
-/** The migration chain `sdxc make migration` writes into, relative to the project's root. */
-const MIGRATIONS_DIRECTORY = "database/migrations";
+import {
+	applyMigrations,
+	MIGRATIONS_DIRECTORY,
+	pendingMigrations,
+	readMigrations,
+} from "~/app/services/migrations";
 
 /** `cf d1 migrations list`'s JSON: one row per migration the production database lacks. */
 const REMOTE_PENDING = s.array(s.object({ Name: s.string() }));
@@ -28,18 +27,6 @@ const REMOTE_PENDING = s.array(s.object({ Name: s.string() }));
 /** Escape sequences `cf` colors its JSON with when its output is a terminal. */
 // oxlint-disable-next-line no-control-regex -- matching the ESC that starts a color sequence
 const ANSI = /\u001B\[[0-9;]*m/g;
-
-/** Every `.sql` file in the chain, with its SQL. */
-async function readMigrations() {
-	let directory = join(PROJECT_ROOT, MIGRATIONS_DIRECTORY);
-	let names = (await readdir(directory)).filter((name) => name.endsWith(".sql"));
-	return Promise.all(
-		names.map(async (name) => ({
-			name,
-			sql: await readFile(join(directory, name), "utf8"),
-		})),
-	);
-}
 
 /** The migrations the production database lacks, as `cf d1 migrations list` reports them. */
 async function remotePending(ctx: AnyCommandContext): Promise<Result<string[], Error>> {
@@ -78,7 +65,7 @@ export default createCommand(commandset.db.migrate, async (ctx) => {
 
 	let database = openDatabase(LOCAL_DATABASE_FILE);
 	try {
-		let migrations = await readMigrations();
+		let migrations = await readMigrations(PROJECT_ROOT);
 		if (ctx.flags.pending) {
 			ctx.stdout(
 				pendingMigrations(database, migrations)
