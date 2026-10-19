@@ -33,6 +33,7 @@ const RELEASES: Record<string, { remix: string }> = {
 const PUBLISHED: Record<string, string[]> = {
 	"@sdxc/cli": ["2026.9.4", "2026.10.14"],
 	"@sdxc/jwt": ["2026.9.1", "2026.10.1"],
+	"@sdxc/csv": ["2026.9.1", "2026.9.20"],
 };
 
 /** The changelog every mocked release ships: one breaking change, to a package the fixture imports. */
@@ -136,6 +137,10 @@ async function fixtureProject(): Promise<string> {
 const EXEC = {
 	"pnpm install": {},
 	"pnpm dlx @sdxc/kit@2026.10.14 upgrade --prompt --from 2026.9.4 --remix-from 3.0.0": {},
+	"pnpm dlx @sdxc/kit@2026.10.14 upgrade --prompt --from 2026.10.14 --since @sdxc/jwt@2026.9.1": {},
+	"pnpm dlx @sdxc/kit@2026.10.14 upgrade --prompt --from 2026.10.1 --since @sdxc/csv@2026.9.1 --remix-from 3.0.0":
+		{},
+	"pnpm dlx @sdxc/kit@2026.10.1 upgrade --prompt --from 2026.10.1 --remix-from 2.9.0": {},
 };
 
 /** Runs `sdxc upgrade` with `argv` in `cwd`, without a terminal unless `options` says so. */
@@ -162,9 +167,9 @@ describe("sdxc upgrade", () => {
 			[
 				"Looking up release latest",
 				"✓ Found release 2026.10.14",
-				...BREAKING,
 				"Resolving 2 @sdxc packages at 2026.10.14",
 				"✓ Resolving 2 @sdxc packages at 2026.10.14",
+				...BREAKING,
 				"package.json: @sdxc/cli 2026.9.4 -> 2026.10.14",
 				"package.json: remix 3.0.0 -> 3.1.0",
 				"package.json: @sdxc/jwt 2026.9.1 -> 2026.10.1",
@@ -193,6 +198,8 @@ describe("sdxc upgrade", () => {
 			[
 				"Looking up release latest",
 				"✓ Found release 2026.10.14",
+				"Resolving 2 @sdxc packages at 2026.10.14",
+				"✓ Resolving 2 @sdxc packages at 2026.10.14",
 				...BREAKING,
 				"✓ Upgrade to release 2026.10.14? No",
 				"Kept the @sdxc packages at 2026.9.4; package.json is unchanged",
@@ -253,15 +260,76 @@ describe("sdxc upgrade", () => {
 		);
 	});
 
-	test("reports the project's release as up to date", async () => {
+	test("reports the project's release as up to date when no pin moves", async () => {
 		let root = await fixtureProject();
 		let result = await upgrade(["2026.9.4"], root);
 		expect(result).toMatchObject({
 			code: 0,
 			stderr:
-				"Looking up release 2026.9.4\n✓ Found release 2026.9.4\nThe @sdxc packages are up to date at 2026.9.4\n",
+				"Looking up release 2026.9.4\n✓ Found release 2026.9.4\nResolving 2 @sdxc packages at 2026.9.4\n✓ Resolving 2 @sdxc packages at 2026.9.4\nThe @sdxc packages are up to date at 2026.9.4\n",
 		});
 		expect(await readFile(join(root, "package.json"), "utf8")).toBe(MANIFEST);
+	});
+
+	test("re-pins packages behind the project's release when it is already the latest", async () => {
+		let root = await fixtureProject();
+		let lagging = MANIFEST.replace('"@sdxc/cli": "2026.9.4"', '"@sdxc/cli": "2026.10.14"').replace(
+			'"remix": "3.0.0"',
+			'"remix": "3.1.0"',
+		);
+		await writeFile(join(root, "package.json"), lagging);
+
+		let result = await upgrade([], root);
+
+		expect(result.code).toBe(0);
+		expect(await readFile(join(root, "package.json"), "utf8")).toBe(
+			lagging.replace('"@sdxc/jwt": "2026.9.1"', '"@sdxc/jwt": "2026.10.1"'),
+		);
+		expect(result.stderr).toContain(BREAKING.join("\n"));
+		expect(result.stderr).toContain("package.json: @sdxc/jwt 2026.9.1 -> 2026.10.1\n");
+		expect(result.stderr).not.toContain("up to date");
+		expect(result.exec.map(({ command }) => command.join(" "))).toEqual([
+			"pnpm install",
+			"pnpm dlx @sdxc/kit@2026.10.14 upgrade --prompt --from 2026.10.14 --since @sdxc/jwt@2026.9.1",
+		]);
+	});
+
+	test("moves remix to the peer of the project's own release", async () => {
+		let root = await fixtureProject();
+		let mismatched = MANIFEST.replace(
+			'"@sdxc/jwt": "2026.9.1"',
+			'"@sdxc/jwt": "2026.10.1"',
+		).replace('"remix": "3.0.0"', '"remix": "2.9.0"');
+		await writeFile(join(root, "package.json"), mismatched);
+
+		let result = await upgrade(["2026.10.1"], root);
+
+		expect(result.code).toBe(0);
+		expect(await readFile(join(root, "package.json"), "utf8")).toBe(
+			mismatched.replace('"remix": "2.9.0"', '"remix": "3.0.0"'),
+		);
+		expect(result.exec.map(({ command }) => command.join(" "))).toEqual([
+			"pnpm install",
+			"pnpm dlx @sdxc/kit@2026.10.1 upgrade --prompt --from 2026.10.1 --remix-from 2.9.0",
+		]);
+	});
+
+	test("hands the prompt each lagging package's own starting release", async () => {
+		let root = await fixtureProject();
+		let lagging = MANIFEST.replace(
+			'"@sdxc/jwt": "2026.9.1"',
+			'"@sdxc/jwt": "2026.10.1",\n\t\t"@sdxc/csv": "2026.9.1"',
+		);
+		await writeFile(join(root, "package.json"), lagging);
+
+		let result = await upgrade([], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stderr).toContain("package.json: @sdxc/csv 2026.9.1 -> 2026.9.20\n");
+		expect(result.exec.map(({ command }) => command.join(" "))).toEqual([
+			"pnpm install",
+			"pnpm dlx @sdxc/kit@2026.10.14 upgrade --prompt --from 2026.10.1 --since @sdxc/csv@2026.9.1 --remix-from 3.0.0",
+		]);
 	});
 
 	test("refuses a release older than the project's", async () => {

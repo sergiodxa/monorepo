@@ -15,7 +15,7 @@ import { findModuleReferences } from "@sdxc/codemod";
 import * as s from "@sdxc/json-schema";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-import { projectRelease, scopedPackageOf } from "../releases.js";
+import { datedPin, projectRelease, scopedPackageOf } from "../releases.js";
 
 /** The `package.json` sections a project's installed versions come from. */
 const DEPENDENCY_FIELDS = ["dependencies", "devDependencies", "optionalDependencies"] as const;
@@ -28,6 +28,7 @@ const SKIPPED_FOLDERS = new Set(["node_modules", "dist", "build", "coverage"]);
 
 /** The fields of `package.json` the upgrade reads. */
 const MANIFEST_SCHEMA = s.object({
+	name: s.optional(s.string()),
 	packageManager: s.optional(s.string()),
 	scripts: s.optional(s.record(s.string(), s.string())),
 	dependencies: s.optional(s.record(s.string(), s.string())),
@@ -100,6 +101,15 @@ export function bumpManifest(
 /** Whether a dependency section of the manifest lists `name`. */
 export function lists(manifest: Manifest, name: string): boolean {
 	return DEPENDENCY_FIELDS.some((field) => manifest[field]?.[name] !== undefined);
+}
+
+/** The dated release `name` is pinned to in the first dependency section listing it, or `null`. */
+export function pinnedRelease(manifest: Manifest, name: string): string | null {
+	for (let field of DEPENDENCY_FIELDS) {
+		let range = manifest[field]?.[name];
+		if (range !== undefined) return datedPin(range);
+	}
+	return null;
 }
 
 /** Every `@sdxc/*` package the manifest lists, which the upgrade moves together. */

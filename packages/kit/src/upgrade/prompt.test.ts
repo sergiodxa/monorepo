@@ -162,6 +162,41 @@ describe("sdxc upgrade --prompt", () => {
 		expect(result).toEqual({ code: 0, stdout: EXPECTED, stderr: "" });
 	});
 
+	test("covers a lagging package from its own pin and the rest from --from", async () => {
+		let packageRoot = await targetRelease([
+			entry("2026.9.5", "@sdxc/auth", "feat", "expose the issuer"),
+			entry("2026.10.1", "@sdxc/jwt", "refactor", "rename verify to check", true),
+			entry("2026.10.14", "@sdxc/auth", "fix", "trim the issuer"),
+		]);
+		let root = await fixtureProject();
+		let result = await invoke(
+			["--prompt", "--from", "2026.10.14", "--since", "@sdxc/jwt@2026.9.4"],
+			root,
+			packageRoot,
+		);
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain(
+			"# Upgrade the @sdxc packages from 2026.9.4 to 2026.10.14\n\nThis project now depends on the @sdxc packages of release 2026.10.14, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after 2026.9.4.",
+		);
+		expect(result.stdout).toContain("### @sdxc/jwt: rename verify to check");
+		expect(result.stdout).not.toContain("expose the issuer");
+		expect(result.stdout).not.toContain("trim the issuer");
+	});
+
+	test("rejects a --since that names no package and release", async () => {
+		let packageRoot = await targetRelease([]);
+		let root = await fixtureProject();
+		let result = await invoke(
+			["--prompt", "--from", "2026.10.14", "--since", "@sdxc/jwt"],
+			root,
+			packageRoot,
+		);
+		expect(result.code).toBe(2);
+		expect(result.stderr).toMatch(
+			/^--since takes <package>@<version>, such as @sdxc\/jwt@2026\.9\.4\n/,
+		);
+	});
+
 	test("writes the prompt to --output instead of stdout", async () => {
 		let packageRoot = await targetRelease([]);
 		let root = await fixtureProject();

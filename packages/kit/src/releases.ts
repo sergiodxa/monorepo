@@ -92,24 +92,47 @@ export async function resolveRelease(
 	release: string | null,
 	signal?: AbortSignal,
 ): Promise<Result<Map<string, string>, Error>> {
+	let packuments = await fetchPackuments(names, signal);
+	if (isFailure(packuments)) return packuments;
+	return versionsAt(packuments.data, release);
+}
+
+/** The registry document of each of `names`, sorted by name; the first npm cannot serve fails. */
+export async function fetchPackuments(
+	names: Iterable<string>,
+	signal?: AbortSignal,
+): Promise<Result<Packument[], Error>> {
 	let sorted = [...new Set(names)].sort();
 	let fetched = await Promise.all(sorted.map((name) => fetchPackument(name, signal)));
-	let versions = new Map<string, string>();
+	let packuments: Packument[] = [];
 	for (let packument of fetched) {
 		if (isFailure(packument)) return packument;
-		let { name } = packument.data;
-		let version =
-			release === null ? packument.data.latest : versionAtRelease(packument.data, release);
+		packuments.push(packument.data);
+	}
+	return success(packuments);
+}
+
+/**
+ * Each package's version at `release`, or at its `latest` dist-tag when `release` is `null`,
+ * by name. A package with no version at that release is a failure naming both.
+ */
+export function versionsAt(
+	packuments: readonly Packument[],
+	release: string | null,
+): Result<Map<string, string>, Error> {
+	let versions = new Map<string, string>();
+	for (let packument of packuments) {
+		let version = release === null ? packument.latest : versionAtRelease(packument, release);
 		if (version === null) {
 			return failure(
 				new Error(
 					release === null
-						? `${name} has no latest version on npm`
-						: `${name} has no release on or before ${release}`,
+						? `${packument.name} has no latest version on npm`
+						: `${packument.name} has no release on or before ${release}`,
 				),
 			);
 		}
-		versions.set(name, version);
+		versions.set(packument.name, version);
 	}
 	return success(versions);
 }

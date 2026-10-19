@@ -55,6 +55,11 @@ export interface ChangedComponent {
 /** Everything the prompt says, already gathered from the project and the installed release. */
 export interface PromptInput {
 	from: string;
+	/**
+	 * The release each package lagging behind `from` is pinned to, by name; its notes start
+	 * there instead of at `from`.
+	 */
+	since?: ReadonlyMap<string, string>;
 	to: string;
 	/** The whole changelog of the target release. */
 	entries: readonly ChangelogEntry[];
@@ -75,16 +80,24 @@ export interface PromptInput {
  */
 export function renderPrompt(input: PromptInput): string {
 	let imported = new Set(input.packages);
-	let relevant = entriesBetween(input.entries, input.from, input.to)
-		.filter((entry) => imported.has(entry.package))
+	let since = input.since ?? new Map<string, string>();
+	let from = earliestStart(input);
+	let relevant = entriesBetween(input.entries, from, input.to)
+		.filter(
+			(entry) =>
+				imported.has(entry.package) &&
+				compare(entry.release, since.get(entry.package) ?? input.from) > 0,
+		)
 		.sort((a, b) => compare(a.release, b.release) || compareText(a.package, b.package));
 	let breaking = relevant.filter((entry) => entry.breaking);
 	let features = relevant.filter((entry) => !entry.breaking && entry.type === "feat");
 	let fixes = relevant.filter((entry) => !entry.breaking && FIX_TYPES.has(entry.type));
 	let sections = [
 		[
-			`# Upgrade the @sdxc packages from ${input.from} to ${input.to}`,
-			`This project now depends on the @sdxc packages of release ${input.to}, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after ${input.from}. Apply each breaking change's migration wherever the code uses what it changed, adopt the features and fixes where they apply, then run the verification commands and fix what they report.`,
+			from === input.to
+				? `# Align the project with @sdxc release ${input.to}`
+				: `# Upgrade the @sdxc packages from ${from} to ${input.to}`,
+			`This project now depends on the @sdxc packages of release ${input.to}, installed. Update its code for the changes below, which are the release notes of the packages it imports for every release after ${from}. Apply each breaking change's migration wherever the code uses what it changed, adopt the features and fixes where they apply, then run the verification commands and fix what they report.`,
 			`Packages this project imports: ${[...input.packages].sort(compareText).map(code).join(", ")}.`,
 		].join("\n\n"),
 	];
@@ -150,6 +163,8 @@ export async function buildPrompt(options: {
 	root: string;
 	packageRoot: string;
 	from: string;
+	/** The release each lagging package is pinned to, by name. */
+	since?: ReadonlyMap<string, string>;
 	remixFrom: string | null;
 	agents?: AgentsStatus;
 }): Promise<Result<string, Error>> {
@@ -184,6 +199,7 @@ export async function buildPrompt(options: {
 	return success(
 		renderPrompt({
 			from: options.from,
+			...(options.since === undefined ? {} : { since: options.since }),
 			to,
 			entries: entries.data,
 			packages: [...packages],
@@ -254,17 +270,18 @@ async function registryChangedIn(packageRoot: string, name: string): Promise<str
  */
 function olderReleases(input: PromptInput): string | null {
 	let start = fullHistoryStart(input.to);
-	if (compare(input.from, start) >= 0) return null;
+	let from = earliestStart(input);
+	if (compare(from, start) >= 0) return null;
 	let releases = [
 		...new Set(
-			entriesBetween(input.entries, input.from, input.to)
+			entriesBetween(input.entries, from, input.to)
 				.map((entry) => entry.release)
 				.filter((release) => compare(release, start) < 0),
 		),
 	].sort(compare);
 	return [
 		"## Older releases",
-		`Releases after ${input.from} and before ${start} are summarized by their breaking changes only. Their full notes are on GitHub: ${RELEASES}`,
+		`Releases after ${from} and before ${start} are summarized by their breaking changes only. Their full notes are on GitHub: ${RELEASES}`,
 		...(releases.length > 0
 			? [releases.map((release) => `- ${release}: ${RELEASES}/tag/v${release}`).join("\n")]
 			: []),
@@ -293,6 +310,15 @@ function agentsNote(input: PromptInput): string | null {
 			? `Restore one pair around the sdxc section, which for release ${input.to} is in ${url}.`
 			: `When this project is an app in the sdxc layout (it has \`bootstrap/worker.ts\`), add the section from ${url}, ${markers} lines included, to \`${AGENTS_FILE}\`, creating the file if needed; \`sdxc upgrade\` then keeps it current.`;
 	return ["## Agent instructions", `${state} ${action}`].join("\n\n");
+}
+
+/** The oldest release the prompt covers: `from`, or an older pin of a lagging package. */
+function earliestStart(input: PromptInput): string {
+	let earliest = input.from;
+	for (let pinned of input.since?.values() ?? []) {
+		if (compare(pinned, earliest) < 0) earliest = pinned;
+	}
+	return earliest;
 }
 
 /** A heading and each entry under its own sub-heading with its full body. */

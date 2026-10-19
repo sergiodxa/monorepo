@@ -25,16 +25,20 @@ agent needs to bring the code along.
 `sdxc upgrade [version] [--no-install] [--output <file>]`.
 
 1. **Resolve.** The current version is the installed `sdxc`; the target is `version`, or the
-   latest release on npm when omitted. A target older than the current version is refused, and
-   the current version is reported as up to date.
+   latest release on npm when omitted. A target older than the current version is refused. A
+   target equal to the current version still goes on to step 2, and the project is reported as up
+   to date only when step 2 would change no pin.
 2. **Bump.** `sdxc` in `package.json` becomes the exact target version, and `remix` becomes the
-   version the target `sdxc` declares as its peer when it differs; nothing else in the file
-   changes. Each `@sdxc/*` dependency the file lists is reported as unsupported beside `sdxc`,
-   with the files that import it.
+   version the target `sdxc` declares as its peer when it differs. Every `@sdxc/*` dependency the
+   file lists moves to its version at the target release, so a package pinned behind the current
+   release (a lagging pin) is caught up even when the target is the current release; nothing
+   else in the file changes.
 3. **Install** with the project's package manager. `--no-install` stops here and prints the
    install command and the prompt command to run after it.
 4. **Prompt.** The CLI runs the newly installed `sdxc` as `sdxc upgrade --prompt --from <current>`,
-   so the prompt is written by the target release's code from the target release's data.
+   plus `--since <package>@<pin>` for each lagging package, so its notes start at its own pin
+   while every other package's start at the current release. The prompt is written by the target
+   release's code from the target release's data.
    `--prompt --from <version>` also regenerates it later without bumping anything.
 
 ### Changelog in the tarball

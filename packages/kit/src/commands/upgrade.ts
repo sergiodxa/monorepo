@@ -17,20 +17,28 @@ import { createCommand, success, usage } from "@sdxc/cli";
 import { failure, isFailure, isSuccess, wrap } from "@sdxc/result";
 import { compare } from "@sdxc/semver";
 
+import type { Packument } from "../releases.js";
 import type { ChangelogEntry } from "../upgrade/changelog.js";
+import type { Manifest } from "../upgrade/project.js";
 import type { Release } from "../upgrade/registry.js";
 
 import { SDXC_COMMANDS } from "../contract.js";
 import { packageRoot, project } from "../middleware.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
-import { resolveRelease, scopedPackageOf } from "../releases.js";
+import {
+	datedPin,
+	fetchPackuments,
+	scopedPackageOf,
+	versionAtRelease,
+	versionsAt,
+} from "../releases.js";
 import { AGENTS_FILE, planAgentsFile, writeAgentsFile } from "../upgrade/agents.js";
-import { entriesBetween } from "../upgrade/changelog.js";
 import {
 	bumpManifest,
 	currentRelease,
 	listedScopedPackages,
 	lists,
+	pinnedRelease,
 	projectImports,
 	readManifest,
 } from "../upgrade/project.js";
@@ -49,9 +57,18 @@ interface Target {
 	changelog: ChangelogEntry[] | null;
 }
 
+/** The pins a run writes, and where each lagging package's changes start. */
+interface Pins {
+	/** Each listed `@sdxc/*` package's version at the target release, by name. */
+	versions: Map<string, string>;
+	/** The pinned release of each package behind its version at the project's release, by name. */
+	since: Map<string, string>;
+}
+
 /**
  * Exits 0 when done or already up to date, 1 when the upgrade failed or the target is older.
- * Progress goes to stderr; stdout carries only the prompt.
+ * A target equal to the project's release still re-pins what lags behind it, `remix` included,
+ * so "up to date" means no pin moves. Progress goes to stderr; stdout carries only the prompt.
  */
 export default createCommand(SDXC_COMMANDS.upgrade, {
 	middleware: UPGRADE_MIDDLEWARE,
@@ -87,13 +104,36 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 				),
 			);
 		}
-		if (order === 0) {
-			ctx.stderr(`The @sdxc packages are up to date at ${current}\n`);
+		let pins = await ctx.task(
+			`Resolving ${scoped.length} @sdxc packages at ${release.version}`,
+			async (task): Promise<Result<Pins, Error>> => {
+				let packuments = await fetchPackuments(scoped, task.signal);
+				if (isFailure(packuments)) return packuments;
+				let versions = versionsAt(packuments.data, release.version);
+				if (isFailure(versions)) return versions;
+				return success({
+					versions: versions.data,
+					since: laggingSince(manifest, packuments.data, current),
+				});
+			},
+		);
+		if (isFailure(pins)) return pins;
+		let { since } = pins.data;
+		let versions: Record<string, string> = Object.fromEntries(pins.data.versions);
+		if (release.remix !== null && lists(manifest, "remix")) versions.remix = release.remix;
+		let bumped = bumpManifest(text, versions);
+		if (bumped.bumps.length === 0) {
+			ctx.stderr(`The @sdxc packages are up to date at ${release.version}\n`);
 			return success();
 		}
-		let imports = await projectImports(root);
 		if (changelog !== null) {
-			let proceed = await confirmBreaking(ctx, changelog, current, release.version, imports);
+			let imports = await projectImports(root);
+			let proceed = await confirmBreaking(ctx, changelog, {
+				from: current,
+				since,
+				to: release.version,
+				imports,
+			});
 			if (isFailure(proceed)) return proceed;
 			if (!proceed.data) {
 				ctx.stderr(`Kept the @sdxc packages at ${current}; package.json is unchanged\n`);
@@ -101,14 +141,6 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 			}
 		}
 
-		let pins = await ctx.task(
-			`Resolving ${scoped.length} @sdxc packages at ${release.version}`,
-			(task) => resolveRelease(scoped, release.version, task.signal),
-		);
-		if (isFailure(pins)) return pins;
-		let versions: Record<string, string> = Object.fromEntries(pins.data);
-		if (release.remix !== null && lists(manifest, "remix")) versions.remix = release.remix;
-		let bumped = bumpManifest(text, versions);
 		let written = await wrap(() => writeFile(resolve(root, "package.json"), bumped.text));
 		if (isFailure(written)) return written;
 		for (let bump of bumped.bumps) {
@@ -127,6 +159,7 @@ export default createCommand(SDXC_COMMANDS.upgrade, {
 			"--prompt",
 			"--from",
 			current,
+			...[...since].flatMap(([name, pinned]) => ["--since", `${name}@${pinned}`]),
 			...(remixFrom === null ? [] : ["--remix-from", remixFrom]),
 			...(output === null ? [] : ["--output", output]),
 		];
@@ -161,6 +194,15 @@ async function printPrompt(
 	from: string,
 	output: string | null,
 ): Promise<Result<undefined, Error>> {
+	let since = new Map<string, string>();
+	for (let value of ctx.flags.since) {
+		let at = value.lastIndexOf("@");
+		let pinned = at > 0 ? datedPin(value.slice(at + 1)) : null;
+		if (pinned === null) {
+			return usage("--since takes <package>@<version>, such as @sdxc/jwt@2026.9.4");
+		}
+		since.set(value.slice(0, at), pinned);
+	}
 	let agents = await planAgentsFile(ctx.project.root, ctx.packageRoot);
 	if (isFailure(agents)) return agents;
 	let prompt = await buildPrompt({
@@ -168,6 +210,7 @@ async function printPrompt(
 		packageRoot: ctx.packageRoot,
 		from,
 		remixFrom: ctx.flags.remixFrom ?? null,
+		since,
 		...(agents.data === null ? {} : { agents: agents.data.status }),
 	});
 	if (isFailure(prompt)) return prompt;
@@ -190,7 +233,7 @@ async function printPrompt(
 }
 
 /**
- * Finds the release `version` names on npm, and, when it is newer than `current`, the
+ * Finds the release `version` names on npm, and, unless it is older than `current`, the
  * changelog it ships. A changelog the CDN cannot serve is `null`, which skips the question
  * about breaking changes rather than the upgrade.
  */
@@ -201,7 +244,7 @@ async function lookUp(ctx: UpgradeContext, version: string | null, current: stri
 			let release = await fetchRelease(version, task.signal);
 			if (isFailure(release)) return release;
 			task.update(`Found release ${release.data.version}`);
-			if (compare(release.data.version, current) <= 0) {
+			if (compare(release.data.version, current) < 0) {
 				return success({ release: release.data, changelog: null });
 			}
 			let changelog = await fetchChangelog(release.data.version, task.signal);
@@ -214,27 +257,57 @@ async function lookUp(ctx: UpgradeContext, version: string | null, current: stri
 }
 
 /**
- * Lists the breaking changes between `from` and `to` in packages the project imports and asks
- * whether to go on. Without a terminal the upgrade goes on; with none to list nothing is asked.
+ * The release each listed `@sdxc/*` package is pinned to when that pin is older than its version
+ * at `current`, by name, so the prompt covers its changes from its own pin; a package at its
+ * version, or pinned to no dated release, is left out and covered from `current`.
+ */
+function laggingSince(
+	manifest: Manifest,
+	packuments: readonly Packument[],
+	current: string,
+): Map<string, string> {
+	let since = new Map<string, string>();
+	for (let packument of packuments) {
+		let pinned = pinnedRelease(manifest, packument.name);
+		let expected = versionAtRelease(packument, current);
+		if (pinned !== null && expected !== null && compare(pinned, expected) < 0) {
+			since.set(packument.name, pinned);
+		}
+	}
+	return since;
+}
+
+/**
+ * Lists the breaking changes the move brings to packages the project imports, each package's
+ * from its entry in `since` or else `from`, up to `to`, and asks whether to go on. Without a
+ * terminal the upgrade goes on; with none to list nothing is asked.
  *
  * @returns Whether to bump `package.json`
  */
 async function confirmBreaking(
 	ctx: UpgradeContext,
 	changelog: readonly ChangelogEntry[],
-	from: string,
-	to: string,
-	imports: ReadonlyMap<string, string[]>,
+	range: {
+		from: string;
+		since: ReadonlyMap<string, string>;
+		to: string;
+		imports: ReadonlyMap<string, string[]>;
+	},
 ): Promise<Result<boolean, Error>> {
 	let imported = new Set<string>();
-	for (let specifier of imports.keys()) {
+	for (let specifier of range.imports.keys()) {
 		let name = scopedPackageOf(specifier);
 		if (name !== null) imported.add(name);
 	}
-	let breaking = entriesBetween(changelog, from, to).filter(
-		(entry) => entry.breaking && imported.has(entry.package),
+	let breaking = changelog.filter(
+		(entry) =>
+			entry.breaking &&
+			imported.has(entry.package) &&
+			compare(entry.release, range.since.get(entry.package) ?? range.from) > 0 &&
+			compare(entry.release, range.to) <= 0,
 	);
 	if (breaking.length === 0) return success(true);
+	let to = range.to;
 	let count = breaking.length === 1 ? "1 breaking change" : `${breaking.length} breaking changes`;
 	ctx.stderr(`Release ${to} brings ${count} to packages this project imports:\n`);
 	for (let entry of breaking) {
