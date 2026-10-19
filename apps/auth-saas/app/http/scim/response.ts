@@ -28,6 +28,7 @@ import routes from "~/routes/tenant";
 export function scimFailure(
 	result:
 		| { ok: false; reason: "invalid-token" }
+		| { ok: false; reason: "not-entitled" }
 		| { ok: false; reason: "missing-external-id" }
 		| { ok: false; reason: "missing-identifier" }
 		| { ok: false; reason: "invalid-identifier" }
@@ -41,6 +42,10 @@ export function scimFailure(
 	switch (result.reason) {
 		case "invalid-token":
 			return errorResponse(new ScimError(401, "The bearer token does not authorize a connection."));
+		case "not-entitled":
+			return errorResponse(
+				new ScimError(403, "SCIM provisioning is not entitled for this tenant."),
+			);
 		case "missing-external-id":
 			return errorResponse(
 				new ScimError(400, "externalId is required.", { scimType: "invalidValue" }),

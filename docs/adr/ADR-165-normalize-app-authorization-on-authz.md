@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-19 (blog, r3-auth, reader and uptime done; auth-saas planned)
+**Accepted** - 2026-10-19 (blog, r3-auth, reader, uptime and auth-saas done)
 
 ## Background
 
@@ -38,7 +38,7 @@ webhook signatures, rate limits and numeric quotas.
 | reader      | per-reader Durable Object, leased tier, agent scope             | already on authz, decided inside the object                                                     | registration added to `policy.ts`   |
 | sdxc-site   | none                                                            | GitHub Sponsors webhook signature                                                               | no authz                            |
 | uptime      | OIDC viewer + team membership, API keys with scopes             | `requireRole("admin")`, owner checks in handlers, 7 subscription gates, API scopes, 1 flag gate | converted                           |
-| auth-saas   | management caller: agent client, person token, dashboard cookie | `requireScope` on 72 routes from `scopesForRole`, entitlement middleware, `dashboardRole`       | planned below                       |
+| auth-saas   | management caller: agent client, person token, dashboard cookie | `requireScope` on 72 routes from `scopesForRole`, entitlement middleware, `dashboardRole`       | converted                           |
 
 ### blog
 
@@ -93,33 +93,38 @@ while members delete every other kind, and any key with `monitors:write` may enq
 stats backfill. The trial page's `stateFor` read picks a billing path for a signed-in visitor
 rather than refusing anything, so it stays a model call.
 
-### auth-saas (planned)
+### auth-saas
 
-Medium size, low risk (not deployed). `MANAGEMENT_SCOPES` stays the public OAuth vocabulary,
-and the RFC 6750 `insufficient_scope` challenge naming the scope must survive.
+The scope matrix stays as it was: the user kept `export:credentials` unreachable outside tests,
+end-user roles behind `members:write`, the reads that need write scopes, and `export:read` for
+`member`, each a change to decide on its own.
 
-1. Decide the scope matrix first: `export:credentials` is unreachable outside tests; end-user
-   roles sit behind `members:write`; several reads need write scopes; `member` can export PII.
-2. Catalog and policy with a parity test reproducing `scopesForRole` and every `requireScope`
-   exactly: roles `member` < `admin` < `owner`, plus `scope:<name>` roles bound as `within` for
-   a token, so `within` replaces today's intersection.
-3. `managementAuth` installs `access(policy, { roles, within, facts, onDenied })`; replace each
-   `requireScope` with `requireAbility`, one resource folder at a time.
-4. Fold `managementEntitlement` into billing-fact guards and `dashboardRole` into `access` on
-   the web router; filter MCP tools with `requireToolAbility`.
-5. Entitlement and DAU checks stay inside the tenant Durable Object, the runtime boundary that
-   receives the traffic; move SCIM's Worker-side entitlement RPC into the object.
+`app/policies/abilities.ts` holds one ability per management operation, its metadata naming the
+scope and the operation. Each scope is a `scope:<name>` role granting the abilities that name it,
+and `member` < `admin` < `owner` inherit the scope roles they carry, so `scopesForRole` is read
+off the policy. `managementAuth` binds an agent client at its scopes' roles, a person at their
+membership role `within` their token's scopes, and a dashboard session at its role; every route
+ends with `requireAbility`, and `managementDenied` keeps the `insufficient_scope` challenge
+naming the scope. A parity test pins the old per-route scopes, role scopes and intersection.
+
+The custom-domain attach and the session-policy write are guards over a `billing` fact, still
+refusing before a missing scope does. The billing checkout and portal bind the dashboard member
+with `dashboardAccess` and require `billing.manage`, held by `owner`. The MCP route binds the
+token's scope roles and each generated tool requires its operation's ability, so a call outside
+the token's scopes fails before it is forwarded. The tenant object checks the `scim` feature in
+each SCIM method itself, admitting a delete and a pure deactivation whatever the billing state.
 
 ## Consequences
 
 ### Positive
 
-- Four apps share one shape, and auth-saas has a plan that keeps its wire contracts.
+- Five apps share one shape, each keeping its wire contracts.
 - Two untested blog rules now have tests.
 
 ### Negative
 
-- auth-saas still authorizes by hand until its plan lands.
+- An MCP call outside the token's scopes now fails as the tool's `ForbiddenError` rather than
+  the management route's `problem+json` refusal.
 
 ## References
 

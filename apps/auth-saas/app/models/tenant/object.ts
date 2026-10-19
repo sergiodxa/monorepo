@@ -846,6 +846,15 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Runs a SCIM call only while this tenant holds the `scim` feature, checked before
+	 * the bearer token resolves, so a lapsed tenant's directory reads and writes nothing.
+	 */
+	async #whenScimEntitled<T>(run: () => Promise<T>): Promise<T | Scim.ScimNotEntitled> {
+		if (!(await this.#isEntitled(Scim.SCIM_FEATURE))) return { ok: false, reason: "not-entitled" };
+		return run();
+	}
+
+	/**
 	 * The AES-GCM key TOTP secrets are sealed and opened with, importing it from
 	 * this tenant's `TOTP_SEAL_KEY` secret binding on first use and caching the
 	 * result for the object's lifetime — importing is async and the key is
@@ -2403,9 +2412,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 */
 	async scimProvisionUser(
 		input: ScimProvisionUserInput,
-	): Promise<WithCost<ScimProvisionUserResult>> {
+	): Promise<WithCost<ScimProvisionUserResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimProvisionUser(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimProvisionUser(this.#db, input)),
+		);
 	}
 
 	/**
@@ -2418,28 +2429,36 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * @returns The current representation and whether anything changed, or
 	 * which rule refused the call.
 	 */
-	async scimReplaceUser(input: ScimReplaceUserInput): Promise<WithCost<ScimReplaceUserResult>> {
+	async scimReplaceUser(
+		input: ScimReplaceUserInput,
+	): Promise<WithCost<ScimReplaceUserResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimReplaceUser(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimReplaceUser(this.#db, input)),
+		);
 	}
 
 	/**
 	 * Applies PATCH operations to a user's current representation and writes
 	 * the result the way a replace does. `active: false` blocks the subject and
-	 * revokes every session in the same call.
+	 * revokes every session in the same call, and alone needs no `scim` feature.
 	 *
 	 * @param input - The bearer token, the subject id, the parsed operations,
 	 * and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
-	async scimPatchUser(input: ScimPatchUserInput): Promise<WithCost<ScimPatchUserResult>> {
+	async scimPatchUser(
+		input: ScimPatchUserInput,
+	): Promise<WithCost<ScimPatchUserResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimPatchUser(this.#db, input));
+		let patch = () => Scim.scimPatchUser(this.#db, input);
+		if (Scim.isPureDeactivation(input.operations)) return this.#withCost(patch);
+		return this.#withCost(() => this.#whenScimEntitled(patch));
 	}
 
 	/**
 	 * Deletes a user per the connection's own policy: blocks and revokes its
-	 * sessions, or retires the subject outright. A `deleted` outcome also
+	 * sessions, or retires the subject outright, whatever the billing state. A `deleted` outcome also
 	 * clears the subject's passwords, passkeys, consent grants and second
 	 * factor, the same cascade {@link deleteSubject} runs for its own caller.
 	 *
@@ -2475,9 +2494,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * @param input - The bearer token and the subject id.
 	 * @returns The user's representation, or which rule refused the call.
 	 */
-	async scimReadUser(input: ScimReadUserInput): Promise<WithCost<ScimReadUserResult>> {
+	async scimReadUser(
+		input: ScimReadUserInput,
+	): Promise<WithCost<ScimReadUserResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimReadUser(this.#db, input));
+		return this.#withCost(() => this.#whenScimEntitled(() => Scim.scimReadUser(this.#db, input)));
 	}
 
 	/**
@@ -2487,9 +2508,13 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * @param input - The bearer token and the parsed list query.
 	 * @returns The page and its exact total, or which rule refused the call.
 	 */
-	async scimReadUserPage(input: ScimReadUserPageInput): Promise<WithCost<ScimReadUserPageResult>> {
+	async scimReadUserPage(
+		input: ScimReadUserPageInput,
+	): Promise<WithCost<ScimReadUserPageResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimReadUserPage(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimReadUserPage(this.#db, input)),
+		);
 	}
 
 	/**
@@ -2502,9 +2527,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 */
 	async scimProvisionGroup(
 		input: ScimProvisionGroupInput,
-	): Promise<WithCost<ScimProvisionGroupResult>> {
+	): Promise<WithCost<ScimProvisionGroupResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimProvisionGroup(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimProvisionGroup(this.#db, input)),
+		);
 	}
 
 	/**
@@ -2514,9 +2541,13 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
-	async scimReplaceGroup(input: ScimReplaceGroupInput): Promise<WithCost<ScimReplaceGroupResult>> {
+	async scimReplaceGroup(
+		input: ScimReplaceGroupInput,
+	): Promise<WithCost<ScimReplaceGroupResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimReplaceGroup(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimReplaceGroup(this.#db, input)),
+		);
 	}
 
 	/**
@@ -2527,9 +2558,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
-	async scimPatchGroup(input: ScimPatchGroupInput): Promise<WithCost<ScimPatchGroupResult>> {
+	async scimPatchGroup(
+		input: ScimPatchGroupInput,
+	): Promise<WithCost<ScimPatchGroupResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimPatchGroup(this.#db, input));
+		return this.#withCost(() => this.#whenScimEntitled(() => Scim.scimPatchGroup(this.#db, input)));
 	}
 
 	/**
@@ -2540,9 +2573,13 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * with.
 	 * @returns Success, or which rule refused the call.
 	 */
-	async scimDeleteGroup(input: ScimDeleteGroupInput): Promise<WithCost<ScimDeleteGroupResult>> {
+	async scimDeleteGroup(
+		input: ScimDeleteGroupInput,
+	): Promise<WithCost<ScimDeleteGroupResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimDeleteGroup(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimDeleteGroup(this.#db, input)),
+		);
 	}
 
 	/**
@@ -2551,9 +2588,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * @param input - The bearer token and the group id.
 	 * @returns The group's representation, or which rule refused the call.
 	 */
-	async scimReadGroup(input: ScimReadGroupInput): Promise<WithCost<ScimReadGroupResult>> {
+	async scimReadGroup(
+		input: ScimReadGroupInput,
+	): Promise<WithCost<ScimReadGroupResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimReadGroup(this.#db, input));
+		return this.#withCost(() => this.#whenScimEntitled(() => Scim.scimReadGroup(this.#db, input)));
 	}
 
 	/**
@@ -2565,9 +2604,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 */
 	async scimReadGroupPage(
 		input: ScimReadGroupPageInput,
-	): Promise<WithCost<ScimReadGroupPageResult>> {
+	): Promise<WithCost<ScimReadGroupPageResult | Scim.ScimNotEntitled>> {
 		await this.#migrated;
-		return this.#withCost(() => Scim.scimReadGroupPage(this.#db, input));
+		return this.#withCost(() =>
+			this.#whenScimEntitled(() => Scim.scimReadGroupPage(this.#db, input)),
+		);
 	}
 
 	/**
@@ -4007,23 +4048,6 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<ApplyEntitlementsResult>> {
 		await this.#migrated;
 		return this.#withCost(() => applyEntitlements(this.#db, input));
-	}
-
-	/**
-	 * Whether this tenant's own enforcement record currently entitles a named
-	 * feature, read from the same `entitlement_enforcement` row
-	 * {@link #dauEnforcement} and {@link #auditRetentionDays} already read
-	 * locally for their own caps — an add-on gate lives at this boundary
-	 * rather than behind a database connection this object does not hold. A
-	 * tenant whose record has never been written entitles nothing.
-	 *
-	 * @param input - The feature slug to check.
-	 * @returns Whether the feature is currently entitled.
-	 */
-	async hasEntitlement(input: { feature: string }): Promise<WithCost<{ entitled: boolean }>> {
-		await this.#migrated;
-
-		return this.#withCost(async () => ({ entitled: await this.#isEntitled(input.feature) }));
 	}
 
 	/**

@@ -17,8 +17,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Patch } from "@sdxc/scim/patch";
-
 import { isFailure } from "@sdxc/result";
 import {
 	errorResponse,
@@ -26,14 +24,13 @@ import {
 	parseListQuery,
 	parseUser,
 	readBody,
-	ScimError,
 	scimResponse,
 } from "@sdxc/scim";
 import { parsePatch } from "@sdxc/scim/patch";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { SCIM_FEATURE, scimGate } from "~/app/http/middleware/scim-gate";
+import { scimGate } from "~/app/http/middleware/scim-gate";
 import { scimFailure, userToScim } from "~/app/http/scim/response";
 import {
 	SCIM_MAX_PAGE_SIZE,
@@ -47,42 +44,6 @@ function userId(ctx: { params: Record<string, string | undefined> }): string {
 	return s.parse(s.object({ id: s.string() }), ctx.params).id;
 }
 
-/** Whether a PATCH value sets `active` to false, reading Entra ID's `"False"` string too. */
-function isFalse(value: unknown): boolean {
-	return value === false || (typeof value === "string" && value.toLowerCase() === "false");
-}
-
-/**
- * Whether every operation only sets `active` to false — through `path: "active"`, or a
- * path-less value holding `active` alone, as Okta sends it. Such a PATCH is the
- * deactivation providers send in place of `DELETE`.
- */
-function isPureDeactivation(operations: Patch.Operation[]): boolean {
-	return (
-		operations.length > 0 &&
-		operations.every((operation) => {
-			if (operation.op === "remove") return false;
-			if (operation.path === null) {
-				let value = operation.value as Record<string, unknown>;
-				let keys = Object.keys(value);
-				return (
-					keys.length === 1 &&
-					keys[0]?.toLowerCase() === "active" &&
-					isFalse(Object.values(value)[0])
-				);
-			}
-			let { attribute, filter, subAttribute } = operation.path;
-			return (
-				attribute.attribute.toLowerCase() === "active" &&
-				attribute.subAttribute === null &&
-				filter === null &&
-				subAttribute === null &&
-				isFalse(operation.value)
-			);
-		})
-	);
-}
-
 /**
  * Builds the six `/scim/v2/Users*` actions, gated on the given `RateLimit`
  * binding.
@@ -92,7 +53,6 @@ function isPureDeactivation(operations: Patch.Operation[]): boolean {
  */
 export function createScimUsersController(limiter: RateLimit) {
 	let gate = scimGate(limiter);
-	let lifecycleGate = scimGate(limiter, { requireEntitlement: false });
 
 	return {
 		/**
@@ -186,22 +146,13 @@ export function createScimUsersController(limiter: RateLimit) {
 		 * create or a replace.
 		 */
 		patch: createAction(routes.scimUsersPatch, {
-			middleware: [lifecycleGate],
+			middleware: [gate],
 			handler: async (ctx) => {
 				let id = userId(ctx);
 				let body = await readBody(ctx.request);
 				if (isFailure(body)) return errorResponse(body.error);
 				let operations = parsePatch(body.data);
 				if (isFailure(operations)) return errorResponse(operations.error);
-
-				if (!isPureDeactivation(operations.data)) {
-					let { entitled } = await ctx.tenantStub.hasEntitlement({ feature: SCIM_FEATURE });
-					if (!entitled) {
-						return errorResponse(
-							new ScimError(403, "SCIM provisioning is not entitled for this tenant."),
-						);
-					}
-				}
 
 				let result = await ctx.tenantStub.scimPatchUser({
 					token: ctx.scimToken,
@@ -215,13 +166,12 @@ export function createScimUsersController(limiter: RateLimit) {
 		}),
 
 		/**
-		 * Deletes a user per the connection's own policy. Admitted whatever this
-		 * tenant's billing state — this handler never asks `hasEntitlement`,
-		 * because a lapsed invoice is a poor reason to leave an ex-employee's
-		 * account open.
+		 * Deletes a user per the connection's own policy. The tenant object admits
+		 * it whatever this tenant's billing state, because a lapsed invoice is a poor
+		 * reason to leave an ex-employee's account open.
 		 */
 		delete: createAction(routes.scimUsersDelete, {
-			middleware: [lifecycleGate],
+			middleware: [gate],
 			handler: async (ctx) => {
 				let id = userId(ctx);
 				let result = await ctx.tenantStub.scimDeleteUser({ token: ctx.scimToken, id });

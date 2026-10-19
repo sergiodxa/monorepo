@@ -61,6 +61,48 @@ import {
 } from "~/app/services/tenant/scim-resources";
 import { foldIdentifier } from "~/app/services/tenant/subject-identifiers";
 
+/** The feature slug a SCIM connection's own add-on is sold under. */
+export const SCIM_FEATURE = "scim";
+
+/** A call refused because the tenant does not hold the `scim` feature right now. */
+export type ScimNotEntitled = { ok: false; reason: "not-entitled" };
+
+/** Whether a PATCH value sets `active` to false, reading Entra ID's `"False"` string too. */
+function isFalse(value: unknown): boolean {
+	return value === false || (typeof value === "string" && value.toLowerCase() === "false");
+}
+
+/**
+ * Whether every operation only sets `active` to false — through `path: "active"`, or a
+ * path-less value holding `active` alone, as Okta sends it. Such a PATCH is the
+ * deactivation providers send in place of `DELETE`, admitted whatever the billing state.
+ */
+export function isPureDeactivation(operations: Patch.Operation[]): boolean {
+	return (
+		operations.length > 0 &&
+		operations.every((operation) => {
+			if (operation.op === "remove") return false;
+			if (operation.path === null) {
+				let value = operation.value as Record<string, unknown>;
+				let keys = Object.keys(value);
+				return (
+					keys.length === 1 &&
+					keys[0]?.toLowerCase() === "active" &&
+					isFalse(Object.values(value)[0])
+				);
+			}
+			let { attribute, filter, subAttribute } = operation.path;
+			return (
+				attribute.attribute.toLowerCase() === "active" &&
+				attribute.subAttribute === null &&
+				filter === null &&
+				subAttribute === null &&
+				isFalse(operation.value)
+			);
+		})
+	);
+}
+
 /** The audit actor for a call with no directory connection behind it — an administrator's own action. */
 const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
 

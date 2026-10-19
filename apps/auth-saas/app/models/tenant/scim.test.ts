@@ -41,10 +41,22 @@ let tenant: Tenant;
 
 let platformActor = { type: "platform", id: "admin_1" } as const;
 
-beforeEach(() => {
+beforeEach(async () => {
 	state = createDurableObjectState();
 	tenant = new Tenant(state, {} as Cloudflare.Env);
+	await setScimEntitled(true);
 });
+
+/** Writes this tenant's enforcement record, holding the `scim` feature or not. */
+async function setScimEntitled(entitled: boolean): Promise<void> {
+	await tenant.applyEntitlements({
+		plan: "pro",
+		features: entitled ? { scim: true } : {},
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+}
 
 let nextSuffix = 0;
 
@@ -339,6 +351,59 @@ describe("scimReplaceUser", () => {
 		});
 
 		expect(result).toMatchObject({ ok: false, reason: "not-found" });
+	});
+});
+
+describe("the scim entitlement", () => {
+	test("refuses provisioning for a tenant that no longer holds it, writing nothing", async () => {
+		let connection = await createConnection();
+		await setScimEntitled(false);
+
+		let result = await tenant.scimProvisionUser({
+			token: connection.token,
+			resource: {
+				externalId: "ext-lapsed",
+				userName: "lapsed@example.com",
+				emails: [{ value: "lapsed@example.com", primary: true }],
+				extensions: {},
+			},
+		});
+
+		expect(result).toMatchObject({ ok: false, reason: "not-entitled" });
+		expect(await testDb().findMany(subjects)).toEqual([]);
+	});
+
+	test("refuses a PATCH that provisions more than a deactivation", async () => {
+		let connection = await createConnection();
+		let provisioned = await provisionUser(connection.token);
+		await setScimEntitled(false);
+
+		let patched = await tenant.scimPatchUser({
+			token: connection.token,
+			id: provisioned.representation.id,
+			operations: patchOperations([{ op: "replace", path: "displayName", value: "New" }]),
+		});
+
+		expect(patched).toMatchObject({ ok: false, reason: "not-entitled" });
+	});
+
+	test("admits a pure deactivation and a delete once it lapsed", async () => {
+		let connection = await createConnection();
+		let provisioned = await provisionUser(connection.token);
+		await setScimEntitled(false);
+
+		let patched = await tenant.scimPatchUser({
+			token: connection.token,
+			id: provisioned.representation.id,
+			operations: patchOperations([{ op: "replace", path: "active", value: false }]),
+		});
+		let deleted = await tenant.scimDeleteUser({
+			token: connection.token,
+			id: provisioned.representation.id,
+		});
+
+		expect(patched.ok).toBe(true);
+		expect(deleted.ok).toBe(true);
 	});
 });
 
