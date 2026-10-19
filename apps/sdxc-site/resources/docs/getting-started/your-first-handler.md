@@ -2,9 +2,9 @@
 title: Your first handler
 description: Three packages composed into a request handler that never throws, and what each line of it demonstrates.
 section:
-    title: Getting started
-    order: 1
-order: 3
+    title: Packages à la carte
+    order: 1.5
+order: 2
 lastUpdated: 2026-10-15
 outcomes:
     - "How three packages compose into a request handler with no `try` in it"

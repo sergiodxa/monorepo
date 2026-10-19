@@ -50,10 +50,23 @@ They are not a compatibility promise. Versions are dates, and a later date says 
 later — see [Install and pin](/docs/getting-started/install-and-pin) before you write a range
 into a manifest.
 
-## Where to go next
+## Two ways in
+
+**Build an app with `sdxc`.** You start from a template that already has a router, a database,
+jobs, email, an MCP endpoint and tests wired together, and `sdxc` writes each new controller,
+model or job where it belongs. Pick this when you are starting an app on Cloudflare Workers and
+want the decisions made:
+
+- [The sdxc command](/docs/getting-started/the-sdxc-command) — what each command does, and
+  where it is covered.
+
+**Use the packages à la carte.** You add one package to the app you already have, whatever its
+layout, and import it by its own name. Pick this when you need one problem solved, such as
+signing a JWT or parsing markdown, and want nothing else to change:
 
 - [Install and pin](/docs/getting-started/install-and-pin) — the versioning scheme, and the one
   rule it carries.
 - [Your first handler](/docs/getting-started/your-first-handler) — three packages composed into
   something that runs.
-- [Every package](/api) — the whole list, filterable.
+
+Either way, [every package](/api) is listed with its own reference page.

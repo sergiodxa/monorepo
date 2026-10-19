@@ -2,9 +2,9 @@
 title: Install and pin
 description: How each package installs by its own name, why every package in a project shares one release date, and where the record of a release is kept.
 section:
-    title: Getting started
-    order: 1
-order: 2
+    title: Packages à la carte
+    order: 1.5
+order: 1
 lastUpdated: 2026-10-15
 outcomes:
     - "How to install a package by its own name beside `remix`"
