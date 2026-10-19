@@ -702,3 +702,19 @@ managementRouter.map(
 		),
 	),
 );
+managementRouter.map(
+	routes.tenantSessionPolicySet,
+	lazy(() =>
+		import("~/app/http/controllers/management/tenants/set-session-policy").then((it) =>
+			it.createTenantSessionPolicySetAction(controllerOptions),
+		),
+	),
+);
+managementRouter.map(
+	routes.tenantSessionPolicyDescribe,
+	lazy(() =>
+		import("~/app/http/controllers/management/tenants/session-policy").then((it) =>
+			it.createTenantSessionPolicyDescribeAction(controllerOptions),
+		),
+	),
+);
