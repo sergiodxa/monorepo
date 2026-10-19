@@ -70,8 +70,11 @@ Been Pwned; an unreachable API lets the password through.
 ## 5. Deploy
 
 ```bash
-bun run --cwd apps/auth-saas cf:deploy
+cd apps/auth-saas && sdxc deploy
 ```
+
+It builds, applies any control-plane migration production still lacks, and uploads the
+Worker with `wrangler deploy`.
 
 ## 6. Bootstrap the platform + blog-sso tenant
 

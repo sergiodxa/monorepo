@@ -105,7 +105,6 @@ tenant Durable Object itself on boot. That object is `app/models/tenant/object.t
 | `build`     | Build for production                                        |
 | `start`     | Preview the production build                                |
 | `cli`       | Run a command from `app/commands/`, what `sdxc run` invokes |
-| `cf:deploy` | Deploy to Cloudflare Workers                                |
 | `typecheck` | Type-check                                                  |
 
 To start over with an empty local database, delete `.wrangler/` and run
@@ -117,8 +116,12 @@ First-time setup (D1/KV/Analytics/Email, DNS, secrets, Polar) is documented in
 [DEPLOYMENT.md](./DEPLOYMENT.md). Once configured:
 
 ```bash
-bun run cf:deploy
+sdxc deploy
 ```
+
+It builds, applies the pending control-plane migrations to production with
+`sdxc run db migrate --remote`, then uploads the Worker with `sdxc run deploy`
+(`wrangler deploy`); `sdxc run deploy --dry-run` checks the build without uploading.
 
 ## Environment Variables
 

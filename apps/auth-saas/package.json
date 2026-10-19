@@ -4,7 +4,6 @@
 	"type": "module",
 	"scripts": {
 		"build": "vp build",
-		"cf:deploy": "bunx wrangler deploy",
 		"cli": "bun ./bootstrap/cli.ts",
 		"dev": "vp dev",
 		"start": "vp preview",

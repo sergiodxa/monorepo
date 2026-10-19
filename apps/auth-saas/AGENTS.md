@@ -14,7 +14,7 @@ and [ADR-002](../../docs/adr/auth-saas/ADR-002-rebuild-path-and-implementation-o
 bun run dev                  # Run development server
 bun run build                # Build for production
 bun run start                # Start production server locally
-bun run cf:deploy            # Deploy to Cloudflare Workers
+sdxc deploy                  # Build, migrate production, then deploy to Cloudflare Workers
 sdxc run typegen             # Generate TypeScript types for Cloudflare Workers bindings
 sdxc run db migrate          # Apply control-plane migrations to the local database
 sdxc run db migrate --remote # Apply control-plane migrations to the remote database
