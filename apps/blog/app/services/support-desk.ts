@@ -20,7 +20,8 @@ import { stopForumSpam } from "@sdxc/spam/stop-forum-spam";
 
 import type { SupportRequest } from "~/app/http/validators/encore-support";
 
-import { EncoreSupportEmail } from "~/app/emails/encore-support";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
 /**
  * Mailbox every request is sent from. The domain has to be a verified sender for the Workers
@@ -100,7 +101,7 @@ export class SupportDesk {
 	constructor(options: SupportDeskOptions) {
 		let { transport, inbox, limiter, spamFilter } = options;
 		this.#spamFilter = spamFilter;
-		this.#mailer = transport ? new Mailer({ transport, from: SUPPORT_SENDER }) : undefined;
+		this.#mailer = transport ? new Mailer({ transport, from: SUPPORT_SENDER, mail }) : undefined;
 		this.#inbox = inbox?.trim() || undefined;
 		this.#adapter = limiter
 			? new CloudflareAdapter(limiter, { limit: SUPPORT_RATE_LIMIT, window: "1 minute" })
@@ -161,7 +162,10 @@ export class SupportDesk {
 		if (!this.#mailer || !this.#inbox) return failure(new SupportDeliveryError("unconfigured"));
 
 		let flagged = assessment?.verdict === "unsure" ? assessment : undefined;
-		let sent = await this.#mailer.send(new EncoreSupportEmail(this.#inbox, request, flagged));
+		let sent = await this.#mailer.send(emails.encore.support, {
+			to: this.#inbox,
+			props: { request, flagged },
+		});
 		if (isFailure(sent)) {
 			return failure(new SupportDeliveryError("rejected", { cause: sent.error }));
 		}

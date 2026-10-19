@@ -7,20 +7,25 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { NormalizedMessage, SentMessage, Transport } from "@sdxc/mail";
+import type { Result } from "@sdxc/result";
 import type { Database as DataTable } from "remix/data-table";
 
 import { Database } from "@sdxc/database-middleware";
 import { createJobContext, Job } from "@sdxc/jobs";
+import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { unwrap } from "@sdxc/result";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
+import { failure, unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { mail } from "~/app/initializers/mail";
 import jobs from "~/app/jobs";
-import { Mail } from "~/app/jobs/middleware/mail";
 import { bookmarkAddress } from "~/app/models/post-values";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels, publishModels } from "~/app/test/models";
+import { MAIL_FROM } from "~/config/mail";
 
 /** Every `enqueueMany` call, standing in for the queue the dispatcher writes to. */
 let enqueued = vi.fn<(job: unknown, inputs: unknown[]) => Promise<void>>(async () => {});
@@ -61,12 +66,21 @@ async function bookmark(url: string, flagged = false): Promise<string> {
 	return created.id;
 }
 
-/** Runs the digest with the recording transport, or with none (`null`) as a worker without a binding. */
-async function runDigest(mail: MemoryTransport | null = transport): Promise<void> {
+/** A transport that refuses every message, as a worker without an email binding does. */
+class RefusingTransport implements Transport {
+	async send(_message: NormalizedMessage): Promise<Result<SentMessage, MailError>> {
+		return failure(new MailError("The worker has no email binding."));
+	}
+}
+
+/** Runs the digest with a mailer over `through`, the recording transport by default. */
+async function runDigest(through: Transport = transport): Promise<void> {
 	let ctx = createJobContext(jobs.bookmarks.digest, { id: "m", attempts: 1 });
 	ctx.set(Database, db, { property: "db" });
 	publishModels(ctx, db);
-	ctx.set(Mail, mail ?? undefined, { property: "mail" });
+	ctx.set(CurrentMailer, new Mailer({ transport: through, from: MAIL_FROM, mail }), {
+		property: "email",
+	});
 	try {
 		await digest(ctx);
 	} catch (error) {
@@ -101,7 +115,7 @@ describe("the digest job", () => {
 	test("keeps a flag unreported when the worker cannot send mail", async () => {
 		await bookmark("https://example.com/dead", true);
 
-		await expect(runDigest(null)).rejects.toBeInstanceOf(Job.NonRetriable);
+		await expect(runDigest(new RefusingTransport())).rejects.toBeInstanceOf(Job.Retry);
 		await runDigest();
 
 		expect(transport.messages).toHaveLength(1);
