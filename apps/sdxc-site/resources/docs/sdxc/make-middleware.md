@@ -27,10 +27,13 @@ Wrote app/http/middleware/require-user.test.ts
 Edited app/http/middleware/page.ts
 ```
 
-Reach for it when several controllers need the same step. A step one controller needs belongs in
-that controller.
+Reach for it when several of your controllers need the same step. A step one controller needs
+belongs in that controller.
 
 ## Flags
+
+A middleware does nothing until a chain calls it, so `--mount` adds it to one in the same run:
+`page` or `api` for every page or endpoint, or `router` for every request.
 
 | Flag                  | Default      | What it does                                     |
 | --------------------- | ------------ | ------------------------------------------------ |

@@ -26,8 +26,8 @@ Wrote app/services/billing/charge.ts
 Wrote app/services/billing/charge.test.ts
 ```
 
-A rule about one model belongs on that model, as a method. A service is for what sits between
-them, and it is how a controller, a job and a command share one rule.
+Put a rule about one model on that model, as a method. Reach for a service for what sits between
+models: it is how your controller, your job and your command share one rule.
 
 ## Flags
 

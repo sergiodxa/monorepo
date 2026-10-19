@@ -25,8 +25,8 @@ Wrote database/factories/post.ts
 ```
 
 [`sdxc make model`](/docs/sdxc/make-model#the-factory) already writes a model's factory, with a
-sample value per field. Reach for `sdxc make factory` for a model made with `--skip factory`, or
-one written by hand.
+sample value per field, so you need `sdxc make factory` only for a model made with
+`--skip factory`, or one you wrote by hand.
 
 ## Flags
 

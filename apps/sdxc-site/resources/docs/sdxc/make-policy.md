@@ -27,8 +27,8 @@ Edited app/policies/abilities.ts
 Edited app/policies/policy.ts
 ```
 
-Reach for it whenever a resource needs rules about who reads and who changes it: posts, invoices,
-team members.
+Run it whenever you add a resource that needs rules about who reads and who changes it: posts,
+invoices, team members. [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) runs it for you.
 
 ## Flags
 

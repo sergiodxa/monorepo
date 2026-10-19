@@ -28,7 +28,13 @@ Edited app/jobs/index.ts
 Edited app/initializers/dispatcher.ts
 ```
 
+Reach for it whenever a request would otherwise wait on work its visitor does not need to see
+finish, or when the work runs on a clock rather than on a request.
+
 ## Flags
+
+A job either takes input from whatever enqueues it, or runs on a schedule with no input;
+`--cron` writes the second kind.
 
 | Flag                  | Default      | What it does                                      |
 | --------------------- | ------------ | ------------------------------------------------- |

@@ -25,8 +25,9 @@ Wrote app/initializers/cache.ts
 Wrote app/initializers/cache.test.ts
 ```
 
-Reach for it when a package needs configuring once and importing everywhere. Code that knows
-nothing about the app is a package; code that reads or writes stored state is a model.
+Reach for it when a package needs configuring once and importing everywhere in your app. Code
+that knows nothing about your app is a package; code that reads or writes stored state is a
+model.
 
 ## Flags
 

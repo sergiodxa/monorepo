@@ -26,8 +26,9 @@ Wrote app/http/validators/signup.test.ts
 Added @sdxc/validate@2026.10.13 to package.json; run bun install
 ```
 
-Reach for it for every form or body an action reads, and for any other input from outside: a
-webhook's payload, a query string.
+Write one for every form or body your actions read, and for any other input from outside: a
+webhook's payload, a query string. [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) writes the
+resource's own.
 
 ## Flags
 

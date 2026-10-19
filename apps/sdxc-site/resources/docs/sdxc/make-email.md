@@ -25,6 +25,9 @@ Wrote app/emails/welcome.tsx
 Wrote app/emails/welcome.test.tsx
 ```
 
+Write one for each message your app sends, and send it from a controller, a job or a command
+through `ctx.email`.
+
 ## Flags
 
 | Flag                  | Default      | What it does                         |
