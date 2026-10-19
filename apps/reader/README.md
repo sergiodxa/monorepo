@@ -159,14 +159,15 @@ to exist before the first deploy.
 
 ## Commands
 
-| Command                        | Description                                     |
-| ------------------------------ | ----------------------------------------------- |
-| `sdxc run about`               | The app's name and the versions it runs on      |
-| `sdxc run typegen`             | Generate the Cloudflare binding types           |
-| `sdxc run db migrate`          | Apply the feed catalog migrations locally       |
-| `sdxc run db migrate --remote` | Apply the feed catalog migrations to production |
-| `sdxc run deploy`              | Upload the built Worker with `wrangler deploy`  |
-| `sdxc run db console`          | Run SQL against the local feed catalog          |
+| Command                          | Description                                                                  |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| `sdxc run about`                 | The app's name and the versions it runs on                                   |
+| `sdxc run typegen`               | Generate the Cloudflare binding types                                        |
+| `sdxc run db migrate`            | Apply the feed catalog migrations locally                                    |
+| `sdxc run db migrate --remote`   | Apply the feed catalog migrations to production                              |
+| `sdxc run deploy`                | Upload the built Worker with `wrangler deploy`                               |
+| `sdxc run db console`            | Run SQL against the local feed catalog                                       |
+| `sdxc run emails preview <name>` | Print an email from its `preview()`; `bun dev` shows every one at `/_emails` |
 
 ## Database
 

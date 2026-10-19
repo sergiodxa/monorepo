@@ -17,6 +17,7 @@ import featureFlags from "@sdxc/flags/middleware/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
@@ -38,7 +39,9 @@ import presentation from "~/app/http/middleware/presentation";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { assetResolver } from "~/app/initializers/assets";
 import { flags } from "~/app/initializers/flags";
+import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger, logRenderFailure } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
 import requireAgent from "~/app/mcp/agent";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { SECURITY_TXT } from "~/config/security-txt";
@@ -101,6 +104,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * caller that sent a `traceparent` finds this request's events under its own trace.
 			 */
 			trace(),
+			/**
+			 * While developing, answers `/_emails` with every mapped email in every supported
+			 * language, ahead of the session and the security headers a preview needs neither of.
+			 */
+			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
 			formData(),
 			methodOverride(),
 			createSessionMiddleware(options.kv, options.cookieSecret, options.secure),
