@@ -29,6 +29,9 @@ vp test run <path>              # Scope Vitest to a path while iterating. A rela
                                  # `uuid`…); `"$PWD/packages/u/"` runs exactly that workspace
 vp test watch                   # Watch mode
 vp lint <path>                  # Scope a static check to one workspace while iterating
+bun run doctor                  # Run `sdxc doctor` from this checkout's kit in every app; CI
+                                 # runs it after typegen and fails when any app fails. Extra
+                                 # flags reach every run (`bun run doctor --only migrations`)
 bun run kit:registry            # Write sdxc ui's component registry into packages/kit, so a
                                  # kit run from this checkout (a global `sdxc` linked to
                                  # packages/kit/src/bin.ts) can list and copy components
@@ -73,6 +76,9 @@ sdxc run db migrate --remote    # Apply migrations to production
 sdxc run db console             # SQL prompt over the local database
 sdxc run typegen                # Generate TypeScript types for Cloudflare Workers bindings
 sdxc run about                  # Print the app's name and the versions it runs on
+sdxc deploy --dry-run           # Build and print the plan: pending migrations, what deploys
+sdxc deploy                     # Build, migrate production, then deploy (asks first)
+sdxc deploy --skip migrate      # The same for an app without a database (books, sdxc-site)
 ```
 
 ## Rules
@@ -93,10 +99,9 @@ sdxc run about                  # Print the app's name and the versions it runs 
 - MUST write documentation for each application, following [](./docs/guides/app-documentation.md) as guidelines
 - MUST write an ADR for any significant architectural decisions, following [](./docs/guides/adr-writing.md) as guidelines
 - MUST write a short ADR whenever the user corrects an agent about the architecture of the repo or of a specific app/package, documenting the corrected decision so the mistake never repeats — place it in `docs/adr/` (or the app's subdirectory, e.g. `docs/adr/<app>/`, when scoped to one app) and follow [](./docs/guides/adr-writing.md)
-- MUST `build`, `migrate` and `deploy` applications when necessary, in that order, may skip migration if not application
-- MUST build before migrate, so deploy can be done in a single step after migration, without extra waiting time for build
-- MUST deploy after migration, to ensure the latest code is running with the new database schema
-- MUST NOT deploy before migration, to avoid running old code with an incompatible database schema
+- MUST ship an app with `sdxc deploy`, run from the app's directory and only when asked to deploy: it builds, runs the app's `db migrate --remote`, then the app's own `deploy` command, in that order and behind one confirmation, so new code never runs against an old schema. Print the plan with `sdxc deploy --dry-run` first, and never run `cf deploy`, `wrangler deploy` or a remote migration by hand
+- MUST pass `--skip migrate` for an app without a database (`books`, `sdxc-site`); every other step stays
+- MUST change how an app migrates or deploys in its own `app/commands/db/migrate.ts` and `app/commands/deploy.ts`, which `sdxc deploy` runs
 - MUST configure a Worker in `cloudflare.config.ts` and run it through the app's `cf` scripts; the apps with a `*.workers.test.ts` project stay on `wrangler.jsonc` and `bunx wrangler` until the Workers test pool reads `cloudflare.config.ts` (ADR-100)
 - MUST declare every secret a deployed Worker reads with `bindings.secret()`: `cf deploy` uploads the Worker with exactly the declared secrets and removes any other, and fails when a declared one is missing remotely — so set a new secret with `cf workers secrets update` before the first deploy that declares it
 - MUST use `@sdxc/logger`, never `console.log`

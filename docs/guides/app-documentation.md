@@ -165,22 +165,21 @@ Use a table with Script and Description columns. List the script name without `b
 ```markdown
 ## Scripts
 
-| Script      | Description              |
-| ----------- | ------------------------ |
-| `dev`       | Start development server |
-| `build`     | Build for production     |
-| `cf:deploy` | Deploy to Cloudflare     |
+| Script  | Description              |
+| ------- | ------------------------ |
+| `dev`   | Start development server |
+| `build` | Build for production     |
 ```
 
 ### Deployment
 
-Keep it simple - just the deploy command.
+Keep it simple - just the deploy command. `sdxc deploy` builds, migrates production, then runs the app's own `deploy` command; an app without a database adds `--skip migrate`.
 
 ```markdown
 ## Deployment
 
 \`\`\`bash
-bun run cf:deploy
+sdxc deploy
 \`\`\`
 ```
 
@@ -260,16 +259,15 @@ bun run orm:generate # Generate Drizzle migrations
 
 ## Scripts
 
-| Script      | Description              |
-| ----------- | ------------------------ |
-| `dev`       | Start development server |
-| `build`     | Build for production     |
-| `cf:deploy` | Deploy to Cloudflare     |
+| Script  | Description              |
+| ------- | ------------------------ |
+| `dev`   | Start development server |
+| `build` | Build for production     |
 
 ## Deployment
 
 \`\`\`bash
-bun run cf:deploy
+sdxc deploy
 \`\`\`
 
 ## Environment Variables

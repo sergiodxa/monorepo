@@ -19,16 +19,16 @@ whenever you change a binding in `cloudflare.config.ts`.
 ```sh
 sdxc make controller about                 # a page, mapped in routes/web.ts
 sdxc make controller api/keys --routes api # a JSON endpoint
-sdxc make migration create-posts           # then: sdxc run db migrate
-sdxc make model post                       # then: ctx.models.post
+sdxc make model post title body            # ctx.models.post, its migration and factory
+sdxc make migration create-tags name       # then: sdxc run db migrate
 sdxc make job reports/daily --cron "0 8 * * *"
 sdxc make email welcome                    # then: ctx.email.later(new WelcomeEmail(to, copy))
 sdxc make command users/grant              # then: sdxc run users grant
 sdxc scaffold post title body:text         # model, migration, CRUD pages and tests
 
 sdxc run db console                        # SQL prompt over the local database
-sdxc routes                                # every route and its controller
-sdxc doctor                                # release drift and secrets .env.example lacks
+sdxc routes                                # every route and its controller (-g, -c, --unused)
+sdxc doctor                                # release drift, secrets, migrations and wiring
 bun check                                  # format, lint and types
 bun run test
 ```
@@ -87,5 +87,6 @@ bun check
 sdxc deploy
 ```
 
-`sdxc deploy` builds, applies the pending migrations, then deploys, and asks before it changes
-production.
+`sdxc deploy` builds, then runs `sdxc run db migrate --remote` and `sdxc run deploy`, and asks
+before it changes production. To migrate or deploy differently, edit `app/commands/db/migrate.ts`
+or `app/commands/deploy.ts`.

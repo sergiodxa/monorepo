@@ -10,15 +10,21 @@ documented at `https://sdxc.dev/api/<name>.md` (`https://sdxc.dev/api/result.md`
 
 ### Commands
 
+Read a command's flags from `sdxc <command> --help`, which always matches the installed version,
+and what each command is for in the guides, starting from
+https://sdxc.dev/docs/getting-started/the-sdxc-command.
+
 ```sh
 sdxc make <kind> <name>            # write a file where the layout puts it, with its test
 sdxc make <kind> <name> --dry-run  # print what it would write, and write nothing
+sdxc make model <name> [field...]  # a model, the migration creating its table, and its factory
 sdxc scaffold <name> [field:type]  # model, migration, pages and tests for a resource
 sdxc ui add <component>            # copy an @sdxc/ui component into the app to edit it
 sdxc routes --json                 # every route, its controller and the middleware it runs
-sdxc doctor --json                 # release drift, the install, and secrets .env.example lacks
+sdxc doctor --json                 # release drift, installs, secrets, migrations and wiring
 sdxc run <command>                 # the app's own command line: db migrate, db console, typegen
 sdxc upgrade                       # move every @sdxc package to the latest release
+sdxc deploy --dry-run              # build and print the deploy plan, changing nothing
 bun check                          # format, lint and type check
 bun run test                       # every test, under Vitest
 ```
@@ -30,9 +36,15 @@ bun run test                       # every test, under Vitest
 - For a resource people list, show, create, edit and delete, start from
   `sdxc scaffold <name> title body:text` (`--mcp` and `--command` add its tools and commands).
 - `sdxc make middleware <name> --mount <router|page|api>` also adds the middleware to that chain.
-- After changing a model's columns, write its migration with
-  `sdxc make migration <name> --from-model <model>`; read its warnings before applying it.
-- Read `sdxc routes --json` to find the controller and middleware behind a URL.
+- `sdxc make model post title body published_at` writes the model, the migration creating its
+  plural table (`posts`) and its factory; `--skip migration,factory` leaves those out.
+- Change a table with `sdxc make migration add-slug-to-posts 'slug?'` or
+  `remove-slug-from-posts slug` (`create-posts title …` creates one). After changing a model's
+  columns, write its migration with `sdxc make migration <name> --from-model <model>`; read its
+  warnings before applying it. Apply migrations with `sdxc run db migrate`.
+- Read `sdxc routes --json` to find the controller and middleware behind a URL; narrow it with
+  `-g <text>`, `-c <controller>`, `--method`, `--contract`, and `--unused` for what no router maps.
+- Run `sdxc doctor` after an upgrade or a structural change; each finding names its fix.
 - Build UI from `@sdxc/ui` components; `sdxc ui add` copies one in when it needs changes.
 - `sdxc upgrade` prints a prompt with the release notes to apply; follow it, then run
   `bun check` and `bun run test`.
@@ -112,9 +124,10 @@ bun run test                       # every test, under Vitest
 
 ### Deploying
 
-`sdxc deploy` builds, applies the pending production migrations, then deploys the Worker, so
-the new code reaches production only once its schema is there. It changes production, so run it
-only when asked to deploy, and print the plan first:
+`sdxc deploy` builds, then runs this app's `db migrate --remote` and `deploy` commands, so the
+new code reaches production only once its schema is there. Change how the app migrates or ships
+in `app/commands/db/migrate.ts` and `app/commands/deploy.ts`, never by running `cf deploy` by
+hand. It changes production, so run it only when asked to deploy, and print the plan first:
 
 ```sh
 bun check

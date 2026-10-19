@@ -1,140 +1,92 @@
 /**
- * Tests how `sdxc deploy` reads `cf`'s JSON output and the build output: which account it
- * reports, which migrations it lists, and which D1 binding the migration chain applies to.
+ * Tests how `sdxc deploy` reads the app's pending-migration listing, recognizes the usage errors
+ * an app without a command prints, and words where production stands after a failed deploy.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { ExecError } from "@sdxc/cli";
+import { describe, expect, test } from "vitest";
 
-import { isFailure, isSuccess } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
-
-import { BUILD_WORKERS, parseIdentity, parsePending, readBuiltWorker } from "./plan.js";
-
-/** Fixture projects created by the current test, removed after it. */
-const PROJECTS: string[] = [];
-
-afterEach(async () => {
-	let created = PROJECTS.splice(0);
-	await Promise.all(created.map((dir) => rm(dir, { recursive: true, force: true })));
-});
-
-/** A project whose build output holds one Worker per entry of `workers`, keyed by folder. */
-async function built(workers: Record<string, unknown>): Promise<string> {
-	let root = await mkdtemp(join(tmpdir(), "sdxc-deploy-plan-"));
-	PROJECTS.push(root);
-	for (let [folder, config] of Object.entries(workers)) {
-		await mkdir(join(root, BUILD_WORKERS, folder), { recursive: true });
-		await writeFile(
-			join(root, BUILD_WORKERS, folder, "worker.config.json"),
-			JSON.stringify(config),
-		);
-	}
-	return root;
-}
-
-describe("parseIdentity", () => {
-	let accounts = [
-		{ id: "a1", name: "Personal" },
-		{ id: "a2", name: "Work" },
-	];
-
-	test("names the only account a login reaches", () => {
-		let identity = parseIdentity(
-			JSON.stringify({ authenticated: true, email: "ada@example.com", accounts: [accounts[0]] }),
-			undefined,
-		);
-
-		expect(identity).toEqual({
-			status: "success",
-			data: { account: "Personal (a1)", email: "ada@example.com" },
-		});
-	});
-
-	test("takes the account CLOUDFLARE_ACCOUNT_ID names, as cf does", () => {
-		let identity = parseIdentity(JSON.stringify({ authenticated: true, accounts }), "a2");
-
-		expect(isSuccess(identity) && identity.data.account).toBe(
-			"Work (a2), from CLOUDFLARE_ACCOUNT_ID",
-		);
-	});
-
-	test("says cf picks among several accounts", () => {
-		let identity = parseIdentity(JSON.stringify({ authenticated: true, accounts }), undefined);
-
-		expect(isSuccess(identity) && identity.data.account).toBe("one of 2 accounts, which cf picks");
-	});
-
-	test("reads JSON cf colored", () => {
-		let identity = parseIdentity(
-			'{\u001B[36m"authenticated"\u001B[39m: true, "accounts": []}',
-			"a1",
-		);
-
-		expect(isSuccess(identity) && identity.data.account).toBe("a1, from CLOUDFLARE_ACCOUNT_ID");
-	});
-
-	test("fails naming cf auth login when signed out", () => {
-		let identity = parseIdentity(JSON.stringify({ authenticated: false }), undefined);
-
-		expect(isFailure(identity) && identity.error.message).toContain("cf auth login");
-	});
-});
+import { deployFailure, formatPlan, isUnknown, migrates, parsePending } from "./plan.js";
 
 describe("parsePending", () => {
-	test("answers each unapplied migration's name in order", () => {
-		let pending = parsePending('[{"Name":"0002_a.sql"},{"Name":"0003_b.sql"}]\n');
-
-		expect(isSuccess(pending) && pending.data).toEqual(["0002_a.sql", "0003_b.sql"]);
-	});
-
-	test("fails on output other than the JSON list", () => {
-		let pending = parsePending("✘ Not logged in\n");
-
-		expect(isFailure(pending) && pending.error.message).toContain("cf d1 migrations list");
+	test("reads one name per line and ignores blank lines", () => {
+		expect(parsePending("0001_init.sql\n\n  0002_tags.sql  \n")).toEqual([
+			"0001_init.sql",
+			"0002_tags.sql",
+		]);
+		expect(parsePending("")).toEqual([]);
 	});
 });
 
-describe("readBuiltWorker", () => {
-	test("applies the chain to DB when the Worker binds several databases", async () => {
-		let root = await built({
-			default: {
-				name: "app",
-				env: {
-					ANALYTICS: { type: "d1", id: "analytics-id" },
-					DB: { type: "d1", id: "db-id" },
-					KV: { type: "kv", id: "kv-id" },
-				},
-			},
+describe("isUnknown", () => {
+	test("matches the usage error for a missing command or flag only", () => {
+		let command = new ExecError("exited", {
+			command: ["bun"],
+			code: 2,
+			stderr: 'Unknown command "deploy" for app',
+		});
+		let flag = new ExecError("exited", {
+			command: ["bun"],
+			code: 2,
+			stderr: "Unknown flag --pending",
+		});
+		let crashed = new ExecError("exited", {
+			command: ["bun"],
+			code: 1,
+			stderr: 'Unknown command "deploy" for app',
 		});
 
-		let worker = await readBuiltWorker(root);
-
-		expect(isSuccess(worker) && worker.data).toEqual({
-			name: "app",
-			database: { binding: "DB", id: "db-id" },
-		});
+		expect(isUnknown(command, "command")).toBe(true);
+		expect(isUnknown(command, "flag")).toBe(false);
+		expect(isUnknown(flag, "flag")).toBe(true);
+		expect(isUnknown(crashed, "command")).toBe(false);
+		expect(isUnknown(new Error("spawn failed"), "command")).toBe(false);
 	});
+});
 
-	test("applies the chain to the only database under any binding name", async () => {
-		let root = await built({
-			default: { name: "app", env: { STORE: { type: "d1", id: "s-id" } } },
+describe("migrates", () => {
+	test("runs the migration step for pending or unlisted migrations", () => {
+		expect(migrates({ status: "pending", names: ["0001_init.sql"] })).toBe(true);
+		expect(migrates({ status: "unlisted" })).toBe(true);
+		expect(migrates({ status: "pending", names: [] })).toBe(false);
+		expect(migrates({ status: "skipped", reason: "--skip migrate" })).toBe(false);
+	});
+});
+
+describe("formatPlan", () => {
+	test("lists every pending migration under the step", () => {
+		let plan = formatPlan({
+			app: "blog",
+			build: true,
+			migrations: { status: "pending", names: ["0001_init.sql", "0002_tags.sql"] },
+			deploy: true,
 		});
 
-		let worker = await readBuiltWorker(root);
-
-		expect(isSuccess(worker) && worker.data.database).toEqual({ binding: "STORE", id: "s-id" });
+		expect(plan).toBe(
+			[
+				"App:        blog",
+				"Build:      built just now",
+				"Migrations: 2 pending",
+				"  0001_init.sql",
+				"  0002_tags.sql",
+				"Deploy:     the app's deploy command",
+				"",
+			].join("\n"),
+		);
 	});
+});
 
-	test("fails naming the build when there is no output", async () => {
-		let root = await built({});
-
-		let worker = await readBuiltWorker(root);
-
-		expect(isFailure(worker) && worker.error.message).toContain("run the build first");
+describe("deployFailure", () => {
+	test("says which schema production runs the previous version on", () => {
+		expect(deployFailure({ status: "pending", names: ["0002_tags.sql"] })).toContain(
+			"migrations 0002_tags.sql were applied",
+		);
+		expect(deployFailure({ status: "unlisted" })).toContain("may run the previous version");
+		expect(deployFailure({ status: "skipped", reason: "--skip migrate" })).toContain(
+			"production still runs the previous version",
+		);
 	});
 });

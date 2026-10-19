@@ -17,15 +17,18 @@ sdxc create my-app                   # a Remix v3 app, or --template org/repo fr
 sdxc make controller posts/show      # a file where the app layout puts it, with its test
 sdxc make controller api/keys --routes api  # a JSON endpoint in the API contract
 sdxc make middleware require-user --mount page  # called last in the page chain
-sdxc make migration add-slug --from-model posts  # the SQL app/models/posts.ts needs
-sdxc scaffold post title body:text published:boolean  # model, migration, pages and tests
+sdxc make model post title author_id  # the model, its migration and its factory
+sdxc make migration add-slug-to-posts 'slug?'  # ALTER TABLE, read from the name
+sdxc make migration add-slug --from-model post  # the SQL app/models/post.ts needs
+sdxc scaffold post title body published_at   # types follow the names: text, timestamp
 sdxc ui add dialog                   # copy a component into the project to edit it
 sdxc ui update --all                 # move every unedited copy to the installed @sdxc/ui
 sdxc upgrade                         # move to the latest release and print a prompt for the code
-sdxc doctor                          # report release drift and secrets .env.example leaves out
+sdxc doctor                          # report release drift, missing secrets and app-layout slips
 sdxc routes --json                   # every route, its controller and middleware, for an agent
+sdxc routes -g posts --method post   # narrow it, as rails routes does; --unused, -c, -E too
 sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts
-sdxc deploy                          # build, apply production migrations, then deploy
+sdxc deploy                          # build, then the app's db migrate --remote and deploy
 ```
 
 On a terminal each command asks for what you left out; every question has a flag, so scripts and agents never wait on one.
@@ -36,8 +39,10 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 
 - `sdxc create` pins each package the template lists to its `latest` version.
 - `sdxc make` and `sdxc ui add` add a package the written code imports at the project's release, and print the install command to run.
-- `sdxc upgrade [release]` moves every `@sdxc/*` package the project lists to the target release, latest when left out, and `remix` to the version that release requires, then installs and prints a prompt for an AI agent from that release's changelog. It also rewrites the sdxc section of the project's `AGENTS.md`, between `<!-- sdxc:start … -->` and `<!-- sdxc:end -->`, from that release's template; the rest of the file stays as the project wrote it.
-- `sdxc doctor [--json]` reports, one line per check, any `@sdxc/*` pin behind its version at the project's release, an install that differs from `package.json`, a `remix` pin other than the release's peer, and a secret `cloudflare.config.ts` declares that `.env.example` leaves out, each with the command that fixes it. It exits 1 when a check fails; without the npm registry, the checks that need it report `skip`.
+- `sdxc upgrade [release]` moves every `@sdxc/*` package the project lists to the target release, latest when left out, and `remix` to the version that release requires, then installs and prints a prompt for an AI agent from that release's changelog.
+- `sdxc doctor` reports packages pinned behind the project's release and a `remix` pin other than the release's peer; `sdxc upgrade <release>` fixes both.
+
+`sdxc doctor` also checks secrets, migrations and the app layout, and runs a project's own checks written with `defineCheck` from `@sdxc/kit/doctor`. The [doctor guide](https://sdxc.dev/docs/sdxc/check-a-project) lists every check.
 
 ## API
 
@@ -49,12 +54,12 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 | `sdxc init`     | Writes `.config/sdxc.jsonc` with every key at its default                          |
 | `sdxc routes`   | Prints every route with its controller and middleware; `--json` for an agent       |
 | `sdxc run`      | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime    |
-| `sdxc deploy`   | Builds, applies pending production migrations, then deploys with `cf`, after a yes |
+| `sdxc deploy`   | Builds, then runs the app's own `db migrate --remote` and `deploy`, once confirmed |
 | `sdxc make`     | Writes a controller, job, model, migration or other file, declared and mapped      |
 | `sdxc scaffold` | Writes a resource's model, migration, CRUD pages and tests; `--mcp`, `--command`   |
 | `sdxc ui`       | Copies `@sdxc/ui` components into the project and points imports at the copies     |
 | `sdxc upgrade`  | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt        |
-| `sdxc doctor`   | Reports release drift, a stale install, a wrong `remix` and `.env.example` gaps    |
+| `sdxc doctor`   | Lints the project: release drift, secrets, migrations, layout and its own checks   |
 
 `sdxc <command> --help` lists each command's arguments and flags. Commands run from the project root, the nearest directory with a `package.json`.
 
@@ -62,17 +67,19 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 
 The CLI reads `.config/sdxc.jsonc` (or `sdxc.jsonc` at the project root). Every key is optional.
 
-| Key               | Default                                | Meaning                                                                      |
-| ----------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `ui.directory`    | `resources/components/ui`              | Where `sdxc ui add` writes components                                        |
-| `ui.alias`        | inferred from tsconfig `paths`         | Import prefix for the copies                                                 |
-| `ui.tests`        | `false`                                | Copy a component's tests beside it                                           |
-| `make.routes`     | `web`                                  | Route contract `sdxc make controller` adds to, a module in `routes/`         |
-| `make.migrations` | `{ "default": "database/migrations" }` | Migration chains by name                                                     |
-| `make.tests`      | `true`                                 | Write a test beside every generated file except migrations and factories     |
-| `make.stubs`      | `.config/sdxc/stubs`                   | Stubs that replace the built-in ones                                         |
-| `format`          | none                                   | Command run once on every file a command wrote or edited, the paths appended |
-| `lock`            | `.config/sdxc.lock.jsonl`              | Where the CLI keeps its state                                                |
+| Key                        | Default                                | Meaning                                                                      |
+| -------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
+| `ui.directory`             | `resources/components/ui`              | Where `sdxc ui add` writes components                                        |
+| `ui.alias`                 | inferred from tsconfig `paths`         | Import prefix for the copies                                                 |
+| `ui.tests`                 | `false`                                | Copy a component's tests beside it                                           |
+| `make.routes`              | `web`                                  | Route contract `sdxc make controller` adds to, a module in `routes/`         |
+| `make.migrations`          | `{ "default": "database/migrations" }` | Migration chains by name                                                     |
+| `make.tests`               | `true`                                 | Write a test beside every generated file except migrations and factories     |
+| `make.stubs`               | `.config/sdxc/stubs`                   | Stubs that replace the built-in ones                                         |
+| `doctor.checks`            | `.config/sdxc/checks`                  | The project's own `sdxc doctor` checks, one module each                      |
+| `doctor.migrations.accept` | `[]`                                   | Migration errors `sdxc doctor` steps past, each `{ "file", "column" }`       |
+| `format`                   | none                                   | Command run once on every file a command wrote or edited, the paths appended |
+| `lock`                     | `.config/sdxc.lock.jsonl`              | Where the CLI keeps its state                                                |
 
 `format` is an argument list, such as `["bunx", "vp", "fmt"]`.
 

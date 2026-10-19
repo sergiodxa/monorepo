@@ -1,4 +1,4 @@
-# ADR-161: `sdxc deploy` Builds, Migrates and Deploys in That Order
+# ADR-161: `sdxc deploy` Builds, Then Runs the App's Own Migrate and Deploy Commands
 
 ## Status
 
@@ -12,95 +12,113 @@ migrating before a build that fails leaves the database ahead of every Worker th
 deployed. `AGENTS.md` states the order as rules, and a person or an agent follows it by hand,
 three commands at a time, from memory.
 
+How an app is migrated and where it ships belong to the app. One app keeps its migrations in a
+second chain, another applies them to a tenant database, a third deploys somewhere other than a
+single Worker. A deploy command that hard-codes `cf d1 migrations apply` and `cf deploy` serves
+only the apps shaped like the template.
+
 ## Context
 
-The pieces already exist in an app made from the `app` template:
+An app made from the `app` template already has the pieces:
 
 - **Build.** The `build` script (`vp build`) writes `.cloudflare/output`, the Build Output
-  Specification `cf deploy --prebuilt` uploads. `.cloudflare/output/v0/workers/<worker>/worker.config.json`
-  holds the resolved Worker configuration: its `name`, and every binding with its type, so each
-  D1 database's `id` is readable without evaluating `cloudflare.config.ts`.
-- **Migrate.** `sdxc run db migrate --remote` (ADR-155) runs `cf d1 migrations apply <id> --dir
-database/migrations` against the production database. `cf` asks "About to apply N
-  migration(s)… continue?" on a terminal and answers yes when not interactive, which it decides
-  from the TTYs and the `CI` variable.
-- **List.** `cf d1 migrations list <id> --dir <dir>` prints the unapplied migrations as JSON,
-  `[{ "Name": "0002_add_posts.sql" }]`, and reads the production database unless `--local` is
-  passed. It needs the same credentials `apply` does and changes nothing.
-- **Who.** `cf auth whoami` prints JSON: `authenticated`, the `email`, and the `accounts` the
-  credentials reach. `cf` picks the deploy account from `CLOUDFLARE_ACCOUNT_ID`, then
-  `cloudflare.config.ts`, then the only account, and asks when there are several.
-- **Deploy.** `cf deploy --prebuilt` uploads the build output with the user's `cf` login or
-  `CLOUDFLARE_API_TOKEN`.
+  Specification `cf deploy --prebuilt` uploads.
+- **Command line.** `bootstrap/cli.ts` runs the app's own commands (ADR-155), and
+  `sdxc run <command>` starts it with the project's runtime and `node_modules/.bin` first on
+  `PATH`. Its parser ends an unknown command or flag with exit code 2 and
+  `Unknown command "…"` or `Unknown flag --…` on stderr.
+- **Migrate.** `db migrate --remote` runs `cf d1 migrations apply` against the production
+  database. `cf` asks before applying on a terminal and answers yes when `CI` is set.
+- **Deploy.** `cf deploy --prebuilt` uploads the build output; `--dry-run` checks it and
+  uploads nothing.
 
 ## Decision
 
-`sdxc deploy` runs the three steps in order, stops at the first that fails, and asks before the
-first one that touches production.
+The app owns migrating and deploying, as two commands on its command line; `sdxc deploy` owns
+the order, the plan, the confirmation and the report of where production stands.
+
+The template ships both commands:
+
+- **`db migrate --remote`** applies the chain with `cf d1 migrations apply`. With `--pending` it
+  prints the migrations the database lacks, one name per line, and applies nothing (from
+  `cf d1 migrations list` remotely, from the journal locally). An up-to-date database prints
+  nothing.
+- **`deploy`** runs `cf deploy --prebuilt`; `deploy --dry-run` runs `cf deploy --prebuilt
+--dry-run`. The template has no `cf:deploy` script, so the command line is the one place a
+  deploy is defined.
+
+An app migrates or ships differently by editing those two files.
+
+`sdxc deploy` runs, in order, and stops at the first step that fails:
 
 1. **Preflight.** Without a terminal and without `--yes`, it ends with a usage error before
-   doing anything, so CI states its consent in the command. `cf auth whoami` must report a login;
-   otherwise it ends naming `cf auth login`.
+   doing anything, so CI states its consent in the command. `--skip migrate --skip deploy` is a
+   usage error, since nothing would reach production. A project without `bootstrap/cli.ts`
+   fails, naming it.
 2. **Build.** `<package manager> run build`, the project's own script. A project without a
-   `build` script fails here, unless `--skip-build` deploys the output already on disk.
-3. **Plan.** From the build output it reads the Worker name and the D1 binding the migration
-   chain applies to: `DB`, or the only D1 binding. When that binding exists and the chain
-   (`make.migrations.default`, `database/migrations` by default) holds a `.sql` file, it lists
-   the pending migrations with `cf d1 migrations list`. It prints the Worker, the account, and
-   every pending migration by name.
+   `build` script fails, naming `--skip build`.
+3. **Plan.** `sdxc run db migrate --remote --pending` lists the pending migrations; then
+   `sdxc run deploy --dry-run` runs with its output on the terminal, so the app shows what it
+   would ship and checks it. It prints the app, the build, every pending migration by name, and
+   the deploy step.
 4. **Confirm.** `--yes` answers it; otherwise a terminal question, which defaults to no.
-5. **Migrate.** Only when migrations are pending: `sdxc run db migrate --remote`, through the
-   app's own `bootstrap/cli.ts` exactly as `sdxc run` starts it, with `CI=1` so `cf` takes the
-   answer `sdxc deploy` already got instead of asking a second time.
-6. **Deploy.** `cf deploy --prebuilt`, with the project's `node_modules/.bin` first on `PATH`.
+5. **Migrate.** `sdxc run db migrate --remote`, with `CI=1` so `cf` takes the answer
+   `sdxc deploy` already got. It runs when migrations are pending, or when the app's
+   `db migrate` has no `--pending` to list them, since applying is safe to repeat.
+6. **Deploy.** `sdxc run deploy`.
+
+An app's command line answers for itself: an `Unknown flag --pending` makes the plan say the
+migrations cannot be listed and the migrate step runs anyway; an unknown `db migrate` or
+`deploy` command fails before anything remote, naming the command to add or the `--skip` that
+leaves it out.
 
 Every failure says what already happened and what did not: "Build failed; nothing was migrated
-or deployed", "Migrations failed; the Worker was not deployed, and cf applies migrations one at
-a time, so earlier ones in the list may be applied", "Deploy failed; migrations 0002_add_posts.sql
-were applied, so production runs the previous Worker on the new schema".
+or deployed", "Migrations failed, so nothing was deployed; the ones before the failure may be
+applied", "Deploy failed; migrations 0002_add_posts.sql were applied, so production runs the
+previous version on the new schema".
 
 Flags:
 
 - `--yes` (`-y`): confirms without asking; required without a terminal.
-- `--dry-run`: runs the build and the read-only queries, prints the plan, and changes nothing
-  remote. The plan comes from the build output, so a dry run builds; `--skip-build` reads the
-  output already there.
-- `--skip-build`: deploys the existing `.cloudflare/output`; fails when there is none.
-- `--skip-migrations`: deploys without listing or applying migrations, for an app whose
-  migrations are applied by other means.
-
-The placeholder database id the template ships (`00000000-0000-4000-8000-000000000000`) fails
-the plan with a message pointing at `cf d1 create`, since every `cf d1` call would reject it.
+- `--dry-run`: runs the build and the plan, prints it, and changes nothing remote.
+- `--skip <step>`: leaves out `build`, `migrate` or `deploy`; repeated (`--skip build --skip
+migrate`) or as a list (`--skip build,migrate`). `--skip build` deploys the output already on
+  disk; `--skip migrate` deploys an app whose migrations are applied by other means; `--skip
+deploy` applies the migrations ahead of a later deploy.
 
 ## Consequences
 
 ### Positive
 
-- The order `AGENTS.md` requires is one command, so it holds for people and agents alike.
+- The order `AGENTS.md` requires is one command, for people and agents alike, whatever the app
+  migrates or deploys to.
 - The confirmation names every migration about to run against production.
 - A failure states the state production is left in.
 
 ### Negative
 
-- The plan needs a build, so `--dry-run` builds unless `--skip-build` is passed.
-- An app whose migrations live outside its default chain, or apply to a binding other than `DB`
-  among several, passes `--skip-migrations` and migrates by hand.
-- Listing and applying are two `cf` calls, so a migration added between them is applied without
-  being shown; both read the same directory in the same run, which makes that a local edit
-  mid-deploy.
+- The plan runs the app's command line twice before confirming, each start costing a runtime
+  launch.
+- The plan needs the app's `deploy --dry-run`, which needs a build, so `--dry-run` builds unless
+  `--skip build` is passed.
+- Listing and applying are two runs, so a migration added between them is applied without being
+  shown; both read the same directory in the same run, which makes that a local edit mid-deploy.
 
 ### Neutral
 
-- `sdxc deploy` reads `cf`'s JSON output, whose shape is `cf`'s; a change there surfaces as a
-  plan that fails to parse, before anything remote changes.
+- `sdxc deploy` recognizes a missing command by the usage error `@sdxc/cli` prints; a command
+  line built on another parser reads as a failed plan, before anything remote changes.
 
 ## Alternatives Considered
 
-- **Calling `cf d1 migrations apply` directly.** It duplicates the app's own `db migrate
---remote`, which already knows the database id and the chain. The app's command stays the one
-  place that applies migrations.
-- **Confirming before the build.** The plan would lack the Worker name and the database id the
-  build resolves. The build is local, so running it first costs nothing in production.
+- **Running `cf d1 migrations apply` and `cf deploy` from `sdxc deploy`.** Every app shaped
+  differently from the template would pass `--skip` flags and migrate or deploy by hand. The
+  app's commands are where it already says how it reaches its database.
+- **Falling back to `cf deploy --prebuilt` for an app without a `deploy` command.** The deploy
+  would then live in two places, and an app on another platform would get a `cf` error. A
+  missing command fails with the fix instead.
+- **Confirming before the build.** The plan would lack the app's own dry run, which reads the
+  build. The build is local, so running it first costs nothing in production.
 
 ## References
 

@@ -27,6 +27,19 @@ const JOURNAL = `CREATE TABLE IF NOT EXISTS "d1_migrations"(
 		applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
 )`;
 
+/** The migrations the journal lacks, in the order `applyMigrations` runs them. */
+export function pendingMigrations(
+	database: MigrationDatabase,
+	migrations: readonly Migration[],
+): Migration[] {
+	database.exec(JOURNAL);
+	let rows = database.query("SELECT name FROM d1_migrations").all() as { name: string }[];
+	let applied = new Set(rows.map((row) => row.name));
+	return [...migrations]
+		.filter((migration) => !applied.has(migration.name))
+		.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 /**
  * Runs every migration the journal lacks, each in its own transaction with its journal row, so
  * a failing migration leaves the database as the previous one left it.
@@ -37,15 +50,8 @@ export function applyMigrations(
 	database: MigrationDatabase,
 	migrations: readonly Migration[],
 ): Result<string[], Error> {
-	database.exec(JOURNAL);
-	let rows = database.query("SELECT name FROM d1_migrations").all() as { name: string }[];
-	let applied = new Set(rows.map((row) => row.name));
-	let pending = [...migrations]
-		.filter((migration) => !applied.has(migration.name))
-		.sort((a, b) => a.name.localeCompare(b.name));
-
 	let names: string[] = [];
-	for (let migration of pending) {
+	for (let migration of pendingMigrations(database, migrations)) {
 		try {
 			database.exec(
 				`BEGIN;\n${migration.sql}\n;INSERT INTO d1_migrations (name) VALUES ('${migration.name.replaceAll("'", "''")}');\nCOMMIT;`,

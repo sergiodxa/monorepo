@@ -260,7 +260,7 @@ describe("the app template's command line", () => {
 		);
 		expect(unknown.code).toBe(2);
 		expect(unknown.output).toContain('Unknown command "abuot" for blog; did you mean "about"?');
-		expect(tested.output).toContain("Tests  24 passed (24)");
+		expect(tested.output).toContain("Tests  29 passed (29)");
 		expect(tested.code).toBe(0);
 	});
 });

@@ -21,9 +21,21 @@ export default commands({
 				remote: flag.boolean("remote", {
 					description: "Apply them to the production database instead of the local copy",
 				}),
+				pending: flag.boolean("pending", {
+					description: "Print the ones the database lacks, one per line, and apply nothing",
+				}),
 			},
-			examples: ["db migrate", "db migrate --remote"],
+			examples: ["db migrate", "db migrate --remote", "db migrate --remote --pending"],
 		}),
+	}),
+	deploy: command({
+		description: "Upload the build in .cloudflare/output to Cloudflare with cf deploy",
+		flags: {
+			dryRun: flag.boolean("dry-run", {
+				description: "Run cf's checks on the build and upload nothing",
+			}),
+		},
+		examples: ["deploy", "deploy --dry-run"],
 	}),
 	typegen: command({
 		description: "Write the Worker's env types from cloudflare.config.ts",

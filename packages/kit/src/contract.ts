@@ -11,7 +11,9 @@ import { argument, command, commands, flag, prompt } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
-import { KINDS } from "./make/kinds.js";
+import { DEPLOY_STEPS } from "./deploy/plan.js";
+import { KINDS, MODEL_COMPANIONS } from "./make/kinds.js";
+import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
 
 /** Route methods `make controller --method` accepts; `form` declares a GET page with a POST action. */
 export const METHODS = ["get", "post", "put", "patch", "delete", "form"] as const;
@@ -34,6 +36,19 @@ function nameArgument(kind: string, placeholder: string) {
 	return argument(nonEmpty("Name it"), {
 		description: "The file's name; a slash makes a folder inside the kind's folder",
 		prompt: prompt.text({ message: `What should the ${kind} be called?`, placeholder }),
+	});
+}
+
+/**
+ * The fields `make model` and `scaffold` take, each typed by convention from its name unless it
+ * names a type; `scaffold` writes pages for every type but a reference.
+ */
+function fieldsArgument(references: boolean) {
+	let types = FIELD_TYPE_NAMES.filter((type) => references || type !== "references");
+	let reference = references ? ", *_id references" : "";
+	return argument.variadic(s.string(), {
+		valueName: "field[:type][?]",
+		description: `name, name:type or name? (nullable); a bare name is typed by convention: *_at timestamp, *_on date, is_* and published boolean, *_count integer, email, *_url url, body text${reference}, else string; types: ${types.join(", ")}`,
 	});
 }
 
@@ -83,7 +98,7 @@ export const SDXC_COMMANDS = commands({
 		examples: ["create blog", "create blog --template org/repo/apps/blog#main --no-git"],
 	}),
 	deploy: command({
-		description: "Build, apply production migrations, then deploy the Worker with cf",
+		description: "Build, then run the app's db migrate --remote and deploy commands",
 		flags: {
 			yes: flag.boolean("yes", {
 				short: "y",
@@ -92,21 +107,35 @@ export const SDXC_COMMANDS = commands({
 			dryRun: flag.boolean("dry-run", {
 				description: "Build and print the plan; migrate and deploy nothing",
 			}),
-			skipBuild: flag.boolean("skip-build", {
-				description: "Deploy the output already in .cloudflare/output",
-			}),
-			skipMigrations: flag.boolean("skip-migrations", {
-				description: "Deploy without listing or applying migrations",
-			}),
+			skip: flag
+				.string("skip", {
+					valueName: "step",
+					schema: s.enum_(DEPLOY_STEPS),
+					description: "Leave out build, migrate or deploy; repeat it or list them",
+				})
+				.list(),
 		},
-		examples: ["deploy", "deploy --dry-run", "deploy --yes --skip-build"],
+		examples: [
+			"deploy",
+			"deploy --dry-run",
+			"deploy --yes --skip build",
+			"deploy --skip build --skip migrate",
+		],
 	}),
 	doctor: command({
-		description: "Check @sdxc release drift, the install, the remix peer and .env.example",
+		description: "Lint release drift, secrets, migrations, app layout and project checks",
 		flags: {
 			json: flag.boolean("json", { description: "Print the report as JSON for an agent" }),
+			only: flag
+				.string("only", { valueName: "check", description: "Run only the named checks" })
+				.multiple()
+				.list(),
+			skip: flag
+				.string("skip", { valueName: "check", description: "Leave out the named checks" })
+				.multiple()
+				.list(),
 		},
-		examples: ["doctor", "doctor --json"],
+		examples: ["doctor", "doctor --json", "doctor --only pins,remix", "doctor --skip ui"],
 	}),
 	init: command({
 		description: "Write .config/sdxc.jsonc with every default spelled out",
@@ -187,15 +216,41 @@ export const SDXC_COMMANDS = commands({
 			examples: ['make job digest --cron "0 8 * * *"'],
 		}),
 		model: command({
-			description: "A model in app/models",
+			description: "A model in app/models, with the migration creating its table and its factory",
 			tasks: true,
-			arguments: { name: nameArgument("model", "post") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			arguments: { name: nameArgument("model", "post"), fields: fieldsArgument(true) },
+			flags: {
+				chain: flag.string("chain", {
+					valueName: "chain",
+					description: "The chain in make.migrations the migration goes in (default: default)",
+				}),
+				skip: flag
+					.string("skip", {
+						valueName: "file",
+						schema: s.enum_(MODEL_COMPANIONS),
+						description: "Leave out the migration or the factory; repeat it or list them",
+					})
+					.list(),
+				test: TEST_FLAG,
+				dryRun: DRY_RUN_FLAG,
+			},
+			examples: [
+				"make model post title body published_at author_id",
+				"make model post title 'subtitle?' views:integer",
+				"make model post title --skip migration,factory",
+			],
 		}),
 		migration: command({
 			description: "A numbered SQL migration in a configured chain",
 			tasks: true,
-			arguments: { name: nameArgument("migration", "create-posts") },
+			arguments: {
+				name: nameArgument("migration", "create-posts"),
+				fields: argument.variadic(s.string(), {
+					valueName: "field[:type][?]",
+					description:
+						"Columns, typed as make model types them, for a name create-<table>, add-<columns>-to-<table> or remove-<columns>-from-<table>; an added column needs ? unless it is a boolean",
+				}),
+			},
 			flags: {
 				chain: flag.string("chain", {
 					valueName: "chain",
@@ -207,6 +262,12 @@ export const SDXC_COMMANDS = commands({
 				}),
 				dryRun: DRY_RUN_FLAG,
 			},
+			examples: [
+				"make migration create-posts title body published_at author_id",
+				"make migration add-slug-to-posts 'slug?' featured",
+				"make migration remove-slug-from-posts slug",
+				"make migration sync-posts --from-model post",
+			],
 		}),
 		factory: command({
 			description: "A test factory in database/factories",
@@ -271,8 +332,39 @@ export const SDXC_COMMANDS = commands({
 		description: "Print every route with its controller and the middleware that runs for it",
 		flags: {
 			json: flag.boolean("json", { description: "Print a JSON array instead of a table" }),
+			expanded: flag.boolean("expanded", {
+				short: "E",
+				description: "Print one block per route with every field, for a narrow terminal",
+			}),
+			grep: flag.string("grep", {
+				short: "g",
+				valueName: "pattern",
+				description: "Keep routes whose name, pattern, method or controller matches",
+			}),
+			controller: flag.string("controller", {
+				short: "c",
+				valueName: "path",
+				description: "Keep routes of a controller file or folder, as posts or posts/show",
+			}),
+			method: flag.string("method", {
+				valueName: "method",
+				description: "Keep routes answering a method; ANY routes answer every one",
+			}),
+			contract: flag.string("contract", {
+				valueName: "contract",
+				description: "Keep routes declared in a contract in routes/, as web",
+			}),
+			unused: flag.boolean("unused", {
+				description: "Keep routes no router maps, and report controllers no route maps",
+			}),
 		},
-		examples: ["routes", "routes --json"],
+		examples: [
+			"routes",
+			"routes --json",
+			"routes -g posts",
+			"routes -c admin/users --method post",
+			"routes --unused",
+		],
 	}),
 	run: command({
 		description: "Run the project's own command line, bootstrap/cli.ts, with its runtime",
@@ -295,10 +387,7 @@ export const SDXC_COMMANDS = commands({
 					placeholder: "post",
 				}),
 			}),
-			fields: argument.variadic(s.string(), {
-				valueName: "field:type",
-				description: "Each field, typed string (the default), text, integer, boolean or date",
-			}),
+			fields: fieldsArgument(false),
 		},
 		flags: {
 			plural: flag.string("plural", {
@@ -315,8 +404,8 @@ export const SDXC_COMMANDS = commands({
 			dryRun: DRY_RUN_FLAG,
 		},
 		examples: [
-			"scaffold post title:string body:text published:boolean",
-			"scaffold person name --plural people --mcp --command",
+			"scaffold post title body published_at featured view_count:integer",
+			"scaffold person name email website 'bio?' born_on --plural people --mcp --command",
 		],
 	}),
 	ui: commands({
@@ -400,6 +489,13 @@ export const SDXC_COMMANDS = commands({
 				valueName: "version",
 				description: "The release the project moved from, with --prompt",
 			}),
+			since: flag
+				.string("since", {
+					valueName: "package@version",
+					description:
+						"A package's own pinned release when it lagged behind --from, with --prompt; repeatable",
+				})
+				.multiple(),
 			remixFrom: flag.string("remix-from", {
 				valueName: "version",
 				description: "The remix version the project moved from, with --prompt",

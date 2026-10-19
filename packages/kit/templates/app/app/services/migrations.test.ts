@@ -6,7 +6,7 @@ import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { applyMigrations } from "~/app/services/migrations";
+import { applyMigrations, pendingMigrations } from "~/app/services/migrations";
 
 /** Two migrations, given out of order to show the runner sorts them. */
 const MIGRATIONS = [
@@ -40,6 +40,20 @@ describe("applyMigrations", () => {
 		expect(isFailure(result) && result.error.message).toBe("0003_Broken.sql failed");
 		expect(database.query("SELECT count(*) AS applied FROM d1_migrations").all()).toEqual([
 			{ applied: 2 },
+		]);
+	});
+});
+
+describe("pendingMigrations", () => {
+	test("lists what applyMigrations would run, and applies nothing", () => {
+		let database = openDatabase(":memory:");
+		unwrap(applyMigrations(database, MIGRATIONS.slice(1)));
+
+		let pending = pendingMigrations(database, MIGRATIONS);
+
+		expect(pending.map((migration) => migration.name)).toEqual(["0002_AddTitle.sql"]);
+		expect(database.query("SELECT count(*) AS applied FROM d1_migrations").all()).toEqual([
+			{ applied: 1 },
 		]);
 	});
 });
