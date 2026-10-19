@@ -75,15 +75,15 @@ A handler never builds its own services; the middleware publishes each one onto 
 and the router's type reads them back, so `ctx.models` is typed by the models you registered.
 That is also what lets a test swap one: it runs the same chain with its own database.
 
-| On `ctx`                   | Published by                               | In                 |
-| -------------------------- | ------------------------------------------ | ------------------ |
-| `ctx.log`                  | `log(logger)`                              | everything         |
-| `ctx.db`, `ctx.models`     | `database(…)`, `models(registry, …)`       | everything         |
-| `ctx.email`                | `mail({ transport, from })`                | requests, commands |
-| `ctx.ip`, `ctx.userAgent`  | `getClientIP()`, `userAgent()`             | requests           |
-| `ctx.session`, `ctx.intl`  | the page chain                             | pages              |
-| `ctx.access`               | `access` in the page and api chains        | requests           |
-| `ctx.render`, `ctx.assets` | `render(…)`, `assets(…)` in the page chain | pages              |
+| On `ctx`                   | Published by                               | In         |
+| -------------------------- | ------------------------------------------ | ---------- |
+| `ctx.log`                  | `log(logger)`                              | everything |
+| `ctx.db`, `ctx.models`     | `database(…)`, `models(registry, …)`       | everything |
+| `ctx.email`                | `mailer({ transport, from, mail, queue })` | everything |
+| `ctx.ip`, `ctx.userAgent`  | `getClientIP()`, `userAgent()`             | requests   |
+| `ctx.session`, `ctx.intl`  | the page chain                             | pages      |
+| `ctx.access`               | `access` in the page and api chains        | requests   |
+| `ctx.render`, `ctx.assets` | `render(…)`, `assets(…)` in the page chain | pages      |
 
 A middleware you write with [`sdxc make middleware`](/docs/sdxc/make-middleware) publishes its
 own value the same way, and `--mount` adds it to a chain.
@@ -92,10 +92,11 @@ own value the same way, and `--mount` adds it to a chain.
 
 A controller or a command enqueues a job by its declaration in `app/jobs/index.ts`; Cloudflare
 delivers the message to the Worker's `queue` handler, and the dispatcher in
-`app/initializers/dispatcher.ts` runs its own middleware, the database and the models, before it
-imports the handler the job is mapped to. A `--cron` job is enqueued by the Worker's
-`scheduled` handler when a trigger in `cloudflare.config.ts` fires. Either way the handler sees
-`ctx.input`, `ctx.models` and `ctx.log`, and a failure is retried by the dispatcher.
+`app/initializers/dispatcher.ts` runs its own middleware, the database, the models and the
+mailer, before it imports the handler the job is mapped to. A `--cron` job is enqueued by the
+Worker's `scheduled` handler when a trigger in `cloudflare.config.ts` fires. Either way the
+handler sees `ctx.input`, `ctx.models`, `ctx.email` and `ctx.log`, and a failure is retried by
+the dispatcher.
 
 ## Where each kind of code goes
 
@@ -140,23 +141,23 @@ to its folder:
 <file name="cloudflare.config.ts" />
 </files>
 
-| If the code…                                                   | It goes in                                         |
-| -------------------------------------------------------------- | -------------------------------------------------- |
-| is the Worker, browser or command-line entry point             | `bootstrap/`                                       |
-| builds the one instance of something: router, database, mailer | `app/initializers/`                                |
-| answers HTTP: a controller, a middleware, an input schema      | `app/http/controllers`, `middleware`, `validators` |
-| runs off the request, as a job                                 | `app/jobs/`                                        |
-| is a tool or resource for the MCP endpoint                     | `app/mcp/`                                         |
-| is an email the app sends                                      | `app/emails/`                                      |
-| is a command for `sdxc run`                                    | `app/commands/`                                    |
-| reads or writes stored state, or is a rule about one model     | `app/models/`, as the model or its method          |
-| is a rule across models, or about none                         | `app/services/`                                    |
-| decides who may do what                                        | `app/policies/`                                    |
-| is a URL contract                                              | `routes/`                                          |
-| is a migration or a test factory                               | `database/migrations/`, `database/factories/`      |
-| is a view, layout, stylesheet or translation                   | `resources/`                                       |
-| is static configuration: site settings, security headers       | `config/`                                          |
-| is a test helper                                               | `app/test/`                                        |
+| If the code…                                                           | It goes in                                         |
+| ---------------------------------------------------------------------- | -------------------------------------------------- |
+| is the Worker, browser or command-line entry point                     | `bootstrap/`                                       |
+| builds the one instance of something: router, database, email registry | `app/initializers/`                                |
+| answers HTTP: a controller, a middleware, an input schema              | `app/http/controllers`, `middleware`, `validators` |
+| runs off the request, as a job                                         | `app/jobs/`                                        |
+| is a tool or resource for the MCP endpoint                             | `app/mcp/`                                         |
+| is an email the app sends                                              | `app/emails/`                                      |
+| is a command for `sdxc run`                                            | `app/commands/`                                    |
+| reads or writes stored state, or is a rule about one model             | `app/models/`, as the model or its method          |
+| is a rule across models, or about none                                 | `app/services/`                                    |
+| decides who may do what                                                | `app/policies/`                                    |
+| is a URL contract                                                      | `routes/`                                          |
+| is a migration or a test factory                                       | `database/migrations/`, `database/factories/`      |
+| is a view, layout, stylesheet or translation                           | `resources/`                                       |
+| is static configuration: site settings, security headers               | `config/`                                          |
+| is a test helper                                                       | `app/test/`                                        |
 
 Group a crowded folder by feature with the same name in every layer, such as
 `app/jobs/bookmarks/` beside `app/services/bookmarks/`, and one search for `bookmarks/` finds the

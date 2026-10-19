@@ -128,7 +128,7 @@ import { jobEnqueuer } from "@sdxc/jobs/cli";
 import * as memory from "@sdxc/jobs/memory";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
-import mail from "@sdxc/mail/middleware/cli";
+import mailer from "@sdxc/mail/middleware/cli";
 import { PrintTransport } from "@sdxc/mail/print";
 
 import commandset from "~/app/commands";
@@ -140,8 +140,9 @@ import {
 } from "~/app/initializers/i18n";
 import { openLocalDatabase } from "~/app/initializers/local-database";
 import { logger } from "~/app/initializers/logger";
-import { MAIL_FROM } from "~/app/initializers/mail";
+import { mail } from "~/app/initializers/mail";
 import { models as registry } from "~/app/models";
+import { MAIL_FROM } from "~/config/constants";
 
 interface CLIOptions {
 	openDb?: () => Database;
@@ -172,10 +173,11 @@ export function createAppCLI(options: CLIOptions = {}) {
 				supportedLanguages: SUPPORTED_LANGUAGES,
 				fallbackLanguage: FALLBACK_LANGUAGE,
 			}),
-			mail({
+			mailer({
 				transport: (ctx) =>
 					new PrintTransport({ write: (text) => ctx.stderr(text) }),
 				from: MAIL_FROM,
+				mail,
 			}),
 		],
 	});
@@ -284,7 +286,7 @@ and the command line's database.
 
 `i18n()` from `@sdxc/i18n/middleware/cli` takes the resources and languages the router entry
 does, and publishes two things. `ctx.translate(language)` binds copy to the person a command
-writes to, so an email goes out in its recipient's language. `ctx.intl` and `ctx.locale` carry
+writes to, so a message reads in its recipient's language. `ctx.intl` and `ctx.locale` carry
 the command's own output in the language of whoever runs it, read from `LC_ALL`,
 `LC_MESSAGES` or `LANG`, so `LANG=es_AR.UTF-8` reports in Spanish:
 
@@ -294,39 +296,42 @@ ctx.stdout(`${ctx.intl.t("cli.roleGranted", { email: user.email })}\n`);
 
 ### Mail that never leaves your laptop
 
-`mail()` from `@sdxc/mail/middleware/cli` publishes the app's mailer as `ctx.email`, with the
-sender identity and templates a route uses. The transport is the one decision that changes
-with where the command runs, so it may be a function of the run. `PrintTransport` from
-`@sdxc/mail/print` writes each message to the function it is given, here the command's stderr,
-and reports it sent, so a local run shows every message in full and emails no one:
+`mailer()` from `@sdxc/mail/middleware/cli` publishes the app's mailer as `ctx.email`, given the
+sender identity and the email registry a route uses, so a command sends any declared email by
+its declaration. The transport is the one decision that changes with where the command runs, so
+it may be a function of the run. `PrintTransport` from `@sdxc/mail/print` writes each message to
+the function it is given, here the command's stderr, and reports it sent, so a local run shows
+every message in full and emails no one:
 
 ```typescript {% title="app/commands/postings/resend.ts" %}
 import { createCommand, failure, success } from "@sdxc/cli";
 
 import commandset from "~/app/commands";
-import { PostingPublishedEmail } from "~/app/emails/posting-published";
+import emails from "~/app/emails";
+import { SITE_URL } from "~/config/constants";
 
 export default createCommand(commandset.postings.resend, async (ctx) => {
 	let posting = await ctx.models.postings.find(ctx.arguments.id);
 	if (posting === null) return failure(new Error(`No posting ${ctx.arguments.id}`));
 
-	let { t } = ctx.translate(ctx.flags.locale);
-	let vars = { title: posting.title, company: posting.company };
-	ctx.email.later(
-		new PostingPublishedEmail(posting.contact_email, {
-			subject: t("email.subject", vars),
-			heading: t("email.heading"),
-			body: t("email.body", vars),
-			footer: t("email.footer"),
-		}),
-	);
+	ctx.email.later(emails.postings.published, {
+		to: posting.contact_email,
+		locale: ctx.flags.locale,
+		props: {
+			title: posting.title,
+			company: posting.company,
+			url: new URL(`/postings/${posting.id}`, SITE_URL).href,
+		},
+	});
 	return success();
 });
 ```
 
 `resend` takes the posting's `id` as its argument and the same `--locale` flag, and
-`PostingPublishedEmail` is the class from [Send email](/docs/data-and-background-work/send-email). A message queued with `later()` sends once the handler returns; each send is noted on the
-command's log, and one that fails fails the run, so you see that a message never left.
+`emails.postings.published` is the email declared in
+[Send email](/docs/data-and-background-work/send-email), translated into that locale when it
+renders. A message deferred with `later()` sends once the handler returns; each send is noted on
+the command's log, and one that fails fails the run, so you see that a message never left.
 `new PrintTransport({ write, mime: true })` prints the raw MIME message instead of the summary.
 
 ### Production data
@@ -386,7 +391,7 @@ checks what a script without the flag gets. A job the command enqueued has run b
   command.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher
   the command line runs jobs through.
-- [Send email](/docs/data-and-background-work/send-email) — the mailer and the email classes
-  a command resends.
+- [Send email](/docs/data-and-background-work/send-email) — the email registry and the
+  mailer a command resends through.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — reading the record
   each command run writes.
