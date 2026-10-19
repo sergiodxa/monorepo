@@ -106,6 +106,27 @@ When the run finishes it prints `Wrote` and `Edited` for each path, then runs th
 command from your configuration once over all of them, so the files land in your project's
 style. A formatter that fails leaves the files as `make` wrote them and says so.
 
+## Add a test later
+
+A file made with `--no-test`, or written by hand in a kind's folder, gets the test `make` would
+have written with `sdxc make test`:
+
+```bash
+sdxc make test app/services/billing/charge.ts
+```
+
+```text
+Wrote app/services/billing/charge.test.ts
+```
+
+The kind comes from the folder the file sits in, so the test is rendered from that kind's test
+stub, yours included. A controller's test takes the route that maps it from the router, and a
+form controller gets the form test. An existing test stops the command unless `--force`
+replaces it, and `--dry-run` prints the test instead.
+
+Migrations and factories never get a test, and a policy's test comes with its abilities from
+[`sdxc make policy`](/docs/sdxc/make-policy), so `make test` refuses all three and says why.
+
 ## Declared and mapped
 
 A controller, a job, a model, an MCP tool or resource and a command each need an entry in a
