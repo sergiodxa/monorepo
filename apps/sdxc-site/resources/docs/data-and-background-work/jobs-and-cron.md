@@ -182,8 +182,7 @@ declare module "@sdxc/jobs" {
 }
 ```
 
-The block names `@sdxc/jobs`, the module that declares `JobTypes`, as
-[every augmentation does](/docs/getting-started/install-and-pin#augment-a-package-by-its-own-name).
+The block names `@sdxc/jobs`, the module that declares `JobTypes`.
 
 The factory's options exist for tests: the defaults are what production runs.
 

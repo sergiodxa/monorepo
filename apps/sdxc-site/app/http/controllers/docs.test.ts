@@ -33,6 +33,29 @@ describe("GET /docs", () => {
 		}
 	});
 
+	test("every link between guides reaches a guide and a heading on it", async () => {
+		let slugs = (await listGuides()).flatMap((section) =>
+			section.guides.map((guide) => guide.slug),
+		);
+		let pages = new Map<string, string>();
+		for (let slug of slugs) pages.set(slug, await (await fetchApp(`/docs/${slug}`)).text());
+
+		let broken: string[] = [];
+		for (let [slug, body] of pages) {
+			let article = body.slice(body.indexOf("<article"), body.indexOf("</article>"));
+			for (let [, target, fragment] of article.matchAll(/href="\/docs\/([^"#?]+)(?:#([^"]+))?"/g)) {
+				if (target?.endsWith(".md")) continue;
+				let page = pages.get(target ?? "");
+				if (page === undefined) broken.push(`${slug} → /docs/${target}`);
+				else if (fragment && !page.includes(`id="${fragment}"`)) {
+					broken.push(`${slug} → /docs/${target}#${fragment}`);
+				}
+			}
+		}
+
+		expect(broken).toEqual([]);
+	});
+
 	test("every card leads somewhere that answers", async () => {
 		let sections = await listGuides();
 

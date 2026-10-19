@@ -147,8 +147,7 @@ declare module "@sdxc/authz" {
 }
 ```
 
-The block names `@sdxc/authz`, the module that declares `AuthzTypes`, as
-[every augmentation does](/docs/getting-started/install-and-pin#augment-a-package-by-its-own-name).
+The block names `@sdxc/authz`, the module that declares `AuthzTypes`.
 
 ## Bind the person on each request
 

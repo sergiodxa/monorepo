@@ -211,8 +211,7 @@ declare module "@sdxc/data-model" {
 }
 ```
 
-The block names `@sdxc/data-model`, the module that declares `ModelContext`, as
-[every augmentation does](/docs/getting-started/install-and-pin#augment-a-package-by-its-own-name).
+The block names `@sdxc/data-model`, the module that declares `ModelContext`.
 
 `models` is always there at runtime: the rest of the registry, bound to the same request and
 unit of work. The declaration types it from an interface of the entries, which resolves each
