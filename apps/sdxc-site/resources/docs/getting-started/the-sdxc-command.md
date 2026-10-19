@@ -6,6 +6,10 @@ section:
     order: 1
 order: 4
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to install the `sdxc` command"
+    - "Which command does what, and which guide covers it"
+    - "How every command answers a question up front with a flag"
 ---
 
 The `sdxc` command writes a new project, adds controllers, jobs, models and the rest where the

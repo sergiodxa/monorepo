@@ -6,6 +6,10 @@ section:
     order: 1
 order: 2
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to install a package by its own name beside `remix`"
+    - "Why every `@sdxc` package in a project shares one release date"
+    - "Where to read what changed before a pin moves"
 ---
 
 Install the packages your code imports, each by the name its [API page](/api) shows, beside the

@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.01
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to add a page, a form or a JSON endpoint with its route declared and mapped"
+    - "How a controller is guarded by a resource's abilities"
+    - "How the sitemap decides whether a new page is listed"
 ---
 
 A controller answers one route. `sdxc make controller` writes it in `app/http/controllers/`,

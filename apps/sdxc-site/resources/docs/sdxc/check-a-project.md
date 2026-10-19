@@ -6,6 +6,10 @@ section:
     order: 2
 order: 6
 lastUpdated: 2026-10-19
+outcomes:
+    - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
+    - "How to accept a migration that already ran instead of rewriting it"
+    - "How to add a check of your own and run `doctor` in CI"
 ---
 
 ```bash

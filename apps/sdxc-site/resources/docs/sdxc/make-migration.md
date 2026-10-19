@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.06
 lastUpdated: 2026-10-19
+outcomes:
+    - "How migration names create, alter and drop tables from fields"
+    - "How `--from-model` writes the SQL that brings a chain in step with a model"
+    - "Which warnings to read before you apply a migration"
 ---
 
 A migration is one numbered SQL file that changes the database's schema, applied in order by

@@ -6,6 +6,10 @@ section:
     order: 2
 order: 4
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to copy an `@sdxc/ui` component into your project and edit it"
+    - "How the lock file tells an untouched copy from an edited one"
+    - "How to diff, update and remove a copy when a new release ships"
 ---
 
 [`@sdxc/ui`](/api/ui) components are imported from the package, so a release updates them for

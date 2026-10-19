@@ -6,6 +6,10 @@ section:
     order: 2
 order: 7
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to read the table `sdxc routes` prints"
+    - "How to narrow the listing to one controller, method or contract"
+    - "How to find the routes and controllers nothing wires yet"
 ---
 
 ```bash

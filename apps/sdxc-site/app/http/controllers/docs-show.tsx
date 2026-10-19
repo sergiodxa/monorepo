@@ -24,6 +24,7 @@ import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
+import GuideOutcomes from "~/resources/components/guide-outcomes";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -96,6 +97,8 @@ export default createAction(routes.docs.show, async (ctx) => {
 							markdownUrl={absoluteUrl(markdownHref)}
 							sourceUrl={`${GUIDE_SOURCE_BASE}${slug}.md`}
 						/>
+
+						<GuideOutcomes outcomes={frontmatter.outcomes ?? []} />
 					</header>
 
 					<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>

@@ -6,6 +6,10 @@ section:
     order: 2
 order: 1
 lastUpdated: 2026-10-19
+outcomes:
+    - "How `sdxc create` writes a project from the built-in template or a GitHub repository"
+    - "What a new project holds and which commands to run first"
+    - "How to change the command line's defaults with `.config/sdxc.jsonc`"
 ---
 
 `sdxc create` writes a new project in the folder layout every other `sdxc` command expects, and

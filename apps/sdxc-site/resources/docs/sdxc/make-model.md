@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.05
 lastUpdated: 2026-10-19
+outcomes:
+    - "How field names type a model's columns"
+    - "What `make model` writes beside the model: its migration and its factory"
+    - "How the model is registered and read as `ctx.models`"
 ---
 
 A model owns one table: its columns, and the rules that keep a row consistent.

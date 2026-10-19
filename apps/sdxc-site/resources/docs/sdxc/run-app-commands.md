@@ -6,6 +6,10 @@ section:
     order: 2
 order: 8
 lastUpdated: 2026-10-19
+outcomes:
+    - "How `sdxc run` finds and runs your app's command line"
+    - "Which commands a new app ships with"
+    - "How to migrate and query the local database from the terminal"
 ---
 
 An app created from the template has a command line of its own, in `bootstrap/cli.ts`, for

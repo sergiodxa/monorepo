@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.04
 lastUpdated: 2026-10-19
+outcomes:
+    - "How `make job` declares a job and maps it on the dispatcher"
+    - "How to schedule one with `--cron`"
+    - "How to fill in and test a job handler"
 ---
 
 A job is work that runs off the request: sending an email, calling a slow API, sweeping expired

@@ -6,6 +6,10 @@ section:
     order: 1
 order: 1
 lastUpdated: 2026-10-15
+outcomes:
+    - "What the `@sdxc` packages have in common, and why they agree with each other"
+    - "Which packages need Remix and which run anywhere `fetch` does"
+    - "Which of the two ways in fits what you are building"
 ---
 
 `@sdxc` is {% $packageCount %} packages published under one npm scope. They were written for

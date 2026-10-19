@@ -66,6 +66,13 @@ describe("GET /docs/*slug", () => {
 		expect((await fetchApp("/docs/nothing/here")).status).toBe(404);
 	});
 
+	test("lists what a reader will know under the title, with its code spans set as code", async () => {
+		let body = await (await fetchApp("/docs/sdxc/deploy")).text();
+
+		expect(body).toContain("After reading this guide, you will know");
+		expect(body).toContain("<code>sdxc deploy</code> builds, migrates and deploys");
+	});
+
 	test("draws a note and a warning as labelled asides rather than as raw tags", async () => {
 		let body = await (await fetchApp("/docs/sdxc/deploy")).text();
 

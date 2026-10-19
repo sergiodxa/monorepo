@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.12
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to add an MCP tool, or a resource with `--resource`"
+    - "Where the declaration and the handler go, and how they are mapped"
+    - "How to fill in a tool's handler and test it"
 ---
 
 An MCP tool is something an AI agent can call on your app, such as searching posts; a resource is

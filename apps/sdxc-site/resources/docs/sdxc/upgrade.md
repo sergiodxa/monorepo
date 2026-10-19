@@ -6,6 +6,10 @@ section:
     order: 2
 order: 5
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to move every `@sdxc` package to a newer release, or catch up the ones that lag"
+    - "How `upgrade` lists the breaking changes between two releases"
+    - "How to hand the upgrade prompt to your AI agent"
 ---
 
 ```bash

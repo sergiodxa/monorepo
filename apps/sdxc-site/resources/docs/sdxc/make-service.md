@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.08
 lastUpdated: 2026-10-19
+outcomes:
+    - "When a rule belongs in a service rather than on a model"
+    - "What `make service` writes"
+    - "How a service returns a `Result` its callers branch on"
 ---
 
 A service carries out a rule that spans more than one model, or that belongs to none: charge a

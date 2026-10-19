@@ -6,6 +6,10 @@ section:
     order: 1
 order: 3
 lastUpdated: 2026-10-15
+outcomes:
+    - "How three packages compose into a request handler with no `try` in it"
+    - "How a `Result` makes you handle a parse failure"
+    - "How a parse error carries the line it happened on"
 ---
 
 Here is a handler that accepts a markdown document, validates its frontmatter, and answers with

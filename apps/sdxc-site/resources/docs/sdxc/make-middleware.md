@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.02
 lastUpdated: 2026-10-19
+outcomes:
+    - "What `make middleware` writes"
+    - "How `--mount` adds it to the router's chain or a controller chain"
+    - "How to publish a value on the context and test it"
 ---
 
 A middleware runs before a controller: it publishes something on the context, such as the

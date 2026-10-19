@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.13
 lastUpdated: 2026-10-19
+outcomes:
+    - "How the name you pass becomes the words you type after `sdxc run`"
+    - "What `make command` writes and where it maps the handler"
+    - "How to fill in a command's flags and test it"
 ---
 
 An app command is work you run by hand or from a script, outside any request: seeding, a

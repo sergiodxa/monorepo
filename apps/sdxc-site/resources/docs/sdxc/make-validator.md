@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.03
 lastUpdated: 2026-10-19
+outcomes:
+    - "What `make validator` writes"
+    - "How a form's fields pass the schema before an action trusts them"
+    - "How to test a validator by submitting it"
 ---
 
 A validator is the schema a submission passes before anything trusts it. `sdxc make validator`

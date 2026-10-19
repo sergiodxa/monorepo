@@ -26,6 +26,8 @@ const frontmatterSchema = s.object({
 	section: s.object({ title: s.string(), order: s.number() }),
 	order: s.number(),
 	lastUpdated: s.optional(s.string()),
+	/** What a reader knows after the guide, each finishing "you will know…", shown under the title. */
+	outcomes: s.optional(s.array(s.string())),
 });
 
 export type GuideFrontmatter = s.InferOutput<typeof frontmatterSchema>;

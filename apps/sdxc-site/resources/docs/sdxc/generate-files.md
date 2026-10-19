@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2
 lastUpdated: 2026-10-19
+outcomes:
+    - "Which file each `sdxc make` kind writes, and what it edits to wire the file in"
+    - 'What to do when `make` prints "Declare and map it by hand"'
+    - "How to replace the built-in stubs with your own"
 ---
 
 `sdxc make <kind> <name>` writes one file of that kind where the app layout puts it, with a test

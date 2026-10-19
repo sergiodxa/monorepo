@@ -6,6 +6,10 @@ section:
     order: 2
 order: 3
 lastUpdated: 2026-10-19
+outcomes:
+    - "Every file `sdxc scaffold` writes for one resource"
+    - "How the scaffold's pages, tools and commands check who may do what"
+    - "How to preview a scaffold and change what it writes"
 ---
 
 `sdxc scaffold <name> [field ...]` writes everything a resource needs to be listed, read,

@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.07
 lastUpdated: 2026-10-19
+outcomes:
+    - "Why a factory builds rows through the model"
+    - "What `make factory` writes from a model's fields"
+    - "How to seed test rows with it"
 ---
 
 A factory builds complete rows for tests, so a test sets only the fields it is about. It writes

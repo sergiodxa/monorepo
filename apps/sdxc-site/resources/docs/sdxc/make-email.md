@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.11
 lastUpdated: 2026-10-19
+outcomes:
+    - "What `make email` writes and how its copy types the subject and body"
+    - "How to render and test an email template"
+    - "How to send it after the response with your mailer"
 ---
 
 An email template is the message the app sends: a welcome, a receipt, a password reset.

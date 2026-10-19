@@ -6,6 +6,10 @@ section:
     order: 2
 order: 9
 lastUpdated: 2026-10-19
+outcomes:
+    - "Why `sdxc deploy` builds, migrates and deploys in that order"
+    - "What production runs after each step that can fail"
+    - "How to change the migrate and deploy commands it runs, and how to run it in CI"
 ---
 
 ```bash

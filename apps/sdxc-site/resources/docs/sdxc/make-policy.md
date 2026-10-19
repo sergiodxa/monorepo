@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.09
 lastUpdated: 2026-10-19
+outcomes:
+    - "How `make policy` adds a resource's abilities to the catalog"
+    - "Who the generated grants let read and change the resource"
+    - "How to narrow the grants and test them"
 ---
 
 An app's authorization lives in two files: `app/policies/abilities.ts`, the catalog of everything

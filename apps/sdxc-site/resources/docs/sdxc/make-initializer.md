@@ -6,6 +6,10 @@ section:
     order: 2
 order: 2.10
 lastUpdated: 2026-10-19
+outcomes:
+    - "What belongs in an initializer, and what belongs in a service"
+    - "What `make initializer` writes"
+    - "How to export a singleton or a per-request factory from it"
 ---
 
 An initializer builds the one instance of something the app shares: an API client, a cache, a
