@@ -30,6 +30,11 @@ export interface Kind {
 	extension: ".ts" | ".tsx" | ".sql";
 	/** Whether `make.tests` writes a test beside the file. */
 	tests: boolean;
+	/**
+	 * Whether the kind writes its test alone: a policy's abilities and grants are edits to the
+	 * app's catalog and policy, so the only file it writes is the test that checks them.
+	 */
+	testOnly?: boolean;
 	/** Whether the name may hold folders. */
 	nested: boolean;
 	/** Placeholders beyond {@link COMMON_PLACEHOLDERS}. */
@@ -45,7 +50,7 @@ export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "sp
 
 /**
  * Every kind, in the order `sdxc make --help` lists them. `path` is the declaration's key path
- * in its map (`trials.expire`), `routes` the route contract's specifier, `tool` the MCP tool
+ * in its map (`trials.expire`, or a policy's ability group `billing.invoice`), `routes` the route contract's specifier, `tool` the MCP tool
  * name, `uri` an MCP resource's pattern, `model` the factory's model specifier. A command's
  * `command` is the words typed to run it (`users grant`), `member` the property access that
  * reaches its declaration (`.users.grant`), and `words` those words as string literals. A
@@ -103,7 +108,14 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		nested: true,
 		placeholders: [],
 	},
-	policy: { folder: "app/policies", extension: ".ts", tests: true, nested: true, placeholders: [] },
+	policy: {
+		folder: "app/policies",
+		extension: ".ts",
+		tests: true,
+		testOnly: true,
+		nested: true,
+		placeholders: ["path"],
+	},
 	initializer: {
 		folder: "app/initializers",
 		extension: ".ts",

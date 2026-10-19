@@ -229,7 +229,7 @@ describe("make middleware --mount", () => {
 				'import requireUser from "~/app/http/middleware/require-user";',
 			);
 			expect(await read("app/http/middleware/api.ts")).toContain(
-				"createMiddleware(cors(), apiKey());",
+				"createMiddleware(cors(), access(policy, { load: [abilities] }), apiKey());",
 			);
 			let checked = await typecheck(root);
 

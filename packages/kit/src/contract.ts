@@ -282,9 +282,10 @@ export const SDXC_COMMANDS = commands({
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		policy: command({
-			description: "An authorization policy in app/policies",
+			description:
+				"A resource's create, read, update and delete abilities in app/policies, with their test",
 			tasks: true,
-			arguments: { name: nameArgument("policy", "can-edit") },
+			arguments: { name: nameArgument("policy", "post") },
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
 		}),
 		initializer: command({

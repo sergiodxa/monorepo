@@ -76,6 +76,28 @@ export function ensureImport(
 	return success({ source: insertImport(source, references.data, statement), local });
 }
 
+/**
+ * `source` importing the type `name` from `specifier`. An existing binding of it, as a type or a
+ * value, is reused under its local name; otherwise `import type { … }` is added after the last
+ * import, since a declaration that only names the type keeps the module out of the bundle.
+ */
+export function ensureTypeImport(
+	filename: string,
+	source: string,
+	name: string,
+	specifier: string,
+): Result<Imported, Error> {
+	let references = findModuleReferences(filename, source);
+	if (isFailure(references)) return references;
+	for (let reference of references.data) {
+		if (reference.kind !== "import" || reference.specifier !== specifier) continue;
+		let bound = reference.names.find((each) => each.imported === name);
+		if (bound !== undefined) return success({ source, local: bound.local });
+	}
+	let statement = `import type { ${name} } from ${literal(specifier)};`;
+	return success({ source: insertImport(source, references.data, statement), local: name });
+}
+
 /** Whether a bound import name is the kind of binding `what` asks for. */
 function bindsAs(imported: string, what: ImportKind): boolean {
 	if (what.kind === "namespace") return imported === "*";

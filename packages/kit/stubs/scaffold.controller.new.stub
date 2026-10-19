@@ -1,6 +1,7 @@
 /**
  * The new {{words}} form and the action that creates one: a valid submission lands on the new
  * {{words}}'s page, and a refused one renders the form again with each issue beside its field.
+ * A visitor `{{path}}.create` refuses gets a 403 from both.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
  * @see {@link https://sdxc.dev/docs/identity-and-security/protect-forms}{{header}}
@@ -12,7 +13,7 @@ import { createController } from "remix/router";
 
 import page from "~/app/http/middleware/page";
 import { {{Name}}Schema } from "~/app/http/validators/{{name}}";
-import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import abilities from "~/app/policies/abilities";
 import { {{Name}}FormPage, submittedValues } from "~/resources/views/{{plural}}/form";
 import routes from "~/routes/web";
 
@@ -21,7 +22,7 @@ export default createController(routes.{{pluralKey}}.new, {
 	actions: {
 		/** Renders the empty form with fresh honeypot fields. */
 		async index(ctx) {
-			if (!authorize{{Name}}(null, "create")) return new Response(null, { status: 403 });
+			if (!ctx.access.can(abilities.{{path}}.create)) return new Response(null, { status: 403 });
 			return ctx.render(
 				<{{Name}}FormPage
 					assets={ctx.assets}
@@ -41,7 +42,7 @@ export default createController(routes.{{pluralKey}}.new, {
 		 * refuses renders the form again as a 422, keeping what the visitor typed.
 		 */
 		async action(ctx) {
-			if (!authorize{{Name}}(null, "create")) return new Response(null, { status: 403 });
+			if (!ctx.access.can(abilities.{{path}}.create)) return new Response(null, { status: 403 });
 			let input = await validate(ctx.formData, {{Name}}Schema);
 			let created = isFailure(input) ? input : await ctx.models.{{key}}.create(input.data);
 			if (isFailure(created)) {

@@ -45,7 +45,7 @@ test beside it is the layout ADR-129 expects.
 | `migration`   | `<chain folder>/<number><separator><name>.sql` |
 | `factory`     | `database/factories/<name>.ts`                 |
 | `service`     | `app/services/<name>.ts`                       |
-| `policy`      | `app/policies/<name>.ts`                       |
+| `policy`      | `app/policies/<name>.test.ts` (see below)      |
 | `initializer` | `app/initializers/<name>.ts`                   |
 | `email`       | `app/emails/<name>.tsx`                        |
 | `mcp`         | `app/mcp/tools/<name>.ts`                      |
@@ -54,6 +54,10 @@ Every kind is one word. A slash in the name argument means a folder inside the k
 (`make job trials/expire` writes `app/jobs/trials/expire.ts`), which keeps the feature grouping
 ADR-129 recommends, so a kind never contains one.
 
+- **Policies.** `make policy <resource>` declares the resource's `create`, `read`, `update` and
+  `delete` abilities in `app/policies/abilities.ts` and grants them in `app/policies/policy.ts`,
+  reads to `everyone` and writes to `member`, writing only the test that decides them
+  ([ADR-164](./ADR-164-generated-authorization-uses-authz.md)).
 - **MCP.** `make mcp <name>` writes a tool, the handler most MCP servers have; `--resource`
   writes a resource to `app/mcp/resources/<name>.ts` instead.
 - **Migrations by chain.** `make migration <name> [--chain <chain>]` writes into the folder

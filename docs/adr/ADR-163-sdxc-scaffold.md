@@ -41,7 +41,7 @@ sdxc scaffold <name> [field[:type][?] ...] [--plural <word>] [--mcp] [--command]
 | Migration                   | `database/migrations/NNNN_CreatePosts.sql`, from `createTableStatement`        |
 | Factory                     | `database/factories/post.ts`                                                   |
 | Validator                   | `app/http/validators/post.ts`, the form's `remix/data-schema`                  |
-| Policy                      | `app/policies/post.ts`, `authorizePost(actor, action)`                         |
+| Abilities and grants        | `post.*` in `app/policies/abilities.ts` and `policy.ts`, as `make policy` adds |
 | Form shared by new and edit | `resources/views/posts/form.tsx`                                               |
 | Pages, declared and mapped  | `app/http/controllers/posts/{index,new,show,edit,destroy}.tsx` in `routes/web` |
 | Copy                        | a `posts` block in every `resources/locales/*.json`                            |
@@ -49,8 +49,9 @@ sdxc scaffold <name> [field[:type][?] ...] [--plural <word>] [--mcp] [--command]
 | `--command`: app commands   | `app/commands/posts/{list,show,create,delete}.ts`                              |
 | Test helpers, when missing  | `app/test/database.ts`, and `app/test/mcp.ts` with `--mcp`                     |
 
-The model, validator, policy, pages, tools and commands each get a test beside them, unless
-`--no-test` or `make.tests` says otherwise; the generated tests pass on a fresh project.
+The model, validator, abilities (`app/policies/post.test.ts`), pages, tools and commands each
+get a test beside them, unless `--no-test` or `make.tests` says otherwise; the generated tests
+pass on a fresh project.
 
 - **Top level, not a `make` kind.** A kind writes one file of one kind; a scaffold writes many
   kinds at once and takes a field list no kind takes, so it is its own command beside `make`.
@@ -164,13 +165,19 @@ loops inside stubs.
   `ctx.intl`, `@sdxc/ui` components, and `HoneypotFields` on every form, which the page
   middleware checks on each POST.
 - A refused submission renders the form again as a 422 with each issue beside its field. A
-  missing row is a 404. Each handler asks the policy first and answers 403 when it refuses.
-- The policy lets every visitor take every action, and the anonymous set is the one line to
-  narrow once the app signs people in.
+  missing row, and one `post.read` hides, is a 404. A write `post.create`, `post.update` or
+  `post.delete` refuses is a 403; the index lists only the rows `post.read` allows
+  ([ADR-164](./ADR-164-generated-authorization-uses-authz.md)).
+- Reads are granted to `everyone` and writes to `member`, which the template binds to a visitor
+  whose session holds an `actor`.
 - Tools and commands bind the model to the invocation's database (`ctx.db`); a tool reports a
-  missing row or a refused write with `ToolError`, a command with a failure.
+  missing or hidden row and a write the database refuses with `ToolError` and a refused write
+  with `ForbiddenError`, a command with a failure. Commands run as the operator and check no
+  ability.
 - Tests apply every migration to the in-memory `DB` binding (`app/test/database.ts`) and drive
-  pages through the router, tools through `/mcp`, and commands through `invoke()`, with the
+  pages through the router (writes as a member signed in with `app/test/session.ts`, and as a
+  refused guest), tools through `/mcp` as a guest and through a member-bound router, and
+  commands through `invoke()`, with the
   command line's local database replaced by that binding. A page test allows 30 seconds, since
   its first request imports the page middleware and `@sdxc/ui` while Vitest transforms them cold.
 

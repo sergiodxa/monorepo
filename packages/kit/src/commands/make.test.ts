@@ -28,6 +28,7 @@ import {
 	projectExec,
 	registryDocument,
 	runCommandLine,
+	testProject,
 	typecheck,
 } from "../testing.js";
 
@@ -113,7 +114,6 @@ describe("make", () => {
 		["validator", "signup", "app/http/validators/signup.ts"],
 		["job", "trials/expire", "app/jobs/trials/expire.ts"],
 		["service", "billing/charge", "app/services/billing/charge.ts"],
-		["policy", "can-edit", "app/policies/can-edit.ts"],
 		["initializer", "cache", "app/initializers/cache.ts"],
 		["email", "welcome", "app/emails/welcome.tsx"],
 		["mcp", "get-post", "app/mcp/tools/get-post.ts"],
@@ -208,12 +208,11 @@ describe("make", () => {
 		let root = await project('{ "make": { "tests": false } }');
 
 		await invoke(["service", "charge"], root);
-		await invoke(["policy", "can-edit", "--test"], root);
+		await invoke(["policy", "post", "--test"], root);
 
 		expect(await files(root)).toEqual([
 			".config/sdxc.jsonc",
-			"app/policies/can-edit.test.ts",
-			"app/policies/can-edit.ts",
+			"app/policies/post.test.ts",
 			"app/services/charge.ts",
 		]);
 	});
@@ -257,17 +256,17 @@ describe("make", () => {
 		let root = await project();
 		await mkdir(join(root, ".config/sdxc/stubs"), { recursive: true });
 		await writeFile(join(root, ".config/sdxc/stubs/service.stub"), "export const {{key}} = 1;\n");
-		await writeFile(join(root, ".config/sdxc/stubs/policy.stub"), "{{nmae}}\n");
+		await writeFile(join(root, ".config/sdxc/stubs/validator.stub"), "{{nmae}}\n");
 
 		await invoke(["service", "charge", "--no-test"], root);
-		let typo = await invoke(["policy", "can-edit", "--no-test"], root);
+		let typo = await invoke(["validator", "signup", "--no-test"], root);
 
 		expect(await readFile(join(root, "app/services/charge.ts"), "utf8")).toBe(
 			"export const charge = 1;\n",
 		);
 		expect(typo.code).toBe(1);
 		expect(typo.stderr).toMatch(
-			/^\.config\/sdxc\/stubs\/policy\.stub uses \{\{nmae\}\}, which this kind does not define; it accepts \{\{name\}\}/,
+			/^\.config\/sdxc\/stubs\/validator\.stub uses \{\{nmae\}\}, which this kind does not define; it accepts \{\{name\}\}/,
 		);
 	});
 
@@ -432,7 +431,7 @@ describe("declaring and mapping", () => {
 				["model", "post", "title", "body", "published_at", "is_featured", "author_id?"],
 				["migration", "add-slug-to-posts", "slug?", "pinned"],
 				["service", "billing/charge"],
-				["policy", "can-edit"],
+				["policy", "post"],
 				["initializer", "cache"],
 				["email", "welcome"],
 				["command", "users/grant"],
@@ -496,6 +495,19 @@ describe("declaring and mapping", () => {
 				'export default createModels({\n\tpost: () => import("./post"),\n});',
 			);
 
+			let catalog = await read("app/policies/abilities.ts");
+			let policy = await read("app/policies/policy.ts");
+			expect(catalog).toContain('import { abilities, ability, context } from "@sdxc/authz";');
+			expect(catalog).toContain('import type { PostRow } from "~/app/models/post";');
+			expect(catalog).toContain(
+				'\tpost: {\n\t\tcreate: ability(),\n\t\tread: ability({ context: context<{ post: PostRow }>("post"), deniedAs: "notFound" }),',
+			);
+			expect(policy).toContain('import { definePolicy, fact, allow } from "@sdxc/authz";');
+			expect(policy).toContain('everyone: [allow("post.read", { id: "post-read" })],');
+			expect(policy).toContain(
+				'member: [allow(["post.create", "post.update", "post.delete"], { id: "post-write" })]',
+			);
+
 			let commands = await read("app/commands/index.ts");
 			let cli = await read("app/initializers/cli.ts");
 			expect(commands).toContain(
@@ -554,6 +566,89 @@ describe("declaring and mapping", () => {
 		);
 		expect(await readFile(join(root, "app/initializers/cli.ts"), "utf8")).toBe(initializer);
 	});
+
+	test("a policy in a project without a catalog writes its test and prints the edits to make", async () => {
+		let root = await project();
+
+		let result = await invoke(["policy", "billing/invoice"], root, { exec: UNFORMATTED });
+
+		expect(await files(root)).toEqual(["app/policies/billing/invoice.test.ts"]);
+		expect(result.stdout).toBe(
+			[
+				"Wrote app/policies/billing/invoice.test.ts",
+				"Added @sdxc/authz@2026.10.14 to package.json; run npm install",
+				"Declare and map it by hand, since app/policies/abilities.ts could not be read:",
+				"In app/policies/abilities.ts, in abilities({ … }), under billing:",
+				"  invoice: {",
+				"  \tcreate: ability(),",
+				'  \tread: ability({ context: context<{ invoice: { id: string } }>("invoice"), deniedAs: "notFound" }),',
+				'  \tupdate: ability({ context: context<{ invoice: { id: string } }>("invoice") }),',
+				'  \tdelete: ability({ context: context<{ invoice: { id: string } }>("invoice") }),',
+				"  },",
+				"In app/policies/policy.ts, in definePolicy(…)'s everyone:",
+				'  allow("billing.invoice.read", { id: "billing-invoice-read" }),',
+				"In app/policies/policy.ts, in definePolicy(…)'s roles.member:",
+				'  allow(["billing.invoice.create", "billing.invoice.update", "billing.invoice.delete"], { id: "billing-invoice-write" }),',
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("policy --dry-run prints the catalog and policy edits and writes nothing", async () => {
+		let root = await project();
+		await mkdir(join(root, "app/policies"), { recursive: true });
+		let catalog =
+			'import { abilities, ability } from "@sdxc/authz";\n\nexport default abilities({\n\treports: { export: ability() },\n});\n';
+		let policy =
+			'import { definePolicy } from "@sdxc/authz";\n\nimport abilities from "./abilities";\n\nexport default definePolicy(abilities, {\n\troles: {\n\t\tmember: { inherits: [], grants: [] },\n\t},\n});\n';
+		await writeFile(join(root, "app/policies/abilities.ts"), catalog);
+		await writeFile(join(root, "app/policies/policy.ts"), policy);
+
+		let result = await invoke(["policy", "post", "--dry-run"], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Would write app/policies/post.test.ts:");
+		expect(result.stdout).toContain('+import { abilities, ability, context } from "@sdxc/authz";');
+		expect(result.stdout).toContain("+\tpost: {");
+		expect(result.stdout).toContain('+import { definePolicy, allow } from "@sdxc/authz";');
+		expect(result.stdout).toContain('+\teveryone: [allow("post.read", { id: "post-read" })],');
+		expect(result.stdout).toContain(
+			'allow(["post.create", "post.update", "post.delete"], { id: "post-write" })',
+		);
+		expect(await readFile(join(root, "app/policies/abilities.ts"), "utf8")).toBe(catalog);
+		expect(await readFile(join(root, "app/policies/policy.ts"), "utf8")).toBe(policy);
+		expect(await files(root)).toEqual(["app/policies/abilities.ts", "app/policies/policy.ts"]);
+	});
+
+	test(
+		"a policy's test passes in the app template, typed by its model's row or by an id",
+		{ timeout: 180_000 },
+		async () => {
+			let root = unwrap(await materialize("app"));
+			DIRECTORIES.push(dirname(root));
+			let exec = projectExec(root);
+
+			for (let argv of [
+				["model", "article", "title"],
+				["policy", "article"],
+				["policy", "billing/invoice"],
+			]) {
+				let result = await invoke(argv, root, { exec });
+				expect(result.code, argv.join(" ")).toBe(0);
+				expect(result.stdout, argv.join(" ")).not.toContain("by hand");
+			}
+
+			let catalog = await readFile(join(root, "app/policies/abilities.ts"), "utf8");
+			expect(catalog).toContain("context<{ article: ArticleRow }>");
+			expect(catalog).toContain("context<{ invoice: { id: string } }>");
+			let checked = await typecheck(root);
+			expect(checked.output).toContain("Found no type errors");
+			let tested = await testProject(root);
+			expect(tested.output).toMatch(/Tests {2}\d+ passed/);
+			expect(tested.output).not.toContain("failed");
+			expect(tested.code).toBe(0);
+		},
+	);
 
 	test("a model in a project without a models registry prints the entry to add", async () => {
 		let root = await project();

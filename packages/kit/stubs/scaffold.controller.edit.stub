@@ -1,7 +1,8 @@
 /**
  * The edit form of one {{words}} and the action that saves it: a valid submission lands back on
  * the {{words}}'s page, a refused one renders the form again with each issue beside its field,
- * and an id no {{words}} has is a 404.
+ * and an id no {{words}} has, or one `{{path}}.read` hides, is a 404. A visitor
+ * `{{path}}.update` refuses gets a 403.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
  * @see {@link https://sdxc.dev/docs/identity-and-security/protect-forms}{{header}}
@@ -14,7 +15,7 @@ import { createController } from "remix/router";
 
 import page from "~/app/http/middleware/page";
 import { {{Name}}Schema } from "~/app/http/validators/{{name}}";
-import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import abilities from "~/app/policies/abilities";
 import DocumentLayout from "~/resources/layouts/document";
 import {
 	{{Name}}FormPage,
@@ -28,9 +29,8 @@ export default createController(routes.{{pluralKey}}.edit, {
 	actions: {
 		/** Renders the form filled with the {{words}}'s values and fresh honeypot fields. */
 		async index(ctx) {
-			if (!authorize{{Name}}(null, "update")) return new Response(null, { status: 403 });
 			let row = await ctx.models.{{key}}.find(ctx.params.id);
-			if (row === null) {
+			if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
 				let missing = ctx.intl.t("notFound.title");
 				return ctx.render(
 					<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title={missing}>
@@ -38,6 +38,9 @@ export default createController(routes.{{pluralKey}}.edit, {
 					</DocumentLayout>,
 					{ status: 404 },
 				);
+			}
+			if (!ctx.access.can(abilities.{{path}}.update, { {{key}}: row })) {
+				return new Response(null, { status: 403 });
 			}
 			return ctx.render(
 				<{{Name}}FormPage
@@ -58,8 +61,14 @@ export default createController(routes.{{pluralKey}}.edit, {
 		 * refuses renders the form again as a 422, keeping what the visitor typed.
 		 */
 		async action(ctx) {
-			if (!authorize{{Name}}(null, "update")) return new Response(null, { status: 403 });
 			let { id } = ctx.params;
+			let row = await ctx.models.{{key}}.find(id);
+			if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
+				return new Response(null, { status: 404 });
+			}
+			if (!ctx.access.can(abilities.{{path}}.update, { {{key}}: row })) {
+				return new Response(null, { status: 403 });
+			}
 			let input = await validate(ctx.formData, {{Name}}Schema);
 			let updated = isFailure(input) ? input : await ctx.models.{{key}}.update(id, input.data);
 			if (isFailure(updated)) {

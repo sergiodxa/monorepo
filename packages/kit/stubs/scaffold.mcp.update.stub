@@ -1,21 +1,31 @@
 /**
  * Answers `update_{{snake}}`: changes the fields the call names on the {{words}} with the id, and
- * answers it as saved. An id no {{words}} has, or a write the database refuses, is a tool error.
+ * answers it as saved. An id no {{words}} has, one `{{path}}.read` hides, or a write the database
+ * refuses is a tool error; a caller `{{path}}.update` refuses is a forbidden call.
  *
  * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
  * @see {@link https://sdxc.dev/api/mcp}{{header}}
  */
 
 import { NotFound } from "@sdxc/data-model";
-import { createTool, ToolError } from "@sdxc/mcp";
+import { createTool, ForbiddenError, ToolError } from "@sdxc/mcp";
 import { isFailure } from "@sdxc/result";
 
 import toolset from "~/app/mcp/tools";
 import { {{Name}} } from "~/app/models/{{name}}";
+import abilities from "~/app/policies/abilities";
 
 export default createTool(toolset.{{pluralKey}}.update, async (ctx) => {
 	let { id, ...changes } = ctx.input;
-	let updated = await {{Name}}.bind({ db: ctx.db }).update(id, changes);
+	let model = {{Name}}.bind({ db: ctx.db });
+	let row = await model.find(id);
+	if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
+		throw new ToolError(`No {{words}} has the id ${id}; list_{{pluralSnake}} lists them.`);
+	}
+	if (!ctx.access.can(abilities.{{path}}.update, { {{key}}: row })) {
+		throw new ForbiddenError("{{path}}.update is not permitted");
+	}
+	let updated = await model.update(id, changes);
 	if (isFailure(updated)) {
 		throw new ToolError(
 			updated.error instanceof NotFound

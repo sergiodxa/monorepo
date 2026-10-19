@@ -1,6 +1,7 @@
 /**
- * One {{words}}'s edit form through the app's router, so the honeypot check runs as in the Worker.
- * Its controller loads with the file, keeping its cold import outside each test's time limit.
+ * One {{words}}'s edit form through the app's router as a signed-in member, so the honeypot and
+ * access checks run as in the Worker, and as a guest, whom `{{path}}.update` refuses. Its
+ * controller loads with the file, keeping its cold import outside each test's time limit.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
@@ -13,18 +14,32 @@ import "~/app/http/controllers/{{plural}}/edit";
 import { honeypot } from "~/app/initializers/honeypot";
 import { createWebRouter } from "~/app/initializers/router";
 import { factories, migrate } from "~/app/test/database";
+import { signIn } from "~/app/test/session";
 import { {{Name}}Factory } from "~/database/factories/{{name}}";
 import routes from "~/routes/web";
 
 beforeAll(migrate);
 
-/** Posts `fields` to the update action of the {{words}} with `id`, with valid honeypot fields. */
-async function submit(id: string, fields: Record<string, string>) {
+/**
+ * Posts `fields` to the update action of the {{words}} with `id`, with valid honeypot fields, as
+ * `cookie`'s visitor.
+ */
+async function submit(id: string, fields: Record<string, string>, cookie: string | null) {
 	let { token, tokenField } = unwrap(await honeypot.issue());
 	return createWebRouter().fetch(
 		new Request(new URL(routes.{{pluralKey}}.edit.action.href({ id }), "https://example.com"), {
 			method: "POST",
+			headers: cookie === null ? {} : { cookie },
 			body: new URLSearchParams({ ...fields, [tokenField]: token }),
+		}),
+	);
+}
+
+/** Fetches the edit form of the {{words}} with `id` as `cookie`'s visitor. */
+function form(id: string, cookie: string | null) {
+	return createWebRouter().fetch(
+		new Request(new URL(routes.{{pluralKey}}.edit.index.href({ id }), "https://example.com"), {
+			headers: cookie === null ? {} : { cookie },
 		}),
 	);
 }
@@ -33,9 +48,7 @@ describe("{{plural}}/edit", () => {
 	test("renders the form filled with the {{words}}'s values", async () => {
 		let row = await factories().create({{Name}}Factory);
 
-		let response = await createWebRouter().fetch(
-			new URL(routes.{{pluralKey}}.edit.index.href({ id: row.id }), "https://example.com"),
-		);
+		let response = await form(row.id, await signIn());
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain(
@@ -46,7 +59,7 @@ describe("{{plural}}/edit", () => {
 	test("saves the {{words}} and redirects to its page", async () => {
 		let row = await factories().create({{Name}}Factory);
 
-		let response = await submit(row.id, { {{formSample}} });
+		let response = await submit(row.id, { {{formSample}} }, await signIn());
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.{{pluralKey}}.show.href({ id: row.id }));
@@ -55,14 +68,24 @@ describe("{{plural}}/edit", () => {
 	test("renders the form again for a refused submission", async () => {
 		let row = await factories().create({{Name}}Factory);
 
-		let response = await submit(row.id, { {{invalidForm}} });
+		let response = await submit(row.id, { {{invalidForm}} }, await signIn());
 
 		expect(response.status).toBe(422);
 	});
 
 	test("answers 404 for an id no {{words}} has", async () => {
-		let response = await submit("missing", { {{formSample}} });
+		let response = await submit("missing", { {{formSample}} }, await signIn());
 
 		expect(response.status).toBe(404);
+	});
+
+	test("answers a guest 403 for the form and the action", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let page = await form(row.id, null);
+		let response = await submit(row.id, { {{formSample}} }, null);
+
+		expect(page.status).toBe(403);
+		expect(response.status).toBe(403);
 	});
 });

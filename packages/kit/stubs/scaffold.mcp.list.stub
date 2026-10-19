@@ -1,6 +1,7 @@
 /**
  * Answers `list_{{pluralSnake}}`: the newest {{pluralWords}} first, up to `limit`, so a model sees
- * what exists before it reads one in full with `get_{{snake}}`.
+ * what exists before it reads one in full with `get_{{snake}}`. A {{words}} `{{path}}.read`
+ * hides is left out.
  *
  * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
  * @see {@link https://sdxc.dev/api/mcp}{{header}}
@@ -10,7 +11,13 @@ import { createTool } from "@sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 import { {{Name}} } from "~/app/models/{{name}}";
+import abilities from "~/app/policies/abilities";
 
-export default createTool(toolset.{{pluralKey}}.list, (ctx) =>
-	{{Name}}.bind({ db: ctx.db }).query().orderBy("created_at", "desc").limit(ctx.input.limit).all(),
-);
+export default createTool(toolset.{{pluralKey}}.list, async (ctx) => {
+	let rows = await {{Name}}.bind({ db: ctx.db })
+		.query()
+		.orderBy("created_at", "desc")
+		.limit(ctx.input.limit)
+		.all();
+	return rows.filter((row) => ctx.access.can(abilities.{{path}}.read, { {{key}}: row }));
+});

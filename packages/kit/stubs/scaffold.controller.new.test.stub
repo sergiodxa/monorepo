@@ -1,6 +1,7 @@
 /**
- * The new {{words}} form through the app's router, so the honeypot check runs as in the Worker.
- * Its controller loads with the file, keeping its cold import outside each test's time limit.
+ * The new {{words}} form through the app's router as a signed-in member, so the honeypot check
+ * and the access check run as in the Worker, and as a guest, whom `{{path}}.create` refuses. Its
+ * controller loads with the file, keeping its cold import outside each test's time limit.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
@@ -15,33 +16,42 @@ import { honeypot } from "~/app/initializers/honeypot";
 import { createWebRouter } from "~/app/initializers/router";
 import { {{Name}} } from "~/app/models/{{name}}";
 import { migrate } from "~/app/test/database";
+import { signIn } from "~/app/test/session";
 import routes from "~/routes/web";
 
 beforeAll(migrate);
 
-/** Posts `fields` to the create action with valid honeypot fields. */
-async function submit(fields: Record<string, string>) {
+/** Posts `fields` to the create action with valid honeypot fields, as `cookie`'s visitor. */
+async function submit(fields: Record<string, string>, cookie: string | null) {
 	let { token, tokenField } = unwrap(await honeypot.issue());
 	return createWebRouter().fetch(
 		new Request(new URL(routes.{{pluralKey}}.new.action.href(), "https://example.com"), {
 			method: "POST",
+			headers: cookie === null ? {} : { cookie },
 			body: new URLSearchParams({ ...fields, [tokenField]: token }),
+		}),
+	);
+}
+
+/** Fetches the empty form as `cookie`'s visitor. */
+function form(cookie: string | null) {
+	return createWebRouter().fetch(
+		new Request(new URL(routes.{{pluralKey}}.new.index.href(), "https://example.com"), {
+			headers: cookie === null ? {} : { cookie },
 		}),
 	);
 }
 
 describe("{{plural}}/new", () => {
 	test("renders the form", async () => {
-		let response = await createWebRouter().fetch(
-			new URL(routes.{{pluralKey}}.new.index.href(), "https://example.com"),
-		);
+		let response = await form(await signIn());
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain('name="{{firstColumn}}"');
 	});
 
 	test("creates a {{words}} and redirects to its page", async () => {
-		let response = await submit({ {{formSample}} });
+		let response = await submit({ {{formSample}} }, await signIn());
 
 		let rows = await {{Name}}.bind({ db: openDatabase() }).query().all();
 		expect(response.status).toBe(303);
@@ -51,9 +61,21 @@ describe("{{plural}}/new", () => {
 	});
 
 	test("renders the form again for a refused submission", async () => {
-		let response = await submit({ {{invalidForm}} });
+		let response = await submit({ {{invalidForm}} }, await signIn());
 
 		expect(response.status).toBe(422);
 		expect(await response.text()).toContain('name="{{firstColumn}}"');
+	});
+
+	test("answers a guest 403 for the form and the action, creating nothing", async () => {
+		let before = await {{Name}}.bind({ db: openDatabase() }).query().all();
+
+		let page = await form(null);
+		let response = await submit({ {{formSample}} }, null);
+
+		let after = await {{Name}}.bind({ db: openDatabase() }).query().all();
+		expect(page.status).toBe(403);
+		expect(response.status).toBe(403);
+		expect(after).toHaveLength(before.length);
 	});
 });

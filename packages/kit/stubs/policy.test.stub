@@ -1,20 +1,46 @@
 /**
- * The {{title}} policy.
+ * Who may do what with `{{path}}`: anyone reads one, and a signed-in member creates, updates and
+ * deletes one. Change its grants in `app/policies/policy.ts` and keep these cases in step.
  *
  * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}
- * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
+ * @see {@link https://sdxc.dev/api/authz}{{header}}
  */
 
+import type { ContextOf } from "@sdxc/authz";
+
+import { testAccess } from "@sdxc/authz/testing";
 import { describe, expect, test } from "vitest";
 
-import { {{key}} } from "{{specifier}}";
+import abilities from "~/app/policies/abilities";
+import policy from "~/app/policies/policy";
 
-describe("{{key}}", () => {
-	test("refuses an anonymous visitor", () => {
-		expect({{key}}(null)).toBe(false);
+/** The record each check passes; no grant reads its fields until one gains a condition. */
+const RECORD = { id: "1" } as ContextOf<typeof abilities.{{path}}.read>["{{key}}"];
+
+describe("{{path}}", () => {
+	test("lets a guest read one", () => {
+		let guest = testAccess(policy, { roles: [] });
+
+		expect(guest.can(abilities.{{path}}.read, { {{key}}: RECORD })).toBe(true);
 	});
 
-	test("allows a signed-in actor", () => {
-		expect({{key}}({ id: "1" })).toBe(true);
+	test("lets a member create, update and delete one", () => {
+		let member = testAccess(policy, { roles: ["member"], facts: { actor: { id: "1" } } });
+
+		expect(member.can(abilities.{{path}}.create)).toBe(true);
+		expect(member.can(abilities.{{path}}.update, { {{key}}: RECORD })).toBe(true);
+		expect(member.can(abilities.{{path}}.delete, { {{key}}: RECORD })).toBe(true);
+	});
+
+	test("refuses a guest every write", () => {
+		let guest = testAccess(policy, { roles: [] });
+
+		expect(guest.check(abilities.{{path}}.create)).toMatchObject({ allowed: false });
+		expect(guest.check(abilities.{{path}}.update, { {{key}}: RECORD })).toMatchObject({
+			allowed: false,
+		});
+		expect(guest.check(abilities.{{path}}.delete, { {{key}}: RECORD })).toMatchObject({
+			allowed: false,
+		});
 	});
 });

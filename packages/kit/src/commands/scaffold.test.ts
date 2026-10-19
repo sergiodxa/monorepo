@@ -112,6 +112,21 @@ describe("scaffold", () => {
 				'CREATE TABLE "posts" (',
 			);
 			expect(await read("app/models/index.ts")).toContain('post: () => import("./post"),');
+			let abilities = await read("app/policies/abilities.ts");
+			expect(abilities).toContain('import type { PostRow } from "~/app/models/post";');
+			expect(abilities).toContain('context: context<{ post: PostRow }>("post"),');
+			expect(abilities).toContain('deniedAs: "notFound"');
+			let policy = await read("app/policies/policy.ts");
+			expect(policy).toContain('allow("post.read", { id: "post-read" })');
+			expect(policy).toContain(
+				'allow(["post.create", "post.update", "post.delete"], { id: "post-write" })',
+			);
+			expect(await files(join(root, "app/policies"))).toEqual([
+				"abilities.ts",
+				"policy.test.ts",
+				"policy.ts",
+				"post.test.ts",
+			]);
 			let routes = await read("routes/web.ts");
 			expect(routes).toContain('index: get("/posts"),');
 			expect(routes).toContain('new: form("/posts/new"),');
@@ -191,14 +206,14 @@ describe("scaffold", () => {
 			cwd: root,
 			interactive: false,
 		});
-		await writeFile(join(root, ".config/sdxc/stubs/scaffold.policy.stub"), "{{nope}}\n");
+		await writeFile(join(root, ".config/sdxc/stubs/scaffold.validator.stub"), "{{nope}}\n");
 		let result = await invoke(["post", "title"], root);
 
 		expect(copied.code).toBe(0);
 		expect(copied.stdout).toContain("Wrote .config/sdxc/stubs/scaffold.controller.index.stub");
 		expect(copied.stdout).not.toContain("stubs/model.stub");
 		expect(result.code).toBe(1);
-		expect(result.stderr).toContain(".config/sdxc/stubs/scaffold.policy.stub uses {{nope}}");
+		expect(result.stderr).toContain(".config/sdxc/stubs/scaffold.validator.stub uses {{nope}}");
 		expect((await files(root)).filter((path) => !path.startsWith(".config/"))).toEqual([
 			"package.json",
 		]);

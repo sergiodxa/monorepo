@@ -1,5 +1,5 @@
 /**
- * The `sdxc scaffold` handler: a resource's model, migration, factory, validator, policy, pages
+ * The `sdxc scaffold` handler: a resource's model, migration, factory, validator, abilities, pages
  * and, on request, MCP tools and app commands, each declared and mapped as `sdxc make` does.
  * `createSDXC()` maps it through `lazy()`.
  *

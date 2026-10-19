@@ -1,14 +1,27 @@
 /**
- * Calls the app's MCP tools the way a client does: a JSON-RPC `tools/call` posted to `/mcp`
- * through the router, so a test runs every middleware a real call runs.
+ * Calls the app's MCP tools the way a client does: a JSON-RPC `tools/call` posted to `/mcp`. A
+ * guest's call goes through the app's router, running every middleware a real call runs; a
+ * member's goes through a router binding that principal, which the API grants nobody yet.
  *
  * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}{{header}}
  */
 
+import { access } from "@sdxc/authz/middleware/router";
+import { models } from "@sdxc/data-model/router";
+import { database } from "@sdxc/database-middleware";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { createRouter } from "remix/router";
 
+import { openDatabase } from "~/app/initializers/database";
+import mcp from "~/app/initializers/mcp";
 import { createWebRouter } from "~/app/initializers/router";
+import registry from "~/app/models";
+import abilities from "~/app/policies/abilities";
+import policy from "~/app/policies/policy";
 import routes from "~/routes/api";
+
+/** Who a call is made as: a guest, as the API binds every caller, or a signed-in member. */
+export type Caller = "guest" | "member";
 
 /** What a call answered: its text, and whether the tool, or the protocol, reported a failure. */
 export interface ToolCall {
@@ -23,11 +36,32 @@ interface CallResponse {
 }
 
 /**
- * Calls the tool `name` with `args`. A protocol error, such as arguments the tool's schema
- * refuses, answers its message as a failure.
+ * A router answering `/mcp` over the app's database and models as a member, the principal the
+ * API binds once it authenticates its callers.
  */
-export async function callTool(name: string, args: Record<string, unknown>): Promise<ToolCall> {
-	let response = await createWebRouter().fetch(
+function createMemberRouter() {
+	let router = createRouter({
+		middleware: [
+			database(openDatabase()),
+			models(registry, (ctx) => ({ db: ctx.db })),
+			access(policy, { roles: ["member"], facts: { actor: { id: "1" } }, load: [abilities] }),
+		],
+	});
+	router.map(routes.mcp, (ctx) => mcp.fetch(ctx));
+	return router;
+}
+
+/**
+ * Calls the tool `name` with `args` as `caller`. A protocol error, such as arguments the tool's
+ * schema refuses or a forbidden call, answers its message as a failure.
+ */
+export async function callTool(
+	name: string,
+	args: Record<string, unknown>,
+	caller: Caller = "guest",
+): Promise<ToolCall> {
+	let router = caller === "member" ? createMemberRouter() : createWebRouter();
+	let response = await router.fetch(
 		new Request(new URL(routes.mcp.href(), "https://example.com"), {
 			method: "POST",
 			headers: {

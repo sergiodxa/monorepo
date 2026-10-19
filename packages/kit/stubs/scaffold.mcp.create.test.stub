@@ -1,5 +1,6 @@
 /**
- * The `create_{{snake}}` tool, called over `/mcp` as a client calls it.
+ * The `create_{{snake}}` tool, called over `/mcp` as a client calls it: as a member, whom
+ * `{{path}}.create` allows, and as a guest, whom it refuses.
  *
  * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
@@ -16,10 +17,20 @@ beforeAll(migrate);
 
 describe("create_{{snake}}", () => {
 	test("writes a {{words}} and answers it with its id", async () => {
-		let result = await callTool("create_{{snake}}", { {{jsonSample}} });
+		let result = await callTool("create_{{snake}}", { {{jsonSample}} }, "member");
 
 		expect(result.isError).toBe(false);
 		let { id } = JSON.parse(result.text) as { id: string };
 		expect(await {{Name}}.bind({ db: openDatabase() }).find(id)).not.toBeNull();
+	});
+
+	test("refuses a guest, writing nothing", async () => {
+		let before = await {{Name}}.bind({ db: openDatabase() }).query().all();
+
+		let result = await callTool("create_{{snake}}", { {{jsonSample}} });
+
+		let after = await {{Name}}.bind({ db: openDatabase() }).query().all();
+		expect(result.isError).toBe(true);
+		expect(after).toHaveLength(before.length);
 	});
 });

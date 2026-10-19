@@ -1,5 +1,6 @@
 /**
- * Every {{words}}, newest first, each linking to its page, with the way to add another.
+ * Every {{words}} the visitor may read, newest first, each linking to its page, with the way to
+ * add another.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
  * @see {@link https://sdxc.dev/docs/building-remix-apps/interface-with-remix-ui}{{header}}
@@ -11,16 +12,16 @@ import { Table } from "@sdxc/ui/table";
 import { createAction } from "remix/router";
 
 import page from "~/app/http/middleware/page";
-import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import abilities from "~/app/policies/abilities";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 export default createAction(routes.{{pluralKey}}.index, {
 	middleware: page,
-	/** Lists every {{words}}; a visitor the policy refuses gets a 403. */
+	/** Lists the {{pluralWords}} `{{path}}.read` allows, so a hidden one is left out of the list. */
 	async handler(ctx) {
-		if (!authorize{{Name}}(null, "list")) return new Response(null, { status: 403 });
-		let rows = await ctx.models.{{key}}.query().orderBy("created_at", "desc").all();
+		let all = await ctx.models.{{key}}.query().orderBy("created_at", "desc").all();
+		let rows = all.filter((row) => ctx.access.can(abilities.{{path}}.read, { {{key}}: row }));
 		let title = ctx.intl.t("{{pluralKey}}.index.title");
 		return ctx.render(
 			<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title={title}>

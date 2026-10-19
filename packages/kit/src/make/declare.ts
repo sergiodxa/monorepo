@@ -2,8 +2,9 @@
  * Declares and maps what `make job`, `make controller`, `make mcp` and `make command` generate:
  * the entry in the job map, route contract, MCP or command declaration module, and the mapping
  * in the initializer that serves it, plus a page's sitemap decision; `make model` registers the
- * model in `app/models/index.ts` the same way. Every edit is computed before anything is written;
- * when one cannot be placed, none is made and the command prints them for the user instead.
+ * model in `app/models/index.ts` and `make policy` a resource's abilities and grants the same
+ * way. Every edit is computed before anything is written; when one cannot be placed, none is
+ * made and the command prints them for the user instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,18 +16,18 @@ import { dirname, join, posix } from "node:path";
 import type { ModuleReference } from "@sdxc/codemod";
 import type { Result } from "@sdxc/result";
 
-import { addProperty, findModuleReferences, insertAfterLast } from "@sdxc/codemod";
+import { addElement, addProperty, findModuleReferences, insertAfterLast } from "@sdxc/codemod";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
 import type { Name } from "./names.js";
 
 import { literal, memberAccess } from "./generate.js";
-import { ensureImport, resolvesTo, specifierFor } from "./imports.js";
+import { ensureImport, ensureTypeImport, resolvesTo, specifierFor } from "./imports.js";
 import { camel } from "./names.js";
 
 /** What to declare and map, as the command line asked for it. */
 export interface DeclarationRequest {
-	kind: "job" | "controller" | "mcp" | "command" | "model";
+	kind: "job" | "controller" | "mcp" | "command" | "model" | "policy";
 	name: Name;
 	/** `cron` for a scheduled job, `resource` for an MCP resource, `null` otherwise. */
 	variant: string | null;
@@ -111,6 +112,7 @@ export async function declare(request: DeclarationRequest, root: string): Promis
 	if (request.kind === "controller") return declareController(request, root);
 	if (request.kind === "command") return declareCommand(request, root);
 	if (request.kind === "model") return declareModel(request, root);
+	if (request.kind === "policy") return declarePolicy(request, root);
 	return declareMcp(request, root);
 }
 
@@ -648,6 +650,196 @@ async function declareModel(request: DeclarationRequest, root: string): Promise<
 	};
 }
 
+/** The abilities of a resource `make policy` grants to `member`; its `read` goes to `everyone`. */
+const WRITE_ACTIONS = ["create", "update", "delete"] as const;
+
+/**
+ * Declares a resource's `create`, `read`, `update` and `delete` abilities in
+ * `app/policies/abilities.ts` and grants them in `app/policies/policy.ts`, reads to `everyone` and
+ * writes to `member`. A refused read answers as not found, so a hidden row looks like a missing one.
+ */
+async function declarePolicy(request: DeclarationRequest, root: string): Promise<Declared> {
+	let catalog = "app/policies/abilities.ts";
+	let policyFile = "app/policies/policy.ts";
+	let { name } = request;
+	let groups = name.segments.slice(0, -1).map(camel);
+	let path = [...groups, name.key];
+	let ability = path.join(".");
+	let id = name.segments.join("-");
+	let row = await findRow(root, name);
+	let rowType = row?.type ?? "{ id: string }";
+	let group = (abilityLocal: string, contextLocal: string, type: string) => {
+		let context = `${contextLocal}<{ ${name.key}: ${type} }>(${literal(name.key)})`;
+		return [
+			"{",
+			`	create: ${abilityLocal}(),`,
+			`	read: ${abilityLocal}({ context: ${context}, deniedAs: "notFound" }),`,
+			`	update: ${abilityLocal}({ context: ${context} }),`,
+			`	delete: ${abilityLocal}({ context: ${context} }),`,
+			"}",
+		].join("\n");
+	};
+	let reads = (allow: string) =>
+		`${allow}(${literal(`${ability}.read`)}, { id: ${literal(`${id}-read`)} })`;
+	let writes = (allow: string) => {
+		let names = WRITE_ACTIONS.map((action) => literal(`${ability}.${action}`)).join(", ");
+		return `${allow}([${names}], { id: ${literal(`${id}-write`)} })`;
+	};
+	let manual = (reason: string): Declared => ({
+		kind: "manual",
+		path: ability,
+		reason,
+		instructions: [
+			...(row === null
+				? []
+				: [`In ${catalog}:`, indent(`import type { ${row.type} } from "~/${row.path}";`)]),
+			`In ${catalog}, in abilities({ … })${groupNote(path)}:`,
+			indent(`${name.key}: ${group("ability", "context", rowType)},`),
+			`In ${policyFile}, in definePolicy(…)'s everyone:`,
+			indent(`${reads("allow")},`),
+			`In ${policyFile}, in definePolicy(…)'s roles.member:`,
+			indent(`${writes("allow")},`),
+		].join("\n"),
+	});
+
+	let file = await readSource(root, catalog);
+	if (isFailure(file)) return manual(`${catalog} could not be read`);
+	let catalogImport = importOf(file.data, "abilities");
+	if (catalogImport === null) return manual(`${catalog} does not import abilities()`);
+	let source = file.data.source;
+	let locals: Record<string, string> = {};
+	for (let helper of ["ability", "context"]) {
+		let imported = ensureImport(
+			catalog,
+			source,
+			{ kind: "named", name: helper },
+			(specifier) => specifier === catalogImport.specifier,
+			catalogImport.specifier,
+			helper,
+		);
+		if (isFailure(imported)) return manual(imported.error.message);
+		source = imported.data.source;
+		locals[helper] = imported.data.local;
+	}
+	let type = rowType;
+	if (row !== null) {
+		let aliased = await declaresAlias(root);
+		let specifier = specifierFor(catalog, row.path, staticSpecifiers(file.data), aliased);
+		let imported = ensureTypeImport(catalog, source, row.type, specifier);
+		if (isFailure(imported)) return manual(imported.error.message);
+		source = imported.data.source;
+		type = imported.data.local;
+	}
+	let declared = addProperty(catalog, source, {
+		call: catalogImport.local,
+		path: groups,
+		key: name.key,
+		value: group(locals.ability ?? "ability", locals.context ?? "context", type),
+	});
+	if (isFailure(declared)) return manual(declared.error.message);
+
+	let policy = await readSource(root, policyFile);
+	if (isFailure(policy)) return manual(`${policyFile} could not be read`);
+	let defined = importOf(policy.data, "definePolicy");
+	if (defined === null) return manual(`${policyFile} does not import definePolicy()`);
+	let allow = ensureImport(
+		policyFile,
+		policy.data.source,
+		{ kind: "named", name: "allow" },
+		(specifier) => specifier === defined.specifier,
+		defined.specifier,
+		"allow",
+	);
+	if (isFailure(allow)) return manual(allow.error.message);
+	let granted = grant(
+		policyFile,
+		allow.data.source,
+		defined.local,
+		[["everyone"]],
+		reads(allow.data.local),
+	);
+	if (isFailure(granted)) return manual(granted.error.message);
+	granted = grant(
+		policyFile,
+		granted.data,
+		defined.local,
+		[
+			["roles", "member"],
+			["roles", "member", "grants"],
+		],
+		writes(allow.data.local),
+	);
+	if (isFailure(granted)) return manual(granted.error.message);
+	return {
+		kind: "edits",
+		path: ability,
+		edits: [
+			{ path: catalog, before: file.data.source, after: declared.data.source },
+			{ path: policyFile, before: policy.data.source, after: granted.data },
+		],
+	};
+}
+
+/**
+ * `source` with `value` appended to the first of `lists` the policy's options hold, each a key
+ * path in `definePolicy`'s second argument; with none of them, the first is created holding it.
+ */
+function grant(
+	filename: string,
+	source: string,
+	call: string,
+	lists: readonly (readonly string[])[],
+	value: string,
+): Result<string, Error> {
+	for (let path of lists) {
+		let added = addElement(filename, source, { call, argument: 1, path: [...path], value });
+		if (isSuccess(added)) return success(added.data.source);
+		if (added.error.code !== "not-found") return added;
+	}
+	let [first = []] = lists;
+	let created = addProperty(filename, source, {
+		call,
+		argument: 1,
+		path: first.slice(0, -1),
+		key: first.at(-1) ?? "",
+		value: `[${value}]`,
+	});
+	if (isFailure(created)) return created;
+	return success(created.data.source);
+}
+
+/**
+ * The row type a resource's model exports, `PostRow` from `app/models/post.ts`, or `null` when
+ * the resource has no model or its model exports no such type.
+ */
+async function findRow(root: string, name: Name): Promise<{ path: string; type: string } | null> {
+	let path = `app/models/${name.segments.join("/")}`;
+	let type = `${name.pascal}Row`;
+	for (let extension of [".ts", ".tsx"]) {
+		let source = await wrap(() => readFile(join(root, `${path}${extension}`), "utf8"));
+		if (isFailure(source)) continue;
+		let exported = new RegExp(`export\\s+(?:type|interface)\\s+${escape(type)}\\b`);
+		return exported.test(source.data) ? { path, type } : null;
+	}
+	return null;
+}
+
+/** The local name and specifier `file` imports the named export `name` under, or `null`. */
+function importOf(file: SourceFile, name: string): { local: string; specifier: string } | null {
+	for (let reference of file.references) {
+		if (reference.kind !== "import") continue;
+		let bound = reference.names.find((each) => each.imported === name && !each.typeOnly);
+		if (bound !== undefined) return { local: bound.local, specifier: reference.specifier };
+	}
+	return null;
+}
+
+/** Whether the project's `tsconfig.json` declares the `~/app/*` alias. */
+async function declaresAlias(root: string): Promise<boolean> {
+	let tsconfig = await wrap(() => readFile(join(root, "tsconfig.json"), "utf8"));
+	return !isFailure(tsconfig) && tsconfig.data.includes('"~/app/*"');
+}
+
 /**
  * A `commands({ … })` group holding `entry`, wrapped in one more group for each of `levels`,
  * outermost first, for the folders of a command name that have no group yet.
@@ -726,8 +918,7 @@ async function findInitializer(
 		let file = await readSource(root, `${folder}/${entry}`);
 		if (isSuccess(file)) files.push(file.data);
 	}
-	let tsconfig = await wrap(() => readFile(join(root, "tsconfig.json"), "utf8"));
-	let aliased = !isFailure(tsconfig) && tsconfig.data.includes('"~/app/*"');
+	let aliased = await declaresAlias(root);
 	for (let file of files) file.aliased = aliased;
 	let calling = factory === null ? null : new RegExp(`\\b${factory}\\(`);
 	let importers = files.filter((file) =>

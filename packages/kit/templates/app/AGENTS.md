@@ -35,6 +35,11 @@ bun run test                       # every test, under Vitest
   and declares and maps controllers, jobs, MCP tools and commands, so the file works at once.
 - For a resource people list, show, create, edit and delete, start from
   `sdxc scaffold <name> title body:text` (`--mcp` and `--command` add its tools and commands).
+- `sdxc make policy <resource>` adds the resource's `create`, `read`, `update` and `delete`
+  abilities to `app/policies/abilities.ts` and grants them in `app/policies/policy.ts`, reads to
+  `everyone` and writes to `member`. Check them in a handler with `ctx.access.can(…)`: a hidden
+  read answers 404, a refused write 403. A signed-in visitor (`ctx.session.set("actor", { id })`)
+  is a `member`; tests sign in with `signIn()` from `app/test/session.ts`.
 - `sdxc make middleware <name> --mount <router|page|api>` also adds the middleware to that chain.
 - `sdxc make model post title body published_at` writes the model, the migration creating its
   plural table (`posts`) and its factory; `--skip migration,factory` leaves those out.

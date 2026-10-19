@@ -1,5 +1,6 @@
 /**
- * The `delete_{{snake}}` tool, called over `/mcp` as a client calls it.
+ * The `delete_{{snake}}` tool, called over `/mcp` as a client calls it: as a member, whom
+ * `{{path}}.delete` allows, and as a guest, whom it refuses.
  *
  * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
@@ -19,15 +20,24 @@ describe("delete_{{snake}}", () => {
 	test("deletes the {{words}} with the id", async () => {
 		let row = await factories().create({{Name}}Factory);
 
-		let result = await callTool("delete_{{snake}}", { id: row.id });
+		let result = await callTool("delete_{{snake}}", { id: row.id }, "member");
 
 		expect(result.isError).toBe(false);
 		expect(await {{Name}}.bind({ db: openDatabase() }).find(row.id)).toBeNull();
 	});
 
 	test("reports an id no {{words}} has", async () => {
-		let result = await callTool("delete_{{snake}}", { id: "missing" });
+		let result = await callTool("delete_{{snake}}", { id: "missing" }, "member");
 
 		expect(result.isError).toBe(true);
+	});
+
+	test("refuses a guest and keeps the {{words}}", async () => {
+		let row = await factories().create({{Name}}Factory);
+
+		let result = await callTool("delete_{{snake}}", { id: row.id });
+
+		expect(result.isError).toBe(true);
+		expect(await {{Name}}.bind({ db: openDatabase() }).find(row.id)).not.toBeNull();
 	});
 });

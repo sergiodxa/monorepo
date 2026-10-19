@@ -14,6 +14,7 @@
 	"dependencies": {
 		"@pitlane/assets": "0.1.0",
 		"@sdxc/assets-middleware": "0.0.1",
+		"@sdxc/authz": "0.0.1",
 		"@sdxc/captcha": "0.0.1",
 		"@sdxc/cli": "0.0.1",
 		"@sdxc/data-model": "0.0.1",

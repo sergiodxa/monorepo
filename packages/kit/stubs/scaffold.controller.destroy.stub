@@ -1,5 +1,6 @@
 /**
- * Deletes one {{words}} and sends the visitor back to the list; an id no {{words}} has is a 404.
+ * Deletes one {{words}} and sends the visitor back to the list. An id no {{words}} has, or one
+ * `{{path}}.read` hides, is a 404, and a visitor `{{path}}.delete` refuses gets a 403.
  * The show page's delete button posts here, with the honeypot fields the page middleware checks.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
@@ -10,14 +11,20 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import page from "~/app/http/middleware/page";
-import { authorize{{Name}} } from "~/app/policies/{{name}}";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/web";
 
 export default createAction(routes.{{pluralKey}}.destroy, {
 	middleware: page,
 	/** Deletes the {{words}}, then redirects to the index. */
 	async handler(ctx) {
-		if (!authorize{{Name}}(null, "delete")) return new Response(null, { status: 403 });
+		let row = await ctx.models.{{key}}.find(ctx.params.id);
+		if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
+			return new Response(null, { status: 404 });
+		}
+		if (!ctx.access.can(abilities.{{path}}.delete, { {{key}}: row })) {
+			return new Response(null, { status: 403 });
+		}
 		let deleted = await ctx.models.{{key}}.delete(ctx.params.id);
 		if (isFailure(deleted)) return new Response(null, { status: 404 });
 		return new Response(null, {

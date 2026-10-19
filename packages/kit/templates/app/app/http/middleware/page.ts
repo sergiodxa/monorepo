@@ -1,8 +1,8 @@
 /**
  * The middleware every page declares: the parsed form body, the cross-origin check a
- * cookie-backed form relies on, the visitor's session and language, the honeypot every form submission must pass, the security
- * headers, and the document's assets and renderer. A page controller passes it as its
- * `middleware`, so only requests that render a document pay for it.
+ * cookie-backed form relies on, the visitor's session, access and language, the honeypot every
+ * form submission must pass, the security headers, and the document's assets and renderer. A
+ * page controller passes it as its `middleware`, so only requests that render a document pay.
  */
 
 import { assets } from "@sdxc/assets-middleware";
@@ -15,6 +15,7 @@ import { render } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createMiddleware } from "remix/router";
 
+import access from "~/app/http/middleware/access";
 import { assetResolver } from "~/app/initializers/assets";
 import { honeypot as trap } from "~/app/initializers/honeypot";
 import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
@@ -22,14 +23,15 @@ import { sessionCookie, sessionStorage } from "~/app/initializers/session";
 import { SECURITY_POLICY } from "~/config/security-policy";
 
 /**
- * Publishes `ctx.formData`, `ctx.session`, `ctx.locale`, `ctx.intl`, `ctx.honeypot`, `ctx.securityHeaders`, `ctx.assets` and
- * `ctx.render` on a page's context. A POST without valid honeypot fields is refused with a 400
+ * Publishes `ctx.formData`, `ctx.session`, `ctx.access`, `ctx.locale`, `ctx.intl`, `ctx.honeypot`,
+ * `ctx.securityHeaders`, `ctx.assets` and `ctx.render` on a page's context. A POST without valid honeypot fields is refused with a 400
  * before the controller runs; the security headers come right before the assets and renderer.
  */
 export default createMiddleware(
 	formData(),
 	cop(),
 	session(sessionCookie, sessionStorage),
+	access,
 	i18n({
 		detection: {
 			supportedLanguages: SUPPORTED_LANGUAGES,

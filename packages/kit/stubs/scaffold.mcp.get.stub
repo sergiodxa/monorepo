@@ -1,6 +1,6 @@
 /**
- * Answers `get_{{snake}}`: one {{words}} by its id, every field included. An id no {{words}} has
- * is a tool error pointing the model at `list_{{pluralSnake}}`.
+ * Answers `get_{{snake}}`: one {{words}} by its id, every field included. An id no {{words}} has,
+ * or one `{{path}}.read` hides, is a tool error pointing the model at `list_{{pluralSnake}}`.
  *
  * @see {@link https://sdxc.dev/docs/operations-and-testing/mcp-server}
  * @see {@link https://sdxc.dev/api/mcp}{{header}}
@@ -10,10 +10,11 @@ import { createTool, ToolError } from "@sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
 import { {{Name}} } from "~/app/models/{{name}}";
+import abilities from "~/app/policies/abilities";
 
 export default createTool(toolset.{{pluralKey}}.get, async (ctx) => {
 	let row = await {{Name}}.bind({ db: ctx.db }).find(ctx.input.id);
-	if (row === null) {
+	if (row === null || !ctx.access.can(abilities.{{path}}.read, { {{key}}: row })) {
 		throw new ToolError(`No {{words}} has the id ${ctx.input.id}; list_{{pluralSnake}} lists them.`);
 	}
 	return row;

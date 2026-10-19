@@ -1,7 +1,8 @@
 /**
  * What one `sdxc make <kind>` run does: writes a file of the kind from its stub at the folder
- * the app layout gives it, with a test beside it, declares and maps it where the kind needs it,
- * lists any `@sdxc/*` package it imports in `package.json`, and runs the project's `format`.
+ * the app layout gives it, with a test beside it, declares and maps it where the kind needs it
+ * (a policy's abilities and grants included), lists any `@sdxc/*` package it imports in
+ * `package.json`, and runs the project's `format`.
  * Every file is planned before any is written, and none is ever overwritten.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -111,7 +112,8 @@ export async function make(
 		kind === "controller" ||
 		kind === "mcp" ||
 		kind === "command" ||
-		kind === "model"
+		kind === "model" ||
+		kind === "policy"
 	) {
 		let segments = request.name.segments;
 		declared = await declare(

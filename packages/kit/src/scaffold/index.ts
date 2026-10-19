@@ -109,7 +109,7 @@ export async function scaffold(
 
 	let requests = declarationsOf(resource.data, input, config.make.routes);
 	if (isFailure(requests)) return requests;
-	let staged = await stageDeclarations(root, requests.data);
+	let staged = await stageDeclarations(root, requests.data, planned);
 	if (isFailure(staged)) return staged;
 	let edits = [...staged.data.edits];
 	let locales = await localeEdits(root, resource.data);
@@ -211,7 +211,7 @@ function piecesOf(resource: Resource, input: ScaffoldInput, tests: boolean): Pie
 	add("model", `app/models/${name}.ts`, true);
 	add("factory", `database/factories/${name}.ts`, false);
 	add("validator", `app/http/validators/${name}.ts`, true);
-	add("policy", `app/policies/${name}.ts`, true);
+	if (tests) pieces.push({ stub: "policy.test.stub", path: `app/policies/${name}.test.ts` });
 	add("form", `resources/views/${plural.base}/form.tsx`, false);
 	for (let action of ["index", "new", "show", "edit", "destroy"]) {
 		add(`controller.${action}`, `app/http/controllers/${plural.base}/${action}.tsx`, true);
@@ -240,8 +240,9 @@ function piecesOf(resource: Resource, input: ScaffoldInput, tests: boolean): Pie
 }
 
 /**
- * Every declaration the scaffold makes, in order: the model in its registry, the five pages in
- * the route contract `routes`, then the tools and the commands when asked for.
+ * Every declaration the scaffold makes, in order: the model in its registry, its abilities in the
+ * catalog and their grants in the policy, the five pages in the route contract `routes`, then the
+ * tools and the commands when asked for.
  */
 function declarationsOf(
 	resource: Resource,
@@ -258,6 +259,13 @@ function declarationsOf(
 			kind: "model",
 			name: singular,
 			handler: `app/models/${singular.base}`,
+			title: singular.title,
+		},
+		{
+			...base,
+			kind: "policy",
+			name: singular,
+			handler: `app/policies/${singular.base}`,
 			title: singular.title,
 		},
 	];
@@ -381,13 +389,15 @@ interface Staged {
 }
 
 /**
- * Runs `requests` in order against a temporary copy of the folders they read, writing each
- * one's edits into the copy so the next starts from them, and answers each changed file's
- * original text against its final one. The project itself is only read.
+ * Runs `requests` in order against a temporary copy of the folders they read, with the files the
+ * scaffold writes already in it, writing each one's edits into the copy so the next starts from
+ * them, and answers each changed file's original text against its final one. The project itself
+ * is only read.
  */
 async function stageDeclarations(
 	root: string,
 	requests: readonly DeclarationRequest[],
+	planned: readonly PlannedFile[],
 ): Promise<Result<Staged, Error>> {
 	let stage = await wrap(() => mkdtemp(join(tmpdir(), "sdxc-scaffold-")));
 	if (isFailure(stage)) return stage;
@@ -396,6 +406,11 @@ async function stageDeclarations(
 			let source = join(root, entry);
 			if (isFailure(await wrap(() => stat(source)))) continue;
 			await cp(source, join(stage.data, entry), { recursive: true });
+		}
+		for (let file of planned) {
+			let target = join(stage.data, file.path);
+			await mkdir(dirname(target), { recursive: true });
+			await writeFile(target, file.content);
 		}
 		let originals = new Map<string, string>();
 		let manual: Staged["manual"] = [];

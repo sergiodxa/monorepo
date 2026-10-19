@@ -1,6 +1,7 @@
 /**
  * Plans the files one `sdxc make` run writes: the file of the requested kind at the folder the
- * layout gives it and, when tests are on, its test beside it, each rendered from its stub.
+ * layout gives it and, when tests are on, its test beside it, each rendered from its stub; a
+ * policy writes its test alone.
  * Nothing is written while planning, and a file that already exists stops the plan.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -87,7 +88,8 @@ export async function plan(
 	let path = `${folder}/${file}${kind.extension}`;
 	let testPath = `${folder}/${file}.test${kind.extension}`;
 	let writesTest = kind.tests && request.tests;
-	let paths = writesTest ? [path, testPath] : [path];
+	let writesMain = kind.testOnly !== true;
+	let paths = [...(writesMain ? [path] : []), ...(writesTest ? [testPath] : [])];
 	for (let candidate of paths) {
 		if (isSuccess(await wrap(() => stat(join(root, candidate))))) {
 			return failure(new Error(`${candidate} already exists; sdxc make leaves it as it is`));
@@ -97,9 +99,11 @@ export async function plan(
 	let values = await placeholders(request, root, `${folder}/${file}`);
 	Object.assign(values, overrides);
 	let files: PlannedFile[] = [];
-	let main = await renderFile(request, values, false, root, config, packageRoot);
-	if (isFailure(main)) return main;
-	files.push({ path, content: main.data });
+	if (writesMain) {
+		let main = await renderFile(request, values, false, root, config, packageRoot);
+		if (isFailure(main)) return main;
+		files.push({ path, content: main.data });
+	}
 	if (writesTest) {
 		let test = await renderFile(request, values, true, root, config, packageRoot);
 		if (isFailure(test)) return test;
