@@ -32,6 +32,7 @@ const DECLARATION_CALLS: Partial<Record<KindName, string>> = {
 	controller: "route",
 	job: "jobs",
 	command: "commands",
+	email: "emails",
 };
 
 /** The folders whose code may still reference a destroyed file. */

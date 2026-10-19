@@ -61,6 +61,8 @@ const EDITED = [
 	"app/initializers/cli.ts",
 	"app/models/index.ts",
 	"cloudflare.config.ts",
+	"app/emails/index.ts",
+	"app/initializers/mail.ts",
 ];
 
 describe("destroy", () => {
@@ -79,9 +81,12 @@ describe("destroy", () => {
 				["mcp", "get-post"],
 				["command", "users/grant"],
 				["model", "post", "title"],
+				["email", "teams/invite", "team"],
 			];
 			for (let argv of made)
 				expect((await run(["make", ...argv], root)).code, argv.join(" ")).toBe(0);
+
+			expect(await read("app/emails/index.ts")).toContain("invite: email(");
 
 			for (let argv of made) {
 				let destroyed = await run(["destroy", argv[0] as string, argv[1] as string, "--yes"], root);
