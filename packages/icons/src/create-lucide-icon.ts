@@ -1,6 +1,6 @@
 /**
  * Shared factory that turns Lucide's framework-agnostic icon data into a
- * `remix/component` component, so every generated icon in `src/icons/*` stays a
+ * `remix/component` component, so every generated icon in `src/index.ts` stays a
  * one-line call that reuses this module's `<svg>` rendering logic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
