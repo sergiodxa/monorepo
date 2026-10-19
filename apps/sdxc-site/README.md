@@ -115,15 +115,17 @@ The pager steps only through the sidebar of the page being read.
 | `catalogue` | Extract the catalogue alone                              |
 | `start`     | Preview the production build                             |
 | `cli`       | The app's command line, which `sdxc run` starts          |
-| `cf:deploy` | Deploy to Cloudflare                                     |
 | `typecheck` | Type check the app with `tsc`                            |
 
 ## Deployment
 
 ```bash
-bun run build
-bun run cf:deploy
+sdxc deploy --skip migrate
 ```
+
+It builds, then uploads the build with `sdxc run deploy` (`cf deploy --prebuilt`). The site
+has no database, so there is no migration step. A published release redeploys it from CI
+through the same `deploy` command.
 
 ## Environment Variables
 

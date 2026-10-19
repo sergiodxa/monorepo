@@ -94,10 +94,11 @@ jobs:
       - name: Build
         run: bun run --cwd apps/sdxc-site build
 
-      # `cf` authenticates from `CLOUDFLARE_API_TOKEN` and picks the account from
-      # `CLOUDFLARE_ACCOUNT_ID`, then uploads the Build Output the step above wrote.
+      # The app's own `deploy` command runs `cf deploy --prebuilt`: `cf` authenticates from
+      # `CLOUDFLARE_API_TOKEN`, picks the account from `CLOUDFLARE_ACCOUNT_ID`, then uploads
+      # the Build Output the step above wrote.
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bun run --cwd apps/sdxc-site cf:deploy
+        run: bun run --cwd apps/sdxc-site cli deploy

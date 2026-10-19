@@ -5,7 +5,6 @@
 	"scripts": {
 		"build": "bun scripts/extract-catalogue.ts && vp build",
 		"catalogue": "bun scripts/extract-catalogue.ts",
-		"cf:deploy": "cf deploy --prebuilt",
 		"cli": "bun ./bootstrap/cli.ts",
 		"dev": "bun scripts/extract-catalogue.ts && vp dev",
 		"start": "vp preview",
