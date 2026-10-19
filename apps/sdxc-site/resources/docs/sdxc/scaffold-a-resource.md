@@ -195,6 +195,33 @@ that already exists, or a locale that already has the plural's key, stops the co
 app/models/post.ts already exists; sdxc scaffold leaves it as it is
 ```
 
+When the project already has some of the pieces, `--skip` leaves them out. Pages for a model
+[`sdxc make model`](/docs/sdxc/make-model) wrote are the common case:
+
+```bash
+sdxc make model post title body
+sdxc scaffold post title body --skip model,migration,factory
+```
+
+| Piece       | What `--skip` leaves out                                        |
+| ----------- | --------------------------------------------------------------- |
+| `model`     | the model, its test and its entry in `app/models/index.ts`      |
+| `migration` | the migration that creates the table                            |
+| `factory`   | the factory                                                     |
+| `validator` | the validator and its test                                      |
+| `policy`    | the abilities, their grants and the policy test                 |
+| `pages`     | the five controllers, their tests, the form and the locale copy |
+
+A skipped piece the rest of the scaffold reads must already exist, so the files it writes
+type check. Otherwise the command stops before writing anything:
+
+```text
+--skip model needs app/models/post.ts, which the pages, tools and commands read; drop model from --skip
+```
+
+The same holds for the validator the pages submit through, the factory the tests seed rows
+with, and the abilities in `app/policies/abilities.ts` the pages and tools check.
+
 `--dry-run` prints every file in full and every edit as a diff, and writes nothing. An edit that
 cannot be placed, such as a router laid out differently, is printed for you to make, as
 `sdxc make` does. Once it writes, the `format` command from your configuration runs over every
