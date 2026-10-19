@@ -1,0 +1,67 @@
+/**
+ * The {{title}} form, for a visitor `{{ability}}` admits: the page that shows it and the action
+ * that receives it. Describe what a submission changes and where the visitor lands afterwards.
+ *
+ * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/protect-forms}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { captcha } from "@sdxc/captcha/middleware";
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
+import { HoneypotFields } from "@sdxc/honeypot/ui";
+import { unwrap } from "@sdxc/result";
+import { spam } from "@sdxc/spam/middleware";
+import { env } from "cloudflare:workers";
+import { createController } from "remix/router";
+
+import page from "~/app/http/middleware/page";
+import { turnstile } from "~/app/initializers/captcha";
+import { spamFilter } from "~/app/initializers/spam";
+import abilities from "~/app/policies/abilities";
+import DocumentLayout from "~/resources/layouts/document";
+import routes from "{{routes}}";
+
+export default createController(routes.{{path}}, {
+	middleware: page,
+	actions: {
+		/**
+		 * Renders the form with fresh honeypot fields, which the page middleware checks on submit,
+		 * and the Turnstile widget, admitted by the response's CSP nonce.
+		 */
+		async index(ctx) {
+			{{pageAccess}}
+			let fields = unwrap(await ctx.honeypot.issue());
+			return ctx.render(
+				<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title="{{title}}">
+					<h1>{{title}}</h1>
+					<form method="post" action={routes.{{path}}.action.href()}>
+						<HoneypotFields {...fields} />
+						{/* TODO: replace the message field with the fields this form submits */}
+						<label>
+							Message <textarea name="message" required />
+						</label>
+						<TurnstileWidget siteKey={env.TURNSTILE_SITE_KEY} nonce={ctx.assets.nonce} />
+						<button type="submit">Send</button>
+					</form>
+				</DocumentLayout>,
+			);
+		},
+
+		/**
+		 * Receives a submission that passed the honeypot, the CAPTCHA (a 403 otherwise), the
+		 * spam filter (a 422 otherwise) and `{{ability}}`, and sends the visitor back to the form.
+		 */
+		action: {
+			middleware: [captcha(turnstile), spam(spamFilter, { fields: { content: "message" } })],
+			async handler(ctx) {
+				{{access}}
+				// TODO: save the submission, then redirect where the visitor should land
+				return new Response(null, {
+					status: 303,
+					headers: { location: routes.{{path}}.index.href() },
+				});
+			},
+		},
+	},
+});

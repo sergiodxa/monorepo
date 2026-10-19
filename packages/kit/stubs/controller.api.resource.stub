@@ -1,0 +1,23 @@
+/**
+ * The {{title}} endpoint, for a caller `{{ability}}` admits: describe what a client sends, what
+ * it gets back and which errors it should expect.
+ *
+ * @see {@link https://sdxc.dev/docs/http-apis/json-apis}
+ * @see {@link https://sdxc.dev/docs/identity-and-security/authorization}{{header}}
+ */
+
+import { createAction } from "remix/router";
+
+import api from "~/app/http/middleware/api";
+import abilities from "~/app/policies/abilities";
+import routes from "{{routes}}";
+
+export default createAction(routes.{{path}}, {
+	middleware: api,
+	/** Answers {{title}} as JSON once `ctx.access` admits `{{ability}}`. */
+	async handler(ctx) {
+		{{access}}
+		// TODO: answer the request
+		return Response.json({});
+	},
+});
