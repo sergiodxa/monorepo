@@ -108,7 +108,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * While developing, answers `/_emails` with every mapped email in every supported
 			 * language, ahead of the session and the security headers a preview needs neither of.
 			 */
-			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+			previews(mail, {
+				locales: SUPPORTED_LANGUAGES,
+				enabled: import.meta.env.DEV,
+				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+			}),
 			formData(),
 			methodOverride(),
 			createSessionMiddleware(options.kv, options.cookieSecret, options.secure),
