@@ -152,6 +152,41 @@ Two flags add more ways in:
   per field, and `posts delete <id>` in `app/commands/posts/`, so
   `sdxc run posts create --title Hello …` works.
 
+## A JSON resource
+
+`--api` writes the resource as JSON endpoints in the `api` contract instead of pages, with the
+OpenAPI operations that type them:
+
+```bash
+sdxc scaffold post title body published --api
+```
+
+| Endpoint                | Controller in `app/http/controllers/api/posts/` | Answers                   |
+| ----------------------- | ----------------------------------------------- | ------------------------- |
+| `GET /api/posts`        | `index.tsx`                                     | `{ data: [...] }`         |
+| `GET /api/posts/:id`    | `show.tsx`                                      | `{ data }`, or `notFound` |
+| `POST /api/posts`       | `create.tsx`                                    | `201` with `{ data }`     |
+| `PATCH /api/posts/:id`  | `update.tsx`                                    | `{ data }`                |
+| `DELETE /api/posts/:id` | `destroy.tsx`                                   | `204`                     |
+
+`routes/api.ts` gains the routes and, after them, `POST_SCHEMA` and one operation per endpoint,
+`POSTS_INDEX`, `POST_SHOW`, `POST_CREATE`, `POST_UPDATE` and `POST_DESTROY`, each body typed from
+the fields. `app/initializers/openapi.ts` adds them to the document, so `/api/openapi.json`
+describes every endpoint. Each write parses its body through its operation and answers a
+refused body with the `validationError` problem from `config/problems.ts`, and a missing or
+hidden row with `notFound`.
+
+The model, migration, factory and policy are written as they are for pages; the validator, the
+form, the page controllers and the locale copy are left out, and `--skip pages` leaves out the
+endpoints too.
+
+<note>
+The template's API binds every caller as a guest, who may only read, so the create, update and
+delete endpoints answer `403` until the API authenticates its callers in
+`app/http/middleware/api.ts`. Their tests check that, and leave the signed-in case as a
+`test.todo` to fill in once it does.
+</note>
+
 ## Who may do what
 
 The scaffold adds `post.create`, `post.read`, `post.update` and `post.delete` to the app's
