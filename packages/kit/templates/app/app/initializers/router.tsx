@@ -12,6 +12,7 @@ import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { noWWW } from "@sdxc/no-www-middleware";
 import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
@@ -25,6 +26,7 @@ import { createRouter } from "remix/router";
 
 import serverTiming from "~/app/http/middleware/server-timing";
 import { openDatabase } from "~/app/initializers/database";
+import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
 import { queue, transport } from "~/app/initializers/mail-transport";
@@ -49,6 +51,7 @@ declare module "remix/router" {
  * Builds the router the Worker forwards each request to. Its middleware is what pages and
  * endpoints both need, written inline so {@link AppContext} reads what each one publishes; a
  * controller adds its contract's chain, `app/http/middleware/page.ts` or `api.ts`, itself.
+ * While developing, `/_emails` previews every mapped email in every supported language.
  */
 export function createWebRouter() {
 	let router = createRouter({
@@ -70,6 +73,7 @@ export function createWebRouter() {
 			}),
 			database(openDatabase()),
 			models(registry, (ctx) => ({ db: ctx.db })),
+			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
 			mailer({ transport, from: MAIL_FROM, mail, queue }),
 		],
 	});

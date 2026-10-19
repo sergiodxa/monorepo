@@ -106,6 +106,8 @@ bun run test                       # every test, under Vitest
   `ctx.email.send(emails.welcome, { to, locale, props })`, or `queue()` for a delivery that must
   survive a failure. The template translates with `handle.props.t`, so a queued delivery stays
   plain JSON.
+- Give every email template a `preview()`: `bun dev` lists and renders each one at `/_emails`, and
+  `sdxc run emails preview <name> --locale <language>` prints it.
 - Build UI with `remix/component` JSX, styled with `css()` mixins through `mix`. Render server
   HTML as JSX. A page renders through `ctx.render()` inside `DocumentLayout`, passing it
   `ctx.assets` for the stylesheets, entry script and CSP nonce.

@@ -9,6 +9,7 @@
 
 import type { Check, CheckReport } from "./check.js";
 
+import { emailsCheck } from "./emails.js";
 import { envCheck } from "./env.js";
 import { installedCheck } from "./installed.js";
 import { layoutCheck } from "./layout.js";
@@ -34,6 +35,7 @@ export const CHECKS: readonly Check[] = [
 	layoutCheck,
 	routesCheck,
 	modelsCheck,
+	emailsCheck,
 	uiCheck,
 ];
 

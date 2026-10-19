@@ -52,6 +52,13 @@ describe("router", () => {
 		expect(SECURITY_TXT.expires.getTime() - Date.now()).toBeGreaterThan(RENEWAL_WINDOW_MS);
 	});
 
+	test("previews the mapped emails at /_emails while developing", async () => {
+		let response = await createWebRouter().fetch("https://example.com/_emails");
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("Email previews");
+	});
+
 	test("redirects the www. host to the apex domain", async () => {
 		let response = await createWebRouter().fetch("https://www.example.com/sitemap.xml");
 

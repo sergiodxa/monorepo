@@ -164,6 +164,7 @@ describe("sdxc doctor", () => {
 				"skip  layout      No app/ folder in the project",
 				"skip  routes      No routes/ folder in the project",
 				"skip  models      No app/models/index.ts in the project",
+				"skip  emails      No app/emails/index.ts in the project",
 				"skip  ui          No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
@@ -187,6 +188,7 @@ describe("sdxc doctor", () => {
 				"skip  layout      No app/ folder in the project",
 				"skip  routes      No routes/ folder in the project",
 				"skip  models      No app/models/index.ts in the project",
+				"skip  emails      No app/emails/index.ts in the project",
 				"skip  ui          No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
@@ -233,6 +235,7 @@ describe("sdxc doctor", () => {
 			["layout", "skip"],
 			["routes", "skip"],
 			["models", "skip"],
+			["emails", "skip"],
 			["ui", "skip"],
 		]);
 		expect(report.checks[0]).toMatchObject({
@@ -266,6 +269,7 @@ describe("sdxc doctor", () => {
 			["layout", "skip"],
 			["routes", "skip"],
 			["models", "skip"],
+			["emails", "skip"],
 			["ui", "skip"],
 		]);
 		expect(report.checks[0]?.message).toMatch(/^Could not reach the npm registry/);
@@ -329,6 +333,7 @@ describe("sdxc doctor with project checks", () => {
 				"skip  layout       No app/ folder in the project",
 				"skip  routes       No routes/ folder in the project",
 				"skip  models       No app/models/index.ts in the project",
+				"skip  emails       No app/emails/index.ts in the project",
 				"skip  ui           No @sdxc/ui component is copied",
 				"warn  has-license  LICENSE: LICENSE is missing",
 				"pass  config       checks live in .config/sdxc/checks; app",
@@ -394,7 +399,7 @@ describe("sdxc doctor with project checks", () => {
 
 		let result = await doctorWithChecks(root, [
 			"--skip",
-			"pins,installed,remix,env,typegen,migrations,layout,routes,models,ui",
+			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,ui",
 		]);
 
 		expect(result.code).toBe(1);
@@ -435,7 +440,7 @@ export default defineCheck({
 
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(
-			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, ui, readme",
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, ui, readme",
 		);
 	});
 });

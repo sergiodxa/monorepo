@@ -4,8 +4,9 @@
  * and a folder of handlers is a `commands({ … })` group here.
  */
 
-import { command, commands, flag } from "@sdxc/cli";
+import { argument, command, commands, flag } from "@sdxc/cli";
 import { DB_COMMAND } from "@sdxc/database-middleware/cli";
+import * as s from "remix/data-schema";
 
 /** Declared on the commands that change only the local database, so `--remote` is refused by name. */
 const LOCAL_ONLY = flag.boolean("remote", {
@@ -53,6 +54,21 @@ export default commands({
 			description: "Run the steps in database/seed.ts on the local database",
 			flags: { remote: LOCAL_ONLY },
 			examples: ["db seed"],
+		}),
+	}),
+	emails: commands({
+		preview: command({
+			description: "Print a declared email rendered from its template's preview() props",
+			arguments: {
+				name: argument(s.string(), { description: "The email's name, such as teams.invite" }),
+			},
+			flags: {
+				locale: flag.string("locale", {
+					description: "The language to render it in; the fallback language without one",
+				}),
+				html: flag.boolean("html", { description: "Print the HTML part instead of the text" }),
+			},
+			examples: ["emails preview teams.invite", "emails preview teams.invite --locale es --html"],
 		}),
 	}),
 	deploy: command({

@@ -31,6 +31,7 @@ sdxc run db console                        # SQL prompt over the local database
 sdxc run console                           # Bun's REPL with db and models loaded
 sdxc run db seed                           # run database/seed.ts on the local database
 sdxc run db fresh --seed                   # drop every local table, migrate, seed
+sdxc run emails preview welcome            # print an email from its preview(); /_emails in bun dev
 sdxc routes                                # every route and its controller (-g, -c, --unused)
 sdxc doctor                                # release drift, secrets, migrations and wiring
 bun check                                  # format, lint and types
