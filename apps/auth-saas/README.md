@@ -30,6 +30,7 @@ sdxc make command tenants/suspend          # then: sdxc run tenants suspend
 
 sdxc run db console                        # SQL prompt over the local control-plane database
 sdxc run about                             # the app's name and the versions it runs on
+sdxc run emails preview tenants.invitation # print an email from its preview(); /_emails in bun dev
 bun check                                  # format, lint and types, from the repo root
 ```
 

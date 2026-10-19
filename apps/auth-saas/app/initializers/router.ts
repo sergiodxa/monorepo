@@ -13,6 +13,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -28,6 +29,7 @@ import { models } from "~/app/http/middleware/models";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { assetResolver } from "~/app/initializers/assets";
 import { openDatabase } from "~/app/initializers/database";
+import { FALLBACK_LANGUAGE } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
 import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
@@ -52,6 +54,7 @@ export const webRouter = createRouter({
 		getClientIP(),
 		trace(),
 		asyncContext(),
+		previews(mail, { locales: [FALLBACK_LANGUAGE], enabled: import.meta.env.DEV }),
 		securityHeaders(PLATFORM_SECURITY_POLICY),
 		wellKnown({ "security.txt": securityTxtEntry }),
 		database(openDatabase()),
