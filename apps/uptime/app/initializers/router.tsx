@@ -195,7 +195,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * While developing, answers `/_emails` with every mapped email in every supported
 			 * language, ahead of the session and the security headers a preview needs neither of.
 			 */
-			previews(emailRegistry, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+			previews(emailRegistry, {
+				locales: SUPPORTED_LANGUAGES,
+				enabled: import.meta.env.DEV,
+				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+			}),
 			/**
 			 * Publishes `ctx.email` on every surface, including machine ones — the
 			 * cron-job ping endpoint dispatches alerts too. Sits after the log so
