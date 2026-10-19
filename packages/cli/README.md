@@ -157,7 +157,7 @@ What to ask when a flag or argument is missing on a terminal: `prompt.select({ m
 
 #### `createCLI({ name, version?, commands, middleware? })`
 
-The program. `--help` and `--version` come for free.
+The program. `--help` and `--version` come for free, and `--help --json` prints the same facts as data.
 
 #### `cli.map(command, handler)`
 
@@ -166,6 +166,19 @@ Binds a handler, a `createCommand(...)` or a `lazy(...)` import to a command.
 #### `cli.run(argv, io?)`
 
 Runs the command and answers its exit code; `io` replaces the process's `cwd`, `env`, streams or `exec`.
+
+#### `cli.describe(path?)`
+
+The contract as data: every visible command under `path` with its arguments, flags and examples, as `--help --json` prints it.
+
+#### `cli.check(argv)`
+
+Checks a command line without running it: the command, every flag and every value against its schema. A value a prompt would ask for passes. Answers the command's path, or a `UsageError` listing every problem.
+
+```typescript
+let checked = await cli.check(["greet", "Ada", "--shuot"]);
+if (isFailure(checked)) console.error(checked.error.message); // Unknown flag --shuot …
+```
 
 #### `createCommand(command, handler)`
 

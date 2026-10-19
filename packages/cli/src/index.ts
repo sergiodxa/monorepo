@@ -15,7 +15,7 @@ export type {
 	SingleArgumentOptions,
 	VariadicArgumentOptions,
 } from "./argument.js";
-export type { Binding, CLI, CLIOptions } from "./cli.js";
+export type { Binding, CheckedCommand, CLI, CLIOptions } from "./cli.js";
 export type {
 	ArgumentsOf,
 	ArgumentsShape,
@@ -29,6 +29,7 @@ export type {
 	Node,
 } from "./command.js";
 export type { AnyCommandContext, CommandContextInit, Stdin } from "./context.js";
+export type { ArgumentDescription, CommandDescription, FlagDescription } from "./describe.js";
 export type { Exec, ExecOptions, ExecOutput, ExecRequest, Stdio } from "./exec.js";
 export type {
 	BooleanFlagOptions,

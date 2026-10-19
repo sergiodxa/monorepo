@@ -7,9 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
+
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { ArgumentsOf, FlagsOf, Group, Node } from "./command.js";
+import type { CommandDescription } from "./describe.js";
 import type { CommandAction, CommandHandler } from "./handler.js";
 import type { Lazy } from "./lazy.js";
 import type { AnyCommandMiddleware, ChainProperties, CommandResult } from "./middleware.js";
@@ -17,6 +20,7 @@ import type { RunIO, Script, Session } from "./session.js";
 import type { Entry, Tree } from "./tree.js";
 
 import { CommandContext } from "./context.js";
+import { describeEntry } from "./describe.js";
 import { CancelledError, EXIT_CODES, exitCodeOf, UsageError } from "./errors.js";
 import { isAction } from "./handler.js";
 import { renderHelp } from "./help.js";
@@ -72,6 +76,29 @@ export interface CLI<
 	 * @example process.exitCode = await cli.run(process.argv.slice(2));
 	 */
 	run(argv: readonly string[], io?: RunIO): Promise<number>;
+	/**
+	 * The contract as data, the facts `--help --json` prints: the whole program, or the command
+	 * `path` names, with every visible member below it.
+	 *
+	 * @returns The description, or `undefined` when `path` names no command
+	 * @example let make = cli.describe(["make"]);
+	 */
+	describe(path?: readonly string[]): CommandDescription | undefined;
+	/**
+	 * Checks `argv` the way a run does before it asks or runs anything: the command it names, every
+	 * flag, and every value against its schema. A missing value that a prompt would ask for passes,
+	 * since a terminal run asks for it. Nothing is loaded and no handler runs.
+	 *
+	 * @returns The path of the command `argv` reaches, or a usage failure listing every problem
+	 * @example let checked = await cli.check(["make", "controller", "posts", "--method", "form"]);
+	 */
+	check(argv: readonly string[]): Promise<Result<CheckedCommand, UsageError>>;
+}
+
+/** A command line `check()` accepted. */
+export interface CheckedCommand {
+	/** The words that reached the command; empty for the root. */
+	path: string[];
 }
 
 /** What a CLI keeps for itself and its test harness. */
@@ -112,6 +139,13 @@ export function createCLI<
 			bindings.set(target, resolver(binding));
 		},
 		run: (argv, io = {}) => execute(cli, argv, io, undefined),
+		describe(path = []) {
+			let entry: Entry | undefined = tree.root;
+			for (let word of path) entry = entry?.children.get(word);
+			if (entry === undefined) return undefined;
+			return describeEntry(entry, { version: options.version, description: options.description });
+		},
+		check: (argv) => check(tree, options.version !== undefined, argv),
 	};
 	INTERNALS.set(cli, {
 		tree,
@@ -160,6 +194,41 @@ export function runScripted<Commands extends Group, Chain extends readonly AnyCo
 	return execute(cli, argv, io, script);
 }
 
+/**
+ * Whether `--json` rides along with `--help`, before any `--`, so the help prints as data. A
+ * command with a `--json` flag of its own reads the pair the same way.
+ */
+function asksForJSON(argv: readonly string[]): boolean {
+	let end = argv.indexOf("--");
+	return (end === -1 ? argv : argv.slice(0, end)).includes("--json");
+}
+
+/**
+ * The prompts of a check: every one answers its initial value, so a value a terminal run would
+ * ask for counts as given.
+ */
+const CHECK_SESSION: Pick<Session, "interactive" | "ask"> = {
+	interactive: true,
+	ask: (request) => Promise.resolve(success(request.initial)),
+};
+
+/** Parses and checks `argv` against `tree`, asking nothing and running nothing. */
+async function check(
+	tree: Tree,
+	withVersion: boolean,
+	argv: readonly string[],
+): Promise<Result<CheckedCommand, UsageError>> {
+	let parsed = parseArgv(tree, argv, withVersion);
+	let path = [...parsed.entry.path];
+	if (parsed.help || parsed.version) return success({ path });
+	let inputs = await resolveInputs(parsed, CHECK_SESSION);
+	if (isFailure(inputs)) {
+		let error = inputs.error;
+		return failure(error instanceof UsageError ? error : new UsageError(error.message));
+	}
+	return success({ path });
+}
+
 /** One run, from argument vector to exit code. */
 async function execute(
 	cli: object,
@@ -174,6 +243,10 @@ async function execute(
 	let session = openSession(io, parsed.noProgress, script);
 	try {
 		let entry = parsed.entry;
+		if (parsed.help && asksForJSON(argv)) {
+			session.stdout.write(`${JSON.stringify(describeEntry(entry, program), null, 2)}\n`);
+			return EXIT_CODES.success;
+		}
 		if (parsed.help) {
 			session.stdout.write(renderHelp(entry, program, session.style));
 			return EXIT_CODES.success;

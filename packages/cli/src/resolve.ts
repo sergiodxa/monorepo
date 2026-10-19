@@ -123,7 +123,7 @@ function answerItems(answer: unknown, list: boolean): unknown[] {
  */
 export async function resolveInputs(
 	parsed: Parsed,
-	session: Session,
+	session: Pick<Session, "interactive" | "ask">,
 ): Promise<Result<Inputs, Error>> {
 	let entry = parsed.entry;
 	let inputs: Inputs = { arguments: {}, flags: {} };
