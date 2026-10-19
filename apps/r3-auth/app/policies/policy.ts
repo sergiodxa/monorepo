@@ -16,7 +16,7 @@ import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
  * The policy. `actor` is the signed-in subject, always bound: the account area and the
  * admin area both sit behind the session guard, so no check here runs for a guest.
  */
-export default definePolicy(abilities, {
+const policy = definePolicy(abilities, {
 	facts: {
 		actor: fact<{ id: string }>(),
 	},
@@ -45,3 +45,12 @@ export default definePolicy(abilities, {
 		}),
 	],
 });
+
+declare module "@sdxc/authz" {
+	/** The policy `ctx.access` is bound from, so every check names an ability it declares. */
+	interface AuthzTypes {
+		policy: typeof policy;
+	}
+}
+
+export default policy;
