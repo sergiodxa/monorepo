@@ -522,6 +522,11 @@ export const SDXC_COMMANDS = commands({
 			"scaffold post title body --api",
 		],
 	}),
+	schedule: command({
+		description: "List the scheduled jobs, their next runs and the Worker triggers that fire them",
+		flags: { json: flag.boolean("json", { description: "Print the schedule as JSON" }) },
+		examples: ["schedule", "schedule --json"],
+	}),
 	stats: command({
 		description: "Count lines of code per kind of code the app layout names, and the test ratio",
 		flags: { json: flag.boolean("json", { description: "Print the counts as JSON" }) },

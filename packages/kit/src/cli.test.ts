@@ -57,6 +57,7 @@ describe("help", () => {
 				"  routes        Print every route with its controller and the middleware that runs for it",
 				"  run           Run the project's own command line, bootstrap/cli.ts, with its runtime",
 				"  scaffold      Write a resource's model, migration, pages, tests and more, declared and mapped",
+				"  schedule      List the scheduled jobs, their next runs and the Worker triggers that fire them",
 				"  stats         Count lines of code per kind of code the app layout names, and the test ratio",
 				"  ui            Copy @sdxc/ui components into the project and keep imports on the copies",
 				"  upgrade       Move the @sdxc packages to another release and print the prompt for the code",

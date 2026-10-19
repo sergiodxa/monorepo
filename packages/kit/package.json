@@ -19,6 +19,7 @@
 	"dependencies": {
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
+		"@sdxc/cron": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
