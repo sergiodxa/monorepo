@@ -75,10 +75,16 @@ describe("scaffold", () => {
 				[
 					"post",
 					"title",
-					"body:text",
+					"body",
 					"views:integer",
-					"published:boolean",
-					"publishedOn:date",
+					"published",
+					"publishedOn",
+					"starts_at",
+					"contact_email",
+					"website",
+					"subtitle?",
+					"rating?:integer",
+					"ends_at?",
 					"--mcp",
 					"--command",
 				],
@@ -119,11 +125,18 @@ describe("scaffold", () => {
 			let tools = await read("app/mcp/tools/index.ts");
 			expect(tools).toContain('create: tool("create_post", {');
 			expect(tools).toContain("title: s.optional(s.string()),");
+			expect(tools).toContain("subtitle: s.nullable(s.string()),");
 			let commands = await read("app/commands/index.ts");
 			expect(commands).toContain('show: command({\n\t\t\tdescription: "Print one post as JSON",');
 			expect(commands).toContain(
 				'publishedOn: flag.string("published-on", { required: true, description: "Published on" }),',
 			);
+			expect(commands).toContain('startsAt: flag.number("starts-at", {');
+			expect(commands).toContain('subtitle: flag.string("subtitle", { description: "Subtitle" }),');
+			let form = await read("resources/views/posts/form.tsx");
+			expect(form).toContain('type="datetime-local"');
+			expect(form).toContain('type="email"');
+			expect(form).toContain('type="url"');
 			let locale = JSON.parse(await read("resources/locales/en.json")) as Record<string, unknown>;
 			expect(locale.posts).toMatchObject({ index: { title: "Posts" }, fields: { body: "Body" } });
 
@@ -191,7 +204,7 @@ describe("scaffold", () => {
 		]);
 	});
 
-	test("refuses an unknown field type and a name with folders", async () => {
+	test("refuses an unknown field type, a name with folders, a reference and only optional fields", async () => {
 		let root = await mkdtemp(join(tmpdir(), "sdxc-scaffold-"));
 		DIRECTORIES.push(root);
 		await writeFile(join(root, "package.json"), '{ "name": "blog" }\n');
@@ -199,11 +212,15 @@ describe("scaffold", () => {
 		let unknown = await invoke(["post", "title:varchar"], root);
 		let nested = await invoke(["admin/post", "title"], root);
 		let empty = await invoke(["post"], root);
+		let reference = await invoke(["comment", "post_id", "body"], root);
+		let optional = await invoke(["post", "subtitle?"], root);
 
 		expect(unknown.code).toBe(1);
 		expect(unknown.stderr).toContain('"varchar" in "title:varchar" is not a field type');
 		expect(nested.stderr).toContain("A scaffold name cannot hold folders: admin/post");
 		expect(empty.stderr).toContain("at least one field");
+		expect(reference.stderr).toContain("post_id is a reference");
+		expect(optional.stderr).toContain("at least one field without ?");
 		expect(await files(root)).toEqual(["package.json"]);
 	});
 });

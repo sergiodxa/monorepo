@@ -66,6 +66,41 @@ ADR-129 recommends, so a kind never contains one.
   also writes `<name>.test.ts` (`.test.tsx` beside a `.tsx` file) from that kind's test stub.
   `--test` and `--no-test` override the setting for one run.
 - The generator refuses to overwrite an existing file, the test included.
+- **Model fields.** `make model <name> [field ...]` takes the field list `sdxc scaffold` takes,
+  with the same conventions (ADR-163), and writes each field's column into the model stub's
+  `{{columns}}` placeholder, between `id` and the timestamps; with no field the placeholder
+  renders a reminder to add the columns. The table is the plural of the name (`{{table}}`:
+  `make model post` declares `posts`), as `sdxc scaffold` names it and as a reference to a model
+  the project lacks assumes. A reference becomes a foreign key named `<table>_<column>_fkey`,
+  pointing at the table the referenced model in `app/models/` declares. A project stub that
+  lacks `{{columns}}` refuses a field list, so no field is dropped silently.
+- **A model comes with its migration and factory.** `make model` also writes
+  `create-<table>` into the default chain (or `--chain`), its `CREATE TABLE` rendered from the
+  same fields as the model's columns, and `database/factories/<name>.ts` with a value per field
+  in the factory stub's `{{attributes}}` (the sample values `sdxc scaffold`'s factory uses; a
+  nullable reference is `null`, and a required reference is left out with a note, since only a
+  test knows which row it points at). Without fields the migration holds `id` and the
+  timestamps and the factory is empty. `--skip migration`, `--skip factory` or
+  `--skip migration,factory` leaves either out. All files are planned before any is written,
+  so a taken path, or a table the chain already creates, stops the run with nothing written.
+- **Migration fields.** `make migration <name> [field ...]` reads the name the way Rails does,
+  in any spelling `parseName` accepts (`create_posts`, `AddSlugToPosts`):
+  - `create-<table>` writes the `CREATE TABLE` a model with those fields declares: a text `id`
+    key, the fields, `created_at` and `updated_at`, foreign keys and unique indexes, through the
+    renderer `--from-model` and `sdxc scaffold` use.
+  - `add-<words>-to-<table>` writes one `ALTER TABLE … ADD COLUMN` per field. SQLite fills the
+    rows a table already holds with the column's default and refuses `NOT NULL` without one, so
+    a boolean is added `NOT NULL DEFAULT 0` and any other field must be marked `?`; a required
+    column is added by declaring it in the model and running `--from-model`, which rebuilds the
+    table. A reference is nullable for the same reason, and because D1 enforces foreign keys.
+  - `remove-<words>-from-<table>` writes one `ALTER TABLE … DROP COLUMN` per field, whose type
+    and `?` are ignored.
+
+  The table is the words after `create`, or after the last `to` or `from`. Fields with any other
+  name, or with `--from-model`, are a usage error; without fields the stub is written as before.
+  The statements are applied to the replayed chain before the file is written, so a table that
+  already exists, a missing table or column, or a column SQLite cannot drop fails with SQLite's
+  own message; a chain that does not replay is left unchecked.
 
 ### Stubs
 
@@ -189,3 +224,5 @@ kind typed most often would be the longest.
 
 - [x] Stubs, project stubs, migration chains
 - [x] Declaration and mapping for `job`, `controller` and `mcp`
+- [x] Model fields; `make model` writes its migration and factory
+- [x] Rails-style `make migration` names with fields

@@ -30,10 +30,10 @@ command that writes a working resource, from its table to its pages, with tests 
 ### The command
 
 ```text
-sdxc scaffold <name> [field:type ...] [--plural <word>] [--mcp] [--command] [--[no-]test] [--dry-run]
+sdxc scaffold <name> [field[:type][?] ...] [--plural <word>] [--mcp] [--command] [--[no-]test] [--dry-run]
 ```
 
-`sdxc scaffold post title:string body:text published:boolean` writes:
+`sdxc scaffold post title body published` writes:
 
 | What                        | Where                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------ |
@@ -68,25 +68,65 @@ The model, validator, policy, pages, tools and commands each get a test beside t
   `update_post` and `delete_post` with their JSON Schema input. `--command` declares
   `posts list`, `posts show <id>`, `posts create --<field> …` and `posts delete <id>`.
 
-### Field types
+### Fields
 
-A field is `name:type`; the type defaults to `string`. The name is written as the column's
-snake_case name (`publishedOn` and `published-on` both become `published_on`); `id`,
-`created_at` and `updated_at` belong to every table and are refused. At least one field is
-required.
+A field is `name`, `name:type`, or either with a trailing `?` (`bio?`, `subtitle:string?`),
+which makes it nullable. The name is written as the column's snake_case name (`publishedOn` and
+`published-on` both become `published_on`); `id`, `created_at` and `updated_at` belong to every
+table and are refused. A scaffold needs at least one field without `?`, which a form must fill.
+`sdxc make model` takes the same list (ADR-143), through the same parser.
 
-| Type      | Column        | Form control            | Form schema                               | Tool input    |
-| --------- | ------------- | ----------------------- | ----------------------------------------- | ------------- |
-| `string`  | `c.text()`    | `TextField`             | non-empty `s.string()`                    | `s.string()`  |
-| `text`    | `c.text()`    | `Label` + `TextArea`    | non-empty `s.string()`                    | `s.string()`  |
-| `integer` | `c.integer()` | `TextField type=number` | `coerce.number()`, whole                  | `s.integer()` |
-| `boolean` | `c.boolean()` | `Checkbox`              | `coerce.boolean()`, `false` when unticked | `s.boolean()` |
-| `date`    | `c.text()`    | `DateField`             | `YYYY-MM-DD`                              | `s.string()`  |
+**A bare name takes its type by convention, and an explicit `:type` always wins.** The rules are
+read top to bottom, so `published_at` is a timestamp and `published` a box:
 
-Every column is `NOT NULL`, as `createTableStatement` writes a column that is not
-`.nullable()`, so a form field is required and a row reads back complete. A `date`
-is stored as its ISO text, which sorts and compares as a date in SQLite and renders without a
-time zone.
+| A bare name                                                                                                   | Takes        |
+| ------------------------------------------------------------------------------------------------------------- | ------------ |
+| ending in `_id` (`author_id`)                                                                                 | `references` |
+| ending in `_at` (`published_at`, `publishedAt`)                                                               | `timestamp`  |
+| ending in `_on` or `_date`, or `birthday`, `birthdate`                                                        | `date`       |
+| starting `is_`, `has_`, `can_`, `should_`, `was_`, `allow_`; or `published`, `active`, `enabled`, `archived`… | `boolean`    |
+| ending in `_count` or `_cents`; or `position`, `quantity`, `age`, `rank`, `priority`, `score`, `year`…        | `integer`    |
+| ending in `email` (`email`, `billing_email`)                                                                  | `email`      |
+| ending in `url`, or `website`, `homepage`                                                                     | `url`        |
+| `body`, `description`, `content`, `notes`, `bio`, `summary`, `excerpt`, `message`… or ending in one           | `text`       |
+| anything else                                                                                                 | `string`     |
+
+A name whose words hold `password` is refused whatever its type, unless it ends in `hash` or
+`digest`: a scaffold would keep the password as typed and show it on a page. A `?` on a box is
+refused, since a checkbox is ticked or not. `zsh` reads `?` as a glob, so a nullable field is
+quoted there (`'bio?'`).
+
+| Type         | Column                   | Form control                 | Form schema                               | Tool input    |
+| ------------ | ------------------------ | ---------------------------- | ----------------------------------------- | ------------- |
+| `string`     | `c.text()`               | `TextField`                  | non-blank `s.string()`                    | `s.string()`  |
+| `text`       | `c.text()`               | `Label` + `TextArea`         | non-blank `s.string()`                    | `s.string()`  |
+| `integer`    | `c.integer()`            | `TextField type=number`      | whole number, converted                   | `s.integer()` |
+| `boolean`    | `c.boolean()`            | `Checkbox`                   | `coerce.boolean()`, `false` when unticked | `s.boolean()` |
+| `date`       | `c.text()`               | `DateField`                  | `YYYY-MM-DD`                              | `s.string()`  |
+| `timestamp`  | `c.integer()`            | `Label` + `Input` (datetime) | `YYYY-MM-DDTHH:MM` as UTC, to ms          | `s.integer()` |
+| `email`      | `c.text()`               | `TextField type=email`       | `local@domain`                            | `s.string()`  |
+| `url`        | `c.text()`               | `TextField type=url`         | `URL.canParse()`                          | `s.string()`  |
+| `references` | `c.text().references(…)` | `make model` only            |                                           |               |
+
+- **Not null by default.** A column without `?` is `NOT NULL`, as `createTableStatement`
+  writes a column that is not `.nullable()`, so a form field is required and a row reads back
+  complete. A nullable column is `.nullable()`, its control drops `required`, its form schema
+  reads a blank input as `null`, its tool input takes `null`, and its command flag is optional.
+- **A `date` is ISO text**, which sorts and compares as a date in SQLite and renders without a
+  time zone.
+- **A `timestamp` is milliseconds since the epoch in an integer column**, as the template's
+  database stamps `created_at` and `updated_at` (`now: () => Date.now()`), so every instant in a
+  row reads and sorts the same way. The form takes a `datetime-local` value as UTC; a page shows
+  it as ISO text; a tool and a command take the milliseconds. `@sdxc/ui` has no date-time field,
+  so the form uses `Input` beside a `Label`.
+- **`email` gets no unique index.** An email column is as often a contact field as an identity;
+  uniqueness is the app's rule to add with `.unique()` and a migration.
+- **A reference is a foreign key to the referenced model's table**, `<table>_<column>_fkey`,
+  with the column typed like that table's `id` (text for the UUIDv7 ids models create). The table
+  is the one `app/models/<model>.ts` declares, or the plural of the model's name when the
+  project has none yet. `author:references` and a bare `author_id` write the same column.
+  `sdxc scaffold` refuses a reference: D1 enforces foreign keys, so every generated test that
+  writes a row would first need a row of the referenced table; `make model` writes it.
 
 ### Composing the kinds
 
@@ -146,7 +186,8 @@ loops inside stubs.
 - A scaffold copies `app/` to a temporary folder for each run. Apps are small, so the copy
   costs milliseconds.
 - `declare()` gained two options the `make` command line does not expose.
-- The field vocabulary is small; see Deferred.
+- Conventions are English words; a name in another language takes `string` until it names its
+  type.
 
 ## Alternatives Considered
 
@@ -169,10 +210,9 @@ a template language would make every project stub a program.
 
 ## Deferred
 
-- `references` fields (`author:references`), which need the referenced table's factory in every
-  generated test.
-- Nullable fields (`subtitle:string?`), decimals (data-table has no floating column and
-  `TextField` takes no `step`) and timestamps (`@sdxc/ui` has no date-time field).
+- Pages, tools and commands for a reference (`author_id`): a select of the referenced rows, and
+  generated tests that create the referenced row through its factory first.
+- Decimals: data-table has no floating column and `TextField` takes no `step`.
 - Scaffolds inside a folder (`admin/post`) and in a contract other than `make.routes`.
 
 ## References
@@ -184,6 +224,8 @@ a template language would make every project stub a program.
 ## Current Progress
 
 - [x] Field types, names and pluralization
+- [x] Name conventions, `timestamp`, `email`, `url` and nullable fields
+- [x] `make model` fields, references included
 - [x] Staged declarations and one plan for every write
 - [x] Stubs for the model, migration, factory, validator, policy, pages, tools and commands
 - [x] Generated project type checks and its tests pass

@@ -112,7 +112,6 @@ describe("make", () => {
 		["middleware", "require-user", "app/http/middleware/require-user.ts"],
 		["validator", "signup", "app/http/validators/signup.ts"],
 		["job", "trials/expire", "app/jobs/trials/expire.ts"],
-		["model", "post", "app/models/post.ts"],
 		["service", "billing/charge", "app/services/billing/charge.ts"],
 		["policy", "can-edit", "app/policies/can-edit.ts"],
 		["initializer", "cache", "app/initializers/cache.ts"],
@@ -142,6 +141,51 @@ describe("make", () => {
 			"database/factories/post.ts",
 			"database/migrations/0001_CreatePosts.sql",
 		]);
+	});
+
+	test("model writes the model, its test, the migration creating its table and its factory", async () => {
+		let root = await project();
+
+		let result = await invoke(["model", "post"], root);
+
+		expect(result.code).toBe(0);
+		expect(await files(root)).toEqual([
+			"app/models/post.test.ts",
+			"app/models/post.ts",
+			"database/factories/post.ts",
+			"database/migrations/0001_CreatePosts.sql",
+		]);
+		expect(await readFile(join(root, "app/models/post.ts"), "utf8")).toContain('name: "posts",');
+		expect(
+			await readFile(join(root, "database/migrations/0001_CreatePosts.sql"), "utf8"),
+		).toContain('CREATE TABLE "posts" (\n  "id" TEXT PRIMARY KEY NOT NULL,');
+		expect(await readFile(join(root, "database/factories/post.ts"), "utf8")).toContain(
+			"defineFactory(Post, {});",
+		);
+	});
+
+	test.each([[["--skip", "migration", "--skip", "factory"]], [["--skip", "migration,factory"]]])(
+		"model %j writes the model alone",
+		async (skip) => {
+			let root = await project();
+
+			let result = await invoke(["model", "post", "--no-test", ...skip], root);
+
+			expect(result.code).toBe(0);
+			expect(await files(root)).toEqual(["app/models/post.ts"]);
+		},
+	);
+
+	test("model refuses a taken migration or factory path, writing nothing", async () => {
+		let root = await project();
+		await mkdir(join(root, "database/factories"), { recursive: true });
+		await writeFile(join(root, "database/factories/post.ts"), "mine");
+
+		let result = await invoke(["model", "post", "title"], root);
+
+		expect(result.code).toBe(1);
+		expect(result.stderr).toContain("database/factories/post.ts already exists");
+		expect(await files(root)).toEqual(["database/factories/post.ts"]);
 	});
 
 	test("fills each placeholder, and a variant flag picks its stub", async () => {
@@ -355,6 +399,16 @@ describe("formatting", () => {
 			]);
 		},
 	);
+
+	test("a migration alone, which the template's formatter skips, exits 0", async () => {
+		let root = unwrap(await materialize("app"));
+		DIRECTORIES.push(dirname(root));
+
+		let result = await invoke(["migration", "add-tags"], root, { exec: projectExec(root) });
+
+		expect(result.stderr).toContain("✓ Formatting 1 file\n");
+		expect(result.code).toBe(0);
+	});
 });
 
 describe("declaring and mapping", () => {
@@ -375,9 +429,8 @@ describe("declaring and mapping", () => {
 				["mcp", "article", "--resource"],
 				["middleware", "require-user"],
 				["validator", "signup"],
-				["model", "post"],
-				["factory", "post"],
-				["migration", "create-posts"],
+				["model", "post", "title", "body", "published_at", "is_featured", "author_id?"],
+				["migration", "add-slug-to-posts", "slug?", "pinned"],
 				["service", "billing/charge"],
 				["policy", "can-edit"],
 				["initializer", "cache"],

@@ -7,18 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ColumnBuilder } from "remix/data-table";
-
-import { column, table } from "remix/data-table";
-
 import type { Name } from "../make/names.js";
 
 import { memberAccess } from "../make/generate.js";
 import { createTableStatement } from "../make/schema.js";
 
-import type { Field } from "./fields.js";
+import type { Field, FieldType } from "./fields.js";
 
-import { FIELD_TYPES } from "./fields.js";
+import { columnSource, factorySource, FIELD_TYPES, fieldsTable } from "./fields.js";
 
 /** The resource a scaffold writes: its singular and plural names, and its fields. */
 export interface Resource {
@@ -37,7 +33,9 @@ export function placeholders(resource: Resource, header: string): Record<string,
 	let { singular, plural, fields } = resource;
 	let copy = plural.key;
 	let types = new Set(fields.map((field) => field.type));
+	let table = plural.snake;
 	let changed = fields.find((field) => field.type !== "boolean") ?? fields[0];
+	let labelled = types.has("text") || types.has("timestamp");
 	return {
 		header,
 		name: singular.base,
@@ -54,41 +52,35 @@ export function placeholders(resource: Resource, header: string): Record<string,
 		pluralWords: plural.title.toLowerCase(),
 		pluralMember: memberAccess([plural.base]),
 		table: plural.snake,
-		statement: createTableStatement(runtimeTable(resource)),
+		statement: createTableStatement(fieldsTable(table, fields)),
 		firstColumn: fields[0]?.column ?? "id",
-		columns: lines(fields, 2, (field) => `${field.column}: ${FIELD_TYPES[field.type].column},`),
-		attributes: lines(fields, 1, (field) => `${field.column}: ${factoryValue(field)},`),
+		columns: lines(fields, 2, (field) => `${field.column}: ${columnSource(field, table)},`),
+		attributes: lines(fields, 1, (field) => `${field.column}: ${factorySource(field)},`),
 		schemaImports: [
 			'import * as s from "remix/data-schema";',
-			fields.some((field) => FIELD_TYPES[field.type].coerces)
-				? 'import * as coerce from "remix/data-schema/coerce";'
-				: null,
+			types.has("boolean") ? 'import * as coerce from "remix/data-schema/coerce";' : null,
 			'import * as f from "remix/data-schema/form-data";',
 		]
 			.filter((line) => line !== null)
 			.join("\n"),
-		schemaFields: lines(
-			fields,
-			1,
-			(field) => `${field.column}: ${FIELD_TYPES[field.type].schema},`,
-		),
-		formSample: entries(fields, (field) => JSON.stringify(FIELD_TYPES[field.type].formSample)),
-		invalidForm: entries(fields, (field) => JSON.stringify(FIELD_TYPES[field.type].invalidSample)),
-		jsonSample: entries(fields, (field) => FIELD_TYPES[field.type].jsonSample),
-		changedJson:
-			changed === undefined ? "" : `${changed.column}: ${FIELD_TYPES[changed.type].changedSample}`,
+		schemaFields: lines(fields, 1, (field) => `${field.column}: ${formSchema(field)},`),
+		formSample: entries(fields, (field) => JSON.stringify(typeOf(field).formSample)),
+		invalidForm: entries(fields, (field) => JSON.stringify(typeOf(field).invalidSample)),
+		jsonSample: entries(fields, (field) => typeOf(field).jsonSample),
+		changedJson: changed === undefined ? "" : `${changed.column}: ${typeOf(changed).changedSample}`,
 		formImports: [
 			'import { HoneypotFields } from "@sdxc/honeypot/ui";',
 			'import { Button } from "@sdxc/ui/button";',
 			types.has("boolean") ? 'import { Checkbox } from "@sdxc/ui/checkbox";' : null,
 			types.has("date") ? 'import { DateField } from "@sdxc/ui/date-field";' : null,
 			'import { Form } from "@sdxc/ui/form";',
-			types.has("text") ? 'import { Label } from "@sdxc/ui/label";' : null,
-			types.has("string") || types.has("integer")
+			types.has("timestamp") ? 'import { Input } from "@sdxc/ui/input";' : null,
+			labelled ? 'import { Label } from "@sdxc/ui/label";' : null,
+			["string", "integer", "email", "url"].some((type) => types.has(type as Field["type"]))
 				? 'import { TextField } from "@sdxc/ui/text-field";'
 				: null,
 			types.has("text") ? 'import { TextArea } from "@sdxc/ui/textarea";' : null,
-			types.has("text") ? 'import { css } from "remix/component";' : null,
+			labelled ? 'import { css } from "remix/component";' : null,
 		]
 			.filter((line) => line !== null)
 			.join("\n"),
@@ -118,18 +110,21 @@ export function placeholders(resource: Resource, header: string): Record<string,
 			)
 			.join("\n"),
 		listValues: fields
-			.map((field) =>
-				field.type === "integer" || field.type === "boolean"
-					? `String(row.${field.column})`
-					: `row.${field.column}`,
-			)
+			.map((field) => {
+				let value = field.nullable ? `row.${field.column} ?? ""` : `row.${field.column}`;
+				return typeOf(field).flag === "string" ? value : `String(${value})`;
+			})
 			.join(", "),
-		createValues: lines(fields, 2, (field) => `${field.column}: ctx.flags.${field.key},`),
+		createValues: lines(
+			fields,
+			2,
+			(field) => `${field.column}: ctx.flags.${field.key}${field.nullable ? " ?? null" : ""},`,
+		),
 		createArgv: fields
 			.map((field) =>
 				field.type === "boolean"
 					? JSON.stringify(`--${field.flag}`)
-					: `${JSON.stringify(`--${field.flag}`)}, ${JSON.stringify(FIELD_TYPES[field.type].formSample)}`,
+					: `${JSON.stringify(`--${field.flag}`)}, ${JSON.stringify(typeOf(field).flagSample)}`,
 			)
 			.join(", "),
 	};
@@ -158,10 +153,14 @@ export function localeBlock(resource: Resource): Record<string, unknown> {
 	};
 }
 
-/** The tool input's properties, one line each, every one optional when `optional` says so. */
+/**
+ * The tool input's properties, one line each, every one optional when `optional` says so; a
+ * nullable field also takes `null`.
+ */
 export function jsonProperties(fields: readonly Field[], s: string, optional: boolean): string[] {
 	return fields.map((field) => {
-		let schema = FIELD_TYPES[field.type].json.replace(/^s\./, `${s}.`);
+		let schema = typeOf(field).json.replace(/^s\./, `${s}.`);
+		if (field.nullable) schema = `${s}.nullable(${schema})`;
 		return `\t${field.column}: ${optional ? `${s}.optional(${schema})` : schema},`;
 	});
 }
@@ -171,44 +170,63 @@ export function flagProperties(fields: readonly Field[], flag: string): string[]
 	return fields.map((field) => {
 		let options = `{ description: ${JSON.stringify(field.label)} }`;
 		let required = `{ required: true, description: ${JSON.stringify(field.label)} }`;
-		let declared =
-			field.type === "boolean"
-				? `${flag}.boolean(${JSON.stringify(field.flag)}, ${options})`
-				: `${flag}.${field.type === "integer" ? "number" : "string"}(${JSON.stringify(field.flag)}, ${required})`;
+		let kind = typeOf(field).flag;
+		let declared = `${flag}.${kind}(${JSON.stringify(field.flag)}, ${kind === "boolean" || field.nullable ? options : required})`;
 		return `\t${field.key}: ${declared},`;
 	});
 }
 
-/** The table as `remix/data-table` builds it, which the migration's statement is rendered from. */
-function runtimeTable(resource: Resource) {
-	let columns: Record<string, ColumnBuilder> = { id: column.text().primaryKey() };
-	for (let field of resource.fields) columns[field.column] = FIELD_TYPES[field.type].build(column);
-	columns.created_at = column.integer();
-	columns.updated_at = column.integer();
-	return table({ name: resource.plural.snake, columns, timestamps: true });
+/** The type `field` is written as on a page; the scaffold refuses a reference before rendering. */
+function typeOf(field: Field): FieldType {
+	return FIELD_TYPES[field.type as keyof typeof FIELD_TYPES];
 }
 
-/** A factory attribute: text numbered by the sequence, so two rows a test creates differ. */
-function factoryValue(field: Field): string {
-	if (field.type === "integer") return "({ sequence }) => sequence";
-	if (field.type === "boolean") return "false";
-	if (field.type === "date") return '"2026-01-01"';
-	return `({ sequence }) => \`${field.label} \${sequence}\``;
+/**
+ * The form schema of `field`: a box through `coerce.boolean()`, anything else read as text that
+ * passes its type's test and is converted to the column's value. A nullable field reads a blank
+ * or missing input as `null`.
+ */
+function formSchema(field: Field): string {
+	if (field.type === "boolean") return "f.field(s.defaulted(coerce.boolean(), false))";
+	let { test, convert } = typeOf(field);
+	let refine = (expression: string, message: string) =>
+		`.refine((value) => ${expression}, ${JSON.stringify(message)})`;
+	if (!field.nullable) {
+		let checked = test === null ? "" : refine(test.expression, test.message);
+		let converted = convert === null ? "" : `.transform((value) => ${convert})`;
+		return `f.field(s.string()${checked}${converted})`;
+	}
+	let blank = 'value.trim() === ""';
+	let checked =
+		test === null || test.expression === 'value.trim() !== ""'
+			? ""
+			: refine(`${blank} || (${test.expression})`, test.message);
+	return `f.field(s.defaulted(s.string(), "")${checked}.transform((value) => (${blank} ? null : ${convert ?? "value"})))`;
 }
 
 /** How a row's value reads in the edit form, as the text a submission would carry. */
 function formValue(field: Field): string {
 	let value = `row.${field.column}`;
-	if (field.type === "integer") return `String(${value})`;
 	if (field.type === "boolean") return `${value} ? "true" : "false"`;
-	return value;
+	let text = value;
+	if (field.type === "integer") text = `String(${value})`;
+	if (field.type === "timestamp") text = `new Date(${value}).toISOString().slice(0, 16)`;
+	if (!field.nullable) return text;
+	return text === value ? `${value} ?? ""` : `${value} === null ? "" : ${text}`;
 }
 
-/** How a row's value reads on a page: a box as the copy's yes or no, anything else as it is. */
+/**
+ * How a row's value reads on a page: a box as the copy's yes or no, a timestamp as its UTC ISO
+ * text, anything else as it is, and a missing value as nothing.
+ */
 function display(field: Field, copy: string): string {
 	let value = `row.${field.column}`;
-	if (field.type !== "boolean") return value;
-	return `${value} ? ctx.intl.t("${copy}.yes") : ctx.intl.t("${copy}.no")`;
+	if (field.type === "boolean") {
+		return `${value} ? ctx.intl.t("${copy}.yes") : ctx.intl.t("${copy}.no")`;
+	}
+	if (field.type !== "timestamp") return value;
+	let shown = `new Date(${value}).toISOString()`;
+	return field.nullable ? `${value} === null ? "" : ${shown}` : shown;
 }
 
 /** The `@sdxc/ui` control a field is edited with, filled from the form's `values`. */
@@ -216,23 +234,33 @@ function formControl(field: Field, copy: string, plural: string): string {
 	let label = `intl.t("${copy}.fields.${field.column}")`;
 	let value = `values.${field.column}`;
 	let name = JSON.stringify(field.column);
+	let required = field.nullable ? "" : " required";
 	if (field.type === "boolean") {
 		return `<Checkbox name=${name} value="true" defaultChecked={${value} === "true"}>\n\t{${label}}\n</Checkbox>`;
 	}
 	if (field.type === "date") {
-		return `<DateField label={${label}} name=${name} defaultValue={${value}} required />`;
+		return `<DateField label={${label}} name=${name} defaultValue={${value}}${required} />`;
 	}
-	if (field.type === "text") {
+	if (field.type === "text" || field.type === "timestamp") {
 		let id = JSON.stringify(`${plural}-${field.column}`);
+		let control =
+			field.type === "text"
+				? `<TextArea id=${id} name=${name} defaultValue={${value}}${required} />`
+				: `<Input id=${id} type="datetime-local" name=${name} defaultValue={${value}}${required} />`;
 		return [
 			`<div mix={css({ display: "grid", gap: "0.375rem" })}>`,
 			`\t<Label htmlFor=${id}>{${label}}</Label>`,
-			`\t<TextArea id=${id} name=${name} defaultValue={${value}} required />`,
+			`\t${control}`,
 			"</div>",
 		].join("\n");
 	}
-	let type = field.type === "integer" ? ' type="number"' : "";
-	return `<TextField${type} label={${label}} name=${name} defaultValue={${value}} required />`;
+	let types: Partial<Record<Field["type"], string>> = {
+		integer: "number",
+		email: "email",
+		url: "url",
+	};
+	let type = types[field.type] === undefined ? "" : ` type="${types[field.type]}"`;
+	return `<TextField${type} label={${label}} name=${name} defaultValue={${value}}${required} />`;
 }
 
 /** One line per field, each indented by `depth` tabs. */

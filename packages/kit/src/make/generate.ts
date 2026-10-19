@@ -17,6 +17,7 @@ import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import type { Config } from "../config.js";
 
 import { headerTags, resolveAuthor } from "../author.js";
+import { pluralize } from "../scaffold/fields.js";
 
 import type { KindName } from "./kinds.js";
 import type { Name } from "./names.js";
@@ -164,6 +165,8 @@ async function placeholders(
 		command: name.segments.join(" "),
 		member: memberAccess(name.segments),
 		words: name.segments.map((segment) => literal(segment)).join(", "),
+		table: pluralize(name.snake),
+		attributes: "",
 	};
 	let values: Record<string, string> = {};
 	for (let key of [...COMMON_PLACEHOLDERS, ...KINDS[request.kind].placeholders]) {

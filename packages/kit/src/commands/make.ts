@@ -76,11 +76,15 @@ export const mcp = createCommand(SDXC_COMMANDS.make.mcp, {
 /** `sdxc make migration`, numbered within its chain. */
 export const migration = createCommand(SDXC_COMMANDS.make.migration, {
 	middleware: MAKE_MIDDLEWARE,
-	/** `--chain` picks one of `make.migrations`; `--from-model` writes the SQL a model needs. */
+	/**
+	 * `--chain` picks one of `make.migrations`; `--from-model` writes the SQL a model needs, and
+	 * fields write the statements the name spells.
+	 */
 	handler: (ctx) =>
 		run(ctx, {
 			kind: "migration",
 			name: ctx.arguments.name,
+			fields: ctx.arguments.fields,
 			chain: ctx.flags.chain,
 			fromModel: ctx.flags.fromModel,
 			test: false,
@@ -102,7 +106,7 @@ export const factory = createCommand(SDXC_COMMANDS.make.factory, {
  * @param kind - The kind it writes
  */
 function plain<
-	Kind extends "validator" | "model" | "service" | "policy" | "initializer" | "email" | "command",
+	Kind extends "validator" | "service" | "policy" | "initializer" | "email" | "command",
 >(kind: Kind) {
 	return createCommand(SDXC_COMMANDS.make[kind], {
 		middleware: MAKE_MIDDLEWARE,
@@ -134,8 +138,24 @@ export const middleware = createCommand(SDXC_COMMANDS.make.middleware, {
 /** `sdxc make validator`. */
 export const validator = plain("validator");
 
-/** `sdxc make model`. */
-export const model = plain("model");
+/** `sdxc make model`, with a column per field it is given, its migration and its factory. */
+export const model = createCommand(SDXC_COMMANDS.make.model, {
+	middleware: MAKE_MIDDLEWARE,
+	/**
+	 * Writes the model with its fields' columns, the migration creating its table and its factory,
+	 * each unless `--skip` names it, and the model's test unless `--no-test` says otherwise.
+	 */
+	handler: (ctx) =>
+		run(ctx, {
+			kind: "model",
+			name: ctx.arguments.name,
+			fields: ctx.arguments.fields,
+			chain: ctx.flags.chain,
+			skip: ctx.flags.skip,
+			test: ctx.flags.test,
+			dryRun: ctx.flags.dryRun,
+		}),
+});
 
 /** `sdxc make service`. */
 export const service = plain("service");

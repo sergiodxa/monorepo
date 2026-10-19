@@ -12,14 +12,14 @@ import { column as c, table } from "remix/data-table";
 import { createModel } from "@sdxc/data-model";
 import { generateUUID } from "@sdxc/uuid/v7";
 
-/** The `{{snake}}` table, as its migration creates it. */
+/** The `{{table}}` table, as its migration creates it. */
 export const {{key}}Table = table({
-	name: "{{snake}}",
+	name: "{{table}}",
 	columns: {
 		id: c.text().primaryKey(),
+{{columns}}
 		created_at: c.integer(),
 		updated_at: c.integer(),
-		// TODO: add the columns the migration creates
 	},
 	/** `create` and `update` stamp `created_at` and `updated_at` with the database's clock. */
 	timestamps: true,

@@ -39,7 +39,7 @@ import { flagProperties, jsonProperties, localeBlock, placeholders } from "./ren
 /** One scaffold, as the command line gave it. */
 export interface ScaffoldInput {
 	name: string;
-	/** Each `name:type`. */
+	/** Each `name`, `name:type` or `name?`, as `parseFields` reads them. */
 	fields: readonly string[];
 	/** The plural when the English rules get it wrong. */
 	plural: string | undefined;
@@ -161,7 +161,8 @@ export async function scaffold(
 
 /**
  * The resource `input` names: one name without folders, its plural from `--plural` or the
- * English rules, and at least one field.
+ * English rules, and at least one field a form must fill. A reference is refused, since every
+ * generated test would need a row of the referenced table to point at.
  */
 function parseResource(input: ScaffoldInput): Result<Resource, Error> {
 	let singular = parseName(input.name);
@@ -176,6 +177,22 @@ function parseResource(input: ScaffoldInput): Result<Resource, Error> {
 	}
 	let fields = parseFields(input.fields);
 	if (isFailure(fields)) return fields;
+	if (fields.data.length === 0) {
+		return failure(new Error("Give the scaffold at least one field, such as title"));
+	}
+	let reference = fields.data.find((field) => field.type === "references");
+	if (reference !== undefined) {
+		return failure(
+			new Error(
+				`${reference.column} is a reference, which sdxc scaffold writes no pages for yet; write ${reference.column}:string, or add it with sdxc make model`,
+			),
+		);
+	}
+	if (fields.data.every((field) => field.nullable)) {
+		return failure(
+			new Error("Give the scaffold at least one field without ?, which a form must fill"),
+		);
+	}
 	return success({ singular: singular.data, plural: plural.data, fields: fields.data });
 }
 

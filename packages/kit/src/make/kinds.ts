@@ -48,7 +48,9 @@ export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "sp
  * in its map (`trials.expire`), `routes` the route contract's specifier, `tool` the MCP tool
  * name, `uri` an MCP resource's pattern, `model` the factory's model specifier. A command's
  * `command` is the words typed to run it (`users grant`), `member` the property access that
- * reaches its declaration (`.users.grant`), and `words` those words as string literals.
+ * reaches its declaration (`.users.grant`), and `words` those words as string literals. A
+ * model's `columns` are the column lines of the fields `make model` was given and `table` the
+ * plural its table is named; a factory's `attributes` are a value per field, empty without fields.
  */
 export const KINDS: Readonly<Record<KindName, Kind>> = {
 	controller: {
@@ -73,7 +75,13 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		placeholders: [],
 	},
 	job: { folder: "app/jobs", extension: ".ts", tests: true, nested: true, placeholders: ["path"] },
-	model: { folder: "app/models", extension: ".ts", tests: true, nested: true, placeholders: [] },
+	model: {
+		folder: "app/models",
+		extension: ".ts",
+		tests: true,
+		nested: true,
+		placeholders: ["columns", "table"],
+	},
 	migration: {
 		folder: "database/migrations",
 		extension: ".sql",
@@ -86,7 +94,7 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		extension: ".ts",
 		tests: false,
 		nested: true,
-		placeholders: ["model"],
+		placeholders: ["model", "attributes"],
 	},
 	service: {
 		folder: "app/services",
@@ -119,6 +127,12 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		placeholders: ["command", "member", "words"],
 	},
 };
+
+/** What `make model` writes beside the model unless `--skip` names it. */
+export const MODEL_COMPANIONS = ["migration", "factory"] as const;
+
+/** One of {@link MODEL_COMPANIONS}. */
+export type ModelCompanion = (typeof MODEL_COMPANIONS)[number];
 
 /** Where `make mcp --resource` writes, beside the tools. */
 export const MCP_RESOURCES_FOLDER = "app/mcp/resources";
