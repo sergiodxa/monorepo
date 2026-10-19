@@ -104,7 +104,9 @@ second migration; add columns with [`sdxc make migration`](/docs/sdxc/make-migra
 
 When the run finishes it prints `Wrote` and `Edited` for each path, then runs the `format`
 command from your configuration once over all of them, so the files land in your project's
-style. A formatter that fails leaves the files as `make` wrote them and says so.
+style. A formatter that fails leaves the files as `make` wrote them and says so. Anything that
+still needs you comes last, after the formatter's output: an edit to make by hand, a piece
+`--skip` left out, a declaration `--force` kept.
 
 ## Add a test later
 
