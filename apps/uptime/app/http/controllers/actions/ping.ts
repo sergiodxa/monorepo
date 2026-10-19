@@ -18,9 +18,11 @@ import { Session } from "remix/session";
 
 import type { MonitorStatus } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { RunPingSchema } from "~/app/http/validators/ping";
+import abilities from "~/app/policies/abilities";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { HttpCheck } from "~/app/services/http-check";
@@ -90,7 +92,7 @@ export const QUICK_PING_RESULT = "pingResult";
  * uses — so it supplies its own `requireUser`/`requireTeam` chain directly.
  */
 export const runPing = createAction(routes.actions.runPing, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let session = ctx.get(Session);
 		let dashboard = routes.app.team.dashboard.index.href({ team: ctx.team.slug });
@@ -110,11 +112,12 @@ export const runPing = createAction(routes.actions.runPing, {
 		}
 
 		/**
-		 * A quick check is billed exactly like a scheduled one, so it is gated with
-		 * `stateFor`: an owner whose subscription state can't be determined still
+		 * A quick check is billed exactly like a scheduled one, so it is gated by
+		 * `checks.run`: an owner whose subscription state can't be determined still
 		 * gets their check, matching the manual "run check" button.
 		 */
-		if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
+		await ctx.access.load(abilities.checks.run);
+		if (!ctx.access.can(abilities.checks.run)) {
 			session?.set(QUICK_PING_RESULT, { kind: "error", id, code: "subscriptionRequired" });
 			return back;
 		}

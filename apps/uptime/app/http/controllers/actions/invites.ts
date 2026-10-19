@@ -1,6 +1,6 @@
 /**
  * Form actions for creating and revoking team invites. Requires
- * `requireRole("admin")`. Creating an invite for an email that already has a pending
+ * `requireAbility(abilities.invites.write)`. Creating an invite for an email that already has a pending
  * invite resends it instead of creating a duplicate row, and queues the invite email
  * for after the response, because a mail provider having a bad minute must not cost
  * the admin the invite they just created.

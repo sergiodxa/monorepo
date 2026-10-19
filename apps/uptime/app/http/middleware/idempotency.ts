@@ -46,7 +46,7 @@ const OPTIONS: IdempotencyOptions = {
  * replayed; a `5xx` releases the key. The create endpoints answer a `5xx` only when the
  * write itself fails, so a retry after one runs the write that never happened.
  *
- * @example monitorsCreate: { middleware: [requireApiKey("monitors:write"), idempotent], handler }
+ * @example monitorsCreate: { middleware: [requireAbility(abilities.monitors.write), idempotent], handler }
  */
 export default idempotency(OPTIONS);
 

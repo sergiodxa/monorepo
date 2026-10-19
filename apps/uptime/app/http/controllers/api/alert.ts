@@ -10,6 +10,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -26,9 +27,11 @@ import {
 	serializeAlertSafe,
 	serializeAlertStrategyOnly,
 } from "~/app/http/controllers/api/alerts";
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { ALERT_ID_PARAMS, CREATE_ALERT_BODY, UPDATE_ALERT_BODY } from "~/app/http/openapi/alerts";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -97,7 +100,7 @@ function writableChannel(alert: SelectAlert) {
  * A changed `monitorType` alone widens to the whole type, a removed `monitorId` alone
  * widens to every monitor, and any changed channel member rebuilds the channel config.
  *
- * @param ctx - The request, after `requireApiKey("alerts:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.alerts.write)`.
  * @returns The updated alert; a 404 for an alert outside the team, before the body is read.
  */
 async function patchAlert(ctx: RequestContext): Promise<Response> {
@@ -150,7 +153,7 @@ export default createController(alertRoutes, {
 	actions: {
 		/** GET /api/v1/alerts/:alertId — a single alert with sensitive config stripped. */
 		alertShow: {
-			middleware: [requireApiKey("alerts:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.read)],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let alert = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
@@ -162,13 +165,13 @@ export default createController(alertRoutes, {
 
 		/** PATCH /api/v1/alerts/:alertId — merge-patches an alert. */
 		alertPatch: {
-			middleware: [requireApiKey("alerts:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.write)],
 			handler: patchAlert,
 		},
 
 		/** PUT /api/v1/alerts/:alertId — updates an alert's non-channel fields. */
 		alertUpdate: {
-			middleware: [requireApiKey("alerts:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.write)],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
@@ -215,7 +218,7 @@ export default createController(alertRoutes, {
 
 		/** DELETE /api/v1/alerts/:alertId — deletes an alert. */
 		alertDestroy: {
-			middleware: [requireApiKey("alerts:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.write)],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
@@ -229,7 +232,7 @@ export default createController(alertRoutes, {
 
 		/** GET /api/v1/alerts/:alertId/events — delivery-event history for one alert. */
 		alertEvents: {
-			middleware: [requireApiKey("alerts:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.read)],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
 				let alert = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);

@@ -10,6 +10,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -19,6 +20,7 @@ import { createController } from "remix/router";
 
 import type { InsertMonitor, SelectMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -26,6 +28,7 @@ import {
 	UPDATE_MONITOR_BODY,
 	WRITABLE_MONITOR,
 } from "~/app/http/openapi/monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -81,7 +84,7 @@ function writableMonitor(monitor: SelectMonitor) {
  * Applies a `PATCH` merge patch to one monitor. Only the members the patch changed are
  * written, so re-sending `enabled: true` keeps the instant checks resumed.
  *
- * @param ctx - The request, after `requireApiKey("monitors:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.monitors.write)`.
  * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
  */
 async function patchMonitor(ctx: RequestContext): Promise<Response> {
@@ -118,7 +121,7 @@ export default createController(monitorRoutes, {
 	actions: {
 		/** GET /api/v1/monitors/:monitorId — a single HTTP monitor. */
 		monitorShow: {
-			middleware: [requireApiKey("monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -130,13 +133,13 @@ export default createController(monitorRoutes, {
 
 		/** PATCH /api/v1/monitors/:monitorId — merge-patches an HTTP monitor. */
 		monitorPatch: {
-			middleware: [requireApiKey("monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write)],
 			handler: patchMonitor,
 		},
 
 		/** PUT /api/v1/monitors/:monitorId — updates an HTTP monitor's editable fields. */
 		monitorUpdate: {
-			middleware: [requireApiKey("monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -179,7 +182,7 @@ export default createController(monitorRoutes, {
 
 		/** DELETE /api/v1/monitors/:monitorId — deletes an HTTP monitor. */
 		monitorDestroy: {
-			middleware: [requireApiKey("monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -193,7 +196,7 @@ export default createController(monitorRoutes, {
 
 		/** GET /api/v1/monitors/:monitorId/stats — aggregate stats for one monitor. */
 		monitorStats: {
-			middleware: [requireApiKey("monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -207,7 +210,7 @@ export default createController(monitorRoutes, {
 
 		/** GET /api/v1/monitors/:monitorId/results — paginated check-result history. */
 		monitorResults: {
-			middleware: [requireApiKey("monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -260,7 +263,7 @@ export default createController(monitorRoutes, {
 
 		/** GET /api/v1/monitors/:monitorId/alert-events — alert-delivery history for one monitor. */
 		monitorAlertEvents: {
-			middleware: [requireApiKey("alerts:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.read)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);

@@ -9,6 +9,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -19,6 +20,7 @@ import type { UptimeModels } from "~/app/models";
 import type { InsertStatusPage, SelectStatusPage } from "~/database/schema";
 
 import { serializeStatusPage } from "~/app/http/controllers/api/status-pages";
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -27,6 +29,7 @@ import {
 	UPDATE_STATUS_PAGE_BODY,
 	WRITABLE_STATUS_PAGE,
 } from "~/app/http/openapi/status-pages";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -67,7 +70,7 @@ function writableStatusPage(page: SelectStatusPage) {
  * A removed `title` falls back to `name`, as on create; the slug is checked for uniqueness
  * only when the patch changes it.
  *
- * @param ctx - The request, after `requireApiKey("status-pages:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.statusPages.write)`.
  * @returns The updated page with its attachments; a 404 for a page outside the team, before
  *   the body is read.
  */
@@ -112,7 +115,7 @@ export default createController(statusPageRoutes, {
 	actions: {
 		/** GET /api/v1/status-pages/:statusPageId — a status page with its attachment id lists. */
 		statusPageShow: {
-			middleware: [requireApiKey("status-pages:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.statusPages.read)],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let statusPage = await loadWithAttachments(ctx.models, ctx.apiTeam.id, statusPageId);
@@ -127,13 +130,13 @@ export default createController(statusPageRoutes, {
 
 		/** PATCH /api/v1/status-pages/:statusPageId — merge-patches a status page's own fields. */
 		statusPagePatch: {
-			middleware: [requireApiKey("status-pages:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.statusPages.write)],
 			handler: patchStatusPage,
 		},
 
 		/** PUT /api/v1/status-pages/:statusPageId — updates a status page's own fields. */
 		statusPageUpdate: {
-			middleware: [requireApiKey("status-pages:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.statusPages.write)],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
@@ -189,7 +192,7 @@ export default createController(statusPageRoutes, {
 
 		/** DELETE /api/v1/status-pages/:statusPageId — deletes a status page and its attachments. */
 		statusPageDestroy: {
-			middleware: [requireApiKey("status-pages:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.statusPages.write)],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
@@ -206,7 +209,7 @@ export default createController(statusPageRoutes, {
 
 		/** PUT /api/v1/status-pages/:statusPageId/monitors — replaces attached monitors/cron jobs. */
 		statusPageMonitors: {
-			middleware: [requireApiKey("status-pages:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.statusPages.write)],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
 				let statusPage = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);

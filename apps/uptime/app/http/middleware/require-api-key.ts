@@ -1,10 +1,8 @@
 /**
- * Route guard factory for the `/api/v1/*` surface. Reads `Authorization: Bearer
- * <key>`, hashes it with the same SHA-256 scheme `app/services/api/key.ts` generates
- * keys with, looks the hash up in `api_keys`, rejects missing/invalid/expired keys,
- * checks the scope the calling route requires, and exposes `ctx.apiKey`/`ctx.apiTeam`
- * for the handler. Every check runs per request, so a revoked or expired key
- * stops working on its very next use.
+ * Authenticates the `/api/v1/*` surface. Reads `Authorization: Bearer <key>`, hashes it
+ * with the SHA-256 scheme `app/services/api/key.ts` generates keys with, rejects a
+ * missing, unknown or expired key, and exposes `ctx.apiKey`/`ctx.apiTeam`; `apiAccess` then
+ * holds the key to its scopes. Every check runs per request, so a revoked key stops at once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,7 +12,7 @@ import type { Middleware } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
 
-import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
+import type { SelectApiKey, SelectTeam } from "~/database/schema";
 
 import { hashApiKey } from "~/app/services/api/key";
 import { apiChallenge } from "~/app/services/api/metadata";
@@ -48,62 +46,45 @@ function unauthorized(origin: string, presented: boolean): Response {
 }
 
 /**
- * Requires a valid `Authorization: Bearer <key>` header carrying `scope`.
+ * Requires a valid `Authorization: Bearer <key>` header, answering 401 with a Bearer
+ * challenge for a missing, unknown or expired key, and marking the key used otherwise.
  *
- * @param scope The scope the calling route requires.
- * @returns Middleware responding 401 for a missing/invalid/expired key, 403 for a
- * valid key missing `scope` (both with a Bearer challenge), otherwise forwarding to the handler with
- * `ctx.apiKey`/`ctx.apiTeam` set.
  * @example
  * router.map(routes.api.v1.monitors.index, {
- * 	middleware: [requireApiKey("monitors:read")],
+ * 	middleware: [requireAbility(abilities.monitors.read)],
  * 	handler: monitorsIndex,
  * });
  */
-export default function requireApiKey(scope: ApiKeyScope): Middleware {
-	return async (ctx, next) => {
-		let header = ctx.request.headers.get("Authorization");
-		let match = header ? BEARER_PATTERN.exec(header) : null;
-		let key = match?.[1] ?? null;
-		if (!key) return unauthorized(ctx.url.origin, false);
+export const requireApiKey: Middleware = async (ctx, next) => {
+	let header = ctx.request.headers.get("Authorization");
+	let match = header ? BEARER_PATTERN.exec(header) : null;
+	let key = match?.[1] ?? null;
+	if (!key) return unauthorized(ctx.url.origin, false);
 
-		let keyHash = await hashApiKey(key);
-		let apiKey = await ctx.models.apiKeys.findBy({ key_hash: keyHash });
-		if (!apiKey) return unauthorized(ctx.url.origin, true);
+	let keyHash = await hashApiKey(key);
+	let apiKey = await ctx.models.apiKeys.findBy({ key_hash: keyHash });
+	if (!apiKey) return unauthorized(ctx.url.origin, true);
 
-		if (apiKey.expires_at !== null && apiKey.expires_at < Date.now()) {
-			return unauthorized(ctx.url.origin, true);
-		}
+	if (apiKey.expires_at !== null && apiKey.expires_at < Date.now()) {
+		return unauthorized(ctx.url.origin, true);
+	}
 
-		let team = await ctx.models.teams.findByIdOrSlug(apiKey.team_id);
-		if (!team) return unauthorized(ctx.url.origin, true);
+	let team = await ctx.models.teams.findByIdOrSlug(apiKey.team_id);
+	if (!team) return unauthorized(ctx.url.origin, true);
 
-		await ctx.models.apiKeys.markUsed(apiKey.id);
+	await ctx.models.apiKeys.markUsed(apiKey.id);
 
-		if (!apiKey.scopes.includes(scope)) {
-			return apiProblems.forbidden(
-				{ detail: `API key does not have ${scope} scope`, instance: problemInstance() },
-				{
-					headers: {
-						"WWW-Authenticate": apiChallenge(ctx.url.origin, {
-							error: "insufficient_scope",
-							scope: [scope],
-						}),
-					},
-				},
-			);
-		}
+	ctx.apiKey = apiKey;
+	ctx.apiTeam = team;
 
-		ctx.apiKey = apiKey;
-		ctx.apiTeam = team;
+	/**
+	 * Attributes the invocation to the team whose key paid for it, so a machine
+	 * request is queryable by team exactly like a browser one, and the endpoints
+	 * under this guard record only what they alone know.
+	 */
+	currentLog()?.set({ team: { id: team.id } });
 
-		/**
-		 * Attributes the invocation to the team whose key paid for it, so a machine
-		 * request is queryable by team exactly like a browser one, and the endpoints
-		 * under this guard record only what they alone know.
-		 */
-		currentLog()?.set({ team: { id: team.id } });
+	return next();
+};
 
-		return next();
-	};
-}
+export default requireApiKey;

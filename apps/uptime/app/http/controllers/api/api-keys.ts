@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -20,11 +21,13 @@ import { createController } from "remix/router";
 
 import type { SelectApiKey } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import { idempotentUnstored } from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_API_KEY_BODY } from "~/app/http/openapi/api-keys";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -49,7 +52,7 @@ export default createController(apiKeysRoutes, {
 	actions: {
 		/** GET /api/v1/api-keys — lists the team's API keys (metadata only). */
 		apiKeysIndex: {
-			middleware: [requireApiKey("api-keys:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.apiKeys.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -87,7 +90,12 @@ export default createController(apiKeysRoutes, {
 
 		/** POST /api/v1/api-keys — creates a new API key for the team, returning the plaintext key once. */
 		apiKeysCreate: {
-			middleware: [requireApiKey("api-keys:write"), idempotentUnstored],
+			middleware: [
+				requireApiKey,
+				apiAccess,
+				requireAbility(abilities.apiKeys.write),
+				idempotentUnstored,
+			],
 			handler: async (ctx) => {
 				let existingCount = await ctx.models.apiKeys.inTeam(ctx.apiTeam.id).count();
 				if (existingCount >= MAX_API_KEYS_PER_TEAM) {

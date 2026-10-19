@@ -9,6 +9,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -18,6 +19,7 @@ import { createController } from "remix/router";
 
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -25,6 +27,7 @@ import {
 	UPDATE_TCP_MONITOR_BODY,
 	WRITABLE_TCP_MONITOR,
 } from "~/app/http/openapi/tcp-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -68,7 +71,7 @@ function writableTcpMonitor(monitor: SelectTcpMonitor) {
  * Applies a `PATCH` merge patch to one TCP monitor. Only the members the patch changed
  * are written, so re-sending the current interval or `isEnabled` leaves the schedule alone.
  *
- * @param ctx - The request, after `requireApiKey("tcp-monitors:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.tcpMonitors.write)`.
  * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
  */
 async function patchTcpMonitor(ctx: RequestContext): Promise<Response> {
@@ -101,7 +104,7 @@ export default createController(tcpMonitorRoutes, {
 	actions: {
 		/** GET /api/v1/tcp-monitors/:tcpMonitorId — a single TCP monitor. */
 		tcpMonitorShow: {
-			middleware: [requireApiKey("tcp-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.read)],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.tcpMonitors
@@ -119,13 +122,13 @@ export default createController(tcpMonitorRoutes, {
 
 		/** PATCH /api/v1/tcp-monitors/:tcpMonitorId — merge-patches a TCP monitor. */
 		tcpMonitorPatch: {
-			middleware: [requireApiKey("tcp-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.write)],
 			handler: patchTcpMonitor,
 		},
 
 		/** PUT /api/v1/tcp-monitors/:tcpMonitorId — updates a TCP monitor's editable fields. */
 		tcpMonitorUpdate: {
-			middleware: [requireApiKey("tcp-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.write)],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.tcpMonitors
@@ -162,7 +165,7 @@ export default createController(tcpMonitorRoutes, {
 
 		/** DELETE /api/v1/tcp-monitors/:tcpMonitorId — deletes a TCP monitor. */
 		tcpMonitorDestroy: {
-			middleware: [requireApiKey("tcp-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.write)],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.tcpMonitors
@@ -182,7 +185,7 @@ export default createController(tcpMonitorRoutes, {
 
 		/** GET /api/v1/tcp-monitors/:tcpMonitorId/results — paginated check-result history. */
 		tcpMonitorResults: {
-			middleware: [requireApiKey("tcp-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.read)],
 			handler: async (ctx) => {
 				let { tcpMonitorId } = s.parse(TCP_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.tcpMonitors

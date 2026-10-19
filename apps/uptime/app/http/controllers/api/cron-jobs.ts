@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Schedule } from "@sdxc/cron";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
@@ -19,10 +20,12 @@ import { createController } from "remix/router";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_CRON_JOB_BODY } from "~/app/http/openapi/cron-jobs";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -53,7 +56,7 @@ export default createController(cronJobsRoutes, {
 	actions: {
 		/** GET /api/v1/cron-jobs — lists the team's cron-job monitors. */
 		cronJobsIndex: {
-			middleware: [requireApiKey("cron-jobs:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -95,7 +98,7 @@ export default createController(cronJobsRoutes, {
 		 * database.
 		 */
 		cronJobsCreate: {
-			middleware: [requireApiKey("cron-jobs:write"), idempotent],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.write), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_CRON_JOB_BODY);
 				if (isFailure(result)) {

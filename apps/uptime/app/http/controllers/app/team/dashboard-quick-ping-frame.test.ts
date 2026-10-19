@@ -37,6 +37,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { testAssets } from "~/app/test/document-assets";
@@ -155,7 +156,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.locale = "en";
 		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
-		return next();
+		return teamAccess(ctx, next);
 	};
 }
 

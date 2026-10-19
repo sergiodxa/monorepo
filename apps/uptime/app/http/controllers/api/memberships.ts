@@ -6,11 +6,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
@@ -18,7 +21,7 @@ import routes from "~/routes/web";
 
 /** GET /api/v1/memberships — lists the team's memberships. */
 export const membershipsIndex = createAction(routes.api.v1.memberships, {
-	middleware: [requireApiKey("teams:read")],
+	middleware: [requireApiKey, apiAccess, requireAbility(abilities.team.read)],
 	handler: async (ctx) => {
 		let params = PAGING.parse(ctx.url.searchParams);
 		if (isFailure(params))

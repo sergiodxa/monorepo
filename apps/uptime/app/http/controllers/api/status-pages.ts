@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -17,10 +18,12 @@ import { createController } from "remix/router";
 
 import type { SelectStatusPage } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_STATUS_PAGE_BODY } from "~/app/http/openapi/status-pages";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -49,7 +52,7 @@ export default createController(statusPagesRoutes, {
 	actions: {
 		/** GET /api/v1/status-pages — lists the team's status pages. */
 		statusPagesIndex: {
-			middleware: [requireApiKey("status-pages:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.statusPages.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -87,7 +90,12 @@ export default createController(statusPagesRoutes, {
 
 		/** POST /api/v1/status-pages — creates a status page for the team. */
 		statusPagesCreate: {
-			middleware: [requireApiKey("status-pages:write"), idempotent],
+			middleware: [
+				requireApiKey,
+				apiAccess,
+				requireAbility(abilities.statusPages.write),
+				idempotent,
+			],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_STATUS_PAGE_BODY);
 				if (isFailure(result)) {

@@ -1,6 +1,6 @@
 /**
  * Form actions for adding, removing, and retrying verification of team domains.
- * Requires `requireRole("admin")`. Adding/retrying enqueues a `verifyDomainOwnership`
+ * Requires `requireAbility(abilities.domains.write)`. Adding/retrying enqueues a `verifyDomainOwnership`
  * message immediately, ahead of the periodic sweep.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

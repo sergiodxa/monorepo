@@ -6,20 +6,28 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { API_KEY_ID_PARAMS } from "~/app/http/openapi/api-keys";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import routes from "~/routes/web";
 
 /** DELETE /api/v1/api-keys/:apiKeyId — revokes an API key for the team. */
 export const apiKeyDestroy = createAction(routes.api.v1.apiKeys.destroy, {
-	middleware: [catchValidationError(), requireApiKey("api-keys:write")],
+	middleware: [
+		catchValidationError(),
+		requireApiKey,
+		apiAccess,
+		requireAbility(abilities.apiKeys.write),
+	],
 	handler: async (ctx) => {
 		let { apiKeyId } = s.parse(API_KEY_ID_PARAMS, ctx.params);
 		let existing = await ctx.models.apiKeys.inTeam(ctx.apiTeam.id).where({ id: apiKeyId }).first();

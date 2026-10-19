@@ -22,6 +22,7 @@ import {
 	FlowMonitorIdSchema,
 	UpdateFlowMonitorSchema,
 } from "~/app/http/validators/flow-monitor";
+import abilities from "~/app/policies/abilities";
 import { writePingResult } from "~/app/services/analytics";
 import { planFlowBilling, settleFlowBilling } from "~/app/services/flow-billing";
 import { inspectFlowSource, runFlowCheck } from "~/app/services/flow-check";
@@ -159,11 +160,12 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	});
 
 	/**
-	 * `stateFor` lets an owner whose entitlement cannot be determined still get their run, since
+	 * `checks.run` lets an owner whose entitlement cannot be determined still get their run, since
 	 * refusing a paying customer over an inconclusive lookup is the worse mistake — the same
 	 * reading every other manual check takes.
 	 */
-	if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
+	await ctx.access.load(abilities.checks.run);
+	if (!ctx.access.can(abilities.checks.run)) {
 		if (wantsJson(ctx.request)) {
 			return ok({
 				status: null,

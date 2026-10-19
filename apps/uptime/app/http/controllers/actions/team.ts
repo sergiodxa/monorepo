@@ -1,8 +1,8 @@
 /**
  * Form actions for team settings and membership: update/delete a team, and
- * remove/promote/demote a member. All require `requireRole("admin")`, which also
- * admits the owner (see `app/http/middleware/require-role.ts`). The owner keeps
- * their membership and role until the team itself is deleted.
+ * remove/promote/demote a member. The router admits each by an admin ability, which the
+ * owner holds too, and the policy keeps the owner's membership and role until the team
+ * itself is deleted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,6 +22,7 @@ import {
 	RemoveMemberSchema,
 	UpdateTeamSchema,
 } from "~/app/http/validators/team";
+import abilities from "~/app/policies/abilities";
 import { cancelSubscriptions } from "~/app/services/customer";
 import routes from "~/routes/web";
 
@@ -53,9 +54,10 @@ export const updateTeam = createAction(routes.teamAdminActions.team.update, asyn
 	});
 });
 
-/** DELETE /actions/:team/delete-team — owner-only in effect (checked here explicitly). */
+/** DELETE /actions/:team/delete-team — the router admits any admin, and only the owner deletes. */
 export const deleteTeam = createAction(routes.teamAdminActions.team.delete, async (ctx) => {
-	if (ctx.membership.subject_id !== ctx.team.owner_id) {
+	await ctx.access.load(abilities.team.delete);
+	if (!ctx.access.can(abilities.team.delete)) {
 		return badRequest("Only the team owner can delete the team.");
 	}
 
@@ -95,7 +97,12 @@ export const removeMember = createAction(routes.teamAdminActions.member.remove, 
 		});
 	}
 
-	if (result.data.subject_id === ctx.team.owner_id) {
+	await ctx.access.load(abilities.members.remove);
+	if (
+		!ctx.access.can(abilities.members.remove, {
+			member: { isOwner: result.data.subject_id === ctx.team.owner_id },
+		})
+	) {
 		return badRequest("The team owner can't be removed.");
 	}
 
@@ -119,7 +126,12 @@ export const changeRole = createAction(routes.teamAdminActions.member.changeRole
 		});
 	}
 
-	if (result.data.subject_id === ctx.team.owner_id) {
+	await ctx.access.load(abilities.members.changeRole);
+	if (
+		!ctx.access.can(abilities.members.changeRole, {
+			member: { isOwner: result.data.subject_id === ctx.team.owner_id },
+		})
+	) {
 		return badRequest("The team owner's role can't be changed.");
 	}
 

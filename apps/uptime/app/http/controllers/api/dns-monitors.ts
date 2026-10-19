@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { currentLog } from "@sdxc/logger";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
@@ -20,11 +21,13 @@ import { createController } from "remix/router";
 import type { ZoneFileImport } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_DNS_MONITOR_BODY } from "~/app/http/openapi/dns-monitors";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import {
@@ -96,7 +99,7 @@ export default createController(dnsMonitorsRoutes, {
 	actions: {
 		/** GET /api/v1/dns-monitors — a page of the team's DNS monitors, newest first. */
 		dnsMonitorsIndex: {
-			middleware: [requireApiKey("dns-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -134,7 +137,12 @@ export default createController(dnsMonitorsRoutes, {
 
 		/** POST /api/v1/dns-monitors — creates a DNS monitor for the team, up to {@link MAX_DNS_MONITORS_PER_TEAM}. */
 		dnsMonitorsCreate: {
-			middleware: [requireApiKey("dns-monitors:write"), idempotent],
+			middleware: [
+				requireApiKey,
+				apiAccess,
+				requireAbility(abilities.dnsMonitors.write),
+				idempotent,
+			],
 			handler: async (ctx) => {
 				/**
 				 * Checked before anything is parsed: one check sweeps every tracked name of every monitor

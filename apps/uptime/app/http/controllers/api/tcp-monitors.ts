@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -16,10 +17,12 @@ import { createController } from "remix/router";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_TCP_MONITOR_BODY } from "~/app/http/openapi/tcp-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -49,7 +52,7 @@ export default createController(tcpMonitorsRoutes, {
 	actions: {
 		/** GET /api/v1/tcp-monitors — lists the team's TCP monitors. */
 		tcpMonitorsIndex: {
-			middleware: [requireApiKey("tcp-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.tcpMonitors.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -89,7 +92,12 @@ export default createController(tcpMonitorsRoutes, {
 
 		/** POST /api/v1/tcp-monitors — creates a TCP monitor for the team. */
 		tcpMonitorsCreate: {
-			middleware: [requireApiKey("tcp-monitors:write"), idempotent],
+			middleware: [
+				requireApiKey,
+				apiAccess,
+				requireAbility(abilities.tcpMonitors.write),
+				idempotent,
+			],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_TCP_MONITOR_BODY);
 				if (isFailure(result)) {

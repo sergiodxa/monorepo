@@ -34,6 +34,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import models from "~/app/http/middleware/models";
 import { createActiveSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -85,7 +86,7 @@ function seedTeam(
 		ctx.locale = "en";
 		ctx.intl = intl;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
-		return next();
+		return teamAccess(ctx, next);
 	};
 }
 

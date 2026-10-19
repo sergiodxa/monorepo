@@ -32,6 +32,7 @@ import {
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
+import abilities from "~/app/policies/abilities";
 import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import {
@@ -254,11 +255,12 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	if (!monitor) return notFound("Not Found");
 
 	/**
-	 * `stateFor` returns a state even when entitlement cannot be determined, and an owner in
-	 * that case still gets their check: refusing a paying customer over an inconclusive lookup
+	 * `checks.run` refuses only a subscription known to be inactive, so an owner whose
+	 * entitlement cannot be determined still gets their check: refusing a paying customer over an inconclusive lookup
 	 * is the worse of the two mistakes, the same reading every other manual check takes.
 	 */
-	if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
+	await ctx.access.load(abilities.checks.run);
+	if (!ctx.access.can(abilities.checks.run)) {
 		session?.flash("toast", {
 			intent: "error",
 			message: ctx.intl.t("actions.checks.subscriptionRequired"),

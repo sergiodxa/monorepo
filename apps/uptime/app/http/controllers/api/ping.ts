@@ -11,6 +11,7 @@ import type { InferOutput } from "@sdxc/json-schema";
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { issuesFrom } from "@sdxc/problem";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
@@ -24,9 +25,10 @@ import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { PingStatus } from "~/app/services/analytics";
 import type { DnsRecordType } from "~/app/services/dns/record-value";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { PING_BODY } from "~/app/http/openapi/ping";
-import { features } from "~/app/initializers/flags";
+import abilities from "~/app/policies/abilities";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
@@ -122,18 +124,14 @@ const limitByApiKey: Middleware = (context, next) => {
 
 /** POST /api/v1/ping — runs one throwaway check and returns its result. */
 export default createAction(routes.api.v1.ping, {
-	middleware: [requireApiKey("ping:trigger"), limitByApiKey],
+	middleware: [requireApiKey, apiAccess, requireAbility(abilities.ping.trigger), limitByApiKey],
 	handler: async (ctx) => {
 		/**
 		 * The endpoint's own switch, read before the body is: a team it is off for gets
-		 * the same answer whatever it sent. The team is the subject, so a rule naming
-		 * `team.slug` closes the endpoint to one caller rather than to every caller.
+		 * the same answer whatever it sent.
 		 */
-		let available = await ctx.flags.get(features.adhocPingApi, {
-			context: { targetingKey: ctx.apiTeam.id, team: { slug: ctx.apiTeam.slug } },
-		});
-
-		if (!available) {
+		await ctx.access.load(abilities.ping.api);
+		if (!ctx.access.can(abilities.ping.api)) {
 			return apiProblems.endpointUnavailable({
 				detail: "Ad-hoc pings are unavailable",
 				instance: problemInstance(),
@@ -149,11 +147,11 @@ export default createAction(routes.api.v1.ping, {
 		}
 
 		/**
-		 * Reads via `stateFor`: an owner whose subscription state can't be determined fails
-		 * open and gets their ping, matching what the manual "run check" button does —
-		 * refusing a paying customer over an inconclusive lookup is the worse mistake.
+		 * Refused only for a subscription known to be inactive, matching what the manual "run
+		 * check" button does: refusing a paying customer over an inconclusive lookup is the worse mistake.
 		 */
-		if ((await ctx.models.subscriptions.stateFor(ctx.apiTeam.owner_id)) === "inactive") {
+		await ctx.access.load(abilities.checks.run);
+		if (!ctx.access.can(abilities.checks.run)) {
 			return apiProblems.subscriptionRequired({
 				detail: "An active subscription is required to run a ping",
 				instance: problemInstance(),

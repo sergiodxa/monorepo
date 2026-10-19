@@ -30,6 +30,7 @@ import type { DnsRecordType } from "~/app/models/dns-monitor-records";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { teamAccess } from "~/app/http/middleware/access";
 import i18n from "~/app/http/middleware/i18n";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -173,7 +174,7 @@ function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): 
 	return (ctx, next) => {
 		(ctx as unknown as { team: SelectTeam }).team = team;
 		(ctx as unknown as { membership: SelectMembership }).membership = membership;
-		return next();
+		return teamAccess(ctx, next);
 	};
 }
 

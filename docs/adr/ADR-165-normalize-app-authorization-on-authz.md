@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-19 (blog, r3-auth and reader done; uptime and auth-saas planned)
+**Accepted** - 2026-10-19 (blog, r3-auth, reader and uptime done; auth-saas planned)
 
 ## Background
 
@@ -37,7 +37,7 @@ webhook signatures, rate limits and numeric quotas.
 | r3-auth     | session subject, `role` column                                  | already on authz; registration lived in `types.ts`                                              | registration moved into `policy.ts` |
 | reader      | per-reader Durable Object, leased tier, agent scope             | already on authz, decided inside the object                                                     | registration added to `policy.ts`   |
 | sdxc-site   | none                                                            | GitHub Sponsors webhook signature                                                               | no authz                            |
-| uptime      | OIDC viewer + team membership, API keys with scopes             | `requireRole("admin")`, owner checks in handlers, 7 subscription gates, API scopes, 1 flag gate | planned below                       |
+| uptime      | OIDC viewer + team membership, API keys with scopes             | `requireRole("admin")`, owner checks in handlers, 7 subscription gates, API scopes, 1 flag gate | converted                           |
 | auth-saas   | management caller: agent client, person token, dashboard cookie | `requireScope` on 72 routes from `scopesForRole`, entitlement middleware, `dashboardRole`       | planned below                       |
 
 ### blog
@@ -65,33 +65,33 @@ Left as they are, each a behavior change to decide on its own:
   `can.posts.keep`, while `features.tags` cannot become `can.tags.label` without hiding labels
   from free readers.
 
-### uptime (planned)
+### uptime
 
-Medium: few rules, many call sites. Keep `requireUser`, `requireApiKey` (authentication),
-`requireTeam` (membership lookup, 404) and the `inTeam` query scoping.
+Converted with every status code, redirect, copy and the API's `insufficient_scope` challenge
+kept. `requireUser`, `requireApiKey` (now authentication alone), `requireTeam` and `inTeam`
+query scoping stay.
 
-1. Catalog: `monitors.{write,delete,check}` (one group per monitor kind if the scopes stay per
-   kind), `alerts`, `maintenance`, `statusPages`, `team.{update,delete,leave}`,
-   `members.{remove,changeRole}`, `invites`, `domains`, `apiKeys`, `billing.manage`,
-   `ping.trigger`, `stats.backfill`.
-2. Policy: `member`; `admin` inherits it and adds team, members, invites, domains and keys;
-   `owner` inherits admin and adds `team.delete` and `billing.manage`; a guard refuses
-   `members.*` and `team.leave` for the owner. One ceiling role per API scope bound as
-   `within`, so a key never exceeds its scopes. Facts: `billing` from `fromEntitlements`, with a
-   guard on `monitors.check` and `ping.trigger` for an `inactive` subscription (fail-open as
-   today), and `flags.adhocPingApi` as a guard on the API ping.
-3. Bind `access` after `requireTeam` in `MEMBER_GUARDS`/`ADMIN_GUARDS` and after
-   `requireApiKey`; replace `requireRole("admin")` with `requireAbility`, keeping its 403 page
-   through `onDenied`, and the API's `insufficient_scope` challenge through the API's
-   `onDenied`.
-4. Replace the owner checks in `actions/team.ts`, `actions/account.ts`, `checkout.tsx` and the
-   HTTP-monitor delete, and the 7 `stateFor` gates, one area at a time, each keeping its status
-   and copy.
-5. First add a router test asserting the guards are attached, since today every action test
-   stubs `ctx.team`/`ctx.membership` and dropping `ADMIN_GUARDS` fails nothing.
+- The catalog's read and write pairs follow the API key scopes one to one; `monitors.delete`
+  (HTTP monitors only, admin), `team.{update,delete,leave}`, `members.{manage,remove,changeRole}`,
+  `billing.manage`, `checks.run`, `ping.{trigger,api}` and `stats.backfill` complete it.
+- Roles: `member`, `admin` inheriting it, and `owner` holding everything; a team's owner binds
+  `owner` alone. Guards keep the owner in the team (`members.remove`, `members.changeRole`,
+  `team.leave`, reason `owner`), ask an admin to be demoted before leaving (reason `admin`),
+  refuse `checks.run` for a subscription known `inactive` (the `billing` fact reads the D1
+  projection through `stateFor`, so it fails open as before), and close `ping.api` while the
+  `adhocPingApi` flag is off for the calling team.
+- An API key binds `owner` within one `scope:<name>` role per scope; `API_SCOPES` in
+  `policy.ts` is the table, and the first scope granting a refused ability is the one the
+  challenge names.
+- `teamAccess` ends `MEMBER_GUARDS`; admin actions add `requireAbility` for the ability each
+  performs. Team deletion is admitted by `team.update` and refused in the action, with its 400,
+  for anyone but the owner. `app/initializers/router.test.ts` drives the real router to prove
+  every team action is guarded.
 
-Open product questions: deletes are admin-only for HTTP monitors and open to members for every
-other kind; any team's `monitors:write` key can enqueue the global stats backfill.
+The two product questions stay as they were, by decision: HTTP-monitor deletes remain admin-only
+while members delete every other kind, and any key with `monitors:write` may enqueue the global
+stats backfill. The trial page's `stateFor` read picks a billing path for a signed-in visitor
+rather than refusing anything, so it stays a model call.
 
 ### auth-saas (planned)
 
@@ -114,12 +114,12 @@ and the RFC 6750 `insufficient_scope` challenge naming the scope must survive.
 
 ### Positive
 
-- Three apps share one shape, and the next two have a plan that keeps their wire contracts.
+- Four apps share one shape, and auth-saas has a plan that keeps its wire contracts.
 - Two untested blog rules now have tests.
 
 ### Negative
 
-- uptime and auth-saas still authorize by hand until their plans land.
+- auth-saas still authorizes by hand until its plan lands.
 
 ## References
 

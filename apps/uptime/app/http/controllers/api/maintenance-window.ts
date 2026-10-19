@@ -10,6 +10,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure, unwrap } from "@sdxc/result";
@@ -19,6 +20,7 @@ import { createController } from "remix/router";
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
 import { apiScopeFrom, serializeMaintenanceWindow } from "~/app/http/controllers/api/maintenance";
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -26,6 +28,7 @@ import {
 	UPDATE_MAINTENANCE_BODY,
 	WRITABLE_MAINTENANCE,
 } from "~/app/http/openapi/maintenance";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -57,7 +60,7 @@ function writableMaintenanceWindow(window: SelectMaintenanceWindow) {
  * A changed `monitorType` alone widens to the whole type, and a removed `monitorId` alone
  * widens to every monitor.
  *
- * @param ctx - The request, after `requireApiKey("maintenance:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.maintenance.write)`.
  * @returns The updated window; a 404 for a window outside the team, before the body is read.
  */
 async function patchMaintenanceWindow(ctx: RequestContext): Promise<Response> {
@@ -111,7 +114,7 @@ export default createController(maintenanceWindowRoutes, {
 	actions: {
 		/** GET /api/v1/maintenance/:maintenanceId — a single maintenance window. */
 		maintenanceShow: {
-			middleware: [requireApiKey("maintenance:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.maintenance.read)],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let window = await ctx.models.maintenanceWindows.inTeam(ctx.apiTeam.id).find(maintenanceId);
@@ -126,13 +129,13 @@ export default createController(maintenanceWindowRoutes, {
 
 		/** PATCH /api/v1/maintenance/:maintenanceId — merge-patches a maintenance window. */
 		maintenancePatch: {
-			middleware: [requireApiKey("maintenance:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.maintenance.write)],
 			handler: patchMaintenanceWindow,
 		},
 
 		/** PUT /api/v1/maintenance/:maintenanceId — updates a maintenance window. */
 		maintenanceUpdate: {
-			middleware: [requireApiKey("maintenance:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.maintenance.write)],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.maintenanceWindows
@@ -193,7 +196,7 @@ export default createController(maintenanceWindowRoutes, {
 
 		/** DELETE /api/v1/maintenance/:maintenanceId — deletes a maintenance window. */
 		maintenanceDestroy: {
-			middleware: [requireApiKey("maintenance:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.maintenance.write)],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.maintenanceWindows
@@ -212,7 +215,7 @@ export default createController(maintenanceWindowRoutes, {
 
 		/** POST /api/v1/maintenance/:maintenanceId/end — ends a maintenance window early. */
 		maintenanceEnd: {
-			middleware: [requireApiKey("maintenance:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.maintenance.write)],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.maintenanceWindows

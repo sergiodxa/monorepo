@@ -1,6 +1,6 @@
 /**
  * Team settings page controller, gated behind `requireUser`, `requireTeam`, and
- * `requireRole("admin")`. Billing and Danger Zone stay owner-only, and the
+ * `requireAbility(abilities.team.update)`. Billing and Danger Zone stay owner-only, and the
  * danger-zone delete button relies on the native `pattern="DELETE"` constraint
  * to stay disabled-in-effect until the confirmation input matches exactly.
  *
@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { addDays, formatDate, formatRelative } from "@sdxc/dates";
 import { Trans } from "@sdxc/i18n/ui";
 import {
@@ -52,12 +53,13 @@ import { AlertDialog, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { admin } from "~/app/http/middleware/admin";
 import { getViewer } from "~/app/http/middleware/auth";
-import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createManagementClient } from "~/app/initializers/management-client";
+import abilities from "~/app/policies/abilities";
 import { resolveSubjects } from "~/app/services/subjects";
 import { teamLogoUrl } from "~/app/services/team-logo";
 import Avatar from "~/resources/components/avatar";
@@ -135,7 +137,13 @@ function textInput() {
  * own trailing margin spaces the danger-zone confirmation input from the footer below.
  */
 export default createAction(routes.app.team.settings, {
-	middleware: [requireUser, requireTeam, requireRole("admin"), admin(createManagementClient)],
+	middleware: [
+		requireUser,
+		requireTeam,
+		teamAccess,
+		requireAbility(abilities.team.update),
+		admin(createManagementClient),
+	],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

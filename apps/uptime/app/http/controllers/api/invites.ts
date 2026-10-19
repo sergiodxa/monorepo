@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -17,10 +18,12 @@ import { createController } from "remix/router";
 
 import type { SelectInvite } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_INVITE_BODY } from "~/app/http/openapi/team";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { refuseUndeliverableRecipient } from "~/app/services/email-address";
@@ -46,7 +49,7 @@ export default createController(invitesRoutes, {
 	actions: {
 		/** GET /api/v1/invites — lists every invite (pending and accepted) for the team. */
 		invitesIndex: {
-			middleware: [requireApiKey("invites:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.invites.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -87,7 +90,7 @@ export default createController(invitesRoutes, {
 		 * already invited, pending or accepted, answers 409 `conflict` and sends nothing.
 		 */
 		invitesCreate: {
-			middleware: [requireApiKey("invites:write"), idempotent],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.invites.write), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_INVITE_BODY);
 				if (isFailure(result)) {

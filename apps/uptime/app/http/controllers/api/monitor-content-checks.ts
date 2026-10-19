@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
@@ -17,6 +18,7 @@ import { createController } from "remix/router";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -25,6 +27,7 @@ import {
 	CREATE_CONTENT_CHECK_BODY,
 	MONITOR_ID_PARAMS,
 } from "~/app/http/openapi/monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -50,7 +53,7 @@ export default createController(monitorContentChecksRoutes, {
 	actions: {
 		/** GET /api/v1/monitors/:monitorId/content-checks — lists a monitor's content checks. */
 		monitorContentChecksIndex: {
-			middleware: [requireApiKey("monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -93,7 +96,7 @@ export default createController(monitorContentChecksRoutes, {
 
 		/** POST /api/v1/monitors/:monitorId/content-checks — creates a content check. */
 		monitorContentChecksCreate: {
-			middleware: [requireApiKey("monitors:write"), idempotent],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write), idempotent],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
@@ -124,7 +127,7 @@ export default createController(monitorContentChecksRoutes, {
 
 		/** DELETE /api/v1/monitors/:monitorId/content-checks/:contentCheckId — deletes a content check. */
 		monitorContentCheckDestroy: {
-			middleware: [requireApiKey("monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write)],
 			handler: async (ctx) => {
 				let { monitorId, contentCheckId } = s.parse(CONTENT_CHECK_PARAMS, ctx.params);
 				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);

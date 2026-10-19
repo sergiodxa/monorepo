@@ -11,6 +11,7 @@ import type { DayRange } from "@sdxc/dates";
 import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { vary } from "@sdxc/http/cache";
 import { accepts } from "@sdxc/http/negotiate";
 import { attachment, csv } from "@sdxc/http/response";
@@ -24,9 +25,11 @@ import type { Report } from "~/app/models/reports";
 import type { ReportKind } from "~/app/services/reports/csv";
 import type { ReportRangeProblem } from "~/app/services/reports/range";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { REPORT_QUERY } from "~/app/http/openapi/reports";
 import { dailyRows, summaryRows } from "~/app/models/reports";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, PAGING } from "~/app/services/pagination";
@@ -89,7 +92,7 @@ const RANGE_MESSAGES: Record<ReportRangeProblem, { message: string; pointer: str
  * is refused, since guessing the other would report a range nobody asked for. A status page
  * must be the team's own, answering 404 otherwise, as an id naming another team's page does.
  *
- * @param ctx - The request, after `requireApiKey("reports:read")`.
+ * @param ctx - The request, after `requireAbility(abilities.reports.read)`.
  * @returns The filter, or the problem response to answer with.
  */
 async function readFilter(ctx: RequestContext): Promise<Report.Filter | Response> {
@@ -322,7 +325,7 @@ export default createController(reportsRoutes, {
 		 * every monitor in one response, since the list is as long as the team's monitors.
 		 */
 		reportsUptimeSummary: {
-			middleware: [requireApiKey("reports:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.reports.read)],
 			handler: async (ctx) => {
 				let filter = await readFilter(ctx);
 				if (filter instanceof Response) return filter;
@@ -348,7 +351,7 @@ export default createController(reportsRoutes, {
 		 * CSV streams the whole range; JSON pages by a cursor on the report's order.
 		 */
 		reportsUptimeDaily: {
-			middleware: [requireApiKey("reports:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.reports.read)],
 			handler: async (ctx) => {
 				let filter = await readFilter(ctx);
 				if (filter instanceof Response) return filter;

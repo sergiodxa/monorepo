@@ -9,12 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { createAction } from "remix/router";
 
 import type { UptimeModels } from "~/app/models";
 import type { Monitor } from "~/app/models/monitors";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import abilities from "~/app/policies/abilities";
 import { apiSuccess } from "~/app/services/api/response";
 import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
@@ -54,7 +57,7 @@ async function statusFor(models: UptimeModels, monitor: Monitor): Promise<Monito
 
 /** GET /api/v1/status — the team's overall status across every HTTP monitor. */
 export const statusShow = createAction(routes.api.v1.status, {
-	middleware: [requireApiKey("monitors:read")],
+	middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 	handler: async (ctx) => {
 		let monitors = await ctx.models.monitors
 			.inTeam(ctx.apiTeam.id)

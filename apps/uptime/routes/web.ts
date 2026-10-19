@@ -341,7 +341,7 @@ export default route({
 
 	/**
 	 * A separate route-map group, not a URL prefix (paths stay `/actions/:team/...`),
-	 * so `app/initializers/router.tsx` can lay `requireRole("admin")` over exactly this group: a
+	 * so `app/initializers/router.tsx` can lay an admin ability over exactly this group: a
 	 * `router.map()` call takes one middleware chain over every leaf within it.
 	 */
 	teamAdminActions: {

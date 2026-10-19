@@ -1,12 +1,13 @@
 /**
  * New API key page controller. Requires `requireUser` + `requireTeam` +
- * `requireRole("admin")`. Renders the new API key form, grouping fields into
+ * `requireAbility(abilities.apiKeys.write)`. Renders the new API key form, grouping fields into
  * two cards and listing every `apiKeyScopes` value as a checkbox.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { pis } from "@sdxc/u/size";
@@ -16,10 +17,11 @@ import { createAction } from "remix/router";
 
 import type { ApiKeyScope } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
-import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import { apiKeyScopes } from "~/database/schema";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -55,7 +57,7 @@ function descriptionId(scope: ApiKeyScope) {
 
 /** GET /app/:team/api-keys/new — the new API key form. */
 export default createAction(routes.app.team.apiKeys.new, {
-	middleware: [requireUser, requireTeam, requireRole("admin")],
+	middleware: [requireUser, requireTeam, teamAccess, requireAbility(abilities.apiKeys.write)],
 	handler: () => {
 		let ctx = getContext();
 		let viewer = getViewer();

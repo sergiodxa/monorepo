@@ -16,6 +16,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
@@ -27,6 +28,7 @@ import { createController } from "remix/router";
 import type { UptimeModels } from "~/app/models";
 import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -36,6 +38,7 @@ import {
 	UPDATE_FLOW_MONITOR_BODY,
 	WRITABLE_FLOW_MONITOR,
 } from "~/app/http/openapi/flow-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -82,7 +85,7 @@ function writableFlowMonitor(monitor: SelectFlowMonitor) {
  * are written, so re-sending `isEnabled: true` keeps the schedule, and a changed `source`
  * passes the reach rule before anything is stored.
  *
- * @param ctx - The request, after `requireApiKey("flow-monitors:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.flowMonitors.write)`.
  * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
  */
 async function patchFlowMonitor(ctx: RequestContext): Promise<Response> {
@@ -122,7 +125,7 @@ export default createController(flowMonitorsRoutes, {
 	actions: {
 		/** GET /api/v1/flow-monitors — lists the team's flow monitors. */
 		flowMonitorsIndex: {
-			middleware: [requireApiKey("flow-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -160,7 +163,12 @@ export default createController(flowMonitorsRoutes, {
 
 		/** POST /api/v1/flow-monitors — creates a flow monitor for the team. */
 		flowMonitorsCreate: {
-			middleware: [requireApiKey("flow-monitors:write"), idempotent],
+			middleware: [
+				requireApiKey,
+				apiAccess,
+				requireAbility(abilities.flowMonitors.write),
+				idempotent,
+			],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_FLOW_MONITOR_BODY);
 				if (isFailure(result)) {
@@ -189,7 +197,7 @@ export default createController(flowMonitorsRoutes, {
 
 		/** GET /api/v1/flow-monitors/:flowMonitorId — a single flow monitor. */
 		flowMonitorShow: {
-			middleware: [requireApiKey("flow-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.read)],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.flowMonitors
@@ -207,13 +215,13 @@ export default createController(flowMonitorsRoutes, {
 
 		/** PATCH /api/v1/flow-monitors/:flowMonitorId — merge-patches a flow monitor. */
 		flowMonitorPatch: {
-			middleware: [requireApiKey("flow-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.write)],
 			handler: patchFlowMonitor,
 		},
 
 		/** PUT /api/v1/flow-monitors/:flowMonitorId — updates a flow monitor's editable fields. */
 		flowMonitorUpdate: {
-			middleware: [requireApiKey("flow-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.write)],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.flowMonitors
@@ -257,7 +265,7 @@ export default createController(flowMonitorsRoutes, {
 
 		/** DELETE /api/v1/flow-monitors/:flowMonitorId — deletes a flow monitor. */
 		flowMonitorDestroy: {
-			middleware: [requireApiKey("flow-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.write)],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.flowMonitors
@@ -277,7 +285,7 @@ export default createController(flowMonitorsRoutes, {
 
 		/** GET /api/v1/flow-monitors/:flowMonitorId/results — check-result history. */
 		flowMonitorResults: {
-			middleware: [requireApiKey("flow-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.flowMonitors.read)],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.flowMonitors

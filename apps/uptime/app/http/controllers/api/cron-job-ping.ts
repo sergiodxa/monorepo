@@ -12,6 +12,7 @@
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { created } from "@sdxc/http/response/json";
 import * as s from "@sdxc/json-schema";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
@@ -19,8 +20,10 @@ import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env, waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CRON_JOB_PING_PARAMS } from "~/app/http/openapi/cron-jobs";
+import abilities from "~/app/policies/abilities";
 import { notifyCronJobResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
@@ -129,7 +132,7 @@ const limitByCaller: Middleware = (context, next) => {
 
 /** POST /api/v1/cron-jobs/:cronJobId/ping */
 export default createAction(routes.api.cronJobPing, {
-	middleware: [limitByCaller, requireApiKey("cron-jobs:ping")],
+	middleware: [limitByCaller, requireApiKey, apiAccess, requireAbility(abilities.cronJobs.ping)],
 	handler: async (ctx) => {
 		let params = s.parse(CRON_JOB_PING_PARAMS, ctx.params);
 		/**

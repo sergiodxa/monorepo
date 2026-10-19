@@ -8,10 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AnyAbility } from "@sdxc/authz";
 import type { Middleware, RequestContext } from "remix/router";
 
 import { assets } from "@sdxc/assets-middleware";
 import { attribution } from "@sdxc/attribution/middleware";
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import billing from "@sdxc/billing/middleware";
 import { database } from "@sdxc/database-middleware";
 import featureFlags from "@sdxc/flags/middleware/router";
@@ -38,11 +40,11 @@ import { createRouter } from "remix/router";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import { teamAccess } from "~/app/http/middleware/access";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import { frameFailures } from "~/app/http/middleware/frame-failures";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
@@ -53,6 +55,7 @@ import { openDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
+import abilities from "~/app/policies/abilities";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import {
@@ -104,12 +107,20 @@ const MACHINE_PATH_PREFIXES = [API_PATH_PREFIX, WEBHOOK_PATH_PREFIX];
 
 /**
  * The chain every team-scoped action runs behind: a signed-in viewer who belongs to the
- * team in the URL. Passed to each action's `lazy()`, so it answers before the module loads.
+ * team in the URL, bound as `ctx.access`. Passed to each action's `lazy()`, so it answers
+ * before the module loads.
  */
-const MEMBER_GUARDS: Middleware[] = [requireUser, requireTeam];
+const MEMBER_GUARDS: Middleware[] = [requireUser, requireTeam, teamAccess];
 
-/** The member chain plus the admin role, for the actions that change the team itself. */
-const ADMIN_GUARDS: Middleware[] = [...MEMBER_GUARDS, requireRole("admin")];
+/**
+ * The member chain plus one ability, for the actions that change the team itself; a member
+ * without it gets the 403 page before the action's module loads.
+ *
+ * @param ability - The ability the action performs.
+ */
+function adminGuards(ability: AnyAbility): Middleware[] {
+	return [...MEMBER_GUARDS, requireAbility(ability)];
+}
 
 /**
  * A signed-in viewer alone, for the account page's actions: each names its own team, since
@@ -401,7 +412,7 @@ export function createWebRouter(options: WebRouterOptions) {
 
 	/**
 	 * Each controller bakes its own `requireUser`/`requireTeam` (and, where
-	 * noted, `requireRole`) chain into its `createAction` call, so `lazy()`
+	 * noted, `requireAbility`) chain into its `createAction` call, so `lazy()`
 	 * takes its module directly, with no guards passed alongside it.
 	 */
 	router.map(
@@ -892,18 +903,19 @@ export function createWebRouter(options: WebRouterOptions) {
 
 	/**
 	 * A separate group from `actions` above (see `routes/web.ts`'s docblock on
-	 * `teamAdminActions`): `requireRole("admin")` layers on the same member-level
-	 * chain, scoped to this group alone.
+	 * `teamAdminActions`): each action adds the ability it performs to the same member-level
+	 * chain. Deleting the team is admitted by `team.update`, and the action itself tells an
+	 * admin apart from the owner, who alone may delete it.
 	 */
 	router.map(routes.teamAdminActions.team, {
 		actions: {
 			update: lazy(
 				() => import("~/app/http/controllers/actions/team").then((it) => it.updateTeam),
-				ADMIN_GUARDS,
+				adminGuards(abilities.team.update),
 			),
 			delete: lazy(
 				() => import("~/app/http/controllers/actions/team").then((it) => it.deleteTeam),
-				ADMIN_GUARDS,
+				adminGuards(abilities.team.update),
 			),
 		},
 	});
@@ -911,11 +923,11 @@ export function createWebRouter(options: WebRouterOptions) {
 		actions: {
 			remove: lazy(
 				() => import("~/app/http/controllers/actions/team").then((it) => it.removeMember),
-				ADMIN_GUARDS,
+				adminGuards(abilities.members.manage),
 			),
 			changeRole: lazy(
 				() => import("~/app/http/controllers/actions/team").then((it) => it.changeRole),
-				ADMIN_GUARDS,
+				adminGuards(abilities.members.manage),
 			),
 		},
 	});
@@ -923,11 +935,11 @@ export function createWebRouter(options: WebRouterOptions) {
 		actions: {
 			create: lazy(
 				() => import("~/app/http/controllers/actions/invites").then((it) => it.createInvite),
-				ADMIN_GUARDS,
+				adminGuards(abilities.invites.write),
 			),
 			revoke: lazy(
 				() => import("~/app/http/controllers/actions/invites").then((it) => it.revokeInvite),
-				ADMIN_GUARDS,
+				adminGuards(abilities.invites.write),
 			),
 		},
 	});
@@ -935,18 +947,18 @@ export function createWebRouter(options: WebRouterOptions) {
 		actions: {
 			add: lazy(
 				() => import("~/app/http/controllers/actions/team-domains").then((it) => it.addDomain),
-				ADMIN_GUARDS,
+				adminGuards(abilities.domains.write),
 			),
 			remove: lazy(
 				() => import("~/app/http/controllers/actions/team-domains").then((it) => it.removeDomain),
-				ADMIN_GUARDS,
+				adminGuards(abilities.domains.write),
 			),
 			retryVerification: lazy(
 				() =>
 					import("~/app/http/controllers/actions/team-domains").then(
 						(it) => it.retryDomainVerification,
 					),
-				ADMIN_GUARDS,
+				adminGuards(abilities.domains.write),
 			),
 		},
 	});
@@ -954,11 +966,11 @@ export function createWebRouter(options: WebRouterOptions) {
 		actions: {
 			create: lazy(
 				() => import("~/app/http/controllers/actions/api-keys").then((it) => it.createApiKey),
-				ADMIN_GUARDS,
+				adminGuards(abilities.apiKeys.write),
 			),
 			delete: lazy(
 				() => import("~/app/http/controllers/actions/api-keys").then((it) => it.deleteApiKey),
-				ADMIN_GUARDS,
+				adminGuards(abilities.apiKeys.write),
 			),
 		},
 	});

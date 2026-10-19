@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -19,11 +20,13 @@ import { createController } from "remix/router";
 import type { MonitorScope, MonitorScopeType } from "~/app/services/monitor-scope";
 import type { AlertConfig, SelectAlert } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_ALERT_BODY } from "~/app/http/openapi/alerts";
 import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { refuseUndeliverableRecipient } from "~/app/services/email-address";
@@ -135,7 +138,7 @@ export default createController(alertsRoutes, {
 	actions: {
 		/** GET /api/v1/alerts — lists the team's alerts with sensitive config stripped. */
 		alertsIndex: {
-			middleware: [requireApiKey("alerts:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -173,7 +176,7 @@ export default createController(alertsRoutes, {
 
 		/** POST /api/v1/alerts — creates an alert for the team, up to {@link MAX_ALERTS_PER_TEAM}. */
 		alertsCreate: {
-			middleware: [requireApiKey("alerts:write"), idempotent],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.alerts.write), idempotent],
 			handler: async (ctx) => {
 				let existingCount = await ctx.models.alerts.inTeam(ctx.apiTeam.id).count();
 				if (existingCount >= MAX_ALERTS_PER_TEAM) {

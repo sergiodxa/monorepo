@@ -25,6 +25,8 @@ import { UpdateEmailsSchema } from "~/app/http/validators/email-preferences";
 import { UpdateLanguageSchema } from "~/app/http/validators/language";
 import { CreateTeamSchema, LeaveTeamSchema } from "~/app/http/validators/team";
 import { language as languageCookie } from "~/app/initializers/cookies";
+import abilities from "~/app/policies/abilities";
+import policy, { rolesOf } from "~/app/policies/policy";
 import { accountExportFilename, buildAccountExport } from "~/app/services/account-export";
 import { optionalEmails } from "~/database/schema";
 import routes from "~/routes/web";
@@ -46,7 +48,7 @@ export const createTeam = createAction(routes.accountActions.createTeam, async (
 	});
 });
 
-/** POST /actions/leave-team */
+/** POST /actions/leave-team. Binds the team the form names, since no team is in the URL. */
 export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ctx) => {
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
@@ -66,8 +68,14 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 	let team = await ctx.models.teams.findByIdOrSlug(result.data.team_id);
 	if (!team) return notFound("Not Found");
 
-	if (team.owner_id === viewer.id) return badRequest("The team owner can't leave the team.");
-	if (membership.role === "admin") {
+	let access = unwrap(policy.for({ roles: rolesOf(team, membership) }));
+	let decision = access.check(abilities.team.leave, {
+		member: { role: membership.role, isOwner: team.owner_id === viewer.id },
+	});
+	if (!decision.allowed && decision.cause === "denied" && decision.reason === "owner") {
+		return badRequest("The team owner can't leave the team.");
+	}
+	if (!decision.allowed) {
 		return badRequest("Admins must be demoted to a member before leaving.");
 	}
 

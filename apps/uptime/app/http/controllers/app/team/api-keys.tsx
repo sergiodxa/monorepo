@@ -1,6 +1,6 @@
 /**
  * API keys list controller. Requires `requireUser` + `requireTeam` +
- * `requireRole("admin")`. Reads the one-time `newApiKey` session flash so a key just
+ * `requireAbility(abilities.apiKeys.read)`. Reads the one-time `newApiKey` session flash so a key just
  * created on this render (redirected from the create action) can be shown once.
  *
  * Renders the API keys list; shows a one-time reveal card for the newly created key
@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { formatDate, formatDateTime } from "@sdxc/dates";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { KeyIcon, PlusIcon } from "@sdxc/icons";
@@ -22,10 +23,11 @@ import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
-import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import { badgeVariant } from "~/resources/components/badge";
 import CopyButton from "~/resources/components/copy-button";
 import AppShell from "~/resources/layouts/app-shell";
@@ -43,7 +45,7 @@ interface NewApiKey {
  * where intl(handle) needs an IntlProvider ancestor to resolve.
  */
 export default createAction(routes.app.team.apiKeys.index, {
-	middleware: [requireUser, requireTeam, requireRole("admin")],
+	middleware: [requireUser, requireTeam, teamAccess, requireAbility(abilities.apiKeys.read)],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");

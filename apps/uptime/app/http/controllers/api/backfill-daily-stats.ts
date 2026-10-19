@@ -9,17 +9,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Accepted } from "@sdxc/http/status-code";
 import { createAction } from "remix/router";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import jobs from "~/app/jobs";
+import abilities from "~/app/policies/abilities";
 import { apiSuccess } from "~/app/services/api/response";
 import routes from "~/routes/web";
 
 /** POST /api/v1/backfill-daily-stats — enqueues a daily-stats rollup. */
 export const backfillDailyStatsCreate = createAction(routes.api.v1.backfillDailyStats, {
-	middleware: [requireApiKey("monitors:write")],
+	middleware: [requireApiKey, apiAccess, requireAbility(abilities.stats.backfill)],
 	handler: async (ctx) => {
 		await ctx.jobs.enqueue(jobs.aggregateDailyStats);
 		return apiSuccess({ status: "queued" }, Accepted);

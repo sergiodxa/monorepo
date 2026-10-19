@@ -1,5 +1,5 @@
 /**
- * Form actions for creating and deleting API keys. Requires `requireRole("admin")`.
+ * Form actions for creating and deleting API keys. Requires `requireAbility(abilities.apiKeys.write)`.
  * The newly-created plaintext key is stashed in a one-time session flash, read
  * and cleared by the list page, since every page here is a full server render
  * with no client-side navigation state to carry it through.

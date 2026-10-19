@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -15,10 +16,12 @@ import { createController } from "remix/router";
 
 import type { SelectTeamDomain } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_TEAM_DOMAIN_BODY, DELETE_TEAM_DOMAIN_BODY } from "~/app/http/openapi/team";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -42,7 +45,7 @@ export default createController(teamDomainsRoutes, {
 	actions: {
 		/** GET /api/v1/team-domains — lists the team's domains. */
 		teamDomainsIndex: {
-			middleware: [requireApiKey("team-domains:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.domains.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -83,7 +86,7 @@ export default createController(teamDomainsRoutes, {
 		 * hostname the team already added, verified or not, answers 409 `conflict`.
 		 */
 		teamDomainsCreate: {
-			middleware: [requireApiKey("team-domains:write"), idempotent],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.domains.write), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_TEAM_DOMAIN_BODY);
 				if (isFailure(result)) {
@@ -110,7 +113,7 @@ export default createController(teamDomainsRoutes, {
 
 		/** DELETE /api/v1/team-domains — removes a domain by id (given in the JSON body). */
 		teamDomainsDestroy: {
-			middleware: [requireApiKey("team-domains:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.domains.write)],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, DELETE_TEAM_DOMAIN_BODY);
 				if (isFailure(result)) {

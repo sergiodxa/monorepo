@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -17,9 +18,11 @@ import { createController } from "remix/router";
 
 import type { SelectMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_MONITOR_BODY } from "~/app/http/openapi/monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -54,7 +57,7 @@ export default createController(monitorsRoutes, {
 	actions: {
 		/** GET /api/v1/monitors — lists the team's HTTP monitors. */
 		monitorsIndex: {
-			middleware: [requireApiKey("monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -92,7 +95,7 @@ export default createController(monitorsRoutes, {
 
 		/** POST /api/v1/monitors — creates an HTTP monitor for the team. */
 		monitorsCreate: {
-			middleware: [requireApiKey("monitors:write"), idempotent],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_MONITOR_BODY);
 				if (isFailure(result)) {
@@ -123,7 +126,7 @@ export default createController(monitorsRoutes, {
 
 		/** GET /api/v1/monitors/stats — aggregate stats across every monitor on the team. */
 		monitorsStats: {
-			middleware: [requireApiKey("monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.read)],
 			handler: async (ctx) => {
 				let stats = await ctx.models.monitors.statsForTeam(ctx.apiTeam.id);
 				return apiSuccess({ stats });

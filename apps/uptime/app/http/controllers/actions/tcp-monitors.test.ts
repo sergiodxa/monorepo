@@ -28,6 +28,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
+import { teamAccess } from "~/app/http/middleware/access";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
@@ -128,7 +129,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
-		return next();
+		return teamAccess(ctx, next);
 	};
 }
 

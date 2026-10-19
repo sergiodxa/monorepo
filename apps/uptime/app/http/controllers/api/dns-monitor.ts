@@ -9,6 +9,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -19,6 +20,7 @@ import { createController } from "remix/router";
 import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
 
 import { serializeDnsMonitor } from "~/app/http/controllers/api/dns-monitors";
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -26,6 +28,7 @@ import {
 	UPDATE_DNS_MONITOR_BODY,
 	WRITABLE_DNS_MONITOR,
 } from "~/app/http/openapi/dns-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -51,7 +54,7 @@ function writableDnsMonitor(monitor: SelectDnsMonitor) {
  * Applies a `PATCH` merge patch to one DNS monitor. Only the members the patch changed
  * are written, so re-sending the current interval or `isEnabled` leaves the schedule alone.
  *
- * @param ctx - The request, after `requireApiKey("dns-monitors:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.dnsMonitors.write)`.
  * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
  */
 async function patchDnsMonitor(ctx: RequestContext): Promise<Response> {
@@ -85,7 +88,7 @@ export default createController(dnsMonitorRoutes, {
 	actions: {
 		/** GET /api/v1/dns-monitors/:dnsMonitorId — a single DNS monitor. */
 		dnsMonitorShow: {
-			middleware: [requireApiKey("dns-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.read)],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.dnsMonitors
@@ -103,13 +106,13 @@ export default createController(dnsMonitorRoutes, {
 
 		/** PATCH /api/v1/dns-monitors/:dnsMonitorId — merge-patches a DNS monitor. */
 		dnsMonitorPatch: {
-			middleware: [requireApiKey("dns-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.write)],
 			handler: patchDnsMonitor,
 		},
 
 		/** PUT /api/v1/dns-monitors/:dnsMonitorId — updates a DNS monitor's editable fields. */
 		dnsMonitorUpdate: {
-			middleware: [requireApiKey("dns-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.write)],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.dnsMonitors
@@ -148,7 +151,7 @@ export default createController(dnsMonitorRoutes, {
 
 		/** DELETE /api/v1/dns-monitors/:dnsMonitorId — deletes a DNS monitor. */
 		dnsMonitorDestroy: {
-			middleware: [requireApiKey("dns-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.write)],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.dnsMonitors
@@ -168,7 +171,7 @@ export default createController(dnsMonitorRoutes, {
 
 		/** GET /api/v1/dns-monitors/:dnsMonitorId/results — check-result history. */
 		dnsMonitorResults: {
-			middleware: [requireApiKey("dns-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.read)],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 				let monitor = await ctx.models.dnsMonitors

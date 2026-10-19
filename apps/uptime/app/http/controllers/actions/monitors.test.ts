@@ -33,6 +33,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
@@ -108,7 +109,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 		ctx.team = team;
 		ctx.membership = membership;
 		ctx.set(Auth, { ok: true, identity: viewer, method: "test" });
-		return next();
+		return teamAccess(ctx, next);
 	};
 }
 

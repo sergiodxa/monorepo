@@ -21,9 +21,11 @@ import { createAction } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
+import { teamAccess } from "~/app/http/middleware/access";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import abilities from "~/app/policies/abilities";
 import { openCheckout, openPortal } from "~/app/services/customer";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -72,12 +74,13 @@ function BillingNotice(handle: Handle<BillingNotice.Props>) {
  * keeps the mistake recoverable.
  */
 export default createAction(routes.app.team.checkout, {
-	middleware: [requireUser, requireTeam],
+	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		if (ctx.membership.subject_id !== ctx.team.owner_id) {
+		await ctx.access.load(abilities.billing.manage);
+		if (!ctx.access.can(abilities.billing.manage)) {
 			return notice(ctx.intl.t("page.billing.ownerOnly"), viewer);
 		}
 

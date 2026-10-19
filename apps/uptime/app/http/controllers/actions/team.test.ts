@@ -34,6 +34,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
+import { teamAccess } from "~/app/http/middleware/access";
 import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import { createTestBilling } from "~/app/test/billing";
@@ -99,7 +100,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		ctx.team = team;
 		ctx.membership = membership;
-		return next();
+		return teamAccess(ctx, next);
 	};
 }
 

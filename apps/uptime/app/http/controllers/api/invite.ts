@@ -6,20 +6,28 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { INVITE_ID_PARAMS } from "~/app/http/openapi/team";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import routes from "~/routes/web";
 
 /** DELETE /api/v1/invites/:inviteId — revokes a pending invite. */
 export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
-	middleware: [catchValidationError(), requireApiKey("invites:write")],
+	middleware: [
+		catchValidationError(),
+		requireApiKey,
+		apiAccess,
+		requireAbility(abilities.invites.write),
+	],
 	handler: async (ctx) => {
 		let { inviteId } = s.parse(INVITE_ID_PARAMS, ctx.params);
 		let invite = await ctx.models.invites.inTeam(ctx.apiTeam.id).where({ id: inviteId }).first();

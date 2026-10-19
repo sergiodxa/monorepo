@@ -11,6 +11,7 @@
 
 import type { OrderByTuple } from "@sdxc/pagination";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -20,6 +21,7 @@ import { createController } from "remix/router";
 
 import type { SelectDnsMonitorRecord } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -27,6 +29,7 @@ import {
 	DNS_MONITOR_RECORD_PARAMS,
 	UPDATE_DNS_MONITOR_RECORD_BODY,
 } from "~/app/http/openapi/dns-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, PAGING } from "~/app/services/pagination";
@@ -73,7 +76,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 		 * draws the same 404 as one that doesn't exist, keeping both indistinguishable.
 		 */
 		dnsMonitorRecordsIndex: {
-			middleware: [requireApiKey("dns-monitors:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.read)],
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 
@@ -127,7 +130,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 		 * `setEnabled`, which may settle a `new` discovery to `ok`.
 		 */
 		dnsMonitorRecordUpdate: {
-			middleware: [requireApiKey("dns-monitors:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.dnsMonitors.write)],
 			handler: async (ctx) => {
 				let { dnsMonitorId, recordId } = s.parse(DNS_MONITOR_RECORD_PARAMS, ctx.params);
 

@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -18,10 +19,12 @@ import { createController } from "remix/router";
 import type { MonitorScope, MonitorScopeType } from "~/app/services/monitor-scope";
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_MAINTENANCE_BODY } from "~/app/http/openapi/maintenance";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { storedMonitorScope } from "~/app/services/monitor-scope";
@@ -79,7 +82,7 @@ export default createController(maintenanceRoutes, {
 	actions: {
 		/** GET /api/v1/maintenance — lists the team's maintenance windows. */
 		maintenanceIndex: {
-			middleware: [requireApiKey("maintenance:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.maintenance.read)],
 			handler: async (ctx) => {
 				let params = PAGING.parse(ctx.url.searchParams);
 				if (isFailure(params))
@@ -121,7 +124,12 @@ export default createController(maintenanceRoutes, {
 
 		/** POST /api/v1/maintenance — creates a maintenance window for the team. */
 		maintenanceCreate: {
-			middleware: [requireApiKey("maintenance:write"), idempotent],
+			middleware: [
+				requireApiKey,
+				apiAccess,
+				requireAbility(abilities.maintenance.write),
+				idempotent,
+			],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CREATE_MAINTENANCE_BODY);
 				if (isFailure(result)) {

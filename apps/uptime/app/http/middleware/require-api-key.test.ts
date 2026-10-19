@@ -1,5 +1,5 @@
 /**
- * Integration tests for `requireApiKey`. They run the real hash lookup
+ * Integration tests for `requireApiKey` and the scope check `apiAccess` adds. They run the real hash lookup
  * (`apiKeys.findBy` / `teams.findByIdOrSlug`) against an in-memory SQLite database
  * with real migrations applied, to verify a valid key with the right scope reaches
  * the handler with `ctx.apiKey`/`ctx.apiTeam` populated and `last_used_at` touched,
@@ -11,6 +11,7 @@
  */
 
 import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { database } from "@sdxc/database-middleware";
 import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -21,8 +22,10 @@ import { describe, expect, test } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import protectedResource from "~/app/http/controllers/api/protected-resource";
+import { apiAccess } from "~/app/http/middleware/access";
 import models from "~/app/http/middleware/models";
 import requireApiKey from "~/app/http/middleware/require-api-key";
+import abilities from "~/app/policies/abilities";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
 import { apiKeys, apiKeyScopes, teams } from "~/database/schema";
@@ -55,11 +58,17 @@ async function seedApiKey(
 	);
 }
 
-async function dispatch(db: Db, scope: ApiKeyScope, headers: Record<string, string> = {}) {
+/** The abilities the routes under test perform, each granted by the scope of the same name. */
+const SCOPED = {
+	"monitors:read": abilities.monitors.read,
+	"monitors:write": abilities.monitors.write,
+};
+
+async function dispatch(db: Db, scope: keyof typeof SCOPED, headers: Record<string, string> = {}) {
 	let router = createRouter({ middleware: [database(db), models()] });
 
 	router.get("/test", {
-		middleware: [requireApiKey(scope)],
+		middleware: [requireApiKey, apiAccess, requireAbility(SCOPED[scope])],
 		handler(ctx) {
 			return Response.json({ apiKeyId: ctx.apiKey.id, apiTeamId: ctx.apiTeam.id });
 		},
@@ -142,7 +151,7 @@ async function dispatchApi(db: Db, url: string, headers: Record<string, string> 
 	let router = createRouter({ middleware: [database(db), models()] });
 	router.map(routes.api.metadata, protectedResource);
 	router.get("/api/v1/monitors", {
-		middleware: [requireApiKey("monitors:write")],
+		middleware: [requireApiKey, apiAccess, requireAbility(abilities.monitors.write)],
 		handler: () => Response.json({}),
 	});
 	return router.fetch(new Request(url, { headers }));

@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RegisteredAccess } from "@sdxc/authz";
 import type { JobEnqueuer } from "@sdxc/jobs";
 
 import { redirect } from "@sdxc/http/response";
@@ -22,11 +23,10 @@ import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { UptimeModels } from "~/app/models";
-
 import { getViewer } from "~/app/http/middleware/auth";
 import { CreateMonitorSchema, UpdateMonitorSchema } from "~/app/http/validators/monitor";
 import jobs from "~/app/jobs";
+import abilities from "~/app/policies/abilities";
 import { trackSecondMonitorCreated } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
@@ -40,19 +40,19 @@ const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
 
 /**
  * Enqueues an on-demand check for a monitor, settling billing here so a queued check is
- * always one that's allowed to run. Reads the D1 projection and **fails open**: only a
- * positively-known `inactive` state refuses.
+ * always one that's allowed to run. `checks.run` **fails open**: only a subscription
+ * known to be `inactive` refuses.
  *
  * @returns Whether the check was enqueued, which is what lets the caller tell the visitor
  * their check is going to happen.
  */
 async function ping(
-	models: UptimeModels,
+	access: RegisteredAccess,
 	enqueuer: JobEnqueuer,
 	monitorId: string,
-	ownerId: string,
 ): Promise<boolean> {
-	if ((await models.subscriptions.stateFor(ownerId)) === "inactive") return false;
+	await access.load(abilities.checks.run);
+	if (!access.can(abilities.checks.run)) return false;
 
 	await enqueuer.enqueue(jobs.checkHttp, {
 		id: `${monitorId}:manual:${generateUUID()}`,
@@ -89,7 +89,7 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 			...result.data,
 		}),
 	);
-	await ping(ctx.models, ctx.jobs, monitor.id, ctx.team.owner_id);
+	await ping(ctx.access, ctx.jobs, monitor.id);
 
 	/**
 	 * Counted after creation, so the number is the team's total including this one, and
@@ -158,7 +158,8 @@ export const deleteMonitor = createAction(routes.actions.monitor.http.delete, as
 		});
 	}
 
-	if (ctx.team.owner_id !== ctx.membership.subject_id && ctx.membership.role !== "admin") {
+	await ctx.access.load(abilities.monitors.delete);
+	if (!ctx.access.can(abilities.monitors.delete)) {
 		return notFound("Not Found");
 	}
 
@@ -190,7 +191,7 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 	let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
-	let queued = await ping(ctx.models, ctx.jobs, monitor.id, ctx.team.owner_id);
+	let queued = await ping(ctx.access, ctx.jobs, monitor.id);
 
 	/**
 	 * A JSON caller is a hydrated page that won't navigate, so the outcome goes in the

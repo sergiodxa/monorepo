@@ -10,6 +10,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { Schedule } from "@sdxc/cron";
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
@@ -19,6 +20,7 @@ import { createController } from "remix/router";
 
 import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -27,6 +29,7 @@ import {
 	WRITABLE_CRON_JOB,
 } from "~/app/http/openapi/cron-jobs";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -73,7 +76,7 @@ function writableCronJob(monitor: SelectCronJobMonitor) {
  * rejected cron expression's error names the reason, field, and character index verbatim;
  * an accepted one is stored normalized, and a new schedule or zone recomputes `nextExpectedAt`.
  *
- * @param ctx - The request, after `requireApiKey("cron-jobs:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.cronJobs.write)`.
  * @returns The updated job; a 404 for a job outside the team, before the body is read.
  */
 async function patchCronJob(ctx: RequestContext): Promise<Response> {
@@ -115,7 +118,7 @@ export default createController(cronJobRoutes, {
 	actions: {
 		/** GET /api/v1/cron-jobs/:cronJobId — a single cron-job monitor. */
 		cronJobShow: {
-			middleware: [requireApiKey("cron-jobs:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.read)],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let cronJob = await ctx.models.cronJobMonitors
@@ -133,7 +136,7 @@ export default createController(cronJobRoutes, {
 
 		/** PATCH /api/v1/cron-jobs/:cronJobId — merge-patches a cron-job monitor. */
 		cronJobPatch: {
-			middleware: [requireApiKey("cron-jobs:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.write)],
 			handler: patchCronJob,
 		},
 
@@ -143,7 +146,7 @@ export default createController(cronJobRoutes, {
 		 * verbatim; an accepted one is stored normalized, so one schedule has one spelling.
 		 */
 		cronJobUpdate: {
-			middleware: [requireApiKey("cron-jobs:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.write)],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.cronJobMonitors
@@ -199,7 +202,7 @@ export default createController(cronJobRoutes, {
 
 		/** DELETE /api/v1/cron-jobs/:cronJobId — deletes a cron-job monitor. */
 		cronJobDestroy: {
-			middleware: [requireApiKey("cron-jobs:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.cronJobs.write)],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
 				let existing = await ctx.models.cronJobMonitors

@@ -23,6 +23,7 @@ import {
 	TcpMonitorIdSchema,
 	UpdateTcpMonitorSchema,
 } from "~/app/http/validators/tcp-monitor";
+import abilities from "~/app/policies/abilities";
 import { notifyTcpResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
@@ -129,11 +130,12 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	if (!monitor) return notFound("Not Found");
 
 	/**
-	 * Reads entitlement via `stateFor`, so an owner whose state cannot be determined still
+	 * Gated by `checks.run`, so an owner whose state cannot be determined still
 	 * gets their check — refusing a paying customer over an inconclusive lookup is the worse
 	 * mistake. The same reading every other manual check takes.
 	 */
-	if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
+	await ctx.access.load(abilities.checks.run);
+	if (!ctx.access.can(abilities.checks.run)) {
 		session?.flash("toast", {
 			intent: "error",
 			message: ctx.intl.t("actions.checks.subscriptionRequired"),

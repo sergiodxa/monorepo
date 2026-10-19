@@ -9,6 +9,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { requireAbility } from "@sdxc/authz/middleware/router";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -16,8 +17,10 @@ import { createController } from "remix/router";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";
 
+import { apiAccess } from "~/app/http/middleware/access";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { UPDATE_TEAM_BODY, WRITABLE_TEAM } from "~/app/http/openapi/team";
+import abilities from "~/app/policies/abilities";
 import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { apiSuccess } from "~/app/services/api/response";
 import { readApiUpdate } from "~/app/services/api/update";
@@ -54,7 +57,7 @@ function writableTeam(team: SelectTeam) {
  * Applies a `PATCH` merge patch to the calling key's team, writing only the members the
  * patch changed; a removed `logoUrl` clears the logo.
  *
- * @param ctx - The request, after `requireApiKey("teams:write")`.
+ * @param ctx - The request, after `requireAbility(abilities.team.update)`.
  * @returns The updated team, or the patch's `415`/`400` problem.
  */
 async function patchTeam(ctx: RequestContext): Promise<Response> {
@@ -74,7 +77,7 @@ export default createController(teamRoutes, {
 	actions: {
 		/** GET /api/v1/team — the authenticated team's profile. */
 		teamShow: {
-			middleware: [requireApiKey("teams:read")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.team.read)],
 			handler: async (ctx) => {
 				return apiSuccess({ team: serializeTeam(ctx.apiTeam) });
 			},
@@ -82,13 +85,13 @@ export default createController(teamRoutes, {
 
 		/** PATCH /api/v1/team — merge-patches the authenticated team. */
 		teamPatch: {
-			middleware: [requireApiKey("teams:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.team.update)],
 			handler: patchTeam,
 		},
 
 		/** PUT /api/v1/team — updates the authenticated team's name and/or logo. */
 		teamUpdate: {
-			middleware: [requireApiKey("teams:write")],
+			middleware: [requireApiKey, apiAccess, requireAbility(abilities.team.update)],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, UPDATE_TEAM_BODY);
 				if (isFailure(result)) {
