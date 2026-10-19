@@ -335,7 +335,6 @@ expired session signs in first and comes back to the form.
 | `dev`       | Start the development server                    |
 | `build`     | Build for production                            |
 | `start`     | Preview the production build                    |
-| `cf:deploy` | Deploy to Cloudflare Workers                    |
 | `cli`       | Run a command from `app/commands/` (`sdxc run`) |
 | `typecheck` | Type-check                                      |
 
@@ -356,10 +355,13 @@ what makes later changes an `Update` and a deletion a `Delete`.
 ## Deployment
 
 ```bash
-bun run build
-sdxc run db migrate --remote
-bun run cf:deploy
+sdxc deploy
 ```
+
+It builds, applies the migrations production lacks with `sdxc run db migrate --remote`, then
+uploads the Worker with `sdxc run deploy` (`wrangler deploy`). `sdxc run db migrate --remote
+--pending` lists those migrations and `sdxc run deploy --dry-run` checks the build, both
+without changing production.
 
 ### Deploying Federation
 
@@ -386,9 +388,7 @@ deploy that serves them.
    `ACTIVITYPUB_RATE_LIMITER` binding (namespace `1004`) from `wrangler.jsonc`.
 
    ```bash
-   bun run build
-   sdxc run db migrate --remote
-   bun run cf:deploy
+   sdxc deploy
    ```
 
 4. Check the actor carries its key, then follow `@hello@sergiodxa.com` from a Mastodon
