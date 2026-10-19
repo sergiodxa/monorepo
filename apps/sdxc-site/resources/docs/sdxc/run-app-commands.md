@@ -14,12 +14,14 @@ outcomes:
 
 An app created from the template has a command line of its own, in `bootstrap/cli.ts`, for
 work that belongs to the app but to no request: migrations, seeding, backfills, granting a role.
-`sdxc run` runs it from any folder in the project:
+`sdxc run` runs it from any folder in the project. This page is about running the commands;
+[Your app's command line](/docs/operations-and-testing/your-apps-command-line) is about writing
+them.
 
 ```bash
+sdxc run --help
 sdxc run about
 sdxc run users grant ada@example.com --role admin
-sdxc run --help
 ```
 
 Every word after `run` reaches your app's command line as typed, `--help` included, and its
@@ -62,7 +64,12 @@ sdxc run db console < seed.sql
 ```
 
 `--pending` works with `--remote` too, and that pair is how
-[`sdxc deploy`](/docs/sdxc/deploy) lists what production lacks before it asks. Run `typegen`
+[`sdxc deploy`](/docs/sdxc/deploy) lists what production lacks before it asks.
+
+<warning>
+`db migrate --remote` changes production on its own. Ship a migration with `sdxc deploy`
+instead, which applies it right before the code that needs it and after one look at the plan.
+</warning> Run `typegen`
 after adding a binding or a secret, so `env` type checks against what the Worker receives;
 [`sdxc doctor`](/docs/sdxc/check-a-project) warns when the types are older than
 `cloudflare.config.ts`.
@@ -80,10 +87,11 @@ sdxc run users grant --help
 
 The commands run with the app's database, models, jobs and mailer, and only `bootstrap/cli.ts`
 loads them, so none of them ships in the Worker. `sdxc scaffold --command` writes a resource's
-`list`, `show`, `create` and `delete` commands the same way.
+`list`, `show`, `create` and `delete` commands the same way. Filling one in, with its arguments,
+flags and the services it reads, is covered in
+[Your app's command line](/docs/operations-and-testing/your-apps-command-line).
 
 ## Where to go next
 
-- [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — write the
-  commands `sdxc run` runs, with their flags and the services they read.
+- [Make a command](/docs/sdxc/make-command) — what `sdxc make command` writes and edits.
 - [Deploy](/docs/sdxc/deploy) — how `db migrate --remote` and `deploy` ship the app.

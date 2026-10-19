@@ -8,6 +8,11 @@ order: 9
 lastUpdated: 2026-10-15
 ---
 
+<note>
+This guide builds the command line and its commands. To run the commands an app already has,
+such as `db migrate`, see [Run your app's commands](/docs/sdxc/run-app-commands).
+</note>
+
 Some work belongs to your app but to no request: seeding a database, backfilling a column,
 granting someone a role, resending an email that bounced. A command line inside the app does
 that work with the app's own models, jobs and templates, so a backfill runs the same code a
@@ -45,20 +50,10 @@ import { cli } from "~/app/initializers/cli";
 process.exitCode = await cli.run(process.argv.slice(2));
 ```
 
-It runs on Node or Bun, outside the server, from a package script:
-
-```json {% title="package.json" %}
-{
-	"scripts": {
-		"cli": "bun ./bootstrap/cli.ts"
-	}
-}
-```
-
-`bun run cli about` runs the template's `about` command. With `@sdxc/kit` installed globally,
-`sdxc run about` does the same from any folder in the project, with Bun for a project on Bun
-and Node otherwise. The server entry never imports `bootstrap/cli.ts`, so no command ships in
-the server build.
+It runs on Node or Bun, outside the server: `sdxc run about` runs the template's `about`
+command from any folder in the project, as [Run your app's commands](/docs/sdxc/run-app-commands)
+describes. The server entry never imports `bootstrap/cli.ts`, so no command ships in the server
+build.
 
 ## Add a command
 
@@ -389,8 +384,6 @@ checks what a script without the flag gets. A job the command enqueued has run b
   prompts, tasks and middleware in full.
 - [Make a command](/docs/sdxc/make-command) — `sdxc make command` declares and maps a
   command.
-- [Run your app's commands](/docs/sdxc/run-app-commands) — `sdxc run` from any folder in the
-  project.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher
   the command line runs jobs through.
 - [Send email](/docs/data-and-background-work/send-email) — the mailer and the email classes
