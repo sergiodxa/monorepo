@@ -119,7 +119,8 @@ bun dev
 
 [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) writes the model, migration and pages,
 `sdxc run db migrate` applies the migration to the local database, and `/posts` lists, creates,
-edits and deletes posts.
+edits and deletes posts. [Build an app](/docs/getting-started/build-an-app) takes the same start
+through a policy, a validator, a job, the tests and a deploy.
 
 ## Configure the command line
 
