@@ -15,9 +15,11 @@ import { RELEASE_PACKAGE } from "../upgrade/registry.js";
 import type { Check, CheckResult } from "./check.js";
 
 import { passed, rangeOf, skipped } from "./check.js";
-import { exactInstallCommand } from "./install.js";
 
-/** Fails when the `remix` pin differs from the release's peer, and fixes it by pinning the peer. */
+/**
+ * Fails when the `remix` pin differs from the release's peer; the fix is `sdxc upgrade <release>`,
+ * which pins the peer together with every lagging `@sdxc/*` package in one install.
+ */
 export const remixCheck: Check = {
 	name: "remix",
 	async run(context): Promise<CheckResult> {
@@ -36,7 +38,7 @@ export const remixCheck: Check = {
 			status: "fail",
 			message: `remix ${pinned} differs from the ${peer} release ${release} declares`,
 			findings: [`remix ${pinned} -> ${peer}`],
-			fix: exactInstallCommand(context.manager, context.manifest, new Map([["remix", peer]])),
+			fix: `sdxc upgrade ${release}`,
 		};
 	},
 };

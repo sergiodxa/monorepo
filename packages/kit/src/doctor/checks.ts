@@ -11,11 +11,31 @@ import type { Check, CheckReport } from "./check.js";
 
 import { envCheck } from "./env.js";
 import { installedCheck } from "./installed.js";
+import { layoutCheck } from "./layout.js";
+import { migrationsCheck } from "./migrations.js";
+import { modelsCheck } from "./models.js";
 import { pinsCheck } from "./pins.js";
 import { remixCheck } from "./remix.js";
+import { routesCheck } from "./routes.js";
+import { typegenCheck } from "./typegen.js";
+import { uiCheck } from "./ui.js";
 
-/** Every check, release drift first, then the install, the `remix` peer and the Worker's secrets. */
-export const CHECKS: readonly Check[] = [pinsCheck, installedCheck, remixCheck, envCheck];
+/**
+ * Every built-in check: release drift, the install and the `remix` peer first, then the
+ * Worker's secrets and types, then the app's own code, layout to copied components.
+ */
+export const CHECKS: readonly Check[] = [
+	pinsCheck,
+	installedCheck,
+	remixCheck,
+	envCheck,
+	typegenCheck,
+	migrationsCheck,
+	layoutCheck,
+	routesCheck,
+	modelsCheck,
+	uiCheck,
+];
 
 /** Whether any check failed, which makes `sdxc doctor` exit 1. */
 export function hasFailure(reports: readonly CheckReport[]): boolean {

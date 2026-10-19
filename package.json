@@ -9,6 +9,7 @@
 	"scripts": {
 		"check": "vp run check:all",
 		"check:fix": "vp check --fix",
+		"doctor": "bun scripts/doctor-apps.ts",
 		"format": "vp fmt --check",
 		"format:fix": "vp fmt",
 		"lint": "vp lint",

@@ -187,7 +187,10 @@ async function projectRuntime(root: string): Promise<"bun" | "node"> {
 }
 
 /** Every numbered SQL file of the chain at `folder`; a chain with no folder yet is empty. */
-async function readChain(root: string, folder: string): Promise<Result<MigrationSource[], Error>> {
+export async function readChain(
+	root: string,
+	folder: string,
+): Promise<Result<MigrationSource[], Error>> {
 	let entries = await wrap(() => readdir(join(root, folder)));
 	if (isFailure(entries)) {
 		let code = (entries.error as NodeJS.ErrnoException).code;

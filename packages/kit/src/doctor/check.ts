@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import type { Config } from "../config.js";
 import type { PackageManager } from "../package-manager.js";
 import type { Packument } from "../releases.js";
 import type { Manifest } from "../upgrade/project.js";
@@ -45,7 +46,10 @@ export interface CheckReport extends CheckResult {
 export interface DoctorContext {
 	root: string;
 	manifest: Manifest;
+	config: Config;
 	manager: PackageManager;
+	/** The `@sdxc/kit` package whose component registry the copies are compared with. */
+	packageRoot: string;
 	/**
 	 * The registry document for `name`, fetched at most once per run, so checks that read the
 	 * same package share a request and agree on what the registry answered.
@@ -57,7 +61,9 @@ export interface DoctorContext {
 export interface DoctorContextOptions {
 	root: string;
 	manifest: Manifest;
+	config: Config;
 	manager: PackageManager;
+	packageRoot: string;
 	signal?: AbortSignal;
 }
 
@@ -67,7 +73,9 @@ export function createDoctorContext(options: DoctorContextOptions): DoctorContex
 	return {
 		root: options.root,
 		manifest: options.manifest,
+		config: options.config,
 		manager: options.manager,
+		packageRoot: options.packageRoot,
 		packument(name) {
 			let pending = fetched.get(name);
 			if (pending === undefined) {

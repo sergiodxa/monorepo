@@ -1,22 +1,28 @@
 /**
  * `sdxc doctor` over fixture projects: a healthy one passing every check, a drifted one failing
  * each with its fix, the JSON form an agent reads, and an unreachable registry turning the
- * checks that need it into skips while the offline checks still run.
+ * checks that need it into skips while the offline checks still run; then the checks a project
+ * defines, run in the project's runtime, each failure mode reported beside the rest.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 
+import type { Exec } from "@sdxc/cli";
+
+import { spawnExec } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
+import { success } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { createSDXC } from "../cli.js";
+import { defaultPackageRoot } from "../create/templates.js";
 import { registryDocument } from "../testing.js";
 
 /** The releases the mocked npm serves as `@sdxc/kit` versions, each with its `remix` peer. */
@@ -89,6 +95,8 @@ interface Fixture {
 	/** The version installed in `node_modules`, by package name. */
 	installed: Record<string, string>;
 	envExample: string;
+	/** Further project files by path, written before the Worker's generated types. */
+	files?: Record<string, string>;
 }
 
 /** The project on release 2026.10.1 with every check passing. */
@@ -124,6 +132,8 @@ async function fixtureProject(fixture: Fixture): Promise<string> {
 	for (let [name, version] of Object.entries(fixture.installed)) {
 		files[`node_modules/${name}/package.json`] = JSON.stringify({ name, version });
 	}
+	Object.assign(files, fixture.files);
+	files[".cloudflare/types/index.d.ts"] = "interface Env {}\n";
 	for (let [path, content] of Object.entries(files)) {
 		await mkdir(dirname(join(root, path)), { recursive: true });
 		await writeFile(join(root, path), content);
@@ -145,10 +155,16 @@ describe("sdxc doctor", () => {
 		expect(result.code).toBe(0);
 		expect(result.stdout).toBe(
 			[
-				"pass  pins       Every @sdxc package is at release 2026.10.1; sdxc upgrade moves them to 2026.10.14",
-				"pass  installed  3 packages are installed at the versions package.json pins",
-				"pass  remix      remix 3.0.0 is the peer release 2026.10.1 declares",
-				"pass  env        .env.example lists every secret cloudflare.config.ts declares",
+				"pass  pins        Every @sdxc package is at release 2026.10.1; sdxc upgrade moves them to 2026.10.14",
+				"pass  installed   3 packages are installed at the versions package.json pins",
+				"pass  remix       remix 3.0.0 is the peer release 2026.10.1 declares",
+				"pass  env         .env.example lists every secret cloudflare.config.ts declares",
+				"pass  typegen     .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  migrations  The project has no migrations",
+				"skip  layout      No app/ folder in the project",
+				"skip  routes      No routes/ folder in the project",
+				"skip  models      No app/models/index.ts in the project",
+				"skip  ui          No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
 		);
@@ -162,10 +178,16 @@ describe("sdxc doctor", () => {
 		expect(result.code).toBe(1);
 		expect(result.stdout).toBe(
 			[
-				"fail  pins       1 @sdxc package is behind release 2026.10.14: @sdxc/jwt 2026.9.1 -> 2026.10.1. Fix: bun add --exact --dev @sdxc/jwt@2026.10.1",
-				"fail  installed  node_modules differs from package.json: @sdxc/cli 2026.9.4 is installed, package.json pins 2026.10.14; remix is not installed. Fix: bun install",
-				"fail  remix      remix 3.0.0 differs from the 3.1.0 release 2026.10.14 declares: remix 3.0.0 -> 3.1.0. Fix: bun add --exact remix@3.1.0",
-				"fail  env        .env.example leaves out a secret cloudflare.config.ts declares: API_KEY is declared with bindings.secret(). Fix: printf '\\nAPI_KEY=\\n' >> .env.example",
+				"fail  pins        1 @sdxc package is behind release 2026.10.14: @sdxc/jwt 2026.9.1 -> 2026.10.1. Fix: sdxc upgrade 2026.10.14",
+				"fail  installed   node_modules differs from package.json: @sdxc/cli 2026.9.4 is installed, package.json pins 2026.10.14; remix is not installed. Fix: bun install",
+				"fail  remix       remix 3.0.0 differs from the 3.1.0 release 2026.10.14 declares: remix 3.0.0 -> 3.1.0. Fix: sdxc upgrade 2026.10.14",
+				"fail  env         .env.example leaves out a secret cloudflare.config.ts declares: API_KEY is declared with bindings.secret(). Fix: printf '\\nAPI_KEY=\\n' >> .env.example",
+				"pass  typegen     .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  migrations  The project has no migrations",
+				"skip  layout      No app/ folder in the project",
+				"skip  routes      No routes/ folder in the project",
+				"skip  models      No app/models/index.ts in the project",
+				"skip  ui          No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
 		);
@@ -182,7 +204,7 @@ describe("sdxc doctor", () => {
 
 		expect(result.code).toBe(1);
 		expect(result.stdout).toContain(
-			"fail  pins       1 @sdxc package is behind release 2026.10.1: @sdxc/csv 2026.9.1 -> 2026.9.20 (sdxc upgrade moves it to 2026.9.20). Fix: bun add --exact @sdxc/csv@2026.9.20\n",
+			"fail  pins        1 @sdxc package is behind release 2026.10.1: @sdxc/csv 2026.9.1 -> 2026.9.20 (sdxc upgrade moves it to 2026.9.20). Fix: sdxc upgrade 2026.10.1\n",
 		);
 	});
 
@@ -206,10 +228,16 @@ describe("sdxc doctor", () => {
 			["installed", "pass"],
 			["remix", "pass"],
 			["env", "warn"],
+			["typegen", "pass"],
+			["migrations", "skip"],
+			["layout", "skip"],
+			["routes", "skip"],
+			["models", "skip"],
+			["ui", "skip"],
 		]);
 		expect(report.checks[0]).toMatchObject({
 			findings: ["@sdxc/jwt latest -> 2026.9.1 (sdxc upgrade moves it to 2026.10.1)"],
-			fix: "bun add --exact --dev @sdxc/jwt@2026.9.1",
+			fix: "sdxc upgrade 2026.9.4",
 		});
 		expect(report.checks[3]).toMatchObject({
 			findings: ["STALE_TOKEN is in .env.example only"],
@@ -233,7 +261,181 @@ describe("sdxc doctor", () => {
 			["installed", "fail"],
 			["remix", "skip"],
 			["env", "fail"],
+			["typegen", "pass"],
+			["migrations", "skip"],
+			["layout", "skip"],
+			["routes", "skip"],
+			["models", "skip"],
+			["ui", "skip"],
 		]);
 		expect(report.checks[0]?.message).toMatch(/^Could not reach the npm registry/);
+	});
+});
+
+/** Runs the project's runtime for real and answers every other command as a silent success. */
+const EXEC: Exec = async (command, request) => {
+	if (command[0] === "bun" || command[0] === "node") return spawnExec(command, request);
+	return success({ code: 0, stdout: "", stderr: "", output: "" });
+};
+
+/** The healthy project with `checks` in `.config/sdxc/checks/`, by file name. */
+async function projectWithChecks(checks: Record<string, string>): Promise<string> {
+	let files: Record<string, string> = { "README.md": "# App\n" };
+	for (let [name, source] of Object.entries(checks)) files[`.config/sdxc/checks/${name}`] = source;
+	return fixtureProject({ ...HEALTHY, files });
+}
+
+/** Runs `sdxc doctor` with `argv` in `cwd`, loading project checks with the real runtime. */
+function doctorWithChecks(cwd: string, argv: string[]) {
+	return invoke(createSDXC(), ["doctor", ...argv], {
+		cwd,
+		interactive: false,
+		env: { PATH: process.env.PATH ?? "" },
+		exec: EXEC,
+	});
+}
+
+/** A check that passes when README.md exists and warns otherwise. */
+const README_CHECK = `export default {
+	name: "readme",
+	async run(ctx) {
+		let text = await ctx.readFile("README.md");
+		if (text === null) return { status: "warn", message: "No README.md", fix: "touch README.md" };
+		return { status: "pass", message: "README.md starts with " + text.split("\\n")[0] };
+	},
+};
+`;
+
+describe("sdxc doctor with project checks", () => {
+	test("runs each check module beside the built-in checks, filling in what a result leaves out", async () => {
+		let root = await projectWithChecks({
+			"readme.ts": README_CHECK,
+			"pair.ts": `export default [
+	{ name: "has-license", run: async (ctx) => ({ status: (await ctx.exists("LICENSE")) ? "pass" : "warn", message: "LICENSE", findings: ["LICENSE is missing"] }) },
+	{ name: "config", run: (ctx) => ({ status: "pass", message: "checks live in " + ctx.config.doctor.checks + "; " + ctx.manifest.name }) },
+];
+`,
+			"pair.test.ts": "throw new Error('a test file is never loaded');\n",
+		});
+
+		let result = await doctorWithChecks(root, ["--skip", "pins,installed,remix"]);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toBe(
+			[
+				"pass  env          .env.example lists every secret cloudflare.config.ts declares",
+				"pass  typegen      .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  migrations   The project has no migrations",
+				"skip  layout       No app/ folder in the project",
+				"skip  routes       No routes/ folder in the project",
+				"skip  models       No app/models/index.ts in the project",
+				"skip  ui           No @sdxc/ui component is copied",
+				"warn  has-license  LICENSE: LICENSE is missing",
+				"pass  config       checks live in .config/sdxc/checks; app",
+				"pass  readme       README.md starts with # App",
+				"",
+			].join("\n"),
+		);
+	});
+
+	test("reports a check that throws, answers nothing usable or reads outside the project as failed", async () => {
+		let root = await projectWithChecks({
+			"a-throws.ts": `export default { name: "throws", run() { throw new Error("database unreachable"); } };\n`,
+			"b-shape.ts": `export default { name: "shape", run: () => ({ status: "ok" }) };\n`,
+			"c-outside.ts": `export default { name: "outside", run: (ctx) => ctx.readFile("../secrets.txt") };\n`,
+			"d-taken.ts": `export default { name: "pins", run: () => ({ status: "pass", message: "mine" }) };\n`,
+			"readme.ts": README_CHECK,
+		});
+
+		let result = await doctorWithChecks(root, [
+			"--json",
+			"--only",
+			"throws,shape,outside,pins,readme",
+		]);
+
+		expect(result.code).toBe(1);
+		let report = JSON.parse(result.stdout) as {
+			ok: boolean;
+			checks: Array<{
+				name: string;
+				status: string;
+				message: string;
+				findings: string[];
+				fix: string | null;
+			}>;
+		};
+		expect(report.ok).toBe(false);
+		expect(report.checks.map(({ name, status }) => [name, status])).toEqual([
+			["pins", "pass"],
+			["throws", "fail"],
+			["shape", "fail"],
+			["outside", "fail"],
+			["pins", "fail"],
+			["readme", "pass"],
+		]);
+		expect(report.checks[1]).toEqual({
+			name: "throws",
+			status: "fail",
+			message: "throws failed to run",
+			findings: ["Error: database unreachable"],
+			fix: "Fix .config/sdxc/checks/a-throws.ts",
+		});
+		expect(report.checks[2]?.message).toBe("shape answered no result sdxc doctor reads");
+		expect(report.checks[3]?.findings[0]).toMatch(/\.\.\/secrets\.txt is outside the project/);
+		expect(report.checks[4]?.findings).toEqual(["The name pins is taken by a built-in check"]);
+	});
+
+	test("reports a module that fails to load under its path and still runs the others", async () => {
+		let root = await projectWithChecks({
+			"broken.ts": "export default {\n",
+			"empty.ts": "export const unrelated = 1;\n",
+			"readme.ts": README_CHECK,
+		});
+
+		let result = await doctorWithChecks(root, [
+			"--skip",
+			"pins,installed,remix,env,typegen,migrations,layout,routes,models,ui",
+		]);
+
+		expect(result.code).toBe(1);
+		let lines = result.stdout.trimEnd().split("\n");
+		expect(lines).toHaveLength(3);
+		expect(lines[0]).toMatch(
+			/^fail {2}\.config\/sdxc\/checks\/broken\.ts {2}\.config\/sdxc\/checks\/broken\.ts is not a check module: Could not load \.config\/sdxc\/checks\/broken\.ts: .+\. Fix: Fix \.config\/sdxc\/checks\/broken\.ts$/,
+		);
+		expect(lines[1]).toBe(
+			"fail  .config/sdxc/checks/empty.ts   .config/sdxc/checks/empty.ts is not a check module: .config/sdxc/checks/empty.ts default-exports no check; export defineCheck({ name, run }) or a list of them. Fix: Fix .config/sdxc/checks/empty.ts",
+		);
+		expect(lines[2]).toBe("pass  readme                         README.md starts with # App");
+	});
+
+	test("loads a check written with defineCheck from @sdxc/kit/doctor", async () => {
+		let root = await projectWithChecks({
+			"routes.ts": `import { defineCheck } from "@sdxc/kit/doctor";
+
+export default defineCheck({
+	name: "route-count",
+	run: (ctx) => ({ status: "pass", message: ctx.routes.length + " routes" }),
+});
+`,
+		});
+		await mkdir(join(root, "node_modules/@sdxc"), { recursive: true });
+		await symlink(defaultPackageRoot(), join(root, "node_modules/@sdxc/kit"), "dir");
+
+		let result = await doctorWithChecks(root, ["--only", "route-count"]);
+
+		expect(result.stdout).toBe("pass  route-count  0 routes\n");
+		expect(result.code).toBe(0);
+	});
+
+	test("stops on a name in --only that no check has, listing the names there are", async () => {
+		let root = await projectWithChecks({ "readme.ts": README_CHECK });
+
+		let result = await doctorWithChecks(root, ["--only", "readme,nope"]);
+
+		expect(result.code).toBe(1);
+		expect(result.stderr).toContain(
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, ui, readme",
+		);
 	});
 });

@@ -34,6 +34,26 @@ const MAKE_DEFAULTS = {
 };
 
 /**
+ * A migration error `sdxc doctor` accepts: the file that raised it and the column the error
+ * names, narrow enough that a different error in the same file still fails.
+ */
+const ACCEPTED_MIGRATION_FAILURE = s.object(
+	{
+		file: s.string().meta({ description: "Migration file name, without its folder" }),
+		column: s.string().meta({ description: "Column SQLite's error names" }),
+	},
+	{ unknownKeys: "error" },
+);
+
+/** The `doctor.migrations` group as a project with no such key gets it. */
+const DOCTOR_MIGRATIONS_DEFAULTS: { accept: s.InferOutput<typeof ACCEPTED_MIGRATION_FAILURE>[] } = {
+	accept: [],
+};
+
+/** The `doctor` group as a project with no `doctor` key gets it. */
+const DOCTOR_DEFAULTS = { checks: ".config/sdxc/checks", migrations: DOCTOR_MIGRATIONS_DEFAULTS };
+
+/**
  * Every configuration key. Each leaf carries its default, or an example when it has none, and
  * a description that becomes its comment in `sdxc init`'s output; an unknown key is an error, so
  * a misspelt key is reported instead of silently ignored.
@@ -82,9 +102,34 @@ export const CONFIG_SCHEMA = s.object(
 			),
 			MAKE_DEFAULTS,
 		),
+		doctor: s.defaulted(
+			s.object(
+				{
+					checks: s.defaulted(s.string(), DOCTOR_DEFAULTS.checks).meta({
+						description: "Folder of the project's own checks, each module run by `sdxc doctor`",
+					}),
+					migrations: s.defaulted(
+						s.object(
+							{
+								accept: s
+									.defaulted(s.array(ACCEPTED_MIGRATION_FAILURE), DOCTOR_MIGRATIONS_DEFAULTS.accept)
+									.meta({
+										description:
+											"Migration errors `sdxc doctor` steps past, each a file that already ran and the column its error names",
+									}),
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_MIGRATIONS_DEFAULTS,
+					),
+				},
+				{ unknownKeys: "error" },
+			),
+			DOCTOR_DEFAULTS,
+		),
 		format: s.optional(s.array(s.string()).pipe(checks.minItems(1))).meta({
 			description: "Command run on every file the CLI writes or edits, paths appended",
-			examples: [["bunx", "vp", "fmt"]],
+			examples: [["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"]],
 		}),
 		lock: s.defaulted(s.string(), ".config/sdxc.lock.jsonl").meta({
 			description: "Where the CLI keeps its state; commit it with the project",
@@ -185,6 +230,7 @@ function configuredPaths(config: Config): Array<[string, string]> {
 	let paths: Array<[string, string]> = [
 		["ui.directory", config.ui.directory],
 		["make.stubs", config.make.stubs],
+		["doctor.checks", config.doctor.checks],
 		["lock", config.lock],
 	];
 	for (let [chain, folder] of Object.entries(config.make.migrations)) {

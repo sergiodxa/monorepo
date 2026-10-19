@@ -82,6 +82,10 @@ jobs:
       - name: Generate framework types
         run: bun --filter '*' cli typegen
 
+      # Runs after typegen, which the doctor's typegen check compares the Worker types against.
+      - name: Run sdxc doctor
+        run: bun run doctor
+
       - name: Run Check
         run: bun run check
 

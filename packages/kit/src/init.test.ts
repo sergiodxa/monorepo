@@ -54,8 +54,16 @@ const EXPECTED = `{
 		// Stubs here replace the built-in ones; \`sdxc make stubs\` copies them out
 		"stubs": ".config/sdxc/stubs",
 	},
+	"doctor": {
+		// Folder of the project's own checks, each module run by \`sdxc doctor\`
+		"checks": ".config/sdxc/checks",
+		"migrations": {
+			// Migration errors \`sdxc doctor\` steps past, each a file that already ran and the column its error names
+			"accept": [],
+		},
+	},
 	// Command run on every file the CLI writes or edits, paths appended
-	// "format": ["bunx", "vp", "fmt"],
+	// "format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],
 	// Where the CLI keeps its state; commit it with the project
 	"lock": ".config/sdxc.lock.jsonl",
 }
@@ -70,7 +78,10 @@ describe("renderConfig", () => {
 		let rendered = unwrap(renderConfig({ format: ["bunx", "vp", "fmt"] }));
 
 		expect(rendered).toBe(
-			EXPECTED.replace('// "format": ["bunx", "vp", "fmt"],', '"format": ["bunx", "vp", "fmt"],'),
+			EXPECTED.replace(
+				'// "format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],',
+				'"format": ["bunx", "vp", "fmt"],',
+			),
 		);
 		let parsed = unwrap(JSONC.parse(rendered));
 		expect(unwrap(parseConfig(parsed, "/project", ".config/sdxc.jsonc")).config.format).toEqual([

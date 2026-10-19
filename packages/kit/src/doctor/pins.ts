@@ -19,11 +19,11 @@ import { RELEASE_PACKAGE } from "../upgrade/registry.js";
 import type { Check, CheckResult } from "./check.js";
 
 import { passed, rangeOf, skipped } from "./check.js";
-import { exactInstallCommand } from "./install.js";
 
 /**
  * Fails on a pin older than the package's version at the project's release, and warns on a pin
- * that names no dated version; the fix pins each one to its version at the release.
+ * that names no dated version; the fix is `sdxc upgrade <release>`, which re-pins each one to its
+ * version at the release and writes the prompt for the changes it crosses.
  */
 export const pinsCheck: Check = {
 	name: "pins",
@@ -44,7 +44,6 @@ export const pinsCheck: Check = {
 		let upgradeTo = latest !== null && compare(latest, release) > 0 ? latest : null;
 
 		let findings: string[] = [];
-		let versions = new Map<string, string>();
 		let lagging = 0;
 		for (let name of scoped) {
 			let packument = packuments.get(name);
@@ -57,13 +56,12 @@ export const pinsCheck: Check = {
 			let next = upgradeTo === null ? null : versionAtRelease(packument, upgradeTo);
 			let upgrade = next === null ? "" : ` (sdxc upgrade moves it to ${next})`;
 			findings.push(`${name} ${range} -> ${expected}${upgrade}`);
-			versions.set(name, expected);
 		}
 		if (findings.length === 0) {
 			let newer = upgradeTo === null ? "" : `; sdxc upgrade moves them to ${upgradeTo}`;
 			return passed(`Every @sdxc package is at release ${release}${newer}`);
 		}
-		let fix = exactInstallCommand(context.manager, context.manifest, versions);
+		let fix = `sdxc upgrade ${release}`;
 		if (lagging === 0) {
 			return {
 				status: "warn",

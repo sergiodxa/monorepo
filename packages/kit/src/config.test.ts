@@ -43,6 +43,7 @@ const DEFAULTS = {
 		tests: true,
 		stubs: ".config/sdxc/stubs",
 	},
+	doctor: { checks: ".config/sdxc/checks", migrations: { accept: [] } },
 	lock: ".config/sdxc.lock.jsonl",
 };
 
@@ -108,6 +109,29 @@ describe("loadConfig", () => {
 			"sdxc.jsonc: lok: Unknown key",
 			"sdxc.jsonc: ui.colour: Unknown key",
 			"sdxc.jsonc: ui.tests: Expected boolean",
+		]);
+	});
+
+	test("reads accepted migration failures as a file and a column, and nothing else", async () => {
+		let accept = [{ file: "0002_rename.sql", column: "display_name" }];
+		let accepted = await loadConfig(
+			await project({ "sdxc.jsonc": JSON.stringify({ doctor: { migrations: { accept } } }) }),
+		);
+		let partial = await loadConfig(
+			await project({
+				"sdxc.jsonc": JSON.stringify({
+					doctor: { migrations: { accept: [{ file: "0002_rename.sql", message: "x" }] } },
+				}),
+			}),
+		);
+
+		expect(unwrap(accepted).config.doctor).toEqual({
+			checks: ".config/sdxc/checks",
+			migrations: { accept },
+		});
+		expect(isFailure(partial) && partial.error.message.split("\n").sort()).toEqual([
+			"sdxc.jsonc: doctor.migrations.accept.0.column: Expected string",
+			"sdxc.jsonc: doctor.migrations.accept.0.message: Unknown key",
 		]);
 	});
 

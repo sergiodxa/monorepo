@@ -9,6 +9,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/cli.ts",
+		"./doctor": "./src/doctor/define.ts",
 		"./config.schema.json": "./config.schema.json",
 		"./lock.schema.json": "./lock.schema.json"
 	},

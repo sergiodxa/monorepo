@@ -66,6 +66,31 @@ const ACCEPTED_AFFINITIES: Record<ColumnTypeName, readonly Affinity[]> = {
 	binary: ["BLOB"],
 };
 
+/** Drizzle's marker between the statements of one migration file. */
+const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
+
+/** An error {@link replayChain} stepped past because its caller accepted it. */
+export interface AcceptedFailure {
+	file: string;
+	/** SQLite's message for the statement that failed. */
+	message: string;
+}
+
+/** How {@link replayChain} treats a statement that errors. */
+export interface ReplayOptions {
+	/**
+	 * Whether the replay steps past `message`, raised by a statement of `file`, and goes on with
+	 * the next one. Without it, every error stops the replay.
+	 */
+	accepts?(file: string, message: string): boolean;
+}
+
+/** A replayed chain: the database it built, which the caller closes, and the errors it accepted. */
+export interface ReplayedChain {
+	db: DatabaseSync;
+	accepted: AcceptedFailure[];
+}
+
 /** The prefix of the table a rebuild creates beside the one it replaces. */
 const REBUILD_PREFIX = "__sdxc_new_";
 
@@ -130,7 +155,7 @@ export function planMigration(
 ): Result<SchemaChange, Error> {
 	let replayed = replayChain(migrations);
 	if (isFailure(replayed)) return replayed;
-	let db = replayed.data;
+	let db = replayed.data.db;
 	try {
 		let change = diffTables(db, tables);
 		if (isFailure(change) || change.data.statements.length === 0) return change;
@@ -160,23 +185,43 @@ export function planMigration(
 /**
  * A fresh in-memory database with `migrations` applied in order of their leading number, with
  * double-quoted string literals disabled so a copy reading a missing column errors instead of
- * writing the column's name into every row. A file that errors stops the replay, naming it.
+ * writing the column's name into every row. An error the caller accepts is stepped past.
+ *
+ * @returns The database, with every accepted error in replay order; the first other error stops
+ * the replay with a failure naming its file.
  */
-export function replayChain(migrations: readonly MigrationSource[]): Result<DatabaseSync, Error> {
+export function replayChain(
+	migrations: readonly MigrationSource[],
+	options: ReplayOptions = {},
+): Result<ReplayedChain, Error> {
 	let db = new DatabaseSync(":memory:", { enableDoubleQuotedStringLiterals: false });
+	let accepted: AcceptedFailure[] = [];
 	let ordered = [...migrations].sort((a, b) => leadingNumber(a.name) - leadingNumber(b.name));
 	for (let migration of ordered) {
-		let applied = wrap(() => db.exec(migration.sql));
-		if (isFailure(applied)) {
+		for (let statement of statementsOf(migration.sql)) {
+			let applied = wrap(() => db.exec(statement));
+			if (!isFailure(applied)) continue;
+			let message = applied.error.message;
+			if (options.accepts?.(migration.name, message) === true) {
+				accepted.push({ file: migration.name, message });
+				continue;
+			}
 			db.close();
 			return failure(
-				new Error(`${migration.name} does not replay: ${applied.error.message}`, {
-					cause: applied.error,
-				}),
+				new Error(`${migration.name} does not replay: ${message}`, { cause: applied.error }),
 			);
 		}
 	}
-	return success(db);
+	return success({ db, accepted });
+}
+
+/**
+ * A file's steps: each piece between Drizzle's statement breakpoints, or the whole file as one
+ * step. Stepping past an accepted error skips only the statement that raised it in a Drizzle
+ * file, so the rest of that file still builds the schema later files read.
+ */
+function statementsOf(sql: string): string[] {
+	return sql.split(STATEMENT_BREAKPOINT).filter((piece) => piece.trim() !== "");
 }
 
 /** A file's leading number, which orders a chain; a file without one sorts last. */
