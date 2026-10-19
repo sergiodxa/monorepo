@@ -42,8 +42,10 @@ with `cloudflare.config.ts`, a Vite+ configuration, a test runner and its own co
 - Every TypeScript module credits you in its `@author` and `@copyright` tags, from your git
   user.
 
+<note>
 `create` writes files and runs nothing from them: it installs no dependencies and runs no
 scripts, and prints the commands to run next with the project's package manager.
+</note>
 
 ### Where it writes
 
@@ -161,9 +163,11 @@ The file is JSON with comments, so each setting can say why it is set. `format` 
 projects set: a generated file and a copied component then come out in your project's style.
 It is an argument list run without a shell, once per command, with the written paths appended.
 
+<note>
 `sdxc.jsonc` at the project root is read too, when you prefer it there; a project with both
-files is refused until you delete one. `init` never overwrites a configuration file that
-exists.
+files is refused until you delete one. `init` leaves a configuration file that exists as it
+is.
+</note>
 
 Every command validates the file before it runs. A misspelt key, a value of the wrong type, or a
 path outside the project stops the command with one line per problem:

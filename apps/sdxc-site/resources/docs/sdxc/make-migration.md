@@ -234,13 +234,20 @@ A column that becomes `NOT NULL` with a default is copied through `COALESCE`, so
 `NULL` takes the default. When other tables reference the rebuilt one, the rebuild runs between
 `PRAGMA defer_foreign_keys = on` and `off`.
 
+<warning>
 A table another table references with `ON DELETE CASCADE`, `SET NULL`, `SET DEFAULT` or
-`RESTRICT` is refused, naming the references: on D1 the `DROP TABLE` would act on those rows.
-Write that migration by hand.
+`RESTRICT` is refused, naming the references: on D1 the rebuild's `DROP TABLE` would delete or
+change those rows. Write that migration by hand.
+</warning>
 
 ### Warnings
 
-Every warning prints on screen and stays in the file as a SQL comment, for whoever reviews it:
+Every warning prints on screen and stays in the file as a SQL comment, for whoever reviews it.
+
+<warning>
+Read each warning before you apply the migration. A dropped column's data is gone once
+production applies it, and the way back is a new migration that adds the column again, empty.
+</warning>
 
 - **Dropped columns.** A column the model no longer has is dropped with its data.
 - **Renames.** A model carries no history, so a renamed column reads as one column dropped and

@@ -70,8 +70,10 @@ guide says which of them its declaration uses.
 - `--no-test` skips the test for one run, and `--test` writes it when `make.tests` is `false`.
   Migrations and factories never get one.
 
-A run plans every file and every edit before it writes any, and never overwrites a file: a name
-that is taken, test included, stops the command and leaves the project as it was.
+<note>
+A run plans every file and every edit before it writes any, and leaves every existing file as
+it is: a name that is taken, test included, stops the command and leaves the project as it was.
+</note>
 
 ```text
 app/http/controllers/home.tsx already exists; sdxc make leaves it as it is
@@ -179,8 +181,12 @@ That writes every stub whose name starts with each kind, such as `controller.stu
 `controller.form.stub`, `controller.api.stub` and their `.test.stub` partners. `sdxc make stubs
 scaffold` copies the ones [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) writes from, and with
 no kind it copies all of them. A stub already in the folder is kept, so your edits survive a
-second run. Delete the ones you leave unchanged: every kind without a stub of yours keeps the
-built-in one, and takes its improvements when you upgrade.
+second run.
+
+<note>
+Delete the stubs you leave unchanged: every kind without a stub of yours keeps the built-in one,
+and takes its improvements when you upgrade.
+</note>
 
 A kind's stub is `<kind>.stub`, a flag that changes the file selects `<kind>.<variant>.stub`, and
 the test is `<kind>.test.stub` or `<kind>.<variant>.test.stub`, falling back to the kind's test

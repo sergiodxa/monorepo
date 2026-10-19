@@ -15,7 +15,7 @@ import { MathTag } from "sdxc/math/ui";
 
 import CodeBlock from "~/resources/components/code-block";
 import Files, { File, Folder } from "~/resources/components/files";
-import Note from "~/resources/components/note";
+import Note, { GuideNote, GuideWarning } from "~/resources/components/note";
 import { ProseHeading, ProseLink, ProseList, ProseParagraph } from "~/resources/components/prose";
 
 export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
@@ -30,12 +30,14 @@ export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	paragraph: ProseParagraph,
 	list: ProseList,
 	link: ProseLink,
+	note: GuideNote,
+	warning: GuideWarning,
 };
 
 /**
- * What a root-level policy page renders through: the documentation map plus the one tag
- * those pages reach for, so a caution about pinning reads as an aside rather than as a
- * paragraph among the paragraphs it qualifies.
+ * What a root-level policy page renders through: the documentation map with its own
+ * unlabelled `note`, whose `kind` the page picks, so a caution about pinning reads as an
+ * aside rather than as a paragraph among the paragraphs it qualifies.
  */
 export const POLICY_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	...DOCS_COMPONENTS,

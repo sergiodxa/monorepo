@@ -70,9 +70,9 @@ dynamic `import()`; an action that imports its code up front is named by its key
 
 ### Accept a migration that already ran
 
-A migration production applied long ago can fail on an empty database, and rewriting it changes
-nothing for the databases that ran it. List it under `doctor.migrations.accept` in
-`.config/sdxc.jsonc`, with the file and the column its error names:
+A migration production applied long ago can fail on an empty database. List it under
+`doctor.migrations.accept` in `.config/sdxc.jsonc`, with the file and the column its error
+names, rather than editing the file:
 
 ```jsonc {% title=".config/sdxc.jsonc" %}
 {
@@ -89,6 +89,11 @@ checks the rest of the chain. In a file split by Drizzle's `--> statement-breakp
 only the statement that raised the error and runs the ones after it; any other file is one step.
 A passing line counts the accepted errors and lists each as a finding, and an entry whose error
 no longer occurs warns, so the list shrinks once the migration is fixed.
+
+<warning>
+Leave a migration production applied as it is. The databases that ran it never run it again, so
+an edit reaches only new databases, and they end up on a schema production does not have.
+</warning>
 
 ## Run some of them
 

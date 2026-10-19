@@ -48,10 +48,14 @@ export default createCommand(commandset.deploy, async (ctx) => {
 });
 ```
 
-Keep the contract the table describes: `--pending` prints names and applies nothing, and
-`deploy --dry-run` uploads nothing. A `db migrate` without `--pending` still works; the plan
-then says `db migrate --remote` runs without listing what it applies, which is safe because
-applying a migration twice skips it.
+<warning>
+Keep the contract the table describes when you edit these commands: `--pending` prints names
+and applies nothing, and `deploy --dry-run` uploads nothing. `sdxc deploy` runs both before it
+asks, so a `--pending` that applies migrations changes production before you answer.
+</warning>
+
+A `db migrate` without `--pending` still works; the plan then says `db migrate --remote` runs
+without listing what it applies, which is safe because applying a migration twice skips it.
 
 ## The plan
 
@@ -71,8 +75,8 @@ changes nothing. Migrations run only when some are pending.
 
 ## Flags
 
-- `-y, --yes` deploys without asking. A run without a terminal, such as CI, needs it, and
-  stops with a usage error without it.
+- `-y, --yes` deploys without asking. CI has no terminal to answer the question, so a run
+  there needs it, and stops with a usage error without it.
 - `--dry-run` builds, lists, checks and prints the plan, then stops: nothing is migrated or
   deployed.
 - `--skip <step>` leaves out `build`, `migrate` or `deploy`. Repeat it or list them:
@@ -98,9 +102,13 @@ A failed step stops the run, and the message says what production runs now:
 | migrations       | nothing deployed; the migrations before the failure may be applied   |
 | deploy           | the previous version, on the new schema when migrations were applied |
 
-The deploy failure names the migrations it applied, so you know which schema the previous
-version is serving. Fix the cause and run `sdxc deploy` again: the migrations already applied are
-no longer pending, so the second run applies only the rest.
+<note>
+A failed deploy after applied migrations leaves the previous version serving the new schema. The
+failure names the migrations it applied, so you know which schema that version is reading.
+</note>
+
+Fix the cause and run `sdxc deploy` again: the migrations already applied are no longer
+pending, so the second run applies only the rest.
 
 A project that cannot be deployed this way is named before anything runs: a missing
 `bootstrap/cli.ts`, a `package.json` without a `build` script (add one, or pass

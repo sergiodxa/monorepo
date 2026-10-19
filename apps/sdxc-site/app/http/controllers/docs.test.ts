@@ -24,6 +24,15 @@ describe("GET /docs", () => {
 		expect(body).toContain("Browse the packages");
 	});
 
+	test("every guide parses and renders", async () => {
+		let sections = await listGuides();
+
+		for (let guide of sections.flatMap((section) => section.guides)) {
+			let response = await fetchApp(`/docs/${guide.slug}`);
+			expect(response.status, guide.slug).toBe(200);
+		}
+	});
+
 	test("every card leads somewhere that answers", async () => {
 		let sections = await listGuides();
 
@@ -55,6 +64,15 @@ describe("GET /docs/*slug", () => {
 
 	test("answers 404 for a slug no file owns", async () => {
 		expect((await fetchApp("/docs/nothing/here")).status).toBe(404);
+	});
+
+	test("draws a note and a warning as labelled asides rather than as raw tags", async () => {
+		let body = await (await fetchApp("/docs/sdxc/deploy")).text();
+
+		expect(body).toContain('aria-label="Note"');
+		expect(body).toContain('aria-label="Warning"');
+		expect(body).not.toContain("&lt;warning&gt;");
+		expect(body).not.toContain("<warning>");
 	});
 });
 

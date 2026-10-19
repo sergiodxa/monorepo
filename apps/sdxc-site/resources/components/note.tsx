@@ -1,7 +1,7 @@
 /**
- * The `note` tag: a short aside beside the argument it qualifies. It is an `<aside>`
- * rather than a live region, because the text is there when the page loads and nothing
- * updates it.
+ * The `note` and `warning` tags: a short aside beside the argument it qualifies. It is
+ * an `<aside>` rather than a live region, because the text is there when the page
+ * loads and nothing updates it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,8 +12,8 @@ import type { Handle } from "remix/component";
 import { border } from "sdxc/u/color";
 import { rounded } from "sdxc/u/effects";
 import { vstack } from "sdxc/u/layout";
-import { p } from "sdxc/u/size";
-import { text } from "sdxc/u/typography";
+import { m, p } from "sdxc/u/size";
+import { font, text, textTransform, tracking, weight } from "sdxc/u/typography";
 import { semanticColorPanel } from "sdxc/ui/styles";
 
 import type { MarkdownProps } from "~/resources/components/markdown-props";
@@ -26,16 +26,19 @@ namespace Note {
 
 	export interface Props extends MarkdownProps {
 		kind?: Kind;
+		/** A word read before the text, so a screen reader announces what the aside is. */
+		label?: string;
 	}
 }
 
-/** Renders one aside, tinted by its kind. */
+/** Renders one aside, tinted by its kind and opened by its label when it has one. */
 export default function Note(handle: Handle<Note.Props>) {
 	return () => {
-		let { children, kind = "info" } = handle.props;
+		let { children, kind = "info", label } = handle.props;
 
 		return (
 			<aside
+				aria-label={label}
 				data-color={kind === "caution" ? "warning" : "brand"}
 				mix={[
 					semanticColorPanel(),
@@ -47,8 +50,46 @@ export default function Note(handle: Handle<Note.Props>) {
 					text("sm"),
 				]}
 			>
+				{label ? (
+					<p
+						mix={[
+							m(0),
+							font("mono"),
+							text("xs"),
+							weight("semibold"),
+							textTransform("uppercase"),
+							tracking("widest"),
+						]}
+					>
+						{label}
+					</p>
+				) : null}
 				{children}
 			</aside>
 		);
 	};
+}
+
+/**
+ * A guide's `<note>`: a fact the reader can skip on a first read and will want later,
+ * labelled "Note" so it reads as an aside rather than as the next step.
+ */
+export function GuideNote(handle: Handle<MarkdownProps>) {
+	return () => (
+		<Note kind="info" label="Note">
+			{handle.props.children}
+		</Note>
+	);
+}
+
+/**
+ * A guide's `<warning>`: what breaks, or what cannot be undone, when the reader skips
+ * it. Labelled "Warning" and tinted as a caution.
+ */
+export function GuideWarning(handle: Handle<MarkdownProps>) {
+	return () => (
+		<Note kind="caution" label="Warning">
+			{handle.props.children}
+		</Note>
+	);
 }
