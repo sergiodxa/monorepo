@@ -38,6 +38,7 @@ Reach for it whenever a feature needs a new URL: a page, a form with its action,
 | `--path <path>`       | `/<name>`     | the route's pattern, params included                                         |
 | `--routes <contract>` | `make.routes` | the contract in `routes/` the route is declared in                           |
 | `--resource <name>`   |               | check the resource's ability the method implies; see below                   |
+| `--actions <list>`    |               | one controller per action of a resource, or `all`; see below                 |
 | `--test`, `--no-test` | `make.tests`  | write the test beside it, or skip it                                         |
 | `--dry-run`           |               | print the files and the diffs, and change nothing                            |
 
@@ -145,6 +146,47 @@ Run `sdxc make policy <name>` first; when `app/policies/abilities.ts` does not d
 resource yet, `make` writes the controller and prints a note saying so. A nested name checks the
 nested group: `--resource billing/invoice` checks `abilities.billing.invoice.*` against
 `{ invoice: row }`.
+
+## Every action of a resource
+
+`--actions` writes one controller per action under the name, each with the method and route a
+resource's pages take, and formats them together:
+
+```bash
+sdxc make controller posts --actions all --resource post
+```
+
+| Action    | Route                     | Ability with `--resource` |
+| --------- | ------------------------- | ------------------------- |
+| `index`   | `GET /posts`              | none; filter each row     |
+| `new`     | form at `/posts/new`      | `create`                  |
+| `show`    | `GET /posts/:id`          | `read`                    |
+| `edit`    | form at `/posts/:id/edit` | `update`                  |
+| `destroy` | `POST /posts/:id/destroy` | `delete`                  |
+
+In the `api` contract the actions are the endpoints of a JSON resource:
+
+```bash
+sdxc make controller api/posts --routes api --actions index,show,create,update,destroy
+```
+
+| Action    | Route               | Ability with `--resource` |
+| --------- | ------------------- | ------------------------- |
+| `index`   | `GET /posts`        | none; filter each row     |
+| `show`    | `GET /posts/:id`    | `read`                    |
+| `create`  | `POST /posts`       | `create`                  |
+| `update`  | `PATCH /posts/:id`  | `update`                  |
+| `destroy` | `DELETE /posts/:id` | `delete`                  |
+
+`all` writes every action the contract has, and a list writes the ones it names. Each
+controller is the one `--method` and `--path` would write, so `--actions` refuses both. A list
+shows many rows, so `index` checks none and the run prints a note: show each row a visitor may
+read with `ctx.access.can(abilities.post.read, { post: row })`.
+
+<note>
+`--actions` writes the controllers alone. For the model, the form and the validator too, run
+[`sdxc scaffold`](/docs/sdxc/scaffold-a-resource).
+</note>
 
 ## What it edits
 
