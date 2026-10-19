@@ -163,7 +163,7 @@ export function DateRangePicker(handle: Handle<DateRangePicker.Props>) {
 			...rest
 		} = handle.props;
 
-		if (import.meta.env.DEV && !children) {
+		if (import.meta.env?.DEV && !children) {
 			if (!startLabel) {
 				console.warn(
 					'DateRangePicker: falling back to paired "input type=date" fields needs a "startLabel" describing the range\'s start for assistive technology.',

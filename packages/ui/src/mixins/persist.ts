@@ -70,7 +70,7 @@ export const persist: MixinFactory<HTMLElement, [key: string], ElementProps> = c
 					let host = event.currentTarget;
 					let checkbox = findToggleCheckbox(host);
 					if (checkbox === null) {
-						if (import.meta.env.DEV) {
+						if (import.meta.env?.DEV) {
 							console.warn(
 								`persist(): no element with ${SIDEBAR_TOGGLE_ATTRIBUTE} found beneath the Sidebar root to toggle.`,
 							);

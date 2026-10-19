@@ -217,7 +217,7 @@ Command.Item = function CommandItem(handle: Handle<Command.ItemProps>) {
 	return () => {
 		let { value, children, mix, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !value) {
+		if (import.meta.env?.DEV && !value) {
 			console.warn(
 				'Command.Item: needs a "value" — a filter behavior matches typed text against this instead of parsing rendered children.',
 			);

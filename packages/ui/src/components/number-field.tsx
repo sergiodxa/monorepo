@@ -247,7 +247,7 @@ NumberField.DecrementButton = function NumberFieldDecrementButton(
 	return () => {
 		let { type, mix, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !handle.props["aria-label"] && !handle.props["aria-labelledby"]) {
+		if (import.meta.env?.DEV && !handle.props["aria-label"] && !handle.props["aria-labelledby"]) {
 			console.warn(
 				"NumberField.DecrementButton: needs an `aria-label` describing what it does — its content is a decorative glyph with no accessible name of its own.",
 			);
@@ -284,7 +284,7 @@ NumberField.IncrementButton = function NumberFieldIncrementButton(
 	return () => {
 		let { type, mix, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !handle.props["aria-label"] && !handle.props["aria-labelledby"]) {
+		if (import.meta.env?.DEV && !handle.props["aria-label"] && !handle.props["aria-labelledby"]) {
 			console.warn(
 				"NumberField.IncrementButton: needs an `aria-label` describing what it does — its content is a decorative glyph with no accessible name of its own.",
 			);

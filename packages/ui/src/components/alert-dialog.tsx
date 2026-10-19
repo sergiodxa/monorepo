@@ -260,7 +260,7 @@ AlertDialog.Action = function AlertDialogAction(handle: Handle<AlertDialog.Actio
 		let isInvoker = resolvedType === "button";
 		let resolvedColor = color ?? DEFAULT_ACTION_COLOR;
 
-		if (import.meta.env.DEV && isInvoker && !commandfor) {
+		if (import.meta.env?.DEV && isInvoker && !commandfor) {
 			console.warn(
 				'AlertDialog.Action: needs "commandfor" naming the panel it dismisses, or type="submit" to submit its enclosing form instead — as rendered, pressing it does nothing.',
 			);

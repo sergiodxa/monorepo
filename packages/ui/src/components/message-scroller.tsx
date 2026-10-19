@@ -277,7 +277,7 @@ MessageScroller.Item = function MessageScrollerItem(handle: Handle<MessageScroll
 	return () => {
 		let { messageId, scrollAnchor, children, mix, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !messageId) {
+		if (import.meta.env?.DEV && !messageId) {
 			console.warn(
 				'MessageScroller.Item: needs a "messageId" — a scroll-follow behavior matches rows against this instead of parsing rendered children.',
 			);

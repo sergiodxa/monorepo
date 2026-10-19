@@ -109,7 +109,7 @@ function mirrorValidity(field: ValidatableField, message: string): void {
 
 	let slot = findFieldErrorSlot(field);
 	if (slot === null) {
-		if (import.meta.env.DEV && message !== "") {
+		if (import.meta.env?.DEV && message !== "") {
 			console.warn(
 				"validate(): no FieldError slot found through this field's aria-describedby; " +
 					`add ${FIELD_ERROR_ATTRIBUTE} to the element the field describes its error with.`,

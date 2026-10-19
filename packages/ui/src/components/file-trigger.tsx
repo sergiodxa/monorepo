@@ -118,7 +118,7 @@ export function FileTrigger(handle: Handle<FileTrigger.Props>) {
 		let resolvedSize = size ?? DEFAULT_SIZE;
 
 		if (
-			import.meta.env.DEV &&
+			import.meta.env?.DEV &&
 			!handle.props["aria-label"] &&
 			!handle.props["aria-labelledby"] &&
 			!hasAccessibleText(children)

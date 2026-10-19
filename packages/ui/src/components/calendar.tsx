@@ -224,7 +224,7 @@ export function Calendar(handle: Handle<Calendar.Props>) {
 		} = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 
-		if (import.meta.env.DEV && !children && !ariaLabel && !ariaLabelledBy) {
+		if (import.meta.env?.DEV && !children && !ariaLabel && !ariaLabelledBy) {
 			console.warn(
 				'Calendar: falling back to a plain "input type=date" needs an "aria-label" or "aria-labelledby" describing what it collects for assistive technology.',
 			);

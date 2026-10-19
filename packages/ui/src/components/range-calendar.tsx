@@ -196,7 +196,7 @@ export function RangeCalendar(handle: Handle<RangeCalendar.Props>) {
 		} = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 
-		if (import.meta.env.DEV && !children) {
+		if (import.meta.env?.DEV && !children) {
 			if (!startLabel) {
 				console.warn(
 					'RangeCalendar: falling back to a plain "input type=date" pair needs a "startLabel" describing the range\'s start for assistive technology.',

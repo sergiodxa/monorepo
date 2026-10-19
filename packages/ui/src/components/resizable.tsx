@@ -230,7 +230,7 @@ Resizable.Handle = function ResizableHandle(handle: Handle<Resizable.HandleProps
 		let { mix, ...rest } = handle.props;
 		let context = handle.context.get(Resizable);
 
-		if (import.meta.env.DEV && !rest["aria-label"] && !rest["aria-labelledby"]) {
+		if (import.meta.env?.DEV && !rest["aria-label"] && !rest["aria-labelledby"]) {
 			console.warn(
 				"Resizable.Handle: a resize handle with no `aria-label` or `aria-labelledby` needs one describing what it resizes — assistive technology has no accessible name to announce otherwise.",
 			);

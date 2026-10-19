@@ -162,7 +162,7 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 	return () => {
 		let { id, children, mix, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !id) {
+		if (import.meta.env?.DEV && !id) {
 			console.warn(
 				'Dialog rendered without an "id" — "commandfor" on a trigger or close control has nothing to target.',
 			);

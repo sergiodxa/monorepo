@@ -45,7 +45,7 @@ export function warnIfNoAccessibleName(
 	message: string,
 ): void {
 	if (
-		import.meta.env.DEV &&
+		import.meta.env?.DEV &&
 		!props["aria-label"] &&
 		!props["aria-labelledby"] &&
 		!hasAccessibleText(children)
@@ -68,7 +68,7 @@ export function warnIfNoAccessibleName(
  * );
  */
 export function warnIfNoAccessibleLabel(props: AccessibleNameProps, message: string): void {
-	if (import.meta.env.DEV && !props["aria-label"] && !props["aria-labelledby"]) {
+	if (import.meta.env?.DEV && !props["aria-label"] && !props["aria-labelledby"]) {
 		console.warn(message);
 	}
 }

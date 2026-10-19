@@ -69,7 +69,7 @@ export function SharedElement(handle: Handle<SharedElement.Props>) {
 	return () => {
 		let { id, mix, style, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !id) {
+		if (import.meta.env?.DEV && !id) {
 			console.warn(
 				'SharedElement rendered without an "id" — the browser has nothing to match it against on the other side of a cross-document view transition.',
 			);

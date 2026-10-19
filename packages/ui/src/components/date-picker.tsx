@@ -133,7 +133,7 @@ export function DatePicker(handle: Handle<DatePicker.Props>) {
 			...rest
 		} = handle.props;
 
-		if (import.meta.env.DEV && !children && !label) {
+		if (import.meta.env?.DEV && !children && !label) {
 			console.warn(
 				'DatePicker: falling back to DateField\'s plain "input type=date" needs a "label" describing what it collects for assistive technology.',
 			);

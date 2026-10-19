@@ -492,7 +492,7 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 		let resolvedRole = role ?? (href !== undefined ? "link" : isConfigured ? "button" : undefined);
 		let resolvedTabIndex = tabIndex ?? (isConfigured ? 0 : undefined);
 
-		if (import.meta.env.DEV && !isConfigured) {
+		if (import.meta.env?.DEV && !isConfigured) {
 			console.warn(
 				'Attachment.Trigger: rendered with neither "href" nor "commandfor" — nothing will happen once `attachmentTrigger()` handles an activation.',
 			);

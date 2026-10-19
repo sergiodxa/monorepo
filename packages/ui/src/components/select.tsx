@@ -153,7 +153,7 @@ export function Select(handle: Handle<Select.Props>) {
 		let { color, multiple, size, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 
-		if (import.meta.env.DEV && (multiple || (typeof size === "number" && size > 1))) {
+		if (import.meta.env?.DEV && (multiple || (typeof size === "number" && size > 1))) {
 			console.warn(
 				"Select: `appearance: base-select` styling has no effect on a `multiple` select or one with a `size` greater than 1 — the browser keeps its plain list-box rendering there instead of the customized trigger, value, and option styling.",
 			);
@@ -413,7 +413,7 @@ Select.Group = function SelectGroup(handle: Handle<Select.GroupProps>) {
 	return () => {
 		let { mix, ...rest } = handle.props;
 
-		if (import.meta.env.DEV && !rest.label) {
+		if (import.meta.env?.DEV && !rest.label) {
 			console.warn(
 				"Select.Group: an `optgroup` with no `label` renders with no visible heading for its options — pass a `label` describing the group.",
 			);

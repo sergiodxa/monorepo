@@ -48,7 +48,7 @@ export const contextMenu = createMixin<HTMLElement, [id: string, options?: Ancho
 			let surface = document.getElementById(id);
 
 			if (!surface) {
-				if (import.meta.env.DEV) {
+				if (import.meta.env?.DEV) {
 					console.warn(`contextMenu(): no element with id "${id}" found to open.`);
 				}
 				return;

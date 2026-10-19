@@ -46,7 +46,7 @@ function setOpen(host: HTMLElement, open: boolean): void {
 	}
 
 	if (!host.hasAttribute("popover")) {
-		if (import.meta.env.DEV) {
+		if (import.meta.env?.DEV) {
 			console.warn(
 				`hotkey(): host is neither a <dialog> nor a [popover] element, so it cannot be ${open ? "shown" : "hidden"}.`,
 			);
@@ -104,7 +104,7 @@ export const hotkey: MixinFactory<HTMLElement, [combo: string]> = createMixin<
 	return (combo) => {
 		parsed = parseKeyCombo(combo);
 
-		if (parsed.key === "" && import.meta.env.DEV) {
+		if (parsed.key === "" && import.meta.env?.DEV) {
 			console.warn(`hotkey(): "${combo}" has no trigger key and will never match.`);
 		}
 	};

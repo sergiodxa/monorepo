@@ -81,7 +81,7 @@ function resolveAction(host: HTMLElement): ResolvedAction | undefined {
 
 	let command = host.getAttribute("command") ?? DEFAULT_DIALOG_COMMAND;
 	if (command !== DEFAULT_DIALOG_COMMAND) {
-		if (import.meta.env.DEV) {
+		if (import.meta.env?.DEV) {
 			console.warn(
 				`attachmentTrigger(): unsupported command "${command}" — only "${DEFAULT_DIALOG_COMMAND}" opens a dialog from a card activation.`,
 			);
@@ -91,7 +91,7 @@ function resolveAction(host: HTMLElement): ResolvedAction | undefined {
 
 	let dialog = document.getElementById(commandForId);
 	if (!(dialog instanceof HTMLDialogElement)) {
-		if (import.meta.env.DEV) {
+		if (import.meta.env?.DEV) {
 			console.warn(
 				`attachmentTrigger(): commandfor="${commandForId}" doesn't reference a <dialog> element.`,
 			);

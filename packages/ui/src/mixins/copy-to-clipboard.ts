@@ -119,7 +119,7 @@ export const copyToClipboard: MixinFactory<HTMLButtonElement> = createMixin<HTML
 
 						let target = resolveCopyTarget(button);
 						if (!target) {
-							if (import.meta.env.DEV) {
+							if (import.meta.env?.DEV) {
 								console.warn(
 									'copyToClipboard(): button has no "commandfor" target to copy text from.',
 								);

@@ -100,7 +100,7 @@ export function resolveHeadingLevel(
 	let resolved: number = explicitLevel ?? readAmbientLevel(handle) ?? DEFAULT_LEVEL;
 
 	if (resolved > MAX_LEVEL) {
-		if (import.meta.env.DEV) {
+		if (import.meta.env?.DEV) {
 			console.warn(
 				`Heading nesting resolved to level ${resolved}, past the native "h1"–"h6" range. Flatten the nesting, or start a new top-level HeadingScope instead of nesting further.`,
 			);

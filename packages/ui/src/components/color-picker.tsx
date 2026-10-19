@@ -191,7 +191,7 @@ export function ColorPicker(handle: Handle<ColorPicker.Props>) {
 			...rest
 		} = handle.props;
 
-		if (import.meta.env.DEV && !children && !label) {
+		if (import.meta.env?.DEV && !children && !label) {
 			console.warn(
 				'ColorPicker: falling back to ColorField\'s plain color-notation field needs a "label" describing what it collects for assistive technology.',
 			);

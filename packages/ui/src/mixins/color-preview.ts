@@ -74,7 +74,7 @@ export const colorPreview: MixinFactory<HTMLElement> = createMixin<HTMLElement>(
 					let host = event.currentTarget;
 					let swatch = findSwatch(host);
 					if (swatch === null) {
-						if (import.meta.env.DEV && !hasWarnedMissingSwatch) {
+						if (import.meta.env?.DEV && !hasWarnedMissingSwatch) {
 							hasWarnedMissingSwatch = true;
 							console.warn(
 								`colorPreview(): no element matching ${SWATCH_SELECTOR} found beneath the ColorField host to update.`,
