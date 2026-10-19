@@ -69,9 +69,10 @@ sdxc run db console < seed.sql
 <warning>
 `db migrate --remote` changes production on its own. Ship a migration with `sdxc deploy`
 instead, which applies it right before the code that needs it and after one look at the plan.
-</warning> Run `typegen`
-after adding a binding or a secret, so `env` type checks against what the Worker receives;
-[`sdxc doctor`](/docs/sdxc/check-a-project) warns when the types are older than
+</warning>
+
+Run `typegen` after adding a binding or a secret, so `env` type checks against what the Worker
+receives; [`sdxc doctor`](/docs/sdxc/check-a-project) warns when the types are older than
 `cloudflare.config.ts`.
 
 ## Add your own
