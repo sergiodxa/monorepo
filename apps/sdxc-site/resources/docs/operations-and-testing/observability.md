@@ -3,7 +3,7 @@ title: Logs, traces and timings
 description: One wide log event per invocation, a W3C trace that follows a request into its jobs, and a Server-Timing header for the browser.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 1
 lastUpdated: 2026-10-15
 ---

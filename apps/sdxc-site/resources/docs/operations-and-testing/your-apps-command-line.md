@@ -3,7 +3,7 @@ title: Your app's command line
 description: Give your app commands for work that belongs to no request, and publish its log, database, models, jobs, translations and mailer to them through the same middleware its routes use.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 9
 lastUpdated: 2026-10-15
 ---
@@ -387,8 +387,10 @@ checks what a script without the flag gets. A job the command enqueued has run b
 
 - [Build a command line](/docs/operations-and-testing/build-a-command-line) — contracts,
   prompts, tasks and middleware in full.
-- [The sdxc command](/docs/getting-started/the-sdxc-command) — `sdxc make command` and
-  `sdxc run`.
+- [Make a command](/docs/sdxc/make-command) — `sdxc make command` declares and maps a
+  command.
+- [Run your app's commands](/docs/sdxc/run-app-commands) — `sdxc run` from any folder in the
+  project.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher
   the command line runs jobs through.
 - [Send email](/docs/data-and-background-work/send-email) — the mailer and the email classes

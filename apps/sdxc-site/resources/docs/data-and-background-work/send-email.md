@@ -3,7 +3,7 @@ title: Send email
 description: Define emails with a remix/component body, translate them for the reader, send them from a job, and assert on them with an in-memory transport.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 5
 lastUpdated: 2026-10-16
 ---

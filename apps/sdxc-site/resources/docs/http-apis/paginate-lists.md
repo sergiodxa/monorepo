@@ -3,7 +3,7 @@ title: Paginate lists
 description: Page by offset or keyset, validate the page parameters, advertise pages in Link headers, and render a pager in HTML.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 5
 lastUpdated: 2026-10-15
 ---

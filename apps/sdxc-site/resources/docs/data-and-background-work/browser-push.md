@@ -3,7 +3,7 @@ title: Send browser push notifications
 description: Subscribe a browser from a click, store the subscription safely, and send encrypted Web Push from a Worker, directly or as one more messaging destination.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 14
 lastUpdated: 2026-10-15
 ---

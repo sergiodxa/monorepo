@@ -3,7 +3,7 @@ title: Custom domains for your customers
 description: Prove a customer owns a domain with a DNS TXT check, register it on Cloudflare for SaaS, and poll it until it serves.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 9
 lastUpdated: 2026-10-15
 ---

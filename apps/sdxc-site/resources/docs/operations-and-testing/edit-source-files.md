@@ -3,7 +3,7 @@ title: Edit source files
 description: Find the modules a project imports, rename a package across every file, move names to another module, and add declarations and calls, changing only the text each edit touches.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 11
 lastUpdated: 2026-10-15
 ---
@@ -206,8 +206,9 @@ anything beyond indentation.
 
 ## Where to go next
 
-- [The sdxc command](/docs/getting-started/the-sdxc-command) — `sdxc make` and `sdxc ui add`,
-  which make these edits for you.
+- [Generate files](/docs/sdxc/generate-files) and
+  [Copy UI components](/docs/sdxc/copy-ui-components) — `sdxc make` and `sdxc ui add`, which
+  make these edits for you.
 - [Build a command line](/docs/operations-and-testing/build-a-command-line) — turn a script like
   these into a command with flags and a `--dry-run`.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the declarations and

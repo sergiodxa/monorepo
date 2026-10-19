@@ -3,7 +3,7 @@ title: Draw social card images
 description: Render an Open Graph image for every page inside a Cloudflare Worker, serve it at the page's own address with .png added, keep each card in R2 under a hash of its text, and advertise it with its size.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 14
 lastUpdated: 2026-10-15
 ---

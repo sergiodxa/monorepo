@@ -3,7 +3,7 @@ title: Set text as SVG paths
 description: Measure text with a font's real metrics on the server, shorten it to fit a width, and draw it as SVG path outlines that look the same wherever the image is shown, for a README badge that needs no web font.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 34
 lastUpdated: 2026-10-15
 ---

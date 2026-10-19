@@ -3,7 +3,7 @@ title: Draw QR codes
 description: Encode a link at the error correction level its surface needs, render it inline with remix/component, and serve it as an SVG file from a route.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 9
 lastUpdated: 2026-10-15
 ---

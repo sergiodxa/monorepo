@@ -3,7 +3,7 @@ title: Draw diagrams from text
 description: Turn Mermaid sequence, class, state and flowchart diagrams in markdown into SVG drawn on the server, with broken diagrams caught at build time.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 31
 lastUpdated: 2026-10-15
 ---

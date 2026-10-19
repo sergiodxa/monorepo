@@ -3,7 +3,7 @@ title: Publish RSS, Atom and JSON feeds
 description: Serve one list of posts as RSS 2.0, Atom and JSON Feed, advertise them, and ping a WebSub hub when they change.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 2
 lastUpdated: 2026-10-15
 ---

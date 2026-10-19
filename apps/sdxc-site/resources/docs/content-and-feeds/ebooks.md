@@ -3,7 +3,7 @@ title: Offer posts as EPUB ebooks
 description: Turn a markdown post into an EPUB with a nested table of contents and accessibility metadata, refused at build time wherever epubcheck would reject it, and serve it as a download.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 20
 lastUpdated: 2026-10-15
 ---

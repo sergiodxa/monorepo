@@ -3,7 +3,7 @@ title: Keyboard shortcuts
 description: Bind page-wide keys with keymap(), print each hint in the reader's own key caps, list them in a shortcuts panel, and announce what a key did.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 11
 lastUpdated: 2026-10-15
 ---

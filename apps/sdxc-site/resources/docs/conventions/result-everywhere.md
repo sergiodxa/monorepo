@@ -3,7 +3,7 @@ title: Result everywhere
 description: Every fallible entry point answers with a value instead of throwing, and what that buys you at the call site.
 section:
     title: Conventions
-    order: 2
+    order: 3
 order: 1
 lastUpdated: 2026-10-15
 ---

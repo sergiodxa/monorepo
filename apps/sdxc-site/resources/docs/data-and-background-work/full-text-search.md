@@ -3,7 +3,7 @@ title: Full-text search over SQLite
 description: Keep an FTS5 index beside the tables you already have, parse what a reader types without a syntax error, rank title matches above body matches, highlight them, and page the results.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 18
 lastUpdated: 2026-10-15
 ---

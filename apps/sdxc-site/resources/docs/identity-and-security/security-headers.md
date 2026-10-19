@@ -3,7 +3,7 @@ title: Security headers and CSP
 description: One typed policy for CSP, HSTS and Permissions-Policy, nonces for the scripts you render, violation reports, and a security.txt.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 5
 lastUpdated: 2026-10-15
 ---

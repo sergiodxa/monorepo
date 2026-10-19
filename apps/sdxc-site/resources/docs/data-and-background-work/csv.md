@@ -3,7 +3,7 @@ title: Import and export CSV
 description: Read an uploaded CSV into validated rows with errors that name the line, and stream exports that spreadsheets open safely.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 8
 lastUpdated: 2026-10-15
 ---

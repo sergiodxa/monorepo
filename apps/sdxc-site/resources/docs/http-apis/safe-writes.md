@@ -3,7 +3,7 @@ title: Idempotent writes and JSON Merge Patch
 description: Make a create safe to retry with Idempotency-Key, accept partial updates as merge patches, and refuse writes based on stale reads.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 3
 lastUpdated: 2026-10-15
 ---

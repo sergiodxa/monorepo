@@ -3,7 +3,7 @@ title: Import and export DNS zone files
 description: Read a pasted BIND zone file into typed records with every unusable line reported, check them against live DNS, and hand the zone back as a file.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 15
 lastUpdated: 2026-10-15
 ---

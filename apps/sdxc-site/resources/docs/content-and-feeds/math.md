@@ -3,7 +3,7 @@ title: Render TeX math
 description: Turn TeX formulas in markdown and in components into MathML the browser draws natively, with broken formulas caught at build time.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 30
 lastUpdated: 2026-10-15
 ---

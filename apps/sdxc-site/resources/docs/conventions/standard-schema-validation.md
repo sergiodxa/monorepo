@@ -3,7 +3,7 @@ title: Standard Schema validation
 description: Where a package needs a schema it accepts any Standard Schema, so the validation library is yours to choose.
 section:
     title: Conventions
-    order: 2
+    order: 3
 order: 2
 lastUpdated: 2026-10-15
 ---

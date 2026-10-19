@@ -3,7 +3,7 @@ title: Sign in with OpenID Connect
 description: An authorization-code login against any OpenID Connect provider, with a KV-backed session and a return URL that stays on your origin.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 1
 lastUpdated: 2026-10-15
 ---

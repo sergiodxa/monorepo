@@ -3,7 +3,7 @@ title: Enterprise sign-on with SAML and SCIM
 description: Let a customer's directory sign its people in over SAML 2.0 and provision their users and groups over SCIM 2.0.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 10
 lastUpdated: 2026-10-15
 ---

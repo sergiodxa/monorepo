@@ -3,7 +3,7 @@ title: Naming
 description: What a package name tells you, and the conventions its exports follow, so the next package reads like the last one.
 section:
     title: Conventions
-    order: 2
+    order: 3
 order: 4
 lastUpdated: 2026-10-15
 ---

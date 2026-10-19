@@ -3,7 +3,7 @@ title: Run a newsletter list
 description: Subscribe readers to Buttondown or Kit through one contract, credit the campaign they came from, follow confirmations and unsubscribes from webhooks, and test against an in-memory list.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 11
 lastUpdated: 2026-10-15
 ---

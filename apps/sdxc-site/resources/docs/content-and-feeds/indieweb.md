@@ -3,7 +3,7 @@ title: "Join the IndieWeb: Webmention and Micropub"
 description: Mark posts up with microformats, receive and send Webmentions from background jobs, and accept posts over Micropub.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 3
 lastUpdated: 2026-10-15
 ---

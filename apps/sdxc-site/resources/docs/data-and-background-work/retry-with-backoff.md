@@ -3,7 +3,7 @@ title: Retry on a growing delay
 description: Wait longer after each failure, with a ceiling and jitter, in queue jobs, in-process retries, polled rows and sign-in lockouts.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 9
 lastUpdated: 2026-10-15
 ---

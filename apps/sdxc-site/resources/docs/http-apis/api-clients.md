@@ -3,7 +3,7 @@ title: Write a typed API client
 description: A client class for one API that attaches credentials once, validates every response, and turns problem documents into typed failures.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 4
 lastUpdated: 2026-10-15
 ---

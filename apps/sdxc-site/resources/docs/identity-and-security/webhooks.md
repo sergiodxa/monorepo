@@ -3,7 +3,7 @@ title: Receive and send webhooks
 description: Verify Standard Webhooks deliveries, reject replays, hand the work to a queue, and sign the deliveries you send.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 3
 lastUpdated: 2026-10-15
 ---

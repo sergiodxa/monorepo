@@ -3,7 +3,7 @@ title: Address JSON with JSON Pointer
 description: Parse, stringify, get and set RFC 6901 JSON Pointers, so a member named a/b still points at itself in a problem, a schema path or a patch.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 6
 lastUpdated: 2026-10-15
 ---

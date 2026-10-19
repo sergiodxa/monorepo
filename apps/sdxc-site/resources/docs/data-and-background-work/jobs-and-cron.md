@@ -3,7 +3,7 @@ title: Background jobs and cron
 description: Declare jobs once, enqueue them from handlers, run them on Cloudflare Queues and cron triggers, and validate schedules users type.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 4
 lastUpdated: 2026-10-15
 ---

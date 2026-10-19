@@ -3,7 +3,7 @@ title: Add two-factor sign-in with TOTP
 description: Enroll an authenticator app, ask for its code after the password, spend each code once, back it up with recovery codes, and turn it off.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 8
 lastUpdated: 2026-10-15
 ---

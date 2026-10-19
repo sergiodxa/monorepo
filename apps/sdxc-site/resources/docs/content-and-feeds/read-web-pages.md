@@ -3,7 +3,7 @@ title: Read other people's pages
 description: Save links for later by fetching each page under bounds in a job, pulling out its article, and building preview cards.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 5
 lastUpdated: 2026-10-15
 ---

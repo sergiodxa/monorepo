@@ -3,7 +3,7 @@ title: Feature flags
 description: Declare flags in a typed catalog, target them by rule or percentage, and evaluate them on ctx.flags in handlers and jobs.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 6
 lastUpdated: 2026-10-15
 ---

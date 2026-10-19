@@ -3,7 +3,7 @@ title: Randomness you can replay
 description: Pass random streams into your own code, seed them in tests, store the seed behind a draw, and resume a stream from storage.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 7
 lastUpdated: 2026-10-15
 ---

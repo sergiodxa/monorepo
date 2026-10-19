@@ -3,7 +3,7 @@ title: Accept PNG avatars and draw placeholders
 description: Check an uploaded PNG's size before inflating it, decode it to prove it is an image, crop it square and store a clean copy, and draw an identicon from pixels for everyone who has not uploaded one.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 15
 lastUpdated: 2026-10-15
 ---

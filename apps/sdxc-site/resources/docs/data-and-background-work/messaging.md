@@ -3,7 +3,7 @@ title: Send alerts to chat and paging services
 description: Write one message, deliver it to Slack, Discord, Telegram, PagerDuty, Opsgenie or a signed webhook from a job with retries, and test it without a network.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 13
 lastUpdated: 2026-10-15
 ---

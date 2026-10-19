@@ -3,7 +3,7 @@ title: Canonical URLs, lazy routes and header fields
 description: Redirect to one canonical host and path, end a request with a thrown Response, load routes on demand, and read structured headers.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 7
 lastUpdated: 2026-10-15
 ---

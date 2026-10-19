@@ -3,7 +3,7 @@ title: Build a command line
 description: Declare commands as a contract, answer them with typed handlers, ask for what a flag left out, show progress, share services through middleware, and test every command without a terminal.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 8
 lastUpdated: 2026-10-15
 ---

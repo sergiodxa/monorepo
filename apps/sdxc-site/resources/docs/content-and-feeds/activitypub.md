@@ -3,7 +3,7 @@ title: Federate a site with ActivityPub
 description: Publish an actor, answer WebFinger, verify an inbox that handles follows and undos, deliver signed posts to followers from jobs, and test it all in memory.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 7
 lastUpdated: 2026-10-15
 ---

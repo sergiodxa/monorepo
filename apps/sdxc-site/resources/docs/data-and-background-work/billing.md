@@ -3,7 +3,7 @@ title: Charge for your app
 description: Sell through a hosted checkout, keep your own copy of what each customer holds, and gate features on it without calling the platform.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 7
 lastUpdated: 2026-10-15
 ---

@@ -3,7 +3,7 @@ title: Build a JSON API with problem details
 description: A small resource API that validates bodies, answers failures as RFC 9457 problems, pages its lists and states its rate limit.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 1
 lastUpdated: 2026-10-15
 ---

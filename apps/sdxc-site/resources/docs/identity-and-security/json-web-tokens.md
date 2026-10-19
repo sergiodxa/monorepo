@@ -3,7 +3,7 @@ title: Issue and verify JWTs
 description: Sign short-lived tokens with keys kept in R2, publish them as a JWKS, verify tokens by issuer and audience, and rotate keys safely.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 6
 lastUpdated: 2026-10-15
 ---

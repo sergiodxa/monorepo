@@ -3,7 +3,7 @@ title: Translate your app
 description: Detect each request's language, translate MessageFormat 2 messages in handlers, views, jobs and islands, and catch broken copy in a test.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 4
 lastUpdated: 2026-10-15
 ---

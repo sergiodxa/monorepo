@@ -3,7 +3,7 @@ title: Client addresses and networks
 description: Read the caller's address once per request, key limits on its network, store it as text, admit only your own networks and refuse internal targets.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 12
 lastUpdated: 2026-10-15
 ---

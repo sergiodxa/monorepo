@@ -3,7 +3,7 @@ title: Read configuration files
 description: Parse JSON with comments and trailing commas, point a mistake at its line and column, validate the result, and hand it to every command of a command line.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 10
 lastUpdated: 2026-10-15
 ---

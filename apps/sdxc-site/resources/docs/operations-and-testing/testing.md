@@ -3,7 +3,7 @@ title: Test Workers apps
 description: Vitest through Vite+, real bindings in the Workers pool, in-memory mocks, MSW, and executable specs against a running app.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 3
 lastUpdated: 2026-10-15
 ---

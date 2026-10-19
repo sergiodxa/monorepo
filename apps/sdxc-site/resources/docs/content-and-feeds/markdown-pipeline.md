@@ -3,7 +3,7 @@ title: A markdown content pipeline
 description: Parse posts with typed frontmatter and custom tags, transform them in one walk, and render them in a Remix route.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 1
 lastUpdated: 2026-10-15
 ---

@@ -3,7 +3,7 @@ title: Dates, text and identifiers
 description: Mint prefixed record IDs, slug and summarize titles, show dates in the viewer's zone, and compare client versions.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 6
 lastUpdated: 2026-10-15
 ---

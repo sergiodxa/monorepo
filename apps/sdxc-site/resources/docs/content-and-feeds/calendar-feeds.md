@@ -3,7 +3,7 @@ title: Publish calendar feeds
 description: Serve your events as an iCalendar feed people subscribe to, with time zones and recurrence, and read uploaded .ics files back.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 4
 lastUpdated: 2026-10-15
 ---

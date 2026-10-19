@@ -3,7 +3,7 @@ title: Draw charts as PNG images
 description: Draw a response-time chart with an area fill, a stroked line, labels and a daily status strip on a canvas inside a Worker, and serve it as a PNG an email client shows where SVG and scripts never run.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 35
 lastUpdated: 2026-10-15
 ---

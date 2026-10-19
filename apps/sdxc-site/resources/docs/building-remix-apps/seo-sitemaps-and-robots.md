@@ -3,7 +3,7 @@ title: SEO, sitemaps and robots.txt
 description: Give every page one canonical URL and structured data, and serve sitemap.xml, robots.txt and security.txt from routes.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 5
 lastUpdated: 2026-10-16
 ---

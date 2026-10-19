@@ -3,7 +3,7 @@ title: Validate forms and route params
 description: Turn form posts, query strings, route params and JSON bodies into typed values, and answer each failure with the right response.
 section:
     title: Building Remix apps
-    order: 3
+    order: 4
 order: 2
 lastUpdated: 2026-10-15
 ---

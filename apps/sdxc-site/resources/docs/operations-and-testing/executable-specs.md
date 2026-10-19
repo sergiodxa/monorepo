@@ -3,7 +3,7 @@ title: Write executable specs
 description: Describe your running app's behavior in .spec files, run them against a dev server with named grants, and gate CI on them.
 section:
     title: Operations & testing
-    order: 8
+    order: 9
 order: 5
 lastUpdated: 2026-09-29
 ---

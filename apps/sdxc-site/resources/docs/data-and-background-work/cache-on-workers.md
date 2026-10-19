@@ -3,7 +3,7 @@ title: Cache on Cloudflare Workers
 description: Keep values in Workers KV with a stale copy for outages, and store whole responses at the edge under tags you can purge.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 1
 lastUpdated: 2026-10-15
 ---

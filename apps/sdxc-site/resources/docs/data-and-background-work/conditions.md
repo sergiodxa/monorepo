@@ -3,7 +3,7 @@ title: Rules your users write
 description: Let customers write conditions as text or JSON, store them as data, refuse a broken one with its path, and evaluate it in a request or a job.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 10
 lastUpdated: 2026-10-15
 ---

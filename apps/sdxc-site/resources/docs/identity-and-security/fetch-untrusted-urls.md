@@ -3,7 +3,7 @@ title: Fetch URLs a stranger chose
 description: Refuse private hosts at the endpoint, fetch in a job under one deadline and a byte cap on every redirect, and cap bodies that never came from fetch.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 11
 lastUpdated: 2026-10-15
 ---

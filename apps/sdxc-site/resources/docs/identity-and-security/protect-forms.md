@@ -3,7 +3,7 @@ title: Protect forms from bots and abuse
 description: Layer a honeypot, a CAPTCHA, a per-address budget, spam scoring and address and password checks on a public sign-up form.
 section:
     title: Identity & security
-    order: 5
+    order: 6
 order: 4
 lastUpdated: 2026-10-16
 ---

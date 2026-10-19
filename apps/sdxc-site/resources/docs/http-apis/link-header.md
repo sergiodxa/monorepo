@@ -3,7 +3,7 @@ title: Parse and write Link headers
 description: Parse and stringify RFC 8288 Link headers, keep foreign parameters through a merge, and drop malformed entries instead of failing the response.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 7
 lastUpdated: 2026-10-15
 ---

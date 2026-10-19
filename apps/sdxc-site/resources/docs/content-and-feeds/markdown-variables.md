@@ -3,7 +3,7 @@ title: Fill markdown templates with variables
 description: Write one markdown document with holes for per-render values, fill them per tenant, plan or locale, and keep the template round-tripping through an editor.
 section:
     title: Content & feeds
-    order: 7
+    order: 8
 order: 9
 lastUpdated: 2026-10-15
 ---

@@ -3,7 +3,7 @@ title: Stream several files as a ZIP
 description: Bundle generated text, CSV streams and stored files into one ZIP download that starts at once, holds one entry in memory at a time, and refuses entry names an unarchiver would write outside its folder.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 17
 lastUpdated: 2026-10-15
 ---

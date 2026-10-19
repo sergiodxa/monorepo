@@ -3,7 +3,7 @@ title: Stream JSON Lines
 description: Export records as a JSON Lines download that streams as it is read, import uploads row by row with errors that name the line, and resume a long import where it stopped.
 section:
     title: Data & background work
-    order: 6
+    order: 7
 order: 19
 lastUpdated: 2026-10-15
 ---

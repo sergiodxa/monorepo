@@ -3,7 +3,7 @@ title: Versioning
 description: Releases are dated rather than semantic, the number records when a release went out, and that is why a dependency is written as one exact date.
 section:
     title: Releases
-    order: 9
+    order: 10
 order: 1
 lastUpdated: 2026-10-15
 ---

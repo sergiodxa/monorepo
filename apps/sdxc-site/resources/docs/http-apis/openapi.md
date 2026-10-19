@@ -3,7 +3,7 @@ title: Describe your API with OpenAPI
 description: Turn the schemas your handlers validate with into an OpenAPI 3.1 document, serve it, and test responses against it.
 section:
     title: HTTP APIs
-    order: 4
+    order: 5
 order: 2
 lastUpdated: 2026-10-15
 ---
