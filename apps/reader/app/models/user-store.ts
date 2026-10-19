@@ -1091,8 +1091,6 @@ export namespace UserStore {
 				ok: true;
 				scope: AgentScope;
 				tier: Tier;
-				/** What the token may do: the reader's tier, capped by the token's scope. */
-				may: ReaderClaims["agent"];
 		  }
 		| {
 				ok: false;
@@ -3236,7 +3234,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			unwrap(await this.#models.agentTokens.update(tokenId, { last_used_at: now }));
 		}
 
-		return { ok: true, scope, tier, may: agent };
+		return { ok: true, scope, tier };
 	}
 
 	/**

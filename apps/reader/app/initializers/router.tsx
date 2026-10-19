@@ -42,7 +42,7 @@ import { flags } from "~/app/initializers/flags";
 import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger, logRenderFailure } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
-import requireAgent from "~/app/mcp/agent";
+import requireAgent, { agentAccess } from "~/app/mcp/agent";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { SECURITY_TXT } from "~/config/security-txt";
 import routes from "~/routes/web";
@@ -365,14 +365,15 @@ export function createWebRouter(options: WebRouterOptions) {
 	/**
 	 * The agent surface. A browser's `GET` renders the page explaining how to connect; an
 	 * agent's `POST` is answered by the protocol handler, behind the credential middleware
-	 * that turns a token into one reader and the burst limiter keyed on that token.
+	 * that turns a token into one reader, the access its tier and scope bind, and the burst
+	 * limiter keyed on that token.
 	 */
 	router.map(
 		routes.mcp.index,
 		lazy(() => import("~/app/http/controllers/mcp")),
 	);
 	router.map(routes.mcp.action, {
-		middleware: [requireAgent, agentRateLimit(env)],
+		middleware: [requireAgent, agentAccess, agentRateLimit(env)],
 		/**
 		 * Imported here rather than through `lazy()`, because `requireAgent` publishes the agent
 		 * the handlers read, so this stays an action object, whose `handler` must be a function.

@@ -122,7 +122,7 @@ describe("authorizeAgent", () => {
 		expect(await user.authorizeAgent(TOKEN_ID)).toEqual({ ok: false, reason: "unknown-token" });
 	});
 
-	test("answers what a live token may do, and what the account is on", async () => {
+	test("answers a live token's scope, and what the account is on", async () => {
 		let { state, user } = await createReader();
 		setTier(state, "paid");
 		seedToken(state, { scope: "write" });
@@ -131,7 +131,6 @@ describe("authorizeAgent", () => {
 			ok: true,
 			scope: "write",
 			tier: "paid",
-			may: { connect: true, write: true },
 		});
 	});
 

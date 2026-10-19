@@ -10,20 +10,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyRequestContext, ToolMiddleware } from "@sdxc/mcp";
+import type { AnyRequestContext } from "@sdxc/mcp";
 import type { Middleware, RequestContext } from "remix/router";
 
-import { ForbiddenError } from "@sdxc/mcp";
+import { guard, requireToolAbility } from "@sdxc/authz/mcp";
+import { access } from "@sdxc/authz/middleware/router";
 import { getContext } from "remix/middleware/async-context";
 import { createContextKey } from "remix/router";
 
 import type { UserStore } from "~/app/models/user-store";
-import type { ReaderClaims } from "~/app/policies/access";
 import type { Tier } from "~/app/services/entitlement";
 import type { AgentScope } from "~/database/schema";
 
 import { readAgentToken } from "~/app/mcp/token";
 import { userStore } from "~/app/models/user-store";
+import abilities from "~/app/policies/abilities";
+import policy, { agentRole } from "~/app/policies/policy";
 import routes from "~/routes/web";
 
 /** Who the request is for, what it may do, and what the account is entitled to. */
@@ -32,9 +34,8 @@ export interface AgentIdentity {
 	subject: string;
 	tokenId: string;
 	scope: AgentScope;
+	/** The tier the reader's row leases right now, as their object read it for this call. */
 	tier: Tier;
-	/** What the token may do: the reader's tier capped by its scope, as their object decided. */
-	may: ReaderClaims["agent"];
 }
 
 /**
@@ -67,28 +68,24 @@ export function agentOf(ctx: AnyRequestContext | RequestContext): AgentIdentity 
 }
 
 /**
- * Whether the current credential may write, which is what hides the five writing tools. The
- * reader's object decided it, so a token never writes past its scope nor past its holder.
+ * Binds the reader's policy for the verified agent: the tier their object leased as the
+ * role and the token's scope as the ceiling, so a token never acts past its scope nor past
+ * its holder. The agent claims load before any tool runs, which is what `available` reads.
  */
-export function mayWrite(ctx: AnyRequestContext): boolean {
-	return agentOf(ctx).may.write;
-}
+export const agentAccess: Middleware = access(policy, {
+	roles: (ctx) => [agentOf(ctx).tier],
+	within: (ctx) => [agentRole(agentOf(ctx).scope)],
+	load: [abilities.agent],
+});
 
 /**
- * Refuses a writing tool a read-scoped credential reached anyway.
- *
- * `available` already hides those tools, so reaching this means a client is working from a
- * list it kept — the backstop that keeps a stale list from becoming a write.
+ * What a writing tool declares about itself: hidden from a credential that may not write,
+ * and refused as `agent.write is not permitted` when a client calls one from a list it kept.
  */
-export function requireWriteScope(): ToolMiddleware {
-	return (ctx, next) => {
-		if (!mayWrite(ctx)) throw new ForbiddenError("This token may only read.");
-		return next();
-	};
-}
-
-/** What a writing tool declares about itself, hidden and refused alike for a read token. */
-export const WRITES = { available: mayWrite, middleware: [requireWriteScope()] };
+export const WRITES = {
+	...guard(abilities.agent.write),
+	middleware: [requireToolAbility(abilities.agent.write)],
+};
 
 /** The verified agent, for code holding no context of its own. */
 export function currentAgent(): AgentIdentity {
@@ -197,7 +194,6 @@ export let requireAgent: Middleware = async (ctx, next) => {
 		tokenId: credential.tokenId,
 		scope: allowed.scope,
 		tier: allowed.tier,
-		may: allowed.may,
 	});
 
 	ctx.log.note("mcp.authorized", {

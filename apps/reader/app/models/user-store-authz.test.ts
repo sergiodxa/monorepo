@@ -233,7 +233,8 @@ describe("a switch turned off", () => {
 });
 
 describe("an agent token", () => {
-	test("never writes past a read scope, nor past its holder's plan", async () => {
+	/** The scope is read from the row, so the agent surface binds the ceiling the reader minted. */
+	test("answers each token's own scope beside its holder's leased tier", async () => {
 		let { user } = await createReader("paid");
 		let reading = await mint(user, "read");
 		let writing = await mint(user, "write");
@@ -241,12 +242,12 @@ describe("an agent token", () => {
 		expect(await user.authorizeAgent(reading)).toMatchObject({
 			ok: true,
 			scope: "read",
-			may: { connect: true, write: false },
+			tier: "paid",
 		});
 		expect(await user.authorizeAgent(writing)).toMatchObject({
 			ok: true,
 			scope: "write",
-			may: { connect: true, write: true },
+			tier: "paid",
 		});
 	});
 

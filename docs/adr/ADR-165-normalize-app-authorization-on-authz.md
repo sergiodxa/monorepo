@@ -60,10 +60,12 @@ Left as they are, each a behavior change to decide on its own:
 - r3-auth: the grants page hides "revoke" for the server's own client with its own comparison
   instead of `ctx.access.can(abilities.account.grant.revoke, …)`; the API consent check is an
   ad-hoc 404 rather than a `notFound` ability bound to the API client.
-- reader: MCP writes use `WRITES`/`requireWriteScope` rather than `guard()` from
-  `@sdxc/authz/mcp` (the error text would change); raw `features.savedPosts` checks could read
-  `can.posts.keep`, while `features.tags` cannot become `can.tags.label` without hiding labels
-  from free readers.
+- reader: raw `features.savedPosts` checks could read `can.posts.keep`, while `features.tags`
+  cannot become `can.tags.label` without hiding labels from free readers.
+
+Since decided: reader's MCP route binds an access from the leased tier and the token's scope,
+and its writing tools use `guard()` and `requireToolAbility()` from `@sdxc/authz/mcp` on
+`agent.write`, so a stale call is refused as `agent.write is not permitted`.
 
 ### uptime
 
