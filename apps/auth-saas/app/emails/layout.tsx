@@ -2,7 +2,7 @@
  * The shell every hosted-flow message is written inside: the unbranded card from
  * `@sdxc/mail`, closed with a footer line naming the tenant the mail is from. Every
  * message reuses this rather than `Email.Layout` directly, so a later per-tenant brand
- * record has one place to paint from instead of every message class of its own.
+ * record has one place to paint from instead of every template of its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

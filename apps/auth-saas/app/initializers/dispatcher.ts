@@ -13,13 +13,15 @@ import { Database } from "@sdxc/database-middleware";
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
+import mailer from "@sdxc/mail/middleware/jobs";
 import { env } from "cloudflare:workers";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import jobs from "~/app/jobs";
 import { hostnames } from "~/app/jobs/middleware/hostnames";
-import { mail } from "~/app/jobs/middleware/mail";
 import { tenant } from "~/app/jobs/middleware/tenant";
 import registry from "~/app/models";
 
@@ -36,7 +38,7 @@ export const dispatcher = createJobDispatcher({
 		models(registry, (ctx) => ({ db: ctx.require(Database) })),
 		hostnames(),
 		tenant(),
-		mail(),
+		mailer({ transport, from: MAIL_FROM, mail, queue }),
 	],
 	timeout: "5 minutes",
 
@@ -47,6 +49,7 @@ export const dispatcher = createJobDispatcher({
 	queue: cloudflare.queue(() => env.QUEUE),
 });
 
+dispatcher.map(jobs.email, () => import("~/app/jobs/email"));
 dispatcher.map(jobs.refreshPendingDomains, () => import("~/app/jobs/refresh-pending-domains"));
 dispatcher.map(
 	jobs.sweepDueWebhookDeliveries,

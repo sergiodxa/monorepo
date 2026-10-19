@@ -28,9 +28,7 @@ import { createAction } from "remix/router";
 
 import type { PasswordPolicy } from "~/app/models/tenant/passwords";
 
-import { mailTranslator } from "~/app/emails/locale";
-import { PlatformSignupVerifyEmail } from "~/app/emails/platform-signup-verify-email";
-import { parseSenderAddress } from "~/app/emails/sender";
+import emails from "~/app/emails";
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import {
 	passesUnconditionalTurnstileChallenge,
@@ -231,14 +229,13 @@ export const signupSubmit = createAction(routes.signup.submit, {
 		let sendFailed = false;
 
 		if (added.kind === "email") {
-			let { t } = mailTranslator();
 			let url = new URL(routes.signup.verify.href(), ctx.request.url);
 			url.searchParams.set("ticket", added.ticket);
 
-			let sent = await ctx.mail.send(
-				new PlatformSignupVerifyEmail({ email: added.value, url: url.toString(), t }),
-				{ from: parseSenderAddress(env.EMAIL_FROM) },
-			);
+			let sent = await ctx.email.send(emails.signup.verify, {
+				to: added.value,
+				props: { url: url.toString() },
+			});
 
 			sendFailed = isFailure(sent);
 		}

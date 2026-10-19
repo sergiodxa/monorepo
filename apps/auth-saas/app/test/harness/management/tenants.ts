@@ -19,8 +19,8 @@ import type { RequestContext } from "remix/router";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware";
 import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -44,7 +44,6 @@ import { createTenantMfaPolicySetAction } from "~/app/http/controllers/managemen
 import { createTenantReadAction } from "~/app/http/controllers/management/tenants/read";
 import { createTenantSessionPolicyDescribeAction } from "~/app/http/controllers/management/tenants/session-policy";
 import { createTenantSessionPolicySetAction } from "~/app/http/controllers/management/tenants/set-session-policy";
-import { Mail } from "~/app/http/middleware/mail";
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import {
 	buildManagementTestCore,
@@ -56,6 +55,7 @@ import {
 	HOSTNAME_ZONE_ID,
 	ISSUER,
 } from "~/app/test/harness/management";
+import { createTestMailer } from "~/app/test/mail";
 import routes from "~/routes/management";
 
 export {
@@ -91,7 +91,7 @@ export function buildTenantsRouter(
 	};
 
 	let transport = options.mailTransport ?? new MemoryTransport();
-	let mailer = new Mailer({ transport, from: TEST_SENDER });
+	let mailer = createTestMailer(transport, TEST_SENDER);
 
 	let router = createRouter({
 		middleware: [
@@ -99,7 +99,7 @@ export function buildTenantsRouter(
 			database(db),
 			modelsMiddleware(),
 			(ctx, next) => {
-				ctx.set(Mail, mailer, { property: "mail" });
+				ctx.set(CurrentMailer, mailer, { property: "email" });
 				return next();
 			},
 		],

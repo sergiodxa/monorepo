@@ -21,8 +21,7 @@ import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { mailTranslator } from "~/app/emails/locale";
-import { TenantInvitationEmail } from "~/app/emails/tenant-invitation-email";
+import emails from "~/app/emails";
 import { mountedMiddleware } from "~/app/http/controllers/management/tenants/shared";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
@@ -96,18 +95,12 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 				}),
 			);
 
-			let { t } = mailTranslator();
 			let url = `https://dashboard.${env.PLATFORM_DOMAIN}/invitations/accept?token=${token}`;
 
-			await ctx.mail.send(
-				new TenantInvitationEmail({
-					email: body.email,
-					tenantName: tenant.name,
-					role: body.role,
-					url,
-					t,
-				}),
-			);
+			await ctx.email.queue(emails.tenants.invitation, {
+				to: body.email,
+				props: { tenantName: tenant.name, role: body.role, url },
+			});
 
 			return json({ id: invitation.id, expiresAt: invitation.expires_at }, { status: 201 });
 		},

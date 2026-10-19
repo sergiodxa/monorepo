@@ -11,7 +11,12 @@
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { Database } from "remix/data-table";
 
-import { createDurableObjectNamespace, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import {
+	createDurableObjectNamespace,
+	createEnv,
+	createQueue,
+	createSendEmail,
+} from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -23,7 +28,11 @@ import type Tenant from "~/app/models/tenant/object";
 let queue: QueueMock = createQueue();
 
 vi.doMock("cloudflare:workers", () => ({
-	env: createEnv<Cloudflare.Env>({ QUEUE: queue }),
+	env: createEnv<Cloudflare.Env>({
+		QUEUE: queue,
+		SEND_EMAIL: createSendEmail(),
+		EMAIL_FROM: "Auth SaaS <noreply@auth.sergiodxa.com>",
+	}),
 }));
 
 let { createJobContext } = await import("@sdxc/jobs");

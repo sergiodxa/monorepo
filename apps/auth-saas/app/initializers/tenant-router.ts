@@ -11,8 +11,7 @@ import { assets } from "@sdxc/assets-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
-import { CloudflareTransport } from "@sdxc/mail/cloudflare";
-import mail from "@sdxc/mail/middleware";
+import mailer from "@sdxc/mail/middleware";
 import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { redirect } from "@sdxc/well-known/change-password";
@@ -23,7 +22,6 @@ import { formData } from "remix/middleware/form-data";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import { parseSenderAddress } from "~/app/emails/sender";
 import notFound from "~/app/http/controllers/not-found";
 import i18n from "~/app/http/middleware/i18n";
 import { platformSender } from "~/app/http/middleware/mail-sender";
@@ -42,14 +40,13 @@ import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { turnstile } from "~/app/initializers/turnstile";
 import { userinfoMetadataEntry } from "~/app/initializers/userinfo-resource";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import routes from "~/routes/tenant";
-
-/** The platform's own configured sender, shared by the mail middleware's base identity and every per-tenant override. */
-let platformFrom = parseSenderAddress(env.EMAIL_FROM);
 
 /**
  * The tenant router, with a `404` default handler. `bootstrap/worker.ts` and the platform
@@ -89,8 +86,8 @@ export const tenantRouter = createRouter({
 		render({ assets: assetResolver }),
 		formData(),
 		i18n,
-		platformSender(platformFrom),
-		mail({ transport: new CloudflareTransport(env.SEND_EMAIL), from: platformFrom }),
+		platformSender(MAIL_FROM),
+		mailer({ transport, from: MAIL_FROM, mail, queue }),
 		turnstileProvider(turnstile),
 	],
 	defaultHandler: notFound,

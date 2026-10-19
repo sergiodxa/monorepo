@@ -18,9 +18,9 @@ import type { RequestContext } from "remix/router";
 
 import { createAction } from "remix/router";
 
+import emails from "~/app/emails";
 import { verifyAddressLink } from "~/app/emails/links";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
-import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
 import { redirectToErrorPage } from "~/app/http/controllers/hosted/outcome";
 import { HostedDocument } from "~/resources/views/hosted/document";
 import { VerifyPage } from "~/resources/views/hosted/verify";
@@ -122,15 +122,15 @@ export const verifyResend = createAction(routes.hostedVerifyResend, async (ctx) 
 	});
 
 	if (added.ok && added.kind === "email") {
-		await ctx.email.send(
-			new VerifyAddressEmail({
-				email: added.value,
+		await ctx.email.queue(emails.verifyAddress, {
+			to: added.value,
+			locale: ctx.locale,
+			from: senderAddressFor(ctx),
+			props: {
 				url: verifyAddressLink(ctx, added.ticket),
 				tenantName: senderNameFromIssuer(ctx.tenant.issuer),
-				t,
-			}),
-			{ from: senderAddressFor(ctx) },
-		);
+			},
+		});
 	}
 
 	return renderPending(ctx, { resent: added.ok });

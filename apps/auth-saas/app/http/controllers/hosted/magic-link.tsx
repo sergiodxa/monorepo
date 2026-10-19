@@ -31,9 +31,8 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
+import emails from "~/app/emails";
 import { magicLinkSignInLink } from "~/app/emails/links";
-import { MagicLinkNoAccountEmail } from "~/app/emails/magic-link-no-account-email";
-import { MagicLinkSignInEmail } from "~/app/emails/magic-link-sign-in-email";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
 import {
 	redirectToErrorPage,
@@ -242,19 +241,18 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, {
 		let tenantName = senderNameFromIssuer(ctx.tenant.issuer);
 
 		if (begun.message === "sign_in") {
-			await ctx.email.send(
-				new MagicLinkSignInEmail({
-					email,
-					url: magicLinkSignInLink(ctx, begun.token),
-					code: begun.code,
-					tenantName,
-					t,
-				}),
-				{ from: senderAddressFor(ctx) },
-			);
-		} else if (begun.message === "no_account") {
-			await ctx.email.send(new MagicLinkNoAccountEmail({ email, tenantName, t }), {
+			await ctx.email.queue(emails.magicLink.signIn, {
+				to: email,
+				locale: ctx.locale,
 				from: senderAddressFor(ctx),
+				props: { url: magicLinkSignInLink(ctx, begun.token), code: begun.code, tenantName },
+			});
+		} else if (begun.message === "no_account") {
+			await ctx.email.queue(emails.magicLink.noAccount, {
+				to: email,
+				locale: ctx.locale,
+				from: senderAddressFor(ctx),
+				props: { tenantName },
 			});
 		}
 

@@ -13,6 +13,7 @@ import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import mailer from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -26,13 +27,14 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 
 import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/middleware/api-version";
-import { mail } from "~/app/http/middleware/mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import { models } from "~/app/http/middleware/models";
 import { requestOrigin } from "~/app/http/request-origin";
 import { openDatabase } from "~/app/initializers/database";
 import { createHostnameClient } from "~/app/initializers/hostnames";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { sessionCookie } from "~/app/initializers/session-cookie";
 import { MANAGEMENT_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
@@ -78,7 +80,7 @@ export const managementRouter = createRouter({
 		managementWellKnown(issuer),
 		formData(),
 		apiVersioning(),
-		mail(),
+		mailer({ transport, from: MAIL_FROM, mail, queue }),
 	],
 	defaultHandler: notFound,
 });

@@ -27,7 +27,6 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -101,7 +100,8 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 
 let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
-let { Mail } = await import("~/app/http/middleware/mail");
+let { CurrentMailer } = await import("@sdxc/mail/middleware");
+let { createTestMailer } = await import("~/app/test/mail");
 let { hostedDocumentMiddleware } = await import("~/app/test/document-middleware");
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
 let { turnstileProvider } = await import("~/app/http/middleware/turnstile-verification");
@@ -168,16 +168,13 @@ beforeEach(async () => {
 
 /** Builds the platform web router mapping every `/signup` route, matching how `app/initializers/router.ts` mounts them. */
 function buildRouter() {
-	let mailer = new Mailer({
-		transport: mailTransport,
-		from: { email: "noreply@auth.example.com" },
-	});
+	let mailer = createTestMailer(mailTransport, { email: "noreply@auth.example.com" });
 
 	let middleware: Middleware[] = [
 		database(db) as Middleware,
 		modelsMiddleware() as Middleware,
 		(ctx, next) => {
-			ctx.set(Mail, mailer, { property: "mail" });
+			ctx.set(CurrentMailer, mailer, { property: "email" });
 			return next();
 		},
 		...hostedDocumentMiddleware(),

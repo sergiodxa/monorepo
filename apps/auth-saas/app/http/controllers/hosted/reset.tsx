@@ -24,8 +24,8 @@ import { createAction } from "remix/router";
 
 import type { PasswordPolicy } from "~/app/models/tenant/passwords";
 
+import emails from "~/app/emails";
 import { resetPasswordLink } from "~/app/emails/links";
-import { ResetPasswordEmail } from "~/app/emails/reset-password-email";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/emails/sender";
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import {
@@ -183,15 +183,15 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, {
 			let begun = await ctx.tenantStub.beginPasswordReset({ identifier: parsed.value.identifier });
 
 			if (begun.address !== null) {
-				await ctx.email.send(
-					new ResetPasswordEmail({
-						email: begun.address,
+				await ctx.email.queue(emails.resetPassword, {
+					to: begun.address,
+					locale: ctx.locale,
+					from: senderAddressFor(ctx),
+					props: {
 						url: resetPasswordLink(ctx, begun.ticket),
 						tenantName: senderNameFromIssuer(ctx.tenant.issuer),
-						t,
-					}),
-					{ from: senderAddressFor(ctx) },
-				);
+					},
+				});
 			}
 
 			return ctx.render(

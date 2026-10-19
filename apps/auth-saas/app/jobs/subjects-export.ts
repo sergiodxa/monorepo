@@ -16,8 +16,7 @@ import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import { CredentialsExportStartedEmail } from "~/app/emails/credentials-export-started-email";
-import { mailTranslator } from "~/app/emails/locale";
+import emails from "~/app/emails";
 import { parseSenderAddress, tenantSenderAddress } from "~/app/emails/sender";
 import jobs from "~/app/jobs";
 import { readTransferFileLines, writeTransferFile } from "~/app/models/transfer-storage";
@@ -106,8 +105,6 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 						(membership) => membership.role === "owner",
 					);
 
-					let { t } = mailTranslator();
-
 					for (let owner of owners) {
 						let described = await platformTenant.describeSubject({
 							subjectId: owner.subject_id,
@@ -120,10 +117,11 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 						)?.value;
 						if (!email) continue;
 
-						await ctx.mail.send(
-							new CredentialsExportStartedEmail({ email, tenantName: tenantRow.name, t }),
-							{ from: tenantSenderAddress(platformFrom, tenantRow.issuer) },
-						);
+						await ctx.email.send(emails.owners.credentialsExportStarted, {
+							to: email,
+							from: tenantSenderAddress(platformFrom, tenantRow.issuer),
+							props: { tenantName: tenantRow.name },
+						});
 					}
 				}
 			}

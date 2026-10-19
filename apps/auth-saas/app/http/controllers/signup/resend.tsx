@@ -13,9 +13,7 @@ import type { RequestContext } from "remix/router";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import { mailTranslator } from "~/app/emails/locale";
-import { PlatformSignupVerifyEmail } from "~/app/emails/platform-signup-verify-email";
-import { parseSenderAddress } from "~/app/emails/sender";
+import emails from "~/app/emails";
 import { PublicDocument } from "~/resources/views/landing";
 import { SignUpPendingPage } from "~/resources/views/signup";
 import routes from "~/routes/web";
@@ -73,14 +71,13 @@ export default createAction(routes.signup.resend, async (ctx) => {
 	});
 
 	if (added.ok && added.kind === "email") {
-		let { t } = mailTranslator();
 		let url = new URL(routes.signup.verify.href(), ctx.request.url);
 		url.searchParams.set("ticket", added.ticket);
 
-		await ctx.mail.send(
-			new PlatformSignupVerifyEmail({ email: added.value, url: url.toString(), t }),
-			{ from: parseSenderAddress(env.EMAIL_FROM) },
-		);
+		await ctx.email.queue(emails.signup.verify, {
+			to: added.value,
+			props: { url: url.toString() },
+		});
 	}
 
 	return renderPending(ctx, { resendAction, resent: added.ok });

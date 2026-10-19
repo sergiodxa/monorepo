@@ -16,7 +16,6 @@ import type { R2BucketMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectNamespace, createEnv, createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -52,7 +51,8 @@ let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { publishModels } = await import("~/app/test/models");
-let { Mail } = await import("~/app/jobs/middleware/mail");
+let { CurrentMailer } = await import("@sdxc/mail/middleware/jobs");
+let { createTestMailer } = await import("~/app/test/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let subjectsExport = (await import("~/app/jobs/subjects-export")).default;
 let { mintTransferDownloadTicket } = await import("~/app/models/transfer-storage");
@@ -84,14 +84,7 @@ async function runExportJob(harness: {
 	ctx.set(JobDatabase, harness.db, { property: "db" });
 	publishModels(ctx, harness.db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
-	ctx.set(
-		Mail,
-		new Mailer({
-			transport: new MemoryTransport(),
-			from: { email: "noreply@auth.example.com", name: "Auth SaaS" },
-		}),
-		{ property: "mail" },
-	);
+	ctx.set(CurrentMailer, createTestMailer(new MemoryTransport()), { property: "email" });
 
 	await subjectsExport(ctx);
 }

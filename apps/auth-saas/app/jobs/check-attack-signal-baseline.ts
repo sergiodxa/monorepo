@@ -12,8 +12,7 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import { AttackSignalAlertEmail } from "~/app/emails/attack-signal-alert-email";
-import { mailTranslator } from "~/app/emails/locale";
+import emails from "~/app/emails";
 import { parseSenderAddress, tenantSenderAddress } from "~/app/emails/sender";
 import jobs from "~/app/jobs";
 import { dayOf } from "~/app/models/tenant/metering";
@@ -80,7 +79,6 @@ export default createJobHandler(jobs.checkAttackSignalBaseline, async (ctx) => {
 			);
 			if (owners.length === 0) return;
 
-			let { t } = mailTranslator();
 			let sentToAny = false;
 
 			for (let owner of owners) {
@@ -93,16 +91,15 @@ export default createJobHandler(jobs.checkAttackSignalBaseline, async (ctx) => {
 				let email = described.identifiers.find((identifier) => identifier.kind === "email")?.value;
 				if (!email) continue;
 
-				let sent = await ctx.mail.send(
-					new AttackSignalAlertEmail({
-						email,
+				let sent = await ctx.email.send(emails.owners.attackSignal, {
+					to: email,
+					from: tenantSenderAddress(platformFrom, tenantRow.issuer),
+					props: {
 						tenantName: tenantRow.name,
 						recentFailures: comparison.recentFailures,
 						baselineHourlyAverage: comparison.baselineHourlyAverage,
-						t,
-					}),
-					{ from: tenantSenderAddress(platformFrom, tenantRow.issuer) },
-				);
+					},
+				});
 
 				if (!isFailure(sent)) sentToAny = true;
 			}

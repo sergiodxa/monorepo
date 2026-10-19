@@ -10,11 +10,12 @@
 
 import type { MemoryTransport } from "@sdxc/mail/memory";
 
+import { isComposedEmail } from "@sdxc/mail";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/test/harness/hosted";
 
-import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
+import emails from "~/app/emails";
 import { subjectIdentifiers } from "~/app/models/tenant/subjects";
 import { buildHarness } from "~/app/test/harness/hosted";
 
@@ -113,7 +114,7 @@ describe("verify", () => {
 		let transport = harness.mailTransport as MemoryTransport;
 		expect(transport.messages).toHaveLength(1);
 		expect(transport.last?.to).toEqual([{ email: "jane@example.com" }]);
-		expect(transport.last?.email).toBeInstanceOf(VerifyAddressEmail);
+		expect(isComposedEmail(transport.last?.email, emails.verifyAddress)).toBe(true);
 		expect(transport.last?.html).toContain(String(ticket));
 	});
 

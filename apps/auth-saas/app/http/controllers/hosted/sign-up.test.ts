@@ -13,13 +13,13 @@ import type { SentMessage } from "@sdxc/mail";
 import type { MemoryTransport } from "@sdxc/mail/memory";
 import type { Result } from "@sdxc/result";
 
-import { MailError } from "@sdxc/mail";
+import { isComposedEmail, MailError } from "@sdxc/mail";
 import { failure } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/test/harness/hosted";
 
-import { VerifyAddressEmail } from "~/app/emails/verify-address-email";
+import emails from "~/app/emails";
 import { subjectIdentifiers, subjects } from "~/app/models/tenant/subjects";
 import {
 	buildHarness,
@@ -200,7 +200,7 @@ describe("sign-up", () => {
 		expect(transport.messages).toHaveLength(1);
 		let sent = transport.last;
 		expect(sent?.to).toEqual([{ email: "jane@example.com" }]);
-		expect(sent?.email).toBeInstanceOf(VerifyAddressEmail);
+		expect(isComposedEmail(sent?.email, emails.verifyAddress)).toBe(true);
 		expect(sent?.html).toContain(String(ticket));
 	});
 

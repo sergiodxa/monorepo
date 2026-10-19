@@ -63,8 +63,10 @@ import {
 	tenant,
 } from "~/app/http/middleware/tenant";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
+import { mail as registry } from "~/app/initializers/mail";
 import Tenant from "~/app/models/tenant/object";
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
+import { deliverQueued } from "~/app/test/mail";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/tenant";
 
@@ -87,7 +89,12 @@ function buildRouter(tenantDO: Tenant, transport: Transport, turnstile: MemoryCa
 		formData() as Middleware,
 		i18n as Middleware,
 		platformSender(TEST_MAIL_FROM),
-		mail({ transport, from: TEST_MAIL_FROM }) as Middleware,
+		mail({
+			transport,
+			from: TEST_MAIL_FROM,
+			mail: registry,
+			queue: deliverQueued(transport, TEST_MAIL_FROM),
+		}) as Middleware,
 		turnstileProvider(turnstile),
 	];
 	let router = createRouter({ middleware });

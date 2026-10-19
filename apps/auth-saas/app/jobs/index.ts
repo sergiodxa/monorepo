@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { job, jobs } from "@sdxc/jobs";
+import { EMAIL_DELIVERY } from "@sdxc/mail";
 import * as s from "remix/data-schema";
 
 /**
@@ -15,6 +16,8 @@ import * as s from "remix/data-schema";
  * consumes it.
  */
 export default jobs({
+	/** Delivers what `ctx.email.queue()` handed the queue, for every declared email. */
+	email: job({ input: EMAIL_DELIVERY }),
 	refreshPendingDomains: job({ cron: "0 0 * * *" }),
 	/**
 	 * Claims every tenant's own due webhook deliveries and fans one `deliverWebhook`

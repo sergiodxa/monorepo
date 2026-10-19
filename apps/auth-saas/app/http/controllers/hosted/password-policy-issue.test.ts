@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import type { PasswordPolicyFailure } from "~/app/models/tenant/passwords";
 
-import { mailTranslator } from "~/app/emails/locale";
+import { translate } from "~/app/initializers/i18n";
 
 import { passwordPolicyIssue } from "./password-policy-issue";
 
@@ -31,7 +31,7 @@ let FAILURES: [PasswordPolicyFailure, string][] = [
 
 describe("passwordPolicyIssue", () => {
 	test.each(FAILURES)("renders %o on the password field", (failure, expected) => {
-		let { t } = mailTranslator();
+		let { t } = translate();
 
 		let issue = passwordPolicyIssue(t, failure, "password");
 

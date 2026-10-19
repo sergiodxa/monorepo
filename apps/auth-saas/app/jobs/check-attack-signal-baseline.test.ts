@@ -15,7 +15,6 @@ import type { Database } from "remix/data-table";
 
 import { createDurableObjectNamespace, createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
-import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -61,7 +60,8 @@ vi.doMock("~/app/services/attack-signals", async (importOriginal) => {
 let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("@sdxc/database-middleware");
-let { Mail } = await import("~/app/jobs/middleware/mail");
+let { CurrentMailer } = await import("@sdxc/mail/middleware/jobs");
+let { createTestMailer } = await import("~/app/test/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels, publishModels } = await import("~/app/test/models");
@@ -136,11 +136,7 @@ function makeContext(namespace: ReturnType<typeof makePlatformNamespace>) {
 	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
-	ctx.set(
-		Mail,
-		new Mailer({ transport, from: { email: "noreply@auth.example.com", name: "Auth SaaS" } }),
-		{ property: "mail" },
-	);
+	ctx.set(CurrentMailer, createTestMailer(transport), { property: "email" });
 
 	return {
 		ctx,

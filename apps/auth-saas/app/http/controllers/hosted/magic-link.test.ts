@@ -16,6 +16,7 @@ import type { Middleware } from "remix/router";
 
 import { totp } from "@sdxc/crypto";
 import { lazy } from "@sdxc/lazy-route";
+import { isComposedEmail } from "@sdxc/mail";
 import { MemoryTransport as MemoryMailTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { isFailure } from "@sdxc/result";
@@ -26,13 +27,13 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type Tenant from "~/app/models/tenant/object";
 import type { Harness } from "~/app/test/harness/hosted";
 
-import { MagicLinkNoAccountEmail } from "~/app/emails/magic-link-no-account-email";
-import { MagicLinkSignInEmail } from "~/app/emails/magic-link-sign-in-email";
+import emails from "~/app/emails";
 import i18n from "~/app/http/middleware/i18n";
 import { platformSender } from "~/app/http/middleware/mail-sender";
 import { tenant } from "~/app/http/middleware/tenant";
 import { magicLinkRateLimit } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
+import { mail as registry } from "~/app/initializers/mail";
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import {
 	buildHarness,
@@ -41,6 +42,7 @@ import {
 	createTestSubjectWithPassword,
 	REDIRECT_URI,
 } from "~/app/test/harness/hosted";
+import { deliverQueued } from "~/app/test/mail";
 import routes from "~/routes/tenant";
 
 import { magicLinkSubmit } from "./magic-link";
@@ -130,7 +132,7 @@ describe("magic-link", () => {
 		let nonceCookie = cookieFrom(submitted);
 
 		let transport = harness.mailTransport as MemoryTransport;
-		expect(transport.last?.email).toBeInstanceOf(MagicLinkSignInEmail);
+		expect(isComposedEmail(transport.last?.email, emails.magicLink.signIn)).toBe(true);
 		let url = extractMagicLinkUrl(transport.last as NormalizedMessage);
 		let landingPath = new URL(url).pathname + new URL(url).search;
 
@@ -212,8 +214,8 @@ describe("magic-link", () => {
 
 		let transport = harness.mailTransport as MemoryTransport;
 		expect(transport.messages).toHaveLength(2);
-		expect(transport.messages[0]?.email).toBeInstanceOf(MagicLinkSignInEmail);
-		expect(transport.messages[1]?.email).toBeInstanceOf(MagicLinkNoAccountEmail);
+		expect(isComposedEmail(transport.messages[0]?.email, emails.magicLink.signIn)).toBe(true);
+		expect(isComposedEmail(transport.messages[1]?.email, emails.magicLink.noAccount)).toBe(true);
 	});
 
 	test("refuses an address the identifier rules could never fold, sending nothing", async () => {
@@ -395,13 +397,19 @@ describe("magicLinkSubmit under magicLinkRateLimit", () => {
 		let { interactionId } = await reachMagicLinkRequest(harness, client.id);
 
 		let testSender = { email: "no-reply@example.com", name: "Test Sender" };
+		let testTransport = new MemoryMailTransport();
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
 			...hostedDocumentMiddleware(),
 			formData() as Middleware,
 			i18n as Middleware,
 			platformSender(testSender),
-			mail({ transport: new MemoryMailTransport(), from: testSender }) as Middleware,
+			mail({
+				transport: testTransport,
+				from: testSender,
+				mail: registry,
+				queue: deliverQueued(testTransport, testSender),
+			}) as Middleware,
 			turnstileProvider(harness.turnstile),
 		];
 		let router = createRouter({ middleware });

@@ -12,6 +12,7 @@ import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import mailer from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -23,12 +24,13 @@ import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import { platformTenantForward } from "~/app/http/controllers/platform-tenant-forward";
-import { mail } from "~/app/http/middleware/mail";
 import { models } from "~/app/http/middleware/models";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
 import { assetResolver } from "~/app/initializers/assets";
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { MAIL_FROM, queue, transport } from "~/app/initializers/mail-transport";
 import { turnstile } from "~/app/initializers/turnstile";
 import { PLATFORM_SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
@@ -54,7 +56,7 @@ export const webRouter = createRouter({
 		wellKnown({ "security.txt": securityTxtEntry }),
 		database(openDatabase()),
 		models(),
-		mail(),
+		mailer({ transport, from: MAIL_FROM, mail, queue }),
 		render({ assets: assetResolver }),
 		formData(),
 		methodOverride(),

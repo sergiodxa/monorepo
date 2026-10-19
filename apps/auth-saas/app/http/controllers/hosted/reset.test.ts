@@ -11,11 +11,12 @@
 
 import type { MemoryTransport } from "@sdxc/mail/memory";
 
+import { isComposedEmail } from "@sdxc/mail";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/test/harness/hosted";
 
-import { ResetPasswordEmail } from "~/app/emails/reset-password-email";
+import emails from "~/app/emails";
 import {
 	buildHarness,
 	createTestClient,
@@ -110,7 +111,7 @@ describe("reset", () => {
 		expect(resolved.status).toBe(200);
 		expect(transport.messages).toHaveLength(1);
 		expect(transport.last?.to).toEqual([{ email: "jane@example.com" }]);
-		expect(transport.last?.email).toBeInstanceOf(ResetPasswordEmail);
+		expect(isComposedEmail(transport.last?.email, emails.resetPassword)).toBe(true);
 	});
 
 	test("completing a reset with a valid ticket signs in with the new password afterward", async () => {
