@@ -79,8 +79,8 @@ another origin, add that origin to `config/security-policy.ts`. API errors use t
 ## Before the first deploy
 
 1. Create the resources and put their ids in `cloudflare.config.ts`:
-   `bunx cf d1 create <name>`, `bunx cf kv namespace create <name>`, and
-   `bunx cf queues create <name>` (the `name` in `package.json`).
+   `bunx cf d1 create --name <name>`, `bunx cf kv namespaces create --title <name>`, and
+   `bunx cf queues create --queue-name <name>` (the `name` in `package.json`).
 2. Set every secret in `.env.example` with `bunx cf workers secrets update <NAME>`.
 3. Edit `config/constants.ts`: your domain, site name and description, and a `MAIL_FROM`
    address on a domain with Cloudflare Email Routing.

@@ -22,7 +22,7 @@ export default defineConfig({
 		triggers: [triggers.queue({ name: manifest.name })],
 		env: {
 			/**
-			 * The app's database. `cf d1 create <name>` prints the id to put here, where the
+			 * The app's database. `cf d1 create --name <name>` prints the id to put here, where the
 			 * `sdxc run db` commands read it; until then, `bun dev` runs on a local copy.
 			 */
 			DB: bindings.d1({ name: manifest.name, id: "00000000-0000-4000-8000-000000000000" }),
@@ -31,7 +31,7 @@ export default defineConfig({
 			 * Routing enabled, so set `MAIL_FROM` in `config/constants.ts` to one before deploying.
 			 */
 			EMAIL: bindings.sendEmail(),
-			/** Where the job dispatcher enqueues; `cf queues create <name>` before the first deploy. */
+			/** Where the job dispatcher enqueues; `cf queues create --queue-name <name>` before the first deploy. */
 			QUEUE: bindings.queue({ name: manifest.name }),
 			/**
 			 * 100 requests per minute per client address, across every route. The router's
@@ -39,7 +39,7 @@ export default defineConfig({
 			 */
 			RATE_LIMITER: bindings.rateLimit({ namespace: "1001", simple: { limit: 100, period: 60 } }),
 			/**
-			 * Visitors' sessions. `cf kv namespace create <name>` prints the id to put here; until
+			 * Visitors' sessions. `cf kv namespaces create --title <name>` prints the id to put here; until
 			 * then, `bun dev` keeps sessions in a local copy.
 			 */
 			SESSIONS: bindings.kv({ id: "00000000000000000000000000000000" }),

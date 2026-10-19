@@ -25,6 +25,14 @@ const LISTING_FIELDS = [
 	"peerDependencies",
 ] as const;
 
+/**
+ * Optional peers a package subpath imports at runtime: a project importing the subpath lists
+ * them itself, since installing the subpath's package leaves its optional peers out.
+ */
+const SUBPATH_PEERS: Readonly<Record<string, readonly string[]>> = {
+	"@sdxc/data-model/testing": ["@sdxc/sample"],
+};
+
 /** A file's path relative to the project root and its whole content. */
 export interface SourceText {
 	path: string;
@@ -40,7 +48,10 @@ export interface DependencyEdit {
 	added: Array<{ name: string; version: string }>;
 }
 
-/** Every `@sdxc/*` package `files` import, statically or dynamically, sorted. */
+/**
+ * Every `@sdxc/*` package `files` import, statically or dynamically, with the optional peers
+ * an imported subpath needs at runtime, sorted.
+ */
 export function importedPackages(files: readonly SourceText[]): string[] {
 	let names = new Set<string>();
 	for (let file of files) {
@@ -49,6 +60,7 @@ export function importedPackages(files: readonly SourceText[]): string[] {
 		for (let { specifier } of references.data) {
 			let name = scopedPackageOf(specifier);
 			if (name !== null) names.add(name);
+			for (let peer of SUBPATH_PEERS[specifier] ?? []) names.add(peer);
 		}
 	}
 	return [...names].sort();
