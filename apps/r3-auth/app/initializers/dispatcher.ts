@@ -15,10 +15,14 @@ import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
+import mailer from "@sdxc/mail/middleware/jobs";
 import { env } from "cloudflare:workers";
 
+import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
+import { queueEmail, transport } from "~/app/initializers/mail-transport";
 import jobs from "~/app/jobs";
 import registry from "~/app/models";
 
@@ -35,6 +39,13 @@ export const dispatcher = createJobDispatcher({
 	middleware: [
 		database(openDatabase),
 		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+		mailer({
+			transport,
+			from: MAIL_FROM,
+			replyTo: MAIL_REPLY_TO,
+			mail,
+			queue: queueEmail,
+		}),
 	] as const,
 	queue: cloudflare.queue(() => env.QUEUE),
 
@@ -58,8 +69,11 @@ export const dispatcher = createJobDispatcher({
  */
 dispatcher.map(jobs.cleanExpiredSessions, () => import("~/app/jobs/clean-expired-sessions"));
 
+/** Delivers what `ctx.email.queue()` enqueued, loaded only once a delivery arrives. */
+dispatcher.map(jobs.email, () => import("~/app/jobs/email"));
+
 declare module "@sdxc/jobs" {
-	/** Types every job handler's `ctx` with what the dispatcher's middleware publishes: `ctx.db` and `ctx.models`. */
+	/** Types every job handler's `ctx` with what the dispatcher's middleware publishes: `ctx.db`, `ctx.models` and `ctx.email`. */
 	interface JobTypes {
 		context: JobDispatcherContext<typeof dispatcher>;
 	}

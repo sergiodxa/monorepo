@@ -121,6 +121,13 @@ describe("the new-sign-in notice", () => {
 		let response = await credentialSignIn();
 
 		expect(response.status).toBe(303);
+		expect(app.queued).toEqual([
+			{
+				email: emails.newSignIn.name,
+				to: EMAIL,
+				props: { browser: "Chrome", os: "macOS", deviceType: "desktop", ip: CLIENT_IP },
+			},
+		]);
 		expect(app.mail.messages).toHaveLength(1);
 
 		let message = app.mail.last!;
@@ -217,9 +224,9 @@ describe("the new-sign-in notice", () => {
 	});
 
 	/**
-	 * The notice is flushed after the response is produced, so a delivery refusal
-	 * cannot reach the response, and the session the sign-in opened is never rolled
-	 * back over a mail failure.
+	 * The notice is delivered by the `email` job, so a delivery refusal is that job's to
+	 * retry and never reaches the response, and the session the sign-in opened is never
+	 * rolled back over a mail failure.
 	 */
 	test("completes the sign-in even when the provider refuses the message", async () => {
 		app = await createTestApp({ mailTransport: refusingTransport() });

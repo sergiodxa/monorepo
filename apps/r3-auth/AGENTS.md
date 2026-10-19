@@ -209,7 +209,8 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 ## Operational Notes
 
 - The worker is the `auth` queue's single consumer and owns the midnight cron that feeds
-  it; `auth-dlq` catches a sweep that spends its three deliveries. Adding or renaming a cron
+  it, and every email is a `ctx.email.queue()` delivery the `email` job sends from that queue;
+  `auth-dlq` catches a sweep or an email that spends its three deliveries. Adding or renaming a cron
   means changing both `cloudflare.config.ts` and the job's schedule, which
   `app/initializers/dispatcher.test.ts` keeps in step.
 - Bindings and secrets live in `cloudflare.config.ts`. A secret declared there with

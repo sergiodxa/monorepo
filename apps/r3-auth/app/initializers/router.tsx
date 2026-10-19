@@ -8,7 +8,7 @@
  */
 
 import type { Billing } from "@sdxc/billing";
-import type { Transport } from "@sdxc/mail";
+import type { QueuedEmail, Transport } from "@sdxc/mail";
 import type { Database as DataTable } from "remix/data-table";
 import type { RouterContext } from "remix/router";
 
@@ -42,7 +42,7 @@ import { openDatabase } from "~/app/initializers/database";
 import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
-import { createMailTransport } from "~/app/initializers/mail-transport";
+import { queueEmail, transport } from "~/app/initializers/mail-transport";
 import { createRateLimiters } from "~/app/initializers/rate-limiters";
 import registry from "~/app/models";
 import routes from "~/routes/web";
@@ -82,6 +82,8 @@ export interface WebRouterOptions {
 	limiters?: Limiters;
 	/** How mail leaves the worker; defaults to this worker's own transport. */
 	mailTransport?: Transport;
+	/** Where `ctx.email.queue()` hands a delivery; defaults to this worker's `email` job. */
+	mailQueue?: (delivery: QueuedEmail) => Promise<void>;
 }
 
 /**
@@ -115,10 +117,11 @@ export function createWebRouter(options: WebRouterOptions) {
 				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
 			}),
 			mailer({
-				transport: () => options.mailTransport ?? createMailTransport(),
+				transport: options.mailTransport ?? transport,
 				from: MAIL_FROM,
 				replyTo: MAIL_REPLY_TO,
 				mail,
+				queue: options.mailQueue ?? queueEmail,
 			}),
 			cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
 			assets(assetResolver, {

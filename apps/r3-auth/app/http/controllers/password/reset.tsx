@@ -262,7 +262,13 @@ export default createController(routes.password.reset, {
 
 			unsetTokens();
 
-			ctx.email.later(emails.passwordChanged, { to: subject.email_address, props: {} });
+			let queued = await ctx.email.queue(emails.passwordChanged, {
+				to: subject.email_address,
+				props: {},
+			});
+			if (isFailure(queued)) {
+				ctx.log.warn("password_reset.notice_not_queued", { error: queued.error.message });
+			}
 
 			ctx.log.set({ sessions: { revoked } });
 			ctx.log.note("password_reset.completed");

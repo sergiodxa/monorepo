@@ -52,8 +52,8 @@ this app only.
 | D1 Database  | `DB`                      | Subjects, credentials, connections, sessions, clients and grants           |
 | KV           | `KV`                      | Browser sessions, authorization codes, and the API's client/subject caches |
 | R2           | `R2`                      | The ES256 signing key pair behind every issued token and the JWKS          |
-| Queue        | `QUEUE`                   | Enqueues the daily expired-session sweep this worker consumes              |
-| Queue        | `DLQ`                     | Dead-letter queue for sweeps that spent their three deliveries             |
+| Queue        | `QUEUE`                   | Enqueues the expired-session sweep and every email this worker consumes    |
+| Queue        | `DLQ`                     | Dead-letter queue for jobs that spent their three deliveries               |
 | Secrets      | `POLAR_ACCESS_TOKEN`      | Secrets Store token for mirroring a new subject into Polar                 |
 | Email        | `EMAIL`                   | Every transactional message, including the new-sign-in notice              |
 | Rate limiter | `TOKEN_RATE_LIMITER`      | `/oauth/token`, 20 requests / 60s                                          |
@@ -66,9 +66,9 @@ Observability is enabled. `nodejs_compat` is on, because the JWT and billing dep
 reach for Node built-ins.
 
 The worker owns the `auth` queue's single consumer slot and the daily cron that feeds it:
-the cron enqueues the expired-session sweep at midnight UTC, `QUEUE` publishes it, and the
-`queue` handler in `bootstrap/worker.ts` answers it. A message that spends its three
-deliveries lands in `auth-dlq`, which this worker also consumes so the body is recorded and
+the cron enqueues the expired-session sweep at midnight UTC, `ctx.email.queue()` enqueues
+each email, `QUEUE` publishes both, and the `queue` handler in `bootstrap/worker.ts` answers
+them. A message that spends its three deliveries lands in `auth-dlq`, which this worker also consumes so the body is recorded and
 acked; `DLQ` writes an unreadable body there directly.
 
 ### Email
@@ -84,9 +84,11 @@ Every email is declared in `app/emails/index.ts` with the schema of its props, r
 template per file beside it, and mapped onto the registry in `app/initializers/mail.ts`. A
 request sends through `ctx.email`, published by `@sdxc/mail`'s middleware in
 `app/initializers/router.tsx` over the `EMAIL` transport in `app/initializers/mail-transport.ts`:
-`ctx.email.later(emails.verifyEmail, { to, props })`. Its `later()` queue is flushed after the
-response, so a failed send is logged and cannot change what the person sees. The command line
-shares the registry and prints each message to stderr.
+`await ctx.email.queue(emails.verifyEmail, { to, props })`. That hands the delivery to the
+`email` job in `app/jobs/email.ts`, which sends it through the same registry and sender with
+the queue's three deliveries, so a provider outage delays a message instead of losing it and
+a failed send cannot change what the person sees. The command line shares the registry and
+prints each message to stderr.
 
 The sender identity lives in `app/emails/sender.ts`:
 `Auth <no-reply@auth.sergiodxa.com>`, replies to `hello@sergiodxa.com`. It is **not** an
@@ -140,7 +142,7 @@ written inside the shared card in `app/emails/layout.tsx`.
   answering a client about the subjects who authorized it.
 - **New-sign-in notice**: every authentication that opens a session mails the subject the
   browser, system, device class and address it came from, with a link to the device list.
-  It is queued rather than awaited, so a failed send cannot fail a sign-in, and it carries
+  It is delivered by the `email` job, so a failed send cannot fail a sign-in, and it carries
   no token of any kind. Authorizing another client from a browser that is already signed in
   sends nothing: nobody authenticated on that path.
 - **Rate limiting** on every token, authorization and login endpoint (see below).

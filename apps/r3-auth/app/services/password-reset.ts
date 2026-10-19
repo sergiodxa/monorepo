@@ -128,13 +128,21 @@ export async function requestPasswordReset(ctx: AppContext, email: string): Prom
 		);
 		await env.KV.put(latestKey, tokenDigest, { expirationTtl: ttlSeconds });
 
-		ctx.email.later(emails.resetPassword, {
+		let queued = await ctx.email.queue(emails.resetPassword, {
 			to: subject.email_address,
 			props: {
 				url: resetUrl(token),
 				minutes: Math.round(PASSWORD_RESET_TTL / toMs("1 minute")),
 			},
 		});
+		if (isFailure(queued)) {
+			await env.KV.delete(cooldownKey);
+			ctx.log.warn("password_reset.not_queued", {
+				subject_id: subject.id,
+				error: queued.error.message,
+			});
+			return;
+		}
 
 		ctx.log.set({ subject: { id: subject.id } });
 		ctx.log.note("password_reset.requested");

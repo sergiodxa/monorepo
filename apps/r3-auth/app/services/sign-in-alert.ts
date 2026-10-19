@@ -1,16 +1,18 @@
 /**
  * Dispatch of the new-sign-in notice: reads the subject the session was opened for,
  * reduces the request's user-agent and address to the labels the notice reports, and
- * queues the message for after the response.
+ * hands the message to the `email` job, which delivers it with the queue's retries.
  *
  * Kept as one module so every login controller shares it: a sign-in that mails
  * nobody is invisible, and drift between call sites is how one of them quietly
- * stops mailing. Every step here runs inside a `try`, with the send deferred and
+ * stops mailing. Every step here runs inside a `try`, with the send queued and
  * both outcomes recorded on the request's log, so nothing here can fail a sign-in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { isFailure } from "@sdxc/result";
 
 import type { AppContext } from "~/app/initializers/router";
 
@@ -36,7 +38,7 @@ export async function notifyNewSignIn(ctx: AppContext, subjectId: string): Promi
 
 		let ua = describeUserAgent(ctx.request.headers.get("user-agent"));
 
-		ctx.email.later(emails.newSignIn, {
+		let queued = await ctx.email.queue(emails.newSignIn, {
 			to: subject.email_address,
 			props: {
 				browser: ua.browser,
@@ -45,6 +47,14 @@ export async function notifyNewSignIn(ctx: AppContext, subjectId: string): Promi
 				ip: ctx.ip?.toString() ?? null,
 			},
 		});
+
+		if (isFailure(queued)) {
+			ctx.log.warn("sign_in_alert.not_queued", {
+				subject_id: subjectId,
+				error: queued.error.message,
+			});
+			return;
+		}
 
 		ctx.log.note("sign_in_alert.queued");
 	} catch (error) {

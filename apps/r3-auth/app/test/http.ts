@@ -10,12 +10,16 @@
  */
 
 import type { Billing } from "@sdxc/billing";
-import type { Transport } from "@sdxc/mail";
+import type { QueuedEmail, Transport } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createKVNamespace, createR2Bucket, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { createJobContext } from "@sdxc/jobs";
+import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
+import { wrap } from "@sdxc/result";
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { vi } from "vitest";
@@ -58,6 +62,12 @@ export interface TestAppOptions {
 	 * exercise a send path's behaviour when delivery is refused.
 	 */
 	mailTransport?: Transport;
+	/**
+	 * Where `ctx.email.queue()` hands a delivery. Defaults to one that records it on
+	 * {@link TestApp.queued} and runs the `email` job; pass one that throws to exercise a
+	 * queue that refuses the delivery.
+	 */
+	mailQueue?: (delivery: QueuedEmail) => Promise<void>;
 }
 
 /** Secrets read from `env` at call time, given values no real provider would accept. */
@@ -98,10 +108,18 @@ async function loadModules() {
 		import("~/app/initializers/router"),
 		import("~/app/services/rate-limiters"),
 		import("~/app/test/models"),
-	]).then(([app, rateLimiters, testModels]) => ({
+		import("~/app/initializers/mail"),
+		import("~/app/emails/sender"),
+		import("~/app/jobs"),
+		import("~/app/jobs/email"),
+	]).then(([app, rateLimiters, testModels, mail, sender, jobs, emailJob]) => ({
 		createWebRouter: app.createWebRouter,
 		RateLimiters: rateLimiters.default,
 		createTestModels: testModels.createTestModels,
+		mail: mail.mail,
+		sender,
+		jobs: jobs.default,
+		emailJob: emailJob.default,
 	}));
 
 	return await modules;
@@ -113,6 +131,10 @@ let modules:
 			createWebRouter: (typeof import("~/app/initializers/router"))["createWebRouter"];
 			RateLimiters: (typeof import("~/app/services/rate-limiters"))["default"];
 			createTestModels: (typeof import("~/app/test/models"))["createTestModels"];
+			mail: (typeof import("~/app/initializers/mail"))["mail"];
+			sender: typeof import("~/app/emails/sender");
+			jobs: (typeof import("~/app/jobs"))["default"];
+			emailJob: (typeof import("~/app/jobs/email"))["default"];
 	  }>
 	| undefined;
 
@@ -140,6 +162,11 @@ export interface TestApp {
 	 * different transport.
 	 */
 	mail: MemoryTransport;
+	/**
+	 * Every delivery `ctx.email.queue()` handed the `email` job, in order. Each one is also run
+	 * through the real job handler at once, so {@link TestApp.mail} holds what the job sent.
+	 */
+	queued: QueuedEmail[];
 	/**
 	 * Sends a request through the router, carrying cookies from previous responses so a
 	 * session survives across calls.
@@ -194,7 +221,8 @@ export async function withUnreadableSigningKeys<T>(
  * middleware chain against storage it can read back.
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
-	let { createWebRouter, RateLimiters, createTestModels } = await loadModules();
+	let { createWebRouter, RateLimiters, createTestModels, mail, sender, jobs, emailJob } =
+		await loadModules();
 
 	let appKv = createKVNamespace();
 	let appR2 = createR2Bucket();
@@ -206,6 +234,30 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	let recorder = new MemoryTransport();
 	let mailTransport: Transport = options.mailTransport ?? recorder;
+
+	let queued: QueuedEmail[] = [];
+
+	/**
+	 * Stands in for the queue: records the delivery, then runs the `email` job on it with a
+	 * mailer over this instance's transport. The job's retry or give-up stays the job's, as on
+	 * a real queue, so a refused delivery never reaches the request that enqueued it.
+	 */
+	async function mailQueue(delivery: QueuedEmail): Promise<void> {
+		queued.push(delivery);
+		let ctx = createJobContext(jobs.email, {
+			id: `email-${queued.length}`,
+			attempts: 1,
+			input: delivery,
+		});
+		let mailer = new Mailer({
+			transport: mailTransport,
+			from: sender.MAIL_FROM,
+			replyTo: sender.MAIL_REPLY_TO,
+			mail,
+		});
+		ctx.set(CurrentMailer, mailer, { property: "email" });
+		await wrap(async () => await emailJob(ctx));
+	}
 
 	let limiters = new RateLimiters({
 		token: createRateLimit({ limit: options.limits?.token ?? DEFAULT_RATE_LIMIT }),
@@ -225,6 +277,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 		db,
 		limiters,
 		mailTransport,
+		mailQueue: options.mailQueue ?? mailQueue,
 	});
 	let cookies = new Map<string, string>();
 
@@ -236,6 +289,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 		r2: appR2,
 		billing,
 		mail: recorder,
+		queued,
 		resetCookies() {
 			cookies.clear();
 		},

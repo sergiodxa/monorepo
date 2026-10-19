@@ -165,10 +165,18 @@ export async function sendVerificationEmail(
 
 		await env.KV.put(cooldownKey, "1", { expirationTtl: VERIFICATION_TTL_SECONDS });
 
-		ctx.email.later(emails.verifyEmail, {
+		let queued = await ctx.email.queue(emails.verifyEmail, {
 			to: subject.email_address,
 			props: { url: verificationUrl(token), expiresInMinutes: VERIFICATION_TTL_MINUTES },
 		});
+		if (isFailure(queued)) {
+			await env.KV.delete(cooldownKey);
+			ctx.log.warn("email_verification.not_queued", {
+				subject_id: subject.id,
+				error: queued.error.message,
+			});
+			return "failed";
+		}
 
 		ctx.log.note("email_verification.queued");
 

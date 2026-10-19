@@ -186,6 +186,31 @@ describe("sending the verification email", () => {
 		expect(message!.subject).toBe("Confirm your email address");
 	});
 
+	test("hands the message to the email job with its recipient and link", async () => {
+		await credentialSignIn();
+
+		expect(app.queued).toContainEqual({
+			email: emails.verifyEmail.name,
+			to: EMAIL,
+			props: {
+				url: expect.stringMatching(/^https:\/\/auth\.sergiodxa\.com\/verify-email\?token=/),
+				expiresInMinutes: 5,
+			},
+		});
+	});
+
+	test("releases the resend window when the queue refuses the delivery", async () => {
+		app = await createTestApp({
+			mailQueue: () => Promise.reject(new Error("The queue is unavailable")),
+		});
+		fixtures = await seed(app, { emailVerified: false });
+
+		let response = await credentialSignIn();
+
+		expect(response.status).toBe(303);
+		expect((await app.kv.list({ prefix: "email-verification-cooldown:" })).keys).toHaveLength(0);
+	});
+
 	test("mails nothing when the address is already verified", async () => {
 		app = await createTestApp();
 		fixtures = await seed(app);

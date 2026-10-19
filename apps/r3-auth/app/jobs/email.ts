@@ -1,0 +1,21 @@
+/**
+ * Delivers a queued email. A delivery no retry can send (an email nothing maps, props its
+ * schema refuses) ends here; any other failure, such as the provider being down, is retried
+ * by the queue until its dead-letter queue records it.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import { createJobHandler } from "@sdxc/jobs";
+import { EmailRefusedError } from "@sdxc/mail";
+import { isFailure } from "@sdxc/result";
+
+import jobs from "~/app/jobs";
+
+export default createJobHandler(jobs.email, async (ctx) => {
+	ctx.log.set({ job: { name: "email" }, mail: { email: ctx.input.email } });
+	let sent = await ctx.email.deliver(ctx.input);
+	if (isFailure(sent) && sent.error instanceof EmailRefusedError) ctx.exit(sent.error.message);
+	if (isFailure(sent)) ctx.retry({ cause: sent.error });
+});

@@ -8,6 +8,7 @@
  */
 
 import { job, jobs } from "@sdxc/jobs";
+import { EMAIL_DELIVERY } from "@sdxc/mail";
 
 /** What a job a cron monitor watches declares, so every one of them spells it the same way. */
 interface Monitored {
@@ -24,4 +25,11 @@ export default jobs({
 		cron: "0 0 * * *",
 		meta: { monitorId: "74f508a2-e6e9-4f01-8c25-2884330e7870" } satisfies Monitored,
 	}),
+
+	/**
+	 * Delivers what `ctx.email.queue()` handed the queue, for every declared email. The
+	 * queue's retries and dead-letter queue cover it, so a provider outage delays a message
+	 * instead of losing it.
+	 */
+	email: job({ input: EMAIL_DELIVERY }),
 });

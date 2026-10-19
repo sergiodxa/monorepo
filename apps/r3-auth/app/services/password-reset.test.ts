@@ -169,6 +169,16 @@ describe("requesting a password reset", () => {
 		let response = await requestReset(EMAIL);
 
 		expect(response.status).toBe(200);
+		expect(app.queued).toEqual([
+			{
+				email: emails.resetPassword.name,
+				to: EMAIL,
+				props: {
+					url: expect.stringMatching(/^https:\/\/auth\.sergiodxa\.com\/password\/reset\?token=/),
+					minutes: 30,
+				},
+			},
+		]);
 		expect(app.mail.messages).toHaveLength(1);
 
 		let message = app.mail.last!;
@@ -177,6 +187,18 @@ describe("requesting a password reset", () => {
 		expect(message.from).toEqual({ email: "no-reply@auth.sergiodxa.com", name: "Auth" });
 		expect(message.subject).toBe("Reset your password");
 		expect(message.html).toContain("https://auth.sergiodxa.com/password/reset?token=");
+	});
+
+	test("releases the cooldown when the queue refuses the delivery", async () => {
+		app = await createTestApp({
+			mailQueue: () => Promise.reject(new Error("The queue is unavailable")),
+		});
+		fixtures = await seed(app);
+
+		let response = await requestReset(EMAIL);
+
+		expect(response.status).toBe(200);
+		expect(await keysUnder("password-reset-cooldown:")).toHaveLength(0);
 	});
 
 	test("answers an unknown address with the identical page and sends nothing", async () => {
@@ -518,6 +540,12 @@ describe("completing a reset", () => {
 
 	test("notifies the subject that the password changed", async () => {
 		await completeReset();
+
+		expect(app.queued).toContainEqual({
+			email: emails.passwordChanged.name,
+			to: EMAIL,
+			props: {},
+		});
 
 		let notice = app.mail.messages.find((message) =>
 			isComposedEmail(message.email, emails.passwordChanged),

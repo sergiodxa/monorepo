@@ -41,8 +41,8 @@ export default defineConfig(({ mode }) => ({
 			triggers.scheduled({ schedule: "0 0 * * *" }),
 			/**
 			 * A Cloudflare queue has exactly one consumer, so this worker owns the role. Three
-			 * deliveries are the sweep's whole budget; a message that spends them lands in
-			 * `auth-dlq`, so a failing night leaves a record.
+			 * deliveries are each job's whole budget, the sweep's and every email's; a message
+			 * that spends them lands in `auth-dlq`, so a failure leaves a record.
 			 */
 			triggers.queue({ name: "auth", deadLetterQueue: "auth-dlq", maxRetries: 3 }),
 			/** Consumes the dead-letter queue so what `auth` gave up on is recorded and acked. */
@@ -56,7 +56,7 @@ export default defineConfig(({ mode }) => ({
 			 * read the same file, or tokens stop verifying against the published JWKS.
 			 */
 			R2: bindings.r2({ name: "auth" }),
-			/** Publishes the daily sweep the cron enqueues onto the queue this worker consumes. */
+			/** Publishes the daily sweep and every queued email onto the queue this worker consumes. */
 			QUEUE: bindings.queue({ name: "auth" }),
 			/**
 			 * Writes a body the dispatcher can never read straight to the dead-letter queue, so
