@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isComposedEmail } from "@sdxc/mail";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -20,7 +21,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { TestApp } from "~/app/test/http";
 import type { Fixtures } from "~/app/test/seed";
 
-import { VerifyEmailEmail } from "~/app/emails/verify-email";
+import emails from "~/app/emails";
 import { createTestApp } from "~/app/test/http";
 import { authorizeUrl, EMAIL, ORIGIN, PASSWORD, seed, signIn } from "~/app/test/seed";
 import { sessions, subjects } from "~/database/schema";
@@ -119,7 +120,9 @@ async function githubSignIn(): Promise<Response> {
  * and the wrong message being sent does.
  */
 function lastVerification() {
-	return app.mail.messages.filter((message) => message.email instanceof VerifyEmailEmail).at(-1);
+	return app.mail.messages
+		.filter((message) => isComposedEmail(message.email, emails.verifyEmail))
+		.at(-1);
 }
 
 /** The token out of the most recent verification message's link. */

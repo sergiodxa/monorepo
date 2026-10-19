@@ -8,50 +8,41 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { VerifyEmailEmail } from "~/app/emails/verify-email";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
 const URL_UNDER_TEST = "https://auth.sergiodxa.com/verify-email?token=abc123";
 
-/** Builds the message with everything held fixed. */
-async function build(): Promise<VerifyEmailEmail> {
-	let { locale, t } = emailTranslator();
-
-	return new VerifyEmailEmail({
-		email: "jane@example.com",
-		url: URL_UNDER_TEST,
-		expiresInMinutes: 5,
-		locale,
-		t,
+/** Renders the message with everything held fixed. */
+async function build() {
+	let rendered = await mail.render(emails.verifyEmail, {
+		props: { url: URL_UNDER_TEST, expiresInMinutes: 5 },
 	});
+
+	return unwrap(rendered);
 }
 
 describe("the verification message", () => {
-	test("is addressed to the address it confirms, and to nowhere else", async () => {
-		expect((await build()).to).toEqual({ email: "jane@example.com" });
-	});
-
 	test("carries the link in both body parts", async () => {
-		let { html, text } = await render((await build()).body());
+		let { html, text } = await build();
 
 		expect(html).toContain(URL_UNDER_TEST);
 		expect(text).toContain(URL_UNDER_TEST);
 	});
 
-	test("quotes the lifetime it was constructed with", async () => {
-		let { text } = await render((await build()).body());
+	test("quotes the lifetime it was rendered with", async () => {
+		let { text } = await build();
 
 		expect(text).toContain("5 minutes");
 	});
 
 	test("renders no locale key, so every string it asks for exists", async () => {
-		let email = await build();
-		let { text } = await render(email.body());
+		let { subject, text } = await build();
 
-		expect(email.subject).toBe("Confirm your email address");
+		expect(subject).toBe("Confirm your email address");
 		expect(text).not.toContain("emails.verifyEmail");
 		expect(text).not.toContain("emails.footer");
 	});

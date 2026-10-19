@@ -10,6 +10,7 @@
  */
 
 import { password } from "@sdxc/crypto";
+import { isComposedEmail } from "@sdxc/mail";
 import { unwrap } from "@sdxc/result";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -17,8 +18,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { TestApp } from "~/app/test/http";
 import type { Fixtures } from "~/app/test/seed";
 
-import { PasswordChangedEmail } from "~/app/emails/password-changed";
-import { ResetPasswordEmail } from "~/app/emails/reset-password";
+import emails from "~/app/emails";
 import { createTestApp } from "~/app/test/http";
 import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/test/pwned-passwords";
 import { authorizeUrl, EMAIL, ORIGIN, PASSWORD, seed } from "~/app/test/seed";
@@ -172,7 +172,7 @@ describe("requesting a password reset", () => {
 		expect(app.mail.messages).toHaveLength(1);
 
 		let message = app.mail.last!;
-		expect(message.email).toBeInstanceOf(ResetPasswordEmail);
+		expect(isComposedEmail(message.email, emails.resetPassword)).toBe(true);
 		expect(message.to).toEqual([{ email: EMAIL }]);
 		expect(message.from).toEqual({ email: "no-reply@auth.sergiodxa.com", name: "Auth" });
 		expect(message.subject).toBe("Reset your password");
@@ -519,7 +519,9 @@ describe("completing a reset", () => {
 	test("notifies the subject that the password changed", async () => {
 		await completeReset();
 
-		let notice = app.mail.messages.find((message) => message.email instanceof PasswordChangedEmail);
+		let notice = app.mail.messages.find((message) =>
+			isComposedEmail(message.email, emails.passwordChanged),
+		);
 
 		expect(notice).toBeDefined();
 		expect(notice!.to).toEqual([{ email: EMAIL }]);

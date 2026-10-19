@@ -10,66 +10,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
-import type { Address, Email as EmailContract } from "@sdxc/mail";
-import type { RemixElement } from "remix/component";
+import { createEmail, Email } from "@sdxc/mail";
 
-import { Email } from "@sdxc/mail";
-
+import emails from "~/app/emails";
 import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
 
-export namespace ResetPasswordEmail {
-	/** Everything the message needs, all of it decided when the reset was issued. */
-	export interface Data {
-		/** The subject's own address, the only recipient a recovery link has. */
-		email: string;
-		/** Absolute URL of the reset form, carrying the single-use token. */
-		url: string;
-		/** How many minutes the link stays usable, so the copy states its own deadline. */
-		minutes: number;
-		/** Language the copy is produced in, recorded beside the translator it came from. */
-		locale: string;
-		/** Translator already bound to {@link locale} by the sender. */
-		t: Translate;
-	}
-}
-
 /**
- * Offers a subject a way back into their account.
- *
- * @example await mailer.send(new ResetPasswordEmail({ email, url, minutes, locale, t }));
+ * Offers a subject a way back into their account. The deadline is a duration, which a
+ * reader in any time zone can act on directly, and the plain link is repeated under the
+ * button for clients that strip it and readers who check where a link goes.
  */
-export class ResetPasswordEmail implements EmailContract {
-	/** The issued reset this message was built from; rendering reads only from here. */
-	#reset: ResetPasswordEmail.Data;
-
-	/**
-	 * Creates the message.
-	 *
-	 * @param reset - Where it goes, the link it carries, how long that link lives, and the
-	 *   language to write it in.
-	 */
-	constructor(reset: ResetPasswordEmail.Data) {
-		this.#reset = reset;
-	}
-
-	/** The address the reset was requested for, which is the only place it may be sent. */
-	get to(): Address {
-		return { email: this.#reset.email };
-	}
-
-	/** Subject in the language the message was constructed for. */
-	get subject(): string {
-		return this.#reset.t("emails.resetPassword.subject");
-	}
-
-	/**
-	 * Body tree the mailer renders into both parts. The deadline is a duration, which a
-	 * reader in any time zone can act on directly, and the plain link is repeated under the
-	 * button for clients that strip it and readers who check where a link goes.
-	 */
-	body(): RemixElement {
-		let { t, locale, url, minutes } = this.#reset;
+export default createEmail(emails.resetPassword, {
+	subject: ({ t }) => t("emails.resetPassword.subject"),
+	body: (handle) => () => {
+		let { t, locale, url, minutes } = handle.props;
 
 		return (
 			<EmailLayout
@@ -90,5 +44,6 @@ export class ResetPasswordEmail implements EmailContract {
 				<Email.Text muted>{t("emails.resetPassword.unexpected")}</Email.Text>
 			</EmailLayout>
 		);
-	}
-}
+	},
+	preview: () => ({ url: "https://auth.sergiodxa.com/password/reset?token=preview", minutes: 30 }),
+});

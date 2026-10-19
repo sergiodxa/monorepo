@@ -20,8 +20,7 @@ import { createController } from "remix/router";
 
 import type { AppContext } from "~/app/initializers/router";
 
-import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
-import { PasswordChangedEmail } from "~/app/emails/password-changed";
+import emails from "~/app/emails";
 import { unsetTokens } from "~/app/http/middleware/session";
 import { ResetPasswordSchema, ResetTokenQuerySchema } from "~/app/http/validators/password";
 import { createOidcProvider } from "~/app/models/oidc-storage";
@@ -263,13 +262,7 @@ export default createController(routes.password.reset, {
 
 			unsetTokens();
 
-			ctx.email.later(
-				new PasswordChangedEmail({
-					email: subject.email_address,
-					locale: DEFAULT_EMAIL_LOCALE,
-					t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
-				}),
-			);
+			ctx.email.later(emails.passwordChanged, { to: subject.email_address, props: {} });
 
 			ctx.log.set({ sessions: { revoked } });
 			ctx.log.note("password_reset.completed");

@@ -13,7 +13,7 @@ import { Database, database } from "@sdxc/database-middleware/cli";
 import i18n from "@sdxc/i18n/middleware/cli";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
-import mail from "@sdxc/mail/middleware/cli";
+import mailer from "@sdxc/mail/middleware/cli";
 import { PrintTransport } from "@sdxc/mail/print";
 import { trace } from "@sdxc/trace-context/middleware/cli";
 
@@ -22,6 +22,7 @@ import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { openLocalDatabase } from "~/app/initializers/local-database";
 import { logger } from "~/app/initializers/logger";
+import { mail } from "~/app/initializers/mail";
 import registry from "~/app/models";
 
 import manifest from "../../package.json" with { type: "json" };
@@ -48,10 +49,11 @@ export const cli = createCLI({
 		trace(),
 		database(openLocalDatabase),
 		models(registry, (ctx) => ({ db: ctx.require(Database) })),
-		mail({
+		mailer({
 			transport: (ctx) => new PrintTransport({ write: (text) => ctx.stderr(text) }),
 			from: MAIL_FROM,
 			replyTo: MAIL_REPLY_TO,
+			mail,
 		}),
 		i18n({
 			resources: RESOURCES,

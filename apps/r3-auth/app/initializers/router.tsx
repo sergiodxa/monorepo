@@ -20,7 +20,7 @@ import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
-import mail from "@sdxc/mail/middleware";
+import mailer from "@sdxc/mail/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -39,7 +39,8 @@ import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
-import { createMailTransport } from "~/app/initializers/mail";
+import { mail } from "~/app/initializers/mail";
+import { createMailTransport } from "~/app/initializers/mail-transport";
 import { createRateLimiters } from "~/app/initializers/rate-limiters";
 import registry from "~/app/models";
 import routes from "~/routes/web";
@@ -106,10 +107,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			),
 			i18n,
 			billing({ provider: options.billing ?? polar }),
-			mail({
+			mailer({
 				transport: () => options.mailTransport ?? createMailTransport(),
 				from: MAIL_FROM,
 				replyTo: MAIL_REPLY_TO,
+				mail,
 			}),
 			cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
 			assets(assetResolver, {

@@ -14,12 +14,11 @@
 
 import type { AppContext } from "~/app/initializers/router";
 
-import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
-import { NewSignInEmail } from "~/app/emails/new-sign-in";
+import emails from "~/app/emails";
 import { describeUserAgent } from "~/app/http/view-models/account-session";
 
 /**
- * The copy stays in {@link DEFAULT_EMAIL_LOCALE}, since its reader may be a
+ * The copy is written in the app's fallback language, since its reader may be a
  * stranger to the sign-in. The log carries only the subject id, since the
  * address is the person.
  *
@@ -37,17 +36,15 @@ export async function notifyNewSignIn(ctx: AppContext, subjectId: string): Promi
 
 		let ua = describeUserAgent(ctx.request.headers.get("user-agent"));
 
-		ctx.email.later(
-			new NewSignInEmail({
-				email: subject.email_address,
+		ctx.email.later(emails.newSignIn, {
+			to: subject.email_address,
+			props: {
 				browser: ua.browser,
 				os: ua.os,
 				deviceType: ua.deviceType,
 				ip: ctx.ip?.toString() ?? null,
-				locale: DEFAULT_EMAIL_LOCALE,
-				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
-			}),
-		);
+			},
+		});
 
 		ctx.log.note("sign_in_alert.queued");
 	} catch (error) {

@@ -79,14 +79,13 @@ because every message goes to a subject's own address, so the recipient set is t
 each turn an ordinary send into a refusal at send time. `dev: { remote: true }` means a `bun dev`
 send is a **real** send, which bills and delivers like production.
 
-Mail is sent through two mailers over the same transport, opened once in
-`app/initializers/mail.ts`:
-
-- **request-scoped** — `ctx.email`, published by `@sdxc/mail`'s middleware in
-  `app/initializers/router.tsx`. Its `later()` queue is flushed after the response, so a
-  failed send is logged and cannot change what the person sees.
-- **background** — `createMailer()` from `app/initializers/mail.ts`, for a queue message or a
-  scheduled sweep, where there is no request and therefore no `ctx.email`.
+Every email is declared in `app/emails/index.ts` with the schema of its props, rendered by one
+template per file beside it, and mapped onto the registry in `app/initializers/mail.ts`. A
+request sends through `ctx.email`, published by `@sdxc/mail`'s middleware in
+`app/initializers/router.tsx` over the `EMAIL` transport in `app/initializers/mail-transport.ts`:
+`ctx.email.later(emails.verifyEmail, { to, props })`. Its `later()` queue is flushed after the
+response, so a failed send is logged and cannot change what the person sees. The command line
+shares the registry and prints each message to stderr.
 
 The sender identity lives in `app/emails/sender.ts`:
 `Auth <no-reply@auth.sergiodxa.com>`, replies to `hello@sergiodxa.com`. It is **not** an

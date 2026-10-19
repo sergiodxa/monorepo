@@ -7,6 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createTranslator } from "@sdxc/i18n";
+import { currentLog } from "@sdxc/logger";
+
 import en from "~/resources/locales/en";
 
 /** The languages a page can render in; a request asking for any other gets the fallback. */
@@ -17,3 +20,17 @@ export const FALLBACK_LANGUAGE = "en";
 
 /** The message bundles, one per supported language, as MessageFormat 2 strings. */
 export const RESOURCES = { en };
+
+/**
+ * Translates outside a request, such as in an email, into the reader's language. An
+ * unsupported language binds the fallback, and a broken message is logged on the
+ * invocation's log and renders as its key.
+ */
+export const translate = createTranslator({
+	resources: RESOURCES,
+	supportedLanguages: SUPPORTED_LANGUAGES,
+	fallbackLanguage: FALLBACK_LANGUAGE,
+	onError(error, key) {
+		currentLog()?.warn("i18n.error", { key, type: error.name, message: error.message });
+	},
+});

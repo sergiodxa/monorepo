@@ -17,8 +17,7 @@ import { env } from "cloudflare:workers";
 
 import type { AppContext } from "~/app/initializers/router";
 
-import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
-import { ResetPasswordEmail } from "~/app/emails/reset-password";
+import emails from "~/app/emails";
 import { PasswordResetRecordSchema } from "~/app/http/validators/password";
 import { ISSUER_HOST } from "~/config/oidc";
 import routes from "~/routes/web";
@@ -129,15 +128,13 @@ export async function requestPasswordReset(ctx: AppContext, email: string): Prom
 		);
 		await env.KV.put(latestKey, tokenDigest, { expirationTtl: ttlSeconds });
 
-		ctx.email.later(
-			new ResetPasswordEmail({
-				email: subject.email_address,
+		ctx.email.later(emails.resetPassword, {
+			to: subject.email_address,
+			props: {
 				url: resetUrl(token),
 				minutes: Math.round(PASSWORD_RESET_TTL / toMs("1 minute")),
-				locale: DEFAULT_EMAIL_LOCALE,
-				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
-			}),
-		);
+			},
+		});
 
 		ctx.log.set({ subject: { id: subject.id } });
 		ctx.log.note("password_reset.requested");

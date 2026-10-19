@@ -15,7 +15,7 @@
 import type { SentMessage } from "@sdxc/mail";
 import type { Result } from "@sdxc/result";
 
-import { MailError } from "@sdxc/mail";
+import { isComposedEmail, MailError } from "@sdxc/mail";
 import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -24,7 +24,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { TestApp } from "~/app/test/http";
 import type { Fixtures } from "~/app/test/seed";
 
-import { NewSignInEmail } from "~/app/emails/new-sign-in";
+import emails from "~/app/emails";
 import { createTestApp } from "~/app/test/http";
 import { authorizeUrl, EMAIL, ORIGIN, seed, signIn, submitSignIn } from "~/app/test/seed";
 import { sessions } from "~/database/schema";
@@ -124,7 +124,7 @@ describe("the new-sign-in notice", () => {
 		expect(app.mail.messages).toHaveLength(1);
 
 		let message = app.mail.last!;
-		expect(message.email).toBeInstanceOf(NewSignInEmail);
+		expect(isComposedEmail(message.email, emails.newSignIn)).toBe(true);
 		expect(message.to).toEqual([{ email: EMAIL }]);
 		expect(message.from).toEqual({ email: "no-reply@auth.sergiodxa.com", name: "Auth" });
 		expect(message.subject).toBe("New sign-in to your account");
@@ -171,7 +171,7 @@ describe("the new-sign-in notice", () => {
 		expect(response.status).toBe(303);
 		expect(app.mail.messages).toHaveLength(1);
 		expect(app.mail.last!.to).toEqual([{ email: GITHUB_PROFILE.email }]);
-		expect(app.mail.last!.email).toBeInstanceOf(NewSignInEmail);
+		expect(isComposedEmail(app.mail.last!.email, emails.newSignIn)).toBe(true);
 	});
 
 	/**

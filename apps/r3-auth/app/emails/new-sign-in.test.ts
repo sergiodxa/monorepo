@@ -7,31 +7,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { DeviceType } from "~/app/http/view-models/account-session";
 
-import { emailTranslator } from "~/app/emails/locale";
-import { NewSignInEmail } from "~/app/emails/new-sign-in";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-/** Builds the notice for one device class, with everything else held fixed. */
+/** Renders the notice's text for one device class, with everything else held fixed. */
 async function renderFor(deviceType: DeviceType, ip: string | null): Promise<string> {
-	let { locale, t } = emailTranslator();
-
-	let email = new NewSignInEmail({
-		email: "jane@example.com",
-		browser: "Firefox",
-		os: "Linux",
-		deviceType,
-		ip,
-		locale,
-		t,
+	let rendered = await mail.render(emails.newSignIn, {
+		props: { browser: "Firefox", os: "Linux", deviceType, ip },
 	});
 
-	let { text } = await render(email.body());
-
-	return text;
+	return unwrap(rendered).text;
 }
 
 describe("the new-sign-in notice", () => {

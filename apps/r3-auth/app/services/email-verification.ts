@@ -25,8 +25,7 @@ import type { AppContext } from "~/app/initializers/router";
 import type { AuthModels } from "~/app/models";
 import type { SelectSubject } from "~/database/schema";
 
-import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
-import { VerifyEmailEmail } from "~/app/emails/verify-email";
+import emails from "~/app/emails";
 import { ISSUER_HOST } from "~/config/oidc";
 import routes from "~/routes/web";
 
@@ -166,15 +165,10 @@ export async function sendVerificationEmail(
 
 		await env.KV.put(cooldownKey, "1", { expirationTtl: VERIFICATION_TTL_SECONDS });
 
-		ctx.email.later(
-			new VerifyEmailEmail({
-				email: subject.email_address,
-				url: verificationUrl(token),
-				expiresInMinutes: VERIFICATION_TTL_MINUTES,
-				locale: DEFAULT_EMAIL_LOCALE,
-				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
-			}),
-		);
+		ctx.email.later(emails.verifyEmail, {
+			to: subject.email_address,
+			props: { url: verificationUrl(token), expiresInMinutes: VERIFICATION_TTL_MINUTES },
+		});
 
 		ctx.log.note("email_verification.queued");
 

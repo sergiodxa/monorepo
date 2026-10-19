@@ -7,71 +7,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
-import type { Address, Email as EmailContract } from "@sdxc/mail";
-import type { RemixElement } from "remix/component";
+import { createEmail, Email } from "@sdxc/mail";
 
-import { Email } from "@sdxc/mail";
-
+import emails from "~/app/emails";
 import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
 
-export namespace VerifyEmailEmail {
-	/** Everything the message needs; nothing is loaded while it renders. */
-	export interface Data {
-		/** The address being confirmed, which is also the only address this may go to. */
-		email: string;
-		/** Absolute URL carrying the verification token, already built by the sender. */
-		url: string;
-		/** How many minutes the link stays usable, quoted in the copy. */
-		expiresInMinutes: number;
-		/** Language the copy is produced in, recorded beside the translator it came from. */
-		locale: string;
-		/** Translator already bound to {@link locale} by the sender. */
-		t: Translate;
-	}
-}
-
 /**
- * Asks a subject to confirm the address on their account.
- *
- * @example await mailer.send(new VerifyEmailEmail({ email, url, expiresInMinutes, locale, t }));
+ * Asks a subject to confirm the address on their account. The lifetime sits beside the
+ * button so a reader who returns to an expired link learns it has expired before clicking,
+ * and that same line tells them where a fresh one comes from.
  */
-export class VerifyEmailEmail implements EmailContract {
-	/** The request this message was built from; nothing is loaded while rendering. */
-	#verification: VerifyEmailEmail.Data;
-
-	/**
-	 * Creates the message.
-	 *
-	 * @param verification - The address to confirm, the link that confirms it, and the
-	 *   language to write it in.
-	 */
-	constructor(verification: VerifyEmailEmail.Data) {
-		this.#verification = verification;
-	}
-
-	/**
-	 * The address being confirmed.
-	 *
-	 * It is deliberately the same value the token was issued for: a message proving an
-	 * address that was delivered somewhere else proves nothing at all.
-	 */
-	get to(): Address {
-		return { email: this.#verification.email };
-	}
-
-	/** Subject in the language the message was constructed for. */
-	get subject(): string {
-		return this.#verification.t("emails.verifyEmail.subject");
-	}
-
-	/**
-	 * Body tree the mailer renders into both parts. The lifetime sits beside the button
-	 * so a reader who returns to an expired link learns it has expired before clicking,
-	 * and that same line tells them where a fresh one comes from.
-	 */
-	body(): RemixElement {
-		let { t, locale, url, expiresInMinutes } = this.#verification;
+export default createEmail(emails.verifyEmail, {
+	subject: ({ t }) => t("emails.verifyEmail.subject"),
+	body: (handle) => () => {
+		let { t, locale, url, expiresInMinutes } = handle.props;
 
 		return (
 			<EmailLayout
@@ -91,5 +40,9 @@ export class VerifyEmailEmail implements EmailContract {
 				<Email.Text muted>{t("emails.verifyEmail.ignore")}</Email.Text>
 			</EmailLayout>
 		);
-	}
-}
+	},
+	preview: () => ({
+		url: "https://auth.sergiodxa.com/verify-email?token=preview",
+		expiresInMinutes: 30,
+	}),
+});

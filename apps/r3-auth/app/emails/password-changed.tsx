@@ -11,64 +11,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Translate } from "@sdxc/i18n";
-import type { Address, Email as EmailContract } from "@sdxc/mail";
-import type { RemixElement } from "remix/component";
+import { createEmail, Email } from "@sdxc/mail";
 
-import { Email } from "@sdxc/mail";
-
+import emails from "~/app/emails";
 import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
 import { ISSUER_HOST } from "~/config/oidc";
 import routes from "~/routes/web";
 
-export namespace PasswordChangedEmail {
-	/** Everything the notice reports, deliberately kept to the address and the language. */
-	export interface Data {
-		/** The subject's own address, which is who the notice is addressed to. */
-		email: string;
-		/** Language the copy is produced in, recorded beside the translator it came from. */
-		locale: string;
-		/** Translator already bound to {@link locale} by the sender. */
-		t: Translate;
-	}
+/**
+ * Absolute URL of the sign-in entry point. Built from the typed route so it tracks the
+ * route table, and against the published issuer host because mail needs an absolute href.
+ * Following it only offers the ways in this server already offers.
+ */
+function signInUrl(): string {
+	return new URL(routes.authorize.index.href(), ISSUER_HOST).toString();
 }
 
 /**
- * Tells a subject that their password was changed and their sessions were ended.
- *
- * @example await mailer.send(new PasswordChangedEmail({ email, locale, t }));
+ * Tells a subject that their password was changed and their sessions were ended. The
+ * sign-out is reported as well as the change, because it is the part a reader notices on
+ * their other devices and an unexplained sign-out reads as a fault.
  */
-export class PasswordChangedEmail implements EmailContract {
-	/** The account this notice is about; rendering reads only from here. */
-	#account: PasswordChangedEmail.Data;
-
-	/**
-	 * Creates the notice.
-	 *
-	 * @param account - Where it goes and the language to write it in.
-	 */
-	constructor(account: PasswordChangedEmail.Data) {
-		this.#account = account;
-	}
-
-	/** The subject's own address, the only recipient a security notice has. */
-	get to(): Address {
-		return { email: this.#account.email };
-	}
-
-	/** Subject in the language the notice was constructed for. */
-	get subject(): string {
-		return this.#account.t("emails.passwordChanged.subject");
-	}
-
-	/**
-	 * Body tree the mailer renders into both parts.
-	 *
-	 * The sign-out is reported as well as the change, because it is the part a reader
-	 * notices on their other devices and an unexplained sign-out reads as a fault.
-	 */
-	body(): RemixElement {
-		let { t, locale } = this.#account;
+export default createEmail(emails.passwordChanged, {
+	subject: ({ t }) => t("emails.passwordChanged.subject"),
+	body: (handle) => () => {
+		let { t, locale } = handle.props;
 
 		return (
 			<EmailLayout
@@ -86,14 +53,6 @@ export class PasswordChangedEmail implements EmailContract {
 				<Email.Text muted>{t("emails.passwordChanged.unexpected")}</Email.Text>
 			</EmailLayout>
 		);
-	}
-}
-
-/**
- * Absolute URL of the sign-in entry point. Built from the typed route so it tracks the
- * route table, and against the published issuer host because mail needs an absolute href.
- * Following it only offers the ways in this server already offers.
- */
-function signInUrl(): string {
-	return new URL(routes.authorize.index.href(), ISSUER_HOST).toString();
-}
+	},
+	preview: () => ({}),
+});

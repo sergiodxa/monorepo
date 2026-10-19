@@ -1,34 +1,30 @@
 /**
- * Tests of the background mailer: a send path with no request behind it delivers through
- * the transport it was handed and carries the app's sender identity. The Workers bindings
- * are mocked before the module is imported so it reads them.
+ * The email registry: every declared email has a template mapped, so a send never fails for
+ * an email `sdxc make email` declared but nothing maps.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createEnv } from "@sdxc/cloudflare-mocks";
-import { MemoryTransport } from "@sdxc/mail/memory";
-import { describe, expect, test, vi } from "vitest";
+import type { AnyEmailDeclaration } from "@sdxc/mail";
 
-import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
+import { isEmailDeclaration } from "@sdxc/mail";
+import { describe, expect, test } from "vitest";
 
-vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}), waitUntil: () => {} }));
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-let { createMailer } = await import("~/app/initializers/mail");
+/** Every declaration in the map, walking its groups. */
+function declared(tree: object): AnyEmailDeclaration[] {
+	return Object.values(tree).flatMap((value: object) =>
+		isEmailDeclaration(value) ? [value] : declared(value),
+	);
+}
 
-describe("the background mailer", () => {
-	test("sends with the app's sender identity", async () => {
-		let transport = new MemoryTransport();
+describe("mail", () => {
+	test("maps a template for every declared email", () => {
+		let names = declared(emails).map((email) => email.name);
 
-		let result = await createMailer(transport).send({
-			to: { email: "jane@example.com" },
-			subject: "A subject",
-			html: "<p>A body.</p>",
-		});
-
-		expect(result.status).toBe("success");
-		expect(transport.last?.from).toEqual(MAIL_FROM);
-		expect(transport.last?.replyTo).toEqual([MAIL_REPLY_TO]);
+		expect(mail.mapped.map((email) => email.name).sort()).toEqual(names.sort());
 	});
 });

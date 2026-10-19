@@ -1,44 +1,40 @@
 /**
- * How mail leaves this worker, as one choice both mailers share: the request-scoped
- * mailer the mail middleware publishes as `ctx.email`, and the background one a send path
- * with no request behind it builds for itself. Swapping providers is one line here.
+ * The email registry: every email `app/emails/index.ts` declares, mapped onto its template
+ * through `lazy()`, so a send imports only the template it renders. It holds no transport, so
+ * the Worker's mailers and the command line share it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Transport } from "@sdxc/mail";
+import { createMail, lazy } from "@sdxc/mail";
 
-import { Mailer } from "@sdxc/mail";
-import { CloudflareTransport } from "@sdxc/mail/cloudflare";
-import { env } from "cloudflare:workers";
+import emails from "~/app/emails";
+import { translate } from "~/app/initializers/i18n";
 
-import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
+/** The registry the router, the job dispatcher and the command line hand their mailers. */
+export const mail = createMail({ translator: translate });
 
-/** The isolate's transport, opened by whichever send path reaches it first. */
-let transport: Transport | undefined;
+mail.map(
+	emails.newSignIn,
+	lazy(() => import("~/app/emails/new-sign-in")),
+);
+mail.map(
+	emails.passwordChanged,
+	lazy(() => import("~/app/emails/password-changed")),
+);
+mail.map(
+	emails.resetPassword,
+	lazy(() => import("~/app/emails/reset-password")),
+);
+mail.map(
+	emails.verifyEmail,
+	lazy(() => import("~/app/emails/verify-email")),
+);
 
-/**
- * Opens the transport every message is delivered through.
- *
- * @returns A transport bound to the `EMAIL` binding, shared by every mailer.
- * @example
- * mail({ transport: createMailTransport, from: MAIL_FROM });
- */
-export function createMailTransport(): Transport {
-	return (transport ??= new CloudflareTransport(env.EMAIL));
-}
-
-/**
- * Builds a mailer for a send path with no request behind it — a queue message or a
- * scheduled sweep — carrying the sender identity request paths use. A handler answering a
- * request sends through `ctx.email`, whose `later()` queue is flushed once the response is.
- *
- * @param mailTransport - How the message leaves the worker; defaults to this worker's own.
- * @returns A mailer carrying the app's sender identity.
- * @example
- * await createMailer().send({ to, subject, html });
- */
-export function createMailer(mailTransport: Transport = createMailTransport()): Mailer {
-	return new Mailer({ transport: mailTransport, from: MAIL_FROM, replyTo: MAIL_REPLY_TO });
+declare module "@sdxc/mail" {
+	/** Types the `t()` every template receives with the keys of the app's message bundles. */
+	interface MailTypes {
+		translate: ReturnType<typeof translate>["t"];
+	}
 }
