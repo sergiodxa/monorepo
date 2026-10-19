@@ -104,6 +104,7 @@
         "@sdxc/assets-middleware": "workspace:*",
         "@sdxc/atom": "workspace:*",
         "@sdxc/auth": "workspace:*",
+        "@sdxc/authz": "workspace:*",
         "@sdxc/backoff": "workspace:*",
         "@sdxc/cache": "workspace:*",
         "@sdxc/cli": "workspace:*",

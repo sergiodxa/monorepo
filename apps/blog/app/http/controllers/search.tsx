@@ -14,11 +14,11 @@ import { createAction } from "remix/router";
 
 import type { BlogModels } from "~/app/models";
 
-import { isAdmin } from "~/app/http/middleware/auth";
 import { SearchViewModel } from "~/app/http/view-models/search";
 import { topicPath } from "~/app/http/view-models/topic";
 import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 import { PostSearch } from "~/app/models/search";
+import abilities from "~/app/policies/abilities";
 import { SearchView } from "~/resources/views/search";
 import routes from "~/routes/web";
 
@@ -75,7 +75,7 @@ export default createAction(routes.search, async (ctx) => {
 
 	let headers = PAGING.paginate(new Headers(), page.data, { url: ctx.url });
 	/** The author's page carries the topic link, so only a reader's reaches a shared cache. */
-	let author = isAdmin();
+	let author = ctx.access.can(abilities.search.linkTopics);
 	if (!author) ctx.cache(PUBLIC_PAGE, TAGS.postList());
 
 	let model = SearchViewModel.results({

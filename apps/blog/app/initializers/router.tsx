@@ -42,6 +42,7 @@ import { methodOverride } from "remix/middleware/method-override";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
+import access from "~/app/http/middleware/access";
 import activityPub from "~/app/http/middleware/activitypub";
 import activityPubRateLimit from "~/app/http/middleware/activitypub-rate-limit";
 import auth from "~/app/http/middleware/auth";
@@ -253,6 +254,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			methodOverride(),
 			htmlOnly(redirects),
 			htmlOnly(auth),
+			htmlOnly(access),
 			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",

@@ -15,7 +15,7 @@ import { beforeAll, describe, expect, test, vi } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";
-import { seedAdmin, signedInCookie } from "~/app/test/session";
+import { seedAdmin, seedUser, signedInCookie } from "~/app/test/session";
 import { SECURITY_TXT } from "~/config/security-txt";
 import routes from "~/routes/web";
 
@@ -159,6 +159,28 @@ describe("the blog router", () => {
 				parent_span_id: "00f067aa0ba902b7",
 			}),
 		);
+	});
+});
+
+describe("the CMS guard", () => {
+	/** Regression: a signed-in guest was redirected to the feed, which no test asserted. */
+	test("sends a signed-in guest from the CMS dashboard to the feed", async () => {
+		let guestId = await seedUser(await migratedDatabase(), "guest");
+		let cookie = await signedInCookie(guestId, environment().COOKIE_SESSION_SECRET);
+
+		let response = await fetchPath(routes.cms.dashboard.href(), { headers: { cookie } });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.feed.href());
+	});
+
+	test("lets a signed-in admin open the CMS dashboard", async () => {
+		let adminId = await seedAdmin(await migratedDatabase());
+		let cookie = await signedInCookie(adminId, environment().COOKIE_SESSION_SECRET);
+
+		let response = await fetchPath(routes.cms.dashboard.href(), { headers: { cookie } });
+
+		expect(response.status).toBe(200);
 	});
 });
 

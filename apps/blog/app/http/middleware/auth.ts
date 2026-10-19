@@ -76,14 +76,6 @@ export function isAuthenticated() {
 }
 
 /**
- * Indicates whether the current authenticated user has admin role.
- */
-export function isAdmin() {
-	let user = getAuthUser();
-	return user?.role === "admin";
-}
-
-/**
  * Signs the user in under a freshly generated session id, so the signed-in
  * session is distinct from the one held while anonymous.
  */

@@ -32,16 +32,27 @@ const LIFETIME_SECONDS = 60 * 60;
  * @param db The migrated database.
  * @returns The new admin's id.
  */
-export async function seedAdmin(db: Database): Promise<string> {
+export function seedAdmin(db: Database): Promise<string> {
+	return seedUser(db, "admin");
+}
+
+/**
+ * Creates an account holding `role`; `guest` is the role every login starts with.
+ *
+ * @param db The migrated database.
+ * @param role The role the account holds.
+ * @returns The new account's id.
+ */
+export async function seedUser(db: Database, role: "admin" | "guest"): Promise<string> {
 	let suffix = generateUUID().slice(0, 8);
 	let user = unwrap(
 		await bindModels(db).users.create({
 			subject_id: generateUUID(),
-			role: "admin",
-			email: `admin-${suffix}@example.com`,
+			role,
+			email: `${role}-${suffix}@example.com`,
 			avatar: "https://example.com/avatar.png",
-			username: `admin-${suffix}`,
-			display_name: "Admin",
+			username: `${role}-${suffix}`,
+			display_name: role === "admin" ? "Admin" : "Guest",
 		}),
 	);
 	return user.id;

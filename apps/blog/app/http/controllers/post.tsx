@@ -21,13 +21,13 @@ import { createAction } from "remix/router";
 import type { BlogModels } from "~/app/models";
 import type { PublicTypePath } from "~/app/models/kinds";
 
-import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { TopicViewModel } from "~/app/http/view-models/topic";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 import { isPublicTypePath, kindAt, POST_KINDS } from "~/app/models/kinds";
 import { isPublishedAt } from "~/app/models/post-values";
+import abilities from "~/app/policies/abilities";
 import { article, tombstone } from "~/app/services/federated-posts";
 import { postEpub } from "~/app/services/post-epub";
 import { findPublicPost, findTombstone, isTombstoned } from "~/app/services/posts";
@@ -140,7 +140,7 @@ export default createAction(
 
 		let isPublished = isPublishedAt(post.post.published_at);
 
-		if (!isPublished && !isAdmin()) {
+		if (!ctx.access.can(abilities.posts.read, { post: { published: isPublished } })) {
 			if (prefersMarkdown) {
 				return markdown(403, `# Forbidden\n\nThis ${noun} is not published yet.\n\n`);
 			}

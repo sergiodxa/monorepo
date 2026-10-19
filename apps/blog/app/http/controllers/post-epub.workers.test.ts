@@ -16,7 +16,7 @@ import { createWebRouter } from "~/app/initializers/router";
 import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { bindModels } from "~/app/test/models";
-import { seedAdmin } from "~/app/test/session";
+import { seedAdmin, signedInCookie } from "~/app/test/session";
 
 /** A suffix keeping these slugs apart from other files sharing the storage. */
 const SUFFIX = generateUUID().slice(0, 8);
@@ -37,13 +37,18 @@ function environment(): App.Env {
 }
 
 /** Builds the router and sends one request through it, the way the Worker entrypoint does. */
-function fetchPath(path: string) {
-	return createWebRouter(environment()).fetch(new Request(new URL(path, "https://blog.test")));
+function fetchPath(path: string, init?: RequestInit) {
+	return createWebRouter(environment()).fetch(
+		new Request(new URL(path, "https://blog.test"), init),
+	);
 }
+
+/** The admin who wrote every post here, signed in for the draft they may read. */
+let authorId = "";
 
 beforeAll(async () => {
 	let db = await migratedDatabase();
-	let authorId = await seedAdmin(db);
+	authorId = await seedAdmin(db);
 	unwrap(
 		await bindModels(db).tutorials.create({
 			author_id: authorId,
@@ -126,6 +131,16 @@ describe("GET /:postType/:slug.epub", () => {
 
 		expect(response.status).toBe(403);
 		expect(response.headers.get("content-type")).toContain("text/html");
+	});
+
+	test("lets the signed-in admin read a draft tutorial's EPUB", async () => {
+		let cookie = await signedInCookie(authorId, environment().COOKIE_SESSION_SECRET);
+
+		let response = await fetchPath(`/tutorials/epub-draft-${SUFFIX}.epub`, {
+			headers: { cookie },
+		});
+
+		expect(response.status).toBe(200);
 	});
 
 	test("answers a missing tutorial with the not-found page", async () => {
