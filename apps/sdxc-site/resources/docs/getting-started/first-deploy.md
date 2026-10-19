@@ -47,6 +47,11 @@ Put the id it prints in the `DB` binding:
 DB: bindings.d1({ name: manifest.name, id: "<the id cf printed>" }),
 ```
 
+<note>
+The local database file is named after this id, so `bun dev` opens a new, empty one once you
+write it. Run `sdxc run db migrate` again to create your tables there.
+</note>
+
 The KV namespace that holds visitors' sessions:
 
 ```bash
