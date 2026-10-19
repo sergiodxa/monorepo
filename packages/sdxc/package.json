@@ -179,6 +179,7 @@
 		"./jwt/algorithm": "./src/jwt/algorithm.ts",
 		"./jwt/r2": "./src/jwt/r2.ts",
 		"./kit": "./src/kit.ts",
+		"./kit/doctor": "./src/kit/doctor.ts",
 		"./kit/config.schema.json": "./src/kit/config.schema.json",
 		"./kit/lock.schema.json": "./src/kit/lock.schema.json",
 		"./lazy-frame/ui": "./src/lazy-frame/ui.ts",

@@ -70,6 +70,52 @@
 				"stubs": ".config/sdxc/stubs"
 			}
 		},
+		"doctor": {
+			"type": "object",
+			"properties": {
+				"checks": {
+					"type": "string",
+					"default": ".config/sdxc/checks",
+					"description": "Folder of the project's own checks, each module run by `sdxc doctor`"
+				},
+				"migrations": {
+					"type": "object",
+					"properties": {
+						"accept": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"file": {
+										"type": "string",
+										"description": "Migration file name, without its folder"
+									},
+									"column": {
+										"type": "string",
+										"description": "Column SQLite's error names"
+									}
+								},
+								"required": ["file", "column"],
+								"additionalProperties": false
+							},
+							"default": [],
+							"description": "Migration errors `sdxc doctor` steps past, each a file that already ran and the column its error names"
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"accept": []
+					}
+				}
+			},
+			"additionalProperties": false,
+			"default": {
+				"checks": ".config/sdxc/checks",
+				"migrations": {
+					"accept": []
+				}
+			}
+		},
 		"format": {
 			"type": "array",
 			"items": {
@@ -77,7 +123,7 @@
 			},
 			"minItems": 1,
 			"description": "Command run on every file the CLI writes or edits, paths appended",
-			"examples": [["bunx", "vp", "fmt"]]
+			"examples": [["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"]]
 		},
 		"lock": {
 			"type": "string",
