@@ -3,7 +3,8 @@
  * the app layout gives it, with a test beside it, declares and maps it where the kind needs it
  * (a policy's abilities and grants included), lists any `@sdxc/*` package it imports in
  * `package.json`, and runs the project's `format`.
- * Every file is planned before any is written, and none is ever overwritten.
+ * Every file is planned before any is written, and none is overwritten unless `--force` asks
+ * to replace the file and its test, which keeps the declarations they already have.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +41,9 @@ import type { KindName, ModelCompanion } from "./kinds.js";
 import { declare, declaresAbilities, findRow } from "./declare.js";
 import { fieldMigration } from "./from-fields.js";
 import { modelMigration } from "./from-model.js";
-import { folderOf, plan, resourceScheme } from "./generate.js";
+import { exists, folderOf, plan, resourceScheme } from "./generate.js";
 import { planGuard } from "./guard.js";
+import { KINDS } from "./kinds.js";
 import { chainFolder } from "./migrations.js";
 import { mount } from "./mount.js";
 import { parseName } from "./names.js";
@@ -78,6 +80,11 @@ export interface MakeInput {
 	fields?: readonly string[] | undefined;
 	/** `make model`: the companions to leave out. */
 	skip?: readonly ModelCompanion[] | undefined;
+	/**
+	 * Replace the file and its test when they exist. A file that existed keeps its declaration,
+	 * mapping and mount, and an existing model keeps its migrations.
+	 */
+	force?: boolean | undefined;
 }
 
 /** What `make` writes through: the command's output, child processes and tasks. */
@@ -132,15 +139,23 @@ export async function make(
 		tests: input.test ?? config.make.tests,
 		chain: input.chain,
 		routes: input.routes ?? config.make.routes,
+		replace: input.force === true,
 	};
+	let replacing = input.force === true && (await existsAlready(root, request));
+	if (replacing) {
+		notes.push(
+			`Kept the declaration, mapping and mount ${request.name.segments.join("/")} already has; --force replaces files only\n`,
+		);
+	}
 	let declared: Declared | null = null;
 	if (
-		kind === "job" ||
-		kind === "controller" ||
-		kind === "mcp" ||
-		kind === "command" ||
-		kind === "model" ||
-		kind === "policy"
+		!replacing &&
+		(kind === "job" ||
+			kind === "controller" ||
+			kind === "mcp" ||
+			kind === "command" ||
+			kind === "model" ||
+			kind === "policy")
 	) {
 		let segments = request.name.segments;
 		declared = await declare(
@@ -172,7 +187,7 @@ export async function make(
 		overrides.columns = columns;
 		overrides.table = table;
 	}
-	if (kind === "middleware" && input.mount !== undefined) {
+	if (kind === "middleware" && input.mount !== undefined && !replacing) {
 		let handler = `${folderOf(kind, null)}/${request.name.segments.join("/")}`;
 		let mounted = await mount({ name: request.name, target: input.mount, handler }, root);
 		if (isFailure(mounted)) return mounted;
@@ -221,7 +236,7 @@ export async function make(
 			specs,
 			table: tableOf(model?.content) ?? table,
 			chain: input.chain,
-			skip: input.skip ?? [],
+			skip: replacing ? [...(input.skip ?? []), "migration"] : (input.skip ?? []),
 		});
 		if (isFailure(companions)) return companions;
 		planned.data.files.push(...companions.data.files);
@@ -244,10 +259,14 @@ export async function make(
 		for (let note of notes) ctx.stdout(note);
 		return success(undefined);
 	}
-	let written = await writeFiles(root, planned.data.files);
+	let replaced = new Set<string>();
+	for (let file of planned.data.files) {
+		if (await exists(root, file.path)) replaced.add(file.path);
+	}
+	let written = await writeFiles(root, planned.data.files, input.force === true);
 	if (isFailure(written)) return written;
 	let paths = planned.data.files.map((file) => file.path);
-	for (let path of paths) ctx.stdout(`Wrote ${path}\n`);
+	for (let path of paths) ctx.stdout(`${replaced.has(path) ? "Replaced" : "Wrote"} ${path}\n`);
 	let edited = await wrap(async () => {
 		for (let edit of edits) await writeFile(join(root, edit.path), edit.after);
 	});
@@ -398,13 +417,24 @@ function tableOf(source: string | undefined): string | null {
 	return /\btable\(\s*\{\s*name:\s*["']([^"']+)["']/.exec(source ?? "")?.[1] ?? null;
 }
 
-/** Writes every planned file, creating its folders; an existing file fails the write. */
-function writeFiles(root: string, files: readonly PlannedFile[]) {
+/**
+ * Writes every planned file, creating its folders; an existing file fails the write unless
+ * `replace` lets it be overwritten.
+ */
+function writeFiles(root: string, files: readonly PlannedFile[], replace: boolean) {
 	return wrap(async () => {
 		for (let file of files) {
 			let target = join(root, file.path);
 			await mkdir(dirname(target), { recursive: true });
-			await writeFile(target, file.content, { flag: "wx" });
+			await writeFile(target, file.content, { flag: replace ? "w" : "wx" });
 		}
 	});
+}
+
+/** Whether the file `request` names exists, so a `--force` run replaces it. */
+async function existsAlready(root: string, request: MakeRequest): Promise<boolean> {
+	let kind = KINDS[request.kind];
+	if (request.kind === "migration" || kind.testOnly === true) return false;
+	let file = `${folderOf(request.kind, request.variant)}/${request.name.segments.join("/")}`;
+	return exists(root, `${file}${kind.extension}`);
 }

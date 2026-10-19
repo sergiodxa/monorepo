@@ -2,7 +2,8 @@
  * Plans the files one `sdxc make` run writes: the file of the requested kind at the folder the
  * layout gives it and, when tests are on, its test beside it, each rendered from its stub; a
  * policy writes its test alone.
- * Nothing is written while planning, and a file that already exists stops the plan.
+ * Nothing is written while planning, and a file that already exists stops the plan unless the
+ * request replaces it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,6 +44,8 @@ export interface MakeRequest {
 	chain?: string;
 	/** The route contract a controller is declared in, a module in `routes/`. */
 	routes: string;
+	/** Replace a file the plan would write that already exists, instead of stopping. */
+	replace?: boolean;
 }
 
 /** A file the run writes, by path relative to the project root. */
@@ -58,8 +61,8 @@ export interface Plan {
 }
 
 /**
- * Plans `request` in the project at `root`. Every planned path must be free; an existing file
- * is a failure naming it, before any stub is read.
+ * Plans `request` in the project at `root`. Every planned path must be free unless the request
+ * replaces files; an existing file is otherwise a failure naming it, before any stub is read.
  *
  * @param packageRoot - The `@sdxc/kit` package, whose `stubs/` holds the built-in stubs.
  * @param overrides - Placeholder values a declaration decided, such as a job's reused group.
@@ -94,8 +97,10 @@ export async function plan(
 	let writesMain = kind.testOnly !== true;
 	let paths = [...(writesMain ? [path] : []), ...(writesTest ? [testPath] : [])];
 	for (let candidate of paths) {
-		if (isSuccess(await wrap(() => stat(join(root, candidate))))) {
-			return failure(new Error(`${candidate} already exists; sdxc make leaves it as it is`));
+		if (request.replace !== true && (await exists(root, candidate))) {
+			return failure(
+				new Error(`${candidate} already exists; sdxc make leaves it as it is unless --force`),
+			);
 		}
 	}
 
@@ -113,6 +118,11 @@ export async function plan(
 		files.push({ path: testPath, content: test.data });
 	}
 	return success({ files, values });
+}
+
+/** Whether `path`, relative to `root`, exists. */
+export async function exists(root: string, path: string): Promise<boolean> {
+	return isSuccess(await wrap(() => stat(join(root, path))));
 }
 
 /** The folder a kind's files go in; a migration's comes from its chain instead. */

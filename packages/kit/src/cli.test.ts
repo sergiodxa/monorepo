@@ -73,7 +73,7 @@ describe("help", () => {
 
 		let none = await invoke(cli, [], { cwd: root });
 		let unknown = await invoke(cli, ["publish"], { cwd: root });
-		let flag = await invoke(cli, ["init", "--force"], { cwd: root });
+		let flag = await invoke(cli, ["init", "--all"], { cwd: root });
 
 		expect(none.code).toBe(2);
 		expect(none.stderr).toContain("Usage: sdxc <command> [options]");
@@ -81,7 +81,7 @@ describe("help", () => {
 		expect(unknown.stderr).toMatch(/^Unknown command "publish" for sdxc\n\nUsage: sdxc <command>/);
 		expect(flag.code).toBe(2);
 		expect(flag.stderr).toMatch(
-			/^--force is not a flag of sdxc init; sdxc ui update takes it\n\nUsage: sdxc init \[options\]/,
+			/^--all is not a flag of sdxc init; sdxc ui update takes it\n\nUsage: sdxc init \[options\]/,
 		);
 		expect(await readdir(root)).toEqual(["package.json", "src"]);
 	});

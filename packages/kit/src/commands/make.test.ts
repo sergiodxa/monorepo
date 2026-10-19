@@ -385,9 +385,53 @@ describe("make", () => {
 		expect(result).toMatchObject({
 			code: 1,
 			stdout: "",
-			stderr: "app/services/charge.test.ts already exists; sdxc make leaves it as it is\n",
+			stderr:
+				"app/services/charge.test.ts already exists; sdxc make leaves it as it is unless --force\n",
 		});
 		expect(await files(root)).toEqual(["app/services/charge.test.ts"]);
+	});
+
+	test("--force replaces the file and its test from the stub", async () => {
+		let root = await project();
+		await mkdir(join(root, "app/services"), { recursive: true });
+		await writeFile(join(root, "app/services/charge.test.ts"), "edited");
+
+		let result = await invoke(["service", "charge", "--force"], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain(
+			"Wrote app/services/charge.ts\nReplaced app/services/charge.test.ts\n",
+		);
+		expect(await readFile(join(root, "app/services/charge.test.ts"), "utf8")).not.toBe("edited");
+	});
+
+	test("--force keeps the declaration and mapping an existing controller has", async () => {
+		let root = await sitemapProject();
+		await invoke(["controller", "about"], root);
+		let routes = await readFile(join(root, "routes/web.ts"), "utf8");
+		let router = await readFile(join(root, "app/initializers/router.ts"), "utf8");
+		await writeFile(join(root, "app/http/controllers/about.tsx"), "edited");
+
+		let result = await invoke(["controller", "about", "--force"], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Replaced app/http/controllers/about.tsx\n");
+		expect(result.stdout).toContain("Kept the declaration, mapping and mount about already has");
+		expect(await readFile(join(root, "routes/web.ts"), "utf8")).toBe(routes);
+		expect(await readFile(join(root, "app/initializers/router.ts"), "utf8")).toBe(router);
+		expect(await readFile(join(root, "app/http/controllers/about.tsx"), "utf8")).not.toBe("edited");
+	});
+
+	test("--force on an existing model writes no second migration", async () => {
+		let root = await project();
+		await invoke(["model", "post", "title"], root);
+
+		let result = await invoke(["model", "post", "title", "body", "--force"], root);
+
+		expect(result.code).toBe(0);
+		let migrations = (await files(root)).filter((path) => path.startsWith("database/migrations/"));
+		expect(migrations).toHaveLength(1);
+		expect(await readFile(join(root, "app/models/post.ts"), "utf8")).toContain("body");
 	});
 
 	test("a project stub replaces the built-in one; an unknown placeholder names the stub", async () => {

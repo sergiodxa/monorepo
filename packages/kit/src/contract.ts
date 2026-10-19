@@ -66,6 +66,14 @@ const DRY_RUN_FLAG = flag.boolean("dry-run", {
 	description: "Print what would be written and change nothing",
 });
 
+/**
+ * `--force`, shared by every kind whose file takes its own name: an existing file and its test
+ * are replaced, and the declaration and mapping they already have are kept.
+ */
+const FORCE_FLAG = flag.boolean("force", {
+	description: "Replace the file and its test when they exist, keeping their declaration",
+});
+
 /** Every command `sdxc` takes. */
 export const SDXC_COMMANDS = commands({
 	create: command({
@@ -153,7 +161,7 @@ export const SDXC_COMMANDS = commands({
 				prompt: prompt.text({ message: "What should it be called?" }),
 			}),
 		},
-		flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+		flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		tasks: true,
 		controller: command({
 			description: "A route handler in app/http/controllers, declared and mapped",
@@ -182,6 +190,7 @@ export const SDXC_COMMANDS = commands({
 				}),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
+				force: FORCE_FLAG,
 			},
 			examples: [
 				"make controller api/keys --routes api",
@@ -201,6 +210,7 @@ export const SDXC_COMMANDS = commands({
 				}),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
+				force: FORCE_FLAG,
 			},
 			examples: ["make middleware require-user --mount page"],
 		}),
@@ -208,7 +218,7 @@ export const SDXC_COMMANDS = commands({
 			description: "An input validator in app/http/validators",
 			tasks: true,
 			arguments: { name: nameArgument("validator", "signup") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		job: command({
 			description: "A background job in app/jobs, declared and mapped",
@@ -221,6 +231,7 @@ export const SDXC_COMMANDS = commands({
 				}),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
+				force: FORCE_FLAG,
 			},
 			examples: ['make job digest --cron "0 8 * * *"'],
 		}),
@@ -242,6 +253,7 @@ export const SDXC_COMMANDS = commands({
 					.list(),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
+				force: FORCE_FLAG,
 			},
 			examples: [
 				"make model post title body published_at author_id",
@@ -282,32 +294,32 @@ export const SDXC_COMMANDS = commands({
 			description: "A test factory in database/factories",
 			tasks: true,
 			arguments: { name: nameArgument("factory", "post") },
-			flags: { dryRun: DRY_RUN_FLAG },
+			flags: { dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		service: command({
 			description: "A service in app/services",
 			tasks: true,
 			arguments: { name: nameArgument("service", "billing/charge") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		policy: command({
 			description:
 				"A resource's create, read, update and delete abilities in app/policies, with their test",
 			tasks: true,
 			arguments: { name: nameArgument("policy", "post") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		initializer: command({
 			description: "An initializer in app/initializers",
 			tasks: true,
 			arguments: { name: nameArgument("initializer", "cache") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		email: command({
 			description: "An email template in app/emails",
 			tasks: true,
 			arguments: { name: nameArgument("email", "welcome") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		mcp: command({
 			description: "An MCP tool in app/mcp/tools, or a resource, declared and mapped",
@@ -319,13 +331,14 @@ export const SDXC_COMMANDS = commands({
 				}),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
+				force: FORCE_FLAG,
 			},
 		}),
 		command: command({
 			description: "A command-line command in app/commands, declared and mapped",
 			tasks: true,
 			arguments: { name: nameArgument("command", "users/grant") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG },
+			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 			examples: ["make command users/grant"],
 		}),
 		stubs: command({

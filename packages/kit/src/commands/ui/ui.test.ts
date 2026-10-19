@@ -509,13 +509,13 @@ describe("usage", () => {
 
 		let none = await invoke([], root, sdxc);
 		let unknown = await invoke(["publish"], root, sdxc);
-		let misplaced = await invoke(["list", "--force"], root, sdxc);
+		let misplaced = await invoke(["list", "--all"], root, sdxc);
 
 		expect(none).toMatchObject({ code: 2, stdout: "" });
 		expect(none.stderr).toMatch(/^Usage: sdxc ui <command> \[options\]/);
 		expect(unknown.stderr).toMatch(/^Unknown command "publish" for sdxc ui\n\nUsage: sdxc ui /);
 		expect(misplaced.stderr).toMatch(
-			/^--force is not a flag of sdxc ui list; sdxc ui update takes it\n/,
+			/^--all is not a flag of sdxc ui list; sdxc ui update takes it\n/,
 		);
 		expect((await invoke(["diff"], root, sdxc)).code).toBe(2);
 		expect((await invoke(["remove", "button"], root, sdxc)).stderr).toBe(

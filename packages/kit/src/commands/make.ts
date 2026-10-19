@@ -43,6 +43,7 @@ export const controller = createCommand(SDXC_COMMANDS.make.controller, {
 			guardedBy: ctx.flags.resource,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
 		}),
 });
 
@@ -57,6 +58,7 @@ export const job = createCommand(SDXC_COMMANDS.make.job, {
 			cron: ctx.flags.cron,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
 		}),
 });
 
@@ -71,6 +73,7 @@ export const mcp = createCommand(SDXC_COMMANDS.make.mcp, {
 			resource: ctx.flags.resource,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
 		}),
 });
 
@@ -98,7 +101,13 @@ export const factory = createCommand(SDXC_COMMANDS.make.factory, {
 	middleware: MAKE_MIDDLEWARE,
 	/** Writes the factory alone. */
 	handler: (ctx) =>
-		run(ctx, { kind: "factory", name: ctx.arguments.name, test: false, dryRun: ctx.flags.dryRun }),
+		run(ctx, {
+			kind: "factory",
+			name: ctx.arguments.name,
+			test: false,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		}),
 });
 
 /**
@@ -118,6 +127,7 @@ function plain<
 				name: ctx.arguments.name,
 				test: ctx.flags.test,
 				dryRun: ctx.flags.dryRun,
+				force: ctx.flags.force,
 			}),
 	});
 }
@@ -133,6 +143,7 @@ export const middleware = createCommand(SDXC_COMMANDS.make.middleware, {
 			mount: ctx.flags.mount,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
 		}),
 });
 
@@ -155,6 +166,7 @@ export const model = createCommand(SDXC_COMMANDS.make.model, {
 			skip: ctx.flags.skip,
 			test: ctx.flags.test,
 			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
 		}),
 });
 
@@ -212,6 +224,13 @@ export const group = createCommand(SDXC_COMMANDS.make, {
 			if (isFailure(picked)) return picked;
 			method = picked.data;
 		}
-		return run(ctx, { kind, name, method, test: ctx.flags.test, dryRun: ctx.flags.dryRun });
+		return run(ctx, {
+			kind,
+			name,
+			method,
+			test: ctx.flags.test,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		});
 	},
 });
