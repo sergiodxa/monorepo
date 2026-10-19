@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 For the tests `sdxc make` writes and how to run one file or one case, start with
@@ -13,25 +13,107 @@ For the tests `sdxc make` writes and how to run one file or one case, start with
 under them.
 
 A Remix v3 app on Workers has three kinds of behavior worth testing: what the router answers,
-what it does to its bindings, and what it sends to the outside world. This guide sets up a
-test suite that covers all three without a hand-written fake in sight. Vitest runs through
-Vite+ (`vp test`), tests that need a real binding run inside workerd,
+what it does to its bindings, and what it sends to the outside world. This guide covers the
+suite an app from `sdxc create` starts with, which tests all three without a hand-written fake
+in sight. Vitest runs through Vite+ (`vp test`),
 [`@sdxc/cloudflare-mocks`](/api/cloudflare-mocks) supplies in-memory bindings that really
-store and really run SQL, MSW answers outbound HTTP, and the memory adapters of
-[`@sdxc/mail`](/api/mail) and [`@sdxc/jobs`](/api/jobs) record what the app sent. On top,
-[`@sdxc/spec`](/api/spec) runs executable `.spec` suites against the app as a client sees it.
+store and really run SQL, MSW answers outbound HTTP, and tests that need Cloudflare's own
+implementation of a binding run inside workerd. On top, [`@sdxc/spec`](/api/spec) runs
+executable `.spec` suites against the app as a client sees it.
+
+The template already depends on Vite+, Vitest and `@sdxc/cloudflare-mocks`. Add the rest as you
+reach for them:
 
 ```bash
-npm add -D vite-plus vitest @cloudflare/vitest-pool-workers msw
-npm add -D @sdxc/cloudflare-mocks @sdxc/spec
+npm add -D msw @cloudflare/vitest-pool-workers @sdxc/spec
 ```
 
-## Configure two projects
+## How the template runs tests
 
-Most tests run fastest on Node threads. A few need Cloudflare's own implementation of a
-binding, because the thing being asserted is a guarantee only the platform can confirm: that
-a KV entry written with a TTL is found again, or that a query D1 would reject fails. Split
-them by file name and give each group its own project.
+The project's `test` script is `vp test run`, and `vite.config.ts` gives Vitest one project on
+Node:
+
+```typescript {% title="vite.config.ts" %}
+test: {
+	include: ["app/**/*.test.ts?(x)", "resources/**/*.test.ts?(x)"],
+	alias: {
+		"cloudflare:workers": new URL("app/test/cloudflare-workers.ts", import.meta.url).pathname,
+	},
+},
+```
+
+The alias is what lets a module that imports `env` from `cloudflare:workers` load under Node.
+`app/test/cloudflare-workers.ts` answers it with an in-memory mock for every binding
+`cloudflare.config.ts` declares, and the development values of the secrets:
+
+```typescript {% title="app/test/cloudflare-workers.ts" %}
+import {
+	createD1Database,
+	createKVNamespace,
+	createRateLimit,
+	createSendEmail,
+} from "@sdxc/cloudflare-mocks";
+
+export const env = {
+	DB: createD1Database(),
+	EMAIL: createSendEmail(),
+	RATE_LIMITER: createRateLimit(),
+	SESSIONS: createKVNamespace(),
+	SESSION_SECRET: "development-session-secret",
+	HONEYPOT_SECRET: "development-honeypot-secret",
+	TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+	TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
+} as Partial<Cloudflare.Env> as Cloudflare.Env;
+```
+
+When you declare a binding, add its mock here too. A test that enqueues a job, or queues an
+email, needs `QUEUE: createQueue()`. Each test file starts from a fresh module graph, so each
+file starts with empty bindings. `vp test run app/mcp` scopes a run to a path, and
+`vp test watch` reruns on change.
+
+## Drive the real router
+
+The test that catches the most is one request through the same middleware chain, controllers
+and jobs the Worker builds. The router reads its bindings through `cloudflare:workers`, so a
+test builds it exactly as `bootstrap/worker.ts` does, with `createWebRouter()`, and
+`app/test/database.ts` prepares the database it reads:
+
+```typescript {% title="app/http/controllers/postings/index.test.tsx" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { PostingFactory } from "~/database/factories/posting";
+import routes from "~/routes/web";
+
+beforeAll(migrate);
+
+test("lists the open positions", async () => {
+	await factories().create(PostingFactory, { title: "Senior Remix Engineer" });
+
+	let response = await createWebRouter().fetch(
+		new URL(routes.postings.index.href(), "https://example.com"),
+	);
+
+	expect(response.status).toBe(200);
+	expect(await response.text()).toContain("Senior Remix Engineer");
+});
+```
+
+`migrate()` applies every file in `database/migrations/` to the `DB` mock, a D1 binding over an
+in-memory SQLite database, so a malformed statement or a constraint violation fails in the test
+rather than in production. `factories()` writes through your own models, with values drawn
+from a fixed seed, as [Generate believable test data](/docs/operations-and-testing/test-data)
+covers. A page that needs a signed-in visitor gets a session cookie from `signIn()` in
+`app/test/session.ts`, and a form post carries the honeypot fields from
+`honeypot.issue()`, as the tests `sdxc scaffold` writes do.
+
+## Run some tests in the Workers pool
+
+A few tests need Cloudflare's own implementation of a binding, because the thing being asserted
+is a guarantee only the platform can confirm: that a KV entry written with a TTL is found
+again, or that a query D1 would reject fails. Name those files `*.workers.test.ts` and give them
+a second project:
 
 ```typescript {% title="vite.config.ts" %}
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
@@ -45,9 +127,14 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "unit",
-					include: ["app/**/*.test.ts?(x)"],
+					include: ["app/**/*.test.ts?(x)", "resources/**/*.test.ts?(x)"],
 					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
-					pool: "threads",
+					alias: {
+						"cloudflare:workers": new URL(
+							"app/test/cloudflare-workers.ts",
+							import.meta.url,
+						).pathname,
+					},
 				},
 			},
 			{
@@ -65,87 +152,15 @@ export default defineConfig({
 });
 ```
 
-`exclude` spreads Vitest's defaults back in, because naming it replaces them. The Workers
-project reads its bindings from your own `wrangler.jsonc`, and `remoteBindings: false` keeps
-a binding declared with `remote: true` from opening a session against your real account. Add
-`@cloudflare/vitest-pool-workers/types` to `compilerOptions.types` in your `tsconfig.json`
-so `cloudflare:test` type-checks, and set `"test": "vp test run"` in `package.json`.
-`vp test run --project workers` runs one project, `vp test run app/mcp` scopes to a path, and
-`vp test watch` reruns on change.
+`exclude` spreads Vitest's defaults back in, because naming it replaces them. The pool reads
+its bindings from a `wrangler.jsonc`, so a project that configures its Worker in
+`cloudflare.config.ts` keeps one beside it that declares the same bindings; `remoteBindings:
+false` keeps a binding declared with `remote: true` from opening a session against your real
+account. Add `@cloudflare/vitest-pool-workers/types` to `compilerOptions.types` in your
+`tsconfig.json` so `cloudflare:test` type-checks. `vp test run --project workers` runs one
+project.
 
-## Drive the real router
-
-The test that catches the most is one request through the same middleware chain, controllers
-and jobs the Worker builds. Make the router factory take the services a test substitutes as
-parameters, and write one helper that opens a database and fetches through the router.
-
-```typescript {% title="app/test/router.ts" %}
-import { readFileSync } from "node:fs";
-
-import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
-import * as memory from "@sdxc/jobs/memory";
-import { Database } from "remix/data-table";
-
-import { createWebRouter } from "~/app/initializers/router";
-
-export const ORIGIN = "https://app.test";
-
-export const queue = memory.queue();
-
-const MIGRATION = readFileSync(
-	new URL("../../database/migrations/0001-init.sql", import.meta.url),
-	"utf8",
-);
-
-export async function createTestDatabase(): Promise<Database> {
-	let binding = createD1Database();
-	await binding.exec(MIGRATION);
-	return new Database(createD1DatabaseAdapter(binding));
-}
-
-export async function fetchApp(db: Database, path: string, init: RequestInit = {}) {
-	let headers = new Headers(init.headers);
-	if (init.method && init.method !== "GET") headers.set("origin", ORIGIN);
-	let request = new Request(new URL(path, ORIGIN), { ...init, headers });
-	return await createWebRouter(() => db, queue).fetch(request);
-}
-```
-
-`createD1Database()` is a D1 binding over an in-memory SQLite database, so a malformed
-statement or a constraint violation fails in the test rather than in production, and
-`exec()` takes the migration file as it stands. `createWebRouter` hands `queue` to
-`jobEnqueuer(queue)` from `@sdxc/jobs/router`, so whatever a handler enqueues through
-`ctx.jobs` lands in a memory queue the test can drain (see
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)). Setting `origin` on writes keeps
-cross-origin protection in the chain under test instead of turning it off. A test is then a
-request and an assertion:
-
-```typescript {% title="app/http/controllers/board.test.ts" %}
-import { beforeEach, expect, test } from "vitest";
-
-import Posting from "~/app/models/posting";
-import { createTestDatabase, fetchApp } from "~/app/test/router";
-
-let db: Awaited<ReturnType<typeof createTestDatabase>>;
-beforeEach(async () => (db = await createTestDatabase()));
-
-test("lists the open positions", async () => {
-	await Posting.publish(db, { title: "Senior Remix Engineer", company: "Acme" });
-
-	let response = await fetchApp(db, "/");
-
-	expect(response.status).toBe(200);
-	expect(await response.text()).toContain("Senior Remix Engineer");
-});
-```
-
-A fresh database per test removes any cleanup step. Code that imports `env` from
-`cloudflare:workers` at module scope has no such module on Node threads: pass the binding in
-through the factory as above, alias the specifier to a small stub module with Vite's
-`resolve.alias` in the unit project, or move the test to the Workers pool.
-
-## Use the real binding in the Workers pool
+### Use the real binding
 
 A file named `*.workers.test.ts` runs inside workerd, and its `env` holds the bindings your
 Wrangler config declares, implemented by Cloudflare's own code.
@@ -244,90 +259,91 @@ real call. `server.use(...)` inside one test overrides a handler for that test o
 
 ## Record mail and jobs in memory
 
-`MemoryTransport` records every message a `Mailer` would have delivered, normalized the way a
-provider receives it, and the memory queue holds jobs until the test drains them.
+The template's mailer sends through the `EMAIL` binding, so in a test the mock records every
+message on its `messages`, which a test reads through `toMatchObject`, since the binding's own
+type leaves the mock's extras out. A queued email and a job a
+handler enqueues land on the `QUEUE` mock's `messages`, once the stub declares it:
 
-```typescript {% title="app/test/mail.ts" %}
-import { Mailer } from "@sdxc/mail";
-import { MemoryTransport } from "@sdxc/mail/memory";
+```typescript {% title="app/http/controllers/teams/invite.test.tsx" %}
+import { unwrap } from "@sdxc/result";
+import { env } from "cloudflare:workers";
+import { beforeAll, expect, test } from "vitest";
 
-export const outbox = new MemoryTransport();
+import { honeypot } from "~/app/initializers/honeypot";
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import { signIn } from "~/app/test/session";
+import routes from "~/routes/web";
 
-export const mailer = new Mailer({
-	transport: outbox,
-	from: { email: "jobs@app.test" },
-});
-```
+beforeAll(migrate);
 
-Import `mailer` into `fetchApp` and pass it to `createWebRouter()` next to the database and the
-queue, the same way the Worker passes its real one. The confirmation is sent by a job, so the
-test drains the queue through the app's own dispatcher before reading what was sent:
-
-```typescript {% title="app/http/controllers/board.test.ts" %}
-import { beforeEach, expect, test } from "vitest";
-
-import { dispatcher } from "~/app/initializers/dispatcher";
-import { outbox } from "~/app/test/mail";
-import { createTestDatabase, fetchApp, queue } from "~/app/test/router";
-
-beforeEach(() => outbox.clear());
-
-test("publishes a submission and mails the poster", async () => {
-	let db = await createTestDatabase();
-	let body = new URLSearchParams({
-		title: "Remix Engineer",
-		contact: "hiring@acme.test",
-	});
-	let response = await fetchApp(db, "/", { method: "POST", body });
-	await queue.drain((delivery) => dispatcher.deliver(delivery));
+test("mails the invitation", async () => {
+	let { token, tokenField } = unwrap(await honeypot.issue());
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.teams.invite.href(), "https://example.com"), {
+			method: "POST",
+			headers: { cookie: await signIn() },
+			body: new URLSearchParams({
+				email: "ada@example.com",
+				[tokenField]: token,
+			}),
+		}),
+	);
 
 	expect(response.status).toBe(303);
-	expect(outbox.last?.to[0]?.email).toBe("hiring@acme.test");
+	expect(env.EMAIL).toMatchObject({
+		messages: [expect.objectContaining({ subject: "Join Remix" })],
+	});
 });
 ```
 
-`queue.drain` runs every message the queue holds and answers once they have settled, so the
-confirmation in the outbox is the proof the job ran; call `queue.reset()` in `beforeEach` to
-start each test empty. To test one handler on its own, build
-its context with
-`createJobContext(jobs.sendConfirmation, { id: "message-1", attempts: 1, input })`, `set`
-the services its middleware would have published, and call it. To assert on what it logged,
-pass `log: new Log({ kind: "job", sink: (record) => records.push(record) })` and run the
-handler inside `log.run(...)`.
+Test an email's copy without a request: `mail.render(emails.teams.invite, { props })` from
+`app/initializers/mail.ts` answers its subject, HTML and text, as the test `sdxc make email`
+writes does. To test a job handler on its own, build its context with
+`createJobContext(jobs.sendConfirmation, { id: "message-1", attempts: 1, input })`, `set` the
+services its middleware would have published, and call it; the template's
+`app/jobs/email.test.tsx` does this with a `MemoryTransport` from `@sdxc/mail/memory`, which
+records every message a `Mailer` would have delivered. To assert on what a handler logged, pass
+`log: new Log({ kind: "job", sink: (record) => records.push(record) })` and run the handler
+inside `log.run(...)`.
 
-MCP tools are routes too, so the same `fetchApp` drives them. A call carries the protocol
-version, the method and the tool name in headers as well as in its body:
+MCP tools are routes too, so the same router drives them. A call carries the protocol version,
+the method and the tool name in headers as well as in its body:
 
-```typescript {% title="app/mcp/server.test.ts" %}
+```typescript {% title="app/mcp/tools/search-jobs.test.ts" %}
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
-import { expect, test } from "vitest";
+import { beforeAll, expect, test } from "vitest";
 
-import { createTestDatabase, fetchApp } from "~/app/test/router";
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+
+beforeAll(migrate);
 
 test("search_jobs answers a tools/call", async () => {
-	let db = await createTestDatabase();
-	let response = await fetchApp(db, "/mcp", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
-			"Mcp-Method": "tools/call",
-			"Mcp-Name": "search_jobs",
-		},
-		body: JSON.stringify({
-			jsonrpc: "2.0",
-			id: 1,
-			method: "tools/call",
-			params: {
-				name: "search_jobs",
-				arguments: { query: "Remix" },
-				_meta: {
-					[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
-					[MetaKey.ClientCapabilities]: {},
-				},
+	let response = await createWebRouter().fetch(
+		new Request("https://example.com/mcp", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+				"Mcp-Method": "tools/call",
+				"Mcp-Name": "search_jobs",
 			},
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 1,
+				method: "tools/call",
+				params: {
+					name: "search_jobs",
+					arguments: { query: "Remix" },
+					_meta: {
+						[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
+						[MetaKey.ClientCapabilities]: {},
+					},
+				},
+			}),
 		}),
-	});
+	);
 
 	expect(response.status).toBe(200);
 });
@@ -387,10 +403,12 @@ when behavior depends on script; `db`, `sample` and shared `command` definitions
 
 ## Where to go next
 
-- [Wire the router](/docs/building-remix-apps/wire-the-router) shows the router factory and the
-  middleware that publishes `ctx.db`, which is what makes it substitutable.
+- [Test your app](/docs/operations-and-testing/test-your-app) lists the tests `sdxc make`
+  writes and the helpers in `app/test/`.
+- [Wire the router](/docs/building-remix-apps/wire-the-router) shows the middleware that
+  publishes `ctx.db`, `ctx.models` and `ctx.email`.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers the
-  dispatcher the memory queue stands in for.
+  dispatcher and running jobs from a memory queue.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) explains the
   records a `Log` sink collects.
 - [`@sdxc/spec`](/api/spec) documents every capability and permission flag.

@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 4
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 Tests written against `"Test User"` and `test@test.com` pass while the real thing breaks: the
@@ -15,19 +15,24 @@ rows instead of one. Random data finds those cases, and then fails once on a val
 a seed, and the same seed with the same calls produces the same people, companies, amounts and
 dates on any machine, on any day.
 
-This guide builds one set of factories for your `Accounts` and `Invoices`, and uses it three
-ways: to seed a test database, to feed a component preview, and to render snapshots that only
-change when your markup does. It assumes the test setup from
-[Test Workers apps](/docs/operations-and-testing/testing).
+This guide builds factories for your `Account` and `Invoice` models and uses the same
+generated data four ways: to seed your local database, to set up a test, to feed a component
+preview, and to render snapshots that only change when your markup does. It assumes the test
+setup from [Test Workers apps](/docs/operations-and-testing/testing).
 
 ```bash
-npm add @sdxc/random @sdxc/sample remix
+npm add @sdxc/data-model @sdxc/random @sdxc/sample remix
 ```
+
+`@sdxc/data-model/testing` and `@sdxc/data-model/seed` draw their values from `@sdxc/sample`,
+so the app needs it installed. An app from `sdxc create` already depends on it, and
+`sdxc make model`, `sdxc make factory` and `sdxc scaffold` add it to `package.json` when the
+code they write imports those entries.
 
 ## One generator per fixture
 
 A generator takes a seed and, optionally, the instant its `date` module measures from. Pin
-both, in one module the tests and the previews share:
+both, in one module the previews, snapshots and property tests share:
 
 ```typescript {% title="app/test/sample.ts" %}
 import { createSample } from "@sdxc/sample";
@@ -44,106 +49,113 @@ name. The reference instant is what keeps dates put: without it, "an invoice iss
 90 days" moves every day, and so does every page that shows how long ago it was. Name seeds
 after what they are for, like `"invoice-list"`, so two tests never share a stream by accident.
 
-## Write factories that agree with themselves
+## Write factories
 
-A factory draws one row's worth of input for your model. The generator's modules return the
-pieces, and `person.record()` returns a whole person whose email and handle match their name:
+A factory, in `database/factories/`, gives every value a create needs, each a value or a
+function of `{ sample, sequence, create }`. `sample` is a generator of the factory's own,
+`sequence` counts its builds from one, and `create` writes another record the row needs:
 
-```typescript {% title="database/factories/index.ts" %}
-import type { Sample } from "@sdxc/sample";
+```typescript {% title="database/factories/invoice.ts" %}
+import { defineFactory } from "@sdxc/data-model/testing";
 
-import type { AccountInput } from "~/app/models/account";
-import type { InvoiceInput } from "~/app/models/invoice";
+import { Invoice } from "~/app/models/invoice";
+import { AccountFactory } from "~/database/factories/account";
 
-export function accountInput(sample: Sample): AccountInput {
-	let person = sample.person.record();
-	let country = sample.location.country();
-	return {
-		name: person.fullName,
-		email: person.email,
-		company: sample.company.name(),
-		country,
-		city: sample.location.city({ country }),
-		createdAt: sample.date.past({ days: 365 }),
-	};
-}
-
-export function invoiceInput(sample: Sample, accountId: string): InvoiceInput {
-	return {
-		accountId,
-		number: sample.helpers.fromRegExp("INV-[0-9]{6}"),
-		amountCents: sample.number.int({ min: 1_000, max: 250_000 }),
-		status: sample.helpers.weightedPick([
-			{ weight: 6, value: "paid" as const },
-			{ weight: 3, value: "open" as const },
-			{ weight: 1, value: "void" as const },
+export const InvoiceFactory = defineFactory(Invoice, {
+	account_id: async ({ create }) => (await create(AccountFactory)).id,
+	number: ({ sequence }) => `INV-${String(sequence).padStart(6, "0")}`,
+	amount_cents: ({ sample }) => sample.number.int({ min: 1_000, max: 250_000 }),
+	status: ({ sample }) =>
+		sample.helpers.weightedPick([
+			{ weight: 6, value: "paid" },
+			{ weight: 3, value: "open" },
+			{ weight: 1, value: "void" },
 		]),
-		issuedAt: sample.date.past({ days: 90 }),
-		notes: sample.helpers.maybe(() => sample.lorem.sentence(), { chance: 0.3 }),
-	};
-}
+	issued_at: ({ sample }) => sample.date.past({ days: 90 }).getTime(),
+	notes: ({ sample }) =>
+		sample.helpers.maybe(() => sample.lorem.sentence(), { chance: 0.3 }),
+}).trait("void", { status: "void" });
 ```
 
-Reading the country first and passing it to `city({ country })` keeps an address believable: a
-city in the country it claims. `weightedPick` makes most invoices paid and a few void, the mix a
-real list has, and `maybe` leaves `notes` as `null` most of the time, so the empty case is
-covered without a test of its own. Contact details can't reach anyone: emails and links use the
-domains reserved for examples, and phone numbers come from the `555-01xx` range kept for
-fiction.
+`weightedPick` makes most invoices paid and a few void, the mix a real list has, and `maybe`
+leaves `notes` as `null` most of the time, so the empty case is covered without a test of its
+own. A value that must be unique carries the `sequence`, so two rows never collide. Contact
+details the generator writes can't reach anyone: emails and links use the domains reserved for
+examples, and phone numbers come from the `555-01xx` range kept for fiction.
 
-## Seed a test database
+Every write goes through the model, so its callbacks and constraints run. A call overrides only
+what it is about, and names traits before its overrides:
 
-A seeding function writes a believable amount of data through your own models, with each part
-drawing from a stream of its own:
-
-```typescript {% title="app/test/seed.ts" %}
-import type { Sample } from "@sdxc/sample";
-import type { Database } from "remix/data-table";
-
-import Accounts from "~/app/models/account";
-import Invoices from "~/app/models/invoice";
-import { accountInput, invoiceInput } from "~/database/factories";
-
-export async function seedDatabase(db: Database, sample: Sample, accounts = 10) {
-	let people = sample.derive("accounts");
-	let billing = sample.derive("invoices");
-	let seeded = [];
-
-	for (let index = 0; index < accounts; index++) {
-		let account = await Accounts.create(db, accountInput(people));
-		let count = billing.number.int({ min: 0, max: 6 });
-		let build = () => invoiceInput(billing, account.id);
-		let invoices = billing.helpers.multiple(build, { count });
-		for (let input of invoices) await Invoices.create(db, input);
-		seeded.push({ account, invoices });
-	}
-
-	return seeded;
-}
+```typescript
+await factories.create(InvoiceFactory, "void", { notes: null });
 ```
 
-Values follow the order of the calls, so adding one call shifts everything drawn after it.
-`derive(label)` opens an independent stream named by its label, which is why this uses two:
-when you add a `phone` field to `accountInput` next month, the accounts change and every
-invoice amount stays exactly where it was.
+## Seed your local database
 
-A test then seeds a fresh database, requests a page, and checks it against what was seeded:
+The rows a new local database starts with are declared once, in `database/seed.ts`, as named
+steps over the app's model registry:
 
-```typescript {% title="app/http/controllers/invoices.test.ts" %}
-import { expect, test } from "vitest";
+```typescript {% title="database/seed.ts" %}
+import { defineSeed } from "@sdxc/data-model/seed";
 
-import { fixtureSample } from "~/app/test/sample";
-import { createTestDatabase, fetchApp } from "~/app/test/router";
-import { seedDatabase } from "~/app/test/seed";
+import registry from "~/app/models";
+import { AccountFactory } from "~/database/factories/account";
+import { InvoiceFactory } from "~/database/factories/invoice";
+
+export default defineSeed(registry, {
+	admin: ({ models }) =>
+		models.account.create({
+			name: "Ada",
+			email: "ada@example.com",
+			company: "Acme",
+		}),
+	accounts: ({ factories }) => factories.createMany(AccountFactory, 10),
+	invoices: async ({ models, factories }) => {
+		for (let account of await models.account.query().all()) {
+			await factories.createMany(InvoiceFactory, 4, { account_id: account.id });
+		}
+	},
+});
+```
+
+A step writes fixed rows through `models` or generated ones through `factories`, and may read
+what the steps before it wrote. The template's commands run it on the local database:
+
+```bash
+sdxc run db seed
+sdxc run db fresh --seed
+sdxc run db prepare
+```
+
+`db seed` runs every step and prints `Seeded <name>` for each. `db fresh --seed` drops every
+local table, applies every migration and seeds, so it rebuilds the same rows each time: the
+factories draw from seed 1 unless `seeder.run({ db }, { seed })` names another. `db prepare`
+migrates, and seeds only a database that had no migration applied, so it is safe on every
+start. All three refuse `--remote`. Every developer gets the same accounts, so a bug report
+that names a customer points at the same row on every laptop.
+
+## Set up a test
+
+`app/test/database.ts` gives a test the same factories over the in-memory `DB` binding, with a
+fixed seed. A test creates what it is about, requests a page, and checks it against what it
+created:
+
+```typescript {% title="app/http/controllers/invoices/index.test.tsx" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { InvoiceFactory } from "~/database/factories/invoice";
+
+beforeAll(migrate);
 
 test("the open filter lists every open invoice", async () => {
-	let db = await createTestDatabase();
-	let seeded = await seedDatabase(db, fixtureSample("invoice-list"));
-	let open = seeded
-		.flatMap((entry) => entry.invoices)
-		.filter((invoice) => invoice.status === "open");
+	let invoices = await factories().createMany(InvoiceFactory, 20);
+	let open = invoices.filter((invoice) => invoice.status === "open");
 
-	let response = await fetchApp(db, "/invoices?status=open");
+	let response = await createWebRouter().fetch(
+		new Request("https://example.com/invoices?status=open"),
+	);
 	let body = await response.text();
 
 	expect(open.length).toBeGreaterThan(0);
@@ -151,48 +163,79 @@ test("the open filter lists every open invoice", async () => {
 });
 ```
 
-`createTestDatabase` and `fetchApp` are the helpers from the testing guide. The assertions
-read the expected values from `seeded` instead of spelling out a name the seed happens to
-produce, so the test states the rule, every open invoice is listed, and keeps passing when a
-package update grows the name lists. The first expectation guards the seed itself: a filter
-test over zero open invoices would pass without testing anything.
+The assertions read the expected values from the rows the factory answered instead of spelling
+out a value the seed happens to produce, so the test states the rule, every open invoice is
+listed, and keeps passing when a package update grows the word lists. The first expectation
+guards the data itself: a filter test over zero open invoices would pass without testing
+anything.
 
-A development database can use the same function. A development-only route that calls
-`seedDatabase(ctx.db, fixtureSample("local-dev"))` gives every developer the same accounts,
-so a bug report that names a customer points at the same row on every laptop.
+Each factory draws from a stream derived from its own name, so adding a column to
+`AccountFactory` next month changes the accounts and leaves every invoice amount exactly where
+it was.
 
 ## Feed component previews
 
-A component worth previewing needs props that look like production. Build the fixture once,
-with ids, from the same factories:
+A component worth previewing needs props that look like production, without a database. Build
+those rows straight from a generator, in a module the previews and the snapshots share:
 
-```typescript {% title="database/factories/invoice.ts" %}
-import type { Account } from "~/app/models/account";
-import type { Invoice } from "~/app/models/invoice";
+```typescript {% title="app/test/fixtures.ts" %}
+import type { Sample } from "@sdxc/sample";
 
-import { accountInput, invoiceInput } from "~/database/factories";
-import { fixtureSample } from "~/app/test/sample";
+import type { AccountRow } from "~/app/models/account";
+import type { InvoiceRow } from "~/app/models/invoice";
+
+import { fixtureSample, REFERENCE } from "~/app/test/sample";
 
 export interface InvoiceFixture {
-	account: Account;
-	invoice: Invoice;
+	account: AccountRow;
+	invoice: InvoiceRow;
+}
+
+export function invoiceValues(sample: Sample) {
+	return {
+		amount_cents: sample.number.int({ min: 1_000, max: 250_000 }),
+		status: sample.helpers.weightedPick([
+			{ weight: 6, value: "paid" as const },
+			{ weight: 3, value: "open" as const },
+			{ weight: 1, value: "void" as const },
+		]),
+		notes: sample.helpers.maybe(() => sample.lorem.sentence(), { chance: 0.3 }),
+	};
 }
 
 export function invoiceFixture(seed: string): InvoiceFixture {
 	let sample = fixtureSample(seed);
-	let account = { id: sample.string.uuid(), ...accountInput(sample) };
-	let invoice = { id: sample.string.uuid(), ...invoiceInput(sample, account.id) };
+	let person = sample.person.record();
+	let stamps = { created_at: REFERENCE.getTime(), updated_at: REFERENCE.getTime() };
+	let account = {
+		id: sample.string.uuid(),
+		name: person.fullName,
+		email: person.email,
+		company: sample.company.name(),
+		...stamps,
+	};
+	let invoice = {
+		id: sample.string.uuid(),
+		account_id: account.id,
+		number: sample.helpers.fromRegExp("INV-[0-9]{6}"),
+		issued_at: sample.date.past({ days: 90 }).getTime(),
+		...invoiceValues(sample),
+		...stamps,
+	};
 	return { account, invoice };
 }
 ```
+
+`person.record()` returns a whole person whose email and handle match their name, so the card
+shows an account that agrees with itself.
 
 A preview page renders your `InvoiceCard` with it, and takes the seed from the query string:
 
 ```tsx {% title="app/http/controllers/previews/invoice-card.tsx" %}
 import { createAction } from "remix/router";
 
+import { invoiceFixture } from "~/app/test/fixtures";
 import { InvoiceCard } from "~/resources/components/invoice-card";
-import { invoiceFixture } from "~/database/factories/invoice";
 import routes from "~/routes/web";
 
 export default createAction(routes.previews.invoiceCard, (ctx) => {
@@ -216,8 +259,8 @@ instant are fixed:
 import { renderToString } from "remix/component/server";
 import { expect, test } from "vitest";
 
+import { invoiceFixture } from "~/app/test/fixtures";
 import { InvoiceCard } from "~/resources/components/invoice-card";
-import { invoiceFixture } from "~/database/factories/invoice";
 
 test.each(["invoice-card", "invoice-card-2", "invoice-card-5"])(
 	"an invoice card renders the same markup for %s",
@@ -258,14 +301,14 @@ import { createSample } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import { totals } from "~/app/services/invoice-totals";
-import { invoiceInput } from "~/database/factories";
+import { invoiceValues } from "~/app/test/fixtures";
 
 const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
 
 describe(`invoice totals (SAMPLE_SEED=${SEED})`, () => {
 	test("the totals per status add up to the whole", () => {
 		let sample = createSample({ seed: SEED });
-		let build = () => invoiceInput(sample, "account-1");
+		let build = () => invoiceValues(sample);
 		let sum = totals(sample.helpers.multiple(build, { count: 200 }));
 
 		expect(sum.paid + sum.open + sum.void).toBe(sum.all);
@@ -279,8 +322,9 @@ Because the seed is in the suite's name, a failure prints it, and
 
 ## Where to go next
 
-- [Test Workers apps](/docs/operations-and-testing/testing): the test database, `fetchApp`
+- [Test Workers apps](/docs/operations-and-testing/testing): the test database, the router
   and the Vitest projects these tests run in.
+- [Make a factory](/docs/sdxc/make-factory): what `sdxc make factory` writes.
 - [Write executable specs](/docs/operations-and-testing/executable-specs): the same seeded
   generation, drawn inside a `.spec` suite.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases): the models the

@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 9
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 <note>
@@ -27,7 +27,7 @@ under the same name and key their router entry uses.
 
 ```bash
 npm add @sdxc/cli @sdxc/data-model @sdxc/database-middleware @sdxc/i18n @sdxc/jobs \
-	@sdxc/logger @sdxc/mail remix
+	@sdxc/logger @sdxc/mail @sdxc/trace-context remix
 ```
 
 ## Where it lives
@@ -40,6 +40,11 @@ An app created with `sdxc create` already has one, in four places:
 | `app/commands/<name>.ts`  | One handler per command, the file's default export         |
 | `app/initializers/cli.ts` | The command line: its middleware, and each handler mapped  |
 | `bootstrap/cli.ts`        | The entry point, which runs the command the arguments name |
+
+It starts with the commands local work needs: `about`, `console` (a REPL with `db` and `models`
+loaded from `bootstrap/console.ts`), `db console`, `db migrate`, `db fresh`, `db prepare` and
+`db seed`, `emails preview`, `deploy` and `typegen`.
+[Run your app's commands](/docs/sdxc/run-app-commands) covers what each one does.
 
 The layout matches `app/mcp/`: declarations in one module, a handler per file beside it, and the
 wiring in an initializer. `bootstrap/cli.ts` is the only file that starts anything:
@@ -64,7 +69,7 @@ sdxc make command users/grant
 `make` writes `app/commands/users/grant.ts` and a test beside it, declares `grant` inside a
 `users` group in `app/commands/index.ts`, and maps the handler through `lazy()` in
 `app/initializers/cli.ts`, so `sdxc run users grant` answers as soon as it finishes. Fill in
-the declaration's arguments and flags:
+the declaration's arguments and flags; the template's own commands stay beside `users`:
 
 ```typescript {% title="app/commands/index.ts" %}
 import { argument, command, commands, flag, prompt } from "@sdxc/cli";
@@ -96,16 +101,16 @@ import { createCommand, failure, success } from "@sdxc/cli";
 import commandset from "~/app/commands";
 
 export default createCommand(commandset.users.grant, async (ctx) => {
-	let user = await ctx.models.users.findByEmail(ctx.arguments.email);
+	let user = await ctx.models.user.findByEmail(ctx.arguments.email);
 	if (user === null) return failure(new Error(`No user ${ctx.arguments.email}`));
 
-	await ctx.models.users.grant(user, ctx.flags.role);
+	await ctx.models.user.grant(user, ctx.flags.role);
 	ctx.stdout(`${user.email} is now ${ctx.flags.role}\n`);
 	return success();
 });
 ```
 
-`findByEmail` and `grant` are methods on your `users` model. On a terminal, a missing `--role`
+`findByEmail` and `grant` are methods on your `user` model. On a terminal, a missing `--role`
 is asked for with the list of roles; in a script, `sdxc run users grant ada@example.com --role
 admin` asks nothing. [Build a command line](/docs/operations-and-testing/build-a-command-line)
 covers arguments, flags, prompts and progress in full.
@@ -113,26 +118,20 @@ covers arguments, flags, prompts and progress in full.
 ## Publish the app's services
 
 The command line's middleware publishes what commands read, in the order a router's does: the
-log first, then the services. Build it in a factory, so a test can hand it a database of its
-own:
+log first, then the services. The template builds it once, at module scope:
 
 ```typescript {% title="app/initializers/cli.ts" %}
-import type { MemoryQueue } from "@sdxc/jobs/memory";
-import type { Database } from "remix/data-table";
-
 import { createCLI, lazy } from "@sdxc/cli";
 import { models } from "@sdxc/data-model/cli";
-import { DB_COMMAND, database, dbHandler } from "@sdxc/database-middleware/cli";
+import { Database, database } from "@sdxc/database-middleware/cli";
 import i18n from "@sdxc/i18n/middleware/cli";
-import { jobEnqueuer } from "@sdxc/jobs/cli";
-import * as memory from "@sdxc/jobs/memory";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
 import mailer from "@sdxc/mail/middleware/cli";
 import { PrintTransport } from "@sdxc/mail/print";
+import { trace } from "@sdxc/trace-context/middleware/cli";
 
 import commandset from "~/app/commands";
-import { createDispatcher } from "~/app/initializers/dispatcher";
 import {
 	FALLBACK_LANGUAGE,
 	RESOURCES,
@@ -141,67 +140,60 @@ import {
 import { openLocalDatabase } from "~/app/initializers/local-database";
 import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
-import { models as registry } from "~/app/models";
+import registry from "~/app/models";
 import { MAIL_FROM } from "~/config/constants";
 
-interface CLIOptions {
-	openDb?: () => Database;
-	queue?: MemoryQueue;
+import manifest from "../../package.json" with { type: "json" };
+
+const COMMAND_LOGGER = createLogger({
+	...logger.options,
+	sink: (record) => process.stderr.write(`${JSON.stringify(record)}\n`),
+});
+
+export const cli = createCLI({
+	name: manifest.name,
+	commands: commandset,
+	middleware: [
+		log(COMMAND_LOGGER),
+		trace(),
+		database(openLocalDatabase),
+		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+		mailer({
+			transport: (ctx) =>
+				new PrintTransport({ write: (text) => ctx.stderr(text) }),
+			from: MAIL_FROM,
+			mail,
+		}),
+		i18n({
+			resources: RESOURCES,
+			supportedLanguages: SUPPORTED_LANGUAGES,
+			fallbackLanguage: FALLBACK_LANGUAGE,
+		}),
+	],
+});
+
+cli.map(
+	commandset.users.grant,
+	lazy(() => import("~/app/commands/users/grant")),
+);
+
+declare module "@sdxc/cli" {
+	interface CLITypes {
+		cli: typeof cli;
+	}
 }
-
-export function createAppCLI(options: CLIOptions = {}) {
-	let openDb = options.openDb ?? openLocalDatabase;
-	let queue = options.queue ?? memory.queue();
-	let dispatcher = createDispatcher({ queue, openDb });
-
-	let cli = createCLI({
-		name: "app",
-		commands: commandset,
-		middleware: [
-			log(
-				createLogger({
-					...logger.options,
-					sink: (record) =>
-						process.stderr.write(`${JSON.stringify(record)}\n`),
-				}),
-			),
-			database(openDb),
-			models(registry, (ctx) => ({ db: ctx.db })),
-			jobEnqueuer(queue, { dispatcher }),
-			i18n({
-				resources: RESOURCES,
-				supportedLanguages: SUPPORTED_LANGUAGES,
-				fallbackLanguage: FALLBACK_LANGUAGE,
-			}),
-			mailer({
-				transport: (ctx) =>
-					new PrintTransport({ write: (text) => ctx.stderr(text) }),
-				from: MAIL_FROM,
-				mail,
-			}),
-		],
-	});
-
-	cli.map(commandset.db, dbHandler);
-	cli.map(
-		commandset.users.grant,
-		lazy(() => import("~/app/commands/users/grant")),
-	);
-	return cli;
-}
-
-export const cli = createAppCLI();
 ```
 
-`commandset.db` is `db: DB_COMMAND` in `app/commands/index.ts`, covered below. `sdxc make
-command` keeps adding its mappings after the last `cli.map`, inside the factory. Each entry is
-explained in the sections that follow.
+The `CLITypes` augmentation is what types a handler's `ctx` in its own file with what this
+chain publishes, so `ctx.models` type checks in `users/grant.ts`. `sdxc make command` adds each mapping after the last `cli.map`, and a test runs the same `cli`
+against a temporary project, as [Test a command](#test-a-command) shows. Each entry is explained
+in the sections that follow.
 
 ### The log
 
 `log(logger)` from `@sdxc/logger/middleware/cli` opens a `command` log for each run and writes it
 once the handler settles, carrying `command.path` (`users grant`), `command.duration_ms`, and
-`command.exit_code` when the run fails. Handlers log through `ctx.log`, and code they call
+`command.exit_code` when the run fails; `trace()` gives the run a trace id. Handlers log through `ctx.log`, and code they call
 reaches the same log through `currentLog()`, exactly as in a route or a job. The logger above
 is the app's own with its records sent to stderr as JSON lines, so stdout carries only what a
 command prints and can be piped.
@@ -214,25 +206,18 @@ called once per run that reaches a handler, so `--help` opens nothing.
 
 Where the database comes from is the app's decision, as it is for the server. A Node or Bun app
 opens the connection its server opens. A Cloudflare app opens the SQLite file its local dev
-server keeps for the D1 database, through Remix's SQLite adapter:
+server keeps for the D1 database, through Remix's SQLite adapter: the template's
+`openLocalDatabase()` in `app/initializers/local-database.ts` finds the file `bun dev` writes
+under `.cloudflare/state/` for the `DB` binding, so a command and the dev server read the same
+rows.
 
-```typescript {% title="app/initializers/local-database.ts" %}
-import { createSqliteDatabase } from "remix/data-table/sqlite";
-
-export function openLocalDatabase() {
-	return createSqliteDatabase({
-		filename: process.env.LOCAL_DATABASE ?? "local.db",
-	});
-}
-```
-
-The same entry ships a `db` command: mount `DB_COMMAND` in your contract under any name and map
-`dbHandler` onto it.
+The same entry ships a SQL prompt: the template mounts `DB_COMMAND` as `db console` in its
+contract and maps `dbHandler` onto it, from `app/commands/db/console.ts`.
 
 ```bash
-sdxc run db                                   # a sql> prompt until .exit or Ctrl+C
-sdxc run db --execute "SELECT count(*) FROM users"
-sdxc run db < scripts/fix-slugs.sql
+sdxc run db console                                   # a sql> prompt until .exit or Ctrl+C
+sdxc run db console --execute "SELECT count(*) FROM users"
+sdxc run db console < scripts/fix-slugs.sql
 ```
 
 A read prints its rows as aligned columns with a row count, and a write prints how many rows it
@@ -248,7 +233,38 @@ on the first model access, after `database()` has published `ctx.db`.
 ### Jobs that run where you are watching
 
 `jobEnqueuer()` from `@sdxc/jobs/cli` publishes `ctx.jobs`, so a command enqueues a job the way a
-route does:
+route does. The template leaves it out; add it after `models()`, over a memory queue and a
+dispatcher built on that queue, such as the `createDispatcher` factory from
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron):
+
+```typescript {% title="app/initializers/cli.ts" %}
+import { jobEnqueuer } from "@sdxc/jobs/cli";
+import * as memory from "@sdxc/jobs/memory";
+
+import { createDispatcher } from "~/app/initializers/dispatcher";
+
+const QUEUE = memory.queue();
+
+export const cli = createCLI({
+	name: manifest.name,
+	commands: commandset,
+	middleware: [
+		log(COMMAND_LOGGER),
+		trace(),
+		database(openLocalDatabase),
+		models(registry, (ctx) => ({ db: ctx.require(Database) })),
+		jobEnqueuer(QUEUE, {
+			dispatcher: createDispatcher({ queue: QUEUE, openDb: openLocalDatabase }),
+		}),
+		mailer({
+			transport: (ctx) =>
+				new PrintTransport({ write: (text) => ctx.stderr(text) }),
+			from: MAIL_FROM,
+			mail,
+		}),
+	],
+});
+```
 
 ```typescript {% title="app/commands/postings/reconfirm.ts" %}
 import { createCommand, success } from "@sdxc/cli";
@@ -271,16 +287,13 @@ export default createCommand(commandset.postings.reconfirm, async (ctx) => {
 ```
 
 `reconfirm` is declared in `app/commands/index.ts` like `grant`, with a `--locale` flag, and
-`unconfirmed` is a method on your `postings` model. Given a memory queue and the app's dispatcher built over it, the jobs run in the command's own
+`unconfirmed` is a method on your `postings` model. Given a memory queue and a dispatcher built
+over it, the jobs run in the command's own
 process once the handler returns, through the dispatcher's middleware, timeout and retries, and
 the jobs those jobs enqueue run too. Each job's record lands under the command's log, so its
 output and failures show in the terminal you ran it from, against the same local database. A
 run you cancel with Ctrl+C runs none of them. Passed the production queue instead, with no
 dispatcher, `jobEnqueuer(queue)` writes to it and the deployed consumer does the work.
-
-`createDispatcher` is the factory from
-[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), given the memory queue
-and the command line's database.
 
 ### Translations
 
@@ -333,6 +346,8 @@ export default createCommand(commandset.postings.resend, async (ctx) => {
 renders. A message deferred with `later()` sends once the handler returns; each send is noted on
 the command's log, and one that fails fails the run, so you see that a message never left.
 `new PrintTransport({ write, mime: true })` prints the raw MIME message instead of the summary.
+To see a template without sending it, `sdxc run emails preview postings.published` prints the
+email rendered from its template's `preview()` props.
 
 ### Production data
 
@@ -343,30 +358,44 @@ through `ctx.prompt.confirm`, naming what the run targets, with `--yes` for scri
 
 ## Run app code outside the server
 
-Every module the command line imports runs on Node or Bun. One that imports
-`cloudflare:workers`, as a Worker's queue and database initializers do, needs that module
-answered there as well; a Cloudflare app provides it for its command line the way its test setup
-provides it for its tests. The command line hands its own database, queue and transport to the
-middleware above, so every read and write it makes goes to the local file.
+Every module the command line imports runs on Node or Bun. The template keeps the modules that
+read Worker bindings out of that graph: the mail transport and the queue live in
+`app/initializers/mail-transport.ts`, which only the router and the job dispatcher import, and
+the registry in `app/initializers/mail.ts` reads none. A module you add to the command line
+that imports `cloudflare:workers`, such as a dispatcher whose queue reads `env.QUEUE`, needs that
+module answered there as well, the way the test setup answers it for the tests. The command line
+hands its own database, queue and transport to the middleware above, so every read and write it
+makes goes to the local file.
 
 ## Test a command
 
-`invoke()` from `@sdxc/cli/test` runs a command through the same middleware, against a test
-database handed to the factory:
+`invoke()` from `@sdxc/cli/test` runs a command through the same middleware. The template's
+`useTemporaryProject()` from `app/test/local-database.ts` points the command line at a
+temporary project holding the migrations you give it, so `db migrate` builds its database and
+the test reads the file back:
 
 ```typescript {% title="app/commands/users/grant.test.ts" %}
 import { invoke } from "@sdxc/cli/test";
+import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { expect, test } from "vitest";
 
-import { createAppCLI } from "~/app/initializers/cli";
-import { createTestDatabase } from "~/app/test/database";
-import { users } from "~/database/schema";
+import { useTemporaryProject } from "~/app/test/local-database";
+
+let project = useTemporaryProject({
+	"0001_CreateUsers.sql":
+		"CREATE TABLE users (id TEXT PRIMARY KEY, email TEXT, role TEXT, created_at INTEGER, updated_at INTEGER);",
+});
+
+let { cli } = await import("~/app/initializers/cli");
 
 test("grants the role it is given", async () => {
-	let db = await createTestDatabase();
-	await db.create(users, { id: "u1", email: "ada@example.com", role: "member" });
+	await invoke(cli, ["db", "migrate"]);
+	let database = openDatabase(project.databaseFile);
+	database.exec(
+		"INSERT INTO users VALUES ('u1', 'ada@example.com', 'member', 0, 0)",
+	);
 
-	let run = await invoke(createAppCLI({ openDb: () => db }), [
+	let run = await invoke(cli, [
 		"users",
 		"grant",
 		"ada@example.com",
@@ -375,13 +404,18 @@ test("grants the role it is given", async () => {
 	]);
 
 	expect(run.code).toBe(0);
-	expect(await db.find(users, "u1")).toMatchObject({ role: "admin" });
+	expect(database.query("SELECT role FROM users WHERE id = 'u1'").get()).toEqual({
+		role: "admin",
+	});
+	database.close();
 });
 ```
 
-`answers: { role: "admin" }` answers the prompt instead of the flag, and `interactive: false`
-checks what a script without the flag gets. A job the command enqueued has run by the time
-`invoke` answers, and a message it sent is in the run's `stderr`.
+The command line is imported after `useTemporaryProject()`, because that call replaces the
+local database module before anything loads it. `answers: { role: "admin" }` in `invoke`'s
+options answers the prompt instead of the flag, and `interactive: false` checks what a script
+without the flag gets. A job the command enqueued has run by the time `invoke` answers, and a
+message it sent is in the run's `stderr`.
 
 ## Where to go next
 

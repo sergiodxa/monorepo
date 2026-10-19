@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 8
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A command line has the same parts as a router: a table of what it answers, a handler per
@@ -341,6 +341,33 @@ The test imports the program from `src/cli.ts`, the module that builds it, while
 `src/main.ts` stays the only one that starts it. A prompt the test left
 unanswered, and a program it gave no reply for, fail the run and name themselves, so nothing
 runs by accident. `run.exec` lists every program a handler ran, in order.
+
+## Describe and check a command line
+
+A command line describes itself as data, for a tool that documents it or checks commands
+written somewhere else, such as a guide or a script. `--help --json` prints a command's
+contract, and the program object answers the same description and checks an argument list
+without running anything:
+
+```bash
+site posts create --help --json
+```
+
+```typescript {% title="scripts/check-docs.ts" %}
+import { isFailure } from "@sdxc/result";
+
+import { cli } from "../src/cli.js";
+
+let description = cli.describe(["posts", "create"]);
+let checked = await cli.check(["posts", "create", "--titel", "Hello"]);
+if (isFailure(checked)) console.error(checked.error.message);
+```
+
+`describe(path)` answers the command `path` names, or the whole program without one, with its
+arguments, flags, defaults and examples, and `undefined` for a path that names no command.
+`check(argv)` parses the line the way a run does before it asks anything: unknown commands,
+unknown flags and values a schema rejects come back together as one `UsageError`, a value a
+prompt would ask for counts as given, and no handler loads.
 
 ## Where to go next
 

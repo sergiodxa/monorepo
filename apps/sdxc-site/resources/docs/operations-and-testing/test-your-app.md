@@ -55,7 +55,7 @@ fill.
 | command       | the command runs through the app's CLI and exits 0, and a `test.todo` | its output and effects             |
 | middleware    | the factory returns a middleware                                      | what it publishes or answers       |
 | service       | the function succeeds                                                 | each outcome its callers branch on |
-| email         | the message is addressed, titled and renders its copy                 | the copy your app sends            |
+| email         | its preview props render into the subject and both body parts         | the copy your app sends            |
 | initializer   | the instance is built at import                                       | how it is configured               |
 
 `sdxc scaffold` writes fuller page tests: they create rows with the factory, sign a member in,
@@ -80,7 +80,11 @@ code it checks:
 - **`app/test/session.ts`** has `signIn(actor?)`, which answers the session cookie of a signed-in
   member, for a request that needs one.
 - **`app/test/cloudflare-workers.ts`** stands in for `cloudflare:workers` under Vitest, so a
-  module that imports `env` loads in a test as it does in the Worker.
+  module that imports `env` loads in a test as it does in the Worker. Its `EMAIL` binding keeps
+  every message sent through it on `messages`.
+- **`app/test/local-database.ts`** has `useTemporaryProject(migrations)`, which points the
+  command line at a temporary project, so a command's test runs `db migrate` and `db seed`
+  without touching your local database.
 
 A page test builds the router the Worker builds and sends it a `Request`:
 
@@ -116,6 +120,10 @@ Put each case beside the code that holds the rule, and test it there with the le
 - A rule about who may do something is a grant in `app/policies/policy.ts`; test it with
   `testAccess(policy, { roles, facts })`, as the policy's test does, without a request.
 - A schema's rule is tested by `validate(form, Schema)` on a `URLSearchParams`.
+- An email's copy is tested by `mail.render(emails.teams.invite, { props })` from
+  `app/initializers/mail.ts`, as the email's own test does; a page that sends one checks
+  `env.EMAIL`'s `messages`, and `app/initializers/mail.test.ts` fails on a declared email with no
+  template mapped.
 
 The page test then needs one case per outcome a visitor sees, rather than one per rule.
 

@@ -48,7 +48,7 @@ and never waits on one.
 | `sdxc schedule`     | list scheduled jobs, their next runs and the triggers that fire them | [Inspect a project](/docs/sdxc/inspect-a-project)      |
 | `sdxc middleware`   | print every middleware chain in run order                            | [Inspect a project](/docs/sdxc/inspect-a-project)      |
 | `sdxc initializers` | list the initializers and what builds each one                       | [Inspect a project](/docs/sdxc/inspect-a-project)      |
-| `sdxc notes`        | list the `TODO` and `FIXME` comments left in the code                | [Inspect a project](/docs/sdxc/inspect-a-project)      |
+| `sdxc notes`        | list the `TODO`, `FIXME`, `HACK` and `OPTIMIZE` comments in the code | [Inspect a project](/docs/sdxc/inspect-a-project)      |
 | `sdxc stats`        | count lines of code per kind, and the code to test ratio             | [Inspect a project](/docs/sdxc/inspect-a-project)      |
 | `sdxc run`          | run your app's own command line: migrations, the SQL console, yours  | [Run your app's commands](/docs/sdxc/run-app-commands) |
 | `sdxc doctor`       | find release drift, missing secrets and wiring mistakes              | [Check a project](/docs/sdxc/check-a-project)          |

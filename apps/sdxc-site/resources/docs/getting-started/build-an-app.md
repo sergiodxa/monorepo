@@ -95,9 +95,11 @@ Edited app/initializers/router.tsx
 Edited app/http/controllers/sitemap.ts
 Edited resources/locales/en.json
 Added @sdxc/uuid@2026.10.13, @sdxc/validate@2026.10.13 to package.json; run bun install
+✓ Formatting 27 files
 ```
 
-Every file has a test beside it, and every edit wires a file in: the routes are declared in
+Every file has a test beside it, `app/test/database.ts` gives those tests a migrated database
+and factories, and every edit wires a file in: the routes are declared in
 `routes/web.ts` and mapped in the router, the model is registered as `ctx.models.bookmark`, and
 the abilities join the app's policy. Install the two packages the new code imports:
 
@@ -261,9 +263,21 @@ Wrote app/jobs/bookmarks/prune.ts
 Wrote app/jobs/bookmarks/prune.test.ts
 Edited app/jobs/index.ts
 Edited app/initializers/dispatcher.ts
+Edited cloudflare.config.ts
+✓ Formatting 5 files
 ```
 
 The job is declared with its schedule in `app/jobs/index.ts` and mapped on the dispatcher.
+Cloudflare fires only the schedules the Worker declares, so `--cron` also adds the trigger that
+fires it to `cloudflare.config.ts`:
+
+```ts {% title="cloudflare.config.ts" %}
+triggers: [
+	triggers.queue({ name: manifest.name }),
+	triggers.scheduled({ schedule: "0 3 * * *" }),
+],
+```
+
 Fill in the handler, which reads the model through `ctx.models` as a controller does:
 
 ```ts {% title="app/jobs/bookmarks/prune.ts" %}
@@ -276,22 +290,19 @@ export default createJobHandler(jobs.bookmarks.prune, async (ctx) => {
 });
 ```
 
-Cloudflare fires only the schedules the Worker declares, so add the same expression to its
-triggers in `cloudflare.config.ts`, then generate the types again:
-
-```ts {% title="cloudflare.config.ts" %}
-triggers: [
-	triggers.queue({ name: manifest.name }),
-	triggers.scheduled({ schedule: "0 3 * * *" }),
-],
-```
+Delete the `test.todo` in `app/jobs/bookmarks/prune.test.ts`: the rule it would test is covered
+on the model. `sdxc schedule` confirms the job and its trigger line up:
 
 ```bash
-sdxc run typegen
+sdxc schedule
 ```
 
-Delete the `test.todo` in `app/jobs/bookmarks/prune.test.ts`: the rule it would test is covered
-on the model. [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers
+```text
+Job              Schedule   Next run              Trigger
+bookmarks.prune  0 3 * * *  2026-10-20 03:00 UTC  cloudflare.config.ts
+```
+
+[Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers
 jobs with input, retries and enqueuing one from a controller.
 
 ## Run the tests
@@ -327,8 +338,8 @@ bun run test
 ```
 
 ```text
- Test Files  26 passed (26)
-      Tests  56 passed (56)
+ Test Files  33 passed (33)
+      Tests  75 passed (75)
 ```
 
 The page tests drive the app's real router, so the honeypot, the policy and the validator all
@@ -347,7 +358,7 @@ sdxc doctor
 `bun check` formats, lints and type checks. `sdxc doctor` checks the project itself: every
 `@sdxc` package on one release, every secret `cloudflare.config.ts` declares listed in
 `.env.example`, the migrations replaying on an empty database, every route mapped through
-`lazy()`, and every model registered. [Check a project](/docs/sdxc/check-a-project) lists each
+`lazy()`, every model registered, and every declared email mapped to a template. [Check a project](/docs/sdxc/check-a-project) lists each
 check and its fix.
 
 ## Deploy

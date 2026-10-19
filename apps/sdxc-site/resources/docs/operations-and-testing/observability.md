@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 When a request misbehaves in production you want to answer three questions quickly: what
@@ -17,8 +17,8 @@ into jobs and outbound requests, and [`@sdxc/server-timing`](/api/server-timing)
 per-request timings in a header every browser's network panel reads.
 
 ```bash
-npm add @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/result @sdxc/server-timing \
-	@sdxc/trace-context @sdxc/validate remix
+npm add @sdxc/database-middleware @sdxc/http @sdxc/jobs @sdxc/logger @sdxc/result \
+	@sdxc/server-timing @sdxc/trace-context @sdxc/validate remix
 ```
 
 The logger and the trace are bound through `AsyncLocalStorage`, so enable `nodejs_compat` in
@@ -168,19 +168,21 @@ import { env } from "cloudflare:workers";
 export const queue = cloudflare.queue(() => env.QUEUE);
 ```
 
-`database()` stands for the job middleware that publishes your database to handlers.
+`database()` from `@sdxc/database-middleware/jobs` publishes the database to handlers as
+`ctx.db`.
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
-import { database } from "~/app/jobs/middleware/database";
-import { queue } from "~/app/initializers/queue";
+import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
+import { queue } from "~/app/initializers/queue";
 
 export const dispatcher = createJobDispatcher({
 	logger,
 	queue,
-	middleware: [database()],
+	middleware: [database(openDatabase)],
 	timeout: "30 seconds",
 });
 ```

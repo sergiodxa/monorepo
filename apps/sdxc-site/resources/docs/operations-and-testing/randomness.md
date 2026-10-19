@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 7
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 `Math.random()` is easy to call and hard to live with. A function that calls it gives a
@@ -253,10 +253,10 @@ const AUDIT_RATE = 0.01;
 export default createJobHandler(jobs.orders.audit, async (ctx) => {
 	let seed = systemSeed();
 	let random = createRandom(seed);
-	let orders = await Orders.placedYesterday(ctx.database);
+	let orders = await Orders.placedYesterday(ctx.db);
 	let picked = orders.filter(() => random.bool(AUDIT_RATE));
 
-	await Orders.flagForAudit(ctx.database, picked);
+	await Orders.flagForAudit(ctx.db, picked);
 	ctx.log.set({ audit: { seed, sampled: picked.length, of: orders.length } });
 });
 ```

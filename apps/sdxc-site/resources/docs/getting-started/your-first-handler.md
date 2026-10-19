@@ -5,7 +5,7 @@ section:
     title: Packages à la carte
     order: 1.5
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How three packages compose into a request handler with no `try` in it"
     - "How a `Result` makes you handle a parse failure"
@@ -69,8 +69,8 @@ parse gave up, so the response tells the client which line to fix instead of tha
 somewhere, was wrong.
 
 **The response helpers name the status.** `ok`, `badRequest` and `methodNotAllowed` are
-[`@sdxc/response`](/api/response): each writes its status, its status text and its
-JSON content type, and merges an `ok` field into the body so a client has one field to branch
+[`@sdxc/response`](/api/response): each writes its status and the JSON content type, and
+merges an `ok` field into the body so a client has one field to branch
 on.
 
 ## Running it

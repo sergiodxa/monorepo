@@ -18,18 +18,19 @@ both, and covers what the template adds: where each piece is built, the order it
 the folder each kind of code goes in. Knowing that is what lets you find any file in an
 unfamiliar app, and tell where a new one belongs before `sdxc make` writes it.
 
-## Three ways in, one set of services
+## Four ways in, one set of services
 
-The Worker is entered three ways, and each entry point hands over to one instance built in
-`app/initializers/`:
+The app is entered four ways, and each entry point hands over to what `app/initializers/` and
+`app/models/` build:
 
 | Entry                                      | Started by                     | Hands over to                                        |
 | ------------------------------------------ | ------------------------------ | ---------------------------------------------------- |
 | `bootstrap/worker.ts` `fetch`              | an HTTP request                | the router, `app/initializers/router.tsx`            |
 | `bootstrap/worker.ts` `queue`, `scheduled` | a queued job or a cron trigger | the job dispatcher, `app/initializers/dispatcher.ts` |
 | `bootstrap/cli.ts`                         | `sdxc run …` on your machine   | the command line, `app/initializers/cli.ts`          |
+| `bootstrap/console.ts`                     | `sdxc run console`             | Bun's REPL, with `db` and `models` on the local file |
 
-Each of the three runs middleware that publishes the same services, so a controller, a job and
+The first three each run middleware that publishes the same services, so a controller, a job and
 a command all read `ctx.db`, `ctx.models` and `ctx.log`, and a model method you write once works
 in all three. `bootstrap/` holds the entry points and nothing else, and nothing outside it
 imports from it: the CLI's commands never ship in the Worker, and a test builds the router
@@ -55,7 +56,8 @@ sequenceDiagram
    `app/initializers/router.tsx` and forwards the request.
 2. **The global middleware runs.** The router's chain, written inline in `createRouter({ middleware })`,
    is what every page and endpoint needs: the request's log and trace, the client address, the
-   rate limit, the database, the models and the mailer. `sdxc routes` prints it at the top.
+   rate limit, the database, the models, the email previews `bun dev` serves at `/_emails`, and
+   the mailer. `sdxc routes` prints it at the top.
 3. **A contract picks the route.** `routes/web.ts` declares the pages and `routes/api.ts` the
    endpoints; each entry is a URL pattern and a method, and the typed `href()` every link uses
    comes from the same declaration.
@@ -96,7 +98,24 @@ delivers the message to the Worker's `queue` handler, and the dispatcher in
 mailer, before it imports the handler the job is mapped to. A `--cron` job is enqueued by the
 Worker's `scheduled` handler when a trigger in `cloudflare.config.ts` fires. Either way the
 handler sees `ctx.input`, `ctx.models`, `ctx.email` and `ctx.log`, and a failure is retried by
-the dispatcher.
+the dispatcher. `ctx.email.queue()` uses the same path: it enqueues the template's `email` job,
+which delivers the message and retries a provider failure.
+
+## An email, step by step
+
+Each email is declared once in `app/emails/index.ts`, with the schema of the props it takes, and
+its template is a file beside it, such as `app/emails/teams/invite.tsx`. The registry in
+`app/initializers/mail.ts` maps each declaration to its template through `lazy()`, and the
+router, the dispatcher and the command line hand that registry to their mailers. A handler
+sends by declaration, with the reader's language:
+
+```ts
+await ctx.email.send(emails.teams.invite, { to, locale, props: { team } });
+```
+
+`sdxc make email` writes the template, declares it and maps it, and `sdxc doctor` fails on a
+declared email with no template mapped. [Send email](/docs/data-and-background-work/send-email) covers
+templates, previews and the transports.
 
 ## Where each kind of code goes
 
@@ -108,6 +127,7 @@ to its folder:
 <file name="worker.ts" />
 <file name="browser.ts" />
 <file name="cli.ts" />
+<file name="console.ts" />
 </folder>
 <folder name="app">
 <folder name="commands" />
@@ -129,6 +149,7 @@ to its folder:
 <folder name="database">
 <folder name="factories" />
 <folder name="migrations" />
+<file name="seed.ts" />
 </folder>
 <folder name="resources">
 <folder name="layouts" />
@@ -143,18 +164,19 @@ to its folder:
 
 | If the code…                                                           | It goes in                                         |
 | ---------------------------------------------------------------------- | -------------------------------------------------- |
-| is the Worker, browser or command-line entry point                     | `bootstrap/`                                       |
+| is the Worker, browser, command-line or REPL entry point               | `bootstrap/`                                       |
 | builds the one instance of something: router, database, email registry | `app/initializers/`                                |
 | answers HTTP: a controller, a middleware, an input schema              | `app/http/controllers`, `middleware`, `validators` |
 | runs off the request, as a job                                         | `app/jobs/`                                        |
 | is a tool or resource for the MCP endpoint                             | `app/mcp/`                                         |
-| is an email the app sends                                              | `app/emails/`                                      |
+| is an email the app sends                                              | `app/emails/`, declared in `app/emails/index.ts`   |
 | is a command for `sdxc run`                                            | `app/commands/`                                    |
 | reads or writes stored state, or is a rule about one model             | `app/models/`, as the model or its method          |
 | is a rule across models, or about none                                 | `app/services/`                                    |
 | decides who may do what                                                | `app/policies/`                                    |
 | is a URL contract                                                      | `routes/`                                          |
 | is a migration or a test factory                                       | `database/migrations/`, `database/factories/`      |
+| is the rows a new local database starts with                           | `database/seed.ts`                                 |
 | is a view, layout, stylesheet or translation                           | `resources/`                                       |
 | is static configuration: site settings, security headers               | `config/`                                          |
 | is a test helper                                                       | `app/test/`                                        |

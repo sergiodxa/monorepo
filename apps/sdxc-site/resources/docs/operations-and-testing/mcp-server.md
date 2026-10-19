@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 An agent that can call your app over the Model Context Protocol can search it, read from it
@@ -88,17 +88,16 @@ the server would never match.
 Each implementation lives in its own file beside the declarations, as that file's default
 export. `createTool` types a handler against its declaration, so `ctx.input` is typed away
 from the `map` call. Handlers receive the router's
-`RequestContext`, so `ctx.db` and everything else your middleware publishes is already there.
+`RequestContext`, so `ctx.models` and everything else your middleware publishes is already there.
 
 ```typescript {% title="app/mcp/tools/search-jobs.ts" %}
 import { createTool, ToolError } from "@sdxc/mcp";
 
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
-import Posting from "~/app/models/posting";
 
 export default createTool(toolset.searchJobs, async (ctx) => {
-	let found = await Posting.search(ctx.db, ctx.input.query, ctx.input.limit);
+	let found = await ctx.models.posting.search(ctx.input.query, ctx.input.limit);
 	if (found.length === 0)
 		throw new ToolError("Nothing matched. Try a broader query.");
 	return found.map((posting) => ({
@@ -114,8 +113,8 @@ A returned string is the answer verbatim, and anything else is serialized as JSO
 Any other exception reaches the model only as "the tool failed", because its message was
 written for you and may carry a query or an upstream URL; pass `onError` to
 `createHandler` to receive those. `href` builds a URI from the resource's pattern, so the
-search points the model at the resource without concatenating a string by hand. `Posting` is
-your app's own model.
+search points the model at the resource without concatenating a string by hand. `search` is a
+method on your app's `posting` model.
 
 A resource implements `read`, and optionally a `list` that fills the client's picker:
 
@@ -124,17 +123,16 @@ import { createResource } from "@sdxc/mcp";
 
 import { toMarkdown } from "~/app/mcp/markdown";
 import resourceset from "~/app/mcp/resources";
-import Posting from "~/app/models/posting";
 
 export default createResource(resourceset.posting, {
 	list: async (ctx) =>
-		(await Posting.listOpen(ctx.db, 50)).map((posting) => ({
+		(await ctx.models.posting.listOpen(50)).map((posting) => ({
 			uri: resourceset.posting.href({ id: posting.id }),
 			name: `${posting.title} at ${posting.company}`,
 		})),
 
 	read: async (ctx) => {
-		let posting = await Posting.find(ctx.db, ctx.variables.id);
+		let posting = await ctx.models.posting.find(ctx.variables.id);
 		return posting ? toMarkdown(posting) : null;
 	},
 });
@@ -214,12 +212,13 @@ import { createTool, ToolError } from "@sdxc/mcp";
 import { cachedSearch } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
-import Posting from "~/app/models/posting";
 
 export default createTool(toolset.searchJobs, async (ctx) => {
 	let { query, limit } = ctx.input;
 	let key = `search_jobs:${limit}:${query.toLowerCase()}`;
-	let found = await cachedSearch(key, () => Posting.search(ctx.db, query, limit));
+	let found = await cachedSearch(key, () =>
+		ctx.models.posting.search(query, limit),
+	);
 	if (found.length === 0)
 		throw new ToolError("Nothing matched. Try a broader query.");
 	return found.map((posting) => ({
@@ -243,72 +242,65 @@ for the `CallToolResult`, and can skip storing a result whose `isError` is set.
 
 ## Mount the endpoint
 
-The server's `fetch` takes the router's context, so the endpoint is one route with whatever
-middleware you want in front of it. An anonymous endpoint needs a caller budget, since every
-call costs you a search.
+The server's `fetch` takes the router's context, so the endpoint is one controller with
+whatever middleware you want in front of it. An app from `sdxc create` has it already: the
+route is `mcp: post("/mcp")` in `routes/api.ts`, and its controller runs the API chain, which
+answers CORS and binds every caller as a guest, before handing the request to the server:
 
-```typescript {% title="app/initializers/router.ts" %}
-import type { RequestContext } from "remix/router";
+```typescript {% title="app/http/controllers/mcp.tsx" %}
+import { createAction } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
-import { lazy } from "@sdxc/lazy-route";
-import { log } from "@sdxc/logger/middleware";
-import { CloudflareAdapter } from "@sdxc/rate-limit";
-import { rateLimit } from "@sdxc/rate-limit/middleware";
-import { env } from "cloudflare:workers";
-import { createRouter } from "remix/router";
+import api from "~/app/http/middleware/api";
+import mcp from "~/app/initializers/mcp";
+import routes from "~/routes/api";
 
-import { logger } from "~/app/initializers/logger";
-import routes from "~/routes/web";
-
-function mcpBudget() {
-	return rateLimit({
-		adapter: new CloudflareAdapter(env.MCP_RATE_LIMITER, {
-			limit: 60,
-			window: "1 minute",
-		}),
-		prefix: "mcp",
-		key: (ctx) =>
-			getClientIP(ctx.request)?.network({ v4: 32, v6: 64 }).toString() ??
-			"unknown",
-	});
-}
-
-export function createWebRouter() {
-	let router = createRouter({ middleware: [log(logger)] });
-	router.map(
-		routes.mcp,
-		lazy(
-			() =>
-				import("~/app/initializers/mcp").then(
-					(it) => (ctx: RequestContext) => it.default.fetch(ctx),
-				),
-			[mcpBudget()],
-		),
-	);
-	return router;
-}
+export default createAction(routes.mcp, {
+	middleware: api,
+	handler: (ctx) => mcp.fetch(ctx),
+});
 ```
 
-The route is `mcp: post("/mcp")` in your route table, and the rate limiter is a binding named
-`MCP_RATE_LIMITER` in your Wrangler config. The budget is `lazy()`'s second argument, so an
-over-budget caller is refused before the server's module loads. Your real `createRouter` call
-carries the rest of your global middleware; with `log(logger)` in that chain, the
-request's record gains `mcp.method`, `mcp.tool` and `mcp.is_error`, so one filter finds every
-call a model did not get a clean answer to. Authentication, when you add it, is ordinary
-request middleware on this route; it runs for `tools/list` too, which matters because the
-list a caller sees can depend on the credential.
+An anonymous endpoint needs a caller budget of its own, since every call costs you a search.
+Give it to the route as `lazy()`'s second argument in the router, so an over-budget caller is
+refused before the controller's module loads:
+
+```typescript {% title="app/initializers/router.tsx" %}
+router.map(
+	apiRoutes.mcp,
+	lazy(
+		() => import("~/app/http/controllers/mcp"),
+		[
+			rateLimit({
+				adapter: new CloudflareAdapter(env.MCP_RATE_LIMITER, {
+					limit: 60,
+					window: "1 minute",
+				}),
+				prefix: "mcp",
+				key: (ctx) => addressKey(ctx.ip),
+			}),
+		],
+	),
+);
+```
+
+`MCP_RATE_LIMITER` is a rate limit binding you declare in `cloudflare.config.ts`, and
+`addressKey()` from `@sdxc/rate-limit` keys each caller by the address `getClientIP()`
+published in the router's global chain, an IPv6 caller by its /64. With `log(logger)` in
+that chain, the request's record gains `mcp.method`, `mcp.tool` and `mcp.is_error`, so one
+filter finds every call a model did not get a clean answer to. Authentication, when you add it,
+is ordinary request middleware in the API chain; it runs for `tools/list` too, which matters
+because the list a caller sees can depend on the credential.
 
 ## Scope tools to a credential
 
 Once callers bring a token, a tool's `available` predicate decides whether it exists for them:
 a tool it answers `false` for is absent from `tools/list` and reported as unknown by
 `tools/call`. With an [`@sdxc/authz`](/api/authz) policy, the predicate is an ability. Bind
-the token's holder on the route with `access()` from `@sdxc/authz/middleware/router`, giving
+the token's holder with `access()` from `@sdxc/authz/middleware/router`, giving
 the token's scope as `within`, a ceiling of roles every check must also pass, and listing the
 claims the predicates read under `load`, since `available` answers synchronously:
 
-```typescript {% title="app/initializers/router.ts" %}
+```typescript {% title="app/http/middleware/api.ts" %}
 access(policy, {
 	roles: (ctx) => [ctx.member.role],
 	within: (ctx) => [`agent:${ctx.token.scope}`],
@@ -316,7 +308,8 @@ access(policy, {
 });
 ```
 
-That middleware goes in the `routes.mcp` mapping's `lazy()` guards after your token middleware, which publishes
+It takes the place of the guest `access(policy, { load: [abilities] })` in the API chain, after
+your token middleware, which publishes
 `ctx.token` and `ctx.member`; `abilities` and `policy` are your catalog and policy, with a role
 named `agent:read` and one named `agent:write`. `@sdxc/authz/mcp` then guards the tool, and
 checks the record it touches once its arguments validate:
@@ -328,7 +321,6 @@ import { guard, requireToolAbility } from "@sdxc/authz/mcp";
 import { createTool } from "@sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
-import Posting from "~/app/models/posting";
 import abilities from "~/app/policies/abilities";
 
 type Input = InputOf<typeof toolset.closePosting>;
@@ -340,7 +332,7 @@ export default createTool(toolset.closePosting, {
 			abilities.posting.close,
 			{
 				context: async (ctx) => {
-					let posting = await Posting.find(ctx.db, ctx.input.id);
+					let posting = await ctx.models.posting.find(ctx.input.id);
 					return posting ? { posting } : null;
 				},
 				notFound: "No open posting has that id.",
@@ -348,7 +340,7 @@ export default createTool(toolset.closePosting, {
 		),
 	],
 	handler: async (ctx) => {
-		await Posting.close(ctx.db, ctx.input.id);
+		await ctx.models.posting.close(ctx.input.id);
 		return "Closed.";
 	},
 });

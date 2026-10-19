@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 11
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 ---
 
 A tool that changes code for people, such as a migration script, a generator or an upgrade
@@ -195,6 +195,33 @@ where the calls are; with no such call yet, it follows the declaration that call
 Compute both edits before writing either. When one fails, write neither and print both for a
 person to make, so a declaration never lands without the call that maps it.
 
+## Remove a declaration and its call
+
+The same two edits run backwards when a generator undoes what it added. `removeProperty` takes
+the `call`, `path` and `key` `addProperty` took and removes the property with its comma, and
+its line when it sits on one; a group the removal leaves empty, such as `reports: {}`, goes
+too. `removeStatements` removes every statement holding a string literal equal to
+`specifier`, with the rest of its lines:
+
+```typescript {% title="scripts/remove-job.ts" %}
+import { findStatements, removeProperty, removeStatements } from "@sdxc/codemod";
+
+let undeclared = removeProperty("app/jobs/index.ts", jobsSource, {
+	call: "jobs",
+	path: ["reports"],
+	key: "daily",
+});
+
+let unmapped = removeStatements("app/initializers/dispatcher.ts", dispatcherSource, {
+	specifier: "~/app/jobs/reports/daily",
+});
+```
+
+A missing call, path or key fails with `not-found`, and a specifier no statement holds leaves
+the source as it is. `findStatements` answers the same statements with their `text`, `start`
+and `end` without removing them, so a script can read what a mapping maps, or list it for a
+person, before it removes anything.
+
 ## Trust the output
 
 Every edit scans its own output again before answering, and fails with `invalid-output` rather
@@ -206,9 +233,10 @@ anything beyond indentation.
 
 ## Where to go next
 
-- [Generate files](/docs/sdxc/generate-files) and
-  [Copy UI components](/docs/sdxc/copy-ui-components) — `sdxc make` and `sdxc ui add`, which
-  make these edits for you.
+- [Generate files](/docs/sdxc/generate-files),
+  [Undo a make](/docs/sdxc/undo-generated-files) and
+  [Copy UI components](/docs/sdxc/copy-ui-components) — `sdxc make`, `sdxc destroy`
+  and `sdxc ui add`, which make these edits for you.
 - [Build a command line](/docs/operations-and-testing/build-a-command-line) — turn a script like
   these into a command with flags and a `--dry-run`.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the declarations and
