@@ -62,6 +62,10 @@ export function createSDXC(
 		lazy(() => import("./commands/deploy.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.destroy,
+		lazy(() => import("./commands/destroy.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.doctor,
 		lazy(() => import("./commands/doctor.js")),
 	);

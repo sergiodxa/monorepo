@@ -47,6 +47,7 @@ describe("help", () => {
 				"Commands:",
 				"  create        Write a new project from a built-in template or a GitHub repository",
 				"  deploy        Build, then run the app's db migrate --remote and deploy commands",
+				"  destroy       Remove a file sdxc make wrote, its test, its mapping and its declaration",
 				"  doctor        Lint release drift, secrets, migrations, app layout and project checks",
 				"  init          Write .config/sdxc.jsonc with every default spelled out",
 				"  initializers  List the initializers in app/initializers, their exports and what builds them",

@@ -12,7 +12,13 @@ import * as s from "remix/data-schema";
 
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
 import { DEPLOY_STEPS } from "./deploy/plan.js";
-import { ACTION_NAMES, KINDS, MODEL_COMPANIONS, SCAFFOLD_PIECES } from "./make/kinds.js";
+import {
+	ACTION_NAMES,
+	DESTROY_KINDS,
+	KINDS,
+	MODEL_COMPANIONS,
+	SCAFFOLD_PIECES,
+} from "./make/kinds.js";
 import { DEFAULT_TAGS } from "./notes.js";
 import { ROUTE_SORTS } from "./routes/filter.js";
 import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
@@ -130,6 +136,32 @@ export const SDXC_COMMANDS = commands({
 			"deploy --dry-run",
 			"deploy --yes --skip build",
 			"deploy --skip build --skip migrate",
+		],
+	}),
+	destroy: command({
+		description: "Remove a file sdxc make wrote, its test, its mapping and its declaration",
+		arguments: {
+			kind: argument(s.enum_(DESTROY_KINDS), {
+				description: "What to remove; every make kind but migration and policy",
+			}),
+			name: argument(nonEmpty("Name it"), {
+				description: "The name it was made with",
+			}),
+		},
+		flags: {
+			yes: flag.boolean("yes", {
+				short: "y",
+				description: "Remove without asking; required without a terminal",
+			}),
+			dryRun: DRY_RUN_FLAG,
+			resource: flag.boolean("resource", {
+				description: "With mcp, a resource in app/mcp/resources instead of a tool",
+			}),
+		},
+		examples: [
+			"destroy controller posts/archive",
+			"destroy job digest --dry-run",
+			"destroy model post --yes",
 		],
 	}),
 	doctor: command({

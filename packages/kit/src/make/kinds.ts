@@ -175,6 +175,24 @@ export const SCAFFOLD_PIECES = [
 /** One piece of a scaffold. */
 export type ScaffoldPiece = (typeof SCAFFOLD_PIECES)[number];
 
+/** The kinds `destroy` undoes; a migration may have run and a policy is edits alone, so neither is. */
+export const DESTROY_KINDS = [
+	"controller",
+	"middleware",
+	"validator",
+	"job",
+	"model",
+	"factory",
+	"service",
+	"initializer",
+	"email",
+	"mcp",
+	"command",
+] as const;
+
+/** One of {@link DESTROY_KINDS}. */
+export type DestroyKind = (typeof DESTROY_KINDS)[number];
+
 /** Where `make mcp --resource` writes, beside the tools. */
 export const MCP_RESOURCES_FOLDER = "app/mcp/resources";
 
