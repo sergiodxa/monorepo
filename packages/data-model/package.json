@@ -9,6 +9,7 @@
 		"./cli": "./src/cli.ts",
 		"./jobs": "./src/jobs.ts",
 		"./router": "./src/router.ts",
+		"./seed": "./src/seed.ts",
 		"./testing": "./src/testing.ts"
 	},
 	"scripts": {

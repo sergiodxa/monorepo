@@ -17,7 +17,7 @@ Tables come from `remix/data-table` in [`remix`](https://www.npmjs.com/package/r
 answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and fail
 with the `ValidationError` from [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate).
 The `./jobs` entry point needs [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs), `./cli`
-needs [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli) and `./testing` needs
+needs [`@sdxc/cli`](https://www.npmjs.com/package/@sdxc/cli), and `./testing` and `./seed` need
 [`@sdxc/sample`](https://www.npmjs.com/package/@sdxc/sample).
 
 ## Usage
@@ -309,6 +309,12 @@ The `ValidationError` a write answers when the database refuses it, with `kind` 
   runs; `build` receives the original members, so a replacement can wrap them.
 - `publishModels(ctx, registry, context, options?)`: binds a registry with `ctx` as its host and
   publishes it the way the middleware does, for a test calling a handler directly.
+
+### `./seed`
+
+- `defineSeed(registry, steps)`: a `Seeder` whose named steps receive `{ models, factories }`
+  and run in order; `seeder.run({ db }, { seed? })` binds the registry and answers the names
+  that ran, or a failure naming the step that threw.
 
 ### Types
 
