@@ -109,7 +109,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			),
 			i18n,
 			billing({ provider: options.billing ?? polar }),
-			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
+			previews(mail, {
+				locales: SUPPORTED_LANGUAGES,
+				enabled: import.meta.env.DEV,
+				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+			}),
 			mailer({
 				transport: () => options.mailTransport ?? createMailTransport(),
 				from: MAIL_FROM,
