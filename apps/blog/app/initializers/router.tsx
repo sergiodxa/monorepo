@@ -243,7 +243,10 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 			socialCards(),
 			database(createDatabase()),
 			models(registry, (ctx) => ({ db: ctx.db })),
-			previews(mail, { enabled: import.meta.env.DEV }),
+			previews(mail, {
+				enabled: import.meta.env.DEV,
+				stylesheets: () => assetResolver.getStylesheets("resources/layouts/document.tsx"),
+			}),
 			jobEnqueuer(jobQueue),
 			workersCache({ cache: () => platformCache }),
 			/**
