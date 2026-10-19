@@ -23,7 +23,7 @@ sdxc make controller api/keys --routes api # a JSON endpoint
 sdxc make model post title body            # ctx.models.post, its migration and factory
 sdxc make migration create-tags name       # then: sdxc run db migrate
 sdxc make job reports/daily --cron "0 8 * * *"
-sdxc make email welcome                    # then: ctx.email.later(new WelcomeEmail(to, copy))
+sdxc make email welcome name               # then: ctx.email.later(emails.welcome, { to, props })
 sdxc make command users/grant              # then: sdxc run users grant
 sdxc scaffold post title body:text         # model, migration, CRUD pages and tests
 
@@ -64,8 +64,9 @@ Claude Code at it. `sdxc upgrade` keeps its sdxc section current; add your own r
 Every request, job and command can read:
 
 - `ctx.db` and `ctx.models`: the D1 database and its models.
-- `ctx.email` (requests and commands): sends email, `later()` after the response or
-  `await send()` before it. A command prints it instead of sending it.
+- `ctx.email`: sends an email `app/emails/index.ts` declares, `await send()` now, `later()`
+  after the response, or `await queue()` to the `email` job, which retries it. A command prints
+  it instead of sending it.
 - `ctx.log`, with a `trace_id` shared by a request and the jobs it starts.
 - `ctx.timing`: adds entries to the `Server-Timing` header (requests only).
 - `ctx.ip` and `ctx.userAgent` (requests only): the client's address, or `null`, and its parsed

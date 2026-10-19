@@ -35,7 +35,9 @@ bun run test                       # every test, under Vitest
 - Create every file a feature needs with `sdxc make`, then fill it in. The kinds are
   `controller`, `middleware`, `validator`, `job`, `model`, `migration`, `factory`, `service`,
   `policy`, `initializer`, `email`, `mcp` and `command`. `make` writes the test beside the file
-  and declares and maps controllers, jobs, MCP tools and commands, so the file works at once.
+  and declares and maps controllers, jobs, MCP tools, commands and emails, so the file works at
+  once. `sdxc make email <name> field ...` takes fields as `make model` does; they become the
+  email's props.
 - For a resource people list, show, create, edit and delete, start from
   `sdxc scaffold <name> title body:text` (`--mcp` and `--command` add its tools and commands).
 - `sdxc make policy <resource>` adds the resource's `create`, `read`, `update` and `delete`
@@ -100,6 +102,10 @@ bun run test                       # every test, under Vitest
 - Write the router's global middleware inline in `createRouter({ middleware: [...] })`.
   Middleware publishes services onto the context (`ctx.db`, `ctx.models`, `ctx.email`), so a
   handler reads them there and a test installs its own.
+- Send an email by its declaration, with the reader's language rather than translated copy:
+  `ctx.email.send(emails.welcome, { to, locale, props })`, or `queue()` for a delivery that must
+  survive a failure. The template translates with `handle.props.t`, so a queued delivery stays
+  plain JSON.
 - Build UI with `remix/component` JSX, styled with `css()` mixins through `mix`. Render server
   HTML as JSX. A page renders through `ctx.render()` inside `DocumentLayout`, passing it
   `ctx.assets` for the stylesheets, entry script and CSP nonce.

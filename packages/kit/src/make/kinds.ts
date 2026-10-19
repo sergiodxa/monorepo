@@ -59,7 +59,9 @@ export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "sp
  * A `--resource` controller's `ability` is the one it checks, `access` the guard answering a
  * refusal with an empty response and `pageAccess` the one rendering the not-found page. A form's
  * `params` is what its handlers pass to `href()`, `ctx.params` when its route has params, and
- * `sampleParams` the values its test passes instead.
+ * `sampleParams` the values its test passes instead. An email's `subject`, `layoutTitle`, `body` and
+ * `preview` are its template's members written from its fields, and `sample`, `subjectSample` and
+ * `textSample` what its test renders and expects.
  */
 export const KINDS: Readonly<Record<KindName, Kind>> = {
 	controller: {
@@ -127,7 +129,22 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		nested: true,
 		placeholders: [],
 	},
-	email: { folder: "app/emails", extension: ".tsx", tests: true, nested: true, placeholders: [] },
+	email: {
+		folder: "app/emails",
+		extension: ".tsx",
+		tests: true,
+		nested: true,
+		placeholders: [
+			"path",
+			"subject",
+			"layoutTitle",
+			"body",
+			"preview",
+			"sample",
+			"subjectSample",
+			"textSample",
+		],
+	},
 	mcp: {
 		folder: "app/mcp/tools",
 		extension: ".ts",

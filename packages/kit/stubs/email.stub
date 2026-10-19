@@ -1,26 +1,21 @@
 /**
- * The {{title}} email: describe who receives it and what it tells them.
+ * The {{title}} email: describe who receives it and what it tells them. Its props are declared
+ * in `app/emails/index.ts`; translate copy with `handle.props.t`, in `handle.props.locale`.
  *
  * @see {@link https://sdxc.dev/docs/data-and-background-work/send-email}
  * @see {@link https://sdxc.dev/api/mail}{{header}}
  */
 
-import { defineEmail, Email } from "@sdxc/mail";
+import { createEmail, Email } from "@sdxc/mail";
 
-/** What the {{title}} email says, already translated for its reader. */
-export interface {{Name}}Copy {
-	heading: string;
-	body: string;
-}
+import emails from "~/app/emails";
 
-/** The {{title}} email, sent with `new {{Name}}Email(recipient, copy)`. */
-export const {{Name}}Email = defineEmail<{{Name}}Copy>({
-	subject: (copy) => copy.heading,
+export default createEmail(emails.{{path}}, {
+	subject: {{subject}},
 	body: (handle) => () => (
-		<Email.Layout preview={handle.props.heading} title={handle.props.heading}>
-			<Email.Heading>{handle.props.heading}</Email.Heading>
-			<Email.Text>{handle.props.body}</Email.Text>
-			{/* TODO: lay out the rest of the email */}
+		<Email.Layout lang={handle.props.locale} title={{layoutTitle}}>
+{{body}}
 		</Email.Layout>
 	),
+	preview: () => ({{preview}}),
 });

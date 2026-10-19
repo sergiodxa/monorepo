@@ -40,6 +40,7 @@ import type { ResourceAction } from "./guard.js";
 import type { KindName, ModelCompanion } from "./kinds.js";
 
 import { declare, declaresAbilities, findRow } from "./declare.js";
+import { planEmail } from "./email.js";
 import { fieldMigration } from "./from-fields.js";
 import { modelMigration } from "./from-model.js";
 import { exists, folderOf, plan, resourceScheme } from "./generate.js";
@@ -79,6 +80,7 @@ export interface MakeInput {
 	/**
 	 * `make model`: each field as `sdxc scaffold` takes it, written as a column, a factory value
 	 * and a column of its migration. `make migration`: the columns its name adds or drops.
+	 * `make email`: the props its schema declares and its template renders.
 	 */
 	fields?: readonly string[] | undefined;
 	/** `make model`: the companions to leave out. */
@@ -199,6 +201,9 @@ export async function makeUnformatted(
 			`Kept the declaration, mapping and mount ${request.name.segments.join("/")} already has; --force replaces files only\n`,
 		);
 	}
+	let email = kind === "email" ? planEmail(input.fields ?? [], name.data) : null;
+	if (email !== null && isFailure(email)) return email;
+	if (email !== null) Object.assign(overrides, email.data.placeholders);
 	let declared: Declared | null = null;
 	if (
 		!replacing &&
@@ -207,7 +212,8 @@ export async function makeUnformatted(
 			kind === "mcp" ||
 			kind === "command" ||
 			kind === "model" ||
-			kind === "policy")
+			kind === "policy" ||
+			kind === "email")
 	) {
 		let segments = request.name.segments;
 		declared = await declare(
@@ -223,6 +229,10 @@ export async function makeUnformatted(
 				tool: segments.map((segment) => segment.replaceAll("-", "_")).join("_"),
 				uri: `${await resourceScheme(root)}://${segments.join("/")}`,
 				title: request.name.title,
+				options:
+					email === null
+						? undefined
+						: { imports: ["s"], lines: ({ s = "s" }) => email.data.declaration(s) },
 			},
 			root,
 		);

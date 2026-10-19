@@ -246,9 +246,11 @@ An initializer in app/initializers
 | `--dry-run` | Print what would be written and change nothing                                |
 | `--force`   | Replace the file and its test when they exist, keeping their declaration      |
 
-#### `sdxc make email <name>`
+#### `sdxc make email <name> [field[:type][?]...]`
 
-An email template in app/emails
+An email template in app/emails, its props declared and the template mapped. Fields are typed as
+`make model` types them and become the props `app/emails/index.ts` declares; the first text prop
+is the subject and heading. Without fields it declares `heading` and `body`.
 
 | Flag        | Does                                                                          |
 | ----------- | ----------------------------------------------------------------------------- |

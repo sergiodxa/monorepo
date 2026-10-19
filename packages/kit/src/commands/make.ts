@@ -144,9 +144,9 @@ export const factory = createCommand(SDXC_COMMANDS.make.factory, {
  *
  * @param kind - The kind it writes
  */
-function plain<
-	Kind extends "validator" | "service" | "policy" | "initializer" | "email" | "command",
->(kind: Kind) {
+function plain<Kind extends "validator" | "service" | "policy" | "initializer" | "command">(
+	kind: Kind,
+) {
 	return createCommand(SDXC_COMMANDS.make[kind], {
 		middleware: MAKE_MIDDLEWARE,
 		/** Writes the file and, unless `--no-test` or `make.tests` says otherwise, its test. */
@@ -209,7 +209,20 @@ export const policy = plain("policy");
 export const initializer = plain("initializer");
 
 /** `sdxc make email`. */
-export const email = plain("email");
+/** `sdxc make email`, which declares the email with its fields as props and maps its template. */
+export const email = createCommand(SDXC_COMMANDS.make.email, {
+	middleware: MAKE_MIDDLEWARE,
+	/** Writes the template and, unless `--no-test` or `make.tests` says otherwise, its test. */
+	handler: (ctx) =>
+		run(ctx, {
+			kind: "email",
+			name: ctx.arguments.name,
+			fields: ctx.arguments.fields,
+			test: ctx.flags.test,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		}),
+});
 
 /** `sdxc make command`, which declares the command and maps its handler on the command line. */
 export const command = plain("command");

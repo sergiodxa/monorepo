@@ -27,7 +27,7 @@ import { camel } from "./names.js";
 
 /** What to declare and map, as the command line asked for it. */
 export interface DeclarationRequest {
-	kind: "job" | "controller" | "mcp" | "command" | "model" | "policy";
+	kind: "job" | "controller" | "mcp" | "command" | "model" | "policy" | "email";
 	name: Name;
 	/** `cron` for a scheduled job, `resource` for an MCP resource, `null` otherwise. */
 	variant: string | null;
@@ -47,7 +47,7 @@ export interface DeclarationRequest {
 	title: string;
 	/** A page's sitemap decision in place of the one its pattern implies. */
 	sitemap?: string;
-	/** A tool's or a command's options in place of the empty ones `make` declares. */
+	/** A tool's or a command's options in place of the empty ones `make` declares; an email's props. */
 	options?: DeclarationOptions;
 }
 
@@ -104,6 +104,7 @@ const INSTANCE_NAMES: Readonly<Record<string, string>> = {
 	createRouter: "router",
 	createHandler: "mcp",
 	createCLI: "cli",
+	createMail: "mail",
 };
 
 /** Plans the declaration and mapping for `request` in the project at `root`. */
@@ -113,6 +114,7 @@ export async function declare(request: DeclarationRequest, root: string): Promis
 	if (request.kind === "command") return declareCommand(request, root);
 	if (request.kind === "model") return declareModel(request, root);
 	if (request.kind === "policy") return declarePolicy(request, root);
+	if (request.kind === "email") return declareEmail(request, root);
 	return declareMcp(request, root);
 }
 
@@ -445,6 +447,110 @@ async function declareMcp(request: DeclarationRequest, root: string): Promise<De
 		statement(lazy.data.local),
 		`${instance}.${group}.map`,
 		"createHandler",
+	);
+	if (isFailure(mapped)) return manual(mapped.error.message);
+	return {
+		kind: "edits",
+		path: path.join("."),
+		edits: [
+			{ path: declarations, before: file.data.source, after: added.data.source },
+			{ path: initializer.path, before: initializer.source, after: mapped.data },
+		],
+	};
+}
+
+/**
+ * Declares an email in `app/emails/index.ts`, with the props its fields describe, and maps its
+ * template on the email registry through `lazy()`, imported from the package that provides
+ * `createMail`.
+ */
+async function declareEmail(request: DeclarationRequest, root: string): Promise<Declared> {
+	let module = "app/emails/index";
+	let declarations = `${module}.ts`;
+	let { name } = request;
+	let initializer = await findInitializer(root, module, "createMail");
+	let instance = initializer === null ? "mail" : instanceOf(initializer, "createMail");
+	let local = initializer === null ? "emails" : (defaultLocal(initializer, module) ?? "emails");
+	let path = [...name.segments.slice(0, -1).map(camel), name.key];
+	let lines = (s: string) => request.options?.lines({ s }) ?? [`props: ${s}.object({}),`];
+	let valueWith = (callee: string, s: string) =>
+		`${callee}({\n${lines(s)
+			.map((line) => `\t${line}`)
+			.join("\n")}\n})`;
+	let handler =
+		initializer === null ? `~/${request.handler}` : handlerSpecifier(initializer, request.handler);
+	let statement = (lazy: string) =>
+		`${instance}.map(${local}.${path.join(".")}, ${lazy}(() => import(${literal(handler)})));`;
+	let manual = (reason: string): Declared => ({
+		kind: "manual",
+		path: path.join("."),
+		reason,
+		instructions: instructions(
+			`${declarations}, in emails({ … })${groupNote(path)}`,
+			`${path.at(-1)}: ${valueWith("email", "s")},`,
+			initializer?.path ?? "the email registry's initializer",
+			statement("lazy"),
+		),
+	});
+	if (initializer === null)
+		return manual("no initializer in app/initializers/ creates the email registry");
+	let file = await readSource(root, declarations);
+	if (isFailure(file)) return manual(`${declarations} could not be read`);
+
+	let mailSpecifier = file.data.references.find(
+		(reference) =>
+			reference.kind === "import" && reference.names.some((bound) => bound.imported === "emails"),
+	)?.specifier;
+	if (mailSpecifier === undefined) return manual(`${declarations} does not import emails()`);
+	let builder = ensureImport(
+		declarations,
+		file.data.source,
+		{ kind: "named", name: "email" },
+		(specifier) => specifier === mailSpecifier,
+		mailSpecifier,
+		"email",
+	);
+	if (isFailure(builder)) return manual(builder.error.message);
+	let schema = ensureImport(
+		declarations,
+		builder.data.source,
+		{ kind: "namespace" },
+		(specifier) => specifier === "remix/data-schema",
+		"remix/data-schema",
+		"s",
+	);
+	if (isFailure(schema)) return manual(schema.error.message);
+	let added = addProperty(declarations, schema.data.source, {
+		call: "emails",
+		path: path.slice(0, -1),
+		key: name.key,
+		value: valueWith(builder.data.local, schema.data.local),
+	});
+	if (isFailure(added)) return manual(added.error.message);
+
+	let mailSource = initializer.references.find(
+		(reference) =>
+			reference.kind === "import" &&
+			reference.names.some((bound) => bound.imported === "createMail"),
+	)?.specifier;
+	if (mailSource === undefined) return manual(`${initializer.path} does not import createMail`);
+	let lazy = ensureImport(
+		initializer.path,
+		initializer.source,
+		{ kind: "named", name: "lazy" },
+		(specifier) => specifier === mailSource,
+		mailSource,
+		"lazy",
+	);
+	if (isFailure(lazy)) return manual(lazy.error.message);
+	let withLazy = { ...initializer, source: lazy.data.source };
+	let mapped = mapAfter(
+		withLazy,
+		module,
+		local,
+		statement(lazy.data.local),
+		`${instance}.map`,
+		"createMail",
 	);
 	if (isFailure(mapped)) return manual(mapped.error.message);
 	return {

@@ -362,10 +362,18 @@ export const SDXC_COMMANDS = commands({
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 		}),
 		email: command({
-			description: "An email template in app/emails",
+			description: "An email template in app/emails, its props declared and the template mapped",
 			tasks: true,
-			arguments: { name: nameArgument("email", "welcome") },
+			arguments: {
+				name: nameArgument("email", "welcome"),
+				fields: argument.variadic(s.string(), {
+					valueName: "field[:type][?]",
+					description:
+						"Props, typed as make model types them, each optional with ?; the first text prop is the subject and heading; none declares heading and body",
+				}),
+			},
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
+			examples: ["make email welcome", "make email teams/invite team invite_url 'expires_on?'"],
 		}),
 		mcp: command({
 			description: "An MCP tool in app/mcp/tools, or a resource, declared and mapped",

@@ -1,21 +1,21 @@
 /**
- * The {{title}} email.
+ * The {{title}} email, rendered through the app's email registry.
  *
  * @see {@link https://sdxc.dev/docs/data-and-background-work/send-email}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
  */
 
-import { render } from "@sdxc/mail";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { {{Name}}Email } from "{{specifier}}";
+import emails from "~/app/emails";
+import { mail } from "~/app/initializers/mail";
 
-describe("{{Name}}Email", () => {
-	test("is addressed to its recipient under its heading", async () => {
-		let email = new {{Name}}Email("ada@example.com", { heading: "Hello", body: "Welcome." });
+describe("{{title}} email", () => {
+	test("renders its props into the subject and both body parts", async () => {
+		let rendered = unwrap(await mail.render(emails.{{path}}, { props: {{sample}} }));
 
-		expect(email.to).toEqual({ email: "ada@example.com" });
-		expect(email.subject).toBe("Hello");
-		expect((await render(email.body())).text).toContain("Welcome.");
+		expect(rendered.subject).toBe({{subjectSample}});
+		expect(rendered.text).toContain({{textSample}});
 	});
 });
