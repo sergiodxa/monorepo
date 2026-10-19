@@ -73,6 +73,8 @@ guide says which of them its declaration uses.
   nothing.
 - `--no-test` skips the test for one run, and `--test` writes it when `make.tests` is `false`.
   Migrations and factories never get one.
+- `--force` writes the file and its test from the stub again when they exist. Every kind but
+  `migration` takes it.
 
 <note>
 A run plans every file and every edit before it writes any, and leaves every existing file as
@@ -80,8 +82,25 @@ it is: a name that is taken, test included, stops the command and leaves the pro
 </note>
 
 ```text
-app/http/controllers/home.tsx already exists; sdxc make leaves it as it is
+app/http/controllers/home.tsx already exists; sdxc make leaves it as it is unless --force
 ```
+
+Pass `--force` when you want the stub's version back, such as after editing a stub of your own.
+The file and its test are replaced, and the declaration, mapping and mount they already have are
+kept, so nothing is declared twice:
+
+```bash
+sdxc make controller home --force
+```
+
+```text
+Replaced app/http/controllers/home.tsx
+Replaced app/http/controllers/home.test.tsx
+Kept the declaration, mapping and mount home already has; --force replaces files only
+```
+
+On an existing model, `--force` rewrites the model, its test and its factory, and writes no
+second migration; add columns with [`sdxc make migration`](/docs/sdxc/make-migration).
 
 When the run finishes it prints `Wrote` and `Edited` for each path, then runs the `format`
 command from your configuration once over all of them, so the files land in your project's

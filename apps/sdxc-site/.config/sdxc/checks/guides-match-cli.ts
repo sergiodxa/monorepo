@@ -164,8 +164,8 @@ export default defineCheck({
 	name: "guides-match-cli",
 	/**
 	 * Fails on a guide line the CLI would refuse, since a reader copies it as written, and warns
-	 * on a command or flag that no guide in the `sdxc` section shows, since a new flag can ship a
-	 * release before its guide.
+	 * on a command or flag that no guide in the `sdxc` section shows. A flag a group declares for
+	 * every member, such as `make --force`, is shown once for the whole group.
 	 */
 	async run(ctx) {
 		let cli = createSDXC();
@@ -204,17 +204,29 @@ export default defineCheck({
 
 		let gaps: string[] = [];
 		let root = cli.describe();
+		/** The `sdxc` section's text of the guides showing any command under `path`. */
+		let textUnder = (path: readonly string[]) => {
+			let prefix = path.join(" ");
+			let files = new Set<string>();
+			for (let [key, shown] of shownIn) {
+				if (key !== prefix && !key.startsWith(`${prefix} `)) continue;
+				for (let file of shown) if (file.startsWith(CLI_GUIDES)) files.add(file);
+			}
+			return [...files].map((file) => texts.get(file) ?? "").join("\n");
+		};
 		for (let command of root === undefined ? [] : commandsOf(root)) {
-			let key = command.path.join(" ");
-			let files = [...(shownIn.get(key) ?? [])].filter((file) => file.startsWith(CLI_GUIDES));
-			if (files.length === 0) {
+			let text = textUnder(command.path);
+			if (text === "") {
 				gaps.push(`${command.title}: no guide in ${CLI_GUIDES} runs it`);
 				continue;
 			}
-			let text = files.map((file) => texts.get(file) ?? "").join("\n");
+			let parent = cli.describe(command.path.slice(0, -1));
+			let shared = new Set(parent?.flags.map((flag) => flag.name));
+			let groupText = parent === undefined ? "" : textUnder(parent.path);
 			for (let flag of command.flags) {
 				if (flag.builtin) continue;
-				if (spellings(flag).some((spelling) => text.includes(spelling))) continue;
+				let documented = shared.has(flag.name) && parent?.path.length !== 0 ? groupText : text;
+				if (spellings(flag).some((spelling) => documented.includes(spelling))) continue;
 				gaps.push(`${command.title} --${flag.name}: no guide that runs it mentions it`);
 			}
 		}

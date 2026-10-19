@@ -93,6 +93,21 @@ describe("guides-match-cli", () => {
 		expect(report.status).not.toBe("fail");
 	});
 
+	test("counts a flag the group declares as shown once for every member", async () => {
+		let report = await check.run(
+			context({
+				"resources/docs/sdxc/generate-files.md": "```bash\nsdxc make job digest --force\n```\n",
+				"resources/docs/sdxc/make-validator.md": "```bash\nsdxc make validator signup\n```\n",
+			}),
+		);
+		expect(report.findings).not.toContain(
+			"sdxc make validator --force: no guide that runs it mentions it",
+		);
+		expect(report.findings).toContain(
+			"sdxc make validator --dry-run: no guide that runs it mentions it",
+		);
+	});
+
 	test("warns on commands and flags no guide shows", async () => {
 		let report = await check.run(
 			context({ "resources/docs/sdxc/deploy.md": "```bash\nsdxc deploy --dry-run\n```\n" }),
