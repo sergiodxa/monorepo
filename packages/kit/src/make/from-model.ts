@@ -131,7 +131,7 @@ export async function migrationFromModel(
  * The tables the module at `path` exports, imported by the runtime `sdxc run` uses, from the
  * project root, so the model resolves its imports exactly as the app does.
  */
-async function loadTables(
+export async function loadTables(
 	ctx: Pick<AnyCommandContext, "exec">,
 	root: string,
 	path: string,

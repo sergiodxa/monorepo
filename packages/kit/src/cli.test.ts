@@ -52,6 +52,7 @@ describe("help", () => {
 				"  initializers  List the initializers in app/initializers, their exports and what builds them",
 				"  make          Write a controller, job, model or other file where the app layout puts it",
 				"  middleware    Print each router's global middleware and every chain in app/http/middleware",
+				"  models        Print each model's table and whether the migrations create it, from app/models",
 				"  notes         List the TODO, FIXME, HACK and OPTIMIZE comments in the app's code",
 				"  routes        Print every route with its controller and the middleware that runs for it",
 				"  run           Run the project's own command line, bootstrap/cli.ts, with its runtime",

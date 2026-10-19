@@ -78,6 +78,10 @@ export function createSDXC(
 		lazy(() => import("./commands/middleware.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.models,
+		lazy(() => import("./commands/models.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.notes,
 		lazy(() => import("./commands/notes.js")),
 	);

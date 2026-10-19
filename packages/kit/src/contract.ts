@@ -389,6 +389,19 @@ export const SDXC_COMMANDS = commands({
 		flags: { json: flag.boolean("json", { description: "Print the chains as JSON" }) },
 		examples: ["middleware", "middleware --json"],
 	}),
+	models: command({
+		description: "Print each model's table and whether the migrations create it, from app/models",
+		tasks: false,
+		arguments: {
+			names: argument.variadic(s.string(), {
+				valueName: "model",
+				description:
+					"The models to print in full, as sdxc make model names them; every one listed when left out",
+			}),
+		},
+		flags: { json: flag.boolean("json", { description: "Print the models as JSON" }) },
+		examples: ["models", "models post", "models post comment --json"],
+	}),
 	notes: command({
 		description: "List the TODO, FIXME, HACK and OPTIMIZE comments in the app's code",
 		flags: {
