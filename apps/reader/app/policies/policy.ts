@@ -57,7 +57,7 @@ function off(name: keyof Switches): Condition {
  * Every tier role grants what the tier below it does and more, so an upgrade never
  * removes an ability. A role per agent scope is only ever bound as `within`.
  */
-export default definePolicy(abilities, {
+const policy = definePolicy(abilities, {
 	facts: { flags: fact<Switches>() },
 	everyone: [allow(["posts.keep", "rules.apply"], { id: "everyone" })],
 	roles: {
@@ -78,3 +78,12 @@ export default definePolicy(abilities, {
 		}),
 	],
 });
+
+declare module "@sdxc/authz" {
+	/** Types every access bound from this policy, in the reader's object and on any request. */
+	interface AuthzTypes {
+		policy: typeof policy;
+	}
+}
+
+export default policy;
