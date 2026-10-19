@@ -47,6 +47,9 @@ export interface Guard {
  * abilities of `resource`. A read, update or delete checks one row, so its route takes
  * `/<controller>/:id` by default and a `pattern` without `:id` is refused. With `model`, the row
  * is the model's, and a missing one is a 404 like a hidden one; without it, the row is its id.
+ *
+ * @param checked - The ability to check instead of the one `method` implies, such as `update`
+ * for an edit form
  */
 export function planGuard(
 	controller: Name,
@@ -54,8 +57,9 @@ export function planGuard(
 	method: string,
 	pattern: string | undefined,
 	model: boolean,
+	checked?: ResourceAction,
 ): Result<Guard, Error> {
-	let action = METHOD_ACTIONS[method] ?? "read";
+	let action = checked ?? METHOD_ACTIONS[method] ?? "read";
 	let catalogPath = [...resource.segments.slice(0, -1).map(camel), resource.key];
 	let path = `abilities.${catalogPath.join(".")}`;
 	let ability = `${catalogPath.join(".")}.${action}`;

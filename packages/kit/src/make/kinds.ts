@@ -57,7 +57,9 @@ export const COMMON_PLACEHOLDERS = ["name", "key", "Name", "snake", "title", "sp
  * model's `columns` are the column lines of the fields `make model` was given and `table` the
  * plural its table is named; a factory's `attributes` are a value per field, empty without fields.
  * A `--resource` controller's `ability` is the one it checks, `access` the guard answering a
- * refusal with an empty response and `pageAccess` the one rendering the not-found page.
+ * refusal with an empty response and `pageAccess` the one rendering the not-found page. A form's
+ * `params` is what its handlers pass to `href()`, `ctx.params` when its route has params, and
+ * `sampleParams` the values its test passes instead.
  */
 export const KINDS: Readonly<Record<KindName, Kind>> = {
 	controller: {
@@ -65,7 +67,7 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		extension: ".tsx",
 		tests: true,
 		nested: true,
-		placeholders: ["path", "routes", "ability", "access", "pageAccess"],
+		placeholders: ["path", "routes", "ability", "access", "pageAccess", "params", "sampleParams"],
 	},
 	middleware: {
 		folder: "app/http/middleware",

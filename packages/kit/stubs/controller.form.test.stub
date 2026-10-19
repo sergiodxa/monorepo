@@ -16,7 +16,7 @@ import routes from "{{routes}}";
 /** Posts `form` to the form's action. */
 function submit(form: Record<string, string>) {
 	return createWebRouter().fetch(
-		new Request(new URL(routes.{{path}}.action.href(), "https://example.com"), {
+		new Request(new URL(routes.{{path}}.action.href({{sampleParams}}), "https://example.com"), {
 			method: "POST",
 			body: new URLSearchParams(form),
 		}),
@@ -26,7 +26,7 @@ function submit(form: Record<string, string>) {
 describe("{{name}}", () => {
 	test("renders the form with its honeypot fields and CAPTCHA widget", async () => {
 		let response = await createWebRouter().fetch(
-			new URL(routes.{{path}}.index.href(), "https://example.com"),
+			new URL(routes.{{path}}.index.href({{sampleParams}}), "https://example.com"),
 		);
 
 		expect(response.status).toBe(200);

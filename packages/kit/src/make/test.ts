@@ -95,14 +95,14 @@ export function locate(path: string): Result<Located, Error> {
 async function controllerRoute(
 	root: string,
 	file: string,
-): Promise<{ routes: string | null; path: string | null; form: boolean }> {
+): Promise<{ routes: string | null; path: string | null; form: boolean; pattern: string }> {
 	let listing = await listRoutes(root);
 	let entries = listing.routes.filter((entry) => entry.controller?.file === file);
 	let first = entries[0];
-	if (first === undefined) return { routes: null, path: null, form: false };
+	if (first === undefined) return { routes: null, path: null, form: false, pattern: "" };
 	let form = entries.find((entry) => entry.name.endsWith(".action"));
 	let path = form === undefined ? first.name : form.name.slice(0, -".action".length);
-	return { routes: first.contract, path, form: form !== undefined };
+	return { routes: first.contract, path, form: form !== undefined, pattern: first.pattern };
 }
 
 /**
@@ -137,6 +137,10 @@ export async function makeTest(
 		if (route.routes !== null) routes = route.routes;
 		if (route.path !== null) overrides.path = route.path;
 		if (route.form) chosen = "form";
+		let params = [...route.pattern.matchAll(/:(\w+)/g)].map((match) => match[1] as string);
+		if (params.length > 0) {
+			overrides.sampleParams = `{ ${params.map((param) => `${param}: "1"`).join(", ")} }`;
+		}
 	}
 	let request: MakeRequest = {
 		kind,

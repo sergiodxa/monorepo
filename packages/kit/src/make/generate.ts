@@ -195,6 +195,8 @@ async function placeholders(
 		ability: "",
 		access: "",
 		pageAccess: "",
+		params: "",
+		sampleParams: "",
 	};
 	let values: Record<string, string> = {};
 	for (let key of [...COMMON_PLACEHOLDERS, ...KINDS[request.kind].placeholders]) {

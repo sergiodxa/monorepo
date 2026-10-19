@@ -36,6 +36,7 @@ import { readManifest } from "../upgrade/project.js";
 
 import type { Declared } from "./declare.js";
 import type { MakeRequest, PlannedFile } from "./generate.js";
+import type { ResourceAction } from "./guard.js";
 import type { KindName, ModelCompanion } from "./kinds.js";
 
 import { declare, declaresAbilities, findRow } from "./declare.js";
@@ -65,6 +66,8 @@ export interface MakeInput {
 	routes?: string | undefined;
 	/** `make controller`: the resource whose ability the method implies guards every handler. */
 	guardedBy?: string | undefined;
+	/** `make controller --actions`: the ability to check instead of the one the method implies. */
+	ability?: ResourceAction | undefined;
 	/** `make mcp`: a resource instead of a tool. */
 	resource?: boolean | undefined;
 	/** `make migration`: the chain in `make.migrations`. */
@@ -103,6 +106,24 @@ export async function make(
 	packageRoot: string,
 	input: MakeInput,
 ): Promise<Result<void, Error>> {
+	let changed = await makeUnformatted(ctx, project, packageRoot, input);
+	if (isFailure(changed)) return changed;
+	if (changed.data.length === 0) return success(undefined);
+	return formatFiles(ctx, project.config.format, changed.data, project.root);
+}
+
+/**
+ * {@link make} up to the project's `format`, which the caller runs once over every path it
+ * answers, so a command making several files formats them together.
+ *
+ * @returns Every path written or edited; none under `dryRun`
+ */
+export async function makeUnformatted(
+	ctx: MakeContext,
+	project: Project,
+	packageRoot: string,
+	input: MakeInput,
+): Promise<Result<string[], Error>> {
 	let { root, config } = project;
 	let { kind } = input;
 	let name = parseName(input.name);
@@ -115,7 +136,7 @@ export async function make(
 		let resource = parseName(input.guardedBy);
 		if (isFailure(resource)) return resource;
 		let model = (await findRow(root, resource.data)) !== null;
-		let guard = planGuard(name.data, resource.data, method, pattern, model);
+		let guard = planGuard(name.data, resource.data, method, pattern, model, input.ability);
 		if (isFailure(guard)) return guard;
 		pattern = guard.data.pattern;
 		overrides.ability = guard.data.ability;
@@ -125,6 +146,13 @@ export async function make(
 			notes.push(
 				`app/policies/abilities.ts declares no ${guard.data.catalogPath.join(".")} abilities yet; run sdxc make policy ${resource.data.segments.join("/")} so ${guard.data.ability} exists\n`,
 			);
+		}
+	}
+	if (kind === "controller") {
+		let names = [...(pattern ?? "").matchAll(/:(\w+)/g)].map((match) => match[1] as string);
+		if (names.length > 0) {
+			overrides.params = "ctx.params";
+			overrides.sampleParams = `{ ${names.map((param) => `${param}: "1"`).join(", ")} }`;
 		}
 	}
 	let request: MakeRequest = {
@@ -205,7 +233,7 @@ export async function make(
 	if (kind === "migration" && input.fromModel !== undefined) {
 		let sql = await modelMigration(ctx, project, input.fromModel, input.chain, request.name);
 		if (isFailure(sql)) return sql;
-		if (sql.data === null) return success(undefined);
+		if (sql.data === null) return success([]);
 		migrationSql = sql.data;
 	}
 	if (kind === "migration" && specs.length > 0) {
@@ -257,7 +285,7 @@ export async function make(
 		for (let edit of edits) ctx.stdout(unifiedDiff(edit.path, edit.before, edit.after));
 		if (declared?.kind === "manual") ctx.stdout(manualNote(kind, declared));
 		for (let note of notes) ctx.stdout(note);
-		return success(undefined);
+		return success([]);
 	}
 	let replaced = new Set<string>();
 	for (let file of planned.data.files) {
@@ -286,7 +314,7 @@ export async function make(
 	if (declared?.kind === "manual") ctx.stdout(manualNote(kind, declared));
 	for (let note of notes) ctx.stdout(note);
 	let changed = [...paths, ...edits.map((edit) => edit.path)];
-	return formatFiles(ctx, config.format, changed, root);
+	return success(changed);
 }
 
 /**

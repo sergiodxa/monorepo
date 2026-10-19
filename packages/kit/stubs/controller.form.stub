@@ -32,7 +32,7 @@ export default createController(routes.{{path}}, {
 			return ctx.render(
 				<DocumentLayout assets={ctx.assets} intl={ctx.intl} url={ctx.url} title="{{title}}">
 					<h1>{{title}}</h1>
-					<form method="post" action={routes.{{path}}.action.href()}>
+					<form method="post" action={routes.{{path}}.action.href({{params}})}>
 						<HoneypotFields {...fields} />
 						{/* TODO: replace the message field with the fields this form submits */}
 						<label>
@@ -55,7 +55,7 @@ export default createController(routes.{{path}}, {
 				// TODO: save the submission, then redirect where the visitor should land
 				return new Response(null, {
 					status: 303,
-					headers: { location: routes.{{path}}.index.href() },
+					headers: { location: routes.{{path}}.index.href({{params}}) },
 				});
 			},
 		},

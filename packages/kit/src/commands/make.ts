@@ -9,12 +9,13 @@
 
 import type { ChainContext } from "@sdxc/cli";
 
-import { createCommand, success } from "@sdxc/cli";
+import { createCommand, success, usage } from "@sdxc/cli";
 import { isFailure } from "@sdxc/result";
 
 import type { MakeInput } from "../make/index.js";
 
 import { METHODS, SDXC_COMMANDS } from "../contract.js";
+import { makeActions } from "../make/actions.js";
 import { make } from "../make/index.js";
 import { copyStubs } from "../make/stubs.js";
 import { makeTest } from "../make/test.js";
@@ -33,19 +34,46 @@ async function run(ctx: ChainContext<typeof MAKE_MIDDLEWARE>, input: MakeInput) 
 /** `sdxc make controller`, which declares the route and maps the controller. */
 export const controller = createCommand(SDXC_COMMANDS.make.controller, {
 	middleware: MAKE_MIDDLEWARE,
-	/** Asks for the method on a terminal, with `get` preselected; `--resource` guards the route. */
-	handler: (ctx) =>
-		run(ctx, {
-			kind: "controller",
+	/**
+	 * Asks for the method on a terminal, with `get` preselected; `--resource` guards the route,
+	 * and `--actions` writes one controller per action, each with its own method and route.
+	 */
+	async handler(ctx) {
+		let { flags } = ctx;
+		let shared = {
 			name: ctx.arguments.name,
-			method: ctx.flags.method,
-			path: ctx.flags.path,
-			routes: ctx.flags.routes,
-			guardedBy: ctx.flags.resource,
-			test: ctx.flags.test,
-			dryRun: ctx.flags.dryRun,
-			force: ctx.flags.force,
-		}),
+			routes: flags.routes,
+			guardedBy: flags.resource,
+			test: flags.test,
+			dryRun: flags.dryRun,
+			force: flags.force,
+		};
+		if (flags.actions.length > 0) {
+			if (flags.method !== undefined || flags.path !== undefined) {
+				return usage(
+					"--actions gives each controller its method and route; drop --method and --path",
+				);
+			}
+			let made = await makeActions(ctx, ctx.project, ctx.packageRoot, {
+				...shared,
+				actions: flags.actions,
+			});
+			if (isFailure(made)) return made;
+			return success();
+		}
+		let method = flags.method;
+		if (method === undefined) {
+			let picked = await ctx.prompt.select({
+				message: "Which method?",
+				options: METHODS,
+				default: "get",
+				name: "method",
+			});
+			if (isFailure(picked)) return picked;
+			method = picked.data;
+		}
+		return run(ctx, { ...shared, kind: "controller", method, path: flags.path });
+	},
 });
 
 /** `sdxc make job`, which declares the job and maps its handler. */

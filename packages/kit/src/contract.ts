@@ -12,6 +12,7 @@ import * as s from "remix/data-schema";
 
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
 import { DEPLOY_STEPS } from "./deploy/plan.js";
+import { ACTION_NAMES } from "./make/actions.js";
 import { KINDS, MODEL_COMPANIONS } from "./make/kinds.js";
 import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
 
@@ -169,11 +170,9 @@ export const SDXC_COMMANDS = commands({
 			arguments: { name: nameArgument("controller", "admin/users") },
 			flags: {
 				method: flag.string("method", {
-					default: "get",
 					valueName: "method",
 					schema: s.enum_(METHODS),
-					description: METHODS.join(", "),
-					prompt: prompt.select({ message: "Which method?", options: METHODS, ask: "always" }),
+					description: `${METHODS.join(", ")}; asked on a terminal (default: get)`,
 				}),
 				path: flag.string("path", {
 					valueName: "path",
@@ -188,6 +187,14 @@ export const SDXC_COMMANDS = commands({
 					description:
 						"Check the resource's ability the method implies (get reads, form and post create, put and patch update, delete deletes); a read, update or delete route takes /<name>/:id",
 				}),
+				actions: flag
+					.string("actions", {
+						valueName: "action",
+						schema: s.enum_(ACTION_NAMES),
+						description:
+							"One controller per action under <name>: index, new, show, edit and destroy pages, or with --routes api index, show, create, update and destroy endpoints; all writes each",
+					})
+					.list(),
 				test: TEST_FLAG,
 				dryRun: DRY_RUN_FLAG,
 				force: FORCE_FLAG,
@@ -196,6 +203,7 @@ export const SDXC_COMMANDS = commands({
 				"make controller api/keys --routes api",
 				"make controller ping --method post",
 				"make controller posts/archive --resource post --method delete",
+				"make controller posts --actions all --resource post",
 			],
 		}),
 		middleware: command({

@@ -558,6 +558,79 @@ describe("make", () => {
 	});
 });
 
+describe("make controller --actions", () => {
+	test("writes a page per action under the name, routed as scaffold routes them", async () => {
+		let root = await sitemapProject();
+
+		let result = await invoke(["controller", "posts", "--actions", "all"], root, {
+			exec: UNFORMATTED,
+		});
+
+		expect(result.code).toBe(0);
+		let pages = (await files(root)).filter(
+			(path) => path.startsWith("app/http/controllers/posts/") && !path.includes(".test."),
+		);
+		expect(pages).toEqual(
+			["destroy", "edit", "index", "new", "show"].map(
+				(action) => `app/http/controllers/posts/${action}.tsx`,
+			),
+		);
+		let routes = await readFile(join(root, "routes/web.ts"), "utf8");
+		expect(routes).toContain('"/posts/:id/edit"');
+		expect(routes).toContain('"/posts/:id/destroy"');
+	});
+
+	test("guards each action with the ability it needs and leaves the list to filter rows", async () => {
+		let root = await sitemapProject();
+
+		let result = await invoke(
+			["controller", "posts", "--actions", "edit,destroy,index", "--resource", "post"],
+			root,
+			{ exec: UNFORMATTED },
+		);
+
+		expect(result.code).toBe(0);
+		let read = (action: string) =>
+			readFile(join(root, `app/http/controllers/posts/${action}.tsx`), "utf8");
+		expect(await read("edit")).toContain("abilities.post.update");
+		expect(await read("destroy")).toContain("abilities.post.delete");
+		expect(await read("index")).not.toContain("abilities.post");
+		expect(result.stdout).toContain("posts/index lists rows, so it checks no single one");
+	});
+
+	test("a form route with params passes them to every href, and its test passes sample ones", async () => {
+		let root = await sitemapProject();
+
+		await invoke(
+			["controller", "posts/edit", "--method", "form", "--path", "/posts/:id/edit"],
+			root,
+			{ exec: UNFORMATTED },
+		);
+
+		let page = await readFile(join(root, "app/http/controllers/posts/edit.tsx"), "utf8");
+		let test = await readFile(join(root, "app/http/controllers/posts/edit.test.tsx"), "utf8");
+		expect(page).toContain("routes.posts.edit.action.href(ctx.params)");
+		expect(page).toContain("routes.posts.edit.index.href(ctx.params)");
+		expect(test).toContain('routes.posts.edit.action.href({ id: "1" })');
+	});
+
+	test("refuses --method or --path beside it, and an action the contract lacks", async () => {
+		let root = await sitemapProject();
+
+		let method = await invoke(
+			["controller", "posts", "--actions", "all", "--method", "post"],
+			root,
+		);
+		let api = await invoke(["controller", "posts", "--actions", "new", "--routes", "api"], root);
+
+		expect(method.code).toBe(2);
+		expect(method.stderr).toContain("drop --method and --path");
+		expect(api.code).toBe(1);
+		expect(api.stderr).toContain("new is not an action of the api contract");
+		expect(await files(root)).not.toContain("app/http/controllers/posts/index.tsx");
+	});
+});
+
 describe("field modifiers", () => {
 	test("make model writes a unique column and the indexes its migration creates", async () => {
 		let root = await project();
@@ -709,6 +782,8 @@ describe("declaring and mapping", () => {
 				["controller", "posts/archive", "--resource", "post", "--method", "delete"],
 				["controller", "posts/new", "--resource", "post", "--method", "form"],
 				["controller", "api/posts", "--routes", "api", "--resource", "post", "--method", "patch"],
+				["controller", "articles", "--actions", "all", "--resource", "post"],
+				["controller", "api/articles", "--actions", "all", "--routes", "api", "--resource", "post"],
 				["initializer", "cache"],
 				["email", "welcome"],
 				["command", "users/grant"],
