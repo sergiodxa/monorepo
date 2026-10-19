@@ -18,6 +18,18 @@
 		// Stubs here replace the built-in ones; `sdxc make stubs` copies them out
 		"stubs": ".config/sdxc/stubs",
 	},
+	"doctor": {
+		// Folder of the project's own checks, each module run by `sdxc doctor`
+		"checks": ".config/sdxc/checks",
+		"migrations": {
+			// Migration errors `sdxc doctor` steps past, each a file that already ran and the column its error names
+			"accept": [
+				{ "file": "20250520185608_gigantic_wendell_rand.sql", "column": "subject_id" },
+				{ "file": "20250525233829_chief_miss_america.sql", "column": "team_id" },
+				{ "file": "20250526083508_jazzy_sabra.sql", "column": "subject_id" },
+			],
+		},
+	},
 	// Command run on every file the CLI writes or edits, paths appended
 	// "format": ["bunx", "vp", "fmt"],
 	// Where the CLI keeps its state; commit it with the project
