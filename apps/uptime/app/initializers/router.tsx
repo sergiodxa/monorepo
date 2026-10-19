@@ -26,6 +26,7 @@ import { lazy } from "@sdxc/lazy-route";
 import { currentLog } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
@@ -51,6 +52,7 @@ import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
+import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
 import { mail as emailRegistry } from "~/app/initializers/mail";
 import { queue, transport } from "~/app/initializers/mail-transport";
@@ -189,6 +191,11 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * patterns would claim the path; it reads `ctx.models` for a status page's card.
 			 */
 			socialCards(),
+			/**
+			 * While developing, answers `/_emails` with every mapped email in every supported
+			 * language, ahead of the session and the security headers a preview needs neither of.
+			 */
+			previews(emailRegistry, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
 			/**
 			 * Publishes `ctx.email` on every surface, including machine ones — the
 			 * cron-job ping endpoint dispatches alerts too. Sits after the log so

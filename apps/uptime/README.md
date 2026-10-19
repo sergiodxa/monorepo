@@ -71,6 +71,7 @@ sdxc make command <group/name>     # then: sdxc run <group> <name>
 
 sdxc run about                     # the app's name, its @sdxc/cli and remix versions
 sdxc run db console                # SQL prompt over the local database
+sdxc run emails preview <name>     # print an email from its preview(); /_emails in bun dev
 ```
 
 From the repo root: `bun check` (format, lint and type check in one pass) and `bun run test`.
