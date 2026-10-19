@@ -101,6 +101,20 @@ describe("make email", () => {
 		},
 	);
 
+	test("renders the subject prop as the heading first, whatever its position", async () => {
+		let root = await bareProject();
+
+		let made = await make(
+			["email", "notice", "count:integer", "is_urgent", "title", "--dry-run"],
+			root,
+		);
+
+		let body = made.stdout.slice(made.stdout.indexOf("<Email.Layout"));
+		expect(body.indexOf("<Email.Heading>{handle.props.title}")).toBeLessThan(
+			body.indexOf("{handle.props.count}"),
+		);
+	});
+
 	test("refuses a field that describes a table, writing nothing", async () => {
 		let root = await bareProject();
 

@@ -80,7 +80,9 @@ export function planEmail(specs: readonly string[], name: Name): Result<EmailPla
 					? `() => ${literal(name.title)}`
 					: `({ ${heading.key} }) => ${heading.key}`,
 			layoutTitle: heading === null ? literal(name.title) : `{handle.props.${heading.key}}`,
-			body: fields.map((field) => `\t\t\t${element(field, field === heading)}`).join("\n"),
+			body: [...(heading === null ? [] : [heading]), ...fields.filter((field) => field !== heading)]
+				.map((field) => `\t\t\t${element(field, field === heading)}`)
+				.join("\n"),
 			preview,
 			sample: preview,
 			subjectSample,
