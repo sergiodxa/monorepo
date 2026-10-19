@@ -79,6 +79,58 @@ and its spreads are expanded to the middleware they hold.
   cannot follow keeps its `router` with `controller.file: null`, and the file and expression are a
   diagnostic; an inline controller reports the initializer as its file and `export: null`.
 
+### Filters
+
+The options follow `bin/rails routes`, so a developer who knows Rails reads them on sight. Every
+filter applies before output, they compose (a route is listed when it passes all of them), and
+the table, `--expanded` and `--json` print the same narrowed set.
+
+| Option                    | Keeps                                                                                                                      |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `-g, --grep <pattern>`    | Routes whose name, pattern, method or controller `file`/named export match, ignoring case, as text or a regular expression |
+| `-c, --controller <path>` | Routes whose controller is that file or sits in that folder: `posts`, `posts/show`, `app/http/controllers/posts/show.ts`   |
+| `--method <method>`       | Routes answering that method, case-insensitive; an `ANY` route answers every method                                        |
+| `--contract <name>`       | Routes declared in that contract: `web`, `routes/web` or `routes/web.ts`                                                   |
+| `--unused`                | Routes no router maps, the ones the table shows as `(not mapped)`                                                          |
+
+`--grep` matches when the text occurs **or** the pattern compiles as a regular expression that
+matches, so `-g /posts/:id`, `-g "(/:page)"` and `-g '^admin\.'` all work, and text that is no
+valid expression searches as text alone. `--controller` compares paths without
+`app/http/controllers/`, the extension or a trailing `/index`, so a folder keeps every controller
+under it.
+
+`--unused` also reports, on stderr, each controller file no route loads and no module in `app/`
+or `bootstrap/` imports statically: helpers shared by controllers and handlers passed to the
+router as options are imported that way, so what is left is reached by nothing. They go to stderr
+so `--json` stays an array of routes; `--grep` and `--controller` narrow them, and `--method` or
+`--contract` leaves none, since a file no route maps has neither. A route whose mapping cannot be
+followed (`(unresolved)`) is a reader limit rather than a missing controller, so `--unused` leaves
+it out; its diagnostic already names it.
+
+A filter that matches nothing prints `No routes match.` (`No unused routes found.` with
+`--unused`), or `[]` with `--json`. The router blocks above the table list only the routers that
+map a listed route.
+
+### `-E, --expanded`
+
+One block per route with every field on its own line, for a terminal too narrow for the table,
+as `rails routes -E` prints it:
+
+```text
+--[ Route 1 ]----------------------------------------
+Method                | GET
+Pattern               | /
+Name                  | home
+Contract              | routes/web.ts
+Router                | app/initializers/router.ts
+Controller            | app/http/controllers/home.tsx
+Router middleware     | log(logger)
+Guards                | requireUser
+Controller middleware | page
+```
+
+`@sdxc/cli` flags declare a one-character `short`, which is how `-g`, `-c` and `-E` are spelled.
+
 ## Consequences
 
 ### Positive
@@ -87,7 +139,9 @@ and its spreads are expanded to the middleware they hold.
   opening the contract, the router and every controller.
 - **Runs anywhere:** no bindings, no build, no app code executed.
 - **Unmapped routes surface:** a declared route with `controller: null` is a mapping that is
-  missing.
+  missing, and `--unused` lists those routes and the controllers nothing reaches.
+- **The question narrows to its answer:** `-g`, `-c`, `--method` and `--contract` cut a large
+  app's table to the rows asked about, for a person and for an agent's `--json` alike.
 
 ### Negative
 

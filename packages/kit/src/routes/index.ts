@@ -47,9 +47,18 @@ export interface RouteEntry {
 export interface RouteListing {
 	routes: RouteEntry[];
 	/** Every router found, for printing each one's global middleware once. */
-	routers: Array<Pick<Router, "file" | "middleware">>;
+	routers: RouterSummary[];
 	/** Problems the reader met, each naming its file. */
 	diagnostics: string[];
+}
+
+/** A router as the listing reports it. */
+export interface RouterSummary extends Pick<Router, "file" | "middleware"> {
+	/**
+	 * Each `map()` whose handler loads with the router, as its target and handler, or as its target
+	 * and the action key path when only that action does, since that code loads on every request.
+	 */
+	eager: string[];
 }
 
 /** Where a route is declared. */
@@ -78,7 +87,7 @@ export async function listRoutes(root: string): Promise<RouteListing> {
 	}
 
 	let routers: Router[] = [];
-	for (let file of await sourceFiles(project, "app/initializers")) {
+	for (let file of await sourceFiles(project.root, "app/initializers")) {
 		let module = await project.load(file);
 		if (module !== null) routers.push(...(await readRouters(project, module)));
 	}
@@ -146,9 +155,40 @@ export async function listRoutes(root: string): Promise<RouteListing> {
 	}
 	return {
 		routes,
-		routers: routers.map((router) => ({ file: router.file, middleware: router.middleware })),
+		routers: routers.map((router) => ({
+			file: router.file,
+			middleware: router.middleware,
+			eager: router.mappings.flatMap((mapping) =>
+				mapping.handler.eager.map((path) =>
+					path.length === 0
+						? `${mapping.text}, ${mapping.handler.text}`
+						: `${mapping.text} action ${path.join(".")}`,
+				),
+			),
+		})),
 		diagnostics: [...new Set(project.diagnostics)],
 	};
+}
+
+/**
+ * The sources under `app/http/controllers/` that no module in `app/` or `bootstrap/` imports
+ * statically. A helper shared by controllers, or a handler the router takes as an option, is
+ * imported that way, so what is left is reached by a route's `lazy()` import or by nothing.
+ */
+export async function unimportedControllers(root: string): Promise<string[]> {
+	let project = new Project(root);
+	let imported = new Set<string>();
+	let sources = [...(await sourceFiles(root, "app")), ...(await sourceFiles(root, "bootstrap"))];
+	for (let file of sources) {
+		let module = await project.load(file);
+		if (module === null) continue;
+		for (let specifier of module.specifiers) {
+			let target = await project.resolve(file, specifier);
+			if (target !== null && target !== file) imported.add(target);
+		}
+	}
+	let controllers = await sourceFiles(root, "app/http/controllers");
+	return controllers.filter((file) => !imported.has(file));
 }
 
 /** A route contract: a module in `routes/` whose default export is a route map. */
@@ -162,7 +202,7 @@ interface Contract {
 /** Every route contract in `routes/`, in path order. */
 async function readContracts(project: Project): Promise<Contract[]> {
 	let found: Array<{ module: Module; value: MapValue }> = [];
-	for (let file of await sourceFiles(project, "routes")) {
+	for (let file of await sourceFiles(project.root, "routes")) {
 		let module = await project.load(file);
 		if (module === null || module.declarations.defaultExport === null) continue;
 		let value = await project.exportValue(module, "default");
@@ -190,8 +230,8 @@ function leaves(value: Value, path: string[]): Array<[RouteValue, string[]]> {
 }
 
 /** The TypeScript and JavaScript sources under a project folder, tests left out, sorted. */
-async function sourceFiles(project: Project, folder: string): Promise<string[]> {
-	let entries = await wrap(() => readdir(join(project.root, folder), { recursive: true }));
+async function sourceFiles(root: string, folder: string): Promise<string[]> {
+	let entries = await wrap(() => readdir(join(root, folder), { recursive: true }));
 	if (isFailure(entries)) return [];
 	return entries.data
 		.map((entry) => `${folder}/${entry.split("\\").join("/")}`)

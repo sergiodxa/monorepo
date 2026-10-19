@@ -43,6 +43,12 @@ export interface MappedHandler {
 	forAction(path: readonly string[]): Promise<Handler>;
 	/** The handler expression, for diagnostics. */
 	text: string;
+	/**
+	 * Each part that loads its controller with the router, as the action key path reaching it
+	 * (`[]` for the whole handler). Parts behind `lazy()` or a dynamic `import()` load only when a
+	 * request reaches them, and a handler that could not be followed reports none.
+	 */
+	eager: string[][];
 }
 
 /** One `router.map()` call. */
@@ -64,6 +70,12 @@ export interface Router {
 
 /** The longest middleware expression shown whole; longer calls show as `callee(…)`. */
 const NAME_LIMIT = 40;
+
+/**
+ * A dynamic `import()` in an inline handler's source, which defers the module it loads to the
+ * first request the way `lazy()` does.
+ */
+const DYNAMIC_IMPORT = /\bimport\s*\(/;
 
 /** The specifiers `createRouter` is imported from. */
 const ROUTER_MODULES = new Set(["remix/router", "remix/fetch-router", "@remix-run/fetch-router"]);
@@ -164,6 +176,7 @@ async function mappedHandler(
 	let text = module.reader.text(node);
 	let unresolved: MappedHandler = {
 		text,
+		eager: [],
 		forAction: async () => ({
 			controller: { file: null, export: null },
 			guards: [],
@@ -197,6 +210,7 @@ async function mappedHandler(
 			let chain = await controllerChain(project, controller);
 			return {
 				text,
+				eager: [[]],
 				forAction: async (path) => ({ controller, guards: [], middleware: chainFor(chain, path) }),
 			};
 		}
@@ -205,16 +219,25 @@ async function mappedHandler(
 	if (node.kind === "object") {
 		let chain = await inlineChain(project, module, node);
 		let actions = property(node, "actions");
+		let ownHandler = property(node, "handler");
 		let actionHandlers = new Map<string, MappedHandler>();
+		let eager: string[][] = [];
 		if (actions?.kind === "object") {
 			for (let entry of actions.entries) {
-				if ("spread" in entry || entry.value.kind === "object") continue;
-				actionHandlers.set(entry.key, await mappedHandler(project, module, entry.value, depth + 1));
+				if ("spread" in entry) continue;
+				let action = await mappedHandler(project, module, entry.value, depth + 1);
+				eager.push(...action.eager.map((path) => [entry.key, ...path]));
+				if (entry.value.kind !== "object") actionHandlers.set(entry.key, action);
 			}
+		} else if (ownHandler !== undefined) {
+			eager = (await mappedHandler(project, module, ownHandler, depth + 1)).eager;
+		} else {
+			eager = [[]];
 		}
 		let inline: ControllerRef = { file: module.path, export: null };
 		return {
 			text,
+			eager,
 			forAction: async (path) => {
 				let action = path[0] === undefined ? undefined : actionHandlers.get(path[0]);
 				if (action !== undefined) {
@@ -227,7 +250,11 @@ async function mappedHandler(
 	}
 	if (node.kind === "function") {
 		let inline: ControllerRef = { file: module.path, export: null };
-		return { text, forAction: async () => ({ controller: inline, guards: [], middleware: [] }) };
+		return {
+			text,
+			eager: DYNAMIC_IMPORT.test(text) ? [] : [[]],
+			forAction: async () => ({ controller: inline, guards: [], middleware: [] }),
+		};
 	}
 	return unresolved;
 }
@@ -247,6 +274,7 @@ async function lazyHandler(
 	let chain = controller.file === null ? null : await controllerChain(project, controller);
 	return {
 		text,
+		eager: [],
 		forAction: async (path) => ({
 			controller,
 			guards: guardList,

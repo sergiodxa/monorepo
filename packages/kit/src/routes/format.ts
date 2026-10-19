@@ -70,6 +70,34 @@ export function formatTable(listing: RouteListing): string {
 	return `${lines.join("\n").trimEnd()}\n`;
 }
 
+/**
+ * The listing as one block per route, every field on its own line, for a terminal too narrow
+ * for the table. Middleware is split by where it runs: the router's, `lazy()` guards, then the
+ * controller's chain, each in its run order.
+ */
+export function formatExpanded(listing: RouteListing): string {
+	if (listing.routes.length === 0) return "No routes found in routes/.\n";
+	let blocks = listing.routes.map((route, index) => {
+		let fields: Array<[string, string]> = [
+			["Method", route.method],
+			["Pattern", route.pattern],
+			["Name", route.name],
+			["Contract", route.contract],
+			["Router", route.router ?? ""],
+			["Controller", controller(route)],
+			["Router middleware", names(route.middleware.router)],
+			["Guards", names(route.middleware.guards)],
+			["Controller middleware", names(route.middleware.controller)],
+		];
+		let width = Math.max(...fields.map(([label]) => label.length));
+		let lines = fields.map(([label, value]) => `${label.padEnd(width)} | ${value}`.trimEnd());
+		let title = `--[ Route ${index + 1} ]`;
+		let rule = Math.min(LINE_WIDTH, Math.max(...lines.map((line) => line.length)));
+		return [title.padEnd(rule, "-"), ...lines].join("\n");
+	});
+	return `${blocks.join("\n\n")}\n`;
+}
+
 /** The controller column: the file with a named export after `#`, or why there is none. */
 function controller(route: RouteEntry): string {
 	if (route.controller === null) return "(not mapped)";
