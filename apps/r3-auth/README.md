@@ -38,6 +38,7 @@ sdxc make command clients/rotate           # then: sdxc run clients rotate
 
 sdxc run about                             # the app's name and the versions it runs on
 sdxc run db console                        # SQL prompt over the local database
+sdxc run emails preview verifyEmail        # print an email from its preview(); /_emails in bun dev
 ```
 
 `sdxc` is the `@sdxc/kit` command line, installed with the project. Checks and tests run

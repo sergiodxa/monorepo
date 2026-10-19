@@ -21,6 +21,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
+import { previews } from "@sdxc/mail/previews";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -38,6 +39,7 @@ import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { openDatabase } from "~/app/initializers/database";
+import { SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
 import { mail } from "~/app/initializers/mail";
 import { createMailTransport } from "~/app/initializers/mail-transport";
@@ -107,6 +109,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			),
 			i18n,
 			billing({ provider: options.billing ?? polar }),
+			previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV }),
 			mailer({
 				transport: () => options.mailTransport ?? createMailTransport(),
 				from: MAIL_FROM,
