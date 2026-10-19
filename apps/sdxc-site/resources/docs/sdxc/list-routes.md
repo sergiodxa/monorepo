@@ -73,12 +73,17 @@ The options follow `rails routes`, and compose with each other and with `--json`
   `routes/api` or `routes/api.ts`.
 - `--unused` keeps routes no router maps, and prints on stderr each controller file nothing
   loads.
+- `--except-path <path>` leaves out the routes under a path by whole segments, so `/api` drops
+  `/api/posts` and keeps `/apiary`; repeat it or list several, as `--except-path /api,/mcp`.
+- `--sort <field>` orders the routes by `name`, `pattern`, `method` or `controller` instead of
+  the order the contracts declare them in.
 - `-E, --expanded` prints one block per route with every field, for a narrow terminal.
 
 ```bash
 sdxc routes -g posts
 sdxc routes -c admin/users --method post
 sdxc routes --contract api -E
+sdxc routes --except-path /api,/mcp --sort pattern
 ```
 
 A narrowed table lists only the routers that map one of its routes. A filter that matches
