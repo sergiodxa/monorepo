@@ -1,6 +1,6 @@
 /**
- * The new {{words}} form, rendered and submitted through the app's router, so the page chain's
- * honeypot check runs as it does in the Worker.
+ * The new {{words}} form through the app's router, so the honeypot check runs as in the Worker.
+ * Its controller loads with the file, keeping its cold import outside each test's time limit.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/forms-and-params}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
@@ -9,18 +9,13 @@
 import { unwrap } from "@sdxc/result";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import "~/app/http/controllers/{{plural}}/new";
 import { openDatabase } from "~/app/initializers/database";
 import { honeypot } from "~/app/initializers/honeypot";
 import { createWebRouter } from "~/app/initializers/router";
 import { {{Name}} } from "~/app/models/{{name}}";
 import { migrate } from "~/app/test/database";
 import routes from "~/routes/web";
-
-/**
- * How long a test may take: its first request imports the page middleware and the `@sdxc/ui`
- * components the page renders, which takes seconds while Vitest transforms them cold.
- */
-const PAGE_TEST_TIMEOUT_MS = 30_000;
 
 beforeAll(migrate);
 
@@ -35,7 +30,7 @@ async function submit(fields: Record<string, string>) {
 	);
 }
 
-describe("{{plural}}/new", { timeout: PAGE_TEST_TIMEOUT_MS }, () => {
+describe("{{plural}}/new", () => {
 	test("renders the form", async () => {
 		let response = await createWebRouter().fetch(
 			new URL(routes.{{pluralKey}}.new.index.href(), "https://example.com"),

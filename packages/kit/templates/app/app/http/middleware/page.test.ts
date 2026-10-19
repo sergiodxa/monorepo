@@ -1,11 +1,14 @@
 /**
  * The page chain's security headers and language, checked through the home page, since every
- * page declares the same chain and so sends the same policy.
+ * page declares the same chain and so sends the same policy. The home controller loads with the
+ * file, so the cold import of the chain and its document stays outside each test's time limit.
  */
 
 import { describe, expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
+
+import "~/app/http/controllers/home";
 
 describe("page", () => {
 	test("sends the Content-Security-Policy with a page", async () => {

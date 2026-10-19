@@ -1,5 +1,6 @@
 /**
- * One {{words}}'s page, rendered through the app's router.
+ * One {{words}}'s page, rendered through the app's router. Its controller loads with the file, so
+ * the cold import of its views stays outside each test's time limit.
  *
  * @see {@link https://sdxc.dev/docs/building-remix-apps/wire-the-router}
  * @see {@link https://sdxc.dev/docs/operations-and-testing/testing}{{header}}
@@ -7,16 +8,11 @@
 
 import { beforeAll, describe, expect, test } from "vitest";
 
+import "~/app/http/controllers/{{plural}}/show";
 import { createWebRouter } from "~/app/initializers/router";
 import { factories, migrate } from "~/app/test/database";
 import { {{Name}}Factory } from "~/database/factories/{{name}}";
 import routes from "~/routes/web";
-
-/**
- * How long a test may take: its first request imports the page middleware and the `@sdxc/ui`
- * components the page renders, which takes seconds while Vitest transforms them cold.
- */
-const PAGE_TEST_TIMEOUT_MS = 30_000;
 
 beforeAll(migrate);
 
@@ -27,7 +23,7 @@ function show(id: string) {
 	);
 }
 
-describe("{{plural}}/show", { timeout: PAGE_TEST_TIMEOUT_MS }, () => {
+describe("{{plural}}/show", () => {
 	test("renders the {{words}} with links to edit and delete it", async () => {
 		let row = await factories().create({{Name}}Factory);
 
