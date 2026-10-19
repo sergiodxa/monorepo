@@ -181,10 +181,8 @@ path outside the project stops the command with one line per problem:
 .config/sdxc.jsonc: make.test: Unknown key
 ```
 
-Each key is covered with the command it changes: `ui` in
-[Copy UI components](/docs/sdxc/copy-ui-components), `make` in
-[Generate files](/docs/sdxc/generate-files#configuration), `doctor` in
-[Check a project](/docs/sdxc/check-a-project).
+[Configuration](/docs/sdxc/configuration) covers every key, its default and the command it
+changes.
 
 ## Where to go next
 
