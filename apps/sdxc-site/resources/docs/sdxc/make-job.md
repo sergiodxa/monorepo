@@ -1,6 +1,6 @@
 ---
 title: Make a job
-description: Write a background job with sdxc make job, declared in app/jobs/index.ts and mapped on the dispatcher, or a scheduled one with --cron.
+description: Write a background job with sdxc make job, declared in app/jobs/index.ts and mapped on the dispatcher, or a scheduled one with --cron and the Worker trigger that fires it.
 section:
     title: The sdxc command
     order: 2
@@ -38,7 +38,7 @@ A job either takes input from whatever enqueues it, or runs on a schedule with n
 
 | Flag                  | Default      | What it does                                      |
 | --------------------- | ------------ | ------------------------------------------------- |
-| `--cron <expression>` |              | declare a scheduled job instead of one with input |
+| `--cron <expression>` |              | declare a scheduled job and the trigger firing it |
 | `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it              |
 | `--dry-run`           |              | print the files and the diffs, and change nothing |
 
@@ -95,12 +95,29 @@ With `--cron`, the declaration carries the schedule instead of an input:
 digest: job({ cron: "0 8 * * *" }),
 ```
 
-Cloudflare fires a schedule the Worker declares, so add the same expression to the Worker's
-triggers in `cloudflare.config.ts`:
+Cloudflare fires a schedule the Worker declares, so `make` adds the same expression to the
+Worker's triggers in `cloudflare.config.ts`:
 
-```typescript {% title="cloudflare.config.ts" %}
-triggers: [triggers.queue({ name: manifest.name }), triggers.scheduled({ schedule: "0 8 * * *" })],
+```text
+--- a/cloudflare.config.ts
++++ b/cloudflare.config.ts
+-		triggers: [triggers.queue({ name: manifest.name })],
++		triggers: [triggers.queue({ name: manifest.name }), triggers.scheduled({ schedule: "0 8 * * *" })],
 ```
+
+A trigger that already delivers the schedule is reused, compared as parsed, so `0 9 * * MON-FRI`
+shares the trigger of `0 9 * * 1-5`. When the Worker is configured in `wrangler.jsonc`, or its
+`cloudflare.config.ts` has no `worker.triggers` list, `make` prints the trigger to add instead,
+after everything else:
+
+```text
+Add its trigger by hand, since wrangler.jsonc configures the Worker:
+In wrangler.jsonc, in triggers.crons:
+  "0 8 * * *"
+```
+
+[`sdxc schedule`](/docs/sdxc/inspect-a-project) lists every scheduled job with the trigger that
+fires it. `sdxc destroy job` removes the trigger again once no other job runs on its schedule.
 
 ## Names and keys
 

@@ -68,8 +68,8 @@ that writes the SQL to catch up.
 
 ## Scheduled jobs
 
-A job made with `--cron` runs only when a Worker trigger delivers its exact expression.
-`sdxc schedule` pairs every scheduled job in `app/jobs/index.ts` with the trigger that fires it,
+A job made with `--cron` runs only when a Worker trigger delivers its exact expression, which
+`sdxc make job` adds to `cloudflare.config.ts` beside the job. `sdxc schedule` pairs every scheduled job in `app/jobs/index.ts` with the trigger that fires it,
 from `cloudflare.config.ts` or `wrangler.jsonc`:
 
 ```bash
@@ -82,8 +82,8 @@ reports.daily  0 8 * * *  2026-10-20 08:00 UTC  none; add triggers.scheduled({ s
 ```
 
 <warning>
-A job whose trigger reads `none` never runs in production. Add the trigger the row names to
-`cloudflare.config.ts`, then deploy.
+A job whose trigger reads `none` never runs in production. That is a job declared by hand, or
+one whose Worker is configured in `wrangler.jsonc`: add the trigger the row names, then deploy.
 </warning>
 
 A trigger no job declares is listed below the table, as
