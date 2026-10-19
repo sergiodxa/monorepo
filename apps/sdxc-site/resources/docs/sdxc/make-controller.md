@@ -179,7 +179,8 @@ bun run test app/http/controllers/signup.test.tsx
 - Read and write data through `ctx.models`, which [`sdxc make model`](/docs/sdxc/make-model)
   registers.
 - Validate a form or a body with a schema from [`sdxc make validator`](/docs/sdxc/make-validator).
-- Decide who may reach it with a rule from [`sdxc make policy`](/docs/sdxc/make-policy).
+- Decide who may reach it by checking `ctx.access` against the abilities
+  [`sdxc make policy`](/docs/sdxc/make-policy) adds.
 - Add a check every page needs with [`sdxc make middleware --mount page`](/docs/sdxc/make-middleware).
 
 [Wire the router](/docs/building-remix-apps/wire-the-router) covers the router the controller is

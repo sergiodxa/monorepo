@@ -34,7 +34,7 @@ writes and how to fill it in.
 | [`migration`](/docs/sdxc/make-migration)     | `database/migrations/<number>_<Name>.sql` | no   |                                                         |
 | [`factory`](/docs/sdxc/make-factory)         | `database/factories/<name>.ts`            | no   |                                                         |
 | [`service`](/docs/sdxc/make-service)         | `app/services/<name>.ts`                  | yes  |                                                         |
-| [`policy`](/docs/sdxc/make-policy)           | `app/policies/<name>.ts`                  | yes  |                                                         |
+| [`policy`](/docs/sdxc/make-policy)           | `app/policies/<name>.test.ts`             | yes  | `app/policies/abilities.ts`, `app/policies/policy.ts`   |
 | [`initializer`](/docs/sdxc/make-initializer) | `app/initializers/<name>.ts`              | yes  |                                                         |
 | [`email`](/docs/sdxc/make-email)             | `app/emails/<name>.tsx`                   | yes  |                                                         |
 | [`mcp`](/docs/sdxc/make-mcp)                 | `app/mcp/tools/<name>.ts`                 | yes  | `app/mcp/tools/index.ts`, the MCP handler               |

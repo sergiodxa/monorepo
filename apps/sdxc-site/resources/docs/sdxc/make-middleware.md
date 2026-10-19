@@ -121,8 +121,8 @@ Publish a value with a context key the controllers read, or return a response to
 A middleware that guards a group of routes, instead of a whole chain, goes in `lazy()`'s second
 argument where the router maps them, so it answers before the controller's module loads.
 [Wire the router](/docs/building-remix-apps/wire-the-router) covers both, and
-[Authorization](/docs/identity-and-security/authorization) the rules a guard asks, which
-[`sdxc make policy`](/docs/sdxc/make-policy) writes.
+[Authorization](/docs/identity-and-security/authorization) the abilities a guard checks, which
+[`sdxc make policy`](/docs/sdxc/make-policy) adds.
 
 ## Where to go next
 

@@ -1,6 +1,6 @@
 ---
 title: Scaffold a resource
-description: Write the model, migration, pages, validator, policy and tests a resource needs to be listed, read, created, changed and deleted, with one sdxc scaffold command.
+description: Write the model, migration, pages, validator, abilities and tests a resource needs to be listed, read, created, changed and deleted, with one sdxc scaffold command.
 section:
     title: The sdxc command
     order: 2
@@ -35,7 +35,7 @@ For `sdxc scaffold post`:
 | `database/migrations/<number>_CreatePosts.sql` | the `CREATE TABLE` for `posts`, numbered like the chain          |
 | `database/factories/post.ts`                   | a factory for tests                                              |
 | `app/http/validators/post.ts`                  | the form's validator                                             |
-| `app/policies/post.ts`                         | who may list, show, create, update and delete                    |
+| `app/policies/post.test.ts`                    | who may read, create, update and delete a post                   |
 | `resources/views/posts/form.tsx`               | the form the new and edit pages share                            |
 | `app/http/controllers/posts/*.tsx`             | `index`, `new`, `show`, `edit` and `destroy`                     |
 | `app/test/database.ts`                         | the in-memory database the tests use, when the project lacks one |
@@ -55,6 +55,7 @@ CREATE TABLE "posts" (
 ```
 
 It edits the files that make the pages answer: the model registry in `app/models/index.ts`, the
+`post` abilities in `app/policies/abilities.ts` and their grants in `app/policies/policy.ts`, the
 routes in `routes/web.ts`, their mapping in the router initializer, the sitemap's decisions, and
 every `resources/locales/*.json`, which take each label and title under `posts`:
 
@@ -140,28 +141,35 @@ Two flags add more ways in:
 
 ## Who may do what
 
-The policy the pages ask is yours to tighten. As written, it lets an anonymous visitor take
-every action and a signed-in actor take every one, so the pages work the moment the migration
-is applied:
+The scaffold adds `post.create`, `post.read`, `post.update` and `post.delete` to the app's
+catalog, as [`sdxc make policy`](/docs/sdxc/make-policy) does, and grants the read to everyone
+and the writes to members:
 
-```ts {% title="app/policies/post.ts" %}
-const ANONYMOUS_ACTIONS: ReadonlySet<PostAction> = new Set([
-	"list",
-	"show",
-	"create",
-	"update",
-	"delete",
-]);
+```ts {% title="app/policies/policy.ts" %}
+everyone: [allow("post.read", { id: "post-read" })],
+roles: { member: [allow(["post.create", "post.update", "post.delete"], { id: "post-write" })] },
 ```
 
-Remove the actions an anonymous visitor should not take before you deploy. A page the policy
-refuses answers 403.
+Every page and tool checks the visitor's access against them:
+
+- A post `post.read` hides is a 404 on its pages and a "no such post" error from its tools, the
+  same answer a missing post gets, and the index and `list_posts` leave it out.
+- A create, update or delete the policy refuses is a 403 on a page and a forbidden call from a
+  tool.
+
+So a guest reads every post and a signed-in member writes them. A visitor is a member once the
+session holds them, `ctx.session.set("actor", { id })`, which your sign-in does; until the app
+signs people in, the new and edit pages answer 403. Narrow the grants with conditions, such as
+letting members change only their own posts, in `app/policies/policy.ts`. App commands check
+nothing, since whoever runs them already holds the database.
 
 ## Tests
 
 The generated tests pass as written: they apply your migrations to the in-memory database and
 drive the pages through the router, the tools through `/mcp` and the commands through the app's
-command line. `--no-test` skips them for one run, and `make.tests: false` skips them
+command line. Each write is tested as a member, signed in with `signIn()` from
+`app/test/session.ts`, and refused to a guest; `app/policies/post.test.ts` decides every ability
+for both. `--no-test` skips them for one run, and `make.tests: false` skips them
 everywhere.
 
 ## Taken names and dry runs
