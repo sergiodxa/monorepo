@@ -36,6 +36,7 @@ invoices, team members. [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource) runs i
 | --------------------- | ------------ | --------------------------------------------- |
 | `--test`, `--no-test` | `make.tests` | write the test, or skip it                    |
 | `--dry-run`           |              | print the test and both edits, change nothing |
+| `--force`             |              | write the test again when it exists           |
 
 ## What it edits
 
@@ -84,12 +85,18 @@ A visitor is a `member` once the session holds them: the app template's
 abilities, so `sdxc make policy billing/invoice` declares `billing.invoice.read` and its siblings.
 
 When the catalog or the policy is missing, or not written the way `make` can edit, it writes the
-test and prints the lines to add to each file instead.
+test and prints the lines to add to each file instead. A resource the catalog already declares
+keeps its abilities and grants: `--force` writes its test again and says so last:
+
+```text
+Replaced app/policies/post.test.ts
+Kept the declaration, mapping and mount post already has; --force replaces files only
+```
 
 ## The test
 
 The test decides every ability for a guest and a member with `testAccess` from
-`@sdxc/authz/testing`:
+`@sdxc/authz/testing`, and checks that a guest is refused each write:
 
 ```typescript {% title="app/policies/post.test.ts" %}
 import type { ContextOf } from "@sdxc/authz";
@@ -118,6 +125,18 @@ describe("post", () => {
 		expect(member.can(abilities.post.create)).toBe(true);
 		expect(member.can(abilities.post.update, { post: RECORD })).toBe(true);
 		expect(member.can(abilities.post.delete, { post: RECORD })).toBe(true);
+	});
+
+	test("refuses a guest every write", () => {
+		let guest = testAccess(policy, { roles: [] });
+
+		expect(guest.check(abilities.post.create)).toMatchObject({ allowed: false });
+		expect(guest.check(abilities.post.update, { post: RECORD })).toMatchObject({
+			allowed: false,
+		});
+		expect(guest.check(abilities.post.delete, { post: RECORD })).toMatchObject({
+			allowed: false,
+		});
 	});
 });
 ```

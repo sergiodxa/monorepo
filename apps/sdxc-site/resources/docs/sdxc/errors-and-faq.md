@@ -78,12 +78,21 @@ A file in `app/models/` calls `createModel` but the registry does not list it, s
 `ctx.models.<name>` is undefined. Add it to `createModels({ … })` as
 `key: () => import("./<file>")`.
 
+### "app/initializers/mail.ts maps no template for N declared emails"
+
+An email is declared in `app/emails/index.ts` with no template mapped onto the registry, so every
+send of it fails. Map it as `mail.map(emails.<name>, lazy(() => import(…)))`, or remove the
+declaration; [`sdxc make email`](/docs/sdxc/make-email) declares and maps one in a single step.
+The warning "Found N templates without a test" or "… without preview()" names a template that
+`/_emails` and `sdxc run emails preview` cannot render, or that no test covers.
+
 ## sdxc make and sdxc scaffold
 
-### "… already exists; sdxc make leaves it as it is"
+### "… already exists; sdxc make leaves it as it is unless --force"
 
 `make` leaves every existing file as it is, and it plans every file before it writes any, so
-the project is as it was. Pick another name, or delete the file first if you mean to start it over.
+the project is as it was. Pick another name, or pass `--force` to write the file and its test
+from the stub again; the declaration and mapping it already has are kept.
 
 ### "Declare and map it by hand, since no initializer in app/initializers/ creates …"
 
@@ -106,6 +115,13 @@ release; run the install command before the dev server or the tests load the fil
 ### "Unknown command … for sdxc make"
 
 The kind is misspelt or does not exist. `sdxc make --help` lists every kind.
+
+### "… does not exist; sdxc destroy removes what sdxc make wrote"
+
+`sdxc destroy` looks for the file `make` would have written for that kind and name, and stops
+before editing anything when it is missing. Check the name against the file, as `reports/daily`
+for `app/jobs/reports/daily.ts`. [Undo a make](/docs/sdxc/undo-generated-files) lists the kinds
+it takes.
 
 ## sdxc run and sdxc deploy
 
@@ -179,7 +195,10 @@ create the tables there; the old file stays under `.cloudflare/state/`.
 
 Cloudflare fires only the schedules the Worker declares. The expression in `app/jobs/index.ts`
 says which job a schedule runs; the same expression in `triggers.scheduled({ schedule })` in
-`cloudflare.config.ts` is what makes it fire. Add it there and deploy.
+`cloudflare.config.ts` is what makes it fire. `sdxc make job` with `--cron` adds both, so the
+job that lacks its trigger is one declared by hand, or one in a Worker configured in
+`wrangler.jsonc`. [`sdxc schedule`](/docs/sdxc/inspect-a-project#scheduled-jobs) names the
+trigger to add; add it and deploy.
 
 ### Why does `env.MY_SECRET` not type check?
 

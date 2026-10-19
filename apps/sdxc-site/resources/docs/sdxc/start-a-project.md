@@ -68,20 +68,30 @@ The `app` template is laid out by kind of code, the layout
 [`sdxc make`](/docs/sdxc/generate-files) writes into:
 
 ```text
-bootstrap/        worker.ts, browser.ts, cli.ts: the entry points
+bootstrap/        worker.ts, browser.ts, cli.ts, console.ts: the entry points
 app/http/         controllers, middleware, validators
-app/initializers/ the router, database, dispatcher, mailer, MCP handler and command line
-app/commands/     about, db migrate, db console, deploy, typegen
-app/jobs/  app/mcp/  app/models/  app/services/  app/test/
+app/initializers/ the router, database, dispatcher, mail registry, MCP handler and command line
+app/commands/     about, console, db (migrate, seed, fresh, prepare, console), emails preview,
+                  deploy, typegen
+app/emails/       index.ts, the email registry
+app/jobs/         index.ts, with the job that delivers queued email
+app/policies/     abilities.ts, policy.ts
+app/mcp/  app/models/  app/services/  app/test/
 config/           security headers, security.txt, problem types
-database/         migrations/
+database/         migrations/, seed.ts
 resources/        layouts/, locales/
 routes/           web.ts, api.ts
 ```
 
 It serves a home page, `robots.txt`, a sitemap, an API with a health check and an OpenAPI
-document, and an MCP endpoint. Its `package.json` has `dev`, `build`, `start`, `check`, `test`,
-`typecheck` and `cli` scripts.
+document, and an MCP endpoint, and while `bun dev` runs, `/_emails` previews every email the
+app declares. Its `package.json` has `dev`, `build`, `start`, `check`, `test`, `typecheck` and
+`cli` scripts.
+
+The authorization, email and seed files start empty, ready for the commands that fill them:
+[`sdxc make policy`](/docs/sdxc/make-policy) declares a resource's abilities,
+[`sdxc make email`](/docs/sdxc/make-email) declares and maps an email, and `database/seed.ts`
+holds the steps [`sdxc run db seed`](/docs/sdxc/run-app-commands) runs.
 
 ## Start from your own template
 

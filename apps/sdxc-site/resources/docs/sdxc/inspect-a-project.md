@@ -68,17 +68,20 @@ that writes the SQL to catch up.
 
 ## Scheduled jobs
 
-A job made with `--cron` runs only when a Worker trigger delivers its exact expression, which
-`sdxc make job` adds to `cloudflare.config.ts` beside the job. `sdxc schedule` pairs every scheduled job in `app/jobs/index.ts` with the trigger that fires it,
+A job made with `--cron` runs only when a Worker trigger delivers its exact expression.
+`sdxc make job` with `--cron` adds that trigger to `cloudflare.config.ts` beside the job, and
+`sdxc schedule` pairs every scheduled job in `app/jobs/index.ts` with the trigger that fires it,
 from `cloudflare.config.ts` or `wrangler.jsonc`:
 
 ```bash
+sdxc make job digest --cron "0 8 * * *"
 sdxc schedule
 ```
 
 ```text
 Job            Schedule   Next run              Trigger
-reports.daily  0 8 * * *  2026-10-20 08:00 UTC  none; add triggers.scheduled({ schedule: "0 8 * * *" })
+digest         0 8 * * *  2026-10-20 08:00 UTC  cloudflare.config.ts
+reports.daily  0 9 * * 1  2026-10-26 09:00 UTC  none; add triggers.scheduled({ schedule: "0 9 * * 1" })
 ```
 
 <warning>

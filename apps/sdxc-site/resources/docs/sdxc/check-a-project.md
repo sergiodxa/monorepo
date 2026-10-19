@@ -74,6 +74,10 @@ when each action sits behind `lazy()` or is an inline handler that loads its mod
 dynamic `import()`; an action that imports its code up front is named by its key path, as in
 `app/initializers/router.ts maps routes.board action edit without lazy()`.
 
+`emails` fails on a declared email with no template, because every send of it fails at
+runtime, and warns on a template `sdxc run emails preview` and `/_emails` cannot render without
+a `preview()`. A project without `app/emails/index.ts` reports `skip`.
+
 ### Accept a migration that already ran
 
 A migration production applied long ago can fail on an empty database. List it under

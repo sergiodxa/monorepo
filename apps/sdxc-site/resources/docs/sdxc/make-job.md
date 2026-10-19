@@ -41,6 +41,7 @@ A job either takes input from whatever enqueues it, or runs on a schedule with n
 | `--cron <expression>` |              | declare a scheduled job and the trigger firing it |
 | `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it              |
 | `--dry-run`           |              | print the files and the diffs, and change nothing |
+| `--force`             |              | replace the file and its test, keeping the job    |
 
 ```bash
 sdxc make job digest --cron "0 8 * * *"
@@ -72,22 +73,24 @@ dispatcher the initializer in `app/initializers/` creates with `createJobDispatc
 ```text
 --- a/app/jobs/index.ts
 +++ b/app/jobs/index.ts
--import { jobs } from "@sdxc/jobs";
-+import { jobs, job } from "@sdxc/jobs";
+ import { job, jobs } from "@sdxc/jobs";
+ import { EMAIL_DELIVERY } from "@sdxc/mail";
 +import * as s from "remix/data-schema";
-
--export default jobs({});
-+export default jobs({
+@@
+ export default jobs({
+ 	email: job({ input: EMAIL_DELIVERY }),
 +	reports: {
 +		daily: job({ input: s.object({}) }),
 +	},
-+});
+ });
 --- a/app/initializers/dispatcher.ts
 +++ b/app/initializers/dispatcher.ts
-+import jobs from "~/app/jobs";
-@@
+ dispatcher.map(jobs.email, () => import("~/app/jobs/email"));
 +dispatcher.map(jobs.reports.daily, () => import("~/app/jobs/reports/daily"));
 ```
+
+The template's `email` job, which delivers what `ctx.email.queue()` hands the queue, is already
+declared and mapped; a dispatcher that lacks the `jobs` import gets it too.
 
 With `--cron`, the declaration carries the schedule instead of an input:
 
@@ -149,13 +152,16 @@ bun run test app/jobs/reports/daily.test.ts
 
 Turn the `test.todo` into a run through the dispatcher once the job does its work.
 
+`--force` on a job that exists writes the handler and its test again and keeps its declaration
+and mapping, so nothing is declared twice.
+
 ## Fill it in
 
 1. Describe the job's input in `app/jobs/index.ts`, replacing `s.object({})` with the fields a
    caller sends, such as `s.object({ postId: s.string() })`. The handler's `ctx.input` takes that
    type.
-2. Do the work through what the dispatcher's middleware publishes: `ctx.db`, `ctx.models` and
-   `ctx.log` in the template.
+2. Do the work through what the dispatcher's middleware publishes: `ctx.db`, `ctx.models`,
+   `ctx.email` and `ctx.log` in the template.
 3. Enqueue it from a controller with `ctx.jobs.enqueue(jobs.reports.daily, input)`, once
    `jobEnqueuer(queue)` from `@sdxc/jobs/router` is in the router's chain, or from a job handler
    or a test with `dispatcher.enqueue`.

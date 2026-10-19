@@ -166,6 +166,16 @@ describe("Invite email", () => {
 bun run test app/emails/teams/invite.test.tsx
 ```
 
+The template's `preview()` feeds the app's previews too: `bun dev` lists the email at
+`/_emails`, and the command line prints its subject and text part, or its HTML with `--html`:
+
+```bash
+sdxc run emails preview teams.invite --locale es
+```
+
+`sdxc doctor` fails when `app/emails/index.ts` declares an email no template is mapped for, and
+warns on a template without a test or a `preview()`.
+
 ## Fill it in
 
 1. Write the copy in your message bundles and read it through `t`, such as

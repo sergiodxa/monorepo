@@ -31,10 +31,11 @@ Edited app/initializers/cli.ts
 
 ## Flags
 
-| Flag                  | Default      | What it does                                      |
-| --------------------- | ------------ | ------------------------------------------------- |
-| `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it              |
-| `--dry-run`           |              | print the files and the diffs, and change nothing |
+| Flag                  | Default      | What it does                                          |
+| --------------------- | ------------ | ----------------------------------------------------- |
+| `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it                  |
+| `--dry-run`           |              | print the files and the diffs, and change nothing     |
+| `--force`             |              | replace the handler and its test, keeping the command |
 
 ## Names are the words you type
 
@@ -114,7 +115,7 @@ bun run test app/commands/users/grant.test.ts
    an `email` argument and a `--role` flag; the handler's `ctx.arguments` and `ctx.flags` take
    their types.
 2. Do the work through what the command line publishes: `ctx.db` and `ctx.models` over the local
-   database, the mailer, the log.
+   database, `ctx.email` for the app's declared emails, the log.
 3. Print what changed with `ctx.stdout`, and return a failure for an exit code other than 0.
 
 [Your app's command line](/docs/operations-and-testing/your-apps-command-line) covers arguments,

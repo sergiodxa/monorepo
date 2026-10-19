@@ -25,8 +25,8 @@ and name, the controller the router maps it to, and the middleware that runs for
 ```text
 Router app/initializers/router.tsx
   asyncContext(), log(logger), trace(), serverTiming(), noWWW(), trailingSlash(), wellKnown(…),
-  getClientIP(), userAgent(), rateLimit(…), database(openDatabase()), models(…),
-  mail({ transport, from: MAIL_FROM })
+  getClientIP(), userAgent(), rateLimit(…), database(openDatabase()), models(…), previews(…),
+  mailer(…)
 
 routes/web.ts
   METHOD  PATTERN       NAME      CONTROLLER                          MIDDLEWARE

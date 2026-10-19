@@ -30,9 +30,10 @@ sample value per field, so you need `sdxc make factory` only for a model made wi
 
 ## Flags
 
-| Flag        | What it does                      |
-| ----------- | --------------------------------- |
-| `--dry-run` | print the file and change nothing |
+| Flag        | What it does                                   |
+| ----------- | ---------------------------------------------- |
+| `--dry-run` | print the file and change nothing              |
+| `--force`   | write the factory again when the file is there |
 
 A factory is test code itself, so it never gets a test beside it.
 
@@ -52,6 +53,14 @@ The factory imports the model's PascalCase export from the file of the same name
 reading `Invoice` from `~/app/models/billing/invoice`, the name
 [`sdxc make model`](/docs/sdxc/make-model) exports. With no fields to read, the attributes start
 empty for you to fill.
+
+`@sdxc/data-model/testing` loads `@sdxc/sample` for the sample values, so `make` adds both
+packages to `package.json` when they are missing and prints the `bun install` to run:
+
+```text
+Wrote database/factories/post.ts
+Added @sdxc/sample@2026.10.13 to package.json; run bun install
+```
 
 ## Fill it in
 

@@ -49,13 +49,35 @@ policy around the model, is one [`sdxc scaffold`](/docs/sdxc/scaffold-a-resource
 | `--skip <file,...>`    |              | leave out `migration`, `factory`, or both; repeat it or list them |
 | `--test`, `--no-test`  | `make.tests` | write the model's test, or skip it                                |
 | `--dry-run`            |              | print the files and the diffs, and change nothing                 |
+| `--force`              |              | write an existing model, its test and its factory again           |
 
 ```bash
 sdxc make model post title --skip migration,factory
 ```
 
+The run ends by naming what `--skip` left out, after the formatter's output:
+
+```text
+Wrote app/models/post.ts
+Wrote app/models/post.test.ts
+Edited app/models/index.ts
+Wrote no migration or factory, as --skip asked
+```
+
 Every file is planned before any is written, so a model, migration or factory that already
 exists, or a table the chain already creates, stops the run with the project as it was.
+
+`--force` writes an existing model, its test and its factory again from the fields you give,
+keeps its registry entry, and writes no second migration, since the database already has the
+table. The run ends with the migration to write for the columns you added:
+
+```text
+Replaced app/models/post.ts
+Replaced app/models/post.test.ts
+Replaced database/factories/post.ts
+Kept the declaration, mapping and mount post already has; --force replaces files only
+Wrote no migration, since the model existed; add its new columns with sdxc make migration add-<columns>-to-posts
+```
 
 ## Fields
 

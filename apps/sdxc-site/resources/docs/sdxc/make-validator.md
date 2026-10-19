@@ -36,6 +36,7 @@ resource's own.
 | --------------------- | ------------ | ------------------------------------ |
 | `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it |
 | `--dry-run`           |              | print the files and change nothing   |
+| `--force`             |              | replace the file and its test        |
 
 ## What it writes
 

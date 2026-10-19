@@ -41,9 +41,9 @@ applies in order, named in `make.migrations`. [Make a migration](/docs/sdxc/make
 ## Contract
 
 A module that declares what exists without implementing it. A **route contract** in `routes/`
-declares every URL and method; `app/jobs/index.ts`, `app/commands/index.ts` and
-`app/mcp/tools/index.ts` are the contracts for jobs, commands and MCP tools. Handlers are typed by
-the contract entry they implement.
+declares every URL and method; `app/jobs/index.ts`, `app/commands/index.ts`,
+`app/mcp/tools/index.ts` and `app/emails/index.ts` are the contracts for jobs, commands, MCP
+tools and emails. Handlers and templates are typed by the contract entry they implement.
 
 ## Copy
 
@@ -54,9 +54,9 @@ one differs. `sdxc ui update` replaces untouched copies.
 
 ## Declared and mapped
 
-What a controller, job, model, MCP tool or command needs before the app reaches it: an entry in
-its [contract](#contract), the declaration, and a line in its [initializer](#initializer) that
-connects the entry to its handler, the mapping. `sdxc make` adds both.
+What a controller, job, model, MCP tool, command or email needs before the app reaches it: an
+entry in its [contract](#contract), the declaration, and a line in its
+[initializer](#initializer) that connects the entry to its handler, the mapping. `sdxc make` adds both.
 [Generate files](/docs/sdxc/generate-files#declared-and-mapped)
 
 ## Factory
@@ -66,8 +66,9 @@ itself, with values that repeat from run to run. [Make a factory](/docs/sdxc/mak
 
 ## Field
 
-A column given to `sdxc make model` or `sdxc scaffold` as `name`, `name:type` or `name?`. A bare
-name is typed by its spelling: `*_at` is a timestamp, `*_url` a URL, `body` text.
+A column given to `sdxc make model` or `sdxc scaffold` as `name`, `name:type` or `name?`, with
+`:index` or `:unique` after it to index the column. A bare name is typed by its spelling: `*_at`
+is a timestamp, `*_url` a URL, `body` text.
 [Scaffold a resource](/docs/sdxc/scaffold-a-resource#fields)
 
 ## Grant
@@ -123,6 +124,12 @@ command runs there, so it works from any folder inside the project.
 
 One day's publish of the `@sdxc` packages, named for its date, such as `2026.10.17`. A project's
 release is the newest date among its [pins](#pin). [Versioning](/docs/releases/versioning)
+
+## Seed
+
+`database/seed.ts`: the rows a new local database starts with, as named steps declared with
+`defineSeed`, which `sdxc run db seed` runs in order.
+[Run your app's commands](/docs/sdxc/run-app-commands#seed-and-reset-the-local-database)
 
 ## Stub
 

@@ -40,6 +40,7 @@ A middleware does nothing until a chain calls it, so `--mount` adds it to one in
 | `--mount <target>`    |              | import it and call it last in that chain         |
 | `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it             |
 | `--dry-run`           |              | print the files and the diff, and change nothing |
+| `--force`             |              | replace the file and its test when they exist    |
 
 ## What it writes
 
@@ -100,6 +101,9 @@ controller that declares it as its `middleware`, and `api` for every endpoint. W
 cannot be placed, such as a router that passes no `middleware` array or a chain that already
 binds the name, `make` writes the middleware and its test and prints the import and the call to
 add by hand.
+
+`--force` on a middleware that exists writes the file and its test again and keeps the mount it
+already has, so the chain never calls it twice.
 
 To run it before an entry that is already in the chain, move the call after the run. A
 middleware that needs options gets them where it is called.

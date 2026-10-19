@@ -7,7 +7,7 @@ section:
 order: 2.5
 lastUpdated: 2026-10-19
 outcomes:
-    - "How to remove a controller, job, tool, command or model and everything make wired for it"
+    - "How to remove a controller, job, tool, command, email or model and everything make wired for it"
     - "What sdxc destroy leaves for you, and why"
     - "How to run it from a script or an agent"
 ---
@@ -33,22 +33,24 @@ Remove 2 files and edit 3? › No
 
 ## What it removes
 
-| Kind           | Files                                | Edits                                                                        |
-| -------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
-| `controller`   | the controller and its test          | the route in its contract, its sitemap decision, its `router.map(…)`         |
-| `job`          | the job and its test                 | its declaration in `app/jobs/index.ts`, its `dispatcher.map(…)`, its trigger |
-| `mcp`          | the tool, or `--resource` a resource | its declaration, its `mcp.tools.map(…)`                                      |
-| `command`      | the command and its test             | its declaration in `app/commands/index.ts`, its `cli.map(…)`                 |
-| `model`        | the model, its test and its factory  | its entry in `app/models/index.ts`                                           |
-| any other kind | the file and its test                | none                                                                         |
+| Kind           | Files                                | Edits                                                                            |
+| -------------- | ------------------------------------ | -------------------------------------------------------------------------------- |
+| `controller`   | the controller and its test          | the route in its contract, its sitemap decision, its `router.map(…)`             |
+| `job`          | the job and its test                 | its declaration in `app/jobs/index.ts`, its `dispatcher.map(…)`, its trigger     |
+| `mcp`          | the tool, or `--resource` a resource | its declaration, its `mcp.tools.map(…)` or `mcp.resources.map(…)`                |
+| `command`      | the command and its test             | its declaration in `app/commands/index.ts`, its `cli.map(…)`                     |
+| `email`        | the template and its test            | its declaration in `app/emails/index.ts`, its `mail.map(…)` in the mail registry |
+| `model`        | the model, its test and its factory  | its entry in `app/models/index.ts`                                               |
+| any other kind | the file and its test                | none                                                                             |
 
 `destroy` finds the mapping by the import that loads the file, and reads the declaration from
 the mapping itself, `jobs.trials.expire` in `dispatcher.map(jobs.trials.expire, …)`. A group the
 removal leaves empty, such as `trials: {}`, goes too, and so does an import whose last use was
 the mapping or the declaration. Every other import stays.
 
-A scheduled job's trigger leaves `cloudflare.config.ts` with it, unless another job runs on the
-same schedule. A trigger in `wrangler.jsonc` is listed for you to remove.
+A scheduled job's trigger leaves `cloudflare.config.ts` with it once no other job runs on the
+same schedule, so the Worker stops waking for a job it no longer has. A cron in `wrangler.jsonc`
+is listed for you to remove.
 
 Every make kind but `migration` and `policy` is accepted. A file that does not exist stops the
 command before it edits anything:

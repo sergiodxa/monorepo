@@ -74,8 +74,13 @@ every `resources/locales/*.json`, which take each label and title under `posts`:
 ```
 
 When the generated code imports an `@sdxc` package `package.json` lacks, such as `@sdxc/uuid`
-for the ids or `@sdxc/validate` for the form, the scaffold adds it at your release and prints
-the install command to run.
+for the ids, `@sdxc/validate` for the form, or `@sdxc/sample`, which the factory's
+`@sdxc/data-model/testing` loads, the scaffold adds it at your release and prints the install
+command to run:
+
+```text
+Added @sdxc/uuid@2026.10.13, @sdxc/validate@2026.10.13 to package.json; run bun install
+```
 
 ## Fields
 
@@ -173,8 +178,8 @@ sdxc scaffold post title body published --api
 `POSTS_INDEX`, `POST_SHOW`, `POST_CREATE`, `POST_UPDATE` and `POST_DESTROY`, each body typed from
 the fields. `app/initializers/openapi.ts` adds them to the document, so `/api/openapi.json`
 describes every endpoint. Each write parses its body through its operation and answers a
-refused body with the `validationError` problem from `config/problems.ts`, and a missing or
-hidden row with `notFound`.
+refused body, or a row the model refuses, with the `validationError` problem from
+`config/problems.ts`, and a missing or hidden row with `notFound`.
 
 The model, migration, factory and policy are written as they are for pages; the validator, the
 form, the page controllers and the locale copy are left out, and `--skip pages` leaves out the
@@ -224,7 +229,8 @@ everywhere.
 
 Everything is planned in a staged copy of the project before anything is written, so the
 declarations build on one another and a refusal anywhere leaves the project as it was. A file
-that already exists, or a locale that already has the plural's key, stops the command:
+that already exists, or a locale that already has the plural's key, stops the command, since
+a scaffold writes new files only:
 
 ```text
 app/models/post.ts already exists; sdxc scaffold leaves it as it is
@@ -255,12 +261,18 @@ type check. Otherwise the command stops before writing anything:
 ```
 
 The same holds for the validator the pages submit through, the factory the tests seed rows
-with, and the abilities in `app/policies/abilities.ts` the pages and tools check.
+with, and the abilities in `app/policies/abilities.ts` the pages and tools check. The run ends
+by naming every piece it left out, after the formatter's output:
+
+```text
+Wrote no model, migration, factory, as --skip asked
+```
 
 `--dry-run` prints every file in full and every edit as a diff, and writes nothing. An edit that
 cannot be placed, such as a router laid out differently, is printed for you to make, as
 `sdxc make` does. Once it writes, the `format` command from your configuration runs over every
-file it wrote or edited.
+file it wrote or edited, and the edits to make by hand and the other notes print after it, so
+the run ends with what still needs you.
 
 ## Change what it writes
 

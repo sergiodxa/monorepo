@@ -41,6 +41,7 @@ Reach for it whenever a feature needs a new URL: a page, a form with its action,
 | `--actions <list>`    |               | one controller per action of a resource, or `all`; see below                 |
 | `--test`, `--no-test` | `make.tests`  | write the test beside it, or skip it                                         |
 | `--dry-run`           |               | print the files and the diffs, and change nothing                            |
+| `--force`             |               | replace the file and its test when they exist, keeping their declaration     |
 
 On a terminal `--method` is asked for, with `get` selected; without one, it is `get`.
 
@@ -99,7 +100,9 @@ export default createAction(routes.sponsors, {
 
 `--method form` writes a `createController` with two actions: `index` renders the form with its
 honeypot fields and Turnstile widget, and `action` receives the submission behind the CAPTCHA
-and spam checks, then redirects back with a `303`. `--routes api` writes a `createAction` with
+and spam checks, then redirects back with a `303`. A form route with params, such as
+`--path "/posts/:id/edit"`, builds its form action and redirect with `href(ctx.params)`, and its
+test requests it with sample values (`{ id: "1" }`). `--routes api` writes a `createAction` with
 the API chain that answers `Response.json({})`.
 
 ## Guard it with a resource's abilities
@@ -181,7 +184,9 @@ sdxc make controller api/posts --routes api --actions index,show,create,update,d
 `all` writes every action the contract has, and a list writes the ones it names. Each
 controller is the one `--method` and `--path` would write, so `--actions` refuses both. A list
 shows many rows, so `index` checks none and the run prints a note: show each row a visitor may
-read with `ctx.access.can(abilities.post.read, { post: row })`.
+read with `ctx.access.can(abilities.post.read, { post: row })`. Every file is checked free
+before the first is written, and the notes, this one and any missing ability, print once the
+controllers are written.
 
 <note>
 `--actions` writes the controllers alone. For the model, the form and the validator too, run

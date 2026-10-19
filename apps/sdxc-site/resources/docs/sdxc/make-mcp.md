@@ -36,6 +36,7 @@ Edited app/initializers/mcp.ts
 | `--resource`          |              | write a resource in `app/mcp/resources/` instead of a tool |
 | `--test`, `--no-test` | `make.tests` | write the test beside it, or skip it                       |
 | `--dry-run`           |              | print the files and the diffs, and change nothing          |
+| `--force`             |              | replace the handler and its test, keeping the declaration  |
 
 ## A tool
 

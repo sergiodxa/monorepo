@@ -36,7 +36,9 @@ Reach for it for every change to a table: a new table, a new column, an index, a
 | `--dry-run`            |           | print the file and change nothing                                        |
 
 A migration never gets a test, and its name holds no folders. Fields and `--from-model` together
-are a usage error.
+are a usage error. Every run writes a new file numbered after the last, so `make migration` is
+the one kind without `--force`: to change a migration no database has applied yet, edit its
+file.
 
 [`sdxc make model`](/docs/sdxc/make-model) writes the `create-<table>` migration with the model,
 so the first migration of a table usually comes from there.

@@ -85,6 +85,8 @@ The prompt is Markdown, in this order:
   ships.
 - `## Vendored components`: copies made with [`sdxc ui add`](/docs/sdxc/copy-ui-components)
   whose source changed since, with the `ui diff` and `ui update` commands for each.
+- `## Agent instructions`, when the upgrade left `AGENTS.md` as it is: a link to the release's
+  sdxc section for your agent to add, as AGENTS.md below describes.
 - `## Verify`: the project's own `check`, `typecheck` and `test` scripts, as your package
   manager runs them.
 - `## Documentation`: the reference page of each package the code imports.
