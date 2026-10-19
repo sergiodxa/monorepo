@@ -13,6 +13,7 @@ import * as s from "remix/data-schema";
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
 import { DEPLOY_STEPS } from "./deploy/plan.js";
 import { ACTION_NAMES, KINDS, MODEL_COMPANIONS, SCAFFOLD_PIECES } from "./make/kinds.js";
+import { DEFAULT_TAGS } from "./notes.js";
 import { ROUTE_SORTS } from "./routes/filter.js";
 import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
 
@@ -378,6 +379,20 @@ export const SDXC_COMMANDS = commands({
 			},
 		}),
 	}),
+	notes: command({
+		description: "List the TODO, FIXME, HACK and OPTIMIZE comments in the app's code",
+		flags: {
+			tag: flag
+				.string("tag", {
+					valueName: "tag",
+					description: `The tags to list instead of ${DEFAULT_TAGS.join(", ")}; repeat it or list them`,
+				})
+				.multiple()
+				.list(),
+			json: flag.boolean("json", { description: "Print a JSON array instead of a list" }),
+		},
+		examples: ["notes", "notes --tag TODO", "notes --tag TODO,REVIEW --json"],
+	}),
 	routes: command({
 		description: "Print every route with its controller and the middleware that runs for it",
 		flags: {
@@ -483,6 +498,11 @@ export const SDXC_COMMANDS = commands({
 			"scaffold post title body --skip model,migration,factory",
 			"scaffold post title body --api",
 		],
+	}),
+	stats: command({
+		description: "Count lines of code per kind of code the app layout names, and the test ratio",
+		flags: { json: flag.boolean("json", { description: "Print the counts as JSON" }) },
+		examples: ["stats", "stats --json"],
 	}),
 	ui: commands({
 		description: "Copy @sdxc/ui components into the project and keep imports on the copies",
