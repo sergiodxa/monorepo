@@ -74,9 +74,10 @@ Converted with every status code, redirect, copy and the API's `insufficient_sco
 kept. `requireUser`, `requireApiKey` (now authentication alone), `requireTeam` and `inTeam`
 query scoping stay.
 
-- The catalog's read and write pairs follow the API key scopes one to one; `monitors.delete`
-  (HTTP monitors only, admin), `team.{update,delete,leave}`, `members.{manage,remove,changeRole}`,
-  `billing.manage`, `checks.run`, `ping.{trigger,api}` and `stats.backfill` complete it.
+- The catalog's read, write and delete abilities follow the API key scopes one to one; every
+  monitor kind's `delete` is an admin's, behind its own `:delete` scope.
+  `team.{update,delete,leave}`, `members.{manage,remove,changeRole}`, `billing.manage`,
+  `checks.run`, `ping.{trigger,api}` and `stats.backfill` complete it.
 - Roles: `member`, `admin` inheriting it, and `owner` holding everything; a team's owner binds
   `owner` alone. Guards keep the owner in the team (`members.remove`, `members.changeRole`,
   `team.leave`, reason `owner`), ask an admin to be demoted before leaving (reason `admin`),
@@ -91,10 +92,13 @@ query scoping stay.
   for anyone but the owner. `app/initializers/router.test.ts` drives the real router to prove
   every team action is guarded.
 
-The two product questions stay as they were, by decision: HTTP-monitor deletes remain admin-only
-while members delete every other kind, and any key with `monitors:write` may enqueue the global
-stats backfill. The trial page's `stateFor` read picks a billing path for a signed-in visitor
-rather than refusing anything, so it stays a model call.
+Since decided: deleting a monitor of any kind needs an admin, in the dashboard (the delete
+actions take `adminGuards`, and the pages show delete controls only when the policy allows) and
+through the API (a kind's `:delete` scope). The stats backfill rewrites every team's stats, so it
+is the `operator` role's alone: `operatorAccess` binds it for the key set as
+`UPTIME_CRON_API_KEY`, `owner`'s wildcard excepts it, and no scope grants it. The trial page's
+`stateFor` read picks a billing path for a signed-in visitor rather than refusing anything, so it
+stays a model call.
 
 ### auth-saas
 
