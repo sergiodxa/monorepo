@@ -307,6 +307,17 @@ describe("helpers over any model", () => {
 		>().toEqualTypeOf<ModelRow<typeof USERS> | null>();
 		expectTypeOf(models.articles.live()).toEqualTypeOf<ModelQuery<typeof ARTICLES>>();
 	});
+
+	test("a model created inline in the registry keeps its inputs, with no meta to give", () => {
+		let tags = table({ name: "tags", columns: { id: c.text().primaryKey(), name: c.text() } });
+		let models = createModels({ tags: createModel(tags, {}) }).bind({ db: DB });
+		let standalone = createModel(tags, {});
+
+		expectTypeOf<Parameters<(typeof models)["tags"]["create"]>[0]>().toEqualTypeOf<
+			CreateValues<typeof standalone>
+		>();
+		expectTypeOf<CreateValues<typeof standalone>>().toEqualTypeOf<{ id: string; name: string }>();
+	});
 });
 
 /** The context the shop registry's models read: their siblings and an audit log. */

@@ -57,7 +57,8 @@ function define(config: ModelConfig): unknown {
  */
 export interface CreateModel<Context extends ModelContext> {
 	/**
-	 * Defines a model over a data-table table.
+	 * Defines a model over a data-table table. Its types come from `table` and `options` alone,
+	 * so a model created inline in `createModels({ … })` types as one declared on its own.
 	 *
 	 * @param table The table the model reads and writes.
 	 * @param options Constraints, scopes, methods, callbacks and meta fields.
@@ -92,18 +93,20 @@ export interface CreateModel<Context extends ModelContext> {
 			Inheritance,
 			Generate
 		>,
-	): CheckedDefinition<
-		Shape<
-			T,
-			Constraints,
-			Scopes,
-			Methods,
-			Fields,
-			Optional | GeneratedKey<T, Generate>,
-			Inheritance,
-			Context
-		>,
-		Methods
+	): NoInfer<
+		CheckedDefinition<
+			Shape<
+				T,
+				Constraints,
+				Scopes,
+				Methods,
+				Fields,
+				Optional | GeneratedKey<T, Generate>,
+				Inheritance,
+				Context
+			>,
+			Methods
+		>
 	>;
 }
 
