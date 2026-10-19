@@ -41,6 +41,10 @@ cli.map(
 	lazy(() => import("~/app/commands/about")),
 );
 cli.map(
+	commandset.deploy,
+	lazy(() => import("~/app/commands/deploy")),
+);
+cli.map(
 	commandset.typegen,
 	lazy(() => import("~/app/commands/typegen")),
 );

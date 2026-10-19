@@ -92,20 +92,22 @@ visitor's browser.
 
 ## Scripts
 
-| Script                  | Purpose                                   |
-| ----------------------- | ----------------------------------------- |
-| `bun run dev`           | Start the dev server on port 3003         |
-| `bun run build`         | Build the worker and client assets        |
-| `bun run start`         | Preview the production build              |
-| `bun run typecheck`     | Type-check the app                        |
-| `bun run cli <command>` | Run an app command, as `sdxc run` does    |
-| `sdxc run typegen`      | Regenerate `.cloudflare/types/index.d.ts` |
-| `bun cf:deploy`         | Deploy the worker                         |
+| Script                       | Purpose                                   |
+| ---------------------------- | ----------------------------------------- |
+| `bun run dev`                | Start the dev server on port 3003         |
+| `bun run build`              | Build the worker and client assets        |
+| `bun run start`              | Preview the production build              |
+| `bun run typecheck`          | Type-check the app                        |
+| `bun run cli <command>`      | Run an app command, as `sdxc run` does    |
+| `sdxc run typegen`           | Regenerate `.cloudflare/types/index.d.ts` |
+| `sdxc deploy --skip migrate` | Build and deploy the worker               |
 
 ## Deployment
 
 The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
-Run `bun run build`, then `bun cf:deploy`, which uploads that build output as-is.
+Run `sdxc deploy --skip migrate`: it builds, then uploads that build output with
+`sdxc run deploy` (`cf deploy --prebuilt`). The app has no D1 database, so there is no
+migration step to run. `sdxc run deploy --dry-run` checks the build without uploading.
 Secrets are set with `cf workers secrets update`.
 
 ## Environment Variables

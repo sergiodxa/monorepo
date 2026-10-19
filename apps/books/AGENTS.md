@@ -154,8 +154,9 @@ Run tests from the repo root with `bun run test`, which runs them under Vitest. 
 
 ## Gotchas
 
-- **`bun cf:deploy` uploads the existing build.** It runs `cf deploy --prebuilt`, so run
-  `bun run build` first or it ships whatever `.cloudflare/output` last held.
+- **`sdxc run deploy` uploads the existing build.** It runs `cf deploy --prebuilt`, so ship with
+  `sdxc deploy --skip migrate`, which builds first; on its own it ships whatever
+  `.cloudflare/output` last held.
 - **Bindings and secrets live in `cloudflare.config.ts`.** A secret declared there with
   `bindings.secret()` is what gives it a type on `env`; `.dev.vars` only supplies values.
 - **`redirect()` defaults to 307**, which preserves the method. Every
