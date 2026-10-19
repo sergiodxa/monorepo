@@ -46,6 +46,8 @@ export interface MakeRequest {
 	routes: string;
 	/** Replace a file the plan would write that already exists, instead of stopping. */
 	replace?: boolean;
+	/** Plan the test alone, for a file that exists already. */
+	testAlone?: boolean;
 }
 
 /** A file the run writes, by path relative to the project root. */
@@ -93,8 +95,8 @@ export async function plan(
 	}
 	let path = `${folder}/${file}${kind.extension}`;
 	let testPath = `${folder}/${file}.test${kind.extension}`;
-	let writesTest = kind.tests && request.tests;
-	let writesMain = kind.testOnly !== true;
+	let writesTest = kind.tests && (request.tests || request.testAlone === true);
+	let writesMain = kind.testOnly !== true && request.testAlone !== true;
 	let paths = [...(writesMain ? [path] : []), ...(writesTest ? [testPath] : [])];
 	for (let candidate of paths) {
 		if (request.replace !== true && (await exists(root, candidate))) {

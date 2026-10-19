@@ -126,6 +126,10 @@ export function createSDXC(
 		lazy(() => import("./commands/make.js").then((module) => ({ default: module.command }))),
 	);
 	cli.map(
+		SDXC_COMMANDS.make.test,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.test }))),
+	);
+	cli.map(
 		SDXC_COMMANDS.make.stubs,
 		lazy(() => import("./commands/make.js").then((module) => ({ default: module.stubs }))),
 	);

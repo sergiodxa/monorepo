@@ -17,6 +17,7 @@ import type { MakeInput } from "../make/index.js";
 import { METHODS, SDXC_COMMANDS } from "../contract.js";
 import { make } from "../make/index.js";
 import { copyStubs } from "../make/stubs.js";
+import { makeTest } from "../make/test.js";
 import { packageRoot, project } from "../middleware.js";
 
 /** The middleware every `make` handler runs behind. */
@@ -184,6 +185,22 @@ export const email = plain("email");
 
 /** `sdxc make command`, which declares the command and maps its handler on the command line. */
 export const command = plain("command");
+
+/** `sdxc make test`, which writes the test of an existing file from its kind's test stub. */
+export const test = createCommand(SDXC_COMMANDS.make.test, {
+	middleware: MAKE_MIDDLEWARE,
+	/** Reads the kind from the file's folder; a controller's route comes from its router. */
+	async handler(ctx) {
+		let made = await makeTest(ctx, ctx.project, ctx.packageRoot, {
+			file: ctx.arguments.file,
+			cwd: ctx.cwd,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		});
+		if (isFailure(made)) return made;
+		return success();
+	},
+});
 
 /** `sdxc make stubs`, which copies the built-in stubs of the named kinds, or every kind. */
 export const stubs = createCommand(SDXC_COMMANDS.make.stubs, {

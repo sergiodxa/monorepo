@@ -558,6 +558,69 @@ describe("make", () => {
 	});
 });
 
+describe("make test", () => {
+	test("writes the test a kind gets beside an existing file that has none", async () => {
+		let root = await project();
+		await invoke(["service", "billing/charge", "--no-test"], root);
+
+		let result = await invoke(["test", "app/services/billing/charge.ts"], root);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Wrote app/services/billing/charge.test.ts\n");
+		let written = await readFile(join(root, "app/services/billing/charge.test.ts"), "utf8");
+		expect(written).toContain("~/app/services/billing/charge");
+	});
+
+	test("refuses a test that exists unless --force replaces it", async () => {
+		let root = await project();
+		await invoke(["validator", "signup"], root);
+		await writeFile(join(root, "app/http/validators/signup.test.ts"), "edited");
+
+		let refused = await invoke(["test", "app/http/validators/signup.ts"], root);
+		let forced = await invoke(["test", "app/http/validators/signup.ts", "--force"], root);
+
+		expect(refused).toMatchObject({ code: 1 });
+		expect(refused.stderr).toContain("signup.test.ts already exists");
+		expect(forced.stdout).toContain("Replaced app/http/validators/signup.test.ts\n");
+		expect(await readFile(join(root, "app/http/validators/signup.test.ts"), "utf8")).not.toBe(
+			"edited",
+		);
+	});
+
+	test("takes a form controller's route and stub from the router that maps it", async () => {
+		let root = await sitemapProject();
+		await invoke(["controller", "contact", "--method", "form", "--no-test"], root, {
+			exec: UNFORMATTED,
+		});
+
+		let result = await invoke(["test", "app/http/controllers/contact.tsx"], root, {
+			exec: UNFORMATTED,
+		});
+
+		expect(result.code).toBe(0);
+		let written = await readFile(join(root, "app/http/controllers/contact.test.tsx"), "utf8");
+		expect(written).toContain("routes.contact.action.href()");
+	});
+
+	test("names why a file gets no test, and a missing file", async () => {
+		let root = await project();
+		await mkdir(join(root, "database/migrations"), { recursive: true });
+		await writeFile(join(root, "database/migrations/0001_CreatePosts.sql"), "");
+		await mkdir(join(root, "lib"), { recursive: true });
+		await writeFile(join(root, "lib/odd.ts"), "");
+
+		let migration = await invoke(["test", "database/migrations/0001_CreatePosts.sql"], root);
+		let outside = await invoke(["test", "lib/odd.ts"], root);
+		let missing = await invoke(["test", "app/services/nothing.ts"], root);
+
+		expect(migration.stderr).toContain("gets no test from sdxc make test: a migration has no test");
+		expect(outside.stderr).toContain("lib/odd.ts is in no folder sdxc make writes tests for");
+		expect(missing.stderr).toBe(
+			"app/services/nothing.ts does not exist; sdxc make test writes a test for a file\n",
+		);
+	});
+});
+
 describe("formatting", () => {
 	test(
 		"the app template's own check passes on the files make writes and edits",

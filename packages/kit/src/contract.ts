@@ -341,6 +341,25 @@ export const SDXC_COMMANDS = commands({
 			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 			examples: ["make command users/grant"],
 		}),
+		test: command({
+			description: "The test make writes beside a file, for an existing file without one",
+			tasks: true,
+			arguments: {
+				file: argument(nonEmpty("Name the file"), {
+					valueName: "file",
+					description: "The file to test, such as app/services/billing/charge.ts",
+					prompt: prompt.text({
+						message: "Which file needs a test?",
+						placeholder: "app/services/billing/charge.ts",
+					}),
+				}),
+			},
+			flags: {
+				dryRun: DRY_RUN_FLAG,
+				force: flag.boolean("force", { description: "Replace the test when it exists" }),
+			},
+			examples: ["make test app/services/billing/charge.ts"],
+		}),
 		stubs: command({
 			description: "Copy the built-in stubs into make.stubs to edit",
 			arguments: {
