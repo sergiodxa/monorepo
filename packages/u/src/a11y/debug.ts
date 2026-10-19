@@ -20,7 +20,7 @@ import { merge, nest, utility } from "../internal/descriptor.js";
  */
 export function debug<Node extends Element = Element>(mode: boolean | "nested" = true) {
 	return utility<Node>(() => {
-		if (!mode || !import.meta.env.DEV) return {};
+		if (!mode || !import.meta.env?.DEV) return {};
 
 		let host = { outline: "2px solid red", outlineOffset: "-2px" };
 		if (mode !== "nested") return host;

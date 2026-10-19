@@ -52,7 +52,7 @@ function checkNestedSelector(selector: string): void {
 
 	let message = `@sdxc/u: when("${selector}") would be emitted as a declaration, not a rule, and dropped by the browser. Selectors must start with "&", "@", ":", "[" or "."; wrap a leading element or sibling in :is(), e.g. ":is(input:checked) ~ &".`;
 
-	if (import.meta.env.DEV) throw new Error(message);
+	if (import.meta.env?.DEV) throw new Error(message);
 
 	if (WARNED_SELECTORS.has(selector)) return;
 	WARNED_SELECTORS.add(selector);
