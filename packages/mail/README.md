@@ -116,37 +116,24 @@ export default createJobHandler(jobs.email, async (ctx) => {
 
 ### An email outside the registry
 
-Mail that is no declared email, such as a message to the app's own inbox, can be an email
-object: `defineEmail()` builds its class from props, a subject and a body.
+Mail that is no declared email, such as a message to the app's own inbox, can be any object
+with `to`, `subject` and `body()`; `replyTo`, `headers`, `unsubscribe`, `list` and `calendar`
+are optional members of the same `Email` contract.
 
 ```tsx
-import { defineEmail, Email } from "@sdxc/mail";
+import { Email } from "@sdxc/mail";
 
-interface TeamInvite {
-	team: string;
-	url: string;
-}
-
-export const TeamInviteEmail = defineEmail<TeamInvite>({
-	subject: (invite) => `Join ${invite.team}`,
-	body: (handle) => () => (
-		<Email.Layout preview={`Join ${handle.props.team}`} title="Invite">
-			<Email.Heading>You have been invited</Email.Heading>
-			<Email.Text>Join {handle.props.team} to start collaborating.</Email.Text>
-			<Email.Button href={handle.props.url}>Accept invite</Email.Button>
-			<Email.Footer>You received this because someone invited you to a team.</Email.Footer>
+await mailer.send({
+	to: { email: "support@example.com" },
+	subject: `[Support] ${request.topic}`,
+	replyTo: { email: request.email },
+	body: () => (
+		<Email.Layout title="Support request">
+			<Email.Text>{request.message}</Email.Text>
 		</Email.Layout>
 	),
 });
-
-await mailer.send(new TeamInviteEmail(invite.email, invite));
 ```
-
-`defineEmail()` returns a class built with the recipient (a string, an `Address` or a list) and
-the props; `replyTo`, `headers`, `unsubscribe`, `list` and `calendar` are optional functions of
-the props. The subject arrives as a string, already in the recipient's language. Any object
-with `to`, `subject` and `body()` also satisfies the `Email` contract, for an email whose
-addressing needs more than its props.
 
 ### Publish a mailer on the request context
 
@@ -267,11 +254,6 @@ Assembles a raw RFC 5322 message for a provider that takes MIME. Bodies go into
 headers fold at 78 characters, non-ASCII names and subjects become RFC 2047 encoded words, each
 part is quoted-printable or base64, whichever is smaller, line endings are CRLF, and `Bcc` is
 left to the envelope.
-
-### `defineEmail<Props>(definition: EmailDefinition<Props>): EmailClass<Props>`
-
-Builds an email class from `subject(props)` and a `body` component. Each call returns its own
-class, so `instanceof` tells two emails apart; an instance exposes the `props` it was built with.
 
 ### `isEmail(value: Message | Email): value is Email`
 
@@ -485,14 +467,16 @@ Gmail and Yahoo require one-click unsubscribe on subscribed and marketing mail. 
 its target and list, and the mailer writes the headers:
 
 ```tsx
-import { defineEmail, Email } from "@sdxc/mail";
-import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
-import { unwrap } from "@sdxc/result";
+// app/emails/index.ts
+export default emails({ digest: email({ props: s.object({ token: s.string() }) }) });
 
-const DailyDigestEmail = defineEmail<{ token: string }>({
+// app/emails/digest.tsx
+import { createEmail, Email } from "@sdxc/mail";
+
+export default createEmail(emails.digest, {
 	subject: () => "Your daily digest",
-	unsubscribe: (props) => ({
-		url: `https://example.com/unsubscribe/${props.token}`,
+	unsubscribe: ({ token }) => ({
+		url: `https://example.com/unsubscribe/${token}`,
 		mailto: "unsubscribe@example.com",
 	}),
 	list: () => ({ id: "daily-digest.example.com", name: "Daily digest" }),
@@ -503,8 +487,12 @@ const DailyDigestEmail = defineEmail<{ token: string }>({
 	),
 });
 
+// the sender
+import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { unwrap } from "@sdxc/result";
+
 let token = unwrap(await signUnsubscribeToken(secret, { subject: member.id, list: "digest" }));
-await mailer.send(new DailyDigestEmail(member.email, { token }));
+await ctx.email.send(emails.digest, { to: member.email, props: { token } });
 ```
 
 ```text

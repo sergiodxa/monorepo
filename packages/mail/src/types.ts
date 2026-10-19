@@ -166,9 +166,9 @@ export interface Transport {
 }
 
 /**
- * An email: who it goes to, what it says, and what it looks like, usually built by
- * `defineEmail()`. Sender identity lives on the mailer, and a subject arrives already
- * translated from the caller's locale handling.
+ * An email: who it goes to, what it says, and what it looks like, usually composed by the
+ * registry from a declared email. Sender identity lives on the mailer, and a subject arrives
+ * already translated for its reader.
  */
 export interface Email {
 	/** Recipient this email is addressed to, derived from the data it was constructed with. */

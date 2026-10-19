@@ -85,4 +85,4 @@ Emails get a registry shaped like the others:
 - [x] `sdxc make email` with fields, and the app template wired to the registry
 - [x] Development preview route (`@sdxc/mail/previews`, mounted at `/_emails` while developing) and `sdxc run emails preview <name>`
 - [x] `sdxc doctor` checks for unmapped emails, missing tests and templates without `preview()`
-- [ ] Apps moved onto the registry: demo, r3-auth, reader, blog, uptime, auth-saas
+- [x] Apps moved onto the registry: demo, r3-auth, reader, blog, uptime, auth-saas; `defineEmail()` removed

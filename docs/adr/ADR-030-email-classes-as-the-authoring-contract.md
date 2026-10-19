@@ -2,7 +2,8 @@
 
 ## Status
 
-**Accepted** - 2026-07-29
+**Superseded** by [ADR-167](./ADR-167-email-registry.md) - 2026-10-19: emails are declared in a
+registry and sent by name, and `defineEmail()` is removed.
 
 ## Background
 

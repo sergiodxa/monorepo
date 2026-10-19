@@ -22,7 +22,6 @@ export type {
 	Transport,
 	Unsubscribe,
 } from "./types.js";
-export type { DefinedEmail, EmailClass, EmailDefinition } from "./define.js";
 export type {
 	AnyEmailDeclaration,
 	EmailDeclaration,
@@ -65,7 +64,6 @@ export type EmailTableRow = EmailComponents.Table.Row;
 /** A web font for `Email.Layout` to declare, named here for the same reason as above. */
 export type EmailFont = EmailComponents.Font;
 
-export { defineEmail } from "./define.js";
 export { email, emails, isEmailDeclaration } from "./emails.js";
 export { EmailRefusedError, MailError } from "./errors.js";
 export { lazy } from "./lazy.js";
