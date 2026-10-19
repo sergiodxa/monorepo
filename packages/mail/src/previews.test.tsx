@@ -132,6 +132,19 @@ describe("previews", () => {
 		expect(posted.status).toBe(418);
 	});
 
+	test("serves at a path given with trailing slashes, in time linear in their count", async () => {
+		let started = performance.now();
+		previews(registry(), { path: `/${"/".repeat(50_000)}x` });
+		let app = createRouter({
+			middleware: [previews(registry(), { path: "/inbox///", locales: ["en"] })],
+			defaultHandler: () => new Response("next", { status: 418 }),
+		});
+		let response = await app.fetch("https://example.com/inbox");
+
+		expect(performance.now() - started).toBeLessThan(1_000);
+		expect(response.status).toBe(200);
+	});
+
 	test("passes every request on when it is not enabled", async () => {
 		let app = createRouter({
 			middleware: [previews(registry(), { enabled: false })],

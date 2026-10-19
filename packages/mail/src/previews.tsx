@@ -85,6 +85,16 @@ interface InboxProps {
 	stylesheets: readonly string[];
 }
 
+/**
+ * `path` with every trailing slash removed, by walking back from the end, so the time it takes
+ * grows with the path's length whatever the path holds.
+ */
+function withoutTrailingSlashes(path: string): string {
+	let end = path.length;
+	while (end > 0 && path[end - 1] === "/") end -= 1;
+	return path.slice(0, end);
+}
+
 /** The headers of a page that a preview never caches, since the template may change on the next save. */
 const NO_STORE = { "Cache-Control": "no-store" };
 
@@ -99,7 +109,7 @@ const NO_STORE = { "Cache-Control": "no-store" };
  * @example previews(mail, { locales: SUPPORTED_LANGUAGES, enabled: import.meta.env.DEV })
  */
 export function previews(mail: Mail, options: PreviewsOptions = {}): Middleware {
-	let base = (options.path ?? "/_emails").replace(/\/+$/, "");
+	let base = withoutTrailingSlashes(options.path ?? "/_emails");
 	let locales = options.locales ?? [];
 	let enabled = options.enabled ?? true;
 	let stylesheets = options.stylesheets ?? (() => []);
