@@ -28,8 +28,7 @@ const UNKNOWN = "unknown";
  * Creates the inbox's per-network limit.
  *
  * @param env Environment bindings, read for the rate limiter.
- * @returns The limiting middleware, or none when the deployment declares no limiter, so a
- * local run without the binding keeps accepting deliveries.
+ * @returns The limiting middleware, or none when the deployment declares no limiter, so a local run without the binding keeps accepting deliveries.
  */
 export default function activityPubRateLimit(env: App.Env): Middleware[] {
 	let binding = env.ACTIVITYPUB_RATE_LIMITER;

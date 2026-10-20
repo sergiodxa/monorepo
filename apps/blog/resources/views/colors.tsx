@@ -1,8 +1,7 @@
 /**
  * View for the color-palette reference page. Derives the raw palette scales and
  * the semantic tone tokens from the design system's own contract and renders each
- * tone as a worked example card plus grids of swatches. Exists as a living style
- * guide so the blog's design tokens can be previewed in the browser.
+ * tone as a worked example card plus grids of swatches.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

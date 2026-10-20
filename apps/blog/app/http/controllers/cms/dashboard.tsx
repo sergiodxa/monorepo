@@ -1,8 +1,7 @@
 /**
  * HTTP action for the CMS dashboard. It resolves aggregate counts of articles, tutorials,
  * bookmarks, and glossary terms in parallel from the repository layer and renders the
- * dashboard view with those stats. It exists to give CMS operators an at-a-glance summary
- * of content volume on the backoffice landing page.
+ * dashboard view with those stats.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

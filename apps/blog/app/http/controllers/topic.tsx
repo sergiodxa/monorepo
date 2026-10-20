@@ -43,10 +43,7 @@ function topicNotFound(ctx: AppContext): Promise<Response> {
 
 /**
  * Renders a topic's page: every match of its query on one page, newest first unless it asks
- * for an `order:`, so an old `?page=` address shows the whole list. A kind's topic whose posts
- * are entries of its page, such as the glossary, lists them by term, so each entry's anchor
- * reads as a reference. The page is cached under the post-list tag, which every CMS write
- * purges, previews never appearing in it.
+ * for an `order:`, so an old `?page=` address shows the whole list.
  */
 async function renderTopic(ctx: AppContext, topic: SelectTopic): Promise<Response> {
 	let query = topicQuery(topic);

@@ -32,13 +32,11 @@ const UNKNOWN_CALLER = "unknown";
 
 /**
  * Creates middleware spending one caller's budget before the MCP handler runs.
- *
  * Keyed on the client's network — the address for IPv4, its /64 for IPv6, since one host
  * holds a whole /64 — all an anonymous endpoint has; shared egress means shared buckets.
  *
  * @param env Environment bindings, read for the rate limiter.
- * @returns Middleware that limits the request, or a pass-through that keeps serving when the
- * deployment declares no limiter — a deploy predating the binding, or a local run without it.
+ * @returns Middleware that limits the request, or a pass-through that keeps serving when the deployment declares no limiter — a deploy predating the binding, or a local run without it.
  */
 export default function mcpRateLimit(env: App.Env): Middleware {
 	let binding = env.MCP_RATE_LIMITER;

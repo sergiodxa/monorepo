@@ -41,7 +41,6 @@ export namespace TopicViewModel {
 	 * One post on a topic page, drawn as its kind's own listing draws it: an article or a
 	 * tutorial as a linked title and date, a bookmark with its summary and archive link, a
 	 * glossary entry with its definition, a note or TIL as an activity row reading its content,
-	 * and any other kind as an activity row.
 	 */
 	export type Item =
 		| { type: "page"; key: string; href: string; label: string; date: string; preview: boolean }

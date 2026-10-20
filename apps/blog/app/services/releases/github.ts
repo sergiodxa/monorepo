@@ -66,8 +66,7 @@ export interface GitHubRelease {
  * @param repository The `owner/name` to read.
  * @param window The span a release's publication must fall in.
  * @param token The credential the API is called with.
- * @returns The releases, or why GitHub could not be read; one failed page fails the read,
- * since a partial list would leave packages out of the post without saying so.
+ * @returns The releases, or why GitHub could not be read; one failed page fails the read, since a partial list would leave packages out of the post without saying so.
  */
 export async function listReleases(
 	repository: string,

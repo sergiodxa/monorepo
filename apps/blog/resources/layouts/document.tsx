@@ -1,8 +1,7 @@
 /**
- * Root HTML document shell for the blog app: the html/head/body frame with
- * charset, viewport, title, SEO tags, every stylesheet the app ships and the client
- * entry that hydrates its islands. Each page composes into it, so the page shells
- * vary only in their own chrome while the document itself is assembled one way.
+ * Root HTML document shell for the blog app: the html/head/body frame with charset,
+ * viewport, title, SEO tags, every stylesheet the app ships and the client entry
+ * that hydrates its islands.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

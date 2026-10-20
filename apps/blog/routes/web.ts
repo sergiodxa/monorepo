@@ -35,8 +35,7 @@ export default route({
 	/**
 	 * The blog's one ActivityPub actor and its endpoints. The ids in
 	 * `config/activitypub.ts` name these paths on the canonical origin, and remote servers
-	 * cache them, so they never move. The inbox takes signed `POST`s from any server; the
-	 * documents are what a server reads to follow the actor and backfill its posts.
+	 * cache them, so they never move.
 	 */
 	activityPub: route("/activitypub", {
 		inbox: post("/inbox"),

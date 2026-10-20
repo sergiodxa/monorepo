@@ -1,8 +1,7 @@
 /**
- * Controller for `.well-known` discovery endpoints. It serves a WebFinger JRD document
- * for the site's canonical identity (normalizing acct-URI and homepage-URL resource
- * forms) and proxies the owner's public avatar as a PNG from GitHub. It exists to make
- * the site discoverable by fediverse and identity clients under standard well-known paths.
+ * Controller for `.well-known` discovery endpoints. It serves a WebFinger JRD document for
+ * the site's canonical identity (normalizing acct-URI and homepage-URL resource forms) and
+ * proxies the owner's public avatar as a PNG from GitHub.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -134,8 +133,7 @@ export default createController(routes.wellKnown, {
 		 * only the links whose relation a `rel` parameter asks for (RFC 7033 §4.3).
 		 *
 		 * @param ctx Request context providing the parsed request URL.
-		 * @returns JRD JSON for known resources, a JSON 400 without `resource`, a JSON 404 for
-		 *   anyone else's; every answer allows any origin.
+		 * @returns JRD JSON for known resources, a JSON 400 without `resource`, a JSON 404 for anyone else's; every answer allows any origin.
 		 */
 		async webFinger(ctx) {
 			let query = readQuery(ctx.url);

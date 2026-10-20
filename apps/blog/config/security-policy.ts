@@ -11,10 +11,7 @@ import type { SecurityHeaders } from "@sdxc/security-headers";
 
 /**
  * Enforced: MIME sniffing off, a one-year HSTS for the apex only (subdomains are separate
- * apps), no cross-window access, and the powerful features denied. Observed only: a CSP
- * limited to the site's own origin, plus `data:` images, the inline `<style>` blocks
- * `remix/component` renders and the YouTube player posts embed; the login form posts on
- * to the auth server.
+ * apps), no cross-window access, and the powerful features denied.
  */
 export const SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicyReportOnly: {

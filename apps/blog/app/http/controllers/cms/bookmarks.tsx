@@ -232,9 +232,9 @@ export default createController(routes.cms.bookmarks, {
 		 * Saves an edit, which also marks the bookmark reviewed. A URL another bookmark already
 		 * holds is refused with the form shown again, linking to that bookmark; a new URL is
 		 * read and archived in the background.
+		 *
 		 * @param ctx Controller context with params, form data, and DB access.
-		 * @returns See Other redirect to the edit page, the form again with a 409 on a taken URL,
-		 * or a 404 form view when the target is missing.
+		 * @returns See Other redirect to the edit page, the form again with a 409 on a taken URL, or a 404 form view when the target is missing.
 		 */
 		update: async (ctx) => {
 			let user = getAuthUser();

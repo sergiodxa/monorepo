@@ -39,11 +39,9 @@ async function topicLink(models: BlogModels, text: string): Promise<SearchViewMo
 }
 
 /**
- * Serves the search page. A blank box renders the form alone; a query with nothing to
- * search for, or over a limit, answers 400 with the reason beside the field; malformed
- * paging redirects to the query's first page; anything else renders the requested page,
- * clamped to the last one. Previews never appear, whoever is signed in; the author also sees
- * a link to save the search as a topic, or to the topic already saving it.
+ * Serves the search page. A blank box renders the form alone; a query with nothing to search
+ * for, or over a limit, answers 400 with the reason beside the field; malformed paging
+ * redirects to the query's first page; anything else renders the requested page, clamped to
  *
  * @returns HTML response for `GET /search`.
  */

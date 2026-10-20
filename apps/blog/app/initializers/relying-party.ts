@@ -1,8 +1,7 @@
 /**
  * The confidential client that signs an editor in: the authorization redirect, the
  * callback that verifies the ID token, the provider logout, and the session scheme the
- * auth middleware resolves a user through. Built per request so the callback URL it
- * presents is the origin the request arrived on.
+ * auth middleware resolves a user through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

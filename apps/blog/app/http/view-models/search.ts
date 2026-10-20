@@ -147,8 +147,7 @@ export class SearchViewModel {
 	 * A page of results, highlighted against the query that found them, with pager links
 	 * built from the request URL so every other parameter, `q` included, carries over.
 	 *
-	 * @param input The typed text, its parsed query, the page of results, the request URL, and
-	 * the author's topic link, omitted for a reader.
+	 * @param input The typed text, its parsed query, the page of results, the request URL, and the author's topic link, omitted for a reader.
 	 */
 	static results(input: {
 		query: string;
@@ -176,8 +175,7 @@ export class SearchViewModel {
 	 * so the box answers the same way in both places. Tabs show only while matches span
 	 * more than one kind, since a lone kind's tab would repeat "All".
 	 *
-	 * @param input The typed text, its parsed query, the first page of matches, the tab they
-	 * were narrowed to, and how many matches each kind holds.
+	 * @param input The typed text, its parsed query, the first page of matches, the tab they were narrowed to, and how many matches each kind holds.
 	 */
 	static suggestions(input: {
 		query: string;

@@ -62,11 +62,9 @@ export async function seedUser(db: Database, role: "admin" | "guest"): Promise<s
  * Stores a session signed in as `userId` and returns the `Cookie` header naming it. The
  * token set is opaque with a future expiry, so the auth middleware resolves the account
  * without contacting the provider; the cookie carries the signed expiry envelope the
- * session middleware requires of a cookie with a lifetime.
  *
  * @param userId The account the session is signed in as.
- * @param secret The key the cookie is signed with, which the app accepts only when it
- *   holds the same one.
+ * @param secret The key the cookie is signed with, which the app accepts only when it holds the same one.
  * @returns The `name=value` pair a browser would send back.
  */
 export async function signedInCookie(userId: string, secret: string): Promise<string> {

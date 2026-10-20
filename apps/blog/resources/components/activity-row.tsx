@@ -1,8 +1,7 @@
 /**
  * The blog's one row for a post in a list: an emoji per kind, the title as the link, an
  * optional line of description under it, and the date at the end; a short post shows its
- * content in place of the title, and its date is the link. The home page's activity,
- * the `/search` results and the search dialog all draw their rows with it, so they match.
+ * content in place of the title, and its date is the link.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

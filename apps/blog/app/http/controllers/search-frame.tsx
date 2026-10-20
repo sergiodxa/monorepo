@@ -26,8 +26,7 @@ const SUGGESTION_COUNT = 6;
 /**
  * Serves the dialog's body. Every state answers 200, a blank box and text that cannot run
  * included, because the fragment lands inside a dialog on whatever page the visitor is on;
- * the reason a query cannot run is shown under the box instead. Each answer is cached like
- * `/search` and kept out of indexes with `X-Robots-Tag`, being a view of listed posts.
+ * the reason a query cannot run is shown under the box instead.
  *
  * @returns HTML fragment for `GET /frames/search`.
  */

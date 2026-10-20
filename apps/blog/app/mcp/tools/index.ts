@@ -2,9 +2,6 @@
  * The tools this blog offers an agent, declared the way routes are: a name, a description
  * that is the prompt a model chooses by, and the schema its arguments must satisfy.
  *
- * Every tool declares `readOnlyHint`, letting a client run it without asking a person, and
- * `openWorldHint: false`, since nothing here reaches past this blog's own database.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

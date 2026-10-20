@@ -1,8 +1,7 @@
 /**
  * Invalidates the shared post-list tag after any CMS write. It sits on the
- * resource routes rather than inside each action so a new content type cannot
- * ship with a stale listing: forgetting one call site is the failure this exists
- * to make impossible, and over-purging one tag costs a single re-render.
+ * resource routes rather than inside each action so a new content type cannot ship
+ * with a stale listing: forgetting one call site is the failure this exists to
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

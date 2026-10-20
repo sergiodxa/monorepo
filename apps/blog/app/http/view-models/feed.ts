@@ -1,8 +1,7 @@
 /**
- * View model for the activity feed page. Maps repository feed records into render-ready
- * timeline rows, selecting per-kind copy and routes for articles, tutorials,
- * bookmarks, and glossary entries, parsing what notes and TILs show in place, and dropping
- * entries missing required routing data. It centralizes feed presentation so controllers remain thin.
+ * View model for the activity feed page. Maps repository feed records into render-ready timeline
+ * rows, selecting per-kind copy and routes for articles, tutorials, bookmarks, and glossary entries,
+ * parsing what notes and TILs show in place, and dropping entries missing required routing data.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

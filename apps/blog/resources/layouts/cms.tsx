@@ -1,8 +1,7 @@
 /**
  * Layout component for the CMS/admin section. Composes the shared document shell
  * and adds a top navigation bar linking the dashboard, content sections, and
- * logout, then wraps each page's children. Exists to give all authenticated CMS
- * screens a consistent chrome.
+ * logout, then wraps each page's children.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
