@@ -2,14 +2,6 @@
  * Live preview island for `Group`. The cluster's job is to make several controls read as
  * one field, which only shows when the controls actually belong together: a read-only key
  * beside the button that copies it, and a currency select fused to the amount it applies
- * to.
- *
- * `copyToClipboard()` is what makes the first group do its one job: the button names the
- * field through `commandfor`, the mixin reads that field's value onto the clipboard, and
- * the `ui:copy` event it reports back is what lets the label say the press landed. That
- * label is the button's accessible name and carries the result, so it stays in the markup
- * and only leaves the page: sighted readers get the glyph swap, and a screen reader hears
- * the name change from "Copy" to "Copied".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

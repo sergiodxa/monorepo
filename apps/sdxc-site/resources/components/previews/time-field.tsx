@@ -2,8 +2,6 @@
  * Live preview island for `TimeField`. A time on its own says little, so the example
  * is the shift form two of them appear in: both bounded to the hours the rota allows,
  * stepped in quarter hours, one described and one carrying the message the submission
- * came back with. An app hands `errorMessage` whatever its `parseSafe` result reported
- * for that field.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,8 +63,7 @@ export const TimeFieldPreview = clientEntry(import.meta.url, function TimeFieldP
 			action="/examples/rota"
 			mix={[
 				is("26rem"),
-				// A docs page has nowhere to post to, so the submission stops here instead
-				// of navigating away from the example.
+
 				on<HTMLFormElement, "submit">("submit", (event) => event.preventDefault()),
 			]}
 		>

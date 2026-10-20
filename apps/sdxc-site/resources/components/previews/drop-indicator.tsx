@@ -1,9 +1,7 @@
 /**
  * Live preview island for `DropIndicator`. The bar is muted at rest and solid as the
  * active target, so it only says anything while a drag is in flight — which makes the
- * drag the point of the example. `dragReorder()` turns the grips into a pointer gesture
- * against a `DragSession`, the island reads that session to decide which gap is the
- * current one, and the `ui:reorder` event is what actually moves the row.
+ * drag the point of the example.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -96,8 +94,6 @@ export const DropIndicatorPreview = clientEntry(
 		let session = new DragSession();
 		let steps = [...STEPS];
 
-		// ref() fires on insert, so the subscription is set up in the browser and torn
-		// down with the node — the server renders the list without one.
 		let followDrag = ref((_node, signal) => {
 			session.addEventListener("change", () => void handle.update(), { signal });
 		});
@@ -119,7 +115,7 @@ export const DropIndicatorPreview = clientEntry(
 						m(0),
 						p(0),
 						vstack({ gap: 1, align: "stretch" }),
-						// A pointer drag over text would select it instead, so the list opts out.
+
 						userSelect("none"),
 						dragReorder(session),
 						on<HTMLOListElement, "ui:reorder">("ui:reorder", (event) => {
@@ -136,7 +132,6 @@ export const DropIndicatorPreview = clientEntry(
 				>
 					{steps.map((step, index) => (
 						<li key={step.id} data-rmx-key={step.id} mix={[vstack({ gap: 1, align: "stretch" })]}>
-							{/* One bar per gap: the first row opens the list, and every row closes its own. */}
 							{index === 0 ? <DropIndicator isDropTarget={isGapActive(step.id, "before")} /> : null}
 							<Item>
 								<Item.Media>

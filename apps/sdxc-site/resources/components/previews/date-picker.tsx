@@ -2,8 +2,6 @@
  * Live preview island for `DatePicker`. The calendar is the platform's — the field is a
  * native date input, so picking a day, moving through it with the keyboard and reading the
  * month names in the reader's own locale all come from the browser and all of it works
- * before any script loads. What hydration adds is the one thing the platform has no opinion
- * about: the supporting copy under the field, which answers the day that is in it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

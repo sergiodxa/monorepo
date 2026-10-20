@@ -2,8 +2,6 @@
  * Live preview island for `ColorWheel`. Its hue lives on a single native range input,
  * which renders and steps as a plain bar on its own — the ring shape and the angular drag
  * around it both arrive with `colorWheelDrag()`, so the preview attaches the same mixin a
- * reader would through the root's `mix`, and listens for `ui:color-wheel-change` to show
- * the hue the gesture settled on beside the wheel.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

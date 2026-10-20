@@ -3,9 +3,6 @@
  * at the root rather than under `/docs` because it is an argument rather than a
  * reference, and filing an argument under documentation tells a reader it is optional.
  *
- * The page is one markdown file rendered through the site's own tags, parsed per
- * request: work in the worker's global scope fails upload validation.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -50,7 +47,6 @@ export default createAction(routes.philosophy, async (ctx) => {
 		>
 			<SiteHeader activePath={routes.philosophy.href()} />
 
-			{/* Each band tints the full width, so the cap belongs on the content inside one. */}
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
 				{toRemix(content.data, {
 					components: { ...LANDING_COMPONENTS, ...sponsorTags(roster.current) },

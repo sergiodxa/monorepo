@@ -1,12 +1,7 @@
 /**
  * Named option groups: the axes of choice a page offers more than once — package
  * manager today — and the compact encoding that carries the reader's pick between the
- * server and the browser. One cookie holds every group, so a reader with several
- * choices still sends a single short pair list on every request, assets included.
- *
- * The values here arrive from a cookie, which is the reader's to edit, so a name or a
- * value the site does not offer is dropped on read and the group falls back to its
- * first option.
+ * server and the browser.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,8 +51,7 @@ export function isOptionGroupName(value: string): value is OptionGroupName {
  * Reads the pair list into a map, keeping only the pairs this site offers.
  *
  * @param value - The decoded cookie value, or nothing when no cookie was sent.
- * @returns The groups the reader has chosen in, which is empty for a value that
- * carries nothing this site recognises.
+ * @returns The groups the reader has chosen in, which is empty for a value that carries nothing this site recognises.
  * @example parseOptionSelections("package-manager:bun").get("package-manager") // "bun"
  */
 export function parseOptionSelections(value: string | null | undefined): OptionSelections {
@@ -112,8 +106,7 @@ export function selectOption(
 /**
  * The option a group renders as checked.
  *
- * @param selections - The groups the reader has chosen in, or nothing where the page
- * offers no selections at all.
+ * @param selections - The groups the reader has chosen in, or nothing where the page offers no selections at all.
  * @param name - The group being rendered.
  * @returns The reader's option, or the group's first one.
  * @example selectedOption(new Map(), "package-manager") // "npm"

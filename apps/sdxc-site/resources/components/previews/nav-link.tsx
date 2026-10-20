@@ -2,7 +2,6 @@
  * Live preview island for `NavLink`. What distinguishes it from `Link` is the current
  * page, so the preview is a settings sidebar with one entry marked `aria-current="page"`
  * — once as the plain underlined link and once as the padded, background-filled row an
- * app renders when the active entry carries its own fill.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
  * Live preview island for `NumberField`. Typing and the native arrow keys work with no
  * script, but the step buttons call `stepUp()`/`stepDown()`, which only exist in script,
- * so the preview carries the wiring a reader would write: `stepper()` on the group and
- * the `--step-up`/`--step-down` commands on the two buttons, pointing at the input.
+ * so the preview carries the wiring a reader would write: `stepper()` on the group and t
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

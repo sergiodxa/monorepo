@@ -1,10 +1,7 @@
 /**
- * `/mcp` — the Model Context Protocol endpoint, and the page that explains it.
- *
- * A `POST` is an agent speaking the protocol and a `GET` is a person who pasted the URL
- * into a browser, so both answer at the one address a client is configured with. The
- * protocol half is stateless, which is what lets it be a route on this worker rather than
- * a deployment of its own.
+ * `/mcp` — the Model Context Protocol endpoint, and the page that explains it. A `POST`
+ * is an agent speaking the protocol and a `GET` is a person who pasted the URL into a
+ * browser, so both answer at the one address a client is configured with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

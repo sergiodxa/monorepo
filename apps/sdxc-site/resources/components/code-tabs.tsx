@@ -1,15 +1,7 @@
 /**
- * The `code-tabs` and `code-tab` pair: a strip of labels over a set of snippets, with
- * no script involved. Each tab is a label holding its radio input, followed by its
- * panel; the wrapper around the two is `display: contents`, so the labels line up as one
- * strip while the panel stays a CSS sibling of the label whose input reveals it.
- *
- * The strip is a `<form>` because a radio group is scoped to its form owner: two sets
- * of tabs on one page then answer to their own labels rather than to each other's.
- *
- * A strip that names an option group opens on the option the reader last chose, and a
- * strip with no name opens on the tab the author marked and is remembered nowhere:
- * two sets of samples are rarely the same question asked twice.
+ * The `code-tabs` and `code-tab` pair: a strip of labels over a set of snippets, with no
+ * script involved. Each tab is a label holding its radio input, followed by its panel;
+ * the wrapper around the two is `display: contents`, so the labels line up as one strip
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -134,7 +126,7 @@ export function CodeTab(handle: Handle<CodeTabs.TabProps>) {
 				<div
 					mix={[
 						basis("100%"),
-						/* A long line scrolls inside its block rather than widening the strip past its column. */
+
 						minIs(0),
 						hidden(),
 						precededBy("label:has(input:checked)", raw({ display: "block" })),

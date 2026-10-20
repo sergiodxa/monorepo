@@ -2,14 +2,6 @@
  * Live preview island for `GridList`. Each row already carries the key a behavior
  * correlates it by, and the list renders and reads fine with no script; the roving focus,
  * the multi-row selection and the bulk actions that follow from it are the consumer's, so
- * the preview carries the wiring an inbox would write — `gridListKeys(model)` for the ARIA
- * grid pattern by key and by pointer, and a toolbar reading its counts straight off the
- * `SelectionModel`.
- *
- * A row is a flex line, so what the cells measure is the consumer's too: the sender takes a
- * fixed column and the subject and preview split what is left evenly, since cells left to
- * size themselves start at a different place on every row and the list stops reading as a
- * table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -107,8 +99,6 @@ export const GridListPreview = clientEntry(
 	function GridListPreview(handle: Handle) {
 		let model = new SelectionModel({ keys: THREADS.map((thread) => thread.id) });
 
-		// ref() fires on insert, so the subscription is set up in the browser and torn
-		// down with the node — the server renders the list without one.
 		let followSelection = ref((_node, signal) => {
 			model.addEventListener("change", () => void handle.update(), { signal });
 		});

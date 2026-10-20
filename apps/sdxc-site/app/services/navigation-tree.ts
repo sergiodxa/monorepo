@@ -2,7 +2,6 @@
  * The shape of a sidebar tree, and how a page is located inside it. It holds no reader
  * of its own on purpose: a view drawing the tree or the pager imports only this, so the
  * parsers that assemble a tree stay on the server and out of the client bundle the views
- * are collected into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

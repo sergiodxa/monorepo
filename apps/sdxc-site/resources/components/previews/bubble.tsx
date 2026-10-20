@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Bubble`. The frame carries the tone, the edge it hugs and the
  * clipped corner that marks a run of turns from one side, so a thread needs both sides and
- * a grouped run to read as one. Each reaction is a toggle, so it carries the
- * `pressToggle()` wiring a reader would write, which is what moves `aria-pressed` on press.
+ * a grouped run to read as one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -100,7 +99,7 @@ export const BubblePreview = clientEntry(import.meta.url, function BubblePreview
 						aria-label="Thumbs up, 3 people"
 						mix={[
 							pressToggle(),
-							// A reaction is a count, not a command: a pill sized to its own glyph.
+
 							minBs("1.5rem"),
 							bs("1.5rem"),
 							pi(2),
@@ -118,7 +117,7 @@ export const BubblePreview = clientEntry(import.meta.url, function BubblePreview
 						aria-label="Party, 1 person"
 						mix={[
 							pressToggle(),
-							// A reaction is a count, not a command: a pill sized to its own glyph.
+
 							minBs("1.5rem"),
 							bs("1.5rem"),
 							pi(2),

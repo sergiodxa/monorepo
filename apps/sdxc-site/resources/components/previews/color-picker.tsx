@@ -1,11 +1,6 @@
 /**
  * Live preview island for `ColorPicker`, composed as the trigger-and-panel layout rather
- * than the plain field it falls back to, so there is a picking surface to open. The
- * popover, the swatch trigger and every control inside work on their own; what the island
- * adds is the wiring each surface expects — `colorAreaDrag()` for the square's
- * two-dimensional gesture, `colorWheelDrag()` for the hue ring, `channelSync()` so the
- * alpha track's gradient follows the live hue, and one listener per surface so the field,
- * the trigger's swatch and the preset row all show the same color.
+ * than the plain field it falls back to, so there is a picking surface to open.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

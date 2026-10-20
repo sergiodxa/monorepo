@@ -1,10 +1,6 @@
 /**
  * Live preview island for `Calendar`, composed as the month grid rather than the native
- * `<input type="date">` it falls back to, so there is a grid to move through. The
- * component draws the nav row, the weekday header and every day pill, reading each day's
- * state off its own attributes; moving across days, weeks and months is the consumer's, so
- * the preview carries the same `calendarKeys(model)` wiring and `data-date` markers a
- * reader would write, and records for itself which day the booking lands on.
+ * `<input type="date">` it falls back to, so there is a grid to move through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -119,7 +115,6 @@ export const CalendarPreview = clientEntry(
 		let model = new CalendarModel({ focusedDate: OPENING_DAY });
 		let selected = toDayKey(OPENING_DAY, timeZone);
 
-		// The listener lives as long as the model, which this island owns outright.
 		model.addEventListener("change", () => void handle.update());
 
 		return () => {

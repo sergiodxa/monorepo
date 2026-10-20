@@ -1,10 +1,7 @@
 /**
  * The `@sdxc/ui` theme contract as the site reads it: every `--ui-*` custom property
  * the stylesheets declare or components read with a fallback, what each one controls,
- * and which components read it. All
- * three columns were resolved when the document was generated, so the page is a read
- * rather than a scan. The document loads inside a request, because work in the
- * worker's global scope fails upload validation.
+ * and which components read it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

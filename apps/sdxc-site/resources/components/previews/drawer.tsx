@@ -3,14 +3,6 @@
  * one here, which is where a cart lives — so showing and dismissing it are the platform's
  * commands and work with no script at all.
  *
- * The cart inside is what the drawer is for, and that part is hydrated: `stepper()` gives
- * each quantity's buttons press-and-hold repeat, and the island recomputes the line totals
- * and the footer from the rows so no number disagrees with another.
- *
- * Each line keeps its quantity inside the content slot rather than the trailing action
- * slot, because a 22rem dock is narrow enough that a row with both a description and a
- * trailing control reads better stacked.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -158,9 +150,7 @@ export const DrawerPreview = clientEntry(import.meta.url, function DrawerPreview
 					<div
 						mix={[
 							vstack({ gap: 4, align: "stretch" }),
-							// The dock is as tall as the viewport, so everything between the header and
-							// the footer scrolls as one column — the checkout button never slides out
-							// of reach.
+
 							grow(),
 							minBs(0),
 							overflowY("auto"),

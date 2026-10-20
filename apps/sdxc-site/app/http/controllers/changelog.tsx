@@ -1,8 +1,6 @@
 /**
  * `GET /docs/releases/changelog` — one entry per dated release, newest first, with the
- * notes it went out with. It sits beside the versioning guide because it is what that
- * guide describes actually happening, and it is the one documentation page whose
- * content is fetched rather than read out of the bundle.
+ * notes it went out with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,11 +136,5 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	/*
-	 * No bundle validator here. Every other page is a function of the deployed bundle, so
-	 * one build is one version of it; this page's content arrives from GitHub between
-	 * deploys, and a tag naming the build would hold a reader on yesterday's releases
-	 * until the next one. The stored copy expiring at midnight is what bounds the work.
-	 */
 	return response;
 });

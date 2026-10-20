@@ -2,7 +2,6 @@
  * Live preview island for `Separator`. A hairline only means something between two
  * groups, so the example is a repository summary card: horizontal dividers ruling
  * the metadata rows apart, and a vertical one splitting the stats cluster that sits
- * on one line.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

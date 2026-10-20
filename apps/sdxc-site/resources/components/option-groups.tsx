@@ -3,11 +3,6 @@
  * reader's picks, and the island that records a switch and carries it to the other
  * strips on the page.
  *
- * Each strip keeps a radio group of its own, because radios that share a name are one
- * group and checking a tab in the first strip would blank every other strip's panel.
- * Cross-strip agreement is therefore the island's job, and the page reads correctly
- * without it: a strip switches its own block through CSS alone.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -1,8 +1,7 @@
 /**
- * Resolves the live preview a component page opens with, and the live examples under it.
- * A preview lives in its own module under `previews/` and an example under
+ * Resolves the live preview a component page opens with, and the live examples under it. A
+ * preview lives in its own module under `previews/` and an example under
  * `previews/<component>/`, which keeps each hydrated one in its own client chunk; the older
- * shared map answers for the components whose preview has not been moved yet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

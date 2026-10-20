@@ -2,8 +2,6 @@
  * Live preview island for `Select`. The example is the customizable-select layout —
  * a trigger, a value slot and grouped options — rather than the bare field it falls
  * back to, so the styled picker is what a reader sees wherever the browser resolves
- * `appearance: base-select`. Reacting to the choice is the consumer's, so the island
- * listens for the change where it bubbles and reports the region's own latency.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

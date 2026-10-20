@@ -1,9 +1,7 @@
 /**
  * Live preview island for `ColorSwatchPicker`. Every option is a real radio input behind
  * its swatch, sharing the group's `name`, so one pick at a time and form submission are
- * the platform's. `aria-checked` on those inputs is a static attribute, so each one
- * carries the `ariaChecked()` wiring a reader would write through `parts.input`, and the
- * island reads the group's own change event to name the pick beside it.
+ * the platform's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

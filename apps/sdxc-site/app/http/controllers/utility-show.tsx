@@ -2,7 +2,6 @@
  * `GET /api/u/:utility` — one utility's reference. The quick-reference table is the
  * paired `@example` tags, each live example is a frame drawn from its own module with the
  * code cut from that module's source, and the theme section is the scales the utility
- * reads. Each block is read from code, so the page and the utility agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

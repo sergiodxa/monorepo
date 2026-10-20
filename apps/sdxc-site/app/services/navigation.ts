@@ -1,8 +1,6 @@
 /**
  * The sidebars the documentation reads in: the guides under `/docs`, the package
- * reference under `/api`, and one each for the two catalogues. The tree a page draws and
- * the pager that steps between its pages are both built from here, so the two always
- * agree on what comes next.
+ * reference under `/api`, and one each for the two catalogues.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,7 +41,6 @@ export async function buildGuidesNav(): Promise<NavTree> {
 				href: routes.docs.show.href({ slug: guide.slug }),
 			}));
 
-			/* The changelog reads GitHub rather than a file, so it joins here rather than there. */
 			if (section.title === RELEASES_SECTION) {
 				entries.push({ title: "Changelog", href: routes.docs.changelog.href() });
 			}

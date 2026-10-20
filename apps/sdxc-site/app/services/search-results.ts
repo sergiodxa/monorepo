@@ -130,8 +130,7 @@ export class SearchResults {
 	 * naming a kind with no matches falls back to "All", so a tab that empties as the reader
 	 * types never strands them; tabs show only while matches span more than one kind.
 	 *
-	 * @param input The typed text, its parsed query, every match, the tab asked for, and how
-	 * many rows the dialog lists.
+	 * @param input The typed text, its parsed query, every match, the tab asked for, and how many rows the dialog lists.
 	 */
 	static suggestions(input: {
 		query: string;
@@ -168,8 +167,7 @@ export class SearchResults {
 	 * One page of every match, clamped to the last page, with pager links built from the
 	 * request URL so every other parameter, `q` included, carries over.
 	 *
-	 * @param input The typed text, its parsed query, every match, the page asked for, how many
-	 * a page holds, and the request URL.
+	 * @param input The typed text, its parsed query, every match, the page asked for, how many a page holds, and the request URL.
 	 */
 	static results(input: {
 		query: string;

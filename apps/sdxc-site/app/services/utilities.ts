@@ -1,9 +1,6 @@
 /**
  * The `@sdxc/u` catalogue as the site reads it: every utility the package publishes,
- * and the reference one page draws. Reading is a lookup — the source was parsed once
- * when the document was generated, so a page costs a key rather than a parse, and the
- * parser stays out of the bundle entirely. The document loads inside a request,
- * because work in the worker's global scope fails upload validation.
+ * and the reference one page draws.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

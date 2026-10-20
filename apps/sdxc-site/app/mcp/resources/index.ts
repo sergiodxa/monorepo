@@ -1,10 +1,7 @@
 /**
- * The pages this site offers as resources, declared as the URLs they already answer on.
- *
- * A resource is what a person attaches before they start, and `resources/list` is what
- * puts a corpus in their client's picker — so every declaration enumerates, and the package
- * references, every guide and every page of the two catalogues show up there by name. The URIs are the `.md` twins
- * a client can fetch for itself, so attaching one and fetching it give the same text.
+ * The pages this site offers as resources, declared as the URLs they already answer on. A resource is what a
+ * person attaches before they start, and `resources/list` is what puts a corpus in their client's picker — so
+ * every declaration enumerates, and the package references, every guide and every page of the two catalogues show
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

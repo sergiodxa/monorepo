@@ -3,9 +3,6 @@
  * pages as markdown. A guide or a package README is served as the file it already is; a
  * catalogue page is written from the records its HTML page draws, so the two agree.
  *
- * A package answers with its README unchanged, because that is the document published on
- * npm and read on GitHub, and an agent comparing the three should find one text.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -43,7 +40,6 @@ export default createAction(routes.markdown.docs, async (ctx) => {
 export const packageMarkdown = createAction(routes.markdown.package, async (ctx) => {
 	let { name } = s.parse(s.object({ name: s.string() }), ctx.params);
 
-	/* A directory that publishes nothing has no page here, so its README has no twin. */
 	if (findPackage(name) === null) return missing();
 
 	let source = await readPackageReadme(name);

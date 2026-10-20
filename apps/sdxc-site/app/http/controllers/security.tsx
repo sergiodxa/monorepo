@@ -2,7 +2,6 @@
  * `GET /security` — which releases get fixes, and how to report something privately.
  * It is the page a person looks for before depending on anything, so it is a root
  * route rather than a guide: a reader reaches it from the footer of whatever page
- * raised the question.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

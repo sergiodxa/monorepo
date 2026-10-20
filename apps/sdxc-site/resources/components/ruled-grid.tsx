@@ -1,8 +1,7 @@
 /**
- * A grid of cells separated by hairlines, the way the landing rules its claims, for an
- * index of many links. Every cell draws its own outline into a one-pixel gap it shares with
- * its neighbours, so a line is only ever drawn around a cell, and a last row with fewer cells
- * than columns ends where its cells do.
+ * A grid of cells separated by hairlines, the way the landing rules its claims, for an index
+ * of many links. Every cell draws its own outline into a one-pixel gap it shares with its
+ * neighbours, so a line is only ever drawn around a cell, and a last row with fewer cells
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

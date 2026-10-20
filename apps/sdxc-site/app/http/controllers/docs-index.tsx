@@ -1,8 +1,7 @@
 /**
  * `GET /docs` — the hub. A reader arriving here wants one of a small number of
  * different things, and a sidebar with three hundred leaves answers none of them, so
- * the page routes by intent instead. One card per guide section, built from the
- * sections themselves, keeps the hub current with the tree it points into.
+ * the page routes by intent instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

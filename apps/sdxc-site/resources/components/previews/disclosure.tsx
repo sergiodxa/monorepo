@@ -2,14 +2,6 @@
  * Live preview island for `Disclosure`. A `<details>` element expands and collapses with
  * no script, so the section opens before hydration; what the island adds is the control
  * that only script can offer, putting every override in the panel back to the value the
- * build would use if the section had never been opened.
- *
- * The frame around the section reserves the height the open panel needs, so expanding and
- * collapsing moves nothing outside it — the same thing a settings page does by giving the
- * section a row of its own rather than letting the page reflow under the reader.
- *
- * The chevron is what says the row can be opened at all. It is passed rather than assumed,
- * carrying `data-slot="icon"` so the section turns it over while it is open.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

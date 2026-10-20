@@ -1,8 +1,6 @@
 /**
- * `GET /api/ui/:component` — one component's reference, and the theming page
- * that shares the segment with the catalogue. The hero and the examples are the component
- * itself, each a blocking frame of the fragment a guide embeds too, so their HTML is in the
- * page before any script loads.
+ * `GET /api/ui/:component` — one component's reference, and the theming page that shares
+ * the segment with the catalogue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

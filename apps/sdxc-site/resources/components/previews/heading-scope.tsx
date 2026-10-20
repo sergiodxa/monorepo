@@ -1,12 +1,7 @@
 /**
- * Live preview island for `HeadingScope`. The scope publishes a depth and everything with
- * a title reads it, so the example is a document deep enough for the depth to matter: the
+ * Live preview island for `HeadingScope`. The scope publishes a depth and everything with a
+ * title reads it, so the example is a document deep enough for the depth to matter: the
  * article's own title, a section inside it, and a subsection inside that, each heading
- * getting its tag from where it sits rather than from what it was told.
- *
- * `Empty.Title` sits in the deepest scope to show that every title slot reads the same
- * ambient depth, not just `Heading`. Nothing here needs a mixin — the scope is context, and
- * it resolves on the server.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

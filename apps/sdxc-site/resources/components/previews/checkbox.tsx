@@ -1,10 +1,6 @@
 /**
  * Live preview island for `Checkbox`. The control is a real `<input type="checkbox">`, so
- * it toggles, submits and reads its own checkedness with no script. Two things need
- * wiring: `aria-checked` is a static attribute, so every box carries `ariaChecked()` to
- * keep it following the live state, and a "select all" box's third, partially-checked
- * state is DOM-only — nothing in HTML expresses it, so the island sets it from the run
- * of boxes beneath.
+ * it toggles, submits and reads its own checkedness with no script.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

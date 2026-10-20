@@ -1,8 +1,7 @@
 /**
  * `GET /api/ui/:subpath/:slug` — one mixin, behavior class, animation or style recipe
  * of `@sdxc/ui`. Every block is read from the module that declares it: the signature
- * from its types, the tables from its parameters and members, and below them the
- * events, constants and types the same module publishes for it.
+ * from its types, the tables from its parameters and members, and below them the eve
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

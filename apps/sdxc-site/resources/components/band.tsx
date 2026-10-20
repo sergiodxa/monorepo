@@ -1,8 +1,7 @@
 /**
  * One horizontal band of the landing page, drawn inside the page's frame: a rule across
  * the full width on top, dashed rails down both sides of the content column, and a small
- * marker where they meet. Every band draws the same rails, so down the page they read as
- * one continuous frame the sections are set into.
+ * marker where they meet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

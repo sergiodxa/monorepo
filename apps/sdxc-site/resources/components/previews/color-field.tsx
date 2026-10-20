@@ -1,10 +1,7 @@
 /**
  * Live preview island for `ColorField`. The wrapper composes a label, a text control whose
  * native `pattern` constrains the chosen notation, a live swatch and the description and
- * error slots — a plain form field, typed rather than picked. Repainting that swatch as a
- * keystroke lands on a value the notation accepts is the consumer's to apply, so each
- * field carries the same `colorPreview()` wiring a reader would write; the three fields
- * sit at the three notations so the `format` prop's effect on `pattern` is visible.
+ * error slots — a plain form field, typed rather than picked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

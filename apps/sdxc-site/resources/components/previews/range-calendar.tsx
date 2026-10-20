@@ -1,8 +1,7 @@
 /**
  * Live preview island for `RangeCalendar`. The composed grid renders and submits without
  * script; picking a range across it is what script adds, so the preview carries the pair
- * the component is built for — `calendarKeys(model)` for arrow/Page/Home/End and pointer
- * navigation and `rangePreview(model)` for the band that follows between the two picks.
+ * the component is built for — `calendarKeys(model)` for arrow/Page/Home/End and point
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -228,15 +227,12 @@ export const RangeCalendarPreview = clientEntry(
 									event.preventDefault();
 									pickDay(toDayKey(model.focusedDate, timeZone));
 								}),
-								// RangeCalendar.Cell styles the committed range; the band the pointer
-								// drags out between the two picks is the consumer's to paint.
+
 								when("& td[data-range-preview]", [bg("brand.tint"), fg("brand.emphasis")]),
 								when("& td[data-range-anchor]", [bg("brand.solid"), fg("brand.onSolid")]),
 							]}
 						>
 							<RangeCalendar.GridHeader>
-								{/* A day cell lays its own content out with flex, so each row is the flex line
-								    the seven of them sit on. */}
 								<RangeCalendar.Row mix={[flex()]}>
 									{WEEKDAYS.map((day) => (
 										<RangeCalendar.HeaderCell key={day} mix={[is(9)]}>

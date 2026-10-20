@@ -2,8 +2,6 @@
  * Live preview island for `Alert`. The component paints the tone, the icon well and the
  * action row; an alert that goes away again is the consumer's to arrange, so the preview
  * carries the same `dismiss()` wiring a reader would write — the `--ui-dismiss` command
- * aimed at the host, and the `ui:dismiss` listener that takes it off the page, since the
- * mixin only announces the dismissal.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -145,8 +143,7 @@ export const AlertPreview = clientEntry(import.meta.url, function AlertPreview(h
 				<Alert
 					id="preview-alert-quota"
 					color="warning"
-					// A page is read at its own pace, so the countdown stays off and dismissal
-					// comes only from the button. A queued notice passes a duration instead.
+
 					mix={[
 						dismiss({ duration: null }),
 						on<HTMLDivElement, "ui:dismiss">("ui:dismiss", toggleDismissed),

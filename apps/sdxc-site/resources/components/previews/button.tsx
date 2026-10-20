@@ -1,10 +1,7 @@
 /**
- * Live preview island for `Button`. A `<button>` already presses, so the component's job
- * is the tone, weight and size vocabulary, plus the pending state that swaps the label for
- * a spinner while holding the footprint. What a button does needs wiring, so the last row
- * carries the `copyToClipboard()` pairing a reader would write: a `--copy` command aimed at
- * the element holding the text, and a `ui:copy` listener that reports how the write
- * settled, since the clipboard can refuse a page it does not trust.
+ * Live preview island for `Button`. A `<button>` already presses, so the component's job is
+ * the tone, weight and size vocabulary, plus the pending state that swaps the label for a
+ * spinner while holding the footprint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

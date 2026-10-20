@@ -53,10 +53,10 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 			mix={[
 				sticky(),
 				insBs(0),
-				/* The bar holds the viewport, so it has to paint over the page passing under it. */
+
 				z(10),
 				is("100%"),
-				/* The documentation shell's header is this tall too, so the bar holds still between them. */
+
 				bs("4rem"),
 				bg(),
 				borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
@@ -67,7 +67,7 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 					hstack({ gap: 4, align: "center", justify: "between" }),
 					is("100%"),
 					bs("100%"),
-					/* The bar lines up with the frame the landing bands are drawn in. */
+
 					maxIs("76rem"),
 					mi("auto"),
 					p(0, 5),
@@ -104,7 +104,6 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 
 		return (
 			<div mix={[hstack({ gap: 3, align: "center" })]}>
-				{/* Sixty packages and a large README corpus are unusable without this, from any page. */}
 				<SearchTrigger appleKeyboard={isApplePlatform()} />
 				<Dialog
 					id={SEARCH_DIALOG_ID}
@@ -154,7 +153,7 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 					<NavLink href={componentsPath} aria-current={onComponents ? "page" : undefined}>
 						UI
 					</NavLink>
-					{/* A phone has no room for all six; the footer links the source on every page. */}
+
 					<span mix={[hidden(), media("(min-width: 30rem)", inline())]}>
 						<NavLink href={REPOSITORY_HREF} rel="noreferrer">
 							GitHub

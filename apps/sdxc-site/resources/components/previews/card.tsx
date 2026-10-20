@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Card`. The panel supplies the frame, the tint a `color` picks
  * and the spacing between its header, body and footer; what goes in each slot is the
- * page's. Two panels side by side show the part that matters — the same structure reading
- * as a neutral summary and as a tinted alarm.
+ * page's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

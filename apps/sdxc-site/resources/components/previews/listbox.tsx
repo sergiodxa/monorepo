@@ -2,7 +2,6 @@
  * Live preview island for `ListBox`. The rows render and submit as native radios without
  * script, and the ARIA listbox keyboard pattern is what script adds, so the preview
  * carries the wiring a reader would write: a `listbox.Context` holding the selected and
- * active values, `listboxKeys()` on the group, and `listbox.option()` on every row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
  * Live preview island for `RadioGroup`. The group submits and enforces its single choice
  * natively, and `aria-checked` is what does not follow live checkedness on its own, so
- * every option's input carries `ariaChecked()`. The example is the shape a checkout
- * really uses: rich option rows with a price and an estimate, plus a compact inline set.
+ * every option's input carries `ariaChecked()`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

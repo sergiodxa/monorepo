@@ -2,10 +2,6 @@
  * Live preview island for `ContextMenu`. The surface is a popover, so it renders closed
  * and there is nothing to see until something opens it: no markup can anchor a floating
  * surface to a pointer position, so the preview carries the same `contextMenu(id)` wiring
- * a reader would write on the trigger area, which opens the menu where the pointer is on
- * right-click and at the trigger's box from the Context Menu key. `menuKeys()` adds the
- * roving tabindex, arrows, Home/End and typeahead the menu pattern asks for. The row takes
- * a tab stop of its own, which is what gives the keyboard path somewhere to fire from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

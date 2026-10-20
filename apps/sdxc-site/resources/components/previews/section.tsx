@@ -1,9 +1,7 @@
 /**
  * Live preview island for `Section`. A group only reads as a group next to a second
  * one, so the example is a real account menu with two labeled runs of items and a
- * divider between them. The WAI-ARIA menu keyboard pattern is the consumer's to
- * apply, so the island carries the same `menuKeys()` wiring a reader would write —
- * without it the arrow keys never move between the items the sections hold.
+ * divider between them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -26,8 +26,6 @@ const PAGING = createPaging({ perPage: 20, maxPerPage: 50 });
  * Serves the search page. A blank box renders the form alone; a query with nothing to search
  * for, or over a limit, answers 400 with the reason beside the field; malformed paging
  * redirects to the query's first page; anything else renders the requested page, clamped to
- * the last one. A page holding a query carries `noindex`, and every page's cache tag names
- * its query string, so two searches never share a stored copy.
  *
  * @returns HTML response for `GET /search`.
  */

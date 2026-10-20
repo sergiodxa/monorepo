@@ -1,10 +1,6 @@
 /**
  * Live preview island for `ColorSlider`. Each channel is one native range input on a
- * gradient track, so each one drags, steps by keyboard and submits on its own. None of
- * them can notice a sibling moving, so the group carries the `channelSync()` wiring a
- * reader would write — the `data-channel` marker on every thumb, which is what lets the
- * mixin keep each track's gradient current with the others and report all four values
- * together through `ui:color-channel-change`.
+ * gradient track, so each one drags, steps by keyboard and submits on its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

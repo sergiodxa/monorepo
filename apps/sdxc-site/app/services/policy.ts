@@ -2,11 +2,6 @@
  * The root-level policy pages — what a release is supported for, and how to report
  * something privately. Both are prose a reader checks before depending on anything, so
  * both are markdown files rather than views: the sentence that has to be right is
- * edited on its own, without a component tree around it.
- *
- * They are not guides. A guide teaches the collection and sits in the tree under
- * `/docs`; a policy states what the project will and will not do, and is linked from
- * the footer of every page instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

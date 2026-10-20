@@ -1,10 +1,6 @@
 /**
  * Live preview island for `Command`. The panel draws the palette and marks its input,
  * rows and empty state, and every row stays a reachable button before any script runs.
- * Narrowing the list and moving the active match are the consumer's, so the preview
- * carries the same `commandFilter(model)` and `commandKeys(model)` wiring a reader would
- * write, against one `FilterModel` shared by both: typing hides the rows that do not
- * match, the arrow keys move the active one, and Enter presses the button it nests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

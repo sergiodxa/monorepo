@@ -1,9 +1,7 @@
 /**
  * Live preview island for `Sheet`. An edge-docked column is only worth docking when
  * it holds something, so the opened panel carries a real cart: a header, line items
- * it can remove, a running total, and a footer that checks out. The panel opens from
- * Invoker Commands with no script at all, so what the island adds is the
- * `hotkey("mod+b")` wiring a reader applies to reach it from the keyboard.
+ * it can remove, a running total, and a footer that checks out.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -142,8 +140,7 @@ export const SheetPreview = clientEntry(import.meta.url, function SheetPreview(h
 					id="preview-cart"
 					side="right"
 					aria-labelledby="preview-cart-title"
-					// A docked column fills the edge it is docked to; a dialog's own block
-					// size hugs its content, so the panel states the full height it wants.
+
 					mix={[hotkey("mod+b"), bs("100%")]}
 				>
 					<Sheet.Header>

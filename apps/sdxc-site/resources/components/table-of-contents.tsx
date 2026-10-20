@@ -105,7 +105,6 @@ export const TableOfContents = clientEntry(
 						On this page
 					</p>
 
-					{/* The list's leading edge draws the guide a marked item's own edge sits on. */}
 					<ul
 						mix={[
 							watch,

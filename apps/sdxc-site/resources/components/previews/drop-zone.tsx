@@ -2,11 +2,6 @@
  * Live preview island for `DropZone`. The zone is a `<label>` around a real file input, so
  * clicking it opens the picker before any script runs; the input is styled out of sight
  * through `parts.input` so the dashed surface is the only thing on screen, and it keeps
- * its focus ring because the zone's own styling keys off `:has(input:focus-visible)`.
- *
- * Dragging a file in is the part the platform does not give a `<label>`, so that is what
- * hydration adds: `dropZone()` drives a `DragSession`, highlights the surface while a
- * drag hovers it, and hands the dropped files over in a `ui:drop-files` event.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -109,8 +104,7 @@ export const DropZonePreview = clientEntry(
 					name="photos"
 					accept="image/png, image/jpeg, image/webp"
 					multiple
-					// The native input stays in the accessibility tree and the tab order; the
-					// dashed label is what a person sees, and it draws the focus ring for both.
+
 					parts={{ input: [visuallyHidden()] }}
 					mix={[
 						dropZone(session),

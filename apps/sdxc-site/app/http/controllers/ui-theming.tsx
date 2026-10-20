@@ -1,8 +1,6 @@
 /**
- * `GET /api/ui/theming` — the theme contract: every `--ui-*` variable, what
- * it controls, and which components read it, then the two schemes over the same names.
- * The third column is scanned out of the catalogue rather than written, because a list
- * of variables with nothing reading them is a list nobody can act on.
+ * `GET /api/ui/theming` — the theme contract: every `--ui-*` variable, what it
+ * controls, and which components read it, then the two schemes over the same names.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

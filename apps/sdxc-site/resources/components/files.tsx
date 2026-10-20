@@ -2,10 +2,6 @@
  * The `files`, `folder` and `file` tags: a directory layout drawn as a bordered card,
  * one icon per row and a guide line down each level of nesting.
  *
- * The structure is written as tags rather than inside a fence because it is data: a
- * reader gets icons and alignment, and a narrow screen keeps the tree readable instead
- * of wrapping pre-formatted lines mid-path.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -40,8 +36,7 @@ namespace Files {
 /**
  * Renders the card and the top level of the tree inside it. The list rules are stated
  * here, on the one element that contains every level, because the prose containers a
- * guide renders inside give an ordinary list its markers and its rhythm — both of
- * which a tree supplies for itself, through icons and a guide line.
+ * guide renders inside give an ordinary list its markers and its rhythm — both of wh
  */
 export default function Files(handle: Handle<Files.TreeProps>) {
 	return () => {

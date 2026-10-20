@@ -1,8 +1,7 @@
 /**
  * Live preview island for `OtpField`. The field's own shape is one input, since that is
  * what carries `autocomplete="one-time-code"` reliably; `otpSlots()` coordinates a group
- * of single-character slots instead. The preview shows both — the single field a form
- * submits, and a slot group composed from one-character fields with the mixin attached.
+ * of single-character slots instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -102,8 +101,7 @@ export const OtpFieldPreview = clientEntry(
 
 				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
 					<Header mix={[m(0)]}>As separate slots</Header>
-					{/* Each slot takes focus on its own and rings itself, so the row carries the group's
-					    name and its layout and leaves the focus indicator to whichever slot holds it. */}
+
 					<div
 						role="group"
 						aria-label="One-time code, as separate slots"

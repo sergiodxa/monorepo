@@ -2,7 +2,6 @@
  * Live preview island for `Popover`. Both surfaces open and close through Invoker
  * Commands on the native Popover API, so what the preview shows is what `popover` mode
  * decides: an `"auto"` filters panel that light-dismisses on an outside click or Escape,
- * and a `"manual"` panel that stays put until its own close button hides it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,8 +137,6 @@ export const PopoverPreview = clientEntry(import.meta.url, function PopoverPrevi
 				Why is this limited?
 			</Button>
 
-			{/* "manual" keeps the panel open through an outside click, so a reader can go on
-				    working with the page while it stays on screen. */}
 			<Popover id="preview-retention-note" placement="top">
 				<div mix={[vstack({ gap: 3, align: "start" }), is("16rem"), p(4)]}>
 					<p mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>Retention</p>

@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Link`. An inline anchor only reads correctly inside running
  * text, so the preview is a short run of prose: navigational links in a sentence, an
- * external one carrying its own `rel`, a destructive one in the danger role, and one
- * turned off through `aria-disabled` while staying in the flow of the sentence.
+ * external one carrying its own `rel`, a destructive one in the danger role, and one t
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

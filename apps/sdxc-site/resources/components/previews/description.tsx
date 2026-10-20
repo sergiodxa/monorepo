@@ -2,8 +2,6 @@
  * Live preview island for `Description`. It is the `<p>` a control points
  * `aria-describedby` at, so what it is worth showing is a description doing work: the plan
  * picker's supporting copy is the one place the consequence of the choice is spelled out,
- * and the island swaps it as the selection changes while the element — and the id the
- * select describes itself with — stays put.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -80,8 +78,6 @@ export const DescriptionPreview = clientEntry(
 
 		return () => (
 			<div mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
-				{/* A native select's own change event bubbles, so the field's wrapper is where the
-				    island listens; the select stays plain markup. */}
 				<div
 					mix={[
 						vstack({ gap: 2, align: "stretch" }),

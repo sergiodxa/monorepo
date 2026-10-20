@@ -1,11 +1,11 @@
 ---
 title: Check a project
-description: Lint a project for release drift, missing secrets, stale Worker types, migrations a new database cannot replay, layout and wiring mistakes, and the rules you add yourself, with sdxc doctor.
+description: Lint a project for release drift, missing secrets, stale Worker types, migrations a new database cannot replay, layout and wiring mistakes, JSDoc comment shape, and the rules you add yourself, with sdxc doctor.
 section:
     title: The sdxc command
     order: 2
 order: 6
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-20
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
     - "How to accept a migration that already ran instead of rewriting it"
@@ -34,6 +34,7 @@ pass  layout      app/ holds only the layout's folders and nothing imports boots
 warn  routes      Found 1 route no router maps: GET /pricing (routes/web.ts pricing) is mapped by no router. Fix: Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one
 pass  models      app/models/index.ts registers every model in app/models/
 pass  emails      3 declared emails mapped, tested and previewable
+pass  jsdoc       Every comment is JSDoc within three description lines
 skip  ui          No @sdxc/ui component is copied
 ```
 
@@ -48,19 +49,20 @@ pre-commit hook. Warnings leave the exit code at 0.
 
 They run in this order:
 
-| Check        | Fails or warns when                                                                                                                                                   | Fix                                      |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `pins`       | fail: an `@sdxc` package is behind its version at the project's release; warn: one is pinned to no release                                                            | `sdxc upgrade <release>`                 |
-| `installed`  | fail: `node_modules` holds an `@sdxc` package or `remix` at another version than `package.json` pins, or lacks one                                                    | the install command                      |
-| `remix`      | fail: `remix` differs from the version the project's release declares                                                                                                 | `sdxc upgrade <release>`                 |
-| `env`        | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                    | the line to add, or the declaration      |
-| `typegen`    | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                  | `sdxc run typegen`                       |
-| `migrations` | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                         | the migration to correct, or the entry   |
-| `layout`     | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                        | the file to move                         |
-| `routes`     | warn: a route no router maps, or a controller or action that loads with the router                                                                                    | the mapping to write                     |
-| `models`     | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                      | the registration to add                  |
-| `emails`     | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()` | the mapping, test or `preview` to write  |
-| `ui`         | warn: a copied component is behind the installed release; edited copies are listed for review                                                                         | `sdxc ui update <names>`, `sdxc ui diff` |
+| Check        | Fails or warns when                                                                                                                                                                | Fix                                      |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `pins`       | fail: an `@sdxc` package is behind its version at the project's release; warn: one is pinned to no release                                                                         | `sdxc upgrade <release>`                 |
+| `installed`  | fail: `node_modules` holds an `@sdxc` package or `remix` at another version than `package.json` pins, or lacks one                                                                 | the install command                      |
+| `remix`      | fail: `remix` differs from the version the project's release declares                                                                                                              | `sdxc upgrade <release>`                 |
+| `env`        | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                                 | the line to add, or the declaration      |
+| `typegen`    | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                               | `sdxc run typegen`                       |
+| `migrations` | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                                      | the migration to correct, or the entry   |
+| `layout`     | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                                     | the file to move                         |
+| `routes`     | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                     |
+| `models`     | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                                   | the registration to add                  |
+| `emails`     | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write  |
+| `jsdoc`      | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits       |
+| `ui`         | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff` |
 
 The project's release is the newest date among its `@sdxc` pins, so `pins` names each package
 that lags behind the others. `pins` and `remix` read the npm registry; without it they report
@@ -81,6 +83,12 @@ dynamic `import()`; an action that imports its code up front is named by its key
 `emails` fails on a declared email with no template, because every send of it fails at
 runtime, and warns on a template `sdxc run emails preview` and `/_emails` cannot render without
 a `preview()`. A project without `app/emails/index.ts` reports `skip`.
+
+`jsdoc` warns when a comment in app source is not a `/** … */` block, when its description runs
+past three prose lines, when `@description` appears, or when `@param`, `@returns` or `@throws`
+spill onto a second line. Tooling directives (`@ts-expect-error`, `oxlint-disable`, and the
+rest the repository already allows) stay as they are. Tags other than that one-line set do not
+count toward the description budget.
 
 ### Accept a migration that already ran
 
@@ -120,7 +128,7 @@ sdxc doctor --skip ui --skip typegen
 A name `doctor` does not have stops it with the list it has:
 
 ```text
-No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, ui
+No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, ui
 ```
 
 ## As JSON

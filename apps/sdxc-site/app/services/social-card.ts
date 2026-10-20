@@ -1,8 +1,6 @@
 /**
  * What a page's social card says, derived from the title, description and path its document
- * already states, and the address the card is served from. The page layout and the image
- * route both derive the card through here, so the URL a page advertises always names the
- * image the route renders for it.
+ * already states, and the address the card is served from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

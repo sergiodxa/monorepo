@@ -29,12 +29,9 @@ const IMMUTABLE = "public, max-age=31536000, immutable";
 const REVALIDATE = "public, max-age=3600";
 
 /**
- * Answers a `GET` for `<page>.png` with that page's card. A repeat request is answered from
- * the edge cache; a `v` naming a stored card is served without rendering its page; otherwise
- * the page is rendered, its card read from storage or drawn, stored after the response, and
- * returned. The drawing code and fonts load on the first
- * card drawn, so every other request runs without them. A `.png` path naming no page continues to the
- * router, so it answers as any unknown address does.
+ * Answers a `GET` for `<page>.png` with that page's card. A repeat request is answered from the edge
+ * cache; a `v` naming a stored card is served without rendering its page; otherwise the page is
+ * rendered, its card read from storage or drawn, stored after the response, and returned.
  */
 export default function socialCards(): Middleware {
 	return async (context, next) => {

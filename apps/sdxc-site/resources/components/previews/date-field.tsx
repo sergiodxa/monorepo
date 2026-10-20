@@ -1,9 +1,7 @@
 /**
  * Live preview island for `DateField`. The field is the plain, labelled `input type="date"`
  * a form reaches for when the whole interaction is one day typed or picked from the
- * platform's own control — no popover, no month grid. Hydration is what lets the field's
- * supporting copy answer the value: the island listens on the composed input through
- * `parts`, keeps the value, and re-renders the hint the claim form shows beneath it.
+ * platform's own control — no popover, no month grid.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

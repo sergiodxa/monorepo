@@ -83,7 +83,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				class="system"
 				mix={[
 					colorScheme("light dark"),
-					/* A modal holds the reader's attention, so the page behind it stays where it was left. */
+
 					when("&:has(dialog:modal)", overflow("hidden")),
 				]}
 			>
@@ -94,20 +94,11 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						content="width=device-width, initial-scale=1"
 						data-rmx-key="viewport"
 					/>
-					{/*
-					 * The stylesheets lead the head, ahead of every tag that varies by page and of
-					 * the import maps and preloads the runtime appends on navigation, so the head
-					 * diff never moves their links: Safari unapplies a moved stylesheet until it
-					 * parses it again, and the page flashes unstyled meanwhile.
-					 */}
+
 					{stylesheets.map((href) => (
 						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
 					))}
-					{/*
-					 * Whichever host served the request — a preview, the workers.dev name, the
-					 * custom domain — the canonical URL names one origin, so the same page read
-					 * from two hosts is one page to a crawler and to a model.
-					 */}
+
 					<Seo.Meta
 						title={title}
 						description={description}

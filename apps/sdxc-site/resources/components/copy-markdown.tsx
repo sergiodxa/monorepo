@@ -1,8 +1,6 @@
 /**
  * Client island: puts the page's markdown source on the clipboard, for a reader about to
- * paste it into a model. The source is not on the page — the page is what it rendered
- * into — so the button fetches the twin and copies that, which is also why the same
- * address is offered as a plain link beside it for anyone without script.
+ * paste it into a model.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -66,7 +64,6 @@ export const CopyMarkdown = clientEntry(
 					<CopyIcon size={16} aria-hidden="true" />
 				)}
 				Copy Markdown
-				{/* Empty until an attempt lands, so the region speaks the outcome alone. */}
 				<span role="status" mix={[visuallyHidden()]}>
 					{outcome === "copied" ? "Markdown copied" : ""}
 					{outcome === "failed" ? "Could not copy the markdown" : ""}

@@ -2,7 +2,6 @@
  * Live preview island for `Marker`. The row calls out what happened between two turns of
  * a conversation, so the preview is that sequence: the day divider a log opens with, a
  * delivery receipt, a bordered warning while the connection drops, a plain membership
- * note, and a generating row whose caption shimmers while a reply is still being written.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

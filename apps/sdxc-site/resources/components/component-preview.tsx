@@ -1,8 +1,7 @@
 /**
  * A rendered component with its source one click away. The preview is the component
  * itself under the site's own stylesheet, so the toggle is a disclosure rather than a
- * tab strip: there is one thing on the page and one way to look behind it, and it
- * opens and closes before any script loads.
+ * tab strip: there is one thing on the page and one way to look behind it, and it ope
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,12 +53,7 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 						overflowX("auto"),
 						rounded("lg"),
 						border({ color: "neutral.border", width: 1, style: "solid" }),
-						/*
-						 * A dot grid behind the example separates the component from the page it is
-						 * documented on, so a surface of its own — a card, a panel, a menu — reads as
-						 * a thing sitting on a canvas rather than part of the prose around it. The
-						 * dots are drawn from the border token, so they follow the theme.
-						 */
+
 						raw({
 							backgroundImage:
 								"radial-gradient(circle at 1px 1px, var(--ui-neutral-border, currentcolor) 1px, transparent 0)",
@@ -68,17 +62,11 @@ export default function ComponentPreview(handle: Handle<ComponentPreview.Props>)
 						}),
 					]}
 				>
-					{/*
-					 * The example sits on a surface of its own, so the dots stay a canvas around it
-					 * rather than a texture running under its text. A component that brings no
-					 * background — a tree, a run of prose — would otherwise be read through them.
-					 */}
 					<div
 						mix={[
 							hstack({ gap: 4, align: flush ? "stretch" : "center", justify: "center" }),
 							flexWrap(),
-							/* Filling the canvas is what lets a block example — a table, a run of prose —
-							   take the width it needs; sized to its content it would collapse instead. */
+
 							is("100%"),
 							flush ? clip() : p(6),
 							rounded("md"),

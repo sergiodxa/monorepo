@@ -1,10 +1,7 @@
 /**
  * Live preview island for `Tooltip`. The hint reveals on plain `:hover`/`:focus-visible`
- * of the sibling right before it, with no script in the path — but a popover only
- * gets an implicit anchor when an invoker opens it, so a hover-revealed hint needs an
- * explicit one: each trigger names an anchor through `anchorName()` and its hint
- * points back with `positionAnchor()`. Without that pair the hint lands in the
- * corner of the page instead of against its control.
+ * of the sibling right before it, with no script in the path — but a popover only gets
+ * an implicit anchor when an invoker opens it, so a hover-revealed hint needs an explici
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

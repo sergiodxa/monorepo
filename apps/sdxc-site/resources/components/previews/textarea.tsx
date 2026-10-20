@@ -2,9 +2,6 @@
  * Live preview island for `TextArea`. The field grows with its content through
  * `field-sizing: content`, and the browser's own `minLength`/`maxLength` decide
  * whether the composer may post — so the example is a review composer that shows
- * both: type past a line and the field grows, post too short and the field reports
- * itself invalid. The island keeps the counter and the error copy current, which is
- * the part the platform leaves to the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,8 +79,7 @@ export const TextAreaPreview = clientEntry(
 				mix={[
 					vstack({ gap: 2, align: "stretch" }),
 					is("26rem"),
-					// A docs page has nowhere to post to, so a valid submission clears the
-					// composer's own error instead of navigating away from the example.
+
 					on<HTMLFormElement, "submit">("submit", (event) => {
 						event.preventDefault();
 						message = "";

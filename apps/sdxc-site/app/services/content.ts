@@ -2,8 +2,6 @@
  * The markdown vocabulary the landing page is written in, and the per-request read of
  * it. Registering a tag with an attribute schema is what turns a mistyped attribute
  * into a parse error carrying the line it sits on, instead of a section that renders
- * blank. The read happens per request because work in the worker's global scope fails
- * upload validation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -93,7 +91,6 @@ export const TAGS = {
 	 * Every label belongs to the panel it names, so a tab and its code never drift
 	 * apart. `name` states which axis of choice the tabs offer, where they offer one
 	 * the reader meets elsewhere on the site: a named strip labels its tabs with that
-	 * group's options and opens on the one the reader last picked, anywhere.
 	 */
 	"code-tabs": {
 		content: "blocks",

@@ -1,10 +1,7 @@
 /**
- * Shortens a reference summary to the line a page carries above its example.
- *
- * A module comment opens with what the thing is and then keeps going: the host it is built
- * on, the attributes it reads, the parts it composes from. That continuation is what a
- * maintainer needs and what buries a demo, so a page shows the opening clause and leaves
- * the rest to the reference below it.
+ * Shortens a reference summary to the line a page carries above its example. A module
+ * comment opens with what the thing is and then keeps going: the host it is built on, the
+ * attributes it reads, the parts it composes from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

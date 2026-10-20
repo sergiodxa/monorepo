@@ -2,7 +2,6 @@
  * Live preview island for `Menubar`. Every trigger opens its own Menu through the
  * Popover API without script; the menubar pattern — one tab stop for the whole row,
  * left/right between triggers, and focus handed into whichever Menu opens — is what
- * `menubarKeys()` adds, paired with `menuKeys()` on each surface it hands off to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

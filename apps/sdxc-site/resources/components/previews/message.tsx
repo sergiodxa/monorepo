@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Message`. One turn on its own says nothing about the layout,
  * so the preview is a support thread: an inbound turn with its actions, an outbound turn
- * whose bubble aligns to the end, and a run of consecutive replies inside
- * `Message.Group`. The copy action carries `copyToClipboard()`, which needs script.
+ * whose bubble aligns to the end, and a run of consecutive replies inside `Message.Grou
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -164,7 +163,6 @@ export const MessagePreview = clientEntry(import.meta.url, function MessagePrevi
 
 			<Message.Group>
 				<Message>
-					{/* A run's later turns carry the avatar, so the turns above it reserve its column. */}
 					<Message.Avatar aria-hidden="true">
 						<span mix={[is("2.5rem")]} />
 					</Message.Avatar>

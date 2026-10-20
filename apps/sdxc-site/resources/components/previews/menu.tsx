@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Menu`. The surface opens and closes through the Popover API
  * with no script at all; what script adds is the WAI-ARIA menu pattern, so the preview
- * carries `menuKeys()` on the surface — roving tabindex, arrows, Home/End and typeahead
- * — over the grouped rows, shortcut hints and destructive action a row menu really holds.
+ * carries `menuKeys()` on the surface — roving tabindex, arrows, Home/End and typeahead —
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

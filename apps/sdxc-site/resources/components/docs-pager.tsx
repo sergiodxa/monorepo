@@ -53,7 +53,7 @@ export default function DocsPager(handle: Handle<DocsPager.Props>) {
 							entry={next}
 							label="Next"
 							align="end"
-							/* With no previous to hold the first column, the next page keeps the second. */
+
 							mix={previous ? [] : media("(min-width: 40rem)", gridColumn("2"))}
 						/>
 					) : null}

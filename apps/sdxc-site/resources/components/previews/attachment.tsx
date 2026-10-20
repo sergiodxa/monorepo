@@ -2,12 +2,6 @@
  * Live preview island for `Attachment`. The card paints each lifecycle state and
  * `Attachment.Group` scrolls a strip of them; whole-card click-through is an opt-in
  * wrapper, so the preview carries the same `attachmentTrigger()` wiring a reader would
- * write on `Attachment.Trigger`, aimed at a dialog rather than a URL so the activation is
- * visible without leaving the page. The nested download button keeps its own click.
- *
- * A title takes the `state` prop while its file is still moving, which is what the shimmer
- * across the name is keyed on, and every name stays fully opaque so the file it stands for
- * is readable at each step.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

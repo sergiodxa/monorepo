@@ -1,12 +1,6 @@
 /**
  * The search corpus: one entry per page, plus one per heading a reader can jump to,
- * across the guides, every package reference and every page of the two catalogues. A
- * heading's fragment comes from the same parse and anchoring the page renders, so a
- * result always lands on the section it names; building it costs tens of milliseconds.
- *
- * The result is held for the life of the isolate, so the build happens once inside the
- * first request that needs it rather than in the worker's global scope, where the upload
- * validator rejects the work.
+ * across the guides, every package reference and every page of the two catalogues.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -89,8 +83,6 @@ const CATALOGUE_DIRECTORIES = new Set(["u", "ui"]);
 /**
  * The whole corpus, guides first, packages after and the catalogue pages last, each page
  * followed by its own headings so a result for a page sits above the sections inside it.
- * A catalogue page is one entry, titled by what a reader searches for: the CSS property
- * a utility sets, or a component's or an export's name.
  */
 export async function buildSearchIndex(): Promise<SearchDocument[]> {
 	if (corpus !== null) return corpus;

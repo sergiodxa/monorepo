@@ -1,9 +1,7 @@
 /**
  * Live preview island for `TagGroup`. A tag's remove control is a real form submit,
  * named and valued so the server knows which one to drop — so the example is the
- * applied-filters row above a job list, inside the form that owns it. The island
- * answers that submission in place, which is what makes the round trip visible on a
- * page with nowhere to post to.
+ * applied-filters row above a job list, inside the form that owns it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
