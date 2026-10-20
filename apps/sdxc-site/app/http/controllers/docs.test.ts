@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { listGuides } from "~/app/services/docs";
+import { listGuides, readGuide } from "~/app/services/docs";
 import { listPackages } from "~/app/services/packages";
 import { fetchApp } from "~/app/test/router";
 
@@ -50,6 +50,15 @@ describe("GET /docs", () => {
 
 	test.each(GUIDE_SLUGS)("guide %s parses and renders", async (slug) => {
 		expect((await renderGuide(slug)).status).toBe(200);
+	});
+
+	test.each(GUIDE_SLUGS)("guide %s ends with where to go next, linking on", async (slug) => {
+		let source = (await readGuide(slug)) ?? "";
+		let headings = [...source.matchAll(/^## (.+)$/gm)].map((match) => match[1]);
+		let last = source.slice(source.lastIndexOf("\n## "));
+
+		expect(headings.at(-1)).toBe("Where to go next");
+		expect(last).toMatch(/\]\(\/(docs|api)\//);
 	});
 
 	test.each(GUIDE_SLUGS)(

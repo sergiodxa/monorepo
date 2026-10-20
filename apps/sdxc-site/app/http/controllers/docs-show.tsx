@@ -86,11 +86,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 						<PageTitle eyebrow={frontmatter.section.title} title={frontmatter.title}>
 							{frontmatter.description}
 						</PageTitle>
-						{frontmatter.lastUpdated ? (
-							<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
-								Last updated {frontmatter.lastUpdated}
-							</p>
-						) : null}
+						<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
+							Last updated {frontmatter.lastUpdated}
+						</p>
 
 						<PageActions
 							markdownHref={markdownHref}
@@ -98,7 +96,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 							sourceUrl={`${GUIDE_SOURCE_BASE}${slug}.md`}
 						/>
 
-						<GuideOutcomes outcomes={frontmatter.outcomes ?? []} />
+						<GuideOutcomes outcomes={frontmatter.outcomes} />
 					</header>
 
 					<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>

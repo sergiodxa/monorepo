@@ -41,6 +41,22 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   shows without scrolling, so `bun check:fix` keeps them fitting. A guide may not be filed
   under `packages`: `/docs/packages/*` is where the package reference used to live, and it
   redirects to `/api`.
+- **Every guide meets one bar.** The guides in `resources/docs/sdxc/` set it, and a guide in
+  any section has the same parts:
+  - Frontmatter with `title`, a one-sentence `description`, `section`, `order`, `lastUpdated`
+    and three `outcomes`, each a line starting "How to", "What", "When", "Where" or "Why".
+  - An opening paragraph, before any heading, that names the problem and what the reader
+    ends up with, then the install line for every package the code imports.
+  - Steps as `##` headings phrased as what the reader does, each with a code sample that
+    imports what it uses and carries `{% title="…" %}` naming the file it belongs in, at its
+    app-layout path (`app/services/…`, `app/http/controllers/…`).
+  - A section that tests what the guide built, through the app's router, the package's own
+    testing entry or MSW, whenever the guide writes code an app runs.
+  - A `<note>` or `<warning>` for each constraint a reader would otherwise learn in
+    production: a limit, an ordering requirement, a security consequence.
+  - `## Where to go next`, last, with two or three links and a phrase on why to follow each.
+  - Second person, affirmative, the reason before the flag or option, current APIs only.
+    The schema and `app/http/controllers/docs.test.ts` hold the parts a machine can check.
 - **Each part of the site draws its own sidebar.** `/docs` holds the guides, `/api` every
   package but `u` and `ui`, and `/api/u` and `/api/ui` each hold their own catalogue. The
   builders are in `app/services/navigation.ts`; a page picks the one for the path it

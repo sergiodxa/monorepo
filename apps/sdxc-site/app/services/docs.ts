@@ -25,9 +25,12 @@ const frontmatterSchema = s.object({
 	description: s.string(),
 	section: s.object({ title: s.string(), order: s.number() }),
 	order: s.number(),
-	lastUpdated: s.optional(s.string()),
-	/** What a reader knows after the guide, each finishing "you will know…", shown under the title. */
-	outcomes: s.optional(s.array(s.string())),
+	lastUpdated: s.string(),
+	/**
+	 * What a reader knows after the guide, each finishing "you will know…", shown under the
+	 * title; every guide lists three, so the list reads the same on every page.
+	 */
+	outcomes: s.array(s.string()).refine((list) => list.length === 3, "List three outcomes"),
 });
 
 export type GuideFrontmatter = s.InferOutput<typeof frontmatterSchema>;
