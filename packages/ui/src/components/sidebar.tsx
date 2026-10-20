@@ -141,7 +141,7 @@ const WIDE_SHELL_QUERY = `@container ${PROVIDER_CONTAINER_NAME} (min-width: 48re
 /**
  * Selector matching {@link Sidebar.Trigger}'s own checkbox input once it
  * carries the platform's native `:checked` state — the single source of
- * truth every collapse-driven rule in {@link Sidebar.Provider} reads from.
+ * truth every collapse-driven rule in {@link Sidebar} reads from.
  */
 const TOGGLE_CHECKED_SELECTOR = '[data-slot="toggle"]:checked';
 
@@ -197,7 +197,7 @@ export namespace Sidebar {
 	/**
 	 * Every native `<div>` attribute, plus the `mix` passthrough. Establishes
 	 * the shell's row layout — {@link Sidebar} beside {@link Sidebar.Inset} —
-	 * plus the {@link PROVIDER_CONTAINER_NAME} container and `:checked` collapse rules.
+	 * plus the {@link PROVIDER_CONTAINER_NAME} container the collapse rules query.
 	 */
 	export interface ProviderProps extends TagProps<"div"> {
 		/** {@link Sidebar} and {@link Sidebar.Inset}, in either order. */
@@ -404,9 +404,9 @@ export namespace Sidebar {
 }
 
 /**
- * Renders the rail itself: a native `<aside>` sized and styled through its
- * `data-variant`, `data-collapsible`, and `data-side` attributes, with
- * every collapse rule keyed off {@link Sidebar.Provider}'s `:has()` state.
+ * Renders the rail itself: a native `<aside>` styled through its `data-*`
+ * attributes, with collapse rules keyed off {@link Sidebar.Provider}'s `:has()`
+ * state and declared after its base size, so both directions animate.
  *
  * @param handle Runtime handle carrying the host `<aside>`'s props.
  * @returns The render function producing the rail's markup.
@@ -488,6 +488,31 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 					}),
 					data("variant", "floating", [rounded("xl"), border({ color: "neutral", width: 1 })]),
 					data("variant", "inset", [rounded("xl"), border({ color: "neutral", width: 1 })]),
+					when(`[data-slot="provider"]:has(${TOGGLE_CHECKED_SELECTOR}) &`, [
+						when('&[data-collapsible="icon"]', [
+							is(varUtility("sidebar-width-icon", "3rem")),
+							when("[data-sidebar-collapsed-hide]", visuallyHidden()),
+							when('[data-slot="group-label"]', visuallyHidden()),
+							when('[data-slot="menu-badge"]', hidden()),
+							when('[data-slot="menu-sub"]', hidden()),
+							when('[data-slot="menu-button"], [data-slot="menu-link"]', [
+								justify("center"),
+								pi("0"),
+							]),
+						]),
+						when('&[data-collapsible="offcanvas"][data-side="left"]', [
+							translateX("-100%"),
+							is("0"),
+							overflow("hidden"),
+							border({ width: "0", noStyleDefault: true }),
+						]),
+						when('&[data-collapsible="offcanvas"][data-side="right"]', [
+							translateX("100%"),
+							is("0"),
+							overflow("hidden"),
+							border({ width: "0", noStyleDefault: true }),
+						]),
+					]),
 					mix,
 				]}
 			/>
@@ -497,8 +522,8 @@ export function Sidebar(handle: Handle<Sidebar.Props>) {
 
 /**
  * Renders the shell's layout root: a flex row placing {@link Sidebar} beside
- * {@link Sidebar.Inset}, hosting every collapse rule keyed purely off
- * {@link Sidebar.Trigger}'s checkbox reaching `:checked` in this subtree.
+ * {@link Sidebar.Inset}, whose subtree {@link Sidebar} watches for
+ * {@link Sidebar.Trigger}'s checkbox reaching `:checked`.
  *
  * @param handle Runtime handle carrying the host `<div>`'s props.
  * @returns The render function producing the shell's markup.
@@ -536,31 +561,6 @@ Sidebar.Provider = function SidebarProvider(handle: Handle<Sidebar.ProviderProps
 					items("stretch"),
 					minBs("100dvh"),
 					is("full"),
-					when(`&:has(${TOGGLE_CHECKED_SELECTOR})`, [
-						when('[data-slot="sidebar"][data-collapsible="icon"]', [
-							is(varUtility("sidebar-width-icon", "3rem")),
-							when("[data-sidebar-collapsed-hide]", visuallyHidden()),
-							when('[data-slot="group-label"]', visuallyHidden()),
-							when('[data-slot="menu-badge"]', hidden()),
-							when('[data-slot="menu-sub"]', hidden()),
-							when('[data-slot="menu-button"], [data-slot="menu-link"]', [
-								justify("center"),
-								pi("0"),
-							]),
-						]),
-						when('[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="left"]', [
-							translateX("-100%"),
-							is("0"),
-							overflow("hidden"),
-							border({ width: "0", noStyleDefault: true }),
-						]),
-						when('[data-slot="sidebar"][data-collapsible="offcanvas"][data-side="right"]', [
-							translateX("100%"),
-							is("0"),
-							overflow("hidden"),
-							border({ width: "0", noStyleDefault: true }),
-						]),
-					]),
 					container(PROVIDER_CONTAINER_NAME),
 					mix,
 				]}

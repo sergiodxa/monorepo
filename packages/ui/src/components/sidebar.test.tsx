@@ -30,6 +30,27 @@ describe("Sidebar.Footer", () => {
 	});
 });
 
+describe("Sidebar", () => {
+	test("declares its collapsed size after its open size, so collapsing wins and animates", async () => {
+		let html = String(
+			await renderToString(
+				<Sidebar.Provider>
+					<Sidebar collapsible="offcanvas">nav</Sidebar>
+					<Sidebar.Inset>page</Sidebar.Inset>
+				</Sidebar.Provider>,
+			),
+		);
+
+		let open = html.indexOf("inline-size: var(--sidebar-width, 16rem)");
+		let collapsed = html.search(
+			/data-collapsible="offcanvas"\]\[data-side="left"\][^{]*\{[^}]*inline-size: 0/,
+		);
+
+		expect(open).toBeGreaterThan(-1);
+		expect(collapsed).toBeGreaterThan(open);
+	});
+});
+
 describe("Sidebar.MobileNav", () => {
 	test("lays the drawer out only while it is open, so a closed one stays hidden", async () => {
 		let html = String(
