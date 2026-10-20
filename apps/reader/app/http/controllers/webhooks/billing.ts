@@ -2,7 +2,6 @@
  * `POST /webhooks/billing` — where the payment platform delivers. It verifies the
  * signature, records the delivery before trusting it, and re-reads what the customer holds,
  * so a replayed, late or duplicated delivery still leaves the reader's tier saying what is
- * true.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

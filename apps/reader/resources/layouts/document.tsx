@@ -64,8 +64,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		/**
 		 * Read off the request rather than taken as a prop, since every page in the app
 		 * composes into this shell and none of them has an opinion about the scheme it is
-		 * painted in. The middleware resolved it before any controller ran, so the class is
-		 * decided by the time the first byte is written.
+		 * painted in.
 		 */
 		let { face, theme } = getContext().presentation;
 		let { nonce, script, stylesheets } = assets;
@@ -116,12 +115,9 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						fg("neutral.emphasis"),
 						font("sans"),
 						/**
-						 * The one place this app grows the document above the reader — a page of
-						 * posts arriving as they scroll back up a list — measures that growth and
-						 * scrolls by it, so the reading queue holds its place in every browser
-						 * rather than only in the ones that anchor scrolling themselves. Leaving
-						 * the browser's own anchoring on would have the two corrections land
-						 * together and carry the reader a screenful past where they were.
+						 * The one place this app grows the document above the reader — a page of posts
+						 * arriving as they scroll back up a list — measures that growth and scrolls by it,
+						 * so the reading queue holds its place in every browser rather than only in the
 						 */
 						raw({ overflowAnchor: "none" }),
 					]}

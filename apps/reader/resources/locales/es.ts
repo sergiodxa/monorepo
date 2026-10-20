@@ -515,7 +515,6 @@ export default {
 		 * The one preference about privacy a reader is offered, and it exists because two
 		 * readers can correctly want different answers: almost every publisher's server is
 		 * indifferent to a campaign parameter, and the rare one that routes on it answers a
-		 * broken address without it.
 		 */
 		linkParameters: {
 			keep: "Conservar los parámetros del enlace",

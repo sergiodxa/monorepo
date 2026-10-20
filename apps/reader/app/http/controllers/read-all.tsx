@@ -1,12 +1,7 @@
 /**
  * Mark-everything-read controller for `POST /reading/read`. It empties the queue in one
  * go, for a reader who has fallen far enough behind that starting fresh beats working
- * through the backlog, and returns them to the queue.
- *
- * It renders nothing. The outcome travels in the `marked` query parameter of the redirect,
- * so the queue is the single place that says what happened, in its own copy. The parameter
- * carries a decimal count of the posts the store marked read, which is `0` when the queue
- * was already empty — enough for the queue to tell those two apart.
+ * through the backlog, and returns them to the queue. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

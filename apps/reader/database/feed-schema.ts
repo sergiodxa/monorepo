@@ -2,7 +2,6 @@
  * The canonical feed's schema, declared for `remix/data-table` over the SQL each feed
  * object keeps in its own storage. Column names and types mirror
  * `database/feed-migrations/` exactly, since that SQL is what actually creates the
- * tables.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,11 +36,9 @@ const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 
 /**
- * The shortest wait any feed serves, whatever it publishes.
- *
- * It is the only thing bounding what the busiest feed in the system costs, and below it
- * the gain stops being visible anyway: the head a reader compares against is eventually
- * consistent for up to a minute, and they find out when they next open the app.
+ * The shortest wait any feed serves, whatever it publishes. It is the only thing
+ * bounding what the busiest feed in the system costs, and below it the gain stops being
+ * visible anyway: the head a reader compares against is eventually consistent for up to
  */
 export const POLL_FLOOR_MS = 15 * MINUTE_MS;
 
@@ -49,22 +46,15 @@ export const POLL_FLOOR_MS = 15 * MINUTE_MS;
 export const POLL_CEILING_MS = DAY_MS;
 
 /**
- * What a feed with nothing published inside the rate window waits.
- *
- * Weekly notices a resurrection within a week while returning most of that feed's budget.
- * It is not zero because nothing else here can tell us a publication resumed: dormant is
- * a cadence, and retirement is what the last unsubscribe already does.
+ * What a feed with nothing published inside the rate window waits. Weekly notices a
+ * resurrection within a week while returning most of that feed's budget.
  */
 export const POLL_DORMANT_MS = 7 * DAY_MS;
 
 /**
  * How long a new feed is polled at {@link POLL_WARMUP_INTERVAL_MS} before its own
- * measurement decides.
- *
- * A feed document carries only its most recent entries, so a firehose whose document
- * holds fifty of them measures as though it published fifty in a month. Truncation can
- * only make a feed look slower than it is, and slow is the expensive answer to be wrong
- * about, so a day of observed publishing is bought for twenty-four extra polls.
+ * measurement decides. A feed document carries only its most recent entries, so a
+ * firehose whose document holds fifty of them measures as though it published fifty in
  */
 export const POLL_WARMUP_MS = DAY_MS;
 
@@ -73,10 +63,8 @@ export const POLL_WARMUP_INTERVAL_MS = HOUR_MS;
 
 /**
  * The share of a boundary a rate must fall below before a feed slows down again.
- *
  * Speeding up costs a little money and slowing down costs a reader latency, so the cheap
  * error is the one made eagerly: a rate crossing upward moves bands at once, and a rate
- * drifting back settles rather than flapping between two cadences forever.
  */
 export const POLL_SLOWDOWN_THRESHOLD = 0.8;
 
@@ -88,12 +76,9 @@ export interface PollBand {
 }
 
 /**
- * The cadence table, fastest band first, covering every rate above zero.
- *
- * The boundaries fall where `interval ≈ 4.8 / rate` hours crosses between two bands, which
- * holds a post's worst wait between a tenth and a little over four tenths of the time the
- * feed itself takes between posts — so a newspaper and an essayist give their readers the
- * same guarantee even though their intervals differ by two orders of magnitude.
+ * The cadence table, fastest band first, covering every rate above zero. The boundaries
+ * fall where `interval ≈ 4.8 / rate` hours crosses between two bands, which holds a post's
+ * worst wait between a tenth and a little over four tenths of the time the feed itself
  */
 export const POLL_BANDS: readonly PollBand[] = [
 	{ minRate: 10, intervalMs: POLL_FLOOR_MS },
@@ -105,10 +90,8 @@ export const POLL_BANDS: readonly PollBand[] = [
 
 /**
  * How long this feed waits before it is fetched again, from what it has been publishing.
- *
  * The previous rate is what supplies the hysteresis, so nothing has to be stored beside
- * the measurement: a poll reads `posts_per_day` before it writes the new one, which puts
- * the band a feed was in and the band it now measures at both in hand.
+ * the measurement: a poll reads `posts_per_day` before it writes the new one, which put
  *
  * @param previousRate - The rate this feed measured on its previous poll, if it has one.
  * @param rate - The rate it measures now, where zero means nothing inside the window.
@@ -167,11 +150,9 @@ export type HubState = (typeof HUB_STATES)[number];
 export const HUB_LEASE_SECONDS = 864_000;
 
 /**
- * The shortest wait a feed with a working subscription serves.
- *
- * A hub's failure mode is silence, so the poll underneath it is the only thing that can
- * notice one has died — four checks a day, which finds out inside a day and still leaves
- * the hub covering everything faster than that.
+ * The shortest wait a feed with a working subscription serves. A hub's failure mode is
+ * silence, so the poll underneath it is the only thing that can notice one has died —
+ * four checks a day, which finds out inside a day and still leaves the hub covering
  */
 export const HUB_POLL_FLOOR_MS = 6 * HOUR_MS;
 
@@ -212,11 +193,8 @@ export function hubCoalesced(lastFetchedAt: number | null, now: number): boolean
 
 /**
  * The topic a subscription is made with, or `null` where no subscription should be made.
- *
  * WebSub keys a subscription by the publisher's own `rel=self`, so that is what is sent —
- * but only when it names the origin the feed was fetched from. A document speaking for
- * another origin is either broken or is a publisher declaring a feed this app did not
- * retrieve from them, and the cost of declining is that the feed polls.
+ * but only when it names the origin the feed was fetched from.
  *
  * @param feedUrl - The canonical URL this app fetches the feed from.
  * @param declaredSelf - The `rel=self` declared beside the hub, or `null` where none was.
@@ -242,16 +220,9 @@ export function hubTopicFor(feedUrl: string, declaredSelf: string | null): strin
 export const PURGE_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
- * Items one feed keeps, oldest dropped first.
- *
- * At something under two kilobytes a row this is about a fifth of the ten gigabytes an
- * object gets, which leaves the estimate room to be wrong by five times. There is no age
- * rule beside it: a count bites first only for a feed above a couple of thousand posts a
- * day, so an age rule would only ever fire on an object that had room to spare — a blog
- * posting weekly held to its last year while it used a hundred kilobytes of ten gigabytes.
- *
- * Being generous is cheaper here than anywhere else, because one object is shared by every
- * subscriber of the feed: its history is paid for once rather than once per follower.
+ * Items one feed keeps, oldest dropped first. At something under two kilobytes a row this
+ * is about a fifth of the ten gigabytes an object gets, which leaves the estimate room to
+ * be wrong by five times.
  */
 export const FEED_RETENTION = 1_000_000;
 

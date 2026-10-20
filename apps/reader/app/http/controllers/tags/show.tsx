@@ -1,18 +1,6 @@
 /**
  * Label controller for `GET /tags/:tag`: the posts a reader kept under one label, newest
- * first, as one list.
- *
- * It is the saved list narrowed to one reason for keeping. The page is read through the
- * index the labels are stored under, whose leading column is the label and whose two behind
- * it are the ordering columns in the order they are ordered by, so a page is a range scan
- * down one index rather than a filter, a join and a sort — and it mints the same cursor
- * shape every other list in this app mints.
- *
- * The ways to act on the label are on its own line: renaming it, which writes one row and
- * rewrites no post, and letting it go, which deletes none and unsaves none.
- *
- * The label is looked up in the reader's own storage, so one somebody else made is as
- * absent here as one nobody did, and both answer `404`.
+ * first, as one list. It is the saved list narrowed to one reason for keeping.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -347,11 +335,6 @@ export default createAction(routes.tag, {
 					 * What deleting the label does, which is nothing to any post: they stop carrying
 					 * it and stay kept. How many that is is the only consequence there is, so it is
 					 * the whole of what the prompt says.
-					 *
-					 * Level 2, since the layout's own page heading is the document's only `h1`.
-					 *
-					 * The confirmation posts `_method`, since a browser form sends `GET` and `POST`
-					 * alone and `methodOverride()` reads the declared `DELETE` back out of it.
 					 */}
 					<HeadingScope level={2}>
 						<Confirm

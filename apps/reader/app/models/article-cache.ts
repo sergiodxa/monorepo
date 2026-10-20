@@ -1,13 +1,7 @@
 /**
  * The shared store of extracted articles: one entry per article URL, holding the body
  * the extractor produced, beside one entry per origin holding that origin's
- * `robots.txt`.
- *
- * Nothing in here is about who asked. Two readers who open the same link want the same
- * bytes, so the key carries the article and nothing else and the second of them pays a
- * read rather than a fetch, a parse and a write. Every byte is reconstructible by
- * fetching the page again, which is what lets this expire on its own and lets losing
- * the namespace cost nothing owned.
+ * `robots.txt`. Nothing in here is about who asked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,11 +49,8 @@ export const FAILURE_TTL: DurationString = "1 hour";
 export const MAX_STORED_BYTES = 512 * 1024;
 
 /**
- * Where one article is held.
- *
- * A digest rather than the URL, for the reason a feed's head is keyed by its id: a KV
- * key stops at 512 bytes and a URL does not. It carries no reader identifier by
- * construction rather than by convention, which is what lets one entry serve everyone.
+ * Where one article is held. A digest rather than the URL, for the reason a feed's
+ * head is keyed by its id: a KV key stops at 512 bytes and a URL does not.
  *
  * @param url - The article's canonical address.
  */
@@ -80,12 +71,8 @@ export function robotsKey(origin: string): string {
 }
 
 /**
- * The store extractions are read from and written to.
- *
- * A write is finished before the answer is given, so the next reader to open the same
- * link finds it there. The only request that writes here is the one fetching an article
- * the page it belongs to has already been sent, so the milliseconds are spent behind the
- * reader rather than in front of them.
+ * The store extractions are read from and written to. A write is finished before the
+ * answer is given, so the next reader to open the same link finds it there.
  */
 export function articleCache(): Cache {
 	return new WorkerKVCache(env.KV);

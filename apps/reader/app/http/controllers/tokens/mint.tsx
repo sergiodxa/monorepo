@@ -2,10 +2,6 @@
  * Minting for `POST /settings/tokens`: signs one token for this reader, writes the row
  * describing it, and shows the value once.
  *
- * It renders rather than redirects, because the token is the one thing on this surface that
- * exists exactly once: a redirect would have to carry it in a URL, where it would land in a
- * browser's history, in a referrer and in every log between here and there.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

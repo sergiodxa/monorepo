@@ -3,10 +3,6 @@
  * it registers the service worker, reports the zone quiet hours are computed in, and hands
  * the endpoint a push service gave this browser back to the reader's own object.
  *
- * It draws one button, shown only while the browser has not been asked: Safari and Firefox
- * show a notification prompt only from a user gesture. A browser that runs no script never
- * sees it and never registers a device.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -67,10 +63,6 @@ export const PushRegistration = clientEntry(
 		 * Subscribes this browser and hands the subscription over, asking for permission first
 		 * when it has not been granted. A browser subscribed under a previous key is moved to
 		 * the page's current one.
-		 *
-		 * Re-subscribing answers with the endpoint the browser already had, which is why the
-		 * server takes registration as an upsert: a reader signing in twice on one device ends
-		 * with one row rather than two notifications.
 		 */
 		async function registerDevice(signal: AbortSignal) {
 			let subscribed = await subscribe({

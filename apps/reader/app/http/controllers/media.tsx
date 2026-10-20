@@ -2,16 +2,6 @@
  * Media controller for `GET /media/:signature/:source`: the one place a publisher's image
  * is fetched, and the reason a reader's browser makes no request to any host but this one.
  *
- * The request that goes out carries no cookie, no referrer and a user agent naming this
- * product, so a publisher learns that one server asked for a picture and nothing about who
- * was reading. That substitution is the whole benefit here; every bound below — the
- * signature, the scheme, port and address checks on every hop, the deadline, the size cap
- * and the type allow-list — is the cost of being allowed to make it.
- *
- * Answers are held at the edge and nowhere else. Keeping a copy of the internet's images in
- * a store of this app's own would cost a hundred times the fetch it saves, so a second
- * reader of the same article pays a cache read at the colo they are already talking to.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

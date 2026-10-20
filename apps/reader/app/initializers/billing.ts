@@ -25,9 +25,6 @@ export const CONNECTION = "polar";
  * The platform this deployment sells through. Credentials resolve on first use rather
  * than at construction, so an isolate that never bills pays nothing for it and a rotated
  * secret is picked up by the next one.
- *
- * Deliveries fail closed while the signing secret is unset, which is what a deployment
- * that has not configured the endpoint wants.
  */
 export let polar = new PolarBilling({
 	accessToken: () => env.POLAR_ACCESS_TOKEN,

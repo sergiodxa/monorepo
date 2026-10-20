@@ -1,8 +1,6 @@
 /**
  * Route guard requiring a signed-in reader. It stores the requested URL in the `returnTo`
  * cookie before redirecting home, so signing in lands the visitor back where they started.
- * A plain `Middleware` with no context-transform generic, so it composes directly into a
- * route's own middleware chain. Runs after the `auth` middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

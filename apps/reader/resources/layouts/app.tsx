@@ -3,15 +3,6 @@
  * the header carrying the page's own name and whatever acts on it, and the column the
  * page's content sits in. It exists so each page describes only what it shows.
  *
- * The sidebar is three bands. The search box sits at the top and the reader's own menu at
- * the foot, both held still; between them the queue and every feed the reader follows,
- * which is the band that grows with a subscription list and scrolls within itself. One
- * piece of markup serves both shapes it takes: a drawer a narrow screen opens over the
- * page, and a rail beside the page from the width that has room for one.
- *
- * Copy arrives already translated, so the layout renders text without reaching for a
- * dictionary and a controller stays the one place a key is named.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -91,12 +82,9 @@ import OutboundMark from "~/resources/views/outbound-mark";
 import routes from "~/routes/web";
 
 /**
- * Width of the measure prose and fields are read at.
- *
- * The page itself fills the pane the sidebar leaves it, since a list of rows is scanned
- * down rather than read across and the sidebar already spends the width a cap used to.
- * Content that wants this measure caps itself here on whichever surface it appears: a
- * sentence is no easier to follow, nor a field easier to fill, for spanning a window.
+ * Width of the measure prose and fields are read at. The page itself fills the pane the
+ * sidebar leaves it, since a list of rows is scanned down rather than read across and
+ * the sidebar already spends the width a cap used to.
  */
 export const PAGE_COLUMN = "48rem";
 
@@ -109,8 +97,7 @@ const PAGE_GUTTER = 6;
 /**
  * Where the sidebar stands as a rail down the side of the page. Its own width is what the
  * boundary is set by: below it a rail would spend a third of a narrow screen, so the same
- * three bands become a drawer the reader opens over the page and the page keeps the whole
- * of the width it has.
+ * three bands become a drawer the reader opens over the page and the page keeps the who
  */
 const SIDEBAR_RAIL = "(min-width: 64rem)";
 
@@ -122,14 +109,7 @@ const DRAWER_WIDTH = "min(85vw, 18rem)";
 
 /**
  * Where the header's row has the width for an action to say in words what its mark says,
- * and for the page's own name to still be read beside it. A feed carries three actions,
- * which is the widest set any surface has; at this width their words and a name worth
- * reading both fit, and below it the marks stand alone rather than squeezing the name to
- * its own ellipsis.
- *
- * It counts the gutters and, above 64rem, the rail as well: a screen of 64rem hands the
- * row 45rem of its own, so the words arriving at 45rem of screen keeps one rule true on
- * both sides of the width the rail appears at.
+ * and for the page's own name to still be read beside it.
  */
 const WIDE_HEADER = "(min-width: 45rem)";
 
@@ -154,9 +134,7 @@ export const SEARCH_PARAM = "q";
 
 /**
  * Height of a field standing in the app's top band: the sidebar's search box, and whatever
- * a page puts among its own actions. A field is the one thing up there with a height of its
- * own — a page's name is as tall as its line — so the field is what the band is measured
- * from, and both sides read it from here.
+ * a page puts among its own actions.
  */
 export const BAND_FIELD_HEIGHT = "2.25rem";
 
@@ -169,12 +147,7 @@ const BAND_RULE_WIDTH = 1;
 /**
  * Height of the app's top band, which the sidebar's own header and the page's header both
  * draw. The two sit side by side across the top of the screen, so one height is what puts
- * their lower rules on one line and makes the divider read as a single rule across the
- * whole width rather than as two that nearly meet.
- *
- * A page whose actions outrun its row wraps them beneath its name, which is the one case a
- * header grows past this; the sidebar is a drawer at every width where that happens, so
- * there is no band beside it to line up with.
+ * their lower rules on one line and makes the divider read as a single rule across the who
  */
 const BAND_HEIGHT = `calc(${BAND_FIELD_HEIGHT} + ${BAND_PADDING} * 2 + ${BAND_RULE_WIDTH}px)`;
 
@@ -198,9 +171,7 @@ export const SIDEBAR_ID = "app-sidebar";
 
 /**
  * Edge of every mark down the sidebar's first column: the glyphs naming the two places,
- * and the picture standing for each feed. One size for all of them is what makes that
- * column a column, and setting it rather than leaving it to the image is what keeps a row
- * the same height before a picture arrives as after — and for a picture that never comes.
+ * and the picture standing for each feed.
  */
 const RAIL_MARK_SIZE = "1.25rem";
 
@@ -215,14 +186,7 @@ const ROW_GAP = "0.75rem";
 
 /**
  * One row of the sidebar's navigation: its mark in the first column at the size every
- * other mark is drawn at, and its name in the second. Carried by the two places and by
- * each feed alike, which is what puts every name on one vertical line — the column it
- * begins at being the padding, the mark and the gap rather than a number set to match.
- *
- * Each rule names the slot it lands on. The components set this padding and these mark
- * sizes themselves, and two rules of equal weight are settled by which was written to the
- * stylesheet last, which is not something a caller can see; naming the slot makes these
- * the more specific rules and so the ones that hold wherever they land in the sheet.
+ * other mark is drawn at, and its name in the second.
  *
  * @param slot - The `data-slot` the row's own component stamps on itself.
  */
@@ -246,12 +210,7 @@ function railMark() {
 
 /**
  * Runs a list out to the edges of the page's pane, taking back the gutter the page keeps
- * around everything else. The rules between rows and the fill under the pointer then reach
- * both edges, which is what makes a run of rows read as one list rather than as a stack of
- * cards.
- *
- * The gutter is not lost, it moves: a row carries it as {@link listRowGutter}, so the words
- * land exactly where the page would have put them.
+ * around everything else.
  */
 export function listBleed() {
 	return bleed(PAGE_GUTTER);
@@ -269,17 +228,12 @@ export function listRowGutter() {
  * The size a note on the page is drawn at: padded in proportion to the line or two of news
  * it carries rather than to the paragraph a panel is built for, so a sentence about a sweep
  * sits among rows of posts at the weight of a remark rather than of a section.
- *
- * Every alert in the app takes it, so the sweep that finished, the file that imported and
- * the cursor that went stale all read as the same kind of thing. The fill and the edge the
- * tone is carried in are left alone, since a tighter note has less room to say what it is.
  */
 export function pageNote() {
 	/**
 	 * Carried on the note's own slot rather than bare: the component sets this padding
 	 * itself, and two rules of equal weight are settled by which was written to the
-	 * stylesheet last, which is not something a caller can see. Naming the slot makes this
-	 * the more specific rule and so the one that holds wherever it lands in the sheet.
+	 * stylesheet last, which is not something a caller can see.
 	 */
 	return [when('&[data-slot="alert"]', [p(2, 3), gap(2), rounded("md")])];
 }
@@ -388,10 +342,6 @@ export namespace AppLayout {
  * One link in a row of them, which is what a page's own filters are. The one being read
  * wears the app's strongest foreground and the rest settle to body copy, which is the pair
  * of shades an unread post and a read one already differ by on every other surface.
- *
- * The weight stays put across the row for the reason a post's title holds its own: a
- * heavier face is a wider one, so marking a label current would nudge the ones beside it
- * along the line. Pointing at a label underlines it, which is what the app's other links do.
  */
 export function AppNavLink(
 	handle: Handle<{ href: string; label: string; icon?: RemixNode; isCurrent: boolean }>,
@@ -424,7 +374,6 @@ export function AppNavLink(
  * The words beside an action's mark, carried wherever the header's row has the width for
  * both. On a narrower screen the mark stands alone and the name the control itself holds is
  * what a screen reader announces and a pointer rests on, which is how a post's row says the
- * same things in the same place.
  */
 export function ActionLabel(handle: Handle<{ children: RemixNode }>) {
 	return () => <span mix={[hidden(), media(WIDE_HEADER, inline())]}>{handle.props.children}</span>;
@@ -520,9 +469,6 @@ export namespace SidebarFeeds {
 /**
  * One followed feed as a row of the rail, wherever it is drawn: under a folder's name or
  * under the heading that gathers the ones a reader has filed nowhere.
- *
- * A level down from the queue and quieter for it, so an eye running the sidebar still
- * tells the one place from the many feeds.
  */
 function SidebarFeedRow(handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boolean }>) {
 	return () => {
@@ -536,13 +482,7 @@ function SidebarFeedRow(handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boo
 			>
 				{/**
 				 * The mark the publisher puts on their own feed, which is what an eye finds a
-				 * known publication by before it reads the name. It is the picture the feed
-				 * document itself named and already stored, so drawing it asks nobody who the
-				 * reader follows.
-				 *
-				 * A publisher who named none, or whose picture has since gone, leaves the
-				 * initials of the name — and the name itself is right beside it, so nothing is
-				 * lost either way.
+				 * known publication by before it reads the name.
 				 */}
 				<Logo size="sm" mix={railMark()}>
 					{feed.imageUrl ? (
@@ -577,11 +517,9 @@ function SidebarFeedRow(handle: Handle<{ feed: SidebarFeeds.Feed; isCurrent: boo
 }
 
 /**
- * One band of the rail: a heading naming what it gathers, and the feeds under it.
- *
- * It leads nowhere, and nothing is lost by that — the whole of the list it names is the
- * rows directly beneath it — which leaves one thing in the sidebar lit at a time, the feed
- * being read rather than the feed and the word above it.
+ * One band of the rail: a heading naming what it gathers, and the feeds under it. It leads
+ * nowhere, and nothing is lost by that — the whole of the list it names is the rows
+ * directly beneath it — which leaves one thing in the sidebar lit at a time, the feed
  */
 function SidebarBand(
 	handle: Handle<{
@@ -726,10 +664,9 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 				{folders.map((folder) => (
 					<Sidebar.Group key={folder.id}>
 						{/**
-						 * The folder's name, and the way into reading it as one stream. It is a
-						 * row rather than a plain heading because a folder is somewhere a reader
-						 * goes, and it wears the weight the Feeds heading below wears so the two
-						 * read as the peers they are.
+						 * The folder's name, and the way into reading it as one stream. It is a row rather
+						 * than a plain heading because a folder is somewhere a reader goes, and it wears
+						 * the weight the Feeds heading below wears so the two read as the peers they are.
 						 */}
 						<Sidebar.Item
 							href={folder.href}
@@ -770,15 +707,9 @@ export function SidebarFeeds(handle: Handle<SidebarFeeds.Props>) {
 				{feeds.length > 0 && (
 					<Sidebar.Group>
 						{/**
-						 * The reader's own subscriptions, headed by the word naming them. It is
-						 * drawn as a peer of the queue above — the same mark, the same column, the
-						 * same casing as its own word — rather than as a category divider, because
-						 * that is what it is: the other thing this sidebar holds.
-						 *
-						 * It leads nowhere, and nothing is lost by that: the whole of the list it
-						 * names is the rows directly beneath it, on every page. That leaves one
-						 * thing in the sidebar lit at a time, which is the feed being read rather
-						 * than the feed and the word above it.
+						 * The reader's own subscriptions, headed by the word naming them. It is drawn as a
+						 * peer of the queue above — the same mark, the same column, the same casing as its
+						 * own word — rather than as a category divider, because that is what it is: the
 						 */}
 						<Sidebar.GroupLabel
 							mix={[
@@ -850,9 +781,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 
 		/**
 		 * One thing in the chrome is the place being read, and it is whichever link leads
-		 * exactly where the reader already is. A feed's own page is that feed's row rather
-		 * than the queue above it, which is what a reader following the sidebar down expects
-		 * of the row they just clicked.
+		 * exactly where the reader already is.
 		 */
 		function isCurrent(href: string): boolean {
 			return currentPath === href;
@@ -862,9 +791,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 			<DocumentLayout assets={assets} title={documentTitle} locale={locale}>
 				{/**
 				 * Two columns from the width the rail earns, and one below it, where the sidebar
-				 * has left the flow to wait behind its own trigger. The page's own pane is told
-				 * it may be narrower than its contents, which is what keeps a long word or a wide
-				 * row inside it rather than pushing the whole grid sideways.
+				 * has left the flow to wait behind its own trigger.
 				 */}
 				<div
 					mix={[media(SIDEBAR_RAIL, [grid(), raw({ gridTemplateColumns: `${RAIL_WIDTH} 1fr` })])]}
@@ -872,11 +799,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 					{/**
 					 * The three bands, in the two shapes they take. Below the rail's width they are a
 					 * drawer the browser opens over the page and dismisses on its own, which is what
-					 * lets a page shipping almost no script carry one. From that width up the same
-					 * element is the rail beside the page, holding its place as the page scrolls.
-					 *
-					 * The popover's own display, inset, margin and size all come from the browser's
-					 * stylesheet, so each one is named back here for whichever shape is in play.
+					 * lets a page shipping almost no script carry one.
 					 */}
 					<aside
 						id={SIDEBAR_ID}
@@ -927,12 +850,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 					>
 						{/**
 						 * Searching starts where the reader's eye already is, so the sidebar opens with
-						 * the box rather than with a link to a page holding one. One field and no
-						 * submit: a form with a single text input is sent by the return key, which is
-						 * the whole of the interaction.
-						 *
-						 * The band holds its height whatever the middle one is carrying, so a reader
-						 * following a hundred feeds reaches the box without scrolling to it.
+						 * the box rather than with a link to a page holding one.
 						 */}
 						<Sidebar.Header
 							mix={[bs(BAND_HEIGHT), pb(BAND_PADDING), pi(3), items("center"), bandRule()]}
@@ -943,12 +861,8 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								</label>
 								<input
 									/**
-									 * Keyed by the page it was drawn for, so moving between pages replaces the
-									 * field rather than patching it. The runtime keeps an editable value across
-									 * a reload when the incoming HTML changes only the serialized default,
-									 * which is the right call for a field a reader owns — and the wrong one
-									 * here, where the URL owns it: the box says what the page beside it is
-									 * filtered by, so a query left behind would claim a filter nothing applied.
+									 * Keyed by the page it was drawn for, so moving between pages replaces the field
+									 * rather than patching it.
 									 */
 									data-rmx-key={`${SIDEBAR_SEARCH_FIELD_ID}:${currentPath}?${searchQuery}`}
 									id={SIDEBAR_SEARCH_FIELD_ID}
@@ -976,8 +890,7 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 						{/**
 						 * The band that grows: the queue, then every feed the reader follows under the
 						 * heading naming them. It scrolls on its own once those outrun the sidebar, so a
-						 * long subscription list runs past the bottom of this rather than pushing the
-						 * menu below it off the screen.
+						 * long subscription list runs past the bottom of this rather than pushing the menu
 						 */}
 						<Sidebar.Content>
 							<Sidebar.Nav aria-label={nav.label}>
@@ -1012,17 +925,14 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 							 * The feeds themselves, drawn by the server into this band and redrawn into it
 							 * alone. What they say changes as the reader reads — a post opened here moves a
 							 * count in the sidebar — and the page they read it on is several fetched pages
-							 * long by then, so the band is refetched by name rather than the document that
-							 * holds it. Without script it arrives with the page like any other markup.
 							 */}
 							<Frame name={SIDEBAR_FEEDS_FRAME} src={sidebarFeedsSrc} />
 						</Sidebar.Content>
 
 						{/**
 						 * The viewer, with what belongs to their account behind their own face: the
-						 * preferences and the way out, which are about who is signed in rather than
-						 * about where to read. The band holds its height, so the menu is where it was
-						 * however far down their feeds a reader has scrolled.
+						 * preferences and the way out, which are about who is signed in rather than about
+						 * where to read.
 						 */}
 						<Sidebar.Footer mix={[p(3)]}>
 							{/**
@@ -1095,15 +1005,9 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								mix={[minIs("14rem")]}
 							>
 								{/**
-								 * Whose account this is, which the trigger says in a name and a face. The
-								 * address is what tells two accounts of one person apart, and this is the
-								 * one place the app has to show it.
-								 *
-								 * Both lines name their own foreground. A popover is painted by the browser
-								 * with its own `color`, which beats what the page around it inherits, so
-								 * text set loose inside one reads as black on whatever the surface is: the
-								 * name takes the shade an unread post's title wears and the address the
-								 * shade a read one settles to, which is the pairing every row already uses.
+								 * Whose account this is, which the trigger says in a name and a face. The address
+								 * is what tells two accounts of one person apart, and this is the one place the
+								 * app has to show it. Both lines name their own foreground.
 								 */}
 								<div mix={[vstack({ gap: 0 }), p(2, 3), minIs(0)]}>
 									<span mix={[truncate(), text("sm"), weight("medium"), fg("neutral.emphasis")]}>
@@ -1115,10 +1019,8 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 								<Menu.Separator />
 
 								{/**
-								 * The preferences live here rather than in the sidebar's navigation because
-								 * they are about the account rather than about somewhere to read. The reader
-								 * standing on that page is told so by the row itself, which is the one place
-								 * in the chrome that can say it.
+								 * The preferences live here rather than in the sidebar's navigation because they
+								 * are about the account rather than about somewhere to read.
 								 */}
 								<Menu.Item
 									href={routes.settings.href()}
@@ -1143,10 +1045,8 @@ export default function AppLayout(handle: Handle<AppLayout.Props>) {
 						 */}
 						<header mix={[sticky(), insBs(0), z(10), translucent(), bg("neutral.tint")]}>
 							{/**
-							 * One row wherever the width allows one, and its least height is what every
-							 * page draws, so the page below starts on the same line from surface to
-							 * surface. On a screen too narrow for the row, the actions wrap beneath the
-							 * page's name rather than running off the side of it.
+							 * One row wherever the width allows one, and its least height is what every page
+							 * draws, so the page below starts on the same line from surface to surface.
 							 */}
 							<div
 								mix={[

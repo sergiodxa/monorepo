@@ -1,8 +1,7 @@
 /**
- * Browser entry point. It registers a module-scoped translator so any independently
- * hydrated island can translate without an `IntlProvider` above it, then runs remix/component's
- * client runtime, loading each island from the chunk the server named for it, and reports
- * whatever fails to come up.
+ * Browser entry point. It registers a module-scoped translator so any independently hydrated
+ * island can translate without an `IntlProvider` above it, then runs remix/component's client
+ * runtime, loading each island from the chunk the server named for it, and reports whatever
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,7 +69,7 @@ let runtime = run({
 	/** Resolves a hydrated island's module and named export from the URL the server wrote. */
 	async loadModule(moduleUrl, exportName) {
 		let load = PACKAGE_MODULES[moduleUrl];
-		let mod: unknown = load ? await load() : await import(/* @vite-ignore */ moduleUrl);
+		let mod: unknown = load ? await load() : await import(moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);
@@ -89,10 +88,6 @@ let runtime = run({
 	 * Fetches a frame's HTML, sending a URL-encoded body when the form declares that
 	 * encoding so the server reads it under the requested type with file entries reduced to
 	 * their name; the response's URL reflects any redirect for the frame to adopt.
-	 *
-	 * A response that is not content is refused rather than rendered: an error page written
-	 * for a whole document has a head and a body of its own, and writing one into a region
-	 * of a page that is otherwise fine puts a second document inside the first.
 	 */
 	async resolveFrame(src, options) {
 		let { target, signal, method, formData, encType } = options ?? {};

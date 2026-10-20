@@ -3,10 +3,6 @@
  * through, verifying one that comes back, retrieving it within a deadline and a size cap,
  * and rewriting a sanitized body so every image in it points here.
  *
- * A reader's browser talks to one origin while they read. The publisher learns that one
- * server fetched an image — a hit count — and nothing about who asked for it, which is the
- * whole of what this buys and the reason every bound below is worth paying for.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -82,13 +78,9 @@ async function signatureFor(source: string): Promise<string | null> {
 }
 
 /**
- * The address a remote image is reached at through this app.
- *
- * Without the signature this route would be an open proxy: anybody could hand it any URL
- * and spend this app's address and egress on whatever they liked, which is the single risk
- * deciding whether the route may exist at all. There is no expiry — an expiring address
- * breaks an image on a page rendered a moment ago, and replaying a valid one re-fetches an
- * image this app chose to fetch.
+ * The address a remote image is reached at through this app. Without the signature this
+ * route would be an open proxy: anybody could hand it any URL and spend this app's address
+ * and egress on whatever they liked, which is the single risk deciding whether the route
  *
  * @param url - The image's absolute address, as the publisher's markup gave it.
  * @returns The proxy path, or the address itself when the MAC could not be taken.
@@ -142,10 +134,6 @@ const IMAGE_SOURCE = /(<img\b[^>]*?\ssrc=")([^"]*)(")/giu;
 /**
  * Rewrites every image in a sanitized body to the address it is reached at through this
  * app, so a rendered article makes no request to any host but this one.
- *
- * It runs over markup the sanitizer produced, where every `src` is already an absolute
- * `http:` or `https:` URL emitted with its quotes escaped, which is what lets the rewrite
- * read the attribute without parsing the document a second time.
  *
  * @param html - The sanitized body, as the extractor answered with it.
  * @example await proxyImages(article.html);
@@ -212,8 +200,7 @@ export function servedType(response: Response): string | null {
  * A name that rebinds past the check still reaches nothing of this app's, held in bindings.
  *
  * @param url - The verified address the signature named.
- * @returns The final response whatever its status, or `null` when a hop was refused, the
- * chain ran on, the deadline passed before an answer, or the origin could not be reached.
+ * @returns The final response whatever its status, or `null` when a hop was refused, the chain ran on, the deadline passed before an answer, or the origin could not be reached.
  */
 export async function retrieveImage(url: string): Promise<Response | null> {
 	let followed = await follow(url, {

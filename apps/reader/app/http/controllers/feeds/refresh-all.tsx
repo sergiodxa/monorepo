@@ -3,17 +3,6 @@
  * the spot, for a reader who wants everything current before they sit down with it, and
  * returns them to the reading queue they pressed it from, narrowed as they left it.
  *
- * It renders nothing. The outcome travels in three query parameters of the redirect, so
- * the queue is the single place that says what happened, in its own copy. Each one
- * carries a decimal count, and all three are always present:
- *
- * - `swept` — feeds the sweep reached.
- * - `fresh` — how many of those answered with posts the reader had not seen.
- * - `failed` — how many refused, timed out, or sent something that is not a feed.
- *
- * The posts the sweep brought in stay behind: the sentence speaks in feeds, and a post
- * count belongs to the feed that published it, which the feed's own page already reports.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

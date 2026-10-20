@@ -3,22 +3,6 @@
  * and a single feed differ in which posts they hold and in nothing about how one is shown,
  * so the markup lives here and each controller supplies the page it is showing.
  *
- * A long list continues by fetching the next page into a frame below this one, and that
- * page ends with a frame of its own, so a reader scrolling walks the list without asking
- * for each page in turn. Each page is an ordered list starting where the one above it
- * stopped, rather than rows folded into a list that is already open, so the positions the
- * numbers carry stay true however many pages have arrived.
- *
- * The links are what the frame replaces, and what a browser running no script keeps.
- *
- * A post is one row: the mark that changes what has been read, the title, who it came
- * from, and when. Reading a list of posts is scanning it, and a row that takes one line
- * puts twenty of them on a screen where a panel puts seven.
- *
- * Every string arrives translated and every date arrives formatted: interpolation and
- * locale-aware formatting belong to the controller, which is where the dictionary and the
- * request's language are.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -100,20 +84,13 @@ const TIME_COLUMN = "6rem";
 /**
  * The room a paging link takes, above and below. It is the rhythm of the rows it sits
  * against, because the link is a control: the way through the list for a reader running no
- * script, and what stands there for the moment before the frame holding it mounts. The
- * note that replaces it when a page fails to arrive is about this tall too, so the rows
- * above hold still as one gives way to the other.
- *
- * Spelled here and written into the links' own styles by hand, since those travel to the
- * browser as plain declarations.
+ * script, and what stands there for the moment before the frame holding it mounts.
  */
 const LINK_ROOM = "0.75rem";
 
 /**
  * Marks the row's own words and the link its title is, so the row can colour each of them
- * for the state it is in. The state is one attribute on the row, set by the server and
- * turned over by the mark at its head, which leaves what read and unread look like written
- * once rather than once here and again in the browser.
+ * for the state it is in.
  */
 const ROW_WORDS = "data-post-words";
 const ROW_TITLE = "data-post-title";
@@ -130,18 +107,8 @@ const ROW_SCROLL_MARGIN = `calc(${BAND_FIELD_HEIGHT} + 2rem)`;
 
 /**
  * What a row's words are coloured by, which is the one thing that changes as a post is read.
- *
  * A title still to read takes the brand colour, so a screenful reads as a list of things to
- * open and the loudest rows are the ones still wanting the reader. Read, it keeps the link
- * and drops the hue: quiet enough that a screenful sorts into the two at a glance, and at
- * the same lightness, so it stays a comfortable read on a light page and a dark one alike.
- *
- * The weight is deliberately not one of the differences. A heavier face is a wider one, so
- * switching it rewrites every glyph on the line and the title reflows under the reader's eye
- * at the moment they mark the post.
- *
- * A post whose feed gave it no address is words rather than a link, so it takes the row's own
- * foreground: the brand colour is a promise that clicking goes somewhere.
+ * open and the loudest rows are the ones still wanting the reader.
  */
 function readState() {
 	return css({
@@ -155,8 +122,7 @@ function readState() {
 /**
  * The fill the closing panel carries: the rule between rows thinned nearly to nothing, so
  * it reads as a patch of the page rather than as a notice pasted onto it, and holds that
- * weight on a light page and a dark one alike. Derived the way a row's own hover fill is,
- * since a flat colour picked for one scheme is the wrong one in the other.
+ * weight on a light page and a dark one alike.
  */
 const END_FILL = colorMix("oklab", { color: color("neutral.border"), weight: 15 }, "transparent");
 
@@ -170,7 +136,6 @@ const END_ICON_SIZE = 28;
  * How far above the viewport the newer page starts arriving. Short, where the reach below
  * is generous: a page arriving above the reader moves the document under them, so it is
  * fetched as they actually turn back toward it rather than on the chance that they might.
- * Only the top is extended, which is the side they approach it from.
  */
 const NEWER_REACH = "200px 0px 0px 0px";
 
@@ -280,9 +245,7 @@ export namespace Timeline {
 		cursors: { next: string | null; prev: string | null };
 		/**
 		 * Where the page below this one is fetched from as the reader reaches the end of this
-		 * one, or `null` for a surface walked by its links alone. It is that page's own
-		 * address asked for as a fragment, which is a different URL from the link beside it:
-		 * the link is a page to navigate to, this is a piece to write into this one.
+		 * one, or `null` for a surface walked by its links alone.
 		 */
 		/**
 		 * Whether a row carries the mark that keeps a post. Off, the list is what it was
@@ -306,7 +269,6 @@ export namespace Timeline {
 		 * Whether the rows below this page are already on screen. That is true of a piece
 		 * fetched to continue a list upward: the page it was fetched for sits directly under
 		 * it, so this one prints nothing after its rows — neither the way onward nor the
-		 * sentence saying the list has none.
 		 */
 		joinsBelow?: boolean;
 		/**
@@ -321,11 +283,6 @@ export namespace Timeline {
  * A post's title, and the link out to it for a post whose feed gave it an address. The
  * outbound mark is what says the words can be followed and where following them goes,
  * which leaves a screenful of rows reading as a list of posts rather than as a page of
- * rules; pointing at one underlines it and takes the brand color.
- *
- * Only the words are allowed to run out of room. The mark sits beside them as its own
- * column and never shrinks, because a row clips more titles than it shows in full — and
- * a clipped title that also loses its mark is a link with nothing left to say so.
  */
 function PostTitle(handle: Handle<{ title: string; url: string | null; ping: string | null }>) {
 	return () => {
@@ -344,12 +301,7 @@ function PostTitle(handle: Handle<{ title: string; url: string | null; ping: str
 				rel="noopener noreferrer"
 				/**
 				 * Following the title is what a reader does instead of ticking the row, so the
-				 * browser reports the trip and the post is marked read on its way out. It is a
-				 * `POST` the browser makes itself, which no prefetcher walks; a browser that
-				 * turns pings off leaves the tick beside the row as the way to say so.
-				 *
-				 * A `null` would reach the attribute as the word, and the browser would report
-				 * the trip to a page of that name.
+				 * browser reports the trip and the post is marked read on its way out.
 				 */
 				ping={ping ?? undefined}
 				{...{ [ROW_TITLE]: "" }}
@@ -373,11 +325,6 @@ function PostTitle(handle: Handle<{ title: string; url: string | null; ping: str
 /**
  * The way to the page below this one, which is what a reader walks the list with and what
  * that page replaces once it has arrived under them.
- *
- * It is drawn with an inline style rather than with the app's own mixins, which is the one
- * place in this app that is true: the link travels to the browser inside a client entry's
- * serialized props, and the runtime accepts only plain values there. Everything the link
- * needs is a declaration, so nothing is lost but the underline a pointer would draw.
  */
 function OlderLink(handle: Handle<{ href: string; label: string }>) {
 	return () => <EndLink href={handle.props.href} rel="next" label={handle.props.label} />;
@@ -394,11 +341,6 @@ function NewerLink(handle: Handle<{ href: string; label: string }>) {
 /**
  * One end of a list, as a link a reader follows themselves. Compact, and centred at both
  * ends so the way up and the way down are read as the same control in two places.
- *
- * Drawn with inline styles rather than with the app's own mixins, which is the one place
- * in this app that is true: both links travel to the browser inside a client entry's
- * serialized props, and the runtime accepts only plain values there. Everything they need
- * is a declaration, so nothing is lost but the underline a pointer would draw.
  */
 function EndLink(handle: Handle<{ href: string; label: string; rel: string }>) {
 	return () => (
@@ -441,12 +383,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 			<div>
 				{/**
 				 * The way back up, held by a frame of its own so the page above arrives under the
-				 * reader as they scroll to it rather than waiting to be asked for. The link is that
-				 * frame's children exactly as the older-posts link is the lower frame's, so a
-				 * browser running no script keeps a way through the list at both ends.
-				 *
-				 * The frame is told it sits above the rows, which is what has it wait to be
-				 * scrolled back to and hold the reader's place when the page lands.
+				 * reader as they scroll to it rather than waiting to be asked for.
 				 */}
 				{resumeSrc && cursors.prev ? (
 					<LazyFrame
@@ -469,9 +406,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 				 */}
 				{/**
 				 * The labels already in use, offered to every field on the page, so a second
-				 * spelling of one label is something a reader goes out of their way to type. It
-				 * is one list for the page rather than one per row, which is the whole reason the
-				 * field points at it by name.
+				 * spelling of one label is something a reader goes out of their way to type.
 				 */}
 				{tagging && (
 					<datalist id={tagging.optionsId}>
@@ -487,11 +422,9 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 							key={entry.id}
 							{...{ [ROW_READ]: entry.isRead ? "" : undefined, [POST_ROW_ATTRIBUTE]: "" }}
 							/**
-							 * The current post is the focused row, which is the one kind of selection a
-							 * screen reader is guaranteed to announce and the one that survives a page
-							 * arriving above these rows, a page arriving below them, and this row being
-							 * taken away. A negative index keeps the row out of the tab sequence, so
-							 * `Tab`, the pointer and a browser running no script are untouched.
+							 * The current post is the focused row, which is the one kind of selection a screen
+							 * reader is guaranteed to announce and the one that survives a page arriving above
+							 * these rows, a page arriving below them, and this row being taken away.
 							 */
 							tabIndex={-1}
 							mix={[
@@ -502,17 +435,14 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								hover(bg(ROW_HOVER)),
 								readState(),
 								/**
-								 * The browser keeps the vertical axis for its own scrolling, which is what
-								 * leaves a horizontal swipe on the row to the mark at its head. A handler
-								 * deciding the axis instead is how a list of posts becomes unusable on the
-								 * device the gesture exists for.
+								 * The browser keeps the vertical axis for its own scrolling, which is what leaves
+								 * a horizontal swipe on the row to the mark at its head.
 								 */
 								touchAction("pan-y"),
 								/**
 								 * The row is carried with the finger while a swipe is in progress. How far is
-								 * whatever the finger covered, written onto the element as it moves, so what
-								 * is declared here is that it may be moved at all — and a reader who asked
-								 * for less motion gets the toggle with none of the travel.
+								 * whatever the finger covered, written onto the element as it moves, so what is
+								 * declared here is that it may be moved at all — and a reader who asked for less
 								 */
 								motionSafe(raw({ willChange: "transform" })),
 							]}
@@ -528,21 +458,15 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								/>
 
 								{/**
-								 * The title takes the line and the two quiet columns follow it, until the
-								 * line is too narrow to hold all three and they drop underneath. Where a
-								 * post carries labels they take a line of their own beneath all three, so
-								 * a row is still one line until there is a second thing to say.
+								 * The title takes the line and the two quiet columns follow it, until the line is
+								 * too narrow to hold all three and they drop underneath.
 								 */}
 								<div mix={[grow(), minIs(0)]}>
 									<div mix={[media(WIDE_ROW, [flex(), items("baseline"), gap(3)])]}>
 										{/**
-										 * What the row's own words take when they are not a link: a post whose feed
-										 * gave it no address, and the note a screen reader hears. A linked title
-										 * wears the brand pair instead, which sorts read from unread the same way.
-										 *
-										 * The weight is deliberately not one of those differences. A heavier face
-										 * is a wider one, so switching it rewrites every glyph on the line and the
-										 * title reflows under the reader's eye at the moment they mark a post.
+										 * What the row's own words take when they are not a link: a post whose feed gave
+										 * it no address, and the note a screen reader hears. A linked title wears the
+										 * brand pair instead, which sorts read from unread the same way.
 										 */}
 										<div
 											{...{ [ROW_WORDS]: "" }}
@@ -550,11 +474,8 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 												grow(),
 												minIs(0),
 												/**
-												 * The note a screen reader hears is taken out of the flow, and a
-												 * positioned box belongs to the page itself unless something nearer
-												 * claims it. Claiming it here keeps it inside the clip: its place in
-												 * the line is the far end of a summary the row never shows, which is
-												 * a page-wide sideways scroll on a phone when the page owns it.
+												 * The note a screen reader hears is taken out of the flow, and a positioned box
+												 * belongs to the page itself unless something nearer claims it.
 												 */
 												relative(),
 												truncate(),
@@ -608,11 +529,9 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 											]}
 										>
 											{/**
-											 * The way onto the post's own page, where the article behind the link is
-											 * read in place. It sits with the quiet columns rather than beside the
-											 * title, because the title is still the way out to the publisher and a
-											 * second link of the same weight beside it would be two answers to one
-											 * question.
+											 * The way onto the post's own page, where the article behind the link is read in
+											 * place. It sits with the quiet columns rather than beside the title, because the
+											 * title is still the way out to the publisher and a second link of the same weight
 											 */}
 											{entry.readHref && (
 												<a
@@ -662,10 +581,9 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 								</div>
 
 								{/**
-								 * At the end of the row, where the other mark leads it: the mark at the head
-								 * moves a post through the queue, and this one takes it out of everything that
-								 * empties the queue. Two decisions about the same post, at either end of it,
-								 * so neither is pressed while reaching for the other.
+								 * At the end of the row, where the other mark leads it: the mark at the head moves
+								 * a post through the queue, and this one takes it out of everything that empties
+								 * the queue.
 								 */}
 								{saving && (
 									<SaveToggle
@@ -687,11 +605,6 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 				 * The list is closed before whatever follows it, so the page that arrives below
 				 * opens a list of its own numbered from where this one stopped. Rows fetched into
 				 * a list already open would be nested inside it rather than beside its own.
-				 *
-				 * The link is what the frame holds rather than what sits beside it: the server
-				 * sends the link, a browser running no script keeps it, and the page it leads to
-				 * takes its place the moment it arrives — so the two never stand together and the
-				 * rows of one page meet the rows of the next with nothing between them.
 				 */}
 				{!joinsBelow &&
 					(continueSrc && cursors.next ? (
@@ -709,18 +622,7 @@ export default function Timeline(handle: Handle<Timeline.Props>) {
 
 				{/**
 				 * Where the list stops, said in words and given the room to be read as a moment
-				 * rather than as one more row. A reader scrolling reaches it the way they reach any
-				 * other row, and one listening is told the list has an end rather than being left
-				 * to keep asking.
-				 *
-				 * One panel at the foot of a list of flat rows, which is the whole of the contrast:
-				 * it stops the list rather than continuing it. Getting to the bottom of everything
-				 * you follow is worth marking, and this is the only thing saying there is nothing
-				 * further to scroll for.
-				 *
-				 * A block rather than the run of copy this used to be. Centring and vertical room
-				 * are laid out on a block and merely painted on an inline box, so the words sat in
-				 * the corner of a space they never actually took.
+				 * rather than as one more row.
 				 */}
 				{!joinsBelow && cursors.next === null && entries.length > 0 && (
 					<div

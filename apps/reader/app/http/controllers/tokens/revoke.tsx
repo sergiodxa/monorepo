@@ -1,10 +1,6 @@
 /**
  * Revocation for `DELETE /settings/tokens/:tokenId`: stamps one token as revoked, which
- * stops it answering from the next call onwards.
- *
- * It renders nothing. The row is the only place the answer is ever read from, so there is
- * nothing to invalidate and nothing to wait for — the outcome travels in the settings
- * page's own query and that page says it.
+ * stops it answering from the next call onwards. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

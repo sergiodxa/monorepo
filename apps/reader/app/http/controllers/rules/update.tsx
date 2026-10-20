@@ -2,9 +2,6 @@
  * Rule editing for `POST /rules/:ruleId`. It rewrites what a rule says and returns the
  * reader to the page listing them.
  *
- * The counters travel with the rule rather than being reset: they measure the rule, and a
- * rule whose term was corrected is the same rule the reader has been watching.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

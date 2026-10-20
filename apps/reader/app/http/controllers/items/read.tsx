@@ -41,10 +41,8 @@ const ReadForm = f.object({
 
 /**
  * Narrows a submitted destination to a path inside this app, falling back to the queue.
- *
  * The value arrives in a form field, so it carries whatever was posted: only a path
  * beginning with a single `/` stays within this origin, since `//host` and `/\host` are
- * both read by browsers as an address somewhere else.
  *
  * @param returnTo - The destination the form submitted.
  */

@@ -2,7 +2,6 @@
  * Language-resolution middleware layered over `@sdxc/i18n/middleware`. It resolves the
  * `reader:language` cookie, then `Accept-Language`, falling back to English, and
  * initializes a per-request i18next instance over the app's locale files, publishing
- * `ctx.locale` and `ctx.intl`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

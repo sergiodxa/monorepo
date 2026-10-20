@@ -1,15 +1,6 @@
 /**
  * Labelling for `POST /items/:itemId/tags`. It puts a label on one post and returns the
- * reader to the list they acted from.
- *
- * Labelling keeps the post. That is one gesture rather than two verbs with an order to get
- * wrong: a label is a reason to have kept something, and a reason without the keeping is a
- * promise this design cannot honour, since the post would sit under rules that may take it.
- * So labelling past the shelf's last place is refused for exactly the reason keeping is,
- * and nothing is written.
- *
- * The outcome travels in the `tag` query parameter of the redirect, so the list the reader
- * lands back on is where every refusal is read.
+ * reader to the list they acted from. Labelling keeps the post.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

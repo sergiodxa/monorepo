@@ -1,12 +1,7 @@
 /**
  * Appearance controller for `POST /settings/appearance`: the scheme the reader's pages are
- * painted in and the face their reading surfaces are set in.
- *
- * One fact with two writers, on one response. The reader's own object is the record, so a
- * choice made on one machine is there on the next; the cookie is what the document shell
- * reads, so the answer is an input to the first paint rather than a correction applied
- * after it. Storing and setting happen here together, which is what keeps the window
- * between them to nothing.
+ * painted in and the face their reading surfaces are set in. One fact with two writers, on
+ * one response.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

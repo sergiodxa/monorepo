@@ -1,17 +1,6 @@
 /**
  * Folder creation for `POST /folders`. It makes a named group for subscriptions and sends
- * the reader to the stream that group reads as.
- *
- * It renders nothing. The outcome travels in the `folder` query parameter of the redirect,
- * so a folder's own page is the single place that says what happened, in its own copy. The
- * parameter carries one of two values:
- *
- * - `created` — the folder is now the reader's, and they are standing in it.
- * - `duplicate` — they already had one by that name, and they are standing in that one,
- *   which is where a reader asking for a folder by name meant to end up.
- *
- * A name of nothing but space is refused by the field itself before it is sent, so the
- * store's refusal of one is the guard behind that rather than a sentence anybody reads.
+ * the reader to the stream that group reads as. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

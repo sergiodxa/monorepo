@@ -2,11 +2,6 @@
  * Unlabelling for `DELETE /items/:itemId/tags/:tagId`. It takes one label off one post and
  * returns the reader to the list they acted from.
  *
- * It deletes neither the post nor the label, and it unsaves nothing: the post keeps its
- * place on the shelf under whatever other reasons it is there for. A label a rule applied
- * is the same row as one applied by hand, so this removes either — rules run on arrival,
- * and nothing re-applies a label to a post already ruled on.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

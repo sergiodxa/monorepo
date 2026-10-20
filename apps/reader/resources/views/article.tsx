@@ -2,11 +2,6 @@
  * Prints an extracted article as elements rather than as a string of markup. The body
  * arrives sanitized, and this reads it back into a tree the renderer builds itself, so
  * what reaches the page is escaped and shaped by the same machinery every other page here
- * is drawn with.
- *
- * It is deliberately a second reading of the same markup: the allow-list decides what may
- * exist and this decides nothing, so a tag or an attribute that was never permitted has no
- * path onto the page even if it survived.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

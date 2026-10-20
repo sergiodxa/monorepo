@@ -131,10 +131,6 @@ export function limitsOf(tier: Tier): TierLimits {
  * The oldest post a tier's search may reach, as epoch milliseconds, or `null` for a tier
  * whose search reaches everything the reader has kept.
  *
- * Derived from the tier and the clock rather than stored, so a reader's window changes
- * when their tier does, in one write, with nothing to reconcile — and a cursor minted
- * before it moved still points at the same row in the same total order.
- *
  * @param tier - The tier the reader is on.
  * @param now - Epoch milliseconds the search is being run at.
  * @example let floor = searchFloor("free", Date.now());

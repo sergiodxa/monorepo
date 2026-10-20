@@ -3,9 +3,6 @@
  * subscribed to a push service hands over the subscription it was given, and this records
  * it against the reader.
  *
- * It answers JSON rather than a page: nothing links here, and the only caller is the
- * script that subscribed.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -25,7 +22,6 @@ import routes from "~/routes/web";
  * The browser's subscription and the language it reads the app in. The endpoint is what the
  * reader's object later signs and `POST`s to, so only a public `https:` host passes; the keys
  * must be what encryption imports, so a delivery never fails on material a browser could not
- * have issued.
  */
 const Registration = s.object({
 	subscription: SUBSCRIPTION_SCHEMA,

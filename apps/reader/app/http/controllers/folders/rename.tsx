@@ -1,17 +1,7 @@
 /**
  * Folder renaming for `POST /folders/:folderId`. It changes the name a group of
- * subscriptions reads under and returns the reader to that group's own page.
- *
- * It renders nothing. The outcome travels in the `folder` query parameter of the redirect,
- * so the folder's page is the single place that says what happened, in its own copy. The
- * parameter carries one of three values:
- *
- * - `renamed` — the folder now reads under the name they chose.
- * - `duplicate` — another folder of theirs already reads under it.
- * - `invalid` — the name held nothing but space.
- *
- * Renaming touches one row and moves no post: everything else holds the folder by its id,
- * which a name never was.
+ * subscriptions reads under and returns the reader to that group's own page. It renders
+ * nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

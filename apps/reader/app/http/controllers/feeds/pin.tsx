@@ -1,18 +1,7 @@
 /**
  * Pin controller for `POST /feeds/:feedId/pin`. It pins a subscription to the strip above
- * the queue, or takes the pin off, and returns the reader to the feed's own page.
- *
- * It renders nothing. The outcome travels in the `pin` query parameter of the redirect, so
- * the feed page is the single place that says what happened, in its own copy. The parameter
- * carries one of three values:
- *
- * - `pinned` — the feed's newest unread posts now sit above the queue.
- * - `unpinned` — the feed is back among the rest.
- * - `full` — as many feeds are pinned as the strip holds.
- *
- * A pin changes where a feed is drawn and nothing about what the queue holds: the strip is
- * its own bounded question and the river beneath it keeps every column and predicate it
- * had, so pinning mid-scroll cannot move a post out from under anybody.
+ * the queue, or takes the pin off, and returns the reader to the feed's own page. It
+ * renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

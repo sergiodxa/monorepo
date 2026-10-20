@@ -28,11 +28,6 @@ export default route({
 	 * Every post from every followed feed, and the app's landing spot after sign-in. The
 	 * header's controls narrow it in place: `show` picks a read state, `q` a set of words,
 	 * and the two compose, so a reader searching inside their unread posts is one URL.
-	 *
-	 * GET = the queue ("index"), POST = follows a feed ("action"). Following is posted here
-	 * rather than to the subscriptions, because a refusal is answered with this page: an
-	 * address the reader is left on has to be one they can reload, and a reload of an
-	 * address that answers no `GET` re-sends the submission that got them there.
 	 */
 	reading: form("/reading"),
 
@@ -50,10 +45,6 @@ export default route({
 	 * One post, read here rather than at the publisher: what the feed gave — title,
 	 * author, date, excerpt and the link — and underneath it the article itself, fetched
 	 * when the reader opens this and held for nobody in particular.
-	 *
-	 * It sits under the feed whose page lists it, so the address says where the post came
-	 * from as well as which post it is, and a reader who lands on it from a link has the
-	 * way back in the URL they arrived on.
 	 */
 	post: get("/reading/:feed/:item"),
 
@@ -61,7 +52,6 @@ export default route({
 	 * One folder's posts: every feed filed there, read as one stream. It lives under the
 	 * queue for the reason one feed's page does — it is that same list narrowed to a group
 	 * the reader chose — and takes a segment of its own rather than sharing the feed's, so
-	 * the two patterns never decide between each other.
 	 */
 	folder: get("/reading/folders/:folder"),
 
@@ -84,8 +74,7 @@ export default route({
 	/**
 	 * The posts a reader asked to keep, which no rule that deletes a post reaches. Its own
 	 * address rather than a narrowing of {@link reading}: keeping a post is a decision about
-	 * that post rather than a state the queue can be filtered by, and the list of them is
-	 * somewhere a reader goes back to.
+	 * that post rather than a state the queue can be filtered by, and the list of them is so
 	 */
 	saved: get("/saved"),
 
@@ -118,11 +107,6 @@ export default route({
 	 * The rules a reader writes about what a post says, and the preview of one they are
 	 * still typing. Its own address because a rule is configured once and read back later,
 	 * and because the preview is a page they arrive at with a query rather than a step in a
-	 * flow they have to redo.
-	 *
-	 * GET = the rules and whatever a candidate in the query would have caught ("index"),
-	 * POST = writes a rule ("action"). Writing posts here so a refusal is answered with the
-	 * page the reader is left standing on.
 	 */
 	rules: form("/rules"),
 
@@ -141,8 +125,7 @@ export default route({
 	/**
 	 * The queries a reader kept. Nothing here renders posts: a saved search is a link, and
 	 * the rail draws it as the queue's own address, so these are the addresses the forms
-	 * beside that list act against. A second renderer of one list is a second place for the
-	 * two to disagree.
+	 * beside that list act against.
 	 */
 	searches: {
 		create: post("/searches"),
@@ -203,9 +186,7 @@ export default route({
 		save: post("/items/:itemId/save"),
 		/**
 		 * Where the browser reports that a post's title was clicked, named by the link's
-		 * own `ping` attribute. The browser posts here itself while following the title
-		 * through to the publisher, so opening a post marks it read and the title stays an
-		 * ordinary link to the address the publisher gave.
+		 * own `ping` attribute.
 		 */
 		open: post("/items/:itemId/open"),
 	},
@@ -214,9 +195,6 @@ export default route({
 	 * The band of the sidebar that changes: the feeds a reader follows and how many posts
 	 * of each are waiting. It is its own address so the page can redraw that band alone
 	 * after marking a post read, instead of fetching the whole document to move a number.
-	 *
-	 * Nothing links here. It answers a fragment of the chrome rather than a page, which is
-	 * why it sits apart from the addresses a reader arrives at.
 	 */
 	sidebar: {
 		feeds: get("/sidebar/feeds"),
@@ -303,11 +281,6 @@ export default route({
 	 * Every remote image a reading surface shows, fetched by this app and handed on from
 	 * here, so a reader's browser talks to one origin while they read and a publisher learns
 	 * that one server asked for a picture.
-	 *
-	 * `:source` is the base64url of the image's absolute address and `:signature` the MAC
-	 * this app took over it. Both segments are required: without the signature the route is
-	 * an open proxy, and anybody could spend this app's address and egress on any URL they
-	 * liked.
 	 */
 	media: get("/media/:signature/:source"),
 
@@ -331,11 +304,6 @@ export default route({
 	 * Where a publisher's hub delivers. Nobody links here and no reader arrives here: the
 	 * `GET` answers the hub's verification and the `POST` its notification, which is the
 	 * shape a form route already describes.
-	 *
-	 * `:feedId` is the catalog's id, so a delivery reaches the right object with no lookup,
-	 * and `:token` is an unguessable value minted per feed — the id appears in
-	 * administrative URLs and in logs, and anything that can post here can make this app
-	 * fetch.
 	 */
 	websub: form("/websub/:feedId/:token"),
 });

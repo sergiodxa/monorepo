@@ -1,19 +1,7 @@
 /**
  * Velocity controller for `POST /feeds/:feedId/velocity`. It sets how long a feed's posts
- * stay in this reader's timeline and returns them to the feed's own page.
- *
- * It renders nothing. The outcome travels in the `velocity` query parameter of the
- * redirect, so the feed page is the single place that says what happened, in its own copy.
- * The parameter carries exactly one of three values:
- *
- * - `saved` — the span is now what the reader chose.
- * - `invalid` — the submission named a span this app does not offer.
- * - `missing` — the reader does not follow that feed.
- *
- * The choice may drop posts the reader has not read, which nothing else in this app does.
- * That is the point of it and why it is only ever a reader's own submission: a measured
- * publishing rate is offered beside this control as a sentence and never posted here on
- * anybody's behalf.
+ * stay in this reader's timeline and returns them to the feed's own page. It renders
+ * nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

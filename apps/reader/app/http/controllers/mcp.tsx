@@ -2,10 +2,6 @@
  * The page at `GET /mcp`, explaining what answers a `POST` to the same address: what the
  * server offers, what a token is, and what a client has to be able to do to connect.
  *
- * It answers a `GET` because a person who pastes an endpoint into a browser should find out
- * what it is rather than a method refusal — and because the limit worth stating plainly is
- * the one this page states: a client that can only speak OAuth cannot connect here.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

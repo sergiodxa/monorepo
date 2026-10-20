@@ -36,11 +36,9 @@ export const DEEPLY_DORMANT_MULTIPLIER = 24;
 export const SWEEP_INTERVAL_MS = DAY_MS;
 
 /**
- * What a check interval is multiplied by for a reader who has been away.
- *
- * A reader who has never stamped an open reads as active: the stamp arrives on the first
- * open, and an object migrated before the column existed has opens behind it that nothing
- * recorded.
+ * What a check interval is multiplied by for a reader who has been away. A reader who has
+ * never stamped an open reads as active: the stamp arrives on the first open, and an
+ * object migrated before the column existed has opens behind it that nothing recorded.
  *
  * @param lastOpenedAt - Epoch milliseconds of the last open, or `null` for none recorded.
  * @param now - Epoch milliseconds the distance is measured at.
@@ -78,8 +76,7 @@ export function checkIntervalFor(
 /**
  * Where inside an interval one reader's wakes land, so every reader on a tier does not
  * take the same second of it and hand a popular feed's single thread every subscriber at
- * once. Derived from the subject rather than stored, which is what keeps the phase the
- * same across restarts with no random number to persist and no drift to correct.
+ * once.
  *
  * @param subject - The reader the object is named for.
  * @param intervalMs - The interval the phase is taken inside.

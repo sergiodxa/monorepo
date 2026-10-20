@@ -2,14 +2,6 @@
  * Client island: the keys a reader works their queue with, the panel that tells them those
  * keys exist, and the live region that says what a key just did.
  *
- * The current post is whatever row holds focus, so nothing here caches a selection: a page
- * arriving above the rows, one arriving below them and a row taken away are all answered by
- * asking the document again on the next keystroke. Every binding presses a control the
- * server already rendered, so no key introduces a request the app was not already making.
- *
- * It renders nothing on the server, which is what keeps a page with no script running
- * exactly as it was: the rows are reached by `Tab` and the pointer either way.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -138,9 +130,7 @@ function currentRow(): HTMLElement | null {
 
 /**
  * The row a reader is looking at, for a keystroke pressed with nothing focused — a page
- * just opened, or a row taken out from under them. Moving down takes the first row whose
- * top edge has reached the viewport, and moving up the last row that ends inside it, so
- * the first press selects what is already on screen rather than walking back to row one.
+ * just opened, or a row taken out from under them.
  *
  * @param direction - Which way the keystroke was moving.
  * @returns The row to select, or `null` on a page holding none.
@@ -160,12 +150,7 @@ function rowInView(direction: 1 | -1): HTMLElement | null {
 /**
  * Focuses the row one step from the current one, and the row already on screen when there
  * is no current one. Focusing scrolls the row into view, which is the crossing the frames
- * below and above the rows are already watching for, so the keyboard pages the list
- * through the same mechanism the scroll wheel does.
- *
- * At either end it leaves focus where it is: advancing when a page lands would move focus
- * some hundreds of milliseconds after the keystroke, which is the page running away from a
- * reader who is listening to it.
+ * below and above the rows are already watching for, so the keyboard pages the list throug
  *
  * @param direction - `1` for the next row, `-1` for the previous one.
  */
@@ -191,8 +176,7 @@ function moveRow(direction: 1 | -1): void {
 /**
  * Submits one of the focused row's forms, which runs the submit handler that control
  * already carries: the mark flips first, the request goes out under the header asking for
- * the outcome alone, and a refusal puts the mark back. Where the island never hydrated it
- * is a plain browser submission of the same form to the same route.
+ * the outcome alone, and a refusal puts the mark back.
  *
  * @param selector - Which of the row's forms to press.
  */
@@ -247,11 +231,9 @@ function checkFeeds(): void {
 }
 
 /**
- * Presses the control that opens the panel listing every binding.
- *
- * The button rather than the panel: the button carries the invoker the platform opens the
- * dialog with, so the key and the pointer go through one control, and the browser's own
- * focus restoration hands the reader back the row they were on when the panel closes.
+ * Presses the control that opens the panel listing every binding. The button rather than
+ * the panel: the button carries the invoker the platform opens the dialog with, so the
+ * key and the pointer go through one control, and the browser's own focus restoration
  */
 export function pressShortcutsButton(): void {
 	document.querySelector<HTMLButtonElement>(`button[commandfor="${SHORTCUTS_PANEL_ID}"]`)?.click();
@@ -261,9 +243,6 @@ export function pressShortcutsButton(): void {
  * The binding each key names. Every one of them presses a control the document already
  * holds, so nothing here resolves a frame by name or navigates: a typo or a race in a
  * frame's name would otherwise reach for the whole page.
- *
- * A bare letter is the character typed, so `J` is Shift and `j` together, and `?` is
- * whatever the reader's layout types it with.
  *
  * @param targets - What the bindings reach for beyond the document.
  * @returns Each key mapped to what pressing it does.
@@ -299,8 +278,6 @@ export function watchKeys(targets: Shortcuts.Targets, signal: AbortSignal): void
  * Says a row's mark out loud as it changes. Marking read and keeping a post both rewrite
  * the name of a control the reader is not focused on — focus is on the row — and a name
  * that changes under nobody reaches nobody, so the new name is read into the live region
- * instead. The optimistic flip, the rollback and the refusal all arrive here, because each
- * of them is the control saying what it now carries.
  *
  * @param announce - Says one line in the live region.
  * @param signal - Stops watching when the island goes.

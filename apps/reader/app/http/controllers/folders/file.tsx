@@ -1,19 +1,7 @@
 /**
  * Filing for `POST /feeds/:feedId/folder`. It puts one subscription into a folder, or
- * takes it out of the one it is in, and returns the reader to that feed's own page.
- *
- * It renders nothing. The outcome travels in the `folder` query parameter of the redirect,
- * so the feed page is the single place that says what happened, in its own copy. The
- * parameter carries one of five values:
- *
- * - `filed` — the feed and its posts are now in the folder.
- * - `unfiled` — the feed is back among the ones filed nowhere.
- * - `gone` — the folder named is not one this reader has.
- * - `invalid` — a new folder was asked for under a name of nothing but space.
- * - `missing` — the reader does not follow that feed.
- *
- * A name creates the folder when the reader has none by it, which is where most folders
- * come from: filing a feed is the moment somebody decides a group exists.
+ * takes it out of the one it is in, and returns the reader to that feed's own page. It
+ * renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

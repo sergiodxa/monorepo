@@ -2,11 +2,6 @@
  * The one-off over a previewed page, for `POST /rules/previewed`. It applies a candidate's
  * action to the posts that candidate matched among the reader's newest ones.
  *
- * This is what a reader has instead of a rule that reaches backwards: it is bounded by the
- * page they just looked at, it runs once, and it acts on posts they saw rather than on
- * everything a term might reach. Writing the rule itself is a separate submission, so
- * clearing a bad week and filtering the next one are two decisions.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

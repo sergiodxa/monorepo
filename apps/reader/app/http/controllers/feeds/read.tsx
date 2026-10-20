@@ -1,12 +1,7 @@
 /**
  * Mark-feed-read controller for `POST /feeds/:feedId/read`. It takes one feed's unread
  * posts out of the queue, for a reader who has seen enough of that publisher for now, and
- * returns them to the feed's own page.
- *
- * It renders nothing. The outcome travels in the `marked` query parameter of the redirect,
- * so the feed page is the single place that says what happened, in its own copy. The
- * parameter carries a decimal count of the posts the store marked read, which is `0` when
- * the feed had nothing unread left — enough for the page to tell those two apart.
+ * returns them to the feed's own page. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

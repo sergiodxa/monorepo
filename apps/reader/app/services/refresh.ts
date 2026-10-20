@@ -3,10 +3,6 @@
  * items. It takes a `Database` rather than a Durable Object, so the whole thing runs in a
  * plain test against SQLite with no object around it.
  *
- * Nothing here is scoped by a feed id, because the database it writes to holds one feed.
- * A reader's copy of a post is made later, by that reader's own object, from what this
- * stored.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -53,23 +49,16 @@ const feedBackoff = createBackoff({ base: BASE_BACKOFF_MS, max: MAX_BACKOFF_MS }
 const MAX_BOUND_PARAMETERS = 100;
 
 /**
- * Stored entries the classification prefetches, newest decided first.
- *
- * A cache hit rate rather than a correctness boundary: `UNIQUE (guid)` is what guarantees
- * an entry is stored once, and anything this window did not answer for gets an exact point
- * lookup on that index. Bounding it is what keeps a poll's cost a function of the document
- * the publisher served rather than of everything the feed has ever published.
+ * Stored entries the classification prefetches, newest decided first. A cache hit rate
+ * rather than a correctness boundary: `UNIQUE (guid)` is what guarantees an entry is
+ * stored once, and anything this window did not answer for gets an exact point lookup on
  */
 export const DIGEST_PREFETCH = 1000;
 
 /**
- * The longest line a stored post keeps under its title.
- *
- * It is what a row actually renders: the timeline draws the summary on the title's own
- * line and clips it, so storing a chapter to display a sentence makes the cost of a row
- * unpredictable for no reader-visible gain. Every summary is cut to this, whether the
- * publisher wrote one or it was drawn out of the body, so both kinds read the same and a
- * row's size is something this object can reason about.
+ * The longest line a stored post keeps under its title. It is what a row actually
+ * renders: the timeline draws the summary on the title's own line and clips it, so
+ * storing a chapter to display a sentence makes the cost of a row unpredictable for no
  */
 export const MAX_SUMMARY_LENGTH = 280;
 
@@ -87,7 +76,6 @@ const RATE_WINDOW_DAYS = 30;
  * The status behind a failed retrieval. `Feed.fetch` reports an error status and an
  * unreachable origin through one error type and carries the number only in the message,
  * so reading it back here is what fills `last_http_status` — and lets a view say a feed
- * 404s by reading a column instead of prose.
  */
 const HTTP_STATUS_MESSAGE = /^Failed to fetch feed: (\d{3})$/;
 
@@ -157,9 +145,6 @@ interface Classification {
  * Retrieves the feed and writes what changed: new items inserted, edited ones updated,
  * and the feed's own validators and failure state stamped either way.
  *
- * A poll where nothing changed performs no writes beyond the feed's own timestamps, and
- * reports a head unchanged from the one it started with, so its caller publishes nothing.
- *
  * @param db - The feed's database.
  * @param options - The clock this run reads, and an optional per-fetch deadline.
  * @returns What the poll did, as a value; it resolves however badly the fetch went.
@@ -215,8 +200,7 @@ export async function pollFeed(
 		/**
 		 * The head moves by one tick per thing decided, and each tick is used exactly once:
 		 * an insert takes one and writes it to both `sequence` and `revision`, an edit takes
-		 * one and writes it to `revision` alone. So `sequence` stays a pure record of
-		 * discovery and `revision` is a gap-free order over what a subscriber has not seen.
+		 * one and writes it to `revision` alone.
 		 */
 		let head = feed.head + inserts.length + edits.length;
 
@@ -256,17 +240,8 @@ export async function pollFeed(
 }
 
 /**
- * Drops the oldest items beyond `keep`, and reports how many went.
- *
- * Pruning runs on `revision` rather than on a date. It is the order this object decided
- * things in, it is exactly the order cursors move through, and the rows at the bottom of
- * it are by construction the ones furthest behind every subscriber. A publication date
- * would not be: a publisher posting an entry dated four years ago has published something
- * new, and pruning on that date would delete it before a single reader synchronized it.
- *
- * Deleting the oldest cannot strand a cursor. Cursors only move forward, a reader whose
- * cursor is below everything left simply receives what remains, and the head counter is
- * untouched by a delete — which is why a sweep publishes nothing.
+ * Drops the oldest items beyond `keep`, and reports how many went. Pruning runs on
+ * `revision` rather than on a date.
  *
  * @param db - The feed's database.
  * @param keep - How many items to leave in place.
@@ -277,7 +252,6 @@ export async function pruneItems(db: Database, keep: number, head: number): Prom
 	 * The counter takes a tick per insert and per edit, so it is never below the number of
 	 * items ever written: one integer comparison proves the table is under the ceiling and
 	 * skips an offset probe that would otherwise step through the whole index to delete
-	 * nothing, on every successful poll of every feed.
 	 */
 	if (keep > 0 && head <= keep) return 0;
 
@@ -316,15 +290,9 @@ export async function pruneItems(db: Database, keep: number, head: number): Prom
 }
 
 /**
- * What the feed is publishing, in posts per day over the last month.
- *
- * Measured rather than guessed, and measured here because this object already holds every
- * item with the date it carries: the figure is taken once for a feed and shared by
- * everyone following it, the same way the fetch and the parse are.
- *
- * Taken on every poll, whatever the origin answered: a feed that stopped publishing
- * answers `304` forever, and it is that feed whose rate has to keep falling until the
- * window slides off its last entry and the schedule can call it dormant.
+ * What the feed is publishing, in posts per day over the last month. Measured rather than
+ * guessed, and measured here because this object already holds every item with the date
+ * it carries: the figure is taken once for a feed and shared by everyone following it, th
  *
  * @param db - The feed's database.
  * @param now - Epoch milliseconds the window is measured back from.
@@ -340,9 +308,7 @@ export async function measurePostsPerDay(db: Database, now: number): Promise<num
 
 /**
  * The hub this response advertises, looked for on every poll because a publisher adds one
- * and drops one and the answer held has to be the one their current document gives. The
- * topic is the `rel=self` declared in the same place as the hub, so a header-advertised hub
- * is subscribed under the header's topic.
+ * and drops one and the answer held has to be the one their current document gives.
  *
  * @param retrieved - The response and the document it carried.
  * @param feedUrl - The canonical URL this feed is fetched from.
@@ -443,11 +409,9 @@ async function storedDigests(db: Database): Promise<Map<string, string>> {
 }
 
 /**
- * The digest of one stored entry, for a guid the prefetch window did not answer for.
- *
- * One seek on `UNIQUE (guid)`, and at most as many of them as the document carries
- * entries, which is what keeps an old entry re-served by a publisher recognized as stored
- * rather than inserted a second time.
+ * The digest of one stored entry, for a guid the prefetch window did not answer for. One
+ * seek on `UNIQUE (guid)`, and at most as many of them as the document carries entries,
+ * which is what keeps an old entry re-served by a publisher recognized as stored rather
  */
 async function storedDigestOf(db: Database, guid: string): Promise<string | undefined> {
 	let [stored] = await db.query(items).select("content_hash").where({ guid }).limit(1).all();
@@ -455,11 +419,9 @@ async function storedDigestOf(db: Database, guid: string): Promise<string | unde
 }
 
 /**
- * Writes new items, skipping any guid the table already holds.
- *
- * `UNIQUE (guid)` is what guarantees an entry is stored once, and deferring to it rather
- * than failing on it is what makes two polls of one object interleaving safe: the loser of
- * the race writes nothing instead of aborting a chunk of rows that were all new.
+ * Writes new items, skipping any guid the table already holds. `UNIQUE (guid)` is what
+ * guarantees an entry is stored once, and deferring to it rather than failing on it is
+ * what makes two polls of one object interleaving safe: the loser of the race writes
  */
 async function insertItems(db: Database, rows: readonly InsertItem[]): Promise<void> {
 	if (rows.length === 0) return;
@@ -485,10 +447,6 @@ async function insertItems(db: Database, rows: readonly InsertItem[]): Promise<v
 /**
  * Sorts every parsed entry against what is stored, without writing anything, handing each
  * decision the next tick of the head counter.
- *
- * An entry the prefetch window did not answer for is looked up by its guid before it is
- * called new, so a publisher re-serving something older than the window finds it stored
- * rather than inserted a second time.
  */
 async function classify(
 	db: Database,
@@ -532,7 +490,6 @@ async function classify(
 		 * `sequence`, `id` and `published_at` are absent by construction: an edit is the same
 		 * entry saying something new, so it keeps the place it was discovered at, the key
 		 * every subscriber's copy is joined by, and the date their timeline sorts it under.
-		 * A fresh `revision` is what puts it back in front of each of them exactly once.
 		 */
 		edits.push({
 			guid: entry.guid,
@@ -569,11 +526,8 @@ const MEDIA_TYPES = ["audio/", "video/"];
 
 /**
  * The one attachment worth a play button: the first whose type begins with `audio/` or
- * `video/`, and `undefined` for an entry attaching none.
- *
- * At most one, because a podcast item has one episode. The feeds attaching fifteen files
- * are attaching images, and keeping a list of them is a second table and a join on the read
- * path for a feature whose whole value is that button.
+ * `video/`, and `undefined` for an entry attaching none. At most one, because a podcast
+ * item has one episode.
  *
  * @param entry - One entry of a parsed feed document.
  */
@@ -587,8 +541,6 @@ function mediaEnclosureOf(entry: Feed.Item): Feed.Enclosure | undefined {
  * The line a post is stored with. Most RSS publishes a bare `<description>`, which a feed
  * reports as the body with no summary beside it, so the visible text of that body is what
  * gives those posts a line to read under their title.
- *
- * Both kinds are cut to the same length, so what is stored is what is shown either way.
  */
 function summaryOf(entry: Feed.Item): string | null {
 	if (entry.summary !== undefined) return shortened(entry.summary);
@@ -633,10 +585,6 @@ export function publishedAt(entry: Feed.Item, now: number): number {
  * holds. Take it over a {@link displayableOf} projection on every path that writes an item,
  * so the first poll after a subscription reads every item it already stored as unchanged.
  *
- * The four text fields are what it reads. The attachment rides along with whatever edit
- * those produce, which is what keeps a feed that only re-states its media URLs from
- * re-issuing a revision to every subscriber on every poll.
- *
  * @param displayable - The fields the row will hold, as {@link displayableOf} resolved them.
  */
 export async function digest(displayable: Displayable): Promise<string> {
@@ -653,10 +601,9 @@ export async function digest(displayable: Displayable): Promise<string> {
 }
 
 /**
- * Rows one insert statement fits, derived from the schema so it follows a new column.
- * Call it from any path inserting items: a Durable Object statement binds at most
- * {@link MAX_BOUND_PARAMETERS} parameters, and a batch sized by hand stops being right the
- * day a column is added.
+ * Rows one insert statement fits, derived from the schema so it follows a new column. Call
+ * it from any path inserting items: a Durable Object statement binds at most {@link
+ * MAX_BOUND_PARAMETERS} parameters, and a batch sized by hand stops being right the day a
  */
 export function insertChunkSize(): number {
 	let columns = Object.keys(getTableColumns(items)).length;

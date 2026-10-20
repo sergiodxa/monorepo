@@ -2,11 +2,6 @@
  * Assembles the reader's MCP server: binds every declared tool and resource to its handler
  * and exposes one `fetch` for the router to mount.
  *
- * The same split the router uses — `app/mcp/tools/index.ts` and `app/mcp/resources/index.ts`
- * declare what exists, one file per tool and resource implements it and loads on first use,
- * and the wiring lives here. Every answer belongs to exactly one reader, and the writing
- * tools declare `available`, so the lists stay `"private"` to the caller they were built for.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -20,11 +15,9 @@ import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
 
 /**
- * How long a client may cache the tool, resource and template lists.
- *
- * A minute, because both lists vary by credential — a read token lists no writing tool, and
- * the feed enumeration is one reader's own subscriptions — so what is being cached is this
- * caller's view of them and nothing else's.
+ * How long a client may cache the tool, resource and template lists. A minute, because both
+ * lists vary by credential — a read token lists no writing tool, and the feed enumeration
+ * is one reader's own subscriptions — so what is being cached is this caller's view of them
  */
 const LIST_TTL_MS = 60_000;
 

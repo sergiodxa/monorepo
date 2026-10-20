@@ -32,7 +32,6 @@ const FEATURE_COLUMNS = "repeat(auto-fit, minmax(16rem, 1fr))";
  * GET / — the landing page for a visitor, or a redirect to the queue for a signed-in
  * reader. The sign-in form is a `POST` because starting the flow writes the login
  * transaction into the session, and it stays a document navigation because the provider
- * answers with a cross-origin redirect no frame can follow.
  */
 export default createAction(routes.home, (ctx) => {
 	if (isAuthenticated()) {

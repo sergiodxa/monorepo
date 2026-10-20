@@ -2,12 +2,6 @@
  * The whole of a rule's matching language: one field, one piece of text, and a
  * case-insensitive substring test with nothing else in it.
  *
- * It is a plain `includes` over normalized text because it runs inside the reader's own
- * single-threaded object on the path that also serves their timeline, and no input to
- * `includes` takes more than linear time — so a pattern a reader wrote, was handed, or
- * pasted from somewhere can never wedge the object evaluating it. Nothing here reaches a
- * database or a clock.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -1,17 +1,7 @@
 /**
  * Settings controller for `GET /settings`: what the account does on the reader's behalf,
- * and the two ways their subscription list travels.
- *
- * How often feeds are checked is said here rather than chosen here. A feed is one document
- * with one schedule however many people follow it, so there is no reader to ask, and a
- * setting whose only effect is to fetch a publisher's document more often spends somebody
- * else's bandwidth for an answer the reader cannot see. Every feed is checked once a day,
- * and the check a reader can ask for on a feed's own page is what they have when they want
- * one sooner.
- *
- * Carrying subscriptions in and out belongs to the account rather than to any one view of
- * the list, so both transfers live here, and an import returns to this page with what
- * became of the document it was handed.
+ * and the two ways their subscription list travels. How often feeds are checked is said
+ * here rather than chosen here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,10 +80,6 @@ function importedCount(params: URLSearchParams, name: string): number {
  * The copy and tone for the outcome an import redirect carries, or `null` for an ordinary
  * view of the page and for a value this page has no sentence for.
  *
- * A document that was read and handed to the store succeeded, so it reads as a success
- * whatever the store then made of it: an import of fifty feeds that followed forty-seven
- * leads with the forty-seven and reports the three alongside.
- *
  * @param ctx - The request's dictionary and the query it arrived with.
  */
 function importNote(
@@ -164,15 +150,11 @@ const FACE_ID = "settings-face";
 
 /**
  * How the reader's pages are painted, and the face the words they came here to read are
- * set in.
- *
- * A real form that posts and reloads, so a browser running no script changes both. Where
- * script runs, it is still a form: the answer is stored and the cookie is set on the same
- * response, and the page comes back painted in what was picked.
+ * set in. A real form that posts and reloads, so a browser running no script changes
+ * both.
  *
  * @param ctx - The request being answered, whose query says whether a submission landed.
- * @param current - What is stored for this reader, or what the cookie says before a
- * sign-in has written a row.
+ * @param current - What is stored for this reader, or what the cookie says before a sign-in has written a row.
  */
 function appearanceSection(ctx: AppContext, current: Presentation) {
 	let saved = ctx.url.searchParams.get(APPEARANCE_PARAM) === "saved";
@@ -492,8 +474,7 @@ function notificationsSection(ctx: AppContext, notifications: UserStore.Notifica
 /**
  * Renders the page.
  *
- * @param ctx - The request being answered, whose query says what an import made of the
- * document it was handed.
+ * @param ctx - The request being answered, whose query says what an import made of the document it was handed.
  * @param settings - The reader's stored preferences, or `null` before a sign-in wrote them.
  * @param entitlement - What their plan allows, and where they stand against it.
  * @param notifications - How they are reached, when they are left alone, and on what.
@@ -512,7 +493,6 @@ async function settingsPage(
 	 * The row wins. This page and the sign-in callback are the two places both are read, so
 	 * this is where a cookie that has drifted — cleared, or written before a choice made on
 	 * another machine — is put back to what is stored, on a response that would otherwise
-	 * set none.
 	 */
 	let current = settings?.presentation ?? ctx.presentation;
 
@@ -551,9 +531,6 @@ async function settingsPage(
 			 * What the app does on the reader's behalf, said in the place they would have come
 			 * looking for a switch. The sentence points at the check they can ask for on a feed's
 			 * own page, which is the whole of what is left to act on here.
-			 *
-			 * It keeps the measure a sentence is read in rather than running the width of a
-			 * window, which is the width every other passage on this page takes.
 			 */}
 			<section mix={[vstack({ gap: 1 }), maxIs(PAGE_COLUMN)]}>
 				{/** Level 2, since the layout's own page heading is the document's only `h1`. */}
@@ -715,9 +692,7 @@ async function settingsPage(
 
 			{/**
 			 * Taking the subscription list out and bringing another one in are the same errand read
-			 * in two directions, so they share a section. A hairline is what says the passage above
-			 * has ended, which is the boundary the rest of the app draws between one thing and the
-			 * next.
+			 * in two directions, so they share a section.
 			 */}
 			<section
 				mix={[
@@ -760,9 +735,6 @@ async function settingsPage(
 				 * `multipart/form-data` is the encoding that carries a file's bytes along with the
 				 * field naming it; url-encoding sends the name the reader picked it under and leaves
 				 * the document itself on their disk.
-				 *
-				 * The picker stays optional so an empty submit reaches the import, which answers it
-				 * with the sentence asking for a file.
 				 */}
 				<form
 					method="post"
@@ -783,10 +755,9 @@ async function settingsPage(
 						 * has room for one control at a time. */}
 						<div mix={[flex(), items("center"), flexWrap("wrap"), gap(2), maxIs("100%")]}>
 							{/**
-							 * A native file input rather than a styled trigger. The trigger hides the
-							 * input behind a button-like label, so nothing on the page says which file was
-							 * chosen — and without script there is nothing to say it with. The platform's
-							 * own control names the file it holds.
+							 * A native file input rather than a styled trigger. The trigger hides the input
+							 * behind a button-like label, so nothing on the page says which file was chosen —
+							 * and without script there is nothing to say it with.
 							 */}
 							<input
 								id={IMPORT_FILE_ID}
@@ -800,12 +771,8 @@ async function settingsPage(
 									fg("neutral.muted"),
 									cursor("pointer"),
 									/**
-									 * The platform draws this control, and only its button half can be
-									 * restyled — which is the half worth restyling. Dressed in the box the
-									 * outline buttons on this page wear, down to the leading that decides
-									 * their height, it stands level with the submit beside it and the pair
-									 * reads as one control; the filename the browser writes sits between
-									 * them, which is the whole reason for using the real input.
+									 * The platform draws this control, and only its button half can be restyled —
+									 * which is the half worth restyling.
 									 */
 									when("&::file-selector-button", [
 										mie(3),
