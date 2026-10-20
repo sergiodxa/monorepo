@@ -1,8 +1,7 @@
 /**
  * Sales page view: hero, what's inside, the free-sample offer, the testimonial, both
  * packages with their live prices, the upgrade call-out, the author bio, and the FAQ, each
- * section separated by a rule. This is the page that converts, so its section ids are part
- * of its contract — links published elsewhere point at them.
+ * section separated by a rule.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

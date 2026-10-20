@@ -1,8 +1,7 @@
 /**
- * The books fetch-router: the global middleware stack (async context, request logging and
- * tracing, campaign attribution, form data, cross-origin protection, billing, newsletter,
- * document assets, HTML rendering) and every route mapped onto its controller. The worker builds it per
- * request and the router tests build the same one over an in-memory platform and list.
+ * The books fetch-router: the global middleware stack (async context, request logging and tracing,
+ * campaign attribution, form data, cross-origin protection, billing, newsletter, document assets, HTML
+ * rendering) and every route mapped onto its controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,10 +49,8 @@ declare module "remix/router" {
  * reads like its `GET` to later steps. Each route is mapped individually through `lazy()`,
  * since `router.map` throws on a nested route group, so a request imports only its controller.
  *
- * @param provider - The platform every route bills against, published as
- * `context.billing`; a test supplies an in-memory one.
- * @param list - The newsletter every form subscribes to, published as
- * `context.newsletter`; a test supplies an in-memory one.
+ * @param provider - The platform every route bills against, published as `context.billing`; a test supplies an in-memory one.
+ * @param list - The newsletter every form subscribes to, published as `context.newsletter`; a test supplies an in-memory one.
  * @returns The configured router the worker forwards requests to.
  */
 export function createWebRouter(provider: Billing = polar, list: Newsletter = buttondown) {

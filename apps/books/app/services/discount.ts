@@ -1,8 +1,7 @@
 /**
  * Discount selection use case. Reads the organization's campaigns and decides
  * which — if any — currently applies to the Complete package, filtering by
- * campaign allow-list, date window, redemption limit, and product scope. It
- * decides what a customer is charged, so the rules are exhaustive and tested.
+ * campaign allow-list, date window, redemption limit, and product scope.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,8 +55,7 @@ export function selectDiscount(discounts: readonly Discount[]): Discount | undef
  * failing the sale, so the pricing page and the checkout both stay live.
  *
  * @param billing - The platform to read campaigns from.
- * @returns `success` with the applicable campaign, or `undefined` when none
- * applies; `failure` only when the campaigns could not be read.
+ * @returns `success` with the applicable campaign, or `undefined` when none applies; `failure` only when the campaigns could not be read.
  */
 export async function findApplicableDiscount(
 	billing: Billing,

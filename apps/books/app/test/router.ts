@@ -1,8 +1,7 @@
 /**
- * Drives the real web router — the same middleware chain and controllers
- * the worker builds — end to end. A test supplies the platform every route bills
- * against and the newsletter every form subscribes to directly, because MSW's interceptors leave the router's form-data
- * middleware reading an empty body, failing every POST before validation.
+ * Drives the real web router — the same middleware chain and controllers the worker builds — end to end. A test
+ * supplies the platform every route bills against and the newsletter every form subscribes to directly, because MSW's
+ * interceptors leave the router's form-data middleware reading an empty body, failing every POST before validation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,10 +32,7 @@ export interface FetchAppOptions extends RequestInit {
  * Fetches a URL through the real router.
  *
  * @param path - A path or absolute URL to request.
- * @param options - Request init, plus `billing` to bill this request against and
- * `newsletter` to subscribe it to. A
- * non-GET request gets `origin` set to {@link ORIGIN} by default, since
- * cross-origin protection is part of the chain under test.
+ * @param options - Request init, plus `billing` to bill this request against and `newsletter` to subscribe it to. A non-GET request gets `origin` set to {@link ORIGIN} by default, since cross-origin protection is part of the chain under test.
  * @returns The router's response.
  * @example await fetchApp("/release", { billing: new MemoryBilling({ catalog }) })
  */

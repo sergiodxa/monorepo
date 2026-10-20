@@ -1,8 +1,7 @@
 /**
  * Root HTML document layout. Renders the html/head/body shell: the fixed head tags, the
  * page's SEO metadata and structured data, every stylesheet the site ships (imported below
- * in cascade order), and the analytics beacon. Every page is composed into it, so a page
- * decides only its own content and head values, never how the document is assembled.
+ * in cascade order), and the analytics beacon.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

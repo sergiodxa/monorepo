@@ -1,8 +1,6 @@
 /**
- * Billing webhook controller. On a paid order it tags the buyer's newsletter
- * profile with the tier they bought, so the newsletter can segment on it. Verification,
- * deduplication and dispatch belong to the endpoint; what is left here is the
- * one thing a paid order means to this funnel.
+ * Billing webhook controller. On a paid order it tags the buyer's newsletter profile
+ * with the tier they bought, so the newsletter can segment on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -48,9 +46,8 @@ async function buyerEmail(context: RequestContext, customerId: string | null) {
 
 /**
  * What this funnel does about each delivery it is sent. Tagging reaches only a
- * buyer the newsletter already holds, so every tagged address opted in itself;
- * any other buyer's purchase is recorded in the log alone. A newsletter failure
- * is thrown, so the endpoint answers `503` and the platform redelivers.
+ * buyer the newsletter already holds, so every tagged address opted in itself; any
+ * other buyer's purchase is recorded in the log alone.
  */
 export const handlers: BillingWebhookHandlers = {
 	/**

@@ -1,9 +1,7 @@
 /**
- * Release controller — the sales page. Reads both packages' live prices and
- * the applicable launch discount in parallel, formats them as currency, and
- * decides whether the purchasing-power-parity banner loads. This is the page
- * that converts: a failed campaign lookup degrades to list prices and keeps the
- * page live.
+ * Release controller — the sales page. Reads both packages' live prices and the
+ * applicable launch discount in parallel, formats them as currency, and decides
+ * whether the purchasing-power-parity banner loads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
