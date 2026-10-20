@@ -2,7 +2,6 @@
  * Static configuration for the OAuth 2.0 / OpenID Connect authorization server.
  * Declares the identity the server presents to relying parties — its own client
  * registration, the issuer, token lifetimes, supported scopes — and builds the public
- * discovery document every client reads to learn the endpoints and capabilities.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

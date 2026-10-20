@@ -1,8 +1,6 @@
 /**
  * Mirrors subjects into billing customers so billing elsewhere can resolve a
- * person by the id this server issues. Creates a customer already carrying the
- * subject id as its external id, and reuses whichever customer the platform
- * already holds for the address, which it treats as authoritative once linked.
+ * person by the id this server issues.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,9 +34,7 @@ export default class Customer {
 
 	/**
 	 * Resolves the billing customer for a subject at sign-up: reuses the customer already
-	 * registered under the subject's address, and otherwise creates one. A customer that
-	 * exists is returned as the platform holds it, external id and all, since an external
-	 * id is immutable once set and reassigning one would move somebody else's billing.
+	 * registered under the subject's address, and otherwise creates one.
 	 */
 	static async findOrCreateByEmail(
 		billing: Billing,

@@ -14,11 +14,9 @@ import { Database } from "remix/data-table";
 let database: Database | undefined;
 
 /**
- * Opens a connection to the app's D1 database.
- *
- * `now` is overridden to epoch-ms because the timestamp columns are `c.integer()` holding
- * milliseconds since the epoch, matching the rows already in the database: D1 binds an
- * integer, and integers sort and compare correctly against every row already stored.
+ * Opens a connection to the app's D1 database. `now` is overridden to epoch-ms because
+ * the timestamp columns are `c.integer()` holding milliseconds since the epoch, matching
+ * the rows already in the database: D1 binds an integer, and integers sort and compare
  *
  * @returns A database bound to the `DB` binding, shared by everything this isolate serves.
  * @example

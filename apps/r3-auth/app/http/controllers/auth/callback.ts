@@ -1,9 +1,7 @@
 /**
  * This server's own OAuth callback: the account area is reached through the same
  * authorization flow relying parties use, so this endpoint redeems that code and
- * stores the tokens in the browser session. It is the one place this server acts as a
- * client of itself, so the `state` and the client id are checked against the parked
- * request first — a code for any other client belongs to somebody else's session.
+ * stores the tokens in the browser session.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

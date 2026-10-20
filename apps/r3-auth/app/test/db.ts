@@ -1,8 +1,6 @@
 /**
- * Test-only database helper: applies every migration in `database/migrations/` to a fresh
- * in-memory SQLite database and wraps it the way `app/initializers/database.ts` wraps the real one.
- * Models, jobs, middleware and controllers therefore run against the same SQL engine and
- * schema production uses.
+ * Test-only database helper: applies every migration in `database/migrations/` to a fresh in-memory
+ * SQLite database and wraps it the way `app/initializers/database.ts` wraps the real one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,8 +21,7 @@ import { createSqliteDatabase } from "remix/data-table/sqlite";
  * production has already applied, so a test schema cannot drift from the live one.
  *
  * @param sqliteDb - An open SQLite database.
- * @param include - Picks the files to apply by name, so a test can seed rows between two
- *   migrations the way a live database holds them when the later one runs.
+ * @param include - Picks the files to apply by name, so a test can seed rows between two migrations the way a live database holds them when the later one runs.
  */
 export function applyMigrations(
 	sqliteDb: SqliteDatabaseClient,

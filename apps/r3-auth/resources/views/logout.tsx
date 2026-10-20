@@ -1,8 +1,7 @@
 /**
  * The logout confirmation page: the interactive way out of the identity provider,
  * shown when a browser reaches `/oidc/logout` without a usable RP-initiated logout
- * request. Posting the same URL back to itself keeps sign-out a deliberate action
- * that only this page's own form can start.
+ * request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

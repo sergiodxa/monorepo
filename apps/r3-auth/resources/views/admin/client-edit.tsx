@@ -1,8 +1,6 @@
 /**
  * The client edit form, including both logout channels and their `session_required`
- * switches, plus the opt-in that rotates the secret. When a rotation happens the new
- * secret is revealed once here and nowhere else, because rotating invalidates the copy
- * the relying party is holding.
+ * switches, plus the opt-in that rotates the secret.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

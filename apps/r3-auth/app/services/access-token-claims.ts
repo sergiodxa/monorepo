@@ -1,8 +1,7 @@
 /**
  * Reads the claims of an access token this server issued into its own cookie
- * session, trusting them because the token never left the signed, httpOnly
- * session record. Client-issued tokens route through `AccessToken.verify` in
- * the engine instead, which checks the signature, issuer, and expiry.
+ * session, trusting them because the token never left the signed, httpOnly session
+ * record.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

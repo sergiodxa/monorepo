@@ -2,9 +2,6 @@
  * The authorized-apps page: one row per standing consent, with a revoke control
  * that also signs the person out of that app.
  *
- * This server's own registration renders read-only, since revoking it would end
- * the session reading this page; the revoke action refuses it server-side too.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

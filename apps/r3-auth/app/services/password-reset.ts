@@ -1,9 +1,7 @@
 /**
  * The password-recovery token store and the mail it produces: issues a single-use
  * token bound to one subject, enforces a per-address cooldown so an unauthenticated
- * endpoint cannot become a mail cannon, and spends a presented token. Kept as one
- * module because whether an address may be mailed and which subject a token belongs
- * to must stay in agreement; callers only decide what a person sees.
+ * endpoint cannot become a mail cannon, and spends a presented token.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,8 +80,7 @@ function resetUrl(token: string): string {
  * the form. Answers identically whether or not the address is registered.
  *
  * @param ctx - The request the form was posted on; its mailer and log are read from it.
- * @param email - The address in its canonical form, as `ForgotPasswordSchema` answers it,
- *   which is what the cooldown is keyed on and the subject is looked up by.
+ * @param email - The address in its canonical form, as `ForgotPasswordSchema` answers it, which is what the cooldown is keyed on and the subject is looked up by.
  */
 export async function requestPasswordReset(ctx: AppContext, email: string): Promise<void> {
 	try {
@@ -156,8 +153,7 @@ export async function requestPasswordReset(ctx: AppContext, email: string): Prom
  * can flag an expired or already-spent link before the form ever renders; only
  * submission consumes the token.
  *
- * @returns The subject id, or `null` for a token that is unknown, expired, spent or
- *   stored in a shape this server no longer writes.
+ * @returns The subject id, or `null` for a token that is unknown, expired, spent or stored in a shape this server no longer writes.
  */
 export async function peekPasswordResetToken(token: string): Promise<string | null> {
 	let tokenDigest = await digest(token);

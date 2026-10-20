@@ -1,9 +1,7 @@
 /**
  * Test-only harness for driving the whole app over HTTP: in-memory Cloudflare bindings, a
- * migrated database, the services production runs on handed to the real router,
- * and a cookie-keeping client that exercises a multi-step flow the way a browser would. The
- * `cloudflare:workers` mock installs here, before the application import, so every module
- * capturing `env` at load time captures these bindings.
+ * migrated database, the services production runs on handed to the real router, and a
+ * cookie-keeping client that exercises a multi-step flow the way a browser would.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -217,8 +215,7 @@ export async function withUnreadableSigningKeys<T>(
 /**
  * Builds an app instance with fresh KV and R2 bindings, kept in a local reference so it
  * keeps its own storage once a later call points the shared bindings elsewhere, and hands
- * the router its database, limiters and transport so a test drives the real
- * middleware chain against storage it can read back.
+ * the router its database, limiters and transport so a test drives the real middleware ch
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
 	let { createWebRouter, RateLimiters, createTestModels, mail, sender, jobs, emailJob } =

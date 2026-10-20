@@ -1,8 +1,6 @@
 /**
  * `/account/profile/edit` — the form that changes a subject's display name, username and
- * avatar, and the update it posts. The email address stays fixed: it is the claim every
- * relying party keys on, so changing it here would silently re-point accounts in other
- * apps.
+ * avatar, and the update it posts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,8 +59,7 @@ function fieldError(issues: ValidationError["issues"], field: string): string | 
 /**
  * Renders the edit form.
  *
- * @param values - What the fields start with: the stored row, or what was just submitted
- *   and refused, so a rejected save keeps the typing.
+ * @param values - What the fields start with: the stored row, or what was just submitted and refused, so a rejected save keeps the typing.
  * @param issues - Per-field validator messages, empty on a first render.
  * @param error - A failure no single field owns, such as a username already taken.
  */

@@ -2,8 +2,6 @@
  * The end-session endpoint. `GET` answers an OpenID Connect RP-initiated logout: it
  * identifies the subject from an `id_token_hint` or the browser session, notifies every
  * other relying party over the back channel, deletes the subject's sessions, and either
- * renders the front-channel iframe page or sends the browser to the post-logout address.
- * `POST` is the interactive sign-out button on this server's own pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
- * The rules a password must pass before this server stores it, at registration and on
- * a reset (length, the common-password list, similarity to the account, the Have I Been
- * Pwned lookup), and the sentence each refusal shows. Sign-in runs none of them, so a
- * password stored under older rules keeps working.
+ * The rules a password must pass before this server stores it, at registration and on a
+ * reset (length, the common-password list, similarity to the account, the Have I Been
+ * Pwned lookup), and the sentence each refusal shows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * The client registration form, and the one-time reveal that follows it. A generated
  * secret is stored as the only copy the relying party will ever hold, so the success
  * state renders it once with a copy control and the page says plainly that it will not
- * be shown again — every later screen reads the client without its secret.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

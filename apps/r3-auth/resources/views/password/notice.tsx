@@ -2,7 +2,6 @@
  * A single centered card that states an outcome and offers at most one way onward. It
  * carries the three ends of the password-recovery flow — the link has been sent, the link
  * is no longer usable, the password has been changed — because they differ only in copy and
- * three near-identical pages would drift apart.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

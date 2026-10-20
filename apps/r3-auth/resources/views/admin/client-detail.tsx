@@ -1,8 +1,6 @@
 /**
  * One relying party's registration, read-only: its identity, both logout channels, how
- * many subjects have authorized it, and the two actions that change it. The secret
- * displays as withheld, since its value lives in the database as plaintext and
- * surfacing it here would let a read-only view leak it.
+ * many subjects have authorized it, and the two actions that change it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

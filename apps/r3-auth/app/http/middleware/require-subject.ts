@@ -1,8 +1,7 @@
 /**
  * Route guard for the signed-in area. Requires both tokens in the session, refreshes
  * the access token through the OIDC engine when it is close to expiring, resolves the
- * subject it names, and publishes it as `ctx.subject`. Any failure clears both tokens
- * and sends the visitor back to `/authorize`, closing out the session cleanly.
+ * subject it names, and publishes it as `ctx.subject`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

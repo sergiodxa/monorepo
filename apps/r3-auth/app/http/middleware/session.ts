@@ -1,8 +1,7 @@
 /**
  * The identity provider's own browser session: a signed, httpOnly cookie naming a
  * record in KV that holds the tokens this server issued to itself and the
- * authorization request currently in flight. Also the typed accessors every handler
- * reads and writes that state through, so the key names live in one module.
+ * authorization request currently in flight.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

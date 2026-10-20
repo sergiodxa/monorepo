@@ -1,11 +1,7 @@
 /**
  * The shell every admin page renders inside: a centered column holding the section
  * toolbar, a sticky page header carrying the breadcrumb trail, the heading and the
- * page's own actions, and then the page body. Keeping it in one place is what makes the
- * admin area read as one screen with a changing middle rather than eight pages.
- *
- * Navigation is plain links whose current state is the `aria-current` attribute the
- * server sets, so nothing here needs a line of script to know where it is.
+ * page's own actions, and then the page body.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

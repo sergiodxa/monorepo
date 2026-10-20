@@ -1,8 +1,6 @@
 /**
  * GET/POST /admin/subjects/:subjectId/edit — updates an account's profile, its role, and
- * whether its address counts as verified. The email address stays fixed: a provider
- * identity is matched against it on first sign-in, so it decides who the account
- * belongs to.
+ * whether its address counts as verified.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,7 @@
 /**
  * The form that asks for the address a recovery link should go to. One field,
  * posted back to the URL that rendered it and re-rendered server-side on a
- * malformed address, so a plain form submit is enough. It promises only that a
- * link goes to a registered address, and the page after submitting reads
- * identically whether or not the typed address is registered.
+ * malformed address, so a plain form submit is enough.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

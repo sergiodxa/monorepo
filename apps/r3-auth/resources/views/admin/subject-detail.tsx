@@ -1,8 +1,6 @@
 /**
  * One account, with everything that can sign in as it: the profile, the live sessions
- * (each revocable, plus a revoke-all), and the linked provider identities. Revoking a
- * session invalidates the refresh token it is named by, so each control names one
- * session by an opaque id that is never rendered as text.
+ * (each revocable, plus a revoke-all), and the linked provider identities.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -3,10 +3,6 @@
  * that registered a front-channel logout URI, given a moment to load before the browser
  * moves on to the post-logout destination.
  *
- * The follow-up navigation runs through a `<meta http-equiv="refresh">` tag, keeping
- * the page pure markup end to end. The `<noscript>` link stands by as the manual way
- * out for anything that ignores the refresh.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

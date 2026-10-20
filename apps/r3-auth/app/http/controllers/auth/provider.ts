@@ -2,7 +2,6 @@
  * Starting an external sign-in. A `POST` from the sign-in page's provider button parks
  * the OAuth transaction in this server's session and redirects to the provider; an
  * unknown provider is sent back to the authorization endpoint, since the only way to
- * reach it is a stale or hand-written form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * Schema for the RP-initiated logout query string. Every parameter OpenID Connect
  * RP-Initiated Logout 1.0 defines is optional, so this schema only shapes what
  * arrives; deciding which combinations are usable belongs to the controller and
- * the engine, which can turn any of them into a redirect.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

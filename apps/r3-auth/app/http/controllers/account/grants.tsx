@@ -1,8 +1,7 @@
 /**
  * `/account/grants` — the apps a subject has authorized, and the withdrawal of one. A
  * withdrawal removes the consent and the sessions it produced, so the person is signed
- * out of that app and must consent again to return. Every withdrawal is scoped to the
- * subject the guard resolved, so a forged client id reaches only their own rows.
+ * out of that app and must consent again to return.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

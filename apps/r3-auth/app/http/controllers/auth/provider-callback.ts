@@ -1,9 +1,7 @@
 /**
  * The external sign-in callback. Resolves the provider identity to a subject, issues
  * the authorization code for the request parked in the session, and answers the
- * relying party in the response mode it asked for. Anything that goes wrong after the
- * authorization request is known reaches the relying party as an OAuth error at its
- * own redirect URI, keeping the person's browser inside the flow they started.
+ * relying party in the response mode it asked for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

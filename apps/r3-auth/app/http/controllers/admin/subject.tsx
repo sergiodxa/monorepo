@@ -1,8 +1,7 @@
 /**
  * GET/POST /admin/subjects/:subjectId — one account with its live sessions and provider
- * links, plus the three intents that act on it: delete the account, revoke one session,
- * or revoke them all. A submitted session id is deleted only within this subject, and logs
- * record counts.
+ * links, plus the three intents that act on it: delete the account, revoke one session, or
+ * revoke them all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

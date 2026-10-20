@@ -1,8 +1,7 @@
 /**
  * Cloudflare Worker entry point for the authorization server. Its `fetch` handler builds
  * the application router and forwards the request to it, so everything a request touches
- * reads its dependencies off the context that router publishes them on. `scheduled` and
- * `queue` delegate to the job dispatcher, which publishes a job's own.
+ * reads its dependencies off the context that router publishes them on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,7 +34,6 @@ function isProductionHost(request: Request): boolean {
  * Both job handlers, bound to the dispatcher they delegate to. This worker consumes its own
  * dead-letter queue as well, so a batch from there is recorded and acked rather than
  * dispatched, and a body no redelivery could make readable is written there at once, leaving
- * the work queue's three deliveries for the failures that another attempt does fix.
  */
 const handlers = cloudflare.worker(dispatcher, {
 	deadLetterQueue: "auth-dlq",

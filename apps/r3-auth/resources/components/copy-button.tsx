@@ -1,9 +1,7 @@
 /**
  * Client island: copies a value to the clipboard, confirming briefly in place —
  * the one page shipping JavaScript, since only script can read the clipboard API
- * to capture a newly generated client secret before it disappears. The value
- * lives in a visually hidden carrier that `commandfor` targets, keeping the
- * secret confined to this one spot on the page.
+ * to capture a newly generated client secret before it disappears.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

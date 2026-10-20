@@ -1,8 +1,7 @@
 /**
  * The OAuth 2.0 / OpenID Connect engine: the authorization-code, refresh-token and
- * client-credentials grants, revocation, introspection, userinfo, PKCE, the password
- * login flow, and back-/front-channel logout. It talks only to an {@link OIDC.Repository},
- * so the protocol rules stay testable and independent of storage and of HTTP.
+ * client-credentials grants, revocation, introspection, userinfo, PKCE, the password login
+ * flow, and back-/front-channel logout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -346,10 +345,7 @@ export namespace OIDC {
 		/**
 		 * Stores a password credential for a subject.
 		 *
-		 * @param verifiedAt - When the credential became usable, or `null` to store it
-		 *   refused: a `null` here is what {@link MissingValidationError} reports at the
-		 *   next sign-in, so it must only be passed for a credential whose owner has not
-		 *   been established.
+		 * @param verifiedAt - When the credential became usable, or `null` to store it refused: a `null` here is what {@link MissingValidationError} reports at the next sign-in, so it must only be passed for a credential whose owner has not been established.
 		 */
 		createCredential(
 			subjectId: string,
@@ -608,12 +604,9 @@ export class OIDC {
 	 * client it was issued to or one its audience names. Any other token reads inactive, staying
 	 * silent about why; a key store that cannot answer is reported as this server failing.
 	 *
-	 * @returns The token's claims, with an identifier a token predates — such as the
-	 * `client_id` claim — reported as absent, which keeps that token usable for the rest
-	 * of its lifetime.
+	 * @returns The token's claims, with an identifier a token predates — such as the `client_id` claim — reported as absent, which keeps that token usable for the rest of its lifetime.
 	 * @throws {InvalidClientError} When the client credentials do not check out.
-	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer
-	 * describes this server as the reason.
+	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer describes this server as the reason.
 	 */
 	async introspect(args: {
 		clientId: string;
@@ -696,8 +689,7 @@ export class OIDC {
 	 *
 	 * @throws When the token fails signature, issuer or expiry verification.
 	 * @throws {InvalidTokenError} When the token was not issued with the `openid` scope.
-	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer
-	 * names this server as the reason.
+	 * @throws {InternalServerError} When the signing keys are unavailable, so the answer names this server as the reason.
 	 */
 	async userinfo(args: { accessToken: string; clientId?: string }) {
 		let signingKeys = await wrap(() => this.repository.getSigningKey());
@@ -910,9 +902,8 @@ export class OIDC {
 
 	/**
 	 * Signs a subject in with an email and password, issuing an authorization code. An
-	 * unknown address registers with a verified credential, so signing up ends signed in;
-	 * a known address without one stores an unverified hash, so a stranger cannot claim it.
-	 * Either new password must first pass the password policy.
+	 * unknown address registers with a verified credential, so signing up ends signed in; a
+	 * known address without one stores an unverified hash, so a stranger cannot claim it.
 	 *
 	 * @param input - Credentials plus the authorization request to resume.
 	 * @returns The authorization code result, or why the sign-in was refused.
@@ -1374,8 +1365,7 @@ export class OIDC {
 	 * token was issued to may redeem it, and only once it authenticates (RFC 6749 §6).
 	 *
 	 * @throws {InvalidClientError} When the client credentials do not check out.
-	 * @throws {InvalidGrantError} When the token is unknown, expired, or issued to another
-	 *   client — another client's token answering exactly like an unknown one.
+	 * @throws {InvalidGrantError} When the token is unknown, expired, or issued to another client — another client's token answering exactly like an unknown one.
 	 */
 	private async refreshTokenGrant(args: {
 		refreshToken: string;
@@ -1512,8 +1502,7 @@ class CodeChallenge {
 	 * @param verifier - The `code_verifier` presented at the token endpoint.
 	 * @param challenge - The `code_challenge` stored with the authorization code.
 	 * @param method - The challenge method; defaults to `S256`.
-	 * @returns Whether the verifier derives exactly the stored challenge, or the reason
-	 * the derivation could not be performed.
+	 * @returns Whether the verifier derives exactly the stored challenge, or the reason the derivation could not be performed.
 	 */
 	static async validate(
 		verifier: string,

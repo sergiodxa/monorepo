@@ -1,9 +1,7 @@
 /**
  * Guard for the machine-to-machine API. Verifies the bearer token against this server's
  * own JWKS, confirms it names a registered client, and publishes that client plus a
- * timing collector on the request context. Every response it wraps carries
- * `Server-Timing`, so a slow API call can be attributed without instrumenting each
- * endpoint.
+ * timing collector on the request context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,7 @@
 /**
  * Database schema for the authorization server, declared with remix/data-table:
  * subjects and their password/social credentials, refresh-token sessions, registered
- * OAuth clients, and consent grants. It mirrors the live D1 database exactly — the
- * files in `database/migrations/` are the physical truth, so column names stay
- * snake_case and every timestamp is `c.integer()` holding epoch milliseconds.
+ * OAuth clients, and consent grants.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

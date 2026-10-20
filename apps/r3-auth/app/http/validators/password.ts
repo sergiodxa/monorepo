@@ -1,8 +1,7 @@
 /**
  * Schemas for the password-recovery endpoints: the address a reset is asked for, the
  * token a reset link carries, the new password posted back, and the shape of the record
- * a pending reset is stored as. Everything here arrives from an unauthenticated caller,
- * so validation here confirms shape only.
+ * a pending reset is stored as.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

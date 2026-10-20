@@ -1,8 +1,6 @@
 /**
  * Schemas for the three forms the account area posts: the profile update, and the
- * intent-discriminated submissions of the sessions and grants pages. Every one of them
- * carries an identifier the browser chose, so validation here only confirms shape —
- * the controllers scope each mutation to the signed-in subject themselves.
+ * intent-discriminated submissions of the sessions and grants pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

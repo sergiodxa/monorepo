@@ -1,13 +1,6 @@
 /**
- * GitHub sign-in: starts the redirect, completes the callback, and resolves the
- * identity to a subject, provisioning its connection and billing customer on first sign-in.
- *
- * The database has no transactions, so provisioning writes sequentially and
- * rolls back the subject when its connection cannot be written — an unconnected
- * subject is unreachable and would block the next attempt on the same address.
- *
- * A failed billing mirror is only recorded on the request's log: nothing is charged at
- * sign-up, so the sign-in it already granted stands regardless.
+ * GitHub sign-in: starts the redirect, completes the callback, and resolves the identity to
+ * a subject, provisioning its connection and billing customer on first sign-in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -205,8 +198,7 @@ function externalIdOf(profile: GitHubProfile): string {
  * since address alone proves no ownership and adopting the account on it would be a takeover.
  *
  * @param models - The models the subject and connection are written to.
- * @param billing - Billing platform the subject is mirrored into, best effort; a
- * failed mirror is only recorded, since a later lookup by address recovers it.
+ * @param billing - Billing platform the subject is mirrored into, best effort; a failed mirror is only recorded, since a later lookup by address recovers it.
  * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */

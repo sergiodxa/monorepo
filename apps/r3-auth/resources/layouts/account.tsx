@@ -1,8 +1,7 @@
 /**
  * The chrome every signed-in account page wears: a sticky header carrying the page's
  * breadcrumb trail and heading, a toolbar of navigation links whose active one is
- * marked with `aria-current`, and the sign-out form. It exists so each page describes
- * only its own content while the way out and the way between pages stays in one place.
+ * marked with `aria-current`, and the sign-out form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

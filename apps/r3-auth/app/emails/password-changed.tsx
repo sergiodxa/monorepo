@@ -2,11 +2,6 @@
  * The notice a subject receives once their password has been changed through a recovery
  * link, and every session on the account has been ended.
  *
- * A completed reset is the last cheap moment to reverse a takeover: an attacker reading
- * the mailbox can delete the reset mail, while this one arrives after the fact and states
- * plainly what happened. It holds only a way back to signing in, and its reply-to address
- * reaches a person.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

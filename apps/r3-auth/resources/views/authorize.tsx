@@ -1,9 +1,7 @@
 /**
- * The sign-in page for an authorization request needing a person to authenticate.
- * A wide viewport splits into two columns, client identity beside the sign-in card,
+ * The sign-in page for an authorization request needing a person to authenticate. A
+ * wide viewport splits into two columns, client identity beside the sign-in card,
  * collapsing to the card alone on a narrow one, whose heading becomes the client's
- * name. The credential form appears only when the request asks to create an
- * account, confining the password surface to that single flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

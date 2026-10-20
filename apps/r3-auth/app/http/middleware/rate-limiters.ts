@@ -26,8 +26,7 @@ declare module "remix/router" {
 /**
  * Publishes the limiters for the request about to run.
  *
- * @param source - Opens the limiters, called per request so the bindings are read when one
- * arrives rather than when this module loads.
+ * @param source - Opens the limiters, called per request so the bindings are read when one arrives rather than when this module loads.
  * @returns The middleware, for a router's chain.
  * @example
  * let middleware = [asyncContext(), rateLimiters(createRateLimiters)];
