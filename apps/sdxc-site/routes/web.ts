@@ -107,7 +107,7 @@ export default route({
 		/** One icon's detail, the same one its page draws, for the grid's dialog to load. */
 		icon: get("/frames/icons/:icon"),
 		/**
-		 * Frosted-glass PNG face for the `@sdxc/ui` explorer grid. Drawn with
+		 * Schematic PNG face for the `@sdxc/ui` explorer grid. Drawn with
 		 * `@sdxc/raster` so a tile stays legible without mounting a live frame.
 		 */
 		face: get("/frames/faces/:component"),

@@ -1,6 +1,6 @@
 /**
- * Covers the HIG-style faces the `@sdxc/ui` explorer serves: every catalogue slug draws
- * a PNG, and an unknown slug still gets the elevated-card fallback rather than throwing.
+ * Covers the schematic faces the `@sdxc/ui` explorer serves: every catalogue slug draws
+ * a PNG, and an unknown slug still gets the surface-card fallback rather than throwing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,7 +42,7 @@ describe("renderComponentFace", () => {
 		}
 	});
 
-	test("falls back to an elevated card for an unknown slug", async () => {
+	test("falls back to a surface card for an unknown slug", async () => {
 		expect(hasComponentFace("not-a-component")).toBe(false);
 		let bytes = await renderComponentFace("not-a-component");
 		expect(isPng(bytes)).toBe(true);
