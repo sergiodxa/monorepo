@@ -175,6 +175,10 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/frame-preview").then((it) => it.frameUtilityExample)),
 	);
 	router.map(
+		routes.frames.face,
+		lazy(() => import("~/app/http/controllers/frame-face")),
+	);
+	router.map(
 		routes.examples.visit,
 		lazy(() => import("~/app/http/controllers/examples").then((it) => it.exampleVisit)),
 	);
