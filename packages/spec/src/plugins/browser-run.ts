@@ -2,8 +2,7 @@
  * The `browser` capability backed by Cloudflare Browser Run: same tool surface
  * as the `agent-browser` plugin, with a CDP session so a Worker can drive a
  * real page — including Performance traces and one-shot CDP commands. The
- * binding is injected so this package never owns the remote browser service
- * (ADR-027 §9).
+ * binding is injected so this package never owns the remote browser service.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
