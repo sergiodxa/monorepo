@@ -1,8 +1,7 @@
 /**
  * View model for the glossary index route. Normalizes glossary repository rows into
  * the render-ready `Page` shape and sorts entries alphabetically by term, degrading a
- * missing `id` to the entry slug. It exists to keep glossary controllers thin by
- * centralizing template-facing mapping and deterministic ordering.
+ * missing `id` to the entry slug.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

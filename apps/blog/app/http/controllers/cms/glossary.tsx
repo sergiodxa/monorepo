@@ -1,8 +1,7 @@
 /**
  * CMS controller for glossary-term CRUD. It renders index and edit/new HTML views and
  * handles create, update, and destroy actions, validating form data with the glossary
- * schema, deriving slugs from the term via `slugify`, and using 303 redirects. It
- * exists to manage glossary terms from the backoffice with in-context 404 fallback views.
+ * schema, deriving slugs from the term via `slugify`, and using 303 redirects.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

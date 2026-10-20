@@ -61,9 +61,8 @@ const MENTION_VERBS: Record<PostViewModel.Mention["kind"], string> = {
 
 /**
  * The approved Webmentions under a post: reactions as a row of author avatars, and
- * responses with their content, each an `h-cite` naming its author. Content was
- * sanitized when the mention was verified; photos load without a referrer at a fixed size.
- * Renders nothing for a post nobody has mentioned yet.
+ * responses with their content, each an `h-cite` naming its author. Content was sanitized
+ * when the mention was verified; photos load without a referrer at a fixed size.
  */
 function PostMentions(handle: Handle<{ mentions: PostViewModel.Page["mentions"] }>) {
 	return () => {

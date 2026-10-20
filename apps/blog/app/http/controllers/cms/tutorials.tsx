@@ -1,8 +1,7 @@
 /**
  * CMS controller for tutorial CRUD. It renders index and edit/new HTML views and handles
  * create, update, and destroy actions, validating form data against the tutorial schema
- * and using See Other redirects for the post/redirect/get flow. Every write queues the
- * tutorial's Webmentions and its ActivityPub publish; parsing stays in the schemas.
+ * and using See Other redirects for the post/redirect/get flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -122,8 +121,6 @@ export default createController(routes.cms.tutorials, {
 			if (!id)
 				return redirect(routes.cms.tutorials.index.href(), { status: redirect.Status.SeeOther });
 
-			// Read before deleting: the public page is cached under its slug, which
-			// only the record carries.
 			let tutorial = await ctx.models.tutorials.find(id);
 
 			let destroyed = await ctx.models.tutorials.tombstone(id);
@@ -213,8 +210,6 @@ export default createController(routes.cms.tutorials, {
 				return ctx.render(CMSTutorialsActionView, rejected, { status: 422 });
 			}
 
-			// Read before writing: an edit that renames the slug leaves the old URL
-			// cached, and only the stored record still knows what it was.
 			let previous = await ctx.models.tutorials.find(id);
 
 			let updated = await ctx.models.tutorials.update(id, {

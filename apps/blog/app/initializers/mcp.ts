@@ -2,12 +2,6 @@
  * Assembles the blog's MCP server: binds every declared tool and resource to its handler
  * and exposes one `fetch` for the router to mount.
  *
- * The same split as the router — `app/mcp/tools/index.ts` and `app/mcp/resources/index.ts`
- * declare what exists, one file per tool and resource implements it and loads on first use,
- * and the wiring lives here.
- * Every post this server can reach is already public as HTML, so any client can read it
- * directly here too — the openness this server exists to provide.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

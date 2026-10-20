@@ -81,10 +81,7 @@ export default createController(routes.encoreSupport, {
 		/**
 		 * Handles a submission. A filled trap answers like a success without sending, so a bot
 		 * learns nothing; a missing or unverifiable token re-renders the form to send again, since
-		 * a person with a page opened before a secret rotation holds one. A denied budget, a
-		 * validation issue, or a failed delivery re-renders the form with the visitor's values.
-		 * A valid request the spam filter scores as spam answers like a success without sending;
-		 * one it is unsure about is delivered flagged. Nothing the visitor wrote is logged.
+		 * a person with a page opened before a secret rotation holds one.
 		 *
 		 * @returns A See Other redirect to the confirmation, or the form with a 4xx/5xx status.
 		 */

@@ -1,8 +1,7 @@
 /**
  * The email a support request becomes: addressed to the configured support inbox, with the
  * visitor as Reply-To so answering it from any mail client reaches them directly, and every
- * submitted field laid out as a fact table above the message itself. A request the spam filter
- * was unsure about arrives flagged, with the signals behind the doubt.
+ * submitted field laid out as a fact table above the message itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -20,8 +20,7 @@ import routes from "~/routes/web";
 /**
  * The run covers the week closing at the latest Friday 17:00 UTC, so a retry hours later
  * still writes the same week. A GitHub failure retries the whole run; a week with no package
- * writes nothing; a week that already has its post keeps it as the author left it. The post
- * is attributed to the earliest admin, the blog's author.
+ * writes nothing; a week that already has its post keeps it as the author left it.
  */
 export default createJobHandler(jobs.releases.weekly, async (ctx) => {
 	let token = env.GITHUB_TOKEN;

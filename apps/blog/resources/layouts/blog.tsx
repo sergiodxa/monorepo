@@ -1,8 +1,7 @@
 /**
- * Layout component for public blog pages. Composes the shared document shell,
- * forwarding the page's title, description, canonical and social tags, and draws
- * the silvered body, the site's `h-card`, the main navigation bar and the search
- * dialog before the page children, and the footer after them: every public page's shell.
+ * Layout component for public blog pages. Composes the shared document shell, forwarding
+ * the page's title, description, canonical and social tags, and draws the silvered body,
+ * the site's `h-card`, the main navigation bar and the search dialog before the page c
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

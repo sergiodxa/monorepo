@@ -51,8 +51,7 @@ let cachedSessionMiddleware: {
 /**
  * Attaches session handling to every request, signing the cookie with
  * `COOKIE_SESSION_SECRET`. A request arriving without that secret is answered with a
- * 500, so no cookie is ever signed or trusted under a key anyone could know. The
- * middleware is rebuilt whenever the secret changes and reused while it holds.
+ * 500, so no cookie is ever signed or trusted under a key anyone could know.
  */
 let sessionMiddleware: ReturnType<typeof session> = async (ctx, next) => {
 	let secret = await readSecret();

@@ -14,11 +14,9 @@ import toolset from "~/app/mcp/tools";
 import { PostSearch } from "~/app/models/search";
 
 /**
- * Searches the published corpus, best match first unless the query sets `order:`.
- *
- * Answers an empty `results` array when nothing matches, since a query that found nothing
- * is a fact the model should act on. A query holding nothing searchable, or too many words,
- * answers a tool error naming the problem, so the model can rephrase it.
+ * Searches the published corpus, best match first unless the query sets `order:`. Answers
+ * an empty `results` array when nothing matches, since a query that found nothing is a fact
+ * the model should act on.
  */
 export default createTool(toolset.searchPosts, async (ctx) => {
 	let parsed = PostSearch.parse(ctx.input.query);

@@ -19,9 +19,7 @@ const BACKFILL_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * A capture takes a minute or so, so the job stores the capture's id and retries itself to
- * read it, instead of waiting inside one run. A rate limit or an outage retries later; a
- * capture the archive refuses is recorded as an attempt, which the weekly check repeats
- * after thirty days.
+ * read it, instead of waiting inside one run.
  */
 export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 	let bookmark = await ctx.models.likes.find(ctx.input.postId);

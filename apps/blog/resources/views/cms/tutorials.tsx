@@ -1,8 +1,7 @@
 /**
- * Views for managing tutorials in the CMS. `CMSTutorialsIndexView` renders a
- * table of tutorials with tag chips, publish-state badges, and "Post on X",
- * edit and modal-confirmed delete actions, and `CMSTutorialsActionView` renders the
- * create/edit form. Exist to power the admin CRUD screens for tutorials.
+ * Views for managing tutorials in the CMS. `CMSTutorialsIndexView` renders a table
+ * of tutorials with tag chips, publish-state badges, and "Post on X", edit and
+ * modal-confirmed delete actions, and `CMSTutorialsActionView` renders the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

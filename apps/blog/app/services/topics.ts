@@ -48,8 +48,7 @@ export type TopicPost =
  * A topic's query as its page runs it: newest first unless the query asks for an `order:`.
  *
  * @param topic The topic whose stored query runs.
- * @returns The parsed query, or `null` for a stored query that no longer parses, which lists
- * nothing.
+ * @returns The parsed query, or `null` for a stored query that no longer parses, which lists nothing.
  */
 export function topicQuery(topic: Pick<SelectTopic, "query">): ParsedQuery | null {
 	let parsed = PostSearch.parse(topic.query);

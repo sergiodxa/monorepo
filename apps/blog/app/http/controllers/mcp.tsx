@@ -2,11 +2,6 @@
  * HTTP actions for the `/mcp` page: the HTML page at `GET /mcp` and its Markdown twin at
  * `GET /mcp.md`, both explaining the MCP server that answers `POST /mcp`.
  *
- * The content is a Markdown file per language, so this controller picks a language,
- * negotiates a format, and renders — the same three steps the post controller takes, for
- * the same reason: an agent asking for Markdown should get Markdown, and a page about
- * serving agents would be a poor place to make that an exception.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

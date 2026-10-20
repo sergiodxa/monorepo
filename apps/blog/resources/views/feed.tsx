@@ -1,8 +1,7 @@
 /**
- * View for the site home/feed page. Renders the author intro, an RSS link, and
- * a chronological "Activity" timeline of posts as an `h-feed` of `h-entry` rows, each
- * an activity row with an optional preview badge, notes and TILs read in place. Exists as
- * the landing page of the public blog.
+ * View for the site home/feed page. Renders the author intro, an RSS link, and a
+ * chronological "Activity" timeline of posts as an `h-feed` of `h-entry` rows, each an
+ * activity row with an optional preview badge, notes and TILs read in place.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

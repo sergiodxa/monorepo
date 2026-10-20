@@ -170,7 +170,6 @@ export function federationQueue(enqueuer: JobEnqueuer): Federation.Queue {
  * Stores what a reply, mention, like or boost says about a published post, the remote post
  * or reaction as `source` and the post's permalink as `target`, the way a verified
  * Webmention is stored: a blocked host is dropped, an allowed one approved on arrival, and
- * any other waits as `pending`. A response to anything but a published post is dropped.
  *
  * @param services The invocation's database and models.
  * @param summary The response, `null` for an activity that is none.

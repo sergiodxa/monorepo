@@ -1,10 +1,7 @@
 /**
- * Loads the `/mcp` page's content from the bundled Markdown files, one per language.
- *
- * The page is prose content, so it lives as Markdown the way a post does — which also means
- * it can be served *as* Markdown to the agents the page is about. The files are bundled
- * through `import.meta.glob`, so each request reads an in-memory string, and parsing per
- * request keeps a bad file's failure scoped to the one route that needed it.
+ * Loads the `/mcp` page's content from the bundled Markdown files, one per language. The
+ * page is prose content, so it lives as Markdown the way a post does — which also means it
+ * can be served *as* Markdown to the agents the page is about.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,6 @@
 /**
- * The posts this blog offers as resources, declared as URL patterns.
- *
- * A resource is what a person browses before a slug exists; a tool is what a model calls
- * once it has one. URIs reuse this blog's own `.md` URLs, already served as Markdown, so
- * a client's direct fetch matches what a tool call returns.
+ * The posts this blog offers as resources, declared as URL patterns. A resource is what
+ * a person browses before a slug exists; a tool is what a model calls once it has one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

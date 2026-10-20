@@ -1,8 +1,7 @@
 /**
  * CMS controller for article CRUD. It renders index and edit/new HTML views and handles
  * create, update, and destroy actions, validating form data against the article schema and
- * using See Other redirects to preserve post/redirect/get flow. Every write queues the
- * article's Webmentions and its ActivityPub publish, and missing records get 404 views.
+ * using See Other redirects to preserve post/redirect/get flow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -120,8 +119,6 @@ export default createController(routes.cms.articles, {
 			if (!id)
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
-			// Read before deleting: the public page is cached under its slug, which
-			// only the record carries.
 			let article = await ctx.models.articles.find(id);
 
 			let destroyed = await ctx.models.articles.tombstone(id);
@@ -209,8 +206,6 @@ export default createController(routes.cms.articles, {
 				return ctx.render(CMSArticlesActionView, rejected, { status: 422 });
 			}
 
-			// Read before writing: an edit that renames the slug leaves the old URL
-			// cached, and only the stored record still knows what it was.
 			let previous = await ctx.models.articles.find(id);
 
 			let updated = await ctx.models.articles.update(id, {

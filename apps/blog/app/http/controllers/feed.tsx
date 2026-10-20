@@ -19,8 +19,7 @@ import routes from "~/routes/web";
 /**
  * Handles the `/feed` route. The repository and view-model layers are the source of truth
  * for feed semantics, so this controller renders the activity exactly as they order it.
- * A request preferring ActivityStreams gets the actor document instead, kept out of the
- * edge cache, whose `id` names the canonical copy that carries the key.
+ *
  * @returns HTML response for the feed page, or the actor document.
  */
 export default createAction(routes.feed, async function feedController(ctx) {

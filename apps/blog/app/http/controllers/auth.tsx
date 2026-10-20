@@ -138,9 +138,8 @@ export let logoutController = createController(routes.auth.logout, {
 		/**
 		 * Ends the session on both sides: the provider is handed the `id_token_hint` that
 		 * names its own session, and this app's session is destroyed whatever the provider
-		 * answers, so a handoff that cannot be built still signs the person out here. A
-		 * request already carrying no session is answered the same way, which keeps the
-		 * sign-out click in a tab left open overnight terminal.
+		 * answers, so a handoff that cannot be built still signs the person out here.
+		 *
 		 * @returns 303 redirect to the provider logout endpoint, or to the feed.
 		 */
 		async action(ctx) {
@@ -175,8 +174,8 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * Correlates the provider's answer with the login that asked for it and verifies the ID
 	 * token before any claim is believed, then reconciles the subject with a local account;
 	 * a refused reconcile ends the session the callback opened, leaving the visitor anonymous.
-	 * @returns The login view carrying an error, or a 303 redirect to the page the login
-	 *   was started for, the dashboard when it named none.
+	 *
+	 * @returns The login view carrying an error, or a 303 redirect to the page the login was started for, the dashboard when it named none.
 	 */
 	handler: async (ctx) => {
 		let result = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));

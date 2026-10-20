@@ -47,8 +47,7 @@ const USER_AGENT = "sergiodxa.com";
 /**
  * Asks for the sponsorships with the private ones left out, twice: the active ones, and
  * every one ever made. Past sponsors are the second list less the first, because the field
- * that marks a sponsorship active needs the `read:user` scope. `includePrivate` defaults to
- * true for a token that owns the account, so it is stated on both lists.
+ * that marks a sponsorship active needs the `read:user` scope.
  */
 const SPONSORS_QUERY = `
 	query Sponsors($login: String!, $first: Int!) {
@@ -128,8 +127,7 @@ const errorsSchema = s.object({
  * The roster a payload says is public, each list in the order GitHub gave it.
  *
  * @param payload Whatever came back from the sponsors query.
- * @returns The sponsors safe to name. A payload that misses the schema yields nobody, which
- * is what makes a list disappear rather than stand there with something invented in it.
+ * @returns The sponsors safe to name. A payload that misses the schema yields nobody, which is what makes a list disappear rather than stand there with something invented in it.
  */
 export function sponsorRoster(payload: unknown): SponsorRoster {
 	let parsed = s.parseSafe(responseSchema, payload);
@@ -214,8 +212,7 @@ export async function fetchSponsorRoster(token: string): Promise<Result<SponsorR
  * The stored roster `/sponsors` renders.
  *
  * @param cache Where the roster is kept.
- * @returns The roster, or nobody when the store is empty or unreachable. A page that gets
- * nobody draws no list, which is the honest answer while the roster is unknown.
+ * @returns The roster, or nobody when the store is empty or unreachable. A page that gets nobody draws no list, which is the honest answer while the roster is unknown.
  */
 export async function readStoredSponsors(cache: Cache): Promise<SponsorRoster> {
 	let stored = await cache.read<SponsorRoster>(SPONSORS_CACHE_KEY);
@@ -230,8 +227,7 @@ export async function readStoredSponsors(cache: Cache): Promise<SponsorRoster> {
  *
  * @param cache Where the roster is kept.
  * @param token The credential the query is made with.
- * @param edge The edge cache `/sponsors` is stored in. A failed purge is logged and the
- * refresh still succeeds, since the page's own lifetime then bounds how long it stays stale.
+ * @param edge The edge cache `/sponsors` is stored in. A failed purge is logged and the refresh still succeeds, since the page's own lifetime then bounds how long it stays stale.
  * @returns The roster now stored, or why it was not; a failure leaves the stored one standing.
  */
 export async function refreshSponsors(

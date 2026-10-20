@@ -43,8 +43,7 @@ function sourceHost(ctx: RequestContext): string {
  * under separate key prefixes so the budgets never mix.
  *
  * @param env Environment bindings, read for the rate limiter.
- * @returns The limiting middleware, or none when the deployment declares no limiter, so
- * a local run without the binding keeps accepting mentions.
+ * @returns The limiting middleware, or none when the deployment declares no limiter, so a local run without the binding keeps accepting mentions.
  */
 export default function webmentionRateLimit(env: App.Env): Middleware[] {
 	let binding = env.WEBMENTION_RATE_LIMITER;

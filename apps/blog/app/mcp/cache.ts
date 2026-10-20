@@ -1,14 +1,7 @@
 /**
- * KV caching for the MCP surface.
- *
- * The reads behind these tools are cheap individually and expensive in aggregate: a search
- * or a list touches every published post's metadata, and an agent asking three questions in
- * a turn repeats that three times. Caching by tool and arguments turns a repeated question
- * into one KV read.
- *
- * Every entry is shared by every caller because this surface is anonymous and identical for
- * everybody — no tool declares `available`. A credential introduced later must become part
- * of the key, or one visitor's answer would be served to another.
+ * KV caching for the MCP surface. The reads behind these tools are cheap individually and
+ * expensive in aggregate: a search or a list touches every published post's metadata, and
+ * an agent asking three questions in a turn repeats that three times.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,12 +49,8 @@ async function keyFor(name: string, value: unknown): Promise<string | null> {
 }
 
 /**
- * Caches a computed value under a key, as JSON.
- *
- * A `null` result is cached like any other, since a missing resource is a stable answer.
- * Caching here is only an optimization: a call still returns a fresh value when no key exists,
- * and a store the cache could not reach is absorbed by `fetch`. So a failure means `produce`
- * itself failed, and it is rethrown as what `produce` threw.
+ * Caches a computed value under a key, as JSON. A `null` result is cached like any other,
+ * since a missing resource is a stable answer.
  *
  * @param name What is being cached.
  * @param value The variables the entry is specific to.
@@ -82,13 +71,9 @@ export async function cached<T>(
 }
 
 /**
- * Middleware caching every tool result by tool name and arguments.
- *
- * Only a successful call is cached: `isError` often means a slug that does not exist yet,
- * and storing that would keep answering "not found" for the whole TTL after the post appears.
- *
- * A read the store could not answer counts as a miss, which is what a cache being down should
- * cost: the tool runs.
+ * Middleware caching every tool result by tool name and arguments. Only a successful call is
+ * cached: `isError` often means a slug that does not exist yet, and storing that would keep
+ * answering "not found" for the whole TTL after the post appears.
  *
  * @returns Tool middleware that serves a stored result when one is current.
  */

@@ -63,8 +63,7 @@ export class SupportDeliveryError extends Error {
 	override name = "SupportDeliveryError";
 
 	/**
-	 * @param reason `unconfigured` when the inbox or binding is missing, `rejected` when the
-	 * mail provider refused the message.
+	 * @param reason `unconfigured` when the inbox or binding is missing, `rejected` when the mail provider refused the message.
 	 * @param options The provider's error, when there is one.
 	 */
 	constructor(
@@ -113,8 +112,7 @@ export class SupportDesk {
 	 * script probing the validation spends the same budget as one sending mail. A limiter that
 	 * cannot answer admits the request, since the form is worth more than a perfect count.
 	 *
-	 * @param client The client's network (an IPv4 address or an IPv6 /64), or `unknown`,
-	 *   which then shares one budget.
+	 * @param client The client's network (an IPv4 address or an IPv6 /64), or `unknown`, which then shares one budget.
 	 * @returns Whether the request may proceed.
 	 */
 	async admit(client: string): Promise<boolean> {

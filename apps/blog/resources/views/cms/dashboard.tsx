@@ -1,8 +1,7 @@
 /**
  * View for the CMS dashboard: the bookmark quick add, then a grid of stat cards summarizing
  * counts of articles, likes, tutorials, and glossary terms, each linking to its management
- * section, inside the CMSLayout shell. The landing page of the admin area, so saving a URL
- * takes one field from the first page.
+ * section, inside the CMSLayout shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

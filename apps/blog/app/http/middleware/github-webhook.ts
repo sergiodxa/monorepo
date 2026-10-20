@@ -37,8 +37,7 @@ async function isSigned(request: Request, secret: string): Promise<boolean> {
 /**
  * Creates the check a GitHub webhook route runs behind.
  *
- * @param secret The hook's secret. An unset one refuses every delivery, so a worker
- * deployed without it fails closed.
+ * @param secret The hook's secret. An unset one refuses every delivery, so a worker deployed without it fails closed.
  * @returns Middleware that answers `401` to an unsigned or mis-signed delivery.
  */
 export default function githubWebhook(secret: string | undefined): Middleware {

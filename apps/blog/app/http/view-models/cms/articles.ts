@@ -1,8 +1,7 @@
 /**
  * View model for the CMS article screens. It maps repository records into index rows,
  * edit-form state, new-form defaults, and not-found fallbacks, and normalizes submitted
- * form values into repository input (slug fallback, ISO publish-date parsing). It exists
- * to centralize CMS routing and field coercion so article controllers stay flow-focused.
+ * form values into repository input (slug fallback, ISO publish-date parsing).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

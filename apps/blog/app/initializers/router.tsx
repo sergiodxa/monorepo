@@ -3,10 +3,6 @@
  * admin-guarded CMS and MCP routes mapped onto their controllers, with the renderer
  * controllers reach through `ctx.render` installed last.
  *
- * Every route is mapped through `lazy()`, so the URL surface is complete at startup
- * while each controller is imported by the first request that reaches it. A cold
- * isolate evaluates what it serves instead of the whole route table.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -206,21 +202,9 @@ export interface ApplicationOptions {
 }
 
 /**
- * Builds the blog HTTP router with global middleware, route mappings, CMS auth
- * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
- * middleware sees a plain `GET` and treats a `HEAD` probe as the page request;
- * `log(logger)` follows it and opens the request's wide event around everything else,
- * and `trace()` then continues the caller's W3C trace (or starts one) and sets its IDs on it.
- * `wellKnown()` answers the registered documents it lists before any session or cache
- * work, since they are static and the same for every visitor.
- * `securityHeaders` sits just before the renderer, so it decorates the rendered response
- * that `workersCache` then stores and replays; `assets()` publishes the document's assets
- * that `viewRenderer()` hands every view, after `render()` installs the stream it writes to.
- * `workersCache` sits outside session and auth so its refusal check reads the finished
- * response, downgrading a public declaration once the visitor turns out to be identified.
- * `database(createDatabase())` is global, so `ctx.db` is there for a route the app maps and
- * for a handler behind a route-agnostic boundary alike; `jobEnqueuer` publishes `ctx.jobs`
- * after it, so every message a handler enqueues carries the request's trace.
+ * Builds the blog HTTP router with global middleware, route mappings, CMS auth guards, and
+ * the HTML 404 fallback.
+ *
  * @param env Worker environment bindings injected into request context.
  * @param options Services a test substitutes for the ones the bindings provide.
  * @returns Configured router instance for the worker fetch entrypoint.
@@ -420,9 +404,8 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 				middleware: [mcpRateLimit(env)],
 				/**
 				 * Imported here rather than through `lazy()`, because this action declares
-				 * middleware that publishes context and so has to stay an action object,
-				 * whose `handler` must be a function. The server is built at module scope,
-				 * so deferring the import is what keeps it off a cold start.
+				 * middleware that publishes context and so has to stay an action object, whose
+				 * `handler` must be a function.
 				 */
 				handler: async (ctx) => (await import("~/app/initializers/mcp")).default.fetch(ctx),
 			},

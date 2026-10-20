@@ -27,9 +27,7 @@ import { RELEASE_SOURCES } from "~/config/releases";
  * @param now When the run happens; a late or retried run covers the scheduled run's week.
  * @param token The GitHub credential the releases are read with.
  * @param sources The repositories to read.
- * @returns The summary to upsert the post from, `null` for a week with no qualifying package,
- * or the first repository that could not be read: a partial list would publish a post
- * missing packages, so the run fails and its retry reads every repository again.
+ * @returns The summary to upsert the post from, `null` for a week with no qualifying package, or the first repository that could not be read: a partial list would publish a post missing packages, so the run fails and its retry reads every repository again.
  * @example await weeklyReleases(new Date(scheduledTime), env.GITHUB_TOKEN);
  */
 export async function weeklyReleases(

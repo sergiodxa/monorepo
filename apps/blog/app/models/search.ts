@@ -189,8 +189,7 @@ export class PostSearch {
 	 * caller highlights with is the one the search ran.
 	 *
 	 * @param text The raw search box text.
-	 * @returns The terms, `null` for blank text, or a `ValidationError` for text with nothing
-	 * to find, too many terms, or too many characters.
+	 * @returns The terms, `null` for blank text, or a `ValidationError` for text with nothing to find, too many terms, or too many characters.
 	 */
 	static parse(text: string): Result<ParsedQuery | null, ValidationError> {
 		return parseQuery(text, { fields: POST_SEARCH.fields, filters: Object.keys(FILTER_NAMES) });
@@ -199,12 +198,10 @@ export class PostSearch {
 	/**
 	 * The canonical text of a search: parsed, then folded the way the search compares it —
 	 * words, tags and languages without case, a kind by its registry name, a filter by its
-	 * own name over an alias — with clauses, filters and their values sorted. Two spellings
-	 * of one search write the same text, so a topic's query can be unique.
+	 * own name over an alias — with clauses, filters and their values sorted.
 	 *
 	 * @param text The search as typed.
-	 * @returns The canonical text, or a `ValidationError` for text that cannot run, blank
-	 * text included.
+	 * @returns The canonical text, or a `ValidationError` for text that cannot run, blank text included.
 	 * @example
 	 * PostSearch.canonical("tag:Remix kind:Tutorials"); // success("kind:tutorial tag:remix")
 	 */
@@ -245,8 +242,7 @@ export class PostSearch {
 	 *
 	 * @param db Database connection holding `post_search` and the posts it projects.
 	 * @param options The query, and any narrowing by kind, tag or count.
-	 * @returns Hits in the query's order. Empty when the query is blank or holds nothing to
-	 * search for, since every post would otherwise match.
+	 * @returns Hits in the query's order. Empty when the query is blank or holds nothing to search for, since every post would otherwise match.
 	 * @example
 	 * let hits = await PostSearch.query(db, { query: "remix", kind: "tutorial", limit: 5 });
 	 */
@@ -268,8 +264,7 @@ export class PostSearch {
 	 *
 	 * @param db Database connection holding `post_search` and the posts it projects.
 	 * @param options The parsed query, the page wanted, and any narrowing.
-	 * @returns The page with its total, each hit carrying the body it was found in, or a
-	 * `PaginationError` when the database refuses.
+	 * @returns The page with its total, each hit carrying the body it was found in, or a `PaginationError` when the database refuses.
 	 */
 	static async page(
 		db: Database,
@@ -347,9 +342,7 @@ export class PostSearch {
 	/**
 	 * Every match for `query` whose post is live, of a searchable kind (or the one asked for)
 	 * and published by now, read from `posts` on every query so no projection can drift from
-	 * it, and narrowed by the query's filters and the caller's. `order:asc` and `order:desc`
-	 * sort by publication; under relevance, a query of filters alone has nothing to rank by,
-	 * so it lists newest first.
+	 * it, and narrowed by the query's filters and the caller's.
 	 */
 	private static async matching(
 		db: Database,
@@ -452,8 +445,7 @@ export class PostSearch {
 	/**
 	 * Projects one post into the result shape callers and the MCP tool read: a glossary entry is
 	 * titled by its alias or else its term and summarized by its definition, a bookmark is named
-	 * as `/bookmarks` names it, has no slug and links out, a note is titled by its searched
-	 * `body` shortened, and tags come from the projection.
+	 * as `/bookmarks` names it, has no slug and links out, a note is titled by its searched `b
 	 */
 	private static result(
 		kind: Kind,
@@ -495,9 +487,7 @@ export class PostSearch {
 
 	/**
 	 * Reads a post through its own type's model, so the projection carries exactly the
-	 * metadata the post's pages show. A glossary entry's title holds its term and its alias,
-	 * so either one finds it, and its definition is its content; a bookmark's content is its
-	 * address, so a site's name finds what was saved from it, then its description.
+	 * metadata the post's pages show.
 	 *
 	 * @returns The projection, or `null` when the post is deleted or of a kind search skips.
 	 */
@@ -659,7 +649,6 @@ function lowered(values: ReadonlyArray<string>): string {
  * The stored tags a `tag:` filter's values stand for. A value written `name@version` with a
  * SemVer version stands for itself and every `name@` tag at that version or a newer one that
  * keeps its leading element (`^`), so `remix@3.0.0` finds a post tagged `remix@3.2.6`; any
- * other value stands for itself.
  */
 async function expandTags(db: Database, values: ReadonlyArray<string>): Promise<Array<string>> {
 	let expanded = new Set<string>();

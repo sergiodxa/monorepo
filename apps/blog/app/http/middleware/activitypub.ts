@@ -27,8 +27,7 @@ declare module "remix/router" {
  * global `database()` and `jobEnqueuer()` middleware, whose `ctx.db` and `ctx.jobs` the
  * federation stores to and queues through.
  *
- * @param source Builds the federation for a request; it may import the service on demand,
- * so only a federating route loads it.
+ * @param source Builds the federation for a request; it may import the service on demand, so only a federating route loads it.
  * @example lazy(() => import("~/app/http/controllers/activitypub"), [activityPub(source)]);
  */
 export default function activityPub(
