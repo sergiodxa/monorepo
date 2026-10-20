@@ -28,7 +28,7 @@ globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
  */
 run({
 	async loadModule(moduleUrl, exportName) {
-		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
+		let mod: unknown = await import(moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);
@@ -44,11 +44,9 @@ run({
 	},
 
 	/**
-	 * Sends a submission under the form's declared encoding, coercing a file entry to
-	 * its filename for a urlencoded body, and returns the response as-is so the frame
-	 * can read its redirect target. Every request revalidates the browser's stored copy,
-	 * since a page from an earlier deploy names island chunks that deploy removed, and
-	 * says it is for a frame, which the Worker answers with markup the edge leaves as is.
+	 * Sends a submission under the form's declared encoding, coercing a file entry to its
+	 * filename for a urlencoded body, and returns the response as-is so the frame can
+	 * read its redirect target.
 	 */
 	async resolveFrame(src, options) {
 		let { target, signal, method, formData, encType } = options ?? {};

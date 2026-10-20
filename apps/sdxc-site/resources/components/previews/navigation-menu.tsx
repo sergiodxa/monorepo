@@ -1,8 +1,7 @@
 /**
  * Live preview island for `NavigationMenu`. Each trigger pairs with the panel nested
  * beside it through the item's own context, so the whole menu opens and closes on the
- * Popover API with no script. The example is a marketing header: a wide two-column
- * panel, a narrower list panel, plain links, and the current page marked `aria-current`.
+ * Popover API with no script.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

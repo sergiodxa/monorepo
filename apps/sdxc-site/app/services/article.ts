@@ -113,10 +113,7 @@ function rewriteHref(href: string, directory: string): string {
 
 /**
  * A page written for this site with its counted holes resolved and every heading
- * addressable — the ids the page renders, which search links to. A hole with no number
- * behind it fails the walk, because a sentence quoting a count the manifests cannot
- * supply is a sentence to fix. Holes are filled first, so a heading is slugged from the
- * number it shows.
+ * addressable — the ids the page renders, which search links to.
  *
  * @param document - The parsed page
  * @param options - The options it was parsed with, whose tags check a filled-in attribute
@@ -135,12 +132,7 @@ export function anchorArticle(
 /**
  * Prepares a page written for this site: anchored as `anchorArticle` anchors it,
  * ```mermaid fences drawn as diagrams, TeX turned into MathML, and every other fence
- * painted. A diagram or formula that does not parse fails the walk, so a broken one
- * stops the build that renders it.
- *
- * @param document - The parsed page
- * @param options - The options it was parsed with
- * @returns The page ready to render, or the walk failure with the position it stopped at
+ * painted.
  */
 export function prepareArticle(
 	document: Markdown.Document,

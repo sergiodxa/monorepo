@@ -2,8 +2,6 @@
  * Live preview island for `MessageScroller`. The frame scrolls natively with no script,
  * and what script adds is the follow behavior, so the preview carries `messageFollow`
  * against a `ScrollFollowModel` and streams each reply in a word at a time: the viewport
- * stays pinned to the live edge while the answer is still arriving, and reveals the jump
- * control the moment the reader scrolls back through what came before.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -130,7 +128,6 @@ export const MessageScrollerPreview = clientEntry(
 		let streaming = false;
 		let timer: ReturnType<typeof setInterval> | undefined;
 
-		// The interval outlives a single render, so it is dropped with the island.
 		handle.signal.addEventListener("abort", () => clearInterval(timer));
 
 		/** Plays the next exchange: the question lands at once, the answer a word at a time. */
@@ -148,7 +145,6 @@ export const MessageScrollerPreview = clientEntry(
 			streaming = true;
 			void handle.update();
 
-			// Sending is the reader asking to be at the live edge, wherever they were reading.
 			model.scrollToEnd();
 
 			let words = exchange.answer.split(" ");
@@ -217,13 +213,10 @@ export const MessageScrollerPreview = clientEntry(
 					</header>
 
 					<MessageScroller
-						// The card around it draws the frame, so the log adds no edge of its own.
 						style={{ border: "none", borderRadius: "0" }}
 						mix={[bs("18rem"), grow()]}
 					>
 						<MessageScroller.Viewport mix={[messageFollow(model), scrollFade({ axis: "block" })]}>
-							{/* The log fills the viewport whatever it holds, so an empty state has a
-							    height to centre itself in. */}
 							<MessageScroller.Content
 								aria-busy={streaming || undefined}
 								mix={[vstack({ gap: 0, align: "stretch" }), minBs("100%")]}
@@ -246,8 +239,6 @@ export const MessageScrollerPreview = clientEntry(
 											scrollAnchor
 											mix={[p(3)]}
 										>
-											{/* The reader's own turns hug the trailing edge in a frame; everyone
-											    else's run unframed, so the answer reads as one column of prose. */}
 											<Bubble
 												variant={turn.from === "reader" ? "muted" : "ghost"}
 												align={turn.from === "reader" ? "end" : "start"}
@@ -260,9 +251,6 @@ export const MessageScrollerPreview = clientEntry(
 							</MessageScroller.Content>
 						</MessageScroller.Viewport>
 
-						{/* The control floats over the frame rather than scrolling inside it, so the
-						    viewport's own edge fade stays on the conversation. The mixin reveals it
-						    through data-visible once the reader leaves the live edge. */}
 						<MessageScroller.Button
 							aria-label="Jump to latest"
 							hidden={false}
@@ -280,8 +268,6 @@ export const MessageScrollerPreview = clientEntry(
 							borderEdge("block-start", { width: 1, style: "solid", color: "neutral" }),
 						]}
 					>
-						{/* The composer carries the next scripted question, so a press has something to
-						    send and the reader can read it before it lands. */}
 						<Input
 							aria-label="Message"
 							value={next?.ask ?? "That is everything, thanks."}

@@ -1,10 +1,7 @@
 /**
  * Live preview island for `Avatar`. The component draws the circular host, its two
  * absolutely positioned layers and the overlap a group reads as; both layers fill the
- * host, so the initials come first and the portrait paints over them. Noticing that a
- * portrait failed and hiding it again is the consumer's to apply, so every image here
- * carries the same `imageFallback()` wiring and `data-image-error` rule a reader would
- * write. The last reviewer's portrait points at nothing, which is what makes it visible.
+ * host, so the initials come first and the portrait paints over them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

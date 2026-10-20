@@ -1,10 +1,6 @@
 /**
  * Live preview island for `ColorArea`. The square paints every saturation and brightness
  * for one hue and overlays two native range inputs, each operable on its own by keyboard.
- * Dragging the square as one two-dimensional gesture is the consumer's to apply, so the
- * preview carries the same `colorAreaDrag()` wiring a reader would write, with the
- * `data-color-area-axis` markers that tell the mixin which input tracks which axis, and
- * the `ui:color-area-change` listener that turns the settled pair into a real color.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

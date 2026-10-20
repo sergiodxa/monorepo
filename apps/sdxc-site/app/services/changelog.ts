@@ -1,14 +1,6 @@
 /**
  * The releases behind the changelog: read from GitHub, held in KV, and parsed into the
- * same markdown documents every other page renders. This is the one page whose content
- * lives outside the bundle, so it is also the one page that has to keep answering when
- * the source of that content will not.
- *
- * Two keys hold the same payload for two different jobs. The first expires at the next
- * midnight UTC, which is when a release can first change what this page says, and its
- * presence is what "fresh" means. The second never expires, and is what a reader gets
- * when GitHub refuses the call — an unauthenticated Worker shares sixty requests an
- * hour with every other caller on its address, so being refused is ordinary.
+ * same markdown documents every other page renders.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,12 +82,7 @@ const releasesSchema = s.array(releaseSchema);
 /**
  * How long a copy written now stays current: the span to the next 00:00 UTC, which is
  * when the release workflow can first put something new behind this page. Written at
- * 23:50 it lives ten minutes; written at 00:05 it lives just under a day. Either way
- * the first reader after a release sees the release, and nobody pays for a request
- * that could not have new data behind it.
- *
- * An instant exactly on the boundary has no span left at all, so the floor is what it
- * gets.
+ * 23:50 it lives ten minutes; written at 00:05 it lives just under a day.
  *
  * @param now - The instant the copy is being written at.
  * @returns Whole seconds, never below {@link MINIMUM_TTL_SECONDS}.
@@ -113,12 +100,9 @@ export function cacheTtlSeconds(now: Date): number {
 }
 
 /**
- * The releases the page lists, newest first.
- *
- * A stored copy answers while it is current. Past that it is refreshed, and a refresh
- * GitHub will not serve falls back to the copy held for exactly this, so the page's
- * availability is its own rather than the API's. With neither, the list is empty and
- * the page says where the releases are read instead.
+ * The releases the page lists, newest first. A stored copy answers while it is
+ * current. Past that it is refreshed, and a refresh GitHub will not serve falls back
+ * to the copy held for exactly this, so the page's availability is its own rather
  *
  * @param cache - The store both copies are held in.
  * @returns Every dated release, or an empty list when nothing can be read.
@@ -209,9 +193,6 @@ function toReleases(payload: s.InferOutput<typeof releasesSchema>): Release[] {
  * Parses one release's notes into the document the page renders. The notes are written
  * by whoever wrote the day's commits rather than for this site, so a body the parser
  * refuses costs that entry its prose and leaves the rest of the page standing.
- *
- * Headings here are left unaddressed: every entry on the page is a document of its own,
- * and the same package heading under a dozen dates would give one id to a dozen places.
  *
  * @param notes - The markdown GitHub holds the release's body in.
  * @returns The document to render, or `null` when the notes cannot be read.

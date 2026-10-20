@@ -19,10 +19,8 @@ const SIGNATURE_PREFIX = "sha256=";
  * Verifies `request` against `secret`, reading its body once.
  *
  * @param request The delivery, with its body still unread.
- * @param secret The hook's secret. An unset one refuses every delivery, so a worker
- * deployed without it fails closed.
- * @returns The event the delivery reports, from `X-GitHub-Event` (`ping` when the hook is
- * created), or why it was refused.
+ * @param secret The hook's secret. An unset one refuses every delivery, so a worker deployed without it fails closed.
+ * @returns The event the delivery reports, from `X-GitHub-Event` (`ping` when the hook is created), or why it was refused.
  */
 export async function verifyGitHubDelivery(
 	request: Request,

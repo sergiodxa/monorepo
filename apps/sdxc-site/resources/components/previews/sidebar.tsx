@@ -2,13 +2,6 @@
  * Live preview island for `Sidebar`. The shell is the whole component — a rail beside
  * an inset — so the example composes the real thing: a branded header, two labeled
  * groups of links with badges and a nested sub-menu, a footer account row, and page
- * content in the inset.
- *
- * Collapsing rides `Sidebar.Trigger`'s own checkbox, which every collapse rule in
- * `Sidebar.Provider` reads through `:has()`, and `persist(key)` mirrors that checkbox
- * into a cookie so a fresh load renders the rail as it was left. This page is itself
- * a sidebar shell, and the outer shell reads any checked trigger beneath it, so the
- * collapse belongs on a page that owns its own shell rather than in this frame.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -117,11 +110,6 @@ const SIDEBAR_CODE = `<Sidebar.Provider>
 export const SidebarPreview = clientEntry(import.meta.url, function SidebarPreview() {
 	return () => (
 		<Sidebar.Provider
-			/*
-			 * Tall enough for the whole tree and narrow enough in the rail that the page
-			 * beside it still reads as a page: a shell cropped to a scrolling rail and a
-			 * sliver of content shows neither half of what it is for.
-			 */
 			style={{ "--sidebar-width": "13rem" }}
 			mix={[is("100%"), bs("35rem"), minBs("0")]}
 		>

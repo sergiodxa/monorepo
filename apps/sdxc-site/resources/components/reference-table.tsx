@@ -1,8 +1,6 @@
 /**
  * The table every generated reference prints: the quick reference on a utility page,
- * the props on a component page, the tokens on the theming page. They differ only in
- * their headings and their cells, so one table draws all three and each page stays the
- * shape of its content rather than of its markup.
+ * the props on a component page, the tokens on the theming page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

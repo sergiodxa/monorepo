@@ -15,8 +15,7 @@ export const ORIGIN = "https://sdxc.test";
  * Fetches a URL through the real router.
  *
  * @param path - A path or absolute URL to request.
- * @param init - Request init; a non-GET request gets `origin` set to {@link ORIGIN} by
- * default, since cross-origin protection is part of the chain under test.
+ * @param init - Request init; a non-GET request gets `origin` set to {@link ORIGIN} by default, since cross-origin protection is part of the chain under test.
  * @returns The router's response.
  * @example await fetchApp("/")
  */

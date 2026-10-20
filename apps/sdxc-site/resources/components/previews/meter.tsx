@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Meter`. A meter reports a level that is already what it is,
  * so the preview is the plan-usage panel an app puts them in: three gauges reading the
- * same account, each in the colour its level earns, and one carrying `low`/`high`/
- * `optimum` so the browser's own bands decide how it reads.
+ * same account, each in the colour its level earns, and one carrying `low`/`high`/ `
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

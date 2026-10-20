@@ -1,9 +1,6 @@
 /**
  * The applications the showcase lists, each with the number of packages it installs
- * read from its own manifest. The order is that number, descending, because the page's
- * argument is depth of use: the app that reaches furthest into the collection is the
- * one worth reading first. Two on the same count are separated by whether a reader can
- * go and use one, which is the stronger of the two things this page can show.
+ * read from its own manifest.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

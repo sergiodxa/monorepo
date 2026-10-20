@@ -2,8 +2,6 @@
  * Live preview island for `Resizable`. The component draws the panels, the handles and
  * the custom properties a layout reads; the drag itself is the consumer's to apply, so
  * the preview carries the same `resizeHandle(axis, session)` wiring a reader would write,
- * against one `ResizeSession` per group — a column beside a stacked pair, so both axes
- * are on screen at once.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -85,7 +83,6 @@ let columnSession = new ResizeSession();
 
 /** A pane beside a stacked pair, hydrated so both axes drag. */
 export const ResizablePreview = clientEntry(import.meta.url, function ResizablePreview() {
-	// A session per group, since each one drags along its own axis.
 	let rowSession = new ResizeSession();
 	let columnSession = new ResizeSession();
 
@@ -120,14 +117,11 @@ export const ResizablePreview = clientEntry(import.meta.url, function ResizableP
 				data-resizable-panel
 				data-resizable-min="25"
 			>
-				{/* A group nested in a panel splits that panel along the other axis; the
-					    frame around it is the outer group's, so this one draws none of its own. */}
 				<Resizable
 					orientation="vertical"
 					aria-label="Stacked panes"
 					data-resizable-group
-					// An inline style settles the frame, since a mix entry's own cascade layer
-					// is ordered by first appearance and the group's chrome may land after it.
+
 					style={{ border: "none", borderRadius: "0" }}
 					mix={[bs("100%")]}
 				>

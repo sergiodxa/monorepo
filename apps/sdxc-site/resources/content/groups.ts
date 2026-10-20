@@ -1,9 +1,7 @@
 /**
  * The taxonomy the landing page sorts the published packages into: a reader scanning
  * the list is looking for a problem to solve, not an alphabet, so the groups are
- * named after problems. Membership is stated by directory name, and a package the
- * table does not mention falls into {@link OTHER_GROUP}, so a newly published one
- * appears on the page the day it ships instead of vanishing from it.
+ * named after problems.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

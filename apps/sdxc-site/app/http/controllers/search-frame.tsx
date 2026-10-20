@@ -29,9 +29,7 @@ const SUGGESTION_COUNT = 5;
 /**
  * Serves the dialog's body. Every state answers 200, a blank box and text that cannot run
  * included, because the fragment lands inside a dialog on whatever page the reader is on;
- * the reason a query cannot run is shown under the box instead. The answer streams as it
- * renders, since a page inlines only the first chunk of a frame's body, and carries
- * `X-Robots-Tag` to stay out of indexes.
+ * the reason a query cannot run is shown under the box instead.
  *
  * @returns HTML fragment for `GET /frames/search`.
  */

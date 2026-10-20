@@ -1,10 +1,7 @@
 /**
  * Live preview island for `Form`. `issues` is the whole interface: hand it a `parseSafe`
  * result and every field beneath finds its own message by name, marks itself invalid, and
- * the first one takes focus. A page would set it from the action that parsed the POST;
- * here the island parses the same submission in the browser so the round trip can be seen
- * without one, and a control the wrapper does not cover — the terms checkbox — reads its
- * message out of `issues` itself.
+ * the first one takes focus.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -129,8 +126,7 @@ export const FormPreview = clientEntry(import.meta.url, function FormPreview(han
 				action="/examples/workspaces"
 				method="post"
 				issues={issues}
-				// The native constraints below already block an empty submit with no script;
-				// the schema is what catches the shapes an attribute cannot express.
+
 				noValidate
 				mix={[is("26rem"), on<HTMLFormElement, "submit">("submit", submit)]}
 			>

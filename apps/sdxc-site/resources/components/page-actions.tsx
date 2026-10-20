@@ -3,9 +3,6 @@
  * open it somewhere else. Both exist because a reader's next move is often not reading —
  * it is handing the page to a model — and a rendered page is the wrong thing to hand over.
  *
- * The menu is a native popover opened by an invoker command, so it works, and is reachable
- * from the keyboard, before any script has loaded; every entry is an ordinary link.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -62,8 +59,7 @@ export default function PageActions(handle: Handle<PageActions.Props>) {
 							href={link.href}
 							{...(link.external
 								? { target: "_blank", rel: "noreferrer" }
-								: /* The markdown twin is a text file, so the browser loads it as a document. */
-									{ "data-rmx-document": true })}
+								: { "data-rmx-document": true })}
 						>
 							{link.label}
 						</Menu.Item>

@@ -1,11 +1,7 @@
 /**
  * The tools this site offers a model, declared the way routes are: a name, the
- * description a model chooses by, and the schema its arguments satisfy.
- *
- * Every page here already has a markdown twin at a stable URL, so retrieval is solved for
- * anything that can fetch. What a model cannot do is find the thing — ask whether a
- * package exists for a problem, or enumerate sixty names it has never met — so the tools
- * are weighted toward search and enumeration, and none of them merely refetches a URL.
+ * description a model chooses by, and the schema its arguments satisfy. Every page here
+ * already has a markdown twin at a stable URL, so retrieval is solved for anything that
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,10 +2,6 @@
  * The live preview each component page opens with, and the source that produces it.
  * The catalogue renders as server HTML and works before any script loads, so a preview
  * is this page importing the component and rendering it — the real component under the
- * real stylesheet, rather than a picture of one or a bundler running in the browser.
- *
- * Each entry pairs the markup with the text of that same markup, so the code a reader
- * copies is the code that drew what they are looking at.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -162,7 +158,6 @@ export interface ComponentPreview {
  * The preview for each component, keyed by the slug its page answers to. A component
  * with no entry here shows its documented example as source instead, which is the
  * honest fallback: a preview that needs data the page cannot invent would show a
- * fixture rather than the component.
  */
 export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 	accordion: {

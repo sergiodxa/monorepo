@@ -1,8 +1,7 @@
 /**
  * How a utility's page teaches its theme: which of the `--ui-*` scales the utility reads,
  * and for each one the stylesheet that redefines or extends it and the call that then
- * uses the new value. A scale is read off the utility's signature and the variables its
- * implementation names, so a page shows exactly the scales its utility answers to.
+ * uses the new value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -241,8 +240,7 @@ const SCALES: ScaleDefinition[] = [
  * The scales a utility reads, each written for that utility's page.
  *
  * @param reference - The utility as the catalogue document holds it.
- * @returns One entry per scale the signature takes or the implementation reads, in the
- * order of `SCALES`; an empty list for a utility no theme variable reaches.
+ * @returns One entry per scale the signature takes or the implementation reads, in the order of `SCALES`; an empty list for a utility no theme variable reaches.
  */
 export function themeScales(reference: UtilityReference): ThemeScale[] {
 	return SCALES.filter((scale) => reads(reference, scale)).map((scale) => ({

@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Logo`. A workspace switcher is where an app renders these:
  * one organization's mark at the top with its verified badge, then the row of marks a
- * member belongs to, trailed by a count. `imageFallback()` is wired on every image, and
- * one of them points at a URL that will not load, so the initials it falls back to show.
+ * member belongs to, trailed by a count.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

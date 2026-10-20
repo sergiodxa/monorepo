@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Breadcrumbs`. The `<nav>`, the ordered list and the `›` between
  * rows are the component's; the trail itself is a page's routing, and `aria-current="page"`
- * on the last link is what names the reader's position. A deep path with its middle
- * collapsed is how a real trail behaves once it outgrows its bar, so that is the example.
+ * on the last link is what names the reader's position.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

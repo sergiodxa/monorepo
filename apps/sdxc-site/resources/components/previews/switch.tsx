@@ -2,8 +2,6 @@
  * Live preview island for `Switch`. The control ships no authored `aria-checked`,
  * because a value written on the server goes stale the instant the switch is
  * flipped, so the preview carries the `ariaChecked()` wiring a reader applies to
- * keep the attribute following live checkedness. The example is a real notification
- * panel: three switches, each with its own caption and supporting copy.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

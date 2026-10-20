@@ -1,8 +1,6 @@
 /**
  * The `section-block` tag: one band of the landing page, optionally opened by a short
- * mono label and a display-size title. The `id` is the anchor the page is linked to by,
- * so it belongs in the content file beside the title it names rather than in a view a
- * reader of the copy never opens.
+ * mono label and a display-size title.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -79,7 +77,7 @@ export default function SectionBlock(handle: Handle<SectionBlock.Props>) {
 								mix={[
 									vstack({ gap: 6, align: align === "center" ? "center" : "stretch" }),
 									blocksUseGap(),
-									/* A centered band carries a statement, so its body is set to a measure one reads at a glance. */
+
 									align === "center"
 										? [
 												maxIs("40rem"),
@@ -87,7 +85,7 @@ export default function SectionBlock(handle: Handle<SectionBlock.Props>) {
 												leading("relaxed"),
 												balance(),
 												fg("neutral"),
-												/* A row of buttons that wraps stays centered under the statement too. */
+
 												when('& [data-slot="actions"]', raw({ justifyContent: "center" })),
 											]
 										: [],

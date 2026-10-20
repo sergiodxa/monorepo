@@ -75,7 +75,7 @@ export const CopyButton = clientEntry(
 					) : (
 						<CopyIcon size={16} aria-hidden="true" />
 					)}
-					{/* Empty until the write lands, so the region speaks the confirmation alone. */}
+
 					<span role="status" mix={[visuallyHidden()]}>
 						{copied ? copiedLabel : ""}
 					</span>

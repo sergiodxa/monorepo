@@ -1,8 +1,7 @@
 /**
- * `GET /api` — every published package, under the same taxonomy the landing
- * page groups them by. Sixty names are unscannable as an alphabet, so the page is
+ * `GET /api` — every published package, under the same taxonomy the landing page
+ * groups them by. Sixty names are unscannable as an alphabet, so the page is
  * grouped for a reader browsing and filterable for one who already knows what they
- * are after.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,11 +44,6 @@ export default createAction(routes.api.index, async (ctx) => {
 					{DESCRIPTION}
 				</PageTitle>
 
-				{/*
-				 * The header's search dialog already searches every package alongside every
-				 * guide, and it holds the ⌘K binding, so this page opens that one rather than
-				 * standing a second search up over a subset of the same index.
-				 */}
 				<div mix={[m("2rem", 0, 0, 0)]}>
 					<Button
 						type="button"

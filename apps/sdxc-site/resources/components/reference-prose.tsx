@@ -1,8 +1,6 @@
 /**
  * A sentence lifted from a source comment, drawn the way the comment wrote it: the runs
- * it put in backticks set in the mono face, the rest as prose. Every page that prints a
- * summary or a part's description goes through here, so a comment naming an element or an
- * attribute reads as code on the page instead of showing its backticks.
+ * it put in backticks set in the mono face, the rest as prose.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,11 +31,6 @@ export default function ReferenceProse(handle: Handle<ReferenceProse.Props>) {
 		<>
 			{toRuns(handle.props.children).map((run, index) =>
 				run.code ? (
-					/*
-					 * The size is inherited rather than set, because this sentence is drawn at the
-					 * lede's size on one page and the table's on another, and a code run that keeps
-					 * its own size would sit a step off the words either side of it.
-					 */
 					<code key={String(index)} mix={[font("mono"), fg("neutral.emphasis")]}>
 						{run.text}
 					</code>

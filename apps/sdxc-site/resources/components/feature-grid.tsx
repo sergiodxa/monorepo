@@ -48,10 +48,7 @@ export default function FeatureGrid(handle: Handle<FeatureGrid.Props>) {
 					gridTemplate({ columns: "minmax(0, 1fr)" }),
 					media("(min-width: 48rem)", [
 						gridTemplate({ columns: repeat(Number(columns), "minmax(0, 1fr)") }),
-						/*
-						 * A last row with fewer cells than columns stretches its last cell across
-						 * the gap, so the hairline color never shows through as an empty cell.
-						 */
+
 						columns === "2"
 							? when("& > :last-child:nth-child(odd)", raw({ gridColumn: "1 / -1" }))
 							: [

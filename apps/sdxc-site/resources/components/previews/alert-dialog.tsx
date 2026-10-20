@@ -2,10 +2,6 @@
  * Live preview island for `AlertDialog`. The panel opens modally, traps focus and closes
  * only on an explicit close request, all on the platform's own `<dialog>` and Invoker
  * Commands; `method="dialog"` keeps the confirmation on the page, so the guard runs and the
- * panel closes without a navigation. The guard itself is a schema no HTML attribute can
- * express, so the field carries the same `validate(schema)` wiring a reader would write —
- * the schema a server route would parse the submission with, laid onto the field's native
- * validity and mirrored into its `FieldError` once the browser reports it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

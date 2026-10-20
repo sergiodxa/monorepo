@@ -1,13 +1,7 @@
 /**
  * Live preview island for `Carousel`. The component draws the scroll-snapping track and
  * the invoker buttons, and the track already scrolls and snaps by touch or trackpad with
- * no script. The commands those buttons dispatch need an answer, so the preview carries
- * the same `carouselControls()` wiring a reader would write on the viewport: it pages by a
- * slide, disables whichever button sits at an edge, and jumps to the slide a `--ui-goto`
- * button names through `data-slide`, matched against the `data-carousel-slide` markers.
- *
- * One slide fills the viewport and the track carries no gap, so paging by a viewport width
- * lands exactly on the next slide's snap point.
+ * no script.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -153,12 +147,7 @@ export const CarouselPreview = clientEntry(import.meta.url, function CarouselPre
 								border({ width: 0 }),
 								cursor("pointer"),
 								transition("background-color", { duration: 150 }),
-								/*
-								 * `carouselControls()` marks the dot naming the slide in view, so the row
-								 * reads as a position. The two states exclude each other, since a plain
-								 * resting color beside a state rule can win its cascade layer and leave
-								 * every dot looking the same.
-								 */
+
 								when("&:not([aria-current])", bg("neutral.border-hover")),
 								when("&[aria-current]", bg("neutral.solid")),
 							]}

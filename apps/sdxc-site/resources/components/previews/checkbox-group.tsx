@@ -1,10 +1,7 @@
 /**
  * Live preview island for `CheckboxGroup`. The group is the accessible wrapper around a
  * run of checkboxes: it names the set, points at its own description and error, and lays
- * them out along one axis. A set that needs at least one pick is not something a native
- * attribute can express across several boxes, so the island holds that rule and writes the
- * group's `aria-invalid` and its `FieldError` from it, the same shape a server round-trip
- * would re-render with.
+ * them out along one axis.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,6 @@
 /**
  * Live preview island for `Tabs`. There is no tracked selection here: every tab is a
  * real link, and whichever one points at the page being viewed is the selected one.
- * The preview keeps that contract by reading the URL — the fragment, standing in for
- * the route segment an app would use — so clicking a tab navigates and the strip
- * re-renders from the new URL, indicator and panel together.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -111,8 +108,7 @@ export const TabsPreview = clientEntry(import.meta.url, function TabsPreview(han
 							aria-selected={index === activeIndex}
 							mix={[
 								is(TAB_SIZE),
-								// A fragment navigation leaves no history entry the runtime reports,
-								// so the island reads the URL back on the press itself.
+
 								on<HTMLAnchorElement, "click">("click", () => {
 									fragment = section.fragment;
 									void handle.update();

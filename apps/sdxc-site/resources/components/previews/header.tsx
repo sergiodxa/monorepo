@@ -2,11 +2,6 @@
  * Live preview island for `Header`. It renders a `<header>` holding a small uppercase
  * label, so it earns its place by naming a group of rows rather than standing alone — a
  * usage panel is two such groups, and the label is the only thing telling the reader which
- * numbers they are looking at.
- *
- * `Header` carries no behavior of its own and needs no mixin. The island is what makes the
- * labels worth reading: switching the period rewrites the rows underneath while the
- * headings that name them stay put.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -93,7 +88,6 @@ export const HeaderPreview = clientEntry(import.meta.url, function HeaderPreview
 	}
 
 	return () => (
-		// A native select's change event bubbles, so the panel is where the island listens.
 		<div
 			mix={[
 				vstack({ gap: 4, align: "stretch" }),

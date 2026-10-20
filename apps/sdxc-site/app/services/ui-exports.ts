@@ -1,8 +1,7 @@
 /**
  * The `@sdxc/ui` subpaths beside its components as the site reads them: every mixin,
  * behavior class, animation and style recipe, one page each, with the events, constants
- * and types its module publishes for it. Reading is a lookup into a document generated
- * at build time, loaded inside a request because global-scope work fails upload.
+ * and types its module publishes for it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

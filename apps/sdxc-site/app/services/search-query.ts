@@ -90,11 +90,9 @@ function isWordCharacter(character: string | undefined): boolean {
 }
 
 /**
- * Whether `token` starts a word somewhere in `text`, both already lowercased.
- *
- * A plain substring test would answer "dated" with "Validated", which is how a search for
- * the versioning scheme comes back headed by an unrelated form example. Requiring a word
- * to start where the query does is what keeps a short word from matching by accident.
+ * Whether `token` starts a word somewhere in `text`, both already lowercased. A plain
+ * substring test would answer "dated" with "Validated", which is how a search for the
+ * versioning scheme comes back headed by an unrelated form example.
  *
  * @param text - What to look in.
  * @param token - One word of the query.
@@ -209,8 +207,7 @@ export function matchDocuments(
  * expects a search to behave when the first word matched too much.
  *
  * @param documents - The corpus to rank, in the order it should tie-break in.
- * @param query - What the reader typed; an empty one keeps the corpus order, and text the
- * syntax cannot run reaches nothing.
+ * @param query - What the reader typed; an empty one keeps the corpus order, and text the syntax cannot run reaches nothing.
  * @param limit - How many entries to return.
  * @returns The best matches, strongest first, at most `limit` of them.
  * @example rankDocuments(index, "parse markdown kind:api", 10)

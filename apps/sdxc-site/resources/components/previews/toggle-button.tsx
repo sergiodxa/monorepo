@@ -1,9 +1,7 @@
 /**
  * Live preview island for `ToggleButton`. A native `<button>` has no on/off state,
  * so the rendered `aria-pressed` never moves without the `pressToggle()` wiring this
- * preview carries. The example is a map's layer controls: three toggles a reader can
- * see take effect, since the group reads each button's live pressed state as the
- * click bubbles past the mixin that just flipped it, and lists the layers drawn.
+ * preview carries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

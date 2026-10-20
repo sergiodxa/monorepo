@@ -1,11 +1,6 @@
 /**
  * The `package-groups` tag: the published collection as an inspector, the groups listed
- * down one side and the packages of the one picked filling the other. It is the one tag
- * that reads data rather than its own children, so a package published today is listed
- * today and a description edited in a manifest is the description shown here.
- *
- * Picking a group needs no script: each group is a radio input beside its label and its
- * panel, and the checked input is what reveals the panel after it.
+ * down one side and the packages of the one picked filling the other.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -157,11 +152,6 @@ export default function PackageGroups(handle: Handle<PackageGroups.Props>) {
 								p(5, 0, 0, 0),
 								precededBy("input:checked", vstack({ gap: 5, align: "stretch" })),
 								media(SIDE_BY_SIDE, [
-									/*
-									 * The group list sets the inspector's height and the panel fills it: size
-									 * containment keeps a long group from stretching every row of the list, and
-									 * what does not fit scrolls inside the panel.
-									 */
 									raw({
 										gridColumn: "2",
 										gridRow: `2 / span ${groups.length}`,

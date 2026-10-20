@@ -1,9 +1,7 @@
 /**
  * Live preview island for `FileTrigger`. The trigger is a `<label>` around a file input
  * that the component already styles out of sight, so the picker opens with no script and
- * the control keeps its focus ring. `mix` lands on that input, which is what lets the
- * island read the chosen file: an importer only enables its own submit once there is
- * something to import, and that check is the part the platform will not do.
+ * the control keeps its focus ring.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

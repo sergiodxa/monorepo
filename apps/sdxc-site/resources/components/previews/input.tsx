@@ -3,10 +3,6 @@
  * field is built on, so the example is the four states a form actually renders it in:
  * captioned and described, invalid with a message, read-only, and disabled.
  *
- * The first one is hydrated, because the thing a repository-name field owes its reader is
- * the address it is about to claim — the island mirrors each keystroke into the URL
- * underneath, which is the one part of a plain `<input>` no attribute provides.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

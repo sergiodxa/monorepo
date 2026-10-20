@@ -2,12 +2,6 @@
  * The applications the showcase lists, and the same five a package page may name as
  * users of it. The list is curated rather than exhaustive: an app that reaches for a
  * handful of packages proves nothing about them, and a count a reader cannot check
- * anywhere else on the site is worse than no count. These five are the ones whose
- * dependency lists say something.
- *
- * One list serves both surfaces on purpose. A package page claiming five users while
- * the showcase lists five applications is consistent; one claiming nine and linking
- * five is the first thing a reader notices about the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

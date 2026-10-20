@@ -34,9 +34,7 @@ export const THEMING_SUMMARY =
  *
  * @param reference - The utility as the catalogue document holds it.
  * @param examples - The live examples its page draws, each printed as its code.
- * @returns The page as markdown: every documented call beside the CSS it emits, the
- * examples, the same call with a custom value, on a state and at a width, and how a
- * theme customizes the scales it reads.
+ * @returns The page as markdown: every documented call beside the CSS it emits, the examples, the same call with a custom value, on a state and at a width, and how a theme customizes the scales it reads.
  */
 export function utilityMarkdown(
 	reference: UtilityReference,

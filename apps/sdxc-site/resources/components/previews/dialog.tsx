@@ -1,9 +1,7 @@
 /**
  * Live preview island for `Dialog`. Opening and closing are the platform's: a button
  * carrying `commandfor`/`command` shows the native `<dialog>`, the close control and the
- * footer's own buttons dismiss it, and none of that needs script. What hydration adds is
- * the shortcut — `hotkey("mod+i")` opens the same dialog from anywhere on the page, which
- * is how an invite flow is reached once a team knows the app.
+ * footer's own buttons dismiss it, and none of that needs script.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

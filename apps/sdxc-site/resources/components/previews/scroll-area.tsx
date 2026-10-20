@@ -2,7 +2,6 @@
  * Live preview island for `ScrollArea`. The frame only scrolls once its content
  * outgrows it, so the example carries a whole deploy log rather than a line of text,
  * and the two scroll-timeline factories a reader pairs with it: `scrollShadow()`
- * under the sticky header, and `scrollFade()` tapering the viewport's own edges.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

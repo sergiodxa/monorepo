@@ -81,7 +81,6 @@ export default function SiteFooter(_handle: Handle) {
 							media("(min-width: 64rem)", raw({ gridColumn: "auto" })),
 						]}
 					>
-						{/* Set the way the landing's hero sets the name, so the page opens and closes on it. */}
 						<p
 							mix={[
 								m(0),
@@ -142,7 +141,7 @@ export default function SiteFooter(_handle: Handle) {
 							{ label: "RSS", href: routes.feed.href(), file: true },
 						]}
 					/>
-					{/* Present on every page, so a reader can fund the work before anyone else has. */}
+
 					<Column
 						title="Author"
 						links={[

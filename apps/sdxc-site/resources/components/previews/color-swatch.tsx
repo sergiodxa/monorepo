@@ -1,9 +1,7 @@
 /**
  * Live preview island for `ColorSwatch`. A swatch is a read-only chip: it paints the
  * literal color it is handed over a checkerboard, so a translucent value reads as
- * translucent, and its shape and size are the only choices. A palette is where that
- * matters, so the example lays out a brand ramp, the semantic roles beside it, and the
- * shape and size vocabulary a token page reaches for.
+ * translucent, and its shape and size are the only choices.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

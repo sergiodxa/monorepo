@@ -2,9 +2,6 @@
  * Live preview island for `ImagePlaceholder`. The fallback shows through whenever the
  * image is absent, which the platform handles for an image that was never given a `src`;
  * an image that *fails* is the case CSS cannot see, so `imageFallback()` flags it — the
- * second member below points at a URL that does not resolve, and its initials take over
- * once the load fails. The third shows the presence badge, and the group collapses the
- * rest behind a count.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,8 +43,7 @@ const MEMBERS = [
 		name: "Luis Medina",
 		role: "Platform",
 		initials: "LM",
-		// Nothing serves this, which is the failure imageFallback() exists for: the
-		// element is present and has a src, so no CSS selector can tell it broke.
+
 		src: "/images/team/missing-avatar.jpg",
 		online: false,
 	},

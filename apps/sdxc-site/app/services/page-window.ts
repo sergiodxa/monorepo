@@ -1,8 +1,7 @@
 /**
  * The run of page items a pager renders for one page of a result set: the first and last
  * page always, a window of neighbours around the current one, and an ellipsis standing in
- * for each stretch left out. Built as a list rather than a count so a pager renders it
- * directly and never has to decide where a gap falls while laying out markup.
+ * for each stretch left out.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

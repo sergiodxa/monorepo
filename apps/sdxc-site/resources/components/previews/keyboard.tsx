@@ -3,10 +3,6 @@
  * reads as a shortcut once the row itself lines the label up against the keys — the
  * baseline alignment and the fixed gap are the example.
  *
- * Which keyboard is in front of the reader is read from the request's own user agent, so
- * the glyphs are right in the first paint and stay right through hydration — the answer
- * travels with the island as a prop rather than waiting for script to look it up.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

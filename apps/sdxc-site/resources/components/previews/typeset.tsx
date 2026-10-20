@@ -1,9 +1,7 @@
 /**
  * Live preview island for `Typeset`. The layer decides sizes, spacing and color for
  * markup it does not own, so a short pair of elements shows nothing: the example is
- * a full article excerpt — heading, lead, list, quote, code block, table and inline
- * link — rendered under the `reading` preset, plus a subtree opted out through
- * `data-not-typeset` so the escape hatch is visible too.
+ * a full article excerpt — heading, lead, list, quote, code block, table and inli
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

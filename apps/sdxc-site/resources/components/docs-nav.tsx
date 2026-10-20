@@ -82,9 +82,6 @@ function NavGroupItem(handle: Handle<NavGroupItem.Props>) {
 					{group.title}
 				</span>
 
-				{/* The rule under a group title starts beneath that title's first letter, so the
-				    entries read as indented under it rather than as a column set apart. Both
-				    insets replace ones the component sets, which is what `style` settles. */}
 				<Sidebar.MenuSub style={{ marginInlineStart: "0.625rem", paddingInlineStart: "0.25rem" }}>
 					{group.entries.map((entry) => (
 						<Sidebar.MenuSubItem key={entry.href}>

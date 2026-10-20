@@ -1,10 +1,7 @@
 /**
- * Live preview island for `Tree`. A branch's reveal is the platform's — each node is
- * a `<details>` — so the example is a real source tree several levels deep, with
+ * Live preview island for `Tree`. A branch's reveal is the platform's — each node is a
+ * `<details>` — so the example is a real source tree several levels deep, with
  * `treeKeys(model)` supplying the WAI-ARIA keyboard pattern against a
- * `SelectionModel`: arrows move and expand, typing jumps to a name, Enter selects.
- * Expanding a branch from the keyboard settles its `aria-expanded` and its `<details>`
- * together inside the mixin, leaving the island with the markup alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -121,9 +118,7 @@ export const TreePreview = clientEntry(import.meta.url, function TreePreview(han
 	let model = new SelectionModel({
 		mode: "multiple",
 		keys: KEYS,
-		// The mixin narrows the model's key universe to the rows keyboard
-		// navigation can reach, so a row inside a collapsed subtree cannot
-		// start out selected.
+
 		selectedKeys: ["packages/ui/package.json"],
 	});
 

@@ -2,8 +2,6 @@
  * Live preview island for `Slider`. The example is a five-band equalizer, which is
  * what a run of sliders is actually for: each band a vertical track with its own
  * range, sharing the resolved value with its `<output>` through the root's context.
- * Reporting the live value is the consumer's, so the island re-renders each readout
- * from the thumb's own `input` event.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * Live example island for a `ColorPicker` whose panel offers saved presets. The popover
  * opens from the swatch trigger with no script; keeping the field, the trigger's swatch
  * and the picked preset showing one color is the consumer's, so the island listens to
- * the preset group and the field and re-renders both from the color they settle on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

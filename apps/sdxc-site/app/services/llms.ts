@@ -2,8 +2,6 @@
  * `/llms.txt` — the site as a markdown map, written for a model deciding what to read
  * next. Every link points at a page's `.md` twin rather than its HTML, so following one
  * costs no parse, and the whole file is derived from the same guides and manifests the
- * sidebar is drawn from: a package published or a guide written appears here on the next
- * deploy without anyone editing a list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

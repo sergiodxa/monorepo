@@ -48,7 +48,6 @@ export default createAction(routes.home, async (ctx) => {
 		>
 			<SiteHeader activePath={routes.home.href()} />
 
-			{/* Each band tints the full width, so the cap belongs on the content inside one. */}
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
 				{toRemix(content.data, {
 					components: { ...LANDING_COMPONENTS, ...sponsorTags(roster.current) },

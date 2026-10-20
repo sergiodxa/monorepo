@@ -1,8 +1,6 @@
 /**
  * The site's own identity: the one origin every canonical URL is built from, its author, and
- * how it describes itself. Whichever host served a request — a preview deployment, the
- * workers.dev name, the custom domain — a page states one address, so a crawler and a model
- * that read the same page from two hosts agree on what it is.
+ * how it describes itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

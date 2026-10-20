@@ -2,7 +2,6 @@
  * Live preview island for `Modal`. The panel opens and closes through Invoker Commands
  * on the native `<dialog>`, so the preview shows what an app actually puts inside one —
  * a titled, described form with its own fields, a close affordance in the corner and a
- * cancel/confirm footer — plus `hotkey("mod+i")`, which needs script to reach the panel.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -131,8 +130,6 @@ export const ModalPreview = clientEntry(import.meta.url, function ModalPreview()
 					</Button>
 				</Modal.Footer>
 
-				{/* The corner close is positioned rather than laid out, so it sits last and
-					    opening the panel lands on the first field instead of on a dismissal. */}
 				<Modal.Close commandfor="preview-invite-modal" aria-label="Close" />
 			</Modal>
 		</div>

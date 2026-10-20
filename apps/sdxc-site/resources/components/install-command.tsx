@@ -2,7 +2,6 @@
  * The `install-command` tag: one authored npm command, offered in each package
  * manager's dialect. The strip is a radio group, so the reader switches dialects and
  * copies the one on screen with no script; the dialect they chose arrives with the
- * request, so the server renders the strip already on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,11 +1,6 @@
 /**
- * Assembles the site's MCP server: binds every declared tool and resource to its handler
- * and exposes one `fetch` the router mounts.
- *
- * The same split the router uses — `app/mcp/tools/index.ts` and `app/mcp/resources/index.ts`
- * declare what exists, one file per tool and resource implements it and loads on first use,
- * the wiring lives here. Everything the server can reach is already public as HTML and as markdown,
- * so it needs no credential and every tool is read-only.
+ * Assembles the site's MCP server: binds every declared tool and resource to its handler and
+ * exposes one `fetch` the router mounts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

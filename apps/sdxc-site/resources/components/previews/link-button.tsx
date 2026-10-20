@@ -2,7 +2,6 @@
  * Live preview island for `LinkButton`. Buttons that navigate turn up in pairs, so the
  * preview is the two rows an app actually renders them in: an empty state's primary and
  * secondary calls to action, then a toolbar mixing a download, a size step up, and an
- * anchor turned off through `aria-disabled` rather than losing its `href`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

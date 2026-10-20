@@ -1,9 +1,7 @@
 /**
  * The schemas the form previews validate against, and the checks a single field preview
  * runs on its own. They live here rather than beside the markup because a schema is plain
- * data with no DOM in it, and because the same schema is read twice: once by the submit
- * handler that produces the issues a `Form` renders, and once by the `validate()` mixin
- * that mirrors a verdict into one field as it is typed.
+ * data with no DOM in it, and because the same schema is read twice: once by the submit h
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -89,8 +87,7 @@ export function issueFor(issues: ReadonlyArray<s.Issue>, name: string): string |
 	return issues.find((issue) => {
 		let [segment] = issue.path ?? [];
 		if (segment === undefined) return false;
-		// A path segment is either the key itself or an object carrying it, and a form-data
-		// schema may report either shape.
+
 		return String(typeof segment === "object" ? segment.key : segment) === name;
 	})?.message;
 }

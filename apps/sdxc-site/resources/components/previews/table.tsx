@@ -2,9 +2,6 @@
  * Live preview island for `Table`. A two-column table shows none of what the
  * component does, so the example is a real invoice list: a scrolling container,
  * sort links on the headers with `aria-sort` on the active one, aligned numeric
- * columns, a status badge per row, and a trailing load-more link. Row selection has
- * no native state to ride, so the island keeps it in a `SelectionModel` and mirrors
- * the set onto each row's `aria-selected`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -187,10 +184,6 @@ export const TablePreview = clientEntry(import.meta.url, function TablePreview(h
 		model.addEventListener("change", () => void handle.update(), { signal });
 	})(selection);
 
-	/*
-	 * The headers link rather than listen, so which column is active is whatever the
-	 * query asked for, exactly as it would be for a page an app served sorted.
-	 */
 	let sort = readSort(globalThis.location?.search ?? "");
 
 	/** Re-reads the order from the URL, however the URL came to say something else. */

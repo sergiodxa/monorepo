@@ -3,10 +3,6 @@
  * `:focus-within`, so the card opens for a pointer and for a Tab with no script at all —
  * the `Follow` button inside is reachable because the card stays open while focus is in it.
  *
- * The panel is absolutely positioned against the root, so it needs room in the flow to
- * open into: the frame below reserves the block space the card takes, which is what keeps
- * it from being cut off by whatever scrolls around it.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -71,15 +67,11 @@ export const HoverCardPreview = clientEntry(import.meta.url, function HoverCardP
 					<HoverCard.Trigger>
 						<Link href="/examples/users/sergiodxa">@sergiodxa</Link>
 					</HoverCard.Trigger>
-					{/* bottom-start keeps the panel inside the column it opens in, rather than
-						    centering it under the mention and hanging off the edge. */}
+
 					<HoverCard.Content
 						placement="bottom-start"
 						aria-label="About @sergiodxa"
-						// Every recipe compiles into its own cascade sublayer, and a sublayer's
-						// position is fixed the first time it appears on the page. The panel's own
-						// hidden state registers after the root's reveal rules, which a later layer
-						// wins against, so the reveal is restated here where it lands last.
+
 						mix={[
 							when(':is([data-slot="hover-card"]:hover, [data-slot="hover-card"]:focus-within) &', [
 								opacity(100),

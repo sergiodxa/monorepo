@@ -1,8 +1,7 @@
 /**
  * Draws a page's social card in the landing page's closing band: a dark field with a brand
  * glow, a grid fading out from the middle, dashed rails and rules framed by indigo markers,
- * and the page's eyebrow, title and description centred inside. Colours are the site's dark
- * theme tokens, so the card reads as a piece of the site.
+ * and the page's eyebrow, title and description centred inside.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

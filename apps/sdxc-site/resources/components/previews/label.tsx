@@ -2,7 +2,6 @@
  * Live preview island for `Label`. A caption is only worth looking at next to the field
  * it names, so the preview is a profile form showing the three shapes one takes: pointing
  * at a field by `id`, carrying a trailing optional-marker alongside the caption text, and
- * wrapping its control so the platform pairs them with no `id` at all.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

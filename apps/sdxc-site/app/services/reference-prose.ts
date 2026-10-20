@@ -1,9 +1,7 @@
 /**
- * Splits a sentence taken from a source comment into the runs a page draws it with.
- *
- * A doc comment names code the way prose does, in backticks, and a page that prints the
- * sentence verbatim prints the backticks with it. Reading them here is what lets the page
- * set those runs in the mono face and leave the rest as prose.
+ * Splits a sentence taken from a source comment into the runs a page draws it with. A doc
+ * comment names code the way prose does, in backticks, and a page that prints the
+ * sentence verbatim prints the backticks with it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,15 +19,12 @@ export interface ProseRun {
 const CODE_RUN = /`([^`]+)`/g;
 
 /**
- * Reads a comment sentence as alternating prose and code runs.
- *
- * An unpaired backtick has nothing to close it, so it stays in the prose it sits in and
- * the sentence still reads — the page prints the stray mark rather than swallowing the
- * rest of the line into a code run that never ends.
+ * Reads a comment sentence as alternating prose and code runs. An unpaired backtick has
+ * nothing to close it, so it stays in the prose it sits in and the sentence still reads
+ * — the page prints the stray mark rather than swallowing the rest of the line into a
  *
  * @param sentence - The sentence as the source comment wrote it.
  * @returns The runs to draw, in order, with no empty run between two adjacent ones.
- *
  * @example toRuns("Built on the native `<details>` element.")
  * @example [{ code: false, text: "Built on the native " }, { code: true, text: "<details>" }, { code: false, text: " element." }]
  */

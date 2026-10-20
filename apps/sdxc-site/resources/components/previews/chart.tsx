@@ -2,9 +2,6 @@
  * Live preview island for `Chart`. Every bar is a focusable `<rect>` carrying its own
  * `<title>`, and the gridlines come from the value domain, so the figure is readable and
  * keyboard-navigable with no script: tab into the plot and each bar announces its month,
- * series and count. `Chart.Legend`'s rows are native checkboxes whose `aria-checked`
- * attribute is static, so each one carries the `ariaChecked()` wiring a reader would write
- * to keep it following the live checkedness the row already strikes through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

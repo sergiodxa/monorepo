@@ -1,8 +1,7 @@
 /**
  * Live preview island for `OverlayArrow`. The arrow attaches to the edge of the surface
  * that holds it and points back across the gap at whatever the surface is anchored to,
- * so each placement is shown beside a trigger of its own: the name is where the surface
- * sits, and the glyph is the side that faces the trigger.
+ * so each placement is shown beside a trigger of its own: the name is where the surfac
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,11 +48,6 @@ export const OverlayArrowPreview = clientEntry(import.meta.url, function Overlay
 	return () => (
 		<div mix={[hstack({ gap: 8, align: "center", justify: "center" }), flexWrap()]}>
 			{PLACEMENTS.map((entry) => {
-				/*
-				 * The gap between the surface and its trigger is what the glyph reaches across,
-				 * so the pair stacks along the placement's own axis and the surface leads or
-				 * trails depending on which side of the trigger it sits.
-				 */
 				let surface = (
 					<div
 						key="surface"

@@ -1,9 +1,7 @@
 /**
  * The shell every documentation page composes into: the tree on the left, a trail
  * across the top, the page in the middle closed by its author's credit, and — where a
- * page has one — its own headings on the right. Guides, the package reference and each
- * catalogue draw their own tree in it, so the shell around a page reads the same
- * wherever the reader is.
+ * page has one — its own headings on the right.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -98,30 +96,14 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 				<Sidebar
 					collapsible="offcanvas"
 					mix={[
-						/*
-						 * The rail states no height of its own, so the row it sits in stretches it to
-						 * the page's height. `Sidebar` asks for the full height of its parent, which
-						 * a parent sized by its content answers with that content's height — one
-						 * viewport's worth — and the rail's edge would stop there.
-						 */
 						bs("auto"),
-						/*
-						 * The rail animates its own width, and a transition running on that property
-						 * holds the old value; pulling the rail out of the flow by its own width
-						 * hands the space back at once, alongside the slide it already performs.
-						 */
+
 						when('[data-slot="provider"]:has([data-slot="toggle"]:checked) &', [
 							mis("calc(-1 * var(--sidebar-width, 16rem))"),
 							overflowX("hidden"),
 						]),
 					]}
 				>
-					{/*
-					 * The rail is as tall as the page, so its edge runs unbroken from the header to
-					 * the footer rather than sliding along as a segment the height of the viewport.
-					 * What holds against the viewport is the rail's own two rows: the wordmark at
-					 * the top, and the tree below it, each staying put while the page scrolls past.
-					 */}
 					<Sidebar.Header mix={[sticky(), insBs(0), z(1)]}>{heading}</Sidebar.Header>
 					<Sidebar.Content
 						mix={[sticky(), insBs(HEADER_HEIGHT), maxBs(`calc(100dvh - ${HEADER_HEIGHT})`)]}
@@ -149,7 +131,6 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							media("(min-width: 48rem)", p(0, 8)),
 						]}
 					>
-						{/* The rail is what a wide screen collapses; a narrow one has the drawer instead. */}
 						<span mix={[inlineFlex(), media(DRAWER_BREAKPOINT, hidden())]}>
 							<Sidebar.Trigger id="docs-rail-toggle" aria-label="Collapse the sidebar" />
 						</span>
@@ -168,7 +149,6 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							</Button>
 						</span>
 
-						{/* A phone has room for the trail or the destinations, and only the destinations lead elsewhere. */}
 						{breadcrumbs.length > 0 ? (
 							<span mix={[hidden(), media("(min-width: 48rem)", inlineFlex())]}>
 								<Breadcrumbs aria-label="Breadcrumb">
@@ -198,7 +178,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							is("100%"),
 							relative(),
 							raw({ isolation: "isolate" }),
-							/* The faded grid the landing's hero sits on, so a page opens the way the landing does. */
+
 							before(
 								raw({
 									content: '""',
@@ -228,12 +208,6 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						</main>
 
 						{aside ? (
-							/*
-							 * Held against the viewport so the headings stay reachable down a long page,
-							 * and given a width it keeps: the rail is only worth drawing at its own size,
-							 * so the prose beside it yields the space instead of squeezing it to a column
-							 * of broken words.
-							 */
 							<div
 								mix={[
 									hidden(),

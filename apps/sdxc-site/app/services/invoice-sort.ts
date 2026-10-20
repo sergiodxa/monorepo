@@ -1,9 +1,7 @@
 /**
- * Orders a table's rows from the sort key its column links carry.
- *
- * The table sorts through links rather than script: a header names a URL, the request
- * comes back ordered, and the page reads which column is active from the query it was
- * asked for. This holds that reading, so a preview can show the mechanism working.
+ * Orders a table's rows from the sort key its column links carry. The table sorts
+ * through links rather than script: a header names a URL, the request comes back
+ * ordered, and the page reads which column is active from the query it was asked for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

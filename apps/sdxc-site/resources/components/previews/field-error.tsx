@@ -2,11 +2,6 @@
  * Live preview island for `FieldError`. The element is a `<p>` with a stable id and a
  * `data-field-error` marker, and that marker is the whole contract: `validate()` finds the
  * slot through the field's own `aria-describedby`, writes the schema's message into it, and
- * unhides it. It stays quiet until the browser first reports the field invalid — pressing
- * Save is what does that — and from then on it tracks every keystroke.
- *
- * The second field carries a message the server produced instead, which is the same
- * element with its text rendered rather than written in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

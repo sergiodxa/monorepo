@@ -1,9 +1,7 @@
 /**
  * Live preview island for `Spinner`. The component draws the glyph and holds it
  * still, so the rotation is the `spin()` factory a reader composes through `mix` —
- * without it the indicator sits motionless. The example shows the three places an
- * app reaches for one: a pending button, an inline status row, and a panel that is
- * still fetching, each at the size that spot calls for.
+ * without it the indicator sits motionless.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

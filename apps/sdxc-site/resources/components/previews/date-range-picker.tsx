@@ -2,8 +2,6 @@
  * Live preview island for `DateRangePicker`. Two native date fields joined into one
  * control: the calendar, the keyboard handling and the locale are all the platform's, so
  * both ends of the range are pickable, validated and submittable before any script loads.
- * What hydration adds is the one thing the platform cannot know — that the two fields are
- * ends of the same range — which is what lets the copy beneath them count the nights.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

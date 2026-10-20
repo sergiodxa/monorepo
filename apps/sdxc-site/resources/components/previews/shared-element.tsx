@@ -1,9 +1,7 @@
 /**
  * Live preview island for `SharedElement`. Its identity is its own `id`, matched
  * against the same `id` on the other side of a navigation — which shows nothing on a
- * page that never navigates. So the island moves the element between a grid cell and
- * a detail header and runs the swap inside `document.startViewTransition()`, the same
- * call `viewTransition()` makes for a Frame reload: the cover morphs rather than pops.
+ * page that never navigates.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

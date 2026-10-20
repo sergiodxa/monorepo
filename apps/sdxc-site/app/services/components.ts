@@ -1,9 +1,6 @@
 /**
  * The `@sdxc/ui` catalogue as the site reads it: every component the package
- * publishes, and the reference one page draws. Reading is a lookup — each module's
- * namespace and its compound parts were read once when the document was generated —
- * so a page costs a key rather than a parse. The document loads inside a request,
- * because work in the worker's global scope fails upload validation.
+ * publishes, and the reference one page draws.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
  * `GET /frames/previews/:component`, `/frames/previews/:component/:example` and
  * `/frames/u/:utility/:example` — a component's live preview, one of its live examples, or
- * one utility example, as an HTML fragment for a `<Frame>` to load. Pages and guides embed
- * the same fragment, so a demo is written once and its islands hydrate wherever it appears.
+ * one utility example, as an HTML fragment for a `<Frame>` to load.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

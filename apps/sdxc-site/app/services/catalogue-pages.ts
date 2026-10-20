@@ -1,8 +1,7 @@
 /**
  * Every page of the two catalogues as one list — each `@sdxc/u` utility, then the
  * `@sdxc/ui` theme contract, components and subpath exports — with the markdown twin
- * each one answers on. Search, `/llms.txt`, the sitemap and the MCP resources all
- * enumerate the catalogues through here, so a page added to either reaches all four.
+ * each one answers on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

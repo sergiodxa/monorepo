@@ -2,9 +2,6 @@
  * The words a calendar preview puts around its dates: the month a grid is paged to, the
  * weekday column captions, and the human phrasing of a distance between two days.
  *
- * Every function reads a date in the zone the page runs in, the same zone a month grid
- * names its cells in, so a label never disagrees with the cell it sits on.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

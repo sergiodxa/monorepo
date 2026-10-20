@@ -2,10 +2,6 @@
  * Live preview island for `TextField`. The wrapper computes every id and
  * `aria-describedby` link between its caption, control, description and error itself,
  * so the example is a form step carrying all four: a described field, a field showing
- * the message a submission came back with, and the submit that produced it. An app
- * hands `errorMessage` whatever its `parseSafe` result reported, and pairs
- * `validate(schema)` with the control through `parts` to check that same schema as
- * the field is typed into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -60,8 +56,7 @@ export const TextFieldPreview = clientEntry(import.meta.url, function TextFieldP
 			action="/examples/workspaces"
 			mix={[
 				is("26rem"),
-				// A docs page has nowhere to post to, so the submission stops here instead
-				// of navigating away from the example.
+
 				on<HTMLFormElement, "submit">("submit", (event) => event.preventDefault()),
 			]}
 		>

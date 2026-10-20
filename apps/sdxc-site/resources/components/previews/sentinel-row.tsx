@@ -2,8 +2,6 @@
  * Live preview island for `SentinelRow`. It is the trailing row every list-shaped
  * component reuses for its loading placeholder, so the example shows it where it
  * belongs: at the end of a real notification list, holding the spinner and copy a
- * paired enhancement supplies. The row itself is decorative, so the `spin()` factory
- * through `mix` is what makes it read as still loading.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

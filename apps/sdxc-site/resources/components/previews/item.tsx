@@ -2,12 +2,6 @@
  * Live preview island for `Item`. The row's shape is leading media, a title over a
  * description, and trailing actions, which is what a settings list is made of — the same
  * three slots hold an icon, the setting's name and consequence, and the control that
- * changes it.
- *
- * The switches carry `ariaChecked()`, because a native checkbox's `checked` state lives in
- * the DOM rather than in an attribute: without the mixin, `aria-checked` would report
- * whatever the server rendered forever. The island also reads the rows back, so the
- * summary underneath states what the list currently says.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -108,7 +102,6 @@ export const ItemPreview = clientEntry(import.meta.url, function ItemPreview(han
 		<div mix={[vstack({ gap: 3, align: "stretch" }), is("26rem")]}>
 			<Header>Notifications</Header>
 
-			{/* A checkbox's change event bubbles, so the list is where the island listens. */}
 			<div
 				mix={[
 					vstack({ gap: 2, align: "stretch" }),

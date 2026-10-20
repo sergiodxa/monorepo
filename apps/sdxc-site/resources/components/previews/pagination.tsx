@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Pagination`. A pager is only legible once there are more pages
  * than fit, so the preview is a twelve-page result set: previous and next controls that
- * disable at the ends, page one and page twelve always present, the neighbours of the
- * current page, and an ellipsis standing in for each stretch the window leaves out.
+ * disable at the ends, page one and page twelve always present, the neighbours of the cur
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

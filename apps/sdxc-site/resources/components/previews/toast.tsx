@@ -1,9 +1,7 @@
 /**
  * Live preview island for `Toast`. A notification is only worth looking at when
  * something raises it, so the example is the queue itself: a `Toaster` owning each
- * toast's timer behind a `Toast.Region`, and the buttons an app would raise them
- * from. The queue owns each countdown, so `dismiss()` is there for the close button's
- * own command, and the island pauses the countdown while the pointer rests on a toast.
+ * toast's timer behind a `Toast.Region`, and the buttons an app would raise them from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -148,8 +146,6 @@ export const ToastPreview = clientEntry(import.meta.url, function ToastPreview(h
 						color={toast.data.color}
 						live={toast.data.color === "danger" ? "assertive" : "polite"}
 						mix={[
-							// The queue owns the countdown, so the mixin is here only to answer
-							// the close button's --ui-dismiss command.
 							dismiss({ duration: null }),
 							on<HTMLDivElement, "ui:dismiss">("ui:dismiss", () => void toaster.dismiss(toast.id)),
 							on<HTMLDivElement, "pointerenter">("pointerenter", () => toaster.pause(toast.id)),

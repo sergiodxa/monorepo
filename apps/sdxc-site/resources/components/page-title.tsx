@@ -1,8 +1,7 @@
 /**
  * The heading a documentation page opens with, set the way the landing sets its bands: a
  * short mono label naming where the page sits, the title at display size, and a lead in a
- * lighter voice. Every page in the documentation opens on it, so a reader crossing from the
- * landing into a guide or a package reads one design.
+ * lighter voice.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

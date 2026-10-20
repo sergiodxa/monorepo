@@ -1,11 +1,7 @@
 /**
  * `GET /rss.xml` — what has been written here, newest first, so a reader can follow the
- * documentation without visiting it.
- *
- * The guides are the dated content: each carries a `lastUpdated` its author wrote, which
- * is a real date for a real edit. Package references carry none — a package's dates are
- * its releases, which live on npm and on the repository's own releases — so they stay out
- * rather than arrive stamped with the day the feed happened to be generated.
+ * documentation without visiting it. The guides are the dated content: each carries a
+ * `lastUpdated` its author wrote, which is a real date for a real edit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,7 +63,6 @@ export default createAction(routes.feed, async (ctx) => {
 
 	for (let entry of entries) {
 		feed.addItem({
-			/* The URL is the identity, and it is permanent, so it doubles as the guid. */
 			guid: { value: entry.href, isPermaLink: true },
 			title: entry.title,
 			description: entry.description,

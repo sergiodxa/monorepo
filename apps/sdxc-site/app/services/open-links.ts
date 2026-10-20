@@ -1,8 +1,6 @@
 /**
  * Where a page can be opened other than here: its own markdown, its source on GitHub, and
- * the assistants a reader pastes documentation into. Each assistant link carries the
- * page's markdown URL rather than its HTML, so what the assistant fetches is the text this
- * site was rendered from rather than a page it has to strip chrome out of.
+ * the assistants a reader pastes documentation into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,11 +26,9 @@ function prompt(markdownUrl: string): string {
 }
 
 /**
- * The destinations one page's `Open` menu lists, in the order it lists them.
- *
- * Reading the markdown here follows the path, so it stays on whichever host served the
- * page; handing it to an assistant takes the absolute URL, since the fetch happens
- * somewhere else entirely.
+ * The destinations one page's `Open` menu lists, in the order it lists them. Reading
+ * the markdown here follows the path, so it stays on whichever host served the page;
+ * handing it to an assistant takes the absolute URL, since the fetch happens somewhere
  *
  * @param markdownHref - The page's markdown twin, as a path on this site.
  * @param markdownUrl - The same twin, absolute, for a reader that is not this browser.

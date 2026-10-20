@@ -2,8 +2,6 @@
  * Live preview island for `Skeleton`. A placeholder is only honest when it traces
  * the UI it stands in for, so the example is the loading state of a comment thread:
  * a round avatar, a name line, three lines of body copy at descending widths, and a
- * pair of action pills. The block itself holds still, so the `pulse()` factory a
- * reader composes through `mix` is what supplies the motion cue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,8 +43,7 @@ export const SkeletonPreview = clientEntry(import.meta.url, function SkeletonPre
 		<Card
 			aria-busy="true"
 			aria-label="Loading comments"
-			/* Filling the frame keeps the placeholder the shape of the card it stands in for,
-			 * rather than a small box adrift in the middle of one. */
+
 			mix={[is("100%"), maxIs("34rem")]}
 		>
 			<Card.Content mix={[vstack({ gap: 5, align: "stretch" })]}>

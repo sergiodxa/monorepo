@@ -2,7 +2,6 @@
  * Live preview island for `SelectionIndicator`. Its whole point is that the marker
  * keeps its layout slot whether or not it is showing, which only reads with several
  * rows and a selection that moves — so the example is a sort menu built from radios,
- * hydrated so picking a row moves the checkmark without any label shifting sideways.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * Live preview island for `Accordion`. Each section keeps its own open state on its
  * native `<details>` element, and one `name` shared across the set makes it exclusive
  * through the platform's own behavior, so opening one closes the last with no script
- * involved. Several sections are what shows that, so the example carries a whole FAQ.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

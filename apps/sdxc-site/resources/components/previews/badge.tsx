@@ -1,8 +1,6 @@
 /**
  * Live preview island for `Badge`. A badge is a static chip: the tone and weight come
  * from `color` and `variant`, and the icon slot keeps a glyph from shifting the label.
- * What a reader needs is the vocabulary side by side, so the example shows the two jobs
- * a badge actually does — a run's state, and the labels filed against an issue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

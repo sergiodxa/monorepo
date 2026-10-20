@@ -1,8 +1,6 @@
 /**
  * The `split`, `split-copy` and `split-media` tags: a band laid out as prose on one side
- * and what the prose is about on the other — a code sample, a set of tabs. The columns
- * stack on a narrow screen with the copy first, since the sample only reads once the
- * copy has said what it shows.
+ * and what the prose is about on the other — a code sample, a set of tabs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,10 +33,7 @@ export default function Split(handle: Handle<MarkdownProps & { lean?: "copy" | "
 			mix={[
 				grid(),
 				gap(12),
-				/*
-				 * Both columns start at the top, so switching a tab in the media column changes
-				 * only what is below the strip, never where the strip itself sits.
-				 */
+
 				items("start"),
 				gridTemplate({ columns: "minmax(0, 1fr)" }),
 				media(

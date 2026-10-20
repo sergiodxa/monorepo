@@ -2,9 +2,6 @@
  * Live preview island for `Confirm`. One call composes the whole interruption — the
  * alertdialog, its heading, its supporting copy and the cancel/confirm pair — and a
  * trigger opens it with an invoker command, so the interruption itself needs no script.
- * Without a `form`, confirming closes the panel and leaves the page to decide what the
- * decision means, so the island wires each control through `parts` and reports the
- * outcome, which is the same seam an app hangs its own effect on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,8 +2,6 @@
  * Live preview island for `Toolbar`. A strip of controls is only a toolbar once it
  * carries clusters, so the example is an editor's: a block-level select, formatting
  * toggles, block toggles and an overflow menu, each cluster set off by a vertical
- * separator. The toggles keep no state of their own, so the preview carries the
- * `pressToggle()` wiring a reader applies, and `menuKeys()` on the overflow menu.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

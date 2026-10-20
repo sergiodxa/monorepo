@@ -1,9 +1,6 @@
 /**
  * The handwritten guides: every file under `resources/docs`, its frontmatter held to
- * one schema, and the ordered sections the shell's sidebar is drawn from. The files
- * are loaded lazily so a page pays for the one guide it renders rather than for the
- * whole tree, and the read happens inside a request because work in the worker's
- * global scope fails upload validation.
+ * one schema, and the ordered sections the shell's sidebar is drawn from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -69,9 +66,7 @@ export interface GuideSection {
 
 /**
  * Every guide, grouped into sections ordered by `section.order` and each section's
- * guides by their own `order`. A file whose frontmatter misses the schema is left
- * out rather than taking the listing down with it; the page for that slug reports
- * the failure with the line it sits on.
+ * guides by their own `order`.
  */
 export async function listGuides(): Promise<GuideSection[]> {
 	let sections = new Map<string, GuideSection>();

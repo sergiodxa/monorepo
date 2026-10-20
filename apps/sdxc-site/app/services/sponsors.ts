@@ -1,13 +1,6 @@
 /**
  * The people funding this work, now and before, read from GitHub's GraphQL API and
- * remembered in the site's cache. A page reads the stored roster and nothing else, so it
- * renders at the speed of a KV read and stays up whatever GitHub is doing; a sponsorship
- * webhook, or the weekly schedule behind it, is what puts a fresh roster there.
- *
- * A sponsorship GitHub marks private is one this module is never told about: the query
- * asks for the public view, which GitHub applies before it answers. Nothing here has a
- * sample list, a placeholder or a fallback name — a read that cannot be completed
- * yields nobody, and nobody is what makes a sponsor list disappear.
+ * remembered in the site's cache.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,19 +37,7 @@ const USER_AGENT = "sdxc.dev";
 
 /**
  * Asks for the maintainer's sponsorships with the private ones left out, twice: the
- * active ones, and every one ever made. Past sponsors are the second list less the first,
- * because the field that marks a sponsorship active needs the same scope `privacyLevel`
- * does.
- *
- * Every list leaves the private ones out.
- * `includePrivate` defaults to true for a token that owns the account, so it is stated
- * here, and it is the authoritative filter: GitHub applies it server-side, and nothing
- * a sponsor asked to keep private is in the answer at all.
- *
- * Nothing else about privacy is requested. Reading a sponsorship's own `privacyLevel`
- * needs the `read:user` scope, so asking for it fails the whole query on a token
- * granted anything narrower — which would turn a well-scoped token into an empty
- * footer.
+ * active ones, and every one ever made.
  */
 const SPONSORS_QUERY = `
 	query Sponsors($login: String!, $first: Int!) {
@@ -189,9 +170,7 @@ function readErrors(payload: unknown): string[] {
  * The roster a payload says is public, each list in the order GitHub gave it.
  *
  * @param payload Whatever came back from the sponsors query.
- * @returns The sponsors safe to name. A payload that misses the schema yields none,
- * because a list the site cannot read is a list it cannot vouch for, and none is what
- * makes a sponsor list disappear rather than stand there with something invented in it.
+ * @returns The sponsors safe to name. A payload that misses the schema yields none, because a list the site cannot read is a list it cannot vouch for, and none is what makes a sponsor list disappear rather than stand there with something invented in it.
  */
 export function sponsorRoster(payload: unknown): SponsorRoster {
 	let parsed = s.parseSafe(responseSchema, payload);
@@ -220,7 +199,6 @@ function publicSponsors(nodes: Array<InferOutput<typeof sponsorshipSchema> | nul
 	for (let node of nodes) {
 		if (node === null) continue;
 
-		/* The query already excluded the private ones; a level that says otherwise wins. */
 		let privacy = node.privacyLevel ?? PUBLIC_PRIVACY;
 		if (privacy !== PUBLIC_PRIVACY) continue;
 
@@ -255,8 +233,7 @@ export async function fetchSponsorRoster(token: string): Promise<SponsorRoster> 
  * The stored roster a page renders.
  *
  * @param cache Where the roster is kept.
- * @returns The roster, or nobody when the store is empty or unreachable. A page that
- * gets nobody draws no list, which is the honest answer while the roster is unknown.
+ * @returns The roster, or nobody when the store is empty or unreachable. A page that gets nobody draws no list, which is the honest answer while the roster is unknown.
  */
 export async function readStoredSponsors(cache: Cache): Promise<SponsorRoster> {
 	let stored = await cache.read<SponsorRoster>(SPONSORS_CACHE_KEY);

@@ -2,11 +2,6 @@
  * `GET /sitemap.xml` — every page a crawler should know about, listed by
  * `@sdxc/sitemap`. The list is derived from the guides, the manifests and the two
  * catalogues, so a package published, a guide written or a utility, component or mixin
- * added is discoverable on the next deploy without an edit here.
- *
- * URLs are built on the site's own origin rather than on the host that served the
- * request, because a sitemap fetched from a preview deployment would otherwise invite a
- * crawler to index the preview.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * Live preview island for `ProgressBar`. A progress bar reports a task that is moving,
  * which is what separates it from `Meter`, so the preview is an upload queue that
  * actually moves: pressing Upload advances one file to done, leaves the next
- * indeterminate while the server works on it, and re-arms itself once the queue empties.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

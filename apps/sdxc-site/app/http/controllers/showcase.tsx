@@ -1,8 +1,7 @@
 /**
  * `GET /showcase` — the applications these packages are built and proven in. The list
  * is curated rather than exhaustive: an app reaching for a handful of packages proves
- * nothing about them, and the same five are the ones a package page names as its
- * users, so the two surfaces never disagree about how many there are.
+ * nothing about them, and the same five are the ones a package page names as its us
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -131,11 +130,6 @@ export default createAction(routes.showcase, async (ctx) => {
 								</article>
 							))}
 
-							{/*
-							 * The grid always ends on an invitation, so a reader who has seen what runs on
-							 * the set is one click from starting their own. As the last cell it fills the
-							 * row beside an odd application out, and stretches across a row of its own.
-							 */}
 							<article
 								mix={[
 									vstack({ gap: 4, align: "stretch" }),

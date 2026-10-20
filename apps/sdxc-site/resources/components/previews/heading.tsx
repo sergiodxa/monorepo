@@ -3,11 +3,6 @@
  * `HeadingScope`, which is what keeps a reusable panel from hard-coding `<h3>` and
  * breaking a document outline.
  *
- * An independently hydrated island has no ancestor scope to read, so the page threads its
- * own depth in as a `level` prop and the island opens a scope at that depth. Every heading
- * beneath then resolves from where it sits, and a heading naming its own level overrides
- * that wherever it appears.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

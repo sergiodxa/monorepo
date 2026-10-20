@@ -1,8 +1,7 @@
 /**
  * Live preview island for `AspectRatio`. The box reserves its shape from the `ratio` prop
  * alone and clips whatever it wraps, so a gallery of mixed media keeps its layout from the
- * first paint. Real posters are what make that visible, so the example lays out three
- * tiles at the three ratios a media grid usually mixes.
+ * first paint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

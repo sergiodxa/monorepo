@@ -1,8 +1,7 @@
 /**
  * The `feature` tag: one cell of a claim grid, carrying a title, an optional glyph, an
  * optional number that backs the claim up, and an optional link to where it is argued in
- * full. Only the icons the content actually names are imported, so the page ships those
- * and not the rest of the set.
+ * full.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

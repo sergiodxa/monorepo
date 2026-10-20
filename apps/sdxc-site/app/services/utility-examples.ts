@@ -70,12 +70,8 @@ export async function listUtilityExamples(utility: string): Promise<UtilityExamp
 }
 
 /**
- * Reads an example module's title, description and code from its text.
- *
- * The title and description are the double-quoted strings the module assigns them. The
- * code is a `code` template literal when the module writes one, which is how an example
- * drawn by an island shows the markup a reader would write, and otherwise the expression
- * its `render` arrow returns, dedented, with each `demo.*` call printed as `...`.
+ * Reads an example module's title, description and code from its text. The title and
+ * description are the double-quoted strings the module assigns them.
  *
  * @param source - The example module's text.
  * @returns What the page prints for the example; a missing field reads as empty.

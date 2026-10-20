@@ -1,8 +1,6 @@
 /**
- * `GET /api/:name` — one package's reference: its own README, framed by
- * facts the app reads from the manifest. The README is the file npm and GitHub show
- * too, so its links are rewritten rather than its text edited, and the frame around
- * it carries what a manifest knows and prose would only repeat badly.
+ * `GET /api/:name` — one package's reference: its own README, framed by facts the
+ * app reads from the manifest.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,7 +66,7 @@ export default createAction(routes.api.show, async (ctx) => {
 	let group = listPackageGroups().find((candidate) =>
 		candidate.packages.some((member) => member.directory === name),
 	)?.title;
-	/* A catalogue's README indexes hundreds of pages, so the page draws that index instead. */
+
 	let body = CATALOGUE_PACKAGES.has(name) ? null : await readReference(ctx, entry);
 	let anchors: Anchor[] = body?.anchors ?? [];
 	let markdownHref = routes.markdown.package.href({ name });
@@ -184,8 +182,7 @@ async function readCatalogue(name: string) {
  *
  * @param ctx - The request being answered, which is where a failure is logged.
  * @param entry - The package whose README to read.
- * @returns The rendered body and its headings, or `null` when the file is missing or
- * will not parse, which leaves the page its manifest frame rather than no page.
+ * @returns The rendered body and its headings, or `null` when the file is missing or will not parse, which leaves the page its manifest frame rather than no page.
  */
 async function readReference(ctx: AppContext, entry: PackageEntry) {
 	let source = await readPackageReadme(entry.directory);

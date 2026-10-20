@@ -1,8 +1,7 @@
 /**
  * The shell a root-level prose page composes into: the site bar, a hero band naming the
- * page, and the page's body in a band under it, both inside the frame the landing is
- * drawn in. It carries no documentation tree, because a page at the root is not a step in
- * one — a reader arrives at it from a footer link or a search result rather than a sidebar.
+ * page, and the page's body in a band under it, both inside the frame the landing is drawn
+ * in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

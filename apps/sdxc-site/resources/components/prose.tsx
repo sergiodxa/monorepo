@@ -1,8 +1,6 @@
 /**
  * The components that take over ordinary markdown nodes, so prose written without a
- * single tag still lands in the site's type scale and link styling. They are keyed by
- * node type where the document is rendered, which is what keeps a content file free of
- * markup whose only job is styling.
+ * single tag still lands in the site's type scale and link styling.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

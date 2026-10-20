@@ -1,12 +1,6 @@
 /**
  * The people funding this work now, named with their avatar and their profile, and a
- * link to the page that makes the case for joining them. The sponsorships are the
- * author's rather than the collection's — they predate the npm scope — so the block
- * carries no tiers, no perks and no sizes: everyone here is on the same row.
- *
- * With nobody to name the block draws nothing at all, which is what keeps a page
- * whose sponsor list could not be read from showing an empty heading. A content file
- * places it with the `current-sponsors` tag, which `sponsorTags` supplies per request.
+ * link to the page that makes the case for joining them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

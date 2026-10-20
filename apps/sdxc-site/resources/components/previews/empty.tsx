@@ -1,8 +1,7 @@
 /**
  * Live preview island for `Empty`. An empty state is worth showing against the thing that
  * produced it, so the preview is a real filter over a real list: type something no invoice
- * matches and the dashed panel takes over, naming the query it found nothing for and
- * offering the two ways out — widen the search, or create the thing that is missing.
+ * matches and the dashed panel takes over, naming the query it found nothing for and offe
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

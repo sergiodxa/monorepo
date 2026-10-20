@@ -1,8 +1,7 @@
 /**
  * Reads the workspace manifests the landing page describes. Names and descriptions
  * come from the manifests themselves, inlined into the bundle by `import.meta.glob`,
- * so the page cannot disagree with what is published: a description edited in a
- * manifest is the description the site shows on the next deploy.
+ * so the page cannot disagree with what is published: a description edited in a mani
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -116,9 +115,6 @@ function toDirectory(name: string): string {
  * The subpaths a manifest publishes, written as they appear after the package name.
  * The root comes first because it is what a reader installs and imports before
  * anything else; the rest keep the order the manifest declares them in, which is the
- * order their author grouped them. A wildcard sitting under a subpath that is itself
- * exported is left out, since it says only that the family has members — which is
- * what the family's own page is for, and what thirty of them in a row obscures.
  */
 function readSubpaths(manifest: Manifest): string[] {
 	if (typeof manifest.exports !== "object" || manifest.exports === null) return ["."];
@@ -246,8 +242,7 @@ export function listApplicationsUsing(name: string): string[] {
  * manifest so the showcase quotes a number a reader can check against the same file.
  *
  * @param directory - The application's workspace directory.
- * @returns Its count of `@sdxc/*` dependencies; zero for a directory outside the
- * curated set, which is the set the site is willing to speak about.
+ * @returns Its count of `@sdxc/*` dependencies; zero for a directory outside the curated set, which is the set the site is willing to speak about.
  */
 export function countApplicationPackages(directory: string): number {
 	let manifest = applicationManifests[`../../../${directory}/package.json`];

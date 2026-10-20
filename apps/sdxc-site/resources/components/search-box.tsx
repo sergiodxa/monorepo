@@ -205,8 +205,7 @@ function animateResults(before: ResultsSnapshot, direction: number): void {
 /**
  * The dialog's box, a combobox over the result rows; typing reloads the frame once it pauses,
  * arrows choose a row with focus kept in the box, and closing the dialog restores the page's
- * own state. Being the island every page hydrates, it also attaches the dialog's page keys
- * and turns a click on a kind tab into reloading the results for that kind.
+ * own state.
  */
 export const SearchBox = clientEntry(
 	import.meta.url,
@@ -294,8 +293,7 @@ export const SearchBox = clientEntry(
 		/**
 		 * Turns a plain click on a kind tab into switching tabs in place, and a plain click on any
 		 * other link into following it: the dialog lifts toward the reader while the next page
-		 * loads, or closes for a link into the page already showing. A modified or middle click
-		 * still opens the link as it is.
+		 * loads, or closes for a link into the page already showing.
 		 */
 		function onClick(event: MouseEvent): void {
 			let link = event.target instanceof Element ? event.target.closest("a[href]") : null;
