@@ -72,6 +72,8 @@ export { createHtmlPlugin } from "./plugins/html.js";
 export { createHttpPlugin } from "./plugins/http.js";
 export type { HttpPluginOptions } from "./plugins/http.js";
 export { createJwtPlugin } from "./plugins/jwt.js";
+export { createMcpPlugin } from "./plugins/mcp.js";
+export type { McpPluginOptions } from "./plugins/mcp.js";
 export { createSamplePlugin } from "./plugins/sample.js";
 export { createSpecPlugin } from "./plugins/spec.js";
 export { createStrPlugin } from "./plugins/str.js";

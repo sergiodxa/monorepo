@@ -19,6 +19,7 @@ import { createFsPlugin } from "./plugins/fs.js";
 import { createHtmlPlugin } from "./plugins/html.js";
 import { createHttpPlugin } from "./plugins/http.js";
 import { createJwtPlugin } from "./plugins/jwt.js";
+import { createMcpPlugin } from "./plugins/mcp.js";
 import { createSamplePlugin } from "./plugins/sample.js";
 import { createSpecPlugin } from "./plugins/spec.js";
 import { createStrPlugin } from "./plugins/str.js";
@@ -43,6 +44,7 @@ export const BUILTIN_NAMESPACES = [
 	"sample",
 	"str",
 	"spec",
+	"mcp",
 ] as const;
 
 /** A built-in namespace's name. */
@@ -66,6 +68,7 @@ const BUILTIN_FACTORIES: Record<BuiltinNamespace, () => Plugin> = {
 	sample: createSamplePlugin,
 	str: createStrPlugin,
 	spec: createSpecPlugin,
+	mcp: createMcpPlugin,
 };
 
 /**
