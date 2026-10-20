@@ -2,9 +2,6 @@
  * Privacy Policy controller. Renders the static GDPR-oriented prose — covering data
  * collected, usage, sharing, retention, rights, security, cookies, and the Turnstile
  * bot protection on the public URL checker — inside the shared `MarketingLayout`
- * chrome. Copy comes from `legal.privacy.sections.*` in the locale files; those keys
- * are freshly added and populated only in `en.ts` for now, falling back to English in
- * every other locale until translated.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -3,9 +3,6 @@
  * statements, KV operations and queue writes it makes are counted against it and priced
  * for the teams it declares, and flushed once the job ends however it ended.
  *
- * Outermost in the chain, so everything the job's other middleware does — opening the
- * database included — is counted by the same ledger the handler records against.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

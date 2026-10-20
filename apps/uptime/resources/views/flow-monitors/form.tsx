@@ -1,9 +1,6 @@
 /**
  * Shared flow monitor form fields, used by the new-monitor and edit-monitor views. A new
- * monitor is always created enabled, so the toggle only renders when editing. The interval
- * control lists a flow's seven fixed cadences explicitly (ADR-027 §7a), since each carries
- * its own cost. Verified domains render beside the source since they answer what a spec
- * written here may reach.
+ * monitor is always created enabled, so the toggle only renders when editing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

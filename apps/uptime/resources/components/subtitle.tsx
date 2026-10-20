@@ -3,12 +3,6 @@
  * description slot, so this renders inside its `value`. Shared by the dashboard's
  * stat-card fragment views (usage, overview, counts).
  *
- * Built on `@sdxc/ui`'s `Text` — its default size and `--ui-neutral-fg` color are
- * already the catalog's "small, muted body copy" contract, so this only adds the
- * block-level display and top margin a standalone caption line needs (`Text` itself
- * renders an inline `<span>`, styled here to sit on its own line below the value it
- * follows).
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

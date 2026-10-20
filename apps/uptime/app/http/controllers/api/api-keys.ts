@@ -1,11 +1,7 @@
 /**
  * API v1 collection endpoints for the authenticated team's API keys: list (metadata
- * only, `api-keys:read`) and create (`api-keys:write`), up to the per-team limit.
- * The plaintext key is only ever returned once, in the create response.
- *
- * A key can only create a key no more powerful than itself — see the scope check in
- * `apiKeysCreate`. Without that, `api-keys:write` would be an escalation to every other
- * scope rather than a permission alongside them.
+ * only, `api-keys:read`) and create (`api-keys:write`), up to the per-team limit. The
+ * plaintext key is only ever returned once, in the create response.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,7 +57,6 @@ export default createController(apiKeysRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.apiKeys.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

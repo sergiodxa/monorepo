@@ -61,7 +61,6 @@ export default createController(tcpMonitorsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.tcpMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

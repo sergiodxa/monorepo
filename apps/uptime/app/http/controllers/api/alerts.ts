@@ -1,9 +1,7 @@
 /**
  * API v1 collection endpoints for alerts: `GET /api/v1/alerts` lists a team's alerts
  * with sensitive channel config (webhook URLs, secrets, integration keys) stripped, and
- * `POST /api/v1/alerts` creates one for any channel strategy,
- * enforcing the per-team limit. Requires `alerts:read`/`alerts:write` via
- * `requireApiKey`.
+ * `POST /api/v1/alerts` creates one for any channel strategy, enforcing the per-team
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,14 +35,9 @@ import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed
 import { alertsRoutes } from "~/routes/api-groups";
 
 /**
- * The monitor scope a request asks for, resolved from `monitorType`/`monitorId`.
- * A `monitorId` alone resolves to HTTP: that pairing was the API's only scoping
- * before `monitorType` existed, and every client sending one still means that.
- *
- * Returns null when the id carries a prefix belonging to another monitor type, which
- * names a monitor that cannot exist. Reporting that separately is what keeps such a
- * request from falling back to a null id, since a null id scopes the rule to every
- * monitor of the type instead of the one that was asked for.
+ * The monitor scope a request asks for, resolved from `monitorType`/`monitorId`. A
+ * `monitorId` alone resolves to HTTP: that pairing was the API's only scoping before
+ * `monitorType` existed, and every client sending one still means that.
  */
 export function apiScopeFrom(input: {
 	monitorType?: MonitorScopeType;
@@ -147,7 +140,6 @@ export default createController(alertsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.alerts.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

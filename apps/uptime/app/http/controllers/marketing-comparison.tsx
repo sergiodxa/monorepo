@@ -1,9 +1,7 @@
 /**
  * `/vs/:slug` controller. Renders the comparison page for the slug found in
- * `resources/content/marketing.ts`'s `comparisons` record, extending the
- * generic marketing page shape with a comparison table plus the optional
- * honest-take, "perfect for", and cost-table sections a competitor's record
- * supplies. An unknown slug renders the standard 404.
+ * `resources/content/marketing.ts`'s `comparisons` record, extending the generic
+ * marketing page shape with a comparison table plus the optional honest-take,
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

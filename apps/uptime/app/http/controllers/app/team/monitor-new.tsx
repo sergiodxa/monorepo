@@ -2,13 +2,6 @@
  * New HTTP monitor form page controller. Posts to the `create-monitor` action;
  * requires `requireUser` + `requireTeam`.
  *
- * Fields are grouped into two bordered cards — what gets watched, how it gets
- * checked — inside one `<form>`, with the submit control at the last card's foot.
- *
- * A `?url=` pre-fill lets the rest of the app hand this form a URL to watch
- * already filled in; it only seeds the field, since the monitor is still
- * created by the `POST`, so a link, a crawler, or a reload creates nothing.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

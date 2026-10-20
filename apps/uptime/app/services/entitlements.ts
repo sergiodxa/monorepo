@@ -2,11 +2,6 @@
  * The one way billing state reaches this app's tables: ask the platform what a customer holds
  * right now, write that, and move their monitors to match.
  *
- * Both writers of the projection go through here — the webhook endpoint, which learns *that*
- * something changed, and the daily repair sweep, which assumes a delivery was missed. Neither
- * applies a payload as a diff, because deliveries arrive out of order, get replayed, and carry
- * whatever shape the platform sent them under, while a snapshot is simply what is true now.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -39,8 +34,7 @@ export interface EntitlementSync {
  *
  * @param models - The models bound to the app database.
  * @param customer - Which customer, by either identifier.
- * @returns What the sync did, `null` for a platform customer linked to no subject — which
- * leaves no owner whose monitors this could apply to — or the read's failure.
+ * @returns What the sync did, `null` for a platform customer linked to no subject — which leaves no owner whose monitors this could apply to — or the read's failure.
  */
 export async function syncEntitlements(
 	models: UptimeModels,

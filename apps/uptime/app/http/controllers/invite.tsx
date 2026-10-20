@@ -1,8 +1,7 @@
 /**
  * Public accept-invite page. Requires `requireUser` (anonymous visitors are bounced
  * through sign-in and land back here via the `returnTo` cookie). Accepting is a side
- * effect of the GET itself — visiting the link IS accepting it. The invite must not
- * already be accepted, and must have been sent to the signed-in account's exact email.
+ * effect of the GET itself — visiting the link IS accepting it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

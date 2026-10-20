@@ -1,9 +1,7 @@
 /**
- * Root HTML document layout for the uptime app. It renders the outer html/head/body
- * shell with charset and viewport meta tags, an optional page title, an indexable
- * page's metadata and structured data, the stylesheets imported below in cascade order, and
- * the client entry with the import map its chunks resolve through, both from the `assets` the
- * page passes in. It is the shared document wrapper every server-rendered page is composed into.
+ * Root HTML document layout for the uptime app. It renders the outer html/head/body shell with
+ * charset and viewport meta tags, an optional page title, an indexable page's metadata and
+ * structured data, the stylesheets imported below in cascade order, and the client entry with
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -89,11 +87,9 @@ namespace DocumentLayout {
 }
 
 /**
- * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. The
- * client entry script loads `async`, so a non-blocking Frame's `<template>`
- * is picked up the moment that chunk of the streamed response arrives. The import map
- * precedes every module tag and carries the response's nonce, which every map the client
- * runtime appends reuses.
+ * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. The client entry
+ * script loads `async`, so a non-blocking Frame's `<template>` is picked up the moment
+ * that chunk of the streamed response arrives.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {

@@ -1,9 +1,6 @@
 /**
  * Every background job this app runs, declared in one map: the payload each carries, the
- * schedule it is enqueued on, and the cron-job monitor that watches it. Importing this
- * costs the schemas and nothing else, so a request handler can enqueue without pulling in
- * any job's dependencies. Each key is the name a message is addressed by on the wire —
- * renaming one renames a message the previous deploy may still have in flight.
+ * schedule it is enqueued on, and the cron-job monitor that watches it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,8 +70,7 @@ export default jobs({
 	/**
 	 * The three sweeps that share the every-minute delivery, each claiming only what its
 	 * own `interval_seconds` has made due — a delivery with nothing due costs an indexed
-	 * range that matches no rows. Flow monitors ride along even though their finest
-	 * interval is fifteen minutes (ADR-027 §7a), for the same reason.
+	 * range that matches no rows.
 	 */
 	checkCronJobs: job({
 		cron: "* * * * *",

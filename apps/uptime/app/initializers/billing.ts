@@ -1,12 +1,7 @@
 /**
  * The billing platform this app sells through, configured once. Every Polar identifier the
  * app knows is in this file: call sites name a product and a meter by our own slug, so the
- * vendor appears in one import and one construction here rather than in every controller,
- * job and column.
- *
- * Constructed at module scope because the constructor reaches nothing — routes read the
- * same instance from `ctx.billing`, and a job, which has no request to read it from,
- * imports it.
+ * vendor appears in one import and one construction here rather than in every controller
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

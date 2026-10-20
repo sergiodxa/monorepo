@@ -3,12 +3,6 @@
  * status and what its last run concluded, or an empty state when there are none yet. Requires
  * `requireUser` + `requireTeam`.
  *
- * Each row's kebab-icon actions menu is the shared `RowMenu` — view, edit, delete — and its delete
- * confirmation is `@sdxc/ui`'s `AlertDialog` composed directly rather than through the `Confirm`
- * wrapper, since the confirming control is a real `<form method="post">` submit button rather than
- * a `command="close"` action. The same composition the HTTP monitors' list uses, so the two tables
- * draw the same row.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

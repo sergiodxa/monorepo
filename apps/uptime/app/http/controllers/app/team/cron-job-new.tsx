@@ -1,8 +1,7 @@
 /**
  * New cron-job monitor page controller. Requires `requireUser` + `requireTeam`.
  * Fields are framed as three bordered cards inside one `<form>`, so creating posts
- * every field in a single request. The cron expression starts blank, requiring an
- * explicit schedule from the person creating the job.
+ * every field in a single request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

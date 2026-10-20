@@ -3,12 +3,6 @@
  * label swap. The only client-side interactivity for one-time secret reveals (API
  * keys) and copyable snippets (cron-job ping URLs), per the approved-islands list.
  *
- * Renders {@link CopyButtonProps.value} into a visually-hidden carrier `<span>`
- * inside its own host and points `commandfor` at it, so `@sdxc/ui/mixins`'
- * `copyToClipboard()` — built to copy whatever element its button's `commandfor`
- * targets — always has a same-instance target to read from, regardless of
- * whether `value` also happens to be visible in a sibling element.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

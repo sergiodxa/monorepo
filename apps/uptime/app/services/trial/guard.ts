@@ -2,11 +2,6 @@
  * The fence in front of the public "try it" probe: the checks that must all pass before
  * an anonymous visitor gets to make this Worker fetch a URL they chose.
  *
- * Three things can go wrong with that outbound request: the target can be private
- * ({@link checkTarget}), the caller can be a script ({@link verifyChallenge}), and the
- * volume can be unbounded ({@link consumeCallerBudget}, {@link spendDailyBudget}).
- * {@link guardTrialProbe} runs all three, cheapest first, and returns one `Result`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

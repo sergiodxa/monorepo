@@ -13,9 +13,7 @@ import { currentLog } from "@sdxc/logger";
 
 /**
  * Wraps every request the renderer issues to resolve a `<Frame>` (marked `X-Remix-Frame: true`),
- * covering the fragment's own middleware and handler. A thrown error and a 4xx/5xx answer become
- * a 200 HTML marker naming the failure; a body that errors mid-stream ends with the same marker.
- * Redirects pass through, since the renderer follows them to the page they name.
+ * covering the fragment's own middleware and handler.
  */
 export function frameFailures(): Middleware {
 	return async (ctx, next) => {

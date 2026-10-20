@@ -1,8 +1,6 @@
 /**
  * One team's last seven days, in one email, to one of its members: the week as a bar, how
- * many monitors got through it clean, then every monitor as a row with its own week. Each bar
- * segment is the worst status any monitor reported that day, so a monitor that failed and
- * recovered still shows as the day it failed (ADR-024).
+ * many monitors got through it clean, then every monitor as a row with its own week.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

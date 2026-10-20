@@ -2,12 +2,6 @@
  * Client island: the homepage's usage-based pricing calculator. One slider per
  * monitor sets its check frequency in minutes; the island sums the resulting
  * monthly pings across every monitor and prices them against the base
- * subscription, re-rendering on each drag. Monitors can be added and removed.
- *
- * Renders server-side with the initial frequencies so sliders work as native
- * controls before hydration, totals settling in once the island's module
- * lands. Copy reads through `@sdxc/i18n/ui`'s `intl(handle)`, since the totals
- * need the active language for `Intl.NumberFormat` too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

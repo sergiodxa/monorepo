@@ -2,8 +2,6 @@
  * Dashboard "Slowest Endpoint" stat-card fragment controller. GET
  * /app/:team/dashboard/cards/slowest-endpoint — loads the team's HTTP monitors (to
  * name the slowest one) and its Analytics Engine summaries, and renders `StatCard`
- * directly as a bare fragment, so the dashboard's slowest-endpoint `Frame` can
- * swap it in over its skeleton fallback. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

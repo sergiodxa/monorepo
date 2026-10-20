@@ -3,10 +3,6 @@
  * match test its consumers run against a stored row, and the encoding that lets a single
  * `<select>` express all three scopes without two fields that can disagree.
  *
- * Shared by every table carrying a `(monitor_type, monitor_id)` pair, so they resolve the
- * pair through one module rather than drifting apart independently. Kept import-free so
- * the forms rendering scope options do not pull additional imports into the page.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

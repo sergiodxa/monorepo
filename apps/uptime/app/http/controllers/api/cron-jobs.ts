@@ -1,9 +1,7 @@
 /**
  * API v1 collection endpoints for cron-job monitors: `GET /api/v1/cron-jobs` lists a
  * team's cron jobs and `POST /api/v1/cron-jobs` creates one. Requires
- * `cron-jobs:read`/`cron-jobs:write` via `requireApiKey`. Does not cover
- * `POST /api/v1/cron-jobs/:cronJobId/ping`, which lives in
- * `app/http/controllers/api/cron-job-ping.ts` and requires `cron-jobs:ping`.
+ * `cron-jobs:read`/`cron-jobs:write` via `requireApiKey`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,7 +63,6 @@ export default createController(cronJobsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.cronJobMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

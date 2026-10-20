@@ -1,9 +1,7 @@
 /**
- * Daily background job that re-evaluates SSL certificate status for every HTTP
- * monitor with SSL monitoring enabled. Workers can't read certificate details
- * from `fetch()`, so it re-runs `calculateSslStatus` against the manually
- * entered expiry date, keeping status transitions and expiry-warning alerts
- * on schedule. Monitors run in bounded-concurrency batches; alerts go to the `notify` job (ADR-008).
+ * Daily background job that re-evaluates SSL certificate status for every HTTP monitor with SSL
+ * monitoring enabled. Workers can't read certificate details from `fetch()`, so it re-runs
+ * `calculateSslStatus` against the manually entered expiry date, keeping status transitions and
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

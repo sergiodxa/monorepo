@@ -1,9 +1,6 @@
 /**
  * Edit alert page controller. Requires `requireUser` + `requireTeam`; 404s when the
- * alert doesn't belong to the current team. Fields sit in bordered cards inside one
- * `<form>` that posts to `update-alert`, so a submission always carries the same
- * fields. The delete confirmation composes `AlertDialog` directly because its
- * confirming control is a real form submit button.
+ * alert doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

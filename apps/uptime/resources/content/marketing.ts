@@ -2,14 +2,6 @@
  * Static content for the site's `/features`, `/for`, `/use-cases`, and `/vs`
  * pages, each family rendered by one shared template instead of bespoke views.
  *
- * Trust-indicator and competitor figures track Uptime's actual behavior and a
- * competitor's actual published pricing, hedged or omitted where the real
- * number isn't known.
- *
- * Pages state the check-interval floor for how fast a failure is caught, since
- * that figure is Uptime's own and enforced — the final delivery hop belongs to
- * an inbox, webhook, or chat provider outside this app.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

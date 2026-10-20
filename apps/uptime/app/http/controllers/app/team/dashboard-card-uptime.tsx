@@ -1,9 +1,7 @@
 /**
  * Dashboard "Uptime percentage" stat-card fragment controller. GET
  * /app/:team/dashboard/cards/uptime — loads just the team's Analytics Engine
- * summaries and renders `StatCard` directly as a bare fragment, so the
- * dashboard's uptime `Frame` can swap it in over its skeleton fallback. Requires
- * `requireUser` + `requireTeam`.
+ * summaries and renders `StatCard` directly as a bare fragment, so the dashboard's
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

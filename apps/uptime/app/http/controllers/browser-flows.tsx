@@ -2,7 +2,6 @@
  * `/browser-flows` — the dedicated selling page for real-browser click-through
  * monitoring. Lives outside the shared `/features/:slug` template so the hero can
  * lead with a live spec example and contrast HTTP vs browser billing in one
- * composition.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

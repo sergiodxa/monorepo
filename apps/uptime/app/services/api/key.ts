@@ -1,10 +1,7 @@
 /**
  * API key generation and hashing. Keys look like `uptime_<64 hex chars>` — this exact
  * format and hash must stay byte-identical to what already generated and hashed
- * production keys, or every existing key stops verifying at cutover. Only the
- * SHA-256 hash and a 15-character prefix
- * (enough to display, never enough to guess the rest) are ever persisted — the raw
- * key is shown to the user exactly once, at creation time.
+ * production keys, or every existing key stops verifying at cutover.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

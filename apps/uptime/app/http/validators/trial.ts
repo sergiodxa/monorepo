@@ -1,13 +1,6 @@
 /**
  * Field names the two public try-it forms submit under, and the schema the
- * lead-capture form validates. Defined here since the landing page, the try
- * page, and the handler all write these names, so a mismatch would submit
- * silently empty; only email needs a schema, since the checked URL arrives
- * pre-verified via the session's `guardTrialProbe`.
- *
- * The checkbox field defaults to `false` when the browser omits it, and
- * `consented_at` tracks that opt-in separately from supplying an email to
- * check one URL.
+ * lead-capture form validates.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

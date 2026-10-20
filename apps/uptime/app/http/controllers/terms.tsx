@@ -1,10 +1,7 @@
 /**
  * Terms of Service controller. Renders the static Terms of Service prose —
  * covering accounts, acceptable use, billing, data retention, service
- * availability, liability, and termination — inside the shared
- * `MarketingLayout` chrome. Every section's copy comes from
- * `legal.terms.sections.*` in the locale files, keys new in this pass and
- * populated only in `en.ts` for now, falling back to English elsewhere.
+ * availability, liability, and termination — inside the shared `MarketingLayout`
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

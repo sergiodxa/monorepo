@@ -2,8 +2,6 @@
  * Daily retention job for cron-job ping history (ADR-020). Ping rows are kept for
  * `PING_RETENTION_DAYS` since the docs and monitor detail page depend on a year of
  * history, while `source_ip` and `user_agent` are redacted sooner because they only
- * answer a days-old debugging question and are the app's largest personal-data
- * surface. Both passes run in bounded batches so a widened window cannot flood one run.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

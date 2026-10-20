@@ -2,10 +2,6 @@
  * Test-only billing fixtures: a platform that really bills, and the two projection states a
  * test ever needs to arrange.
  *
- * The projection is written the way production writes it — from an entitlement snapshot,
- * through `subscriptions.sync` — so a test seeds the state a webhook would have left rather
- * than the columns it happens to produce.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -96,8 +92,7 @@ export async function createActiveSubscription(db: Database, ownerId: string): P
 /**
  * Records a revoked subscription for `ownerId` — a *positively known* unentitled state, which
  * is the only one an entitlement gate refuses. Distinct from seeding nothing, which leaves the
- * state unknown and therefore allowed. Written the way it really happens: the subscription is
- * held, and then a later read no longer lists it.
+ * state unknown and therefore allowed.
  */
 export async function createRevokedSubscription(db: Database, ownerId: string): Promise<void> {
 	let subscriptions = subscriptionsOn(db);

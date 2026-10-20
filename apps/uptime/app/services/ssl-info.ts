@@ -2,9 +2,6 @@
  * SSL certificate status calculation. Workers cannot read TLS certificate details from
  * `fetch()`, so this works from a manually entered expiry date to classify the
  * certificate as valid, expiring, or expired against the monitor's warning threshold.
- * The automated daily `CheckSslJob` (`app/jobs/check-ssl.ts`) reuses this same
- * classification, re-evaluating it once a day so status transitions (and alerts) fire
- * without the user having to revisit the settings form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

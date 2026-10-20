@@ -2,8 +2,6 @@
  * TCP monitor detail page uptime-history fragment controller. GET
  * /app/:team/tcp/:monitorId/cards/uptime-history — loads just this one monitor's last
  * 90 days of daily stats and renders the shared uptime bar, with no document shell, so
- * the detail page's history `Frame` can swap it in over its skeleton fallback and the
- * page shell never waits on the rollup table. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

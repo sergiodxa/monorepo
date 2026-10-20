@@ -1,13 +1,6 @@
 /**
  * App-wide client toast stack: a `clientEntry` island holding one headless
- * `Toaster` queue, rendered into a `Toast.Region`. Other islands queue a toast
- * via {@link showToast}, which dispatches a `document` DOM event so any island
- * can reach this region, since each island hydrates its own runtime tree with
- * no shared ancestor between them.
- *
- * Rendering nothing while the queue is empty (always true server-side) is
- * also what lets region labels resolve from the module-scoped `intl(handle)`
- * default without an `IntlProvider` ancestor.
+ * `Toaster` queue, rendered into a `Toast.Region`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

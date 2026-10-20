@@ -2,9 +2,6 @@
  * Daily job that counts yesterday's public-trial funnel, stores the day's stats, and emails
  * the summary to whoever operates the deployment.
  *
- * Every run writes a `trial_daily_stats` row regardless of whether it sends, since two of the
- * three source tables get swept within a month and that row is the only version of the day
- * that survives. Sending itself is opt-in per deployment through `FUNNEL_REPORT_TO`.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

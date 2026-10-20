@@ -1,8 +1,7 @@
 /**
  * The HTTP check: probe a target through a region-pinned `GeoFetchDO`, evaluate the
  * response body against content-check rules, and classify the pair into an
- * up/degraded/down status. A class with a method per step, since the scheduled job and
- * the ad-hoc ping endpoint each interleave different work between the steps.
+ * up/degraded/down status.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

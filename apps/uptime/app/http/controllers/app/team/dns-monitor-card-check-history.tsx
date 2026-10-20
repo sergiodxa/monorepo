@@ -2,7 +2,6 @@
  * DNS monitor detail page check-history fragment controller. GET
  * /app/:team/dns/:monitorId/cards/check-history — renders the monitor's result log with
  * no document shell, so the detail page's history `Frame` loads independently of the
- * results summary `Frame`. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

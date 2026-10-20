@@ -1,11 +1,6 @@
 /**
  * Primary marketing call-to-action: a link to the dashboard when signed in, or a
- * one-click sign-in form posting to the auth action otherwise. Every marketing hero
- * and final-CTA section repeats this exact `isSignedIn` branch, so it's centralized
- * here instead of duplicating the link/form pair per section. Renders through the
- * shared `Button`/`LinkButton` components (themselves thin wrappers over
- * `@sdxc/ui`'s own) instead of a hand-rolled "solid primary" style, so this CTA
- * never drifts from every other button in the app.
+ * one-click sign-in form posting to the auth action otherwise.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

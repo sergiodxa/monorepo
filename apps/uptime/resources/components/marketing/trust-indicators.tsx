@@ -1,12 +1,6 @@
 /**
  * The four-up band of headline figures below a marketing hero: one brand-tinted icon,
- * mono figure, and label per column, inside a bordered tinted strip. Every marketing
- * page carries its own page-specific set of figures, so the band is centralized here
- * for every page family to reuse.
- *
- * Icons arrive as already-rendered nodes: a caller reading its figures out of content
- * data resolves them through `<Icon name>`, while one importing a specific `<XyzIcon>`
- * passes that straight through, and this component renders either one the same way.
+ * mono figure, and label per column, inside a bordered tinted strip.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

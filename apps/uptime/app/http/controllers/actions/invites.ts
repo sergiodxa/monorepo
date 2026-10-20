@@ -1,9 +1,7 @@
 /**
  * Form actions for creating and revoking team invites. Requires
  * `requireAbility(abilities.invites.write)`. Creating an invite for an email that already has a pending
- * invite resends it instead of creating a duplicate row, and hands the invite email to the
- * `email` job, which retries it, because a mail provider having a bad minute must not cost
- * the admin the invite they just created.
+ * invite resends it instead of creating a duplicate row, and hands the invite email to the `email` job,
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

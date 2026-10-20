@@ -1,8 +1,6 @@
 /**
  * Dedicated `/browser-flows` marketing view — a selling page built around a live
- * click-through spec rather than the shared feature-grid template. The hero leads with
- * the brand and a full-width example below the copy; later sections contrast HTTP vs
- * browser, list more examples, state run pricing, and answer FAQ.
+ * click-through spec rather than the shared feature-grid template.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

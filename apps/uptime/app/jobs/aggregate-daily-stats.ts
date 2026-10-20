@@ -1,13 +1,7 @@
 /**
  * Daily background job that rolls up the previous UTC day's checks into one
  * `monitor_daily_stats` row per monitor, the source for the uptime bars and
- * long-term reporting. HTTP aggregates come from Analytics Engine, since that's
- * the only store HTTP results land in; DNS, TCP, flow, and cron-job aggregates
- * come from their own D1 result tables.
- *
- * Rows are written in bounded-concurrency batches, matching the monitor sweeps
- * (ADR-008); one monitor's failed write is logged and counted instead of
- * abandoning the rest of the roll-up.
+ * long-term reporting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -93,9 +87,7 @@ export default createJobHandler(jobs.aggregateDailyStats, async (ctx) => {
 		/**
 		 * An `error` run is this app failing to find out, not the flow being broken, so it
 		 * counts in neither half of the day's rate — the split the detail page's pass rate
-		 * already draws (ADR-027 §8). A day of nothing but errors therefore writes no row
-		 * at all, leaving a gap in the bar rather than reporting a customer's flow down for
-		 * a reason that is ours.
+		 * already draws (ADR-027 §8).
 		 */
 		inconclusiveStatus: "error",
 	});

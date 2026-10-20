@@ -1,9 +1,6 @@
 /**
- * The arithmetic every uptime report shares: folding many checks into one
- * status a summary prints, and turning a success ratio into the percentage
- * next to it. The verdict is always the worst of the checks, since averaging
- * an outage away would hide the one thing a reader could act on, and keeping
- * the rule here stops two reports of the same data from disagreeing.
+ * The arithmetic every uptime report shares: folding many checks into one status a
+ * summary prints, and turning a success ratio into the percentage next to it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

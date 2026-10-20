@@ -1,9 +1,7 @@
 /**
- * Shared chrome for the `/docs` site: a searchable sidebar grouping every
- * doc by section, a topbar with a breadcrumb trail and a dashboard CTA,
- * and the article content column that every doc page composes into. The
- * sidebar stays a custom `<aside popover>` since `@sdxc/ui`'s own `Sidebar`
- * assumes a persistent `<aside>`, not a single slide-in drawer.
+ * Shared chrome for the `/docs` site: a searchable sidebar grouping every doc by
+ * section, a topbar with a breadcrumb trail and a dashboard CTA, and the article
+ * content column that every doc page composes into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

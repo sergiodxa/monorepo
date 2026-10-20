@@ -1,9 +1,6 @@
 /**
- * Claims the flow monitors whose interval has come round via an indexed
- * range and runs each through `runFlowCheck` (ADR-006). Delivered every
- * minute despite intervals as coarse as fifteen (ADR-027 §7a) so the
- * trigger list stays flat as monitor types grow. Verified domains are team
- * state, read fresh each sweep since they are not stored on the monitor.
+ * Claims the flow monitors whose interval has come round via an indexed range and
+ * runs each through `runFlowCheck` (ADR-006).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -128,9 +125,7 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 
 /**
  * Runs one monitor's spec and records its result, reading `last_status` before the
- * write so a recovery is detectable. Throwing here marks the monitor failed, so
- * callers bill unconditionally — `runFlowCheck` never throws, resolving bad specs or
- * unverified hosts to an `error` result instead.
+ * write so a recovery is detectable.
  */
 async function check(
 	models: UptimeModels,

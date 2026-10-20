@@ -2,8 +2,6 @@
  * Monitor detail page run-status probe. GET /app/:team/monitors/:monitorId/run-status —
  * answers with the monitor row's cached `last_status`/`last_checked_at` as JSON, nothing
  * else, so a hydrated page can poll it cheaply after starting an on-demand run and notice
- * the moment a queued check commits its result. Requires `requireUser` + `requireTeam`,
- * and 404s for a monitor outside the current team like every other detail-page route.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

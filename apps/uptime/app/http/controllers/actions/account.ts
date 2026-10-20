@@ -1,12 +1,7 @@
 /**
- * Form actions reached from the account page, addressed by the viewer's own subject id
- * and authorized by `requireUser` alone: creating an additional team, leaving a team,
- * changing the UI language preference, choosing which optional emails to receive,
- * downloading everything the app holds about the viewer, and asking for — or calling
- * off — the deletion of the account.
- *
- * {@link requestDeletion} queues the account for the daily sweep to delete and signs the
- * person out, buying the grace period {@link cancelDeletion} spends before the sweep runs.
+ * Form actions reached from the account page, addressed by the viewer's own subject id and
+ * authorized by `requireUser` alone: creating an additional team, leaving a team, changing
+ * the UI language preference, choosing which optional emails to receive, downloading eve
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

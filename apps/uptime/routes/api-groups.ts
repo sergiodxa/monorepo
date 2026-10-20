@@ -2,7 +2,6 @@
  * Groups the JSON API's route leaves into the maps `router.map()` takes, one per
  * controller. They live beside the route table rather than inside each controller
  * so the bootstrap can map a group without importing the module behind it, which
- * is what lets every API controller arrive with the first request that needs it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * API v1 item endpoints for a single HTTP monitor: get/update/delete
  * (`monitors:read`/`monitors:write`), aggregate stats, check-result history, and
  * alert-delivery history (`monitors:read`/`alerts:read`) for one monitor scoped to
- * the caller's team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -242,10 +241,9 @@ export default createController(monitorRoutes, {
 
 				let results = page.data.items.map((row) => ({
 					/**
-					 * A check result is keyed by `scheduledJobId` — the monitor id and
-					 * the minute the check was scheduled for — which is what lets repeated
-					 * deliveries of one minute's cron collapse onto a single row. That key
-					 * travels as stored, since a TypeID encodes a UUID and this is a pair.
+					 * A check result is keyed by `scheduledJobId` — the monitor id and the minute the
+					 * check was scheduled for — which is what lets repeated deliveries of one minute's
+					 * cron collapse onto a single row.
 					 */
 					id: row.id,
 					responseStatus: row.response_status,

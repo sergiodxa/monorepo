@@ -1,17 +1,7 @@
 /**
- * Billing webhook endpoint: `POST /webhooks/polar`. The single write point for the local
- * projection of subscription state (ADR-005), and the reason the every-minute scheduler asks
- * the platform nothing at all: a delivery lands here once and the owner's monitors are moved
- * immediately.
- *
- * Unauthenticated by the auth chain's standards — the sender has no session and no `Origin` —
- * so the signature over the raw body is the authentication, checked by the endpoint before any
- * handler below runs. See `app/initializers/router.tsx` for how the `/webhooks/` prefix is exempted from
- * cross-origin protection.
- *
- * Every handler does the same thing on purpose: it re-reads the customer's entitlement
- * snapshot rather than applying the delivery as a diff, because a delivery says *that*
- * something changed and only the snapshot says what is now true.
+ * Billing webhook endpoint: `POST /webhooks/polar`. The single write point for the local projection of
+ * subscription state (ADR-005), and the reason the every-minute scheduler asks the platform nothing at
+ * all: a delivery lands here once and the owner's monitors are moved immediately.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

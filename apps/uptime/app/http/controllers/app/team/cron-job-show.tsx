@@ -1,8 +1,6 @@
 /**
- * Cron-job monitor detail page. Requires `requireUser` and `requireTeam`,
- * and 404s when the monitor doesn't belong to the current team. Every
- * timestamp shows as a relative distance from now, in the job's own
- * timezone, matching the clock the cron expression is written against.
+ * Cron-job monitor detail page. Requires `requireUser` and `requireTeam`, and 404s
+ * when the monitor doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

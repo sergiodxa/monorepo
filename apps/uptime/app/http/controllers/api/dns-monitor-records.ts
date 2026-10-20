@@ -1,9 +1,7 @@
 /**
- * API v1 sub-resource for a DNS monitor's tracked records: lists them and toggles whether a
- * deviation from one alerts. Rides the existing `dns-monitors:read`/`write` scopes rather
- * than a pair of their own, since a key that can reconfigure a domain monitor can already
- * decide which of its records are watched. The update leaf is the only channel a script has
- * for declining a record, since an API-created monitor imports and enables everything discovery found.
+ * API v1 sub-resource for a DNS monitor's tracked records: lists them and toggles whether a deviation
+ * from one alerts. Rides the existing `dns-monitors:read`/`write` scopes rather than a pair of their
+ * own, since a key that can reconfigure a domain monitor can already decide which of its records are
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -97,7 +95,6 @@ export default createController(dnsMonitorRecordsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.dnsMonitorRecords.forMonitor(dnsMonitorId);
 
 				let page = await Pagination.byKeyset(query, {

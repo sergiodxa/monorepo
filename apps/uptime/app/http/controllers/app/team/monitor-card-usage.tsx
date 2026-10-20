@@ -2,8 +2,6 @@
  * Monitor detail page "Monthly Pings Usage" stat-card fragment controller. GET
  * /app/:team/monitors/:monitorId/cards/usage — loads just this one monitor's ping
  * usage, with no document shell, so the monitor page's usage `Frame` can swap it in
- * over its skeleton fallback without blocking the rest of the page on it. Requires
- * `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

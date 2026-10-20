@@ -1,9 +1,7 @@
 /**
  * Background job that runs one HTTP monitor check end to end: probes via
  * `HttpCheck`, records the result, caches status on the monitor row, bills the
- * team, and dispatches alerts. The probe steps live in
- * `app/services/http-check.ts`, shared with the ad-hoc ping endpoint; this
- * file owns dedup, history, alerting, and billing.
+ * team, and dispatches alerts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,8 +2,6 @@
  * The product's own SEO instance: one `@sdxc/seo` configuration holding the canonical
  * origin, site name, and default description every `<head>` URL and schema.org node is
  * built from, plus the one builder whose defaults are product facts rather than page
- * input. Controllers and the document layout read their metadata through it, so the
- * product's identity is stated here and nowhere else.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

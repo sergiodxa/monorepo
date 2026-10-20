@@ -2,8 +2,6 @@
  * Background job that dispatches the alerts for one monitor status transition, off the
  * sweep that detected it (ADR-008), reloading the monitor and rebuilding the alert
  * snapshot from what the sweep persisted before handing it to the same `notify*` policy
- * every inline caller uses. The queue delivers at least once, so this job is
- * deliberately re-runnable: per-alert cooldown bounds a redelivery to one repeat.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,11 +2,6 @@
  * Monitor detail page "P99 Response Time" stat-card fragment controller. GET
  * /app/:team/monitors/:monitorId/cards/p99-response-time — loads just this one monitor's
  * 99th-percentile response time over the last 24 hours from Analytics Engine, with no
- * document shell, so the monitor page's p99 `Frame` can swap it in over its skeleton
- * fallback. Requires `requireUser` + `requireTeam`.
- *
- * Calls `getHttpP99ResponseTime` directly, so the card pays for exactly one Analytics
- * Engine query, separate from `monitors.statsForMonitor`'s combined D1 aggregate query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

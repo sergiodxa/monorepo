@@ -2,7 +2,6 @@
  * TypeID encoding for the `/api/v1/*` wire format. Rows store canonical UUIDs, so
  * this is the seam that turns one into the prefixed identifier the API documents
  * (`mon_01h455vb4pex5vsknk084sn02q`) on the way out, and turns it back into a UUID
- * the models can query with on the way in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,10 +12,9 @@ import { TypeID } from "@sdxc/typeid";
 import { assertUUID, isUUID } from "@sdxc/uuid";
 
 /**
- * Every prefix the API serializes, and the only values {@link encodeId} and
- * {@link typedId} accept. Keeping them in one union is what stops a serializer and
- * its route param from drifting onto different spellings of the same resource, and
- * each one is the prefix already published in `resources/docs/api/`.
+ * Every prefix the API serializes, and the only values {@link encodeId} and {@link
+ * typedId} accept. Keeping them in one union is what stops a serializer and its
+ * route param from drifting onto different spellings of the same resource, and
  */
 export type Prefix =
 	| "alt"
@@ -72,10 +70,6 @@ export function typeIdPattern(prefix: Prefix): string {
  * to the UUID the data layer queries with. It documents the input as the TypeID
  * {@link typeIdPattern} describes.
  *
- * `refine` rejects anything that is not a TypeID carrying `prefix` — a raw UUID and
- * an id borrowed from another resource both fail here — so `transform` only ever
- * runs on a value it can decode.
- *
  * @param prefix Prefix the incoming identifier must carry.
  * @returns Schema parsing a TypeID string into its UUID.
  * @example
@@ -92,10 +86,8 @@ export function typedId<const prefix extends Prefix>(prefix: prefix) {
 
 /**
  * Decodes an identifier written either as a TypeID or as the raw UUID behind it.
- *
  * This is for an endpoint whose URL a caller saved somewhere the API cannot reach —
  * a crontab, a deploy script — where the address they already have has to keep
- * working alongside the TypeID the API now hands out.
  *
  * @param prefix Prefix a TypeID form must carry.
  * @param value Incoming identifier in either form.
@@ -112,7 +104,6 @@ export function decodeIdOrUUID(prefix: Prefix, value: string): string | null {
  * The prefix a monitor id carries, chosen by the `monitor_type` stored beside it. An
  * SSL event reports through the HTTP monitor whose certificate it watched, and a
  * registration event through the DNS monitor whose domain it looked up, so each shares
- * that monitor's prefix.
  */
 const MONITOR_TYPE_PREFIXES = {
 	cron: "cron",
@@ -127,8 +118,7 @@ const MONITOR_TYPE_PREFIXES = {
 /**
  * The prefix `type` names. The `monitor_type` columns are stored as text, so a value
  * outside the known set reads as HTTP — the same reading `storedMonitorScope` gives a
- * row written before the type column existed, when an id could only name an HTTP
- * monitor.
+ * row written before the type column existed, when an id could only name an HTTP mon
  */
 function monitorPrefix(type: string | null): Prefix {
 	if (type === null) return "mon";
@@ -152,11 +142,9 @@ export function encodeMonitorId(type: string | null, id: string): string {
 }
 
 /**
- * Decodes the monitor id half of a `(monitor_type, monitor_id)` pair.
- *
- * Returns null rather than throwing so a caller naming a monitor of one type with
- * another type's id gets the endpoint's own "monitor not found" answer, which is what
- * an id pointing into the wrong table amounts to.
+ * Decodes the monitor id half of a `(monitor_type, monitor_id)` pair. Returns null
+ * rather than throwing so a caller naming a monitor of one type with another type's
+ * id gets the endpoint's own "monitor not found" answer, which is what an id pointing
  *
  * @param type Monitor type the id is expected to name.
  * @param value Incoming TypeID string.

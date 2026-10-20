@@ -2,13 +2,6 @@
  * Flow monitor detail page results fragment controller. GET
  * /app/:team/flows/:monitorId/cards/results — loads the monitor's recent runs once and
  * renders the stat cards, marked source, and run table as a bare fragment the results
- * `Frame` swaps in over its skeleton.
- *
- * The stat cards and source marking live here because both reduce over the same run
- * rows: computing them on the page would query the runs twice, and marking a line needs
- * the last run's failing line number, a property the run's row alone carries.
- *
- * Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

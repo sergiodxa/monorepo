@@ -1,9 +1,6 @@
 /**
- * Title + description card for marketing feature/use-case/pricing grids.
- * Renders as a link when `href` is given, or a plain panel otherwise.
- * Composes `Card`'s `<section>` chrome directly since `Card` has no
- * polymorphic `href`/`as` prop, so the link variant wraps that panel in
- * its own `<a>`.
+ * Title + description card for marketing feature/use-case/pricing grids. Renders
+ * as a link when `href` is given, or a plain panel otherwise.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,6 @@
 /**
  * Daily background job that turns yesterday's recorded infrastructure cost into one usage
  * event per team, carrying the cost the platform's own margin reporting reads (ADR-007 §6).
- * Runs once a day: per-check ingestion would be 179,000+ calls a month per account, far past
- * that resolution. The event's `externalId` (`{team}:{day}`) makes a retried delivery or a
- * re-run of the same day free of duplicate events.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,7 @@
 /**
  * API v1 collection endpoints for DNS monitors: `GET /api/v1/dns-monitors` lists a team's
- * monitors and `POST /api/v1/dns-monitors` creates one, gated by `dns-monitors:read`/`write`
- * via `requireApiKey`. A create can carry a zone file and runs discovery inline, since no
- * reviewer sits between an API call and the monitor, so everything discovered is imported
- * **and watched**; rejected lines come back in the response since a script has no review screen.
+ * monitors and `POST /api/v1/dns-monitors` creates one, gated by `dns-monitors:read`/`write` via
+ * `requireApiKey`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -108,7 +106,6 @@ export default createController(dnsMonitorsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.dnsMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

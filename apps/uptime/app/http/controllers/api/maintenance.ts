@@ -1,8 +1,7 @@
 /**
- * API v1 collection endpoints for maintenance windows: `GET /api/v1/maintenance`
- * lists a team's windows and `POST /api/v1/maintenance` creates one, validating the
- * `monitorType`/`monitorId` scope it covers and that `endsAt` follows `startsAt`. Requires
- * `maintenance:read`/`maintenance:write` via `requireApiKey`.
+ * API v1 collection endpoints for maintenance windows: `GET /api/v1/maintenance` lists a
+ * team's windows and `POST /api/v1/maintenance` creates one, validating the
+ * `monitorType`/`monitorId` scope it covers and that `endsAt` follows `startsAt`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,15 +33,9 @@ import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed
 import { maintenanceRoutes } from "~/routes/api-groups";
 
 /**
- * The scope a request asks for, derived from the two fields that express it.
- *
- * A `monitorId` sent with no `monitorType` resolves to an HTTP monitor, preserving what
+ * The scope a request asks for, derived from the two fields that express it. A
+ * `monitorId` sent with no `monitorType` resolves to an HTTP monitor, preserving what
  * every client sending only that field has always meant.
- *
- * Returns null when the id carries a prefix belonging to another monitor type, which
- * names a monitor that cannot exist. Reporting that separately is what keeps such a
- * request from falling back to a null id, since a null id widens the window to every
- * monitor of the type instead of the one that was asked for.
  */
 export function apiScopeFrom(input: {
 	monitorType?: MonitorScopeType;
@@ -91,7 +84,6 @@ export default createController(maintenanceRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.maintenanceWindows.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

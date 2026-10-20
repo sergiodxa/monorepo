@@ -3,13 +3,6 @@
  * as a literal, and no unsubstantiated social-proof claim. Given a module's
  * source, it reports each offending string literal so the guard can name the line.
  *
- * Both catch a failure that type-checks and renders perfectly: a hardcoded price
- * goes stale the moment pricing changes, and an invented customer count costs a
- * monitoring product the credibility it sells.
- *
- * The scan reads string literals directly: an interpolated figure and a
- * hardcoded one render identically, so only source text still tells them apart.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

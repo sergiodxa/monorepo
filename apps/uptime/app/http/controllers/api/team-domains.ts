@@ -54,7 +54,6 @@ export default createController(teamDomainsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.teamDomains.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

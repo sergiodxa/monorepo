@@ -1,9 +1,7 @@
 /**
- * Edit HTTP monitor page controller: general settings, content checks, and
- * SSL monitoring settings. Requires `requireUser` + `requireTeam`; 404s when
- * the monitor doesn't belong to the current team.
- *
- * Each settings group is its own bordered card, posted through its own `<form>`.
+ * Edit HTTP monitor page controller: general settings, content checks, and SSL
+ * monitoring settings. Requires `requireUser` + `requireTeam`; 404s when the
+ * monitor doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

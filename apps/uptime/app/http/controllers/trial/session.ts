@@ -2,7 +2,6 @@
  * The values the public try-it pages pass between requests, and the keys they travel under.
  * Held as plain session values: flashing one would mark the session dirty the moment it is
  * read, and the session middleware's save after the handler returns could then land before a
- * streamed response finishes every frame, clearing the value before it was ever shown.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

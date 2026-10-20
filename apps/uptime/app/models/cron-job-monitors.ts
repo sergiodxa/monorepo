@@ -75,9 +75,7 @@ export const CronJobMonitors = createModel(cronJobMonitors, {
 		 * `last_ping_at`, freshly computed `next_expected_at`, and status — `healthy` when on
 		 * time, `late` otherwise. Only the scheduled sweep decides `missed`.
 		 *
-		 * @returns The history row's id, the idempotency key the ping meter bills against:
-		 * everything the endpoint rejects returns before this write, and the id is the only
-		 * thing about an accepted ping that is unique and already persisted.
+		 * @returns The history row's id, the idempotency key the ping meter bills against: everything the endpoint rejects returns before this write, and the id is the only thing about an accepted ping that is unique and already persisted.
 		 */
 		async recordPing(
 			monitor: { id: string; cron_expression: string; timezone: string },

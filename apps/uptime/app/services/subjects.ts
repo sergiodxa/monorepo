@@ -22,9 +22,7 @@ import { mapWithConcurrency } from "~/app/services/concurrency";
  * @param admin - Management client to read through.
  * @param subjectIds - Subjects to look up, duplicates allowed.
  * @returns The profiles that resolved, keyed by subject id.
- * @throws {ManagementError} On a refusal, a throttle, a provider fault or an unreadable
- *   payload — every condition where the provider may still hold the record — so the caller
- *   decides for itself whether a partial list is enough to render.
+ * @throws {ManagementError} On a refusal, a throttle, a provider fault or an unreadable payload — every condition where the provider may still hold the record — so the caller decides for itself whether a partial list is enough to render.
  */
 export async function resolveSubjects(
 	admin: ManagementClient,

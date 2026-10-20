@@ -2,7 +2,6 @@
  * Sender identity every message this app puts in an inbox carries. It lives in one
  * module because the router, the job dispatcher and the command line each configure a
  * mailer, and a product whose `From` disagreed between an invite and an alert would look
- * like two products.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

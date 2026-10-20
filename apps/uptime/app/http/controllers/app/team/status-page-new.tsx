@@ -1,14 +1,7 @@
 /**
- * New status page controller. Requires `requireUser` + `requireTeam`.
- *
- * The fields group into three bordered cards — branding, visibility, and
- * services — in one `<form>`, so each reads as its own settings group while
- * still submitting as a single request; the submit control sits at the foot
- * of the last card.
- *
- * The markup is spelled out here because the shared status-page field
- * component always renders the complete set of fields as one fragment. The
- * edit page still renders that component unchanged.
+ * New status page controller. Requires `requireUser` + `requireTeam`. The fields
+ * group into three bordered cards — branding, visibility, and services — in one
+ * `<form>`, so each reads as its own settings group while still submitting as a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -186,8 +186,7 @@ export const DnsMonitorRecords = createModel(dnsMonitorRecords, {
 		 * zone file leaves `is_enabled` alone and a record the user declined stays declined.
 		 * Duplicate lines inside one import are absorbed the same way, since DNS itself dedupes.
 		 *
-		 * @returns How many rows were new, which is what a review screen reports after a
-		 * re-import.
+		 * @returns How many rows were new, which is what a review screen reports after a re-import.
 		 */
 		async importMany(
 			monitorId: string,

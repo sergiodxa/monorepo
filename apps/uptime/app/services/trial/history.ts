@@ -1,9 +1,7 @@
 /**
  * Turns a finished free watch's checks into the daily rows a real monitor's
- * history is made of, carrying day-resolution rows into `monitor_daily_stats`
- * to match the aggregation job's pass/fail rollup, since Analytics
- * Engine stamps each result at ingestion and cannot backdate one to when the
- * trial actually ran it.
+ * history is made of, carrying day-resolution rows into `monitor_daily_stats` to
+ * match the aggregation job's pass/fail rollup, since Analytics Engine stamps each
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

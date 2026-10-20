@@ -2,7 +2,6 @@
  * Web route table for the uptime app. Declares every URL the fetch-router serves —
  * the auth flow, signed-in team-area pages, and their form actions — so controllers,
  * middleware, and views share one source of truth for paths and can build hrefs via
- * `routes.*.href(...)`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

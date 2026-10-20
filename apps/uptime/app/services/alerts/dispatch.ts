@@ -1,8 +1,7 @@
 /**
- * Shared alert-dispatch pipeline used by every check path. For each qualifying event
- * it skips monitors under an active maintenance window, resolves the alerts that apply,
+ * Shared alert-dispatch pipeline used by every check path. For each qualifying event it
+ * skips monitors under an active maintenance window, resolves the alerts that apply,
  * skips any repeat still inside its cooldown, sends email inline and queues every other
- * channel for the delivery job, recording each outcome to `alert_events`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -78,7 +77,6 @@ export type { AlertEventType };
  * `"ssl"` and `"registration"` name virtual monitor types: an SSL check runs against an
  * HTTP monitor's own row and a registration lookup against a DNS monitor's, so each
  * resolves and suppresses like the monitor it belongs to while recording its own
- * `alert_events.monitor_type` for accurate history.
  */
 export type AlertMonitorKind = MonitorScopeType | "ssl" | "registration";
 
@@ -311,9 +309,7 @@ export function shouldNotifyDnsResult(
 /**
  * See {@link shouldNotifyTcpResult}. A flow splits a broken flow from an unrunnable one
  * (ADR-027 §1): `down` is a failed assertion and always notifies, while `error` is this
- * app failing to find out — an unparsable spec, a host outside the team's verified
- * domains, a run past its cap — and pages nobody. Recovery therefore fires only out of
- * `down`, the one state anyone was told about.
+ * app failing to find out — an unparsable spec, a host outside the team's verified do
  */
 export function shouldNotifyFlowResult(
 	previousStatus: FlowStatus | null,
@@ -600,9 +596,7 @@ export interface FlowAlertResult {
 
 /**
  * The alert's view of one run, rebuilt from the result row the sweep persisted, for the
- * `notify` queue consumer, which receives only the transition. A monitor whose history
- * row is already gone still reports its transition, with the counters a run that left no
- * record can honestly claim.
+ * `notify` queue consumer, which receives only the transition.
  */
 export function flowAlertResultFromResult(
 	status: FlowStatus,

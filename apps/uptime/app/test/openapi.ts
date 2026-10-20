@@ -17,8 +17,7 @@ import { buildApiDocument } from "~/app/http/openapi/document";
 /**
  * Installs a conformance recorder for the calling test file. After its last test, the
  * file fails on any undocumented response, and on any status an operation of `routes`
- * declares that no test produced. Operation ids are route map keys, so the map the
- * controller is built from names the operations the file covers.
+ * declares that no test produced.
  *
  * @param routes - The route map of the controller under test.
  * @returns The middleware to put first on every test router the file builds.

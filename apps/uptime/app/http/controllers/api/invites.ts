@@ -1,8 +1,7 @@
 /**
  * API v1 collection endpoints for team invites: `GET /api/v1/invites` lists every
  * invite (pending and accepted) and `POST /api/v1/invites` creates a pending one.
- * Requires `invites:read`/`invites:write` via `requireApiKey`. Creating an invite
- * only inserts the row.
+ * Requires `invites:read`/`invites:write` via `requireApiKey`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,7 +57,6 @@ export default createController(invitesRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.invites.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

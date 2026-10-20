@@ -1,14 +1,7 @@
 /**
  * Bounded retention sweeps (ADR-020). An unbounded `DELETE` on a first run, or on a
  * table that never had a retention job, can match millions of rows in one blocking
- * statement — the largest write bill and the longest statement the app issues. Every
- * sweep here instead runs the same bounded statement in a loop, stopping when a batch
- * comes back short or the per-run ceiling is reached.
- *
- * Hitting the ceiling is a normal outcome: the sweep resumes on the next scheduled
- * run, and reporting it lets the caller log a backlog being worked down over nights.
- *
- * The bound is a subquery, which works uniformly across every SQLite build.
+ * statement — the largest write bill and the longest statement the app issues.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

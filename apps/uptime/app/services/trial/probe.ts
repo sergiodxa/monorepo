@@ -1,11 +1,7 @@
 /**
  * The one description of how the public trial probes a URL, shared by the visitor's first
- * check on `/try` and by the hourly sweep that re-checks it for a week.
- *
- * They have to agree. The result a stranger sees on the page and the results the digests
- * report a week later are presented as the same measurement, and they stop being one the
- * moment the two callers drift on a timeout or an expected status. Both were spelled out
- * separately before this existed.
+ * check on `/try` and by the hourly sweep that re-checks it for a week. They have to
+ * agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

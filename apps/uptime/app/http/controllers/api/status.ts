@@ -2,8 +2,6 @@
  * API v1 endpoint reporting the authenticated team's overall status: fetches each
  * enabled HTTP monitor's latest result, derives an up/down/unknown state per
  * monitor, and rolls that up into one of operational/degraded/partial_outage/
- * major_outage/unknown. Requires `monitors:read` via `requireApiKey`; `/healthcheck`
- * separately reports the worker's own runtime health.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

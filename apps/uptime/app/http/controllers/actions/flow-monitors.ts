@@ -2,7 +2,6 @@
  * Form actions for flow monitor create/update/delete, each following validate → mutate →
  * flash → redirect. A flow's source is checked against the team's verified domains before
  * storage, using the same `inspectFlowSource` the sweep applies, so form and sweep share one
- * message for one rule. {@link checkFlowMonitor} runs the flow inline and meters it directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

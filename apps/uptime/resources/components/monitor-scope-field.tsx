@@ -1,12 +1,7 @@
 /**
  * The "Scope" field shared by the alert and maintenance-window create and edit
  * forms: one `<select>` offering team-wide, every monitor of a type, and each
- * individual monitor, grouped by type. All three live in a single control
- * because the scope is a single fact — split across a type picker and a
- * monitor picker, a no-JavaScript submit could pair "DNS" with an HTTP
- * monitor's id, and encoding it as one option value keeps that contradiction
- * unrepresentable. Option copy comes from one `components.monitorScope`
- * namespace, since a monitor type is named the same wherever it is offered.
+ * individual monitor, grouped by type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

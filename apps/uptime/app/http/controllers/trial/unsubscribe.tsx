@@ -2,14 +2,6 @@
  * `/unsubscribe/:token` — the only credential a trial lead ever holds, since they never
  * made an account to sign in with.
  *
- * The GET only renders; only the POST deletes, since corporate link scanners and inbox
- * prefetchers follow every URL before a human sees it, and a GET that unsubscribed would
- * silently drop people who never clicked. The split also lets Gmail and Apple Mail's RFC
- * 8058 one-click button POST straight to this URL.
- *
- * Neither method reports whether a token exists — the GET never looks it up, and the POST
- * answers any token, used or not, with the same page.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -86,8 +78,7 @@ export default createController(routes.trial.unsubscribe, {
 		/**
 		 * POST /unsubscribe/:token — deletes the lead and everything attached to it, then
 		 * reports it plainly: the answer to "do you still have my address?" becomes genuinely
-		 * no. See `leads.forget` for the reasoning behind the hard delete. A mailbox provider's
-		 * RFC 8058 one-click POST reads no body, so it gets an empty `200`.
+		 * no. See `leads.forget` for the reasoning behind the hard delete.
 		 */
 		async action(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);

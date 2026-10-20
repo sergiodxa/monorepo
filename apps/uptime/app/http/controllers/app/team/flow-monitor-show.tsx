@@ -1,13 +1,7 @@
 /**
  * Flow monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s when the
- * monitor doesn't belong to the current team.
- *
- * The controller reads the monitor row and nothing else, so the shell reaches the browser on one
- * query. The cards it renders — status, interval, last checked — are all fields of that row, so
- * they cost nothing extra. The one thing that costs a query, the run history (with the pass-rate,
- * average-duration and total-runs cards derived from it, and the flow's own source marked at the
- * line the last failure names), loads into its own named `Frame` over a skeleton fallback. The
- * same division every other monitor detail page keeps.
+ * monitor doesn't belong to the current team. The controller reads the monitor row and nothing
+ * else, so the shell reaches the browser on one query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

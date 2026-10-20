@@ -1,9 +1,7 @@
 /**
- * Language-resolution middleware layered over `@sdxc/i18n/middleware`:
- * resolves the `language` cookie, then a signed-in viewer's stored
- * preference, then `Accept-Language`, falling back to English, and
- * binds a per-request translator over the app's locale files.
- * Exposes `ctx.locale` and `ctx.intl`.
+ * Language-resolution middleware layered over `@sdxc/i18n/middleware`: resolves
+ * the `language` cookie, then a signed-in viewer's stored preference, then
+ * `Accept-Language`, falling back to English, and binds a per-request translator
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

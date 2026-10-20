@@ -1,10 +1,7 @@
 /**
  * Standalone (non-session) cookies used by the HTTP layer: `returnTo`, a short-lived
  * cookie remembering the page an unauthenticated visitor was trying to reach so the
- * auth callback can send them back after signing in (kept out of the URL, which
- * wouldn't survive an external OAuth redirect); and `language`, a long-lived cookie
- * for a visitor's chosen UI language when they're signed out or haven't set an
- * account preference yet.
+ * auth callback can send them back after signing in (kept out of the URL, which wou
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

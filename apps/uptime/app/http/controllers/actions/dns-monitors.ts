@@ -1,12 +1,7 @@
 /**
- * Form actions for a DNS monitor: create, update, delete, the manual
- * check, and the record-level review, toggle, and zone-file re-import.
- * Each follows validate → mutate → flash → redirect: an error toast and
- * the form on failure, the monitor (or list) on success.
- * Create and import both sweep, so both enforce the parser's size cap and
- * the per-monitor name cap before resolving anything. The manual check
- * runs the same sweep as the scheduled job, so it is gated, reported, and
- * billed the same way; a pasted zone file survives only as parsed records.
+ * Form actions for a DNS monitor: create, update, delete, the manual check, and
+ * the record-level review, toggle, and zone-file re-import.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -63,9 +58,7 @@ interface ZoneFileRefusal {
 /**
  * Parses a pasted zone file and checks it against both import limits.
  *
- * @returns The declared records and the names they add to, or the refusal to flash. An empty
- * paste always yields records instead, meaning the monitor covers its apex alone — the
- * commonest, legitimate way to create one.
+ * @returns The declared records and the names they add to, or the refusal to flash. An empty paste always yields records instead, meaning the monitor covers its apex alone — the commonest, legitimate way to create one.
  */
 function readZoneFile(
 	zoneFile: string | undefined,

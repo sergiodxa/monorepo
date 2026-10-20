@@ -1,8 +1,6 @@
 /**
  * Form actions for TCP monitor create/update/delete/manual-check, each following the
- * validate → mutate → flash → redirect pattern. The manual check opens the connection
- * inline as billable work, so {@link checkTcpMonitor} carries the entitlement gate, the
- * Analytics Engine point, and the meter event for it.
+ * validate → mutate → flash → redirect pattern.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

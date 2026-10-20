@@ -1,9 +1,7 @@
 /**
  * DNS resolution for domain monitors: sweeping every supported record type at a name so a
  * check sees the whole of what a name publishes, and the single-record probe the ad-hoc ping
- * endpoint still asks for. Records resolve over Cloudflare's DNS-over-HTTPS JSON API because
- * Workers have no raw DNS socket. See `resources/docs/concepts/dns-monitors.md` for the
- * product rules this implements.
+ * endpoint still asks for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

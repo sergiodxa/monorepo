@@ -1,8 +1,6 @@
 /**
  * Bounded-concurrency helpers for the jobs that sweep every monitor of a type in one
- * invocation (ADR-008). Each sweep runs its per-monitor work in fixed-size batches
- * instead of one monitor at a time, so its wall time stops being the sum of every
- * monitor's latency and one hung target no longer delays everything behind it.
+ * invocation (ADR-008).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

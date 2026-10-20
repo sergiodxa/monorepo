@@ -1,12 +1,7 @@
 /**
- * A single server-rendered toast, in its own fixed region, that fades out on a
- * CSS timer. Used for the two things this app reports that way: the outcome a
- * redirect flashed into the session, and the answer to a quick check.
- *
- * It exists as a component because both of those are rendered by different
- * requests — one by the page shell, one by a fragment that streams into it —
- * so each gets its own region in the same corner, populated at most once per
- * request since a flash and a check result belong to separate requests.
+ * A single server-rendered toast, in its own fixed region, that fades out on a CSS
+ * timer. Used for the two things this app reports that way: the outcome a redirect
+ * flashed into the session, and the answer to a quick check.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,8 +30,7 @@ const FADE_NAME = "uptime-toast-fade";
  * `occurrence` so a toast patched onto a frame's prior element still gets its
  * own fresh animation name and replays its fade.
  *
- * @param occurrence - Sanitized to safe identifier characters, since the raw
- * value could otherwise produce a `@keyframes` rule no browser parses.
+ * @param occurrence - Sanitized to safe identifier characters, since the raw value could otherwise produce a `@keyframes` rule no browser parses.
  * @returns The animation name to apply to this toast's fade.
  */
 function fadeName(occurrence?: string): string {

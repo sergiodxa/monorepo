@@ -1,11 +1,7 @@
 /**
  * Edit TCP monitor page controller: settings form, posting to `update-tcp-monitor`.
  * Requires `requireUser` + `requireTeam`; 404s when the monitor doesn't belong to
- * the current team. Settings and the destructive action each sit in their own
- * bordered card, the destructive one danger-toned, each posting through its own
- * `<form>`. The TCP fields render as a single block shared with the create page,
- * so both pages draw the same form. The delete confirmation composes `@sdxc/ui`'s
- * `AlertDialog` directly because confirming submits a real `<form method="post">`.
+ * the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

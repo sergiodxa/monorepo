@@ -1,9 +1,7 @@
 /**
- * Centers a page's primary form in a readable-width column instead of
- * stretching across the full content area next to the sidebar, so the
- * width isn't repeated as a literal across every create/edit controller. A
- * form needing extra room passes {@link FormPage.Props.maxWidth} instead
- * of opting out of the wrapper.
+ * Centers a page's primary form in a readable-width column instead of stretching
+ * across the full content area next to the sidebar, so the width isn't repeated as
+ * a literal across every create/edit controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

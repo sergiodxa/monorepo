@@ -1,9 +1,7 @@
 /**
  * Scheduled maintenance job that applies a per-table retention window to everything that
  * grows with monitor activity (ADR-020), batched in one job so the schedule and log line
- * stay shared. A row whose date column is still `NULL` is never matched by a cutoff. The
- * free-watch tables are the exception: their three sweeps run in a load-bearing order —
- * see {@link sweepTrial}.
+ * stay shared. A row whose date column is still `NULL` is never matched by a cutoff.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,6 @@
 /**
  * Daily sweep over the account-deletion queue: cancels billing, deletes the data, mails
  * the confirmation, and only then removes the request row, which is itself the retry.
- * Billing goes first since cancelling it needs team ownership, a right the deletion
- * removes; the mail goes out before the row does since the row holds the only copy of
- * the address, and other members are notified best-effort as the row's removal proceeds.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,8 +53,7 @@ export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
 /**
  * Erases one queued account: billing, then data, then the confirmation, then the request.
  *
- * @returns Whether the account is now fully done with — which is the same question as
- * whether the queued row was removed, and therefore whether tomorrow tries again.
+ * @returns Whether the account is now fully done with — which is the same question as whether the queued row was removed, and therefore whether tomorrow tries again.
  */
 async function erase(
 	ctx: CurrentJobContext,

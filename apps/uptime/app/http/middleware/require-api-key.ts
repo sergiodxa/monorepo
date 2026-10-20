@@ -1,8 +1,7 @@
 /**
- * Authenticates the `/api/v1/*` surface. Reads `Authorization: Bearer <key>`, hashes it
- * with the SHA-256 scheme `app/services/api/key.ts` generates keys with, rejects a
- * missing, unknown or expired key, and exposes `ctx.apiKey`/`ctx.apiTeam`; `apiAccess` then
- * holds the key to its scopes. Every check runs per request, so a revoked key stops at once.
+ * Authenticates the `/api/v1/*` surface. Reads `Authorization: Bearer <key>`, hashes it with
+ * the SHA-256 scheme `app/services/api/key.ts` generates keys with, rejects a missing,
+ * unknown or expired key, and exposes `ctx.apiKey`/`ctx.apiTeam`; `apiAccess` then holds the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

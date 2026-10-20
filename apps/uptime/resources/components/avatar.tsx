@@ -1,11 +1,6 @@
 /**
- * Client island per the approved-islands list: a circular user avatar,
- * composing `@sdxc/ui`'s compound `Avatar` for its fallback/image layering.
- *
- * `@sdxc/ui`'s own `size` prop only accepts `"sm"/"md"/"lg"` variants, so
- * host dimensions and the fallback's font size are set directly through
- * `mix`, keeping this component's numeric `size` exact for any pixel value
- * callers pass (24, 40, 48, …).
+ * Client island per the approved-islands list: a circular user avatar, composing
+ * `@sdxc/ui`'s compound `Avatar` for its fallback/image layering.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
- * API v1 collection endpoints for HTTP monitors: `GET /api/v1/monitors` lists a
- * team's monitors, `POST /api/v1/monitors` creates one, and `GET /api/v1/monitors/stats`
- * returns aggregate stats across every monitor on the team. Requires `monitors:read`
- * (list, stats) or `monitors:write` (create) via `requireApiKey`.
+ * API v1 collection endpoints for HTTP monitors: `GET /api/v1/monitors` lists a team's
+ * monitors, `POST /api/v1/monitors` creates one, and `GET /api/v1/monitors/stats`
+ * returns aggregate stats across every monitor on the team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -66,7 +65,6 @@ export default createController(monitorsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.monitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

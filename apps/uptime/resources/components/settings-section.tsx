@@ -1,13 +1,7 @@
 /**
- * The section-heading-plus-bordered-card composition every settings-style page
- * is built from: a titled section holding cards, each a rounded, bordered box
- * split into an optional header, a field region, and a footer action row, so a
- * page of independent groups reads as distinct settings rather than one column.
- *
- * The field region owns the vertical rhythm between its children as a `gap`,
- * since a trailing margin per field is a contract no markup can enforce. `tone`
- * repeats on the card and its header/footer because the border color must be
- * set on each element that draws one — there's no ambient channel to carry it.
+ * The section-heading-plus-bordered-card composition every settings-style page is
+ * built from: a titled section holding cards, each a rounded, bordered box split
+ * into an optional header, a field region, and a footer action row, so a page of
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

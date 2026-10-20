@@ -1,12 +1,7 @@
 /**
- * The arithmetic the free-watch reports share: turning a target's checks
- * into bar segments, reading a watch's running totals into the three
- * numbers under it, and grouping failures into a report's incidents.
- *
- * One place for the bucketing keeps the daily digest, the weekly wrap-up,
- * and a repeat-submission report agreeing on the same data at three
- * different scales. It builds that data only; rendering stays with the
- * email classes that call it.
+ * The arithmetic the free-watch reports share: turning a target's checks into bar
+ * segments, reading a watch's running totals into the three numbers under it, and
+ * grouping failures into a report's incidents.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

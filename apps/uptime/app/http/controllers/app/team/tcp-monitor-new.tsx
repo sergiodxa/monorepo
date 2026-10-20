@@ -2,11 +2,6 @@
  * New TCP monitor form page controller. Posts to the `create-tcp-monitor` action.
  * Requires `requireUser` + `requireTeam`.
  *
- * The fields sit in a titled, bordered card with the submit control at its foot,
- * matching the geometry of the other create forms and the settings pages. They
- * stay in a single card because the field markup comes from a view shared with
- * the edit page, which renders it as one block.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

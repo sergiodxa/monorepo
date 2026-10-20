@@ -1,9 +1,6 @@
 /**
  * Turns the targets someone probed on the public trial page into real monitors, at the
- * moment they sign in with the address they left behind. Matches the person behind the
- * address rather than the stored string, so a tagged sign-up still claims its attempts, and
- * separately records the durable snapshot of the free-page-to-account funnel. Every failure
- * here is logged and swallowed, because this sits on the one path nobody can route around.
+ * moment they sign in with the address they left behind.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,8 +55,7 @@ export interface TrialConversionSubject {
  * every sign-in and is idempotent on `trialWatches.markConverted`'s stamp, so a repeat sign-in
  * costs one indexed read and claims nothing twice.
  *
- * @returns Resolves once every claimable target has been converted or logged and skipped;
- * never rejects, so a failure here cannot block sign-in.
+ * @returns Resolves once every claimable target has been converted or logged and skipped; never rejects, so a failure here cannot block sign-in.
  */
 export async function convertTrialWatches(
 	models: UptimeModels,

@@ -1,9 +1,6 @@
 /**
  * Edit maintenance window page controller. Requires `requireUser` + `requireTeam`;
- * 404s when the window doesn't belong to the current team. Coverage, schedule,
- * behavior, and recurrence fields sit in bordered cards inside one update `<form>`;
- * ending a window early lives in its own neutral card, since it preserves the
- * window's record and history for later review.
+ * 404s when the window doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,13 +1,6 @@
 /**
  * What every ad-hoc ping does regardless of who asked for it: record it to Analytics
- * Engine and bill it to the team. Two callers perform ad-hoc pings — the public
- * `POST /api/v1/ping` endpoint and the dashboard's quick-check form — and the check
- * itself differs between them (the API offers HTTP, DNS and TCP; the form offers only
- * HTTP), while everything that makes a check *billable* is identical. This is that part.
- *
- * A caller decides what to probe, whether a subscription allows it, and what to say
- * in response; this module owns only what the ping costs and where it is counted —
- * the half that must not drift between the two callers.
+ * Engine and bill it to the team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

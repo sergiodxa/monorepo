@@ -3,12 +3,6 @@
  * sweep runs to take the monitors whose next check is owed, and the two writes that keep
  * the column consistent when a monitor is created or edited.
  *
- * `monitors`, `tcp_monitors` and `dns_monitors` share this column and its meaning —
- * `NULL` means unscheduled, any other value is when the next check is due — and all
- * three advance it by whole `interval_seconds`. The arithmetic, the claim's guard, and
- * the create/edit rules live here once instead of once per table, so a change to how
- * scheduling works is one edit instead of three that can drift.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -40,11 +34,11 @@ export function nextDueAtOnEnable(enabled: boolean): number | null {
  * Claims every row of `table` whose next check is due as of `scheduledAt`, in one
  * atomic `UPDATE … RETURNING` that advances each row's next due time by whole
  * intervals, so concurrent deliveries can never claim the same monitor twice.
+ *
  * @param db Database to run the claim against.
  * @param table Table to claim from; must carry `next_due_at` and `interval_seconds`.
  * @param columns Columns of each claimed row to return.
- * @param scheduledAt The instant "due" is measured against; advances land strictly
- * past this value.
+ * @param scheduledAt The instant "due" is measured against; advances land strictly past this value.
  * @returns `columns` for every row the claim moved.
  */
 export async function claimDue<table extends AnyTable, column extends TableColumnName<table>>(

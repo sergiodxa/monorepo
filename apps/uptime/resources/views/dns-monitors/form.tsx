@@ -1,9 +1,7 @@
 /**
  * The DNS monitor's name/domain/interval/enabled fields, reading copy from
  * `page.<page>.form.fields.*`. A monitor covers a whole domain, so there is no record type or
- * expected value here — those are derived from the zone at review time. The zone-file paste
- * is deliberately kept separate: it is read once, for a single request, and submitted under
- * its own action and copy, through markup of its own.
+ * expected value here — those are derived from the zone at review time.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

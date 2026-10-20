@@ -1,10 +1,7 @@
 /**
  * Not-found view component for the uptime app. Renders the 404 page body — a
  * title, a short description, and a link back to the homepage — using the title
- * and description the not-found view model supplies through its handle props. It
- * exists as the presentational piece the default handler and every "unknown slug"
- * marketing/docs controller composes into the document layout when a request
- * doesn't resolve to real content.
+ * and description the not-found view model supplies through its handle props.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

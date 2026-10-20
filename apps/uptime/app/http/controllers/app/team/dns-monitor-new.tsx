@@ -2,14 +2,6 @@
  * New DNS monitor form page controller. Posts to the `create-dns-monitor` action
  * behind `requireUser` + `requireTeam`.
  *
- * A pasted zone is the only channel through which a domain's other names reach
- * this monitor; apex-only coverage is the default until one arrives. That limit
- * is stated on this screen, where the visitor decides whether to paste — closing
- * the gap between what "domain monitoring" sounds like and what it is.
- *
- * Fields are spelled out directly here since carding the form spans three boxes,
- * while the shared DNS field component emits them as a single one-card fragment.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

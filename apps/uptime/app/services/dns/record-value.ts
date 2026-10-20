@@ -2,11 +2,6 @@
  * Normalization of DNS record names and RDATA into the exact strings stored as a tracked
  * record's identity. A record is identified by `(name, type, value)`, so two spellings of
  * one record — a zone file's `2001:DB8::1` and a resolver's `2001:db8::1` — must fold to
- * the same bytes or the diff invents an addition and a removal on every check.
- *
- * Both input channels — a zone file and a resolver — read RDATA into typed fields with the
- * same codec and print them through {@link storedRecordValue}, so they agree on what a
- * record's value is by construction.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

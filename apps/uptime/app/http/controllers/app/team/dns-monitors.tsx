@@ -3,9 +3,6 @@
  * last-known status and how much of its domain it watches, or an empty state when there
  * are none yet. Requires `requireUser` + `requireTeam`.
  *
- * A monitor's records column reports how many of its domain's records it watches — the
- * only number on this page that says how much work a row stands for.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -48,12 +45,10 @@ interface RecordCounts {
 
 /**
  * Counts every listed monitor's records in one statement, keyed by monitor.
- *
  * A single `GROUP BY` counts every monitor's records in one round trip; the `IN`
  * list stays within the per-team cap, keeping the query under the bound-parameter limit.
  *
- * @returns Counts for the monitors that have records. A monitor with none is absent, and
- * the caller reads that as the zero it is.
+ * @returns Counts for the monitors that have records. A monitor with none is absent, and the caller reads that as the zero it is.
  */
 async function countRecords(
 	db: Database,

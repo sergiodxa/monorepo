@@ -1,9 +1,6 @@
 /**
- * Signed-in app shell: a sidebar (team switcher, nav, admin group, user
- * menu) and a header sit around the content every `/app/:team/*` page
- * composes here. Below 768px the sidebar is a `<nav popover>` off-canvas
- * drawer; at ≥768px that same `<nav>` switches to `display: contents` and
- * its three sections become direct items of a two-column, three-row grid.
+ * Signed-in app shell: a sidebar (team switcher, nav, admin group, user menu) and
+ * a header sit around the content every `/app/:team/*` page composes here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,11 +1,7 @@
 /**
- * Client island: the docs sidebar's search box and navigation list. Typing
- * filters every doc by title into a flat, section-labeled list; clearing it
- * restores the sections grouped by `frontmatter.section.title`.
- *
- * Composes `@sdxc/ui`'s `SearchField`/`SearchField.Input` and `NavLink`, styled
- * with the same tokens `Sidebar.Item` uses for its own rows, so the search box
- * and nav rows stay visually consistent with the rest of the sidebar.
+ * Client island: the docs sidebar's search box and navigation list. Typing filters
+ * every doc by title into a flat, section-labeled list; clearing it restores the
+ * sections grouped by `frontmatter.section.title`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

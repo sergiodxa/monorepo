@@ -1,8 +1,6 @@
 /**
  * Team settings page controller, gated behind `requireUser`, `requireTeam`, and
- * `requireAbility(abilities.team.update)`. Billing and Danger Zone stay owner-only, and the
- * danger-zone delete button relies on the native `pattern="DELETE"` constraint
- * to stay disabled-in-effect until the confirmation input matches exactly.
+ * `requireAbility(abilities.team.update)`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

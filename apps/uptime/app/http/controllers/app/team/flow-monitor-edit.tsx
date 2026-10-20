@@ -3,13 +3,6 @@
  * last run's outcome, and a danger-toned card for deletion. Requires `requireUser` +
  * `requireTeam`; 404s when the monitor belongs to another team.
  *
- * The last result renders on this page beside the source it explains: a flow's outcome is
- * the assertion that broke and the line it broke on, clearest read right beside that line.
- *
- * The delete confirmation composes `@sdxc/ui`'s `AlertDialog` directly: confirming submits a
- * real `<form method="post">` button, matching the composition the other monitor types use
- * for their own delete flow.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -2,7 +2,6 @@
  * DNS monitor review page controller. GET /app/:team/dns/:monitorId/review — the step
  * between creating a domain monitor and monitoring anything with it: discovery has already
  * written the monitor's records, and here the visitor accepts or declines each one before it
- * becomes an expectation. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

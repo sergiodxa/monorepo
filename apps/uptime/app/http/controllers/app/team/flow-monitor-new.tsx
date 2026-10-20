@@ -1,10 +1,7 @@
 /**
  * New flow monitor form page controller. Posts to the `create-flow-monitor` action. Requires
- * `requireUser` + `requireTeam`.
- *
- * Reads the team's verified domains so the form can state what a spec written here may
- * reach. The action enforces that same restriction, so surfacing it here lets a writer
- * target a domain that will actually be accepted.
+ * `requireUser` + `requireTeam`. Reads the team's verified domains so the form can state
+ * what a spec written here may reach.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

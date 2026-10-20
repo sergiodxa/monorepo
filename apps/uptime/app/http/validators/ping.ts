@@ -1,9 +1,7 @@
 /**
- * Form validation schema for the dashboard's quick-check action. Restricts
- * the URL field to `http:`/`https:` schemes: `checks.url()` accepts any
- * parseable URL, including schemes the probe cannot fetch, so the refinement
- * catches a `mailto:` submission as a field error and spares the team a
- * billed check that could never succeed.
+ * Form validation schema for the dashboard's quick-check action. Restricts the URL
+ * field to `http:`/`https:` schemes: `checks.url()` accepts any parseable URL,
+ * including schemes the probe cannot fetch, so the refinement catches a `mailto:`
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

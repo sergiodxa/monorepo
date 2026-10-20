@@ -1,8 +1,6 @@
 /**
  * Every-minute sweep that claims the HTTP monitors whose next due time has come round and
- * fans one `checkHttp` message out per monitor. Claiming advances each monitor's next due
- * time in the same statement, so a second delivery within the same minute enqueues nothing
- * more, and billing is already decided by `next_due_at` (ADR-005).
+ * fans one `checkHttp` message out per monitor.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,9 +1,7 @@
 /**
  * The dashboard's quick-check action: `POST /actions/:team/run-ping`. Probes a
- * submitted URL once with the same `HttpCheck` a monitor's scheduled check
- * uses, matching `POST /api/v1/ping`'s contract without storing anything or
- * touching a monitor. HTTP only: a URL box asks an HTTP question, so DNS and
- * TCP targets stay on the API surface that takes them explicitly.
+ * submitted URL once with the same `HttpCheck` a monitor's scheduled check uses,
+ * matching `POST /api/v1/ping`'s contract without storing anything or touching a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

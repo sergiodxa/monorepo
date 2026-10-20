@@ -1,9 +1,7 @@
 /**
  * Dashboard quick-check fragment controller. GET /app/:team/dashboard/quick-ping —
  * renders the header's URL bar and the previous check's result as a toast, with no
- * document shell, so the dashboard's quick-ping `Frame` can swap it in on its own.
- * A scripted frame reload and a full no-JavaScript navigation both resolve here,
- * so this is the one place that turns a stored check result into markup.
+ * document shell, so the dashboard's quick-ping `Frame` can swap it in on its ow
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

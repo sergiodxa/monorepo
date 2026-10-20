@@ -19,10 +19,6 @@ let database: Database | undefined;
  * Opens a connection to the app's D1 database, counting every statement it runs against
  * the cost ledger of whatever unit of work is running (ADR-019, ADR-007).
  *
- * `now` is overridden to epoch-ms because `database/schema.ts` types timestamp columns
- * as `c.integer()`, and the library's default `now()` returns a `Date`, which D1 cannot
- * bind; `onStatement` reuses the row counts D1 already returns in `meta`.
- *
  * @returns A database bound to the `DB` binding, shared by every request this isolate serves.
  * @example
  * let middleware = [database(openDatabase())];

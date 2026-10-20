@@ -1,8 +1,7 @@
 /**
  * API v1 collection endpoints for status pages: `GET /api/v1/status-pages` lists a
  * team's pages and `POST /api/v1/status-pages` creates one with a globally-unique
- * slug. Requires `status-pages:read`/`status-pages:write` via `requireApiKey`. Only
- * HTTP-monitor and cron-job attachments are exposed over the API.
+ * slug. Requires `status-pages:read`/`status-pages:write` via `requireApiKey`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,7 +60,6 @@ export default createController(statusPagesRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.statusPages.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

@@ -3,9 +3,6 @@
  * measuring how long it takes, exposing the elapsed milliseconds via an `X-Response-Time`
  * header. The object is pinned to a location hint, so a check runs from a chosen region.
  *
- * A monitored endpoint's own failure comes back as a normal response tagged
- * `X-Probe-Outcome: unreachable`; only a fault in the object itself rejects the call.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

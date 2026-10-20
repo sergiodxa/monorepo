@@ -1,8 +1,6 @@
 /**
  * Edit cron-job monitor page controller. Requires `requireUser` + `requireTeam`;
- * 404s when the monitor doesn't belong to the current team. Fields are framed as
- * three bordered cards inside one `<form>`; the delete form stays separate, inside
- * the confirmation dialog.
+ * 404s when the monitor doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

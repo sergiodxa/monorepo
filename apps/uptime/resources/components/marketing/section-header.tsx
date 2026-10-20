@@ -1,9 +1,7 @@
 /**
- * Centered eyebrow badge + heading + lead paragraph at the top of a
- * marketing page section. Every marketing page/section repeats this same
- * three-part shape, centralized here for reuse. Its heading renders through
- * `@sdxc/ui`'s `Heading`, fixed at `level={2}` since every marketing page
- * nests its sections below its own `<h1>` hero.
+ * Centered eyebrow badge + heading + lead paragraph at the top of a marketing page
+ * section. Every marketing page/section repeats this same three-part shape,
+ * centralized here for reuse.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

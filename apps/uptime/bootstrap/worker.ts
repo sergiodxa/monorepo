@@ -1,10 +1,6 @@
 /**
- * Cloudflare Worker entry point for the uptime app. Its `fetch` handler resolves
- * the session cookie secret, builds the application router, and forwards the request
- * to it. Its `scheduled` and `queue` handlers hand the
- * trigger and the batch to the job dispatcher, which owns routing, validation and the
- * lifecycle for both the work queue and its dead-letter queue. Re-exports the `GeoFetchDO`
- * Durable Object class its binding needs.
+ * Cloudflare Worker entry point for the uptime app. Its `fetch` handler resolves the
+ * session cookie secret, builds the application router, and forwards the request to it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,7 +17,6 @@ import { CostLedger, countedKv, trackCost } from "~/app/services/cost";
  * Both job handlers, bound to the dispatcher they delegate to. This worker consumes its own
  * dead-letter queue too (ADR-018), so those batches are recorded and acked rather than
  * dispatched; a body matching no job or failing its schema is written there directly, instead
- * of spending three redeliveries on a payload no redelivery can fix.
  */
 const handlers = cloudflare.worker(dispatcher, {
 	deadLetterQueue: "ping-dlq",

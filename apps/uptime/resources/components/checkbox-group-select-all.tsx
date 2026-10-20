@@ -2,11 +2,6 @@
  * Client island: a tri-state checkbox that ticks or clears every checkbox inside
  * the group element named by {@link CheckboxGroupSelectAllProps.groupId}, writing
  * the `checked` property directly onto each existing control so the submitted
- * payload comes out exactly as if every box had been ticked by hand.
- *
- * Present in the markup but `hidden` until its mixin has wired it up, so
- * hydration always finds a matching element to adopt; each checkbox already
- * handles its own toggling, keeping the page usable immediately on load.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

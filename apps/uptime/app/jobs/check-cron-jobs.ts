@@ -1,12 +1,7 @@
 /**
  * Background job that sweeps every actionable cron-job monitor once per minute,
  * transitioning `healthy` → `late` once its expected arrival passes, and either
- * `healthy` or `late` → `missed` once its grace period also elapses. Enqueues a `notify`
- * message on every transition into `late`/`missed`, per `docs/cron-job-monitoring.md`.
- *
- * This is the tightest budget of any sweep — one minute — so monitors are evaluated in
- * bounded-concurrency batches, with notifications handed off to the `notify` job for
- * delivery, keeping a burst of transitions from slowing down the sweep itself (ADR-008).
+ * `healthy` or `late` → `missed` once its grace period also elapses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

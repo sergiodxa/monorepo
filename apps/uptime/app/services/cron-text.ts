@@ -1,8 +1,7 @@
 /**
  * The one place cron vocabulary becomes text a person reads: a parsed schedule's
  * descriptor into a sentence in the viewer's language, and a rejected expression into
- * a validation message. `@sdxc/cron` returns structured descriptors, so every view and
- * action sources its copy from here, keeping locale text centralized.
+ * a validation message.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,10 +1,7 @@
 /**
  * The sweep behind both team digests: for every member of every team owed one, a single
  * email covering that team's monitors over the window their schedule reports.
- * The daily and weekly digests differ only in window length, stamp, and email, and
- * each is its own job, since a cron-job monitor watches one schedule. The membership, not
- * the subject, is the unit of delivery, and the per-period stamp on `memberships` keeps a
- * redelivered run from sending the same digest twice.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

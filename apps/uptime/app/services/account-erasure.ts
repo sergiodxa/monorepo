@@ -1,9 +1,7 @@
 /**
- * Plans and performs account erasure for the daily deletion sweep. Owning a team destroys
- * it along with every other member's access, since this schema has no owner-transfer
- * feature; {@link planAccountErasure} previews that impact and {@link eraseAccount} performs
- * it, cancelling billing first so a failed cancellation aborts the whole run and keeps
- * billing accurate.
+ * Plans and performs account erasure for the daily deletion sweep. Owning a team destroys it
+ * along with every other member's access, since this schema has no owner-transfer feature;
+ * {@link planAccountErasure} previews that impact and {@link eraseAccount} performs it, canc
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

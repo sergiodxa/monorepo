@@ -1,9 +1,7 @@
 /**
- * Form actions for HTTP monitor create/update/delete/play. Each follows the
- * validate → mutate → flash → redirect pattern: on validation failure the visitor is
- * sent back to the form with an error toast; on success, to the monitor (or list).
- * `playMonitor` additionally answers with JSON when the caller explicitly asks for it, so a
- * hydrated page can start a run without navigating and still learn what to compare against.
+ * Form actions for HTTP monitor create/update/delete/play. Each follows the validate →
+ * mutate → flash → redirect pattern: on validation failure the visitor is sent back to the
+ * form with an error toast; on success, to the monitor (or list).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,8 +41,7 @@ const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
  * always one that's allowed to run. `checks.run` **fails open**: only a subscription
  * known to be `inactive` refuses.
  *
- * @returns Whether the check was enqueued, which is what lets the caller tell the visitor
- * their check is going to happen.
+ * @returns Whether the check was enqueued, which is what lets the caller tell the visitor their check is going to happen.
  */
 async function ping(
 	access: RegisteredAccess,

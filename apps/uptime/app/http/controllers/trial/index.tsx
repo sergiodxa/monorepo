@@ -1,8 +1,6 @@
 /**
- * `/try` — the public offer of a free multi-day health report on one site, and the
- * only page in this feature that sells. `GET` renders the empty URL box with honeypot
- * fields; `POST` reads their check, runs the check and re-renders the same page with the
- * result, so no state has to survive between requests and a reload never shows a stale answer.
+ * `/try` — the public offer of a free multi-day health report on one site, and the only page
+ * in this feature that sells.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -410,10 +408,9 @@ function isIncompleteForm(refusal: TrialRefusalState | undefined): boolean {
 }
 
 /**
- * Renders `/try`, in whichever of its states the caller reached. The single code
- * path both methods answer through: the `GET` passes no result, the `POST` passes
- * what it got, and `POST /try/lead` passes the probe back with its form's error.
- * Every render issues fresh honeypot fields, so a re-rendered form verifies on its next send.
+ * Renders `/try`, in whichever of its states the caller reached. The single code path both
+ * methods answer through: the `GET` passes no result, the `POST` passes what it got, and
+ * `POST /try/lead` passes the probe back with its form's error.
  *
  * @param view - What this particular request has to show.
  * @param init - The response's status and headers.
@@ -1056,9 +1053,6 @@ export default createController(routes.trial.check, {
 		 * POST /try — reads the honeypot's check first, then runs `guardTrialProbe` before any
 		 * outbound fetch, then `HttpCheck` in `followRedirects: false` mode, since a redirect can
 		 * only be safely evaluated by the caller that requested it and never automatically
-		 * followed past the guard. A filled trap answers with the page's own `200` and the URL
-		 * kept, spending no challenge verification, budget or probe; a missing or unverifiable
-		 * token renders the form again with the URL and a request to resend it, as a `400`.
 		 */
 		async action(ctx) {
 			let session = ctx.get(Session);
