@@ -1,8 +1,7 @@
 /**
  * Shapes a session row for the account area's device list: a user-agent string reduced
  * to browser/OS/device labels, dates already formatted for the request's language, and
- * the two flags the page renders differently — whether the row is the browser asking,
- * and whether it has gone quiet long enough to look abandoned.
+ * the two flags the page renders differently — whether the row is the browser asking
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -97,8 +96,7 @@ function formatDate(epochMs: number, locale: string): string {
  * Maps a stored session onto its row. The session the current request arrived on stays
  * marked active, since this very request just touched it.
  *
- * @param currentSessionId - The id of the session this request arrived on, so its row
- *   can be marked and confirmed differently from the rest.
+ * @param currentSessionId - The id of the session this request arrived on, so its row can be marked and confirmed differently from the rest.
  * @param locale - Language the dates are formatted for.
  */
 export function toSessionRow(

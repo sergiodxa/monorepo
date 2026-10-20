@@ -1,8 +1,7 @@
 /**
  * Reading a confidential client's credentials off a token-endpoint request. RFC 6749
  * §2.3.1 allows both HTTP Basic and `client_id`/`client_secret` in the form body, and
- * this server has to accept both: the OIDC client library every relying party here
- * uses defaults to body credentials, and refusing them fails every sign-in at once.
+ * this server has to accept both: the OIDC client library every relying party here u
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

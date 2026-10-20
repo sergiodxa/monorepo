@@ -1,8 +1,6 @@
 /**
  * The OIDC ID token this server issues: a JWT with typed accessors for the standard
  * identity claims, plus the generator that builds one for a subject and a client.
- * Claims are gated by the granted scope per OIDC Core 1.0, so a relying party
- * receives only the attributes the person consented to share.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

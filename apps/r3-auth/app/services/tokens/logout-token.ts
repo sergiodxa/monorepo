@@ -1,8 +1,7 @@
 /**
  * The OIDC back-channel logout token this server sends to relying parties: a short
  * lived JWT carrying the subject, the audience, an optional session id, and the
- * `events` claim the specification requires. Modelled as a value object so the logout
- * fan-out mints and reads one well-defined token shape.
+ * `events` claim the specification requires.
  *
  * @see https://openid.net/specs/openid-connect-backchannel-1_0.html
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -49,9 +48,6 @@ export default class LogoutToken extends JWT {
 	/**
 	 * Mints a logout token for one relying party, timestamped in the seconds RFC 7519
 	 * NumericDate defines so a relying party's `iat`/`exp` checks accept it.
-	 *
-	 * `sid` is written only when a session id is supplied, so the session identifier
-	 * reaches only the clients that require session-specific logout.
 	 *
 	 * @param subjectId - The person being logged out.
 	 * @param clientId - The relying party receiving the notification.

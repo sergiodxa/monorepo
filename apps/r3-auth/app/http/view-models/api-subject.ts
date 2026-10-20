@@ -1,9 +1,6 @@
 /**
  * The subject payload the machine-to-machine API publishes, and the schema that reads
- * one back out of the cache. Its field names and value formats are a frozen contract:
- * clients parse `camelCase` keys and ISO-8601 date strings, and the cache holding these
- * payloads is shared with another worker serving the same API, so both must read what
- * either one wrote.
+ * one back out of the cache.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

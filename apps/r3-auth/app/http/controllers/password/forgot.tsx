@@ -3,10 +3,6 @@
  * link, and the submission that produces one. It is the way back into an account whose
  * password is lost.
  *
- * Every well-formed submission is answered identically whether or not the address belongs to
- * a subject: same validation, same per-address cooldown, same page and status, and logs that
- * record only that a request arrived.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

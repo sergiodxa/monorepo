@@ -1,8 +1,7 @@
 /**
  * The subject-lookup endpoint (`GET /api/subjects/:subjectId`). Answers an authenticated
  * client with the profile of a subject who authorized it, reading a per-client cache before
- * the database. Exists so a relying party's server can resolve the people who signed in to
- * it by id without holding a copy of this server's database.
+ * the database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

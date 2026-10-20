@@ -2,10 +2,6 @@
  * Access to the ES256 key pair every token this server issues is signed with. The
  * keys live in R2 rather than in code or in the database, because each key file is
  * the only copy behind the published JWKS: every worker issuing tokens for this
- * issuer must read the same file, or tokens stop verifying for relying parties.
- *
- * Reading them is a bucket listing, a read per key, and two key imports per key, so
- * a warm isolate holds onto the result and shares it across requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

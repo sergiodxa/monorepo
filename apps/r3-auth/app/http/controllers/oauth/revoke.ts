@@ -3,9 +3,6 @@
  * session a refresh token names. Access tokens are self-contained JWTs that expire on
  * their own, so a hint naming one succeeds with storage untouched.
  *
- * Always answers `200`, whatever the token was: any other status turns the endpoint
- * into an oracle for which tokens are live.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

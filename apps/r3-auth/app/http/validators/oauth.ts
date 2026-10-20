@@ -1,8 +1,6 @@
 /**
  * Schemas for the three OAuth machine endpoints: the token endpoint's grant variants,
- * and the token argument revocation and introspection share. Client credentials are
- * optional in every variant because a request may present them in the `Authorization`
- * header instead of the body.
+ * and the token argument revocation and introspection share.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

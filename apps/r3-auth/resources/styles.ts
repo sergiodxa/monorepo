@@ -1,12 +1,7 @@
 /**
  * The application's design tokens expressed as `remix/component` mixins: five OKLCH
- * color ramps, the Inter-first font stack, and the document surface that
- * follows the viewer's color scheme. Views compose these instead of shipping a
- * stylesheet, so the palette travels with the markup that uses it.
- *
- * This module is the single exception to the rule that mixins are written
- * inline at their use site — a shared token layer only works if there is
- * exactly one definition of it.
+ * color ramps, the Inter-first font stack, and the document surface that follows
+ * the viewer's color scheme.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

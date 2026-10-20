@@ -1,8 +1,7 @@
 /**
  * The OAuth 2.0 access token this server issues: a JWT with typed accessors for the
  * claims RFC 9068 defines, plus the generator that mints one for an audience, a
- * subject and a client. A value object, so every endpoint reads and writes the
- * bearer token through one description of its claim set.
+ * subject and a client.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,13 +71,8 @@ export default class AccessToken extends JWT {
 	 * since the epoch, the NumericDate form RFC 7519 defines, and `scope` is written
 	 * only when scopes were granted, as RFC 9068 requires.
 	 *
-	 * Claims are named rather than positional, so the audience, the subject and the
-	 * client cannot be transposed at a call site and the required client is stated
-	 * by the type.
-	 *
 	 * @param claims.audience - Client id, or the client plus every requested resource.
-	 * @param claims.subjectId - The person the token speaks for, or the client itself
-	 *   for `client_credentials`, where RFC 9068 §2.2.1 has `sub` name the client.
+	 * @param claims.subjectId - The person the token speaks for, or the client itself for `client_credentials`, where RFC 9068 §2.2.1 has `sub` name the client.
 	 * @param claims.clientId - The client that asked for the token.
 	 * @param claims.scope - Granted scopes, joined into the space-separated claim.
 	 */

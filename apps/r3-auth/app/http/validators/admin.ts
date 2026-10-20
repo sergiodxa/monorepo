@@ -1,9 +1,7 @@
 /**
  * Schemas for every form and query string the admin area accepts: the client and
  * subject editors, the `intent` variants each page's single POST route discriminates
- * on, and the page number the two listings read. Administration is the one place that
- * can rewrite a relying party's redirect URI, so every value is validated before it
- * reaches a model.
+ * on, and the page number the two listings read.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

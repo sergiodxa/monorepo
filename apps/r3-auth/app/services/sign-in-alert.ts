@@ -3,11 +3,6 @@
  * reduces the request's user-agent and address to the labels the notice reports, and
  * hands the message to the `email` job, which delivers it with the queue's retries.
  *
- * Kept as one module so every login controller shares it: a sign-in that mails
- * nobody is invisible, and drift between call sites is how one of them quietly
- * stops mailing. Every step here runs inside a `try`, with the send queued and
- * both outcomes recorded on the request's log, so nothing here can fail a sign-in.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -24,8 +19,7 @@ import { describeUserAgent } from "~/app/http/view-models/account-session";
  * stranger to the sign-in. The log carries only the subject id, since the
  * address is the person.
  *
- * @param ctx - The request the sign-in arrived on; its mailer, log, user-agent and
- *   client address are all read from it.
+ * @param ctx - The request the sign-in arrived on; its mailer, log, user-agent and client address are all read from it.
  * @param subjectId - Subject the session was opened for.
  */
 export async function notifyNewSignIn(ctx: AppContext, subjectId: string): Promise<void> {

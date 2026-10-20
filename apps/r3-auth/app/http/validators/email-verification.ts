@@ -1,8 +1,6 @@
 /**
  * Schemas for the verification endpoint: the query string a link carries, and the form the
- * confirmation page posts back. They exist so a token that could not have been issued here
- * is refused before it reaches the store: the endpoint is unauthenticated and reachable by
- * anybody, so the cheapest possible rejection is the right one.
+ * confirmation page posts back.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

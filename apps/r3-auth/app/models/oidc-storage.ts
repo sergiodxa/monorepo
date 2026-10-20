@@ -1,8 +1,7 @@
 /**
  * Binds the OIDC engine to this server's storage: relational lookups for clients,
  * sessions, subjects, credentials and grants, and KV for single-use authorization
- * codes. It is the one place that translates between the database's snake_case,
- * epoch-millisecond rows and the shapes the protocol engine works in.
+ * codes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

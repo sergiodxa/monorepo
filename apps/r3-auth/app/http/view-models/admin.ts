@@ -1,8 +1,7 @@
 /**
  * Shapes the admin screens' data for rendering: the chrome every page wears (document
  * title, navigation labels, breadcrumb trail, heading), the pagination links the two
- * listings show, and the row shapes for clients, subjects and sessions. Views receive
- * only what they display, so no database row — and no client secret — reaches JSX.
+ * listings show, and the row shapes for clients, subjects and sessions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

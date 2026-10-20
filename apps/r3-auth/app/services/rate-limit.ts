@@ -1,8 +1,7 @@
 /**
- * Spending a rate limiter's budget and turning a refusal into the published
- * `429`. Wraps `@sdxc/rate-limit`'s adapters so every protected endpoint
- * answers with the same body and headers, and a limiter outage still lets
- * token issuance proceed.
+ * Spending a rate limiter's budget and turning a refusal into the published `429`.
+ * Wraps `@sdxc/rate-limit`'s adapters so every protected endpoint answers with the
+ * same body and headers, and a limiter outage still lets token issuance proceed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,10 +28,7 @@ const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
  *
  * @param adapter - The limiter to spend from.
  * @param key - Identity the budget belongs to, such as a client id or `addressKey(ctx.ip)`.
- * @returns A `429` to return immediately — its `Retry-After` reports the
- * limiter's full window, the value published to relying parties and always
- * safe for a client to wait out in full — or `null` when the request may
- * continue, so a caller always acts on the returned decision.
+ * @returns A `429` to return immediately — its `Retry-After` reports the limiter's full window, the value published to relying parties and always safe for a client to wait out in full — or `null` when the request may continue, so a caller always acts on the returned decision.
  */
 export async function spendRateLimit(adapter: Adapter, key: string): Promise<Response | null> {
 	let result = await adapter.consume(key);

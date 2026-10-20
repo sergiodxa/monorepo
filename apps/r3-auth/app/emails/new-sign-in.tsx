@@ -3,10 +3,6 @@
  * which system, which kind of device, the address it came from, and a link to the page
  * that can end it.
  *
- * It is unsolicited by design — an owner learns of an unrecognized sign-in only because
- * something tells them. It carries facts and a way to act; the account page authenticates
- * the reader itself, keeping every credential out of the mail.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

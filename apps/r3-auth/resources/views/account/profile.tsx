@@ -2,9 +2,6 @@
  * The read-only profile page: avatar, identity, and account details, with a link
  * to the edit form; the email stays fixed as the relying-party identifier.
  *
- * An unconfirmed address carries a badge and a resend panel, surfacing that
- * verification state directly in the subject's own account.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -3,9 +3,6 @@
  * code straight away for somebody already signed in (SSO), and otherwise parks the
  * request in the session and renders the sign-in page. `POST` completes a sign-in.
  *
- * PKCE is bound here: the challenge is carried through the session for the login round
- * trip and stored with the code, which is what makes the token endpoint's check run.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -98,8 +95,7 @@ function currentSubjectId(): string | null {
  * method to `plain` when omitted; this server defaults to `S256`, the stronger of the
  * two and the one every client library sending a challenge here uses.
  *
- * @returns The challenge; `undefined` for a request carrying none, whose code redeems
- * with the verifier omitted, and `null` for a method beyond the two implemented here.
+ * @returns The challenge; `undefined` for a request carrying none, whose code redeems with the verifier omitted, and `null` for a method beyond the two implemented here.
  */
 function readPkce(query: AuthorizeQuery): OIDC.Pkce | null | undefined {
 	if (!query.code_challenge) return undefined;
@@ -132,8 +128,7 @@ async function errorRedirect(
 /**
  * Renders the sign-in page for a parked authorization request.
  *
- * @param error - Why the previous attempt was refused, already translated, when this
- * is a re-render.
+ * @param error - Why the previous attempt was refused, already translated, when this is a re-render.
  */
 function signInPage(ctx: AppContext, client: SelectClient, authz: AuthzState, error?: string) {
 	return ctx.render(

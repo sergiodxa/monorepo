@@ -1,9 +1,6 @@
 /**
  * The token introspection endpoint (RFC 7662). Authenticates the calling client,
  * then reports whether a token issued to it, or naming it as audience, is live.
- * Any failure to resolve the token collapses to `{ active: false }`, because
- * telling a caller why a token failed would let it distinguish an expired token
- * from a forged one from one belonging to somebody else.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,13 +1,7 @@
 /**
  * A destructive action behind an explicit confirmation: a trigger button, a native
  * modal `<dialog>` opened by the Invoker Commands attributes on that button, and a real
- * form inside the dialog that posts the page's `intent`. Every admin deletion and
- * revocation goes through it, so the confirmation is part of the submission rather than
- * a script that decides whether to submit afterwards.
- *
- * The composition is hand-rolled so the hidden `intent` fields sit inside the dialog's
- * own form, and the trigger and cancel controls need no `type` of their own: an invoker
- * button inside a form carries the right one already.
+ * form inside the dialog that posts the page's `intent`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

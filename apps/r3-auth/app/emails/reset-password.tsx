@@ -2,10 +2,6 @@
  * The message that carries a password-recovery link: one action, the window it is good
  * for, and a line saying an unrequested copy is safe to ignore.
  *
- * It is the only message this server sends that holds a credential, so it holds exactly
- * one and the copy stays anonymous — an interceptor learns the link and its deadline. The
- * link resolves to a single page, the one that asks for a new password.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

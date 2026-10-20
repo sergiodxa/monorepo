@@ -3,9 +3,6 @@
  * authorization response parameters to the relying party's redirect URI, with a
  * no-script fallback button for browsers that skip the script.
  *
- * Every value is rendered as a text node or an attribute, so JSX escaping is what
- * keeps a hostile `state` from breaking out of the markup.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

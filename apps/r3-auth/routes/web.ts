@@ -1,8 +1,6 @@
 /**
  * The route registry: every URL this server answers, declared once so `.href(...)`
- * is typed everywhere and the URL surface can be read in one place. Routes are all
- * declared up front, including ones whose controllers arrive later, because every
- * link and redirect in the app resolves through this map rather than a string.
+ * is typed everywhere and the URL surface can be read in one place.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

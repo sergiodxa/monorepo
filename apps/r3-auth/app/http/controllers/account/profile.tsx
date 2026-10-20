@@ -1,8 +1,7 @@
 /**
  * `GET /account/profile` — the signed-in subject's own profile, read straight from the
  * subject the session guard resolved, so the page always shows the person the guard let
- * through. It is also the one place a person sees that their address is unconfirmed, so
- * it renders the verification badge and the panel that asks for a fresh message.
+ * through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

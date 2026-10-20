@@ -2,7 +2,6 @@
  * The OAuth 2.0 Authorization Server Metadata endpoint (RFC 8414). Serves the very
  * same document as OpenID Connect discovery, at the path plain OAuth clients look for,
  * so a client that speaks only OAuth finds the server without knowing it is also an
- * OpenID provider.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

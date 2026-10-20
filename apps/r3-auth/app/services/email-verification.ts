@@ -1,13 +1,7 @@
 /**
  * Email verification: issuing the single-use token the message carries, holding back a
- * further send while an issued token is still usable, and consuming a token to record
- * that a subject's address is confirmed.
- *
- * It exists as one module because the send is driven from three places — a credential
- * sign-in, a provider sign-in and an explicit resend — and the one condition that decides
- * whether mail goes out at all must be the same sentence in all three. The token and the
- * cooldown live in KV, both short-lived and self-expiring, with no need for a place in the
- * database's fixed shape.
+ * further send while an issued token is still usable, and consuming a token to record that
+ * a subject's address is confirmed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -95,8 +89,7 @@ export type VerificationSendOutcome = "sent" | "not_needed" | "suppressed" | "fa
 /**
  * Hex SHA-256 digest, used for every KV key this module writes.
  *
- * @throws When the platform's digest is unavailable, signaling a broken runtime a caller
- *   cannot act on.
+ * @throws When the platform's digest is unavailable, signaling a broken runtime a caller cannot act on.
  */
 async function digest(value: string): Promise<string> {
 	let hashed = await sha256(value);
@@ -132,8 +125,7 @@ function verificationUrl(token: string): string {
  *
  * @param ctx - The request the send is attached to; its mailer, translator and log.
  * @param subjectId - Subject whose address would be confirmed.
- * @returns Which of the four things happened, so a resend page can say so. A sign-in's
- *   own response is identical on every outcome, so sign-in paths can ignore it.
+ * @returns Which of the four things happened, so a resend page can say so. A sign-in's own response is identical on every outcome, so sign-in paths can ignore it.
  */
 export async function sendVerificationEmail(
 	ctx: AppContext,
@@ -198,11 +190,8 @@ export async function sendVerificationEmail(
  *
  * @param models - The models the subject is read from and the column written to.
  * @param token - The token exactly as the link carried it.
- * @param spend - Whether to delete the record and stamp the column. The record is deleted
- *   before anything is written, the same way an authorization code is consumed by being
- *   read, so two submissions of one link cannot both reach the write.
- * @returns The subject the token names, or why the token is good for nothing — one shared
- *   refusal for both callers, so what a token is good for cannot drift between them.
+ * @param spend - Whether to delete the record and stamp the column. The record is deleted before anything is written, the same way an authorization code is consumed by being read, so two submissions of one link cannot both reach the write.
+ * @returns The subject the token names, or why the token is good for nothing — one shared refusal for both callers, so what a token is good for cannot drift between them.
  */
 async function resolveToken(
 	models: AuthModels,

@@ -2,8 +2,6 @@
  * The OpenID Connect Session Management 1.0 check-session endpoint: a page relying
  * parties embed in a hidden iframe, which recomputes the expected `session_state` from
  * the `op_browser_state` cookie readable on this origin and answers `"unchanged"` or
- * `"changed"`, so an RP learns of a sign-out from the browser alone. The document stays
- * a literal string so its bytes match the specification exactly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

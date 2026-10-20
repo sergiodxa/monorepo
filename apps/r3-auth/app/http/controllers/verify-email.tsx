@@ -1,9 +1,7 @@
 /**
  * `/verify-email` — the page a verification link opens, and the submission that spends
  * the token and confirms the address it names. Scanners and previewers fetch links
- * automatically, so spending the token waits for the person's own click. Every failure
- * — expired, used, malformed, or reissued — renders the same outcome, so a held link
- * reveals nothing about which case applies.
+ * automatically, so spending the token waits for the person's own click.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,9 +41,7 @@ const TOKEN_PAGE_HEADERS: HeadersInit = {
  * resend control lives behind a session.
  *
  * @param outcome - Which locale subsection the copy is read from.
- * @param status - HTTP status; a refused token is a client error, not a server one, and
- *   an outcome the store could not answer is reported as temporary so a crawler or a
- *   retrying client does not treat it as final.
+ * @param status - HTTP status; a refused token is a client error, not a server one, and an outcome the store could not answer is reported as temporary so a crawler or a retrying client does not treat it as final.
  */
 function outcomePage(
 	ctx: AppContext,

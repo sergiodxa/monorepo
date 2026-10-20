@@ -1,8 +1,6 @@
 /**
  * GET/POST /admin/clients — one page of registered relying parties, and the deletion a
- * row's confirmation posts. Deleting a client removes every consent given to it first,
- * so with no transactions available an interrupted deletion still leaves every grant
- * pointing at a client that exists.
+ * row's confirmation posts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

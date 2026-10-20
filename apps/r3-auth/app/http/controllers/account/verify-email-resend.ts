@@ -1,8 +1,6 @@
 /**
  * `POST /account/verify-email/resend` — mails a fresh verification link to the signed-in
- * subject's own address, so anyone whose message went missing can still verify. The
- * recipient is whoever the session guard resolved, and the per-address send window
- * already bounds how often that one address can be mailed.
+ * subject's own address, so anyone whose message went missing can still verify.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

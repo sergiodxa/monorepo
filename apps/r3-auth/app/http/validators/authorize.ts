@@ -1,8 +1,6 @@
 /**
  * Schemas for the authorization endpoint: the query string of an authorization
- * request, and the credential sign-in form posted back to the same URL. Everything a
- * relying party or a browser sends is validated here before any of it reaches the
- * engine.
+ * request, and the credential sign-in form posted back to the same URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,11 +69,6 @@ export type AuthorizeQuery = s.InferOutput<typeof AuthorizeQuerySchema>;
 /**
  * The credential sign-in form. Registration and sign-in post the same fields: the
  * engine decides which one is happening from whether the address is already known.
- *
- * The address must parse as an email address, and passes on trimmed but otherwise as
- * typed: subjects are matched on `email_address` exactly, so every stored address keeps
- * matching the same keystrokes it matched before. The password is only required here:
- * the engine runs the password policy on a password it is about to store.
  */
 export const AuthorizeFormSchema = s.object({
 	email: s

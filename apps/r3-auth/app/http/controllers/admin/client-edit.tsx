@@ -1,8 +1,7 @@
 /**
  * GET/POST /admin/clients/:clientId/edit — updates a relying party's registration,
  * including both logout channels and their `session_required` flags, and rotates the
- * secret on request. A rotation renders the new secret once, because rotating
- * invalidates the copy the relying party currently holds.
+ * secret on request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

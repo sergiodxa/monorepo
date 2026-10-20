@@ -1,8 +1,6 @@
 /**
  * Delivering an authorization response to a relying party in the response mode it
- * asked for: query parameters, a URL fragment, or a self-submitting form post. Every
- * path that ends an authorization request — SSO, credential sign-in, provider sign-in,
- * and the error redirects — goes through here so all three modes behave the same.
+ * asked for: query parameters, a URL fragment, or a self-submitting form post.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

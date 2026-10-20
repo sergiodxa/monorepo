@@ -1,8 +1,6 @@
 /**
  * The registered-clients listing: one page of relying parties in a table, each row
- * linking to its detail and edit pages and offering a confirmed deletion. A client row
- * is what authorizes an entire application, so deleting one is behind an explicit
- * confirmation rather than a bare button.
+ * linking to its detail and edit pages and offering a confirmed deletion.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

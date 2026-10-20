@@ -2,9 +2,6 @@
  * The router's fallback handler: a URL beyond this server's routes gets the localized
  * 404 document, so a mistyped endpoint stays legible.
  *
- * Registered as the router's `defaultHandler`, so it runs for requests that matched no
- * route and every real route keeps priority over it.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

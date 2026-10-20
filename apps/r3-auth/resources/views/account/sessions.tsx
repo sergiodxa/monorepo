@@ -2,9 +2,6 @@
  * The active-sessions page: one row per device holding a live refresh token, the
  * current session marked, with revoke controls per row and for every other session.
  *
- * Each control opens a native `<dialog>` holding the real form that posts the
- * intent, so the confirmation runs as the browser's own modal via a plain HTTP post.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -1,8 +1,6 @@
 /**
  * The token endpoint: exchanges an authorization code, a refresh token, or client
- * credentials for tokens. Authenticates the client from either HTTP Basic or the
- * request body, spends the token budget, and maps every engine failure to an OAuth
- * error envelope.
+ * credentials for tokens.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

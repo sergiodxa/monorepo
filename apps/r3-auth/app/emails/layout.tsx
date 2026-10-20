@@ -1,11 +1,7 @@
 /**
  * The shell every message this server sends is written inside: the card, this app's type
  * stack and action colour, and the one footer line saying why the mail arrived.
- *
- * Consistency is the point. Heading, copy, facts and the single action are children;
- * everything that must stay identical lives here, so a reader who has seen one of these
- * recognizes the next one — which for mail about somebody's account is the difference
- * between a notice they act on and one they report as phishing.
+ * Consistency is the point.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

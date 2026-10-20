@@ -3,11 +3,6 @@
  * checks the token is still live; `POST` consumes it, replaces the hash, and ends every
  * session on the account, the resetting browser's own cookie included.
  *
- * Ending the sessions is the security point: a session left behind after a reset keeps its
- * refresh token live in whoever's hands prompted the reset. The
- * new password passes the same password policy, and its hash the same scrypt cost, as at
- * registration.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
