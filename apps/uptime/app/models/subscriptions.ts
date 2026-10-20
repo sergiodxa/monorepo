@@ -71,10 +71,7 @@ export const Subscriptions = createModel(subscriptions, {
 	methods: {
 		/**
 		 * Writes what the platform says this owner holds right now, keyed on
-		 * `billing_subscription_id` so a re-read updates the rows it already wrote. A subscription
-		 * the snapshot no longer lists is marked revoked rather than deleted, since a row saying
-		 * "positively not entitled" is what `stateFor` distinguishes from never having heard
-		 * of the owner at all.
+		 * `billing_subscription_id` so a re-read updates the rows it already wrote.
 		 *
 		 * @param ownerId - The OIDC subject the platform customer is linked to.
 		 * @param state - The snapshot to write, as `entitlements.of(...)` answered it.
@@ -138,8 +135,7 @@ export const Subscriptions = createModel(subscriptions, {
 		/**
 		 * What the projection says about an owner's entitlement, from one indexed read. Every row
 		 * here grants monitoring when its status is entitling, since only subscriptions to the
-		 * monitoring product are ever recorded. Logs the unknown case, where a delivery may have
-		 * gone missing.
+		 * monitoring product are ever recorded.
 		 */
 		async stateFor(ownerId: string): Promise<SubscriptionState> {
 			let rows = await this.query().where({ external_customer_id: ownerId }).all();

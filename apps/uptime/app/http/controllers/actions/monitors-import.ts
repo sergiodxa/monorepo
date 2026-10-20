@@ -1,13 +1,7 @@
 /**
- * `POST /actions/:team/import-monitors` — creates one monitor per URL in a pasted list.
- *
- * Every URL goes through the same validation and the same `monitors.create` the single-monitor
- * form uses, so an imported monitor is indistinguishable from a hand-made one and no second
- * creation path exists to drift from the first.
- *
- * Pasting thirty lines off a spreadsheet routinely produces a stray blank, a duplicate, or
- * something that isn't a URL, so the good lines are created immediately and the bad ones
- * come back with their reasons — one bad line among many still leaves the batch usable.
+ * `POST /actions/:team/import-monitors` — creates one monitor per URL in a pasted list. Every
+ * URL goes through the same validation and the same `monitors.create` the single-monitor form
+ * uses, so an imported monitor is indistinguishable from a hand-made one and no second creatio
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

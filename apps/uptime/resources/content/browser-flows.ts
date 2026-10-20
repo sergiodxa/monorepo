@@ -3,9 +3,6 @@
  * sells real-browser click-through monitoring as its own product surface, apart from
  * the shared `/features/:slug` template every other capability uses.
  *
- * Pricing figures read live from `config/pricing.ts` so a rate change cannot leave a
- * stale dollar amount on this page.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

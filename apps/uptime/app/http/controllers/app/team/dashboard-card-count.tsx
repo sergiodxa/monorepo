@@ -1,8 +1,7 @@
 /**
- * Dashboard per-monitor-type count stat-card fragment controller. Loads only
- * the one monitor table named by `:resource` and renders its `StatCard`
- * directly, with no document shell, so each of the dashboard's count
- * `Frame`s can swap in independently over its own skeleton fallback.
+ * Dashboard per-monitor-type count stat-card fragment controller. Loads only the
+ * one monitor table named by `:resource` and renders its `StatCard` directly, with
+ * no document shell, so each of the dashboard's count `Frame`s can swap in indepen
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

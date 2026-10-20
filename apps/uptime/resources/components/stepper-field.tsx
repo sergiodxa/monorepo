@@ -1,13 +1,6 @@
 /**
- * Client island: a `NumberField` whose decrement/increment buttons actually
- * step the value, since `stepUp()`/`stepDown()` are script-only. The buttons
- * declare their step as an Invoker Command targeting the input, and
- * `@sdxc/ui/mixins`' `stepper()` turns those into real steps once hydrated,
- * which is why this ships as a `clientEntry`.
- *
- * No-JS baseline: the field is a native `<input type="number">` carrying the
- * same `name`, `min`, `max` and `defaultValue` either way, so typed entry and
- * the submitted form body stay identical with scripting off; only the buttons go quiet.
+ * Client island: a `NumberField` whose decrement/increment buttons actually step the
+ * value, since `stepUp()`/`stepDown()` are script-only.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

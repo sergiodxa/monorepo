@@ -3,9 +3,6 @@
  * `requireAbility(abilities.apiKeys.read)`. Reads the one-time `newApiKey` session flash so a key just
  * created on this render (redirected from the create action) can be shown once.
  *
- * Renders the API keys list; shows a one-time reveal card for the newly created key
- * above the table when it's present.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

@@ -2,7 +2,6 @@
  * Form validation schemas for alert create/update/delete actions. One form posts every
  * channel's fields at once (the alert create/edit pages render them together); `.refine()`
  * enforces that only the fields for the selected `strategy` are actually required,
- * mirroring the content-check schema's inline-validation pattern.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,6 @@
 /**
- * API v1 item endpoints for a single maintenance window: get/update/delete and
- * ending it early, all requiring `maintenance:read`/`maintenance:write` via
- * `requireApiKey`. `PUT` writes the fields it is sent and `PATCH` reads a JSON merge patch;
- * both re-validate the dates and the `monitorType`/`monitorId` scope pair.
+ * API v1 item endpoints for a single maintenance window: get/update/delete and ending it
+ * early, all requiring `maintenance:read`/`maintenance:write` via `requireApiKey`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

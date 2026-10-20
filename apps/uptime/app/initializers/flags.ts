@@ -2,10 +2,6 @@
  * The app's feature flags: the definitions every evaluation resolves against, the typed
  * catalog a call site names one by, and the instance both surfaces evaluate through.
  *
- * Definitions are written here rather than read from storage, so flipping a flag is an
- * edit and a deploy — the review a constant already gets, with the targeting rules a
- * constant has no room for.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -63,10 +59,6 @@ export const features = defineFlags({
 /**
  * The instance both surfaces evaluate through, installed by the router's middleware and
  * the job dispatcher's.
- *
- * The provider is built the first time an evaluation needs one rather than at module
- * scope, which is where {@link FLAG_SET} is parsed — so loading this module in a Worker
- * does no work.
  */
 export const flags = createFlags({
 	provider: () => new EngineProvider(createEngine({ store: new InMemoryFlagStore(FLAG_SET) })),

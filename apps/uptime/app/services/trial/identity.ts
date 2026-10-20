@@ -1,9 +1,7 @@
 /**
- * Normalizes the email and URL keys the free-watch cap compares, so a
- * tagged address, a trailing slash, or an unordered query string cannot
- * buy a second free week under a spelling that is really the same person
- * or the same endpoint. The raw values used to send mail and run the
- * probe are stored and used untouched.
+ * Normalizes the email and URL keys the free-watch cap compares, so a tagged
+ * address, a trailing slash, or an unordered query string cannot buy a second free
+ * week under a spelling that is really the same person or the same endpoint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

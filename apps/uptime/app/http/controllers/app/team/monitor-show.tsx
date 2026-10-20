@@ -1,9 +1,7 @@
 /**
  * HTTP monitor detail page controller. Shows the monitor's usage/performance stat
  * cards, SSL status, and a 90-day uptime bar, plus run/edit actions; 404s when the
- * monitor doesn't belong to the current team. The stat cards and uptime history render
- * via named `Frame`s pointed at their own fragment routes, so the page shell paints
- * independent of Polar's API and the other fragment fetches.
+ * monitor doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

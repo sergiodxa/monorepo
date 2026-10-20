@@ -67,7 +67,6 @@ export default createController(monitorContentChecksRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.contentChecks.ofMonitor(monitorId);
 
 				let page = await Pagination.byKeyset(query, {

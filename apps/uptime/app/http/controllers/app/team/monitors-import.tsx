@@ -1,13 +1,7 @@
 /**
- * `GET /app/:team/import-monitors` — paste a list of URLs, get one monitor per line.
- *
- * A roster of client sites otherwise means repeating the single-monitor form once per
- * site. It reuses that same creation path, so an imported monitor is indistinguishable
- * from a hand-made one, needing no column mapping or per-vendor field translation.
- *
- * The action redirects back here with a one-time report whenever a line did not become
- * a monitor, so the reasons sit above the box the corrected lines get pasted into. That
- * box stays empty afterward, since resubmitting rejected text risks the wrong URL.
+ * `GET /app/:team/import-monitors` — paste a list of URLs, get one monitor per line. A
+ * roster of client sites otherwise means repeating the single-monitor form once per
+ * site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,8 +2,6 @@
  * Dashboard "Monthly Pings Usage" stat-card fragment controller. GET
  * /app/:team/dashboard/cards/usage — loads just the team's ping usage, with no
  * document shell, so the dashboard's usage `Frame` can swap it in over its skeleton
- * fallback without blocking the rest of the page on it. Requires `requireUser` +
- * `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

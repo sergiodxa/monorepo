@@ -1,8 +1,7 @@
 /**
- * Every producer's sends pass through here, where a queue write is billed and one place
- * counts every send. A controller enqueues through `ctx.jobs`, published over {@link jobQueue};
- * {@link enqueue} and {@link enqueueMany} serve code with no request context, typed by the job
- * map alone, so the dispatcher and its handler loaders stay out of the request path.
+ * Every producer's sends pass through here, where a queue write is billed and one place counts
+ * every send. A controller enqueues through `ctx.jobs`, published over {@link jobQueue}; {@link
+ * enqueue} and {@link enqueueMany} serve code with no request context, typed by the job map al
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

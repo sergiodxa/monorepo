@@ -3,13 +3,6 @@
  * on one monitor, and its check history, gated by `flow-monitors:read`/`flow-monitors:write` via
  * `requireApiKey`.
  *
- * `source` is accepted but never returned, on the same reading the alert resource applies to a
- * webhook's secret: a spec carries the credentials the flow signs in with, so a key that may
- * list monitors does not thereby read them back.
- *
- * A write runs `inspectFlowSource`, the same rule the dashboard form and the scheduled sweep
- * apply, so a monitor created here can never reach somewhere one created there could not.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -134,7 +127,6 @@ export default createController(flowMonitorsRoutes, {
 						instance: problemInstance(),
 					});
 
-				// Chaining returns new queries, so the same one both counts and pages.
 				let query = ctx.models.flowMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {

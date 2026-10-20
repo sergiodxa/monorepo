@@ -1,11 +1,7 @@
 /**
- * Database schema for the uptime app defined with remix/data-table. Declares every
- * table backing the uptime monitoring product — teams/access, HTTP/DNS/TCP/SSL/cron-job
+ * Database schema for the uptime app defined with remix/data-table. Declares every table
+ * backing the uptime monitoring product — teams/access, HTTP/DNS/TCP/SSL/cron-job
  * monitoring, alerts, maintenance windows, status pages, API keys, and daily stats
- * aggregation. This reuses a frozen production D1 database (see `database/migrations/`),
- * so column names and nullability mirror that physical schema exactly. Audit timestamps
- * are declared as `c.integer()` (milliseconds since epoch), not text, because the
- * existing rows already store epoch-ms integers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -712,10 +708,9 @@ export type AlertEventSnapshot =
 	  };
 
 /**
- * What became of one alert delivery attempt. Every reason an alert was recorded without
- * being delivered is named `skipped_*`, so the pipeline and history view treat suppressions
- * as a group; `skipped_cap` stays for rows written while that ceiling still existed.
- * `pending` is a delivery queued for the delivery job, which settles it to `sent` or `failed`.
+ * What became of one alert delivery attempt. Every reason an alert was recorded without being
+ * delivered is named `skipped_*`, so the pipeline and history view treat suppressions as a
+ * group; `skipped_cap` stays for rows written while that ceiling still existed.
  */
 export const alertEventStatuses = [
 	"pending",
@@ -947,8 +942,7 @@ export type InsertMonitorDailyStats = InsertRow<typeof monitorDailyStats>;
 /**
  * A **projection** of the billing platform's subscription state (ADR-005): the platform stays
  * authoritative, and only the webhook and the daily reconciliation sweep write here, keeping
- * authorisation to one indexed read per request. Rows persist after a subscription ends;
- * `status` says how.
+ * authorisation to one indexed read per request.
  */
 export const subscriptions = table({
 	name: "subscriptions",
@@ -986,11 +980,6 @@ export type InsertSubscription = InsertRow<typeof subscriptions>;
  * Every billing delivery this app has received, written with the signature verdict before
  * anything trusts it. It is what makes a redelivery cheap to recognise — the platform retries
  * the same delivery id — and it keeps the body that a signature covered, so a handler that
- * turned out to be wrong can be answered for after the fact.
- *
- * `valid` and `processed` are separate because a forged delivery is worth keeping as evidence
- * while an unprocessed one is worth repairing, which the daily sweep does by re-reading the
- * customer rather than by replaying the row.
  */
 export const billingWebhookDeliveries = table({
 	name: "billing_webhook_deliveries",

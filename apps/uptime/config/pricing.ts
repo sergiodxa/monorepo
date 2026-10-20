@@ -1,13 +1,6 @@
 /**
  * The pricing model, in one place: what the subscription costs, how much usage it
- * covers, and what usage past that costs. Every surface that states or computes a
- * price — the pricing calculator, FAQ, and the `/vs/:slug` comparison tables —
- * reads from here, so a price change touches only this file and the copy that
- * interpolates it.
- *
- * Static product configuration the marketing copy quotes; the module stays
- * dependency-free so the pricing-calculator island can import it directly into
- * the client bundle.
+ * covers, and what usage past that costs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,10 +31,9 @@ export const PINGS_PER_BLOCK = 10_000;
 export const PRICE_PER_BLOCK_USD = 1;
 
 /**
- * Browser flow runs included in the subscription before metered usage starts.
- * Zero on purpose (ADR-027 §7): the $5 base already funds 100,000 pings, and folding
- * even a small browser-run allowance into it would spend that margin on a feature most
- * subscribers never enable.
+ * Browser flow runs included in the subscription before metered usage starts. Zero on
+ * purpose (ADR-027 §7): the $5 base already funds 100,000 pings, and folding even a
+ * small browser-run allowance into it would spend that margin on a feature most
  */
 export const INCLUDED_FLOW_RUNS = 0;
 
@@ -90,11 +82,9 @@ export const FLOW_RUN_TIMEOUT_MS = 30_000;
 export const FLOW_RUN_MAX_REQUESTS = 20;
 
 /**
- * How much of one response a run reads, 1 MiB. Parsing a page's markup costs
- * about 25 times the source — a 4 MB body becomes roughly 92 MB — against an
- * isolate with 128 MB, so a single unbounded response would end the run for
- * every monitor sharing it. A megabyte covers a server-rendered page and a
- * JSON payload with room to spare.
+ * How much of one response a run reads, 1 MiB. Parsing a page's markup costs about
+ * 25 times the source — a 4 MB body becomes roughly 92 MB — against an isolate
+ * with 128 MB, so a single unbounded response would end the run for every monitor
  */
 export const FLOW_RUN_MAX_RESPONSE_BYTES = 1_048_576;
 

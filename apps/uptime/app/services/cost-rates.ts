@@ -1,8 +1,7 @@
 /**
  * The rate card: cents per unit of every resource the cost ledger meters, derived from
  * Cloudflare's list prices in `@sdxc/cloudflare-pricing`, plus the quantities this app
- * models because nothing measures them. Rates price usage as if no free tier applied, and
- * {@link RATE_CARD_VERSION} tags every point, so a price change adds a version.
+ * models because nothing measures them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

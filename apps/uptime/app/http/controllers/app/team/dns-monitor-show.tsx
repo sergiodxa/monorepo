@@ -1,10 +1,6 @@
 /**
- * DNS monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s
- * when the monitor doesn't belong to the current team.
- *
- * The summary, uptime history, and check history each cost a query, so each loads into
- * its own `Frame` over a skeleton fallback while the page around it renders right away.
- * The check log sits last, below the record table, since it's the least-scanned section.
+ * DNS monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s when
+ * the monitor doesn't belong to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

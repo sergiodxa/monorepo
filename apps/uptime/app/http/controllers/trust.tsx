@@ -1,14 +1,7 @@
 /**
- * `/trust` — how the monitoring actually works, and who runs it.
- *
- * Monitoring is bought on trust before it is bought on features: a false alarm costs the
- * same credibility as a missed one. This page makes that case in plain terms — where checks
- * run from, how an incident gets confirmed, what gets stored, and what happens when this
- * service itself has a bad day.
- *
- * Every claim here matches what the implementation actually does, staying free of internal
- * hostnames, credentials, or anything that would help an attacker; where the system falls
- * short of what a reader might hope, the copy names the gap plainly, ahead of any outage.
+ * `/trust` — how the monitoring actually works, and who runs it. Monitoring is bought on
+ * trust before it is bought on features: a false alarm costs the same credibility as a
+ * missed one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

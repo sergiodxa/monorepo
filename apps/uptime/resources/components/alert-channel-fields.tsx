@@ -1,9 +1,7 @@
 /**
- * The channel `<select>` and one fieldset per channel, shared by the
- * create and edit alert pages. `:has()` on the checked option shows only
- * the chosen fieldset in CSS alone, so the form works without JavaScript,
- * and hidden fieldsets still post their (empty) values for schemas that
- * only require the chosen strategy.
+ * The channel `<select>` and one fieldset per channel, shared by the create and
+ * edit alert pages. `:has()` on the checked option shows only the chosen fieldset
+ * in CSS alone, so the form works without JavaScript, and hidden fieldsets still
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,13 +1,7 @@
 /**
  * `/features/:slug` controller. Looks up the slug in `resources/content/marketing.ts`'s
  * `features` record and renders the shared `MarketingPageView` template; an unknown
- * slug renders the same 404 the router's `defaultHandler` uses. One controller covers
- * all 12 feature pages instead of one file per page — see the content module's
- * docblock for why.
- *
- * Each page describes itself to crawlers as a `SoftwareApplication` — its subject is
- * one capability of the product — plus an `FAQPage` built from the very questions the
- * page renders, so the structured data never claims answers a visitor can't find.
+ * slug renders the same 404 the router's `defaultHandler` uses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,10 +25,9 @@ import NotFoundView from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
 /**
- * GET /features/:slug — a feature marketing page. The schema `name` strips
- * the meta title's "| Uptime …" suffix: a schema name just names the
- * capability, where the page `<title>` also has to place it in the site.
- * `browser-flows` permanently redirects to the dedicated `/browser-flows` landing.
+ * GET /features/:slug — a feature marketing page. The schema `name` strips the
+ * meta title's "| Uptime …" suffix: a schema name just names the capability, where
+ * the page `<title>` also has to place it in the site.
  */
 export default createAction(routes.marketing.feature, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);

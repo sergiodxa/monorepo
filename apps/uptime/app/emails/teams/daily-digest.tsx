@@ -1,8 +1,6 @@
 /**
  * One team's last full day for one of its members: how many monitors were up, then every
- * monitor with the state it ended the day in and its uptime. A member and a team is the unit,
- * so every row stays attributable to the dashboard that owns it, and the subject carries the
- * team and the whole result, so the ordinary all-up day is done at the notification (ADR-024).
+ * monitor with the state it ended the day in and its uptime.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

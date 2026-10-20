@@ -1,13 +1,7 @@
 /**
- * Client island: a real `<form>` posting to the "run monitor" action works with
- * no JS; once hydrated, `on("submit")` intercepts it to `fetch()` the same action
+ * Client island: a real `<form>` posting to the "run monitor" action works with no
+ * JS; once hydrated, `on("submit")` intercepts it to `fetch()` the same action
  * instead, showing a spinner via `Button`'s `isPending` while it's in flight.
- * `Monitor.ping` only enqueues the check, so the button polls the run-status
- * route until it commits a result (or times out), reloads the affected frames,
- * and toasts any status change.
- *
- * Its label reads through `intl(handle)` rather than `ctx.intl.t`, since it
- * also renders server-side with no request-scoped `ctx.intl` to read from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

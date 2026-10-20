@@ -1,13 +1,6 @@
 /**
- * Client island: a single-value range control matching `Field`'s visual
- * language, built on `@sdxc/ui`'s `Slider`, a live readout, and range labels.
- *
- * `Slider` renders the value it's given, so a drag needs the island to hold
- * that value and re-render on each `input` event — that's what keeps the
- * thumb, readout, and fill bar in agreement from one source.
- *
- * Before hydration, a native `<input type="range">` still submits `name`'s
- * value with the form, keeping the readout and fill at their initial state.
+ * Client island: a single-value range control matching `Field`'s visual language,
+ * built on `@sdxc/ui`'s `Slider`, a live readout, and range labels.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
  * API v1 item endpoints for a single cron-job monitor: get/update/delete, requiring
  * `cron-jobs:read`/`cron-jobs:write` via `requireApiKey`. Updating the cron
- * expression (or the timezone alone) recomputes `nextExpectedAt`. Does not cover the
- * public ping endpoint — see `app/http/controllers/api/cron-job-ping.ts`.
+ * expression (or the timezone alone) recomputes `nextExpectedAt`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

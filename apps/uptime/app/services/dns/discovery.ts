@@ -1,13 +1,6 @@
 /**
  * Discovery and checking for a domain monitor: turns a domain and any zone-file names into
- * the records it watches, and runs the sweep-and-diff every check performs. Sits between
- * the resolver, the zone-file parser and the record table so every entry point that
- * discovers or checks does so identically.
- *
- * What survives an import is the parsed records themselves and the fact that an import
- * happened. The DNS limits every surface quotes live here too, derived from the platform's
- * subrequest ceiling, so a screen that refuses a zone and a job that sweeps one share one
- * number.
+ * the records it watches, and runs the sweep-and-diff every check performs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -262,10 +255,8 @@ export async function planDnsCheck(
  * the history row. The single place a check runs, so the scheduled sweep and "Check now"
  * always agree, with `error` outranking `changed` since an incomplete diff reads as incomplete.
  *
- * @param unsweptNames Names the caller's budget left uncovered; counted as failed queries so
- * a budget cut-off stays legible as a partial check.
- * @returns The history row's id and what the check counted, which is everything a caller
- * needs to meter, report and alert on it.
+ * @param unsweptNames Names the caller's budget left uncovered; counted as failed queries so a budget cut-off stays legible as a partial check.
+ * @returns The history row's id and what the check counted, which is everything a caller needs to meter, report and alert on it.
  */
 export async function recordDnsCheck(
 	models: UptimeModels,

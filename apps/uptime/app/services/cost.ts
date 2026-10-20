@@ -1,10 +1,7 @@
 /**
- * The cost ledger: accumulates the platform operations one unit of work
- * caused, splits them across the teams that caused them, prices them
- * against the rate card, and writes the result to the `uptime_costs`
- * Analytics Engine dataset (ADR-007 §3–§6), which the daily reporting job
- * reads back for Polar. The accumulator is async-local, giving each job
- * in a concurrently-run queue batch its own ledger with no crosstalk.
+ * The cost ledger: accumulates the platform operations one unit of work caused,
+ * splits them across the teams that caused them, prices them against the rate
+ * card, and writes the result to the `uptime_costs` Analytics Engine dataset
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -156,8 +153,7 @@ export class CostLedger {
 	 * Weights **accumulate** across calls, so per-batch and single-call
 	 * callers both end up with the split they meant; only the ratios matter.
 	 *
-	 * @param weights - Team id to relative weight; entries with a non-positive weight are
-	 * ignored, since a zero-weight team caused none of the work.
+	 * @param weights - Team id to relative weight; entries with a non-positive weight are ignored, since a zero-weight team caused none of the work.
 	 */
 	apportion(weights: Iterable<readonly [string, number]>): void {
 		for (let [teamId, weight] of weights) {

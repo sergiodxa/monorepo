@@ -115,9 +115,7 @@ export const DnsMonitors = createModel(dnsMonitors, {
 		 * "last checked" fields in one call. Counters a caller omits stay at the column default
 		 * of zero, a truthful "this check measured none of that".
 		 *
-		 * @returns The history row's id. It is the only thing about a completed check that is
-		 * unique and already persisted, which is what makes it the idempotency key the ping meter
-		 * bills against: a redelivery of the same recorded check meters once.
+		 * @returns The history row's id. It is the only thing about a completed check that is unique and already persisted, which is what makes it the idempotency key the ping meter bills against: a redelivery of the same recorded check meters once.
 		 */
 		async recordCheckResult(monitorId: string, result: DnsCheckOutcome): Promise<string> {
 			let checkedAt = Date.now();

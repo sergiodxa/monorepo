@@ -1,8 +1,7 @@
 /**
  * The app's own billing policy: which subject a platform customer belongs to, what a team's
  * owner is sent back to after a hosted page, and what "cancel this account's billing" means
- * here. The platform calls themselves are one line each — what this module holds is the
- * decisions around them, so no controller has to re-make them.
+ * here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -72,9 +71,7 @@ export async function provisionCustomer(
 
 /**
  * Opens the hosted checkout the team's owner subscribes through, returning them to the
- * team's own dashboard, which is where a completed purchase is visible. The owner's first
- * and last touch ride along as metadata, which the platform hands back on the order and
- * subscription webhooks.
+ * team's own dashboard, which is where a completed purchase is visible.
  *
  * @param billing - The configured platform.
  * @param team - The team being subscribed, whose owner pays.

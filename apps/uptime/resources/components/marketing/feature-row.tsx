@@ -1,8 +1,7 @@
 /**
- * A compact feature entry: a small tinted icon tile beside a title and one
- * line of supporting copy. Kept separate from `MarketingCard` for its own
- * icon-beside-text layout and compact title size, suited to a long list of
- * secondary capabilities reading as a dense checklist.
+ * A compact feature entry: a small tinted icon tile beside a title and one line of
+ * supporting copy. Kept separate from `MarketingCard` for its own icon-beside-text
+ * layout and compact title size, suited to a long list of secondary capabilities
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

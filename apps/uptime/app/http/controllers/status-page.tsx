@@ -1,11 +1,7 @@
 /**
- * Public status page controller — loads a page by slug (private pages 404,
- * since this route is their only access path) and renders every attached
- * monitor's current status and 90-day uptime bar into one page-level status,
- * cached per {@link withCachePolicy}. A DNS monitor's card always reports
- * whole-domain coverage in words, the fact a viewer of the page needs from it.
- * A flow's card carries its name and nothing else it was written from; the maintenance
- * list and its calendar links show only windows the team published on status pages.
+ * Public status page controller — loads a page by slug (private pages 404, since this
+ * route is their only access path) and renders every attached monitor's current status
+ * and 90-day uptime bar into one page-level status, cached per {@link withCachePolicy
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -71,8 +71,7 @@ function writableStatusPage(page: SelectStatusPage) {
  * only when the patch changes it.
  *
  * @param ctx - The request, after `requireAbility(abilities.statusPages.write)`.
- * @returns The updated page with its attachments; a 404 for a page outside the team, before
- *   the body is read.
+ * @returns The updated page with its attachments; a 404 for a page outside the team, before the body is read.
  */
 async function patchStatusPage(ctx: RequestContext): Promise<Response> {
 	let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);

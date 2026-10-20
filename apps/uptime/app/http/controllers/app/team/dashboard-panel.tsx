@@ -1,9 +1,7 @@
 /**
  * Dashboard tab-panel fragment controller. GET /app/:team/dashboard/panel/:type
  * loads and renders one monitor type's table with no document shell, so the
- * dashboard's `Frame` can swap it in without a full page reload. Alongside the tab
- * bar it renders `RefreshFrameButton`, which reloads the same `Frame` from the
- * current tab's fragment.
+ * dashboard's `Frame` can swap it in without a full page reload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,8 +2,6 @@
  * New maintenance window page controller. Requires `requireUser` + `requireTeam`.
  * Fields are grouped into three bordered cards — coverage, schedule, and behavior —
  * inside one `<form>`, with the submit control anchored to the last card's footer.
- * The scope picker comes from `MonitorScopeField`, the one control that offers every
- * monitor of every type plus a per-type "all of them" choice.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

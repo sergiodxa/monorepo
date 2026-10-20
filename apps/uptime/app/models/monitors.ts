@@ -185,8 +185,7 @@ export const Monitors = createModel(monitors, {
 		 * `date`, over the same two windows the team count reads. This is the app's own count of
 		 * recorded checks; billing settles from the metered ping events.
 		 *
-		 * @returns The count, and 0 for a month with no checks, since the card renders a real
-		 * zero differently from an unavailable figure.
+		 * @returns The count, and 0 for a month with no checks, since the card renders a real zero differently from an unavailable figure.
 		 */
 		async countConsumedPingsByMonitor(monitorId: string, date: Date): Promise<number> {
 			let { rollupFrom, rollupTo, rawStart, monthEnd } = pingWindows(date);

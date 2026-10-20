@@ -2,7 +2,6 @@
  * Form validation schemas for TCP monitor create/update/delete/check actions.
  * `UpdateTcpMonitorSchema` defaults `is_enabled` to `false` so an unchecked
  * edit-form checkbox (absent from the submitted body) disables the monitor;
- * `CreateTcpMonitorSchema` defaults it to `true`, matching the table default.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

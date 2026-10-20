@@ -2,7 +2,6 @@
  * Test-only Bun SQLite database adapter that compiles the same SQL statements as
  * production, plus a helper that applies every migration in `database/migrations/`
  * to a fresh in-memory database, letting models, jobs, and controllers run against
- * a real SQL engine in unit tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -1052,8 +1051,8 @@ function migrationsDirectory(): string {
  * Creates an in-memory test database with every migration applied, wrapped as a
  * `remix/data-table` `Database` the same way `app/initializers/database.ts` wraps the
  * production D1 database (epoch-ms `now()`, since timestamp columns are `c.integer()`).
- * @returns The remix `db` handle, the underlying SQLite instance, and the
- * driver between them, which a test can wrap to intercept statements.
+ *
+ * @returns The remix `db` handle, the underlying SQLite instance, and the driver between them, which a test can wrap to intercept statements.
  * @example
  * let { db } = createTestDatabase();
  */

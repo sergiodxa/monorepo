@@ -1,8 +1,7 @@
 /**
  * HTTP monitors list controller. Each row's status and check time come from
- * columns cached on the monitor row instead of a live query per monitor, so
- * a monitor with no cached status has never been checked and renders as
- * `unknown`. Requires `requireUser` + `requireTeam`.
+ * columns cached on the monitor row instead of a live query per monitor, so a
+ * monitor with no cached status has never been checked and renders as `unknown`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

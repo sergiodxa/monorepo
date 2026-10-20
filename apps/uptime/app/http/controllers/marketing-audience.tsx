@@ -1,12 +1,7 @@
 /**
  * `/for/:slug` controller. Looks up the slug in `resources/content/marketing.ts`'s
  * `audiences` record and renders the shared `MarketingPageView` template; an unknown
- * slug renders the router's `defaultHandler` 404. One controller covers all 6
- * audience pages — see the content module's docblock for why.
- *
- * Structured data is the page's own `FAQPage`, built from the questions it renders,
- * so it never claims an answer a visitor can't find — fitting for a page whose
- * subject is who the product is for.
+ * slug renders the router's `defaultHandler` 404.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

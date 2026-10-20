@@ -1,8 +1,7 @@
 /**
  * Background job that claims the TCP monitors whose `interval_seconds` has come round,
  * checks each via a raw TCP connection, and enqueues a `notify` message on a down/timeout
- * result or a recovery back to up (ADR-006). Runs every minute; the batch's cost is
- * apportioned by team and billed only for checks that completed (ADR-007, ADR-008).
+ * result or a recovery back to up (ADR-006).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

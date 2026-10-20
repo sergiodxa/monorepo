@@ -2,8 +2,6 @@
  * Background job that claims the DNS monitors whose `interval_seconds` has come round,
  * sweeps each through the shared pipeline in `app/services/dns/discovery.ts` (ADR-006), and
  * bounds its query budget against the platform's per-invocation ceiling (ADR-026 §9a),
- * deferring or partially reporting what a delivery can't cover. Each completed check bills
- * one ping however many queries it took (ADR-026 §9).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

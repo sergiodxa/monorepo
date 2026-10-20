@@ -1,13 +1,7 @@
 /**
  * TCP monitor detail page controller. Requires `requireUser` + `requireTeam`; 404s
- * when the monitor doesn't belong to the current team.
- *
- * The main row loads in a single query, so the shell reaches the browser fast. The
- * 90-day uptime bar and the result history each cost a query of their own — with the
- * uptime/response-time/total-checks cards derived from the history — so both resolve
- * into their own named `Frame`s over a skeleton fallback, independent of each other.
- * The bar sits above the table because the summary is read first, the rows only when
- * it prompts a question.
+ * when the monitor doesn't belong to the current team. The main row loads in a
+ * single query, so the shell reaches the browser fast.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * Route guard resolving the `:team` URL param to a team the current viewer belongs to.
  * Attaches `ctx.team` and `ctx.membership` for downstream handlers, and responds 404
  * (never a redirect or 403) when the team doesn't exist or the viewer isn't a member,
- * so team existence is never leaked to non-members. Must run after `requireUser`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,8 +30,7 @@ declare module "remix/router" {
  * viewer's teams concurrently since that lookup is independent of it, and
  * apportioning the cost of all three lookups to the resolved team (ADR-007 §5).
  *
- * @returns The downstream response, or a 404 when the team is missing or the viewer
- * is not a member.
+ * @returns The downstream response, or a 404 when the team is missing or the viewer is not a member.
  * @example
  * router.map(routes.app.team, { middleware: [requireUser, requireTeam], actions });
  */

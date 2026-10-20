@@ -1,14 +1,7 @@
 /**
- * Form validation schemas for flow monitor create/update/delete actions.
- *
- * `interval_seconds` accepts one of the seven `FLOW_INTERVALS_SECONDS` values instead of a
- * bounded number, since the control is a select and each option carries its own price
- * (ADR-027 §7a). `is_enabled` defaults oppositely per schema: create defaults to enabled
- * like the column does, while update defaults to `false`, since an unchecked checkbox
- * submits nothing and only an explicit `false` can disable an existing monitor.
- *
- * What a source may reach is validated by `inspectFlowSource`, shared by the action and the
- * sweep so the form and the runtime check can never disagree.
+ * Form validation schemas for flow monitor create/update/delete actions. `interval_seconds`
+ * accepts one of the seven `FLOW_INTERVALS_SECONDS` values instead of a bounded number,
+ * since the control is a select and each option carries its own price (ADR-027 §7a).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

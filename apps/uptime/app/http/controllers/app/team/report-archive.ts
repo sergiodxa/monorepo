@@ -28,8 +28,7 @@ import routes from "~/routes/web";
 /**
  * GET /app/:team/reports.zip — the summary and the daily report as two CSVs in one ZIP, named
  * as the single downloads name them. A query the reports cannot use redirects back to the
- * builder with the same query. Entries carry the download time, so an unarchiver shows when
- * the files were made; the archive stores them uncompressed.
+ * builder with the same query.
  */
 export default createAction(routes.app.team.reports.archive, {
 	middleware: [requireUser, requireTeam],

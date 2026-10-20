@@ -1,8 +1,7 @@
 /**
- * Success envelope for the `/api/v1/*` surface: `apiSuccess` wraps a payload in
- * `{ data, meta: { requestId, timestamp } }`; failures are problem details from
- * `problems.ts`. A paginated endpoint reaches this through `apiPage`, which fills in
- * both the `Link` headers and `meta.pagination` from one page, so the two always agree.
+ * Success envelope for the `/api/v1/*` surface: `apiSuccess` wraps a payload in `{
+ * data, meta: { requestId, timestamp } }`; failures are problem details from
+ * `problems.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,11 +22,8 @@ export interface PageMeta {
 	/** Results this page was built with. */
 	perPage: number;
 	/**
-	 * Rows matching the request across every page.
-	 *
-	 * Present on the collections, whose size is bounded by a product limit or by
-	 * retention. A history feed omits it rather than counting a table that a busy
-	 * monitor fills, so paging one stays a single query.
+	 * Rows matching the request across every page. Present on the collections, whose
+	 * size is bounded by a product limit or by retention.
 	 */
 	total?: number;
 }

@@ -1,12 +1,7 @@
 /**
- * Form schema and line parser for bulk monitor creation from a pasted list of URLs.
- * Turns one textarea full of text into the monitors to create plus the lines that could not
- * become one, each with the reason why, so the action can create the good lines and hand the
- * bad ones back.
- *
- * The rules live here rather than in the action because they are the whole feature: what
- * counts as a blank line, when two lines are the same target, and when a bare host is a URL
- * are decisions that need testing on their own, without a request, a team, or a database.
+ * Form schema and line parser for bulk monitor creation from a pasted list of URLs. Turns
+ * one textarea full of text into the monitors to create plus the lines that could not become
+ * one, each with the reason why, so the action can create the good lines and hand the bad
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

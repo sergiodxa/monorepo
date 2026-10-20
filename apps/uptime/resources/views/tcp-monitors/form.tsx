@@ -1,9 +1,7 @@
 /**
  * Shared TCP monitor form fields, used by both the new-monitor and edit-monitor views.
  * The enabled toggle only renders when editing an existing monitor — a new monitor has
- * no toggle and is always created enabled (see `CreateTcpMonitorSchema`'s `is_enabled`
- * default in `app/http/validators/tcp-monitor.ts`). It exists so the two pages don't
- * duplicate the field markup.
+ * no toggle and is always created enabled (see `CreateTcpMonitorSchema`'s `is_enable
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

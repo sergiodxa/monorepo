@@ -1,9 +1,7 @@
 /**
  * Cron-job ping endpoint: `POST /api/v1/cron-jobs/:cronJobId/ping`. A scheduled
- * job reports that it ran by calling this; the monitor goes late or missed
- * when it doesn't. Callers authenticate with an API key scoped to
- * `cron-jobs:ping`; a per-monitor rate limit and a per-caller abuse budget
- * apply independently, and only an accepted ping is billed.
+ * job reports that it ran by calling this; the monitor goes late or missed when it
+ * doesn't.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

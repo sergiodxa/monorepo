@@ -1,10 +1,7 @@
 /**
  * Server-rendered response-time sparkline: a plain inline `<svg>` polyline
  * computed from recent Analytics Engine points and rendered entirely on the
- * server. It hand-rolls the `<svg>` because a general-purpose component like
- * `@sdxc/ui`'s `Chart.Line` — with its own axes and focusable point markers —
- * is disproportionate ceremony for a decorative 240×32 squiggle in a table
- * cell.
+ * server.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

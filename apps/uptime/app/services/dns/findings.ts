@@ -1,9 +1,6 @@
 /**
  * Presentation rules for the record-level findings a domain sweep produces: the order
- * they are read in, and the one shape a reader will otherwise mistake for a bug. They
- * live apart from the alert pipeline because the plain-text channels and the email render
- * the same findings identically, using only the findings passed to them, with no access
- * to a database handle or Worker binding.
+ * they are read in, and the one shape a reader will otherwise mistake for a bug.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

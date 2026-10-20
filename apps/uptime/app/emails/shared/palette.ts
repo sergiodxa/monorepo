@@ -1,8 +1,7 @@
 /**
  * Colours this app's own email components paint with, as literals, since mail clients
  * strip the `--ui-*` custom properties the web pages read these from along with the
- * stylesheet that defines them. Centralized so the uptime bar and a digest's monitor
- * list share one green rather than risk a second, drifting copy of the same hexes.
+ * stylesheet that defines them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

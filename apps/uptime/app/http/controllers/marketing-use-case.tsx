@@ -2,12 +2,6 @@
  * `/use-cases/:slug` controller. Looks up the slug in
  * `resources/content/marketing.ts`'s `useCases` record and renders the shared
  * `MarketingPageView` template; an unknown slug renders the router's
- * `defaultHandler` 404. One controller covers all 7 use-case pages — see the
- * content module's docblock for why.
- *
- * Structured data is the page's own `FAQPage`, built from the same questions
- * it renders, so answers always match what the page shows. A use-case page's
- * subject is the job to be done.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

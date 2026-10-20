@@ -2,9 +2,6 @@
  * Generic marketing page view shared by `/features/:slug`, `/for/:slug`, and
  * `/use-cases/:slug`: a split hero, trust-indicator strip, feature grid, numbered
  * "how it works" row, two-column FAQ accordion, and a final call to action, driven
- * entirely by `resources/content/marketing.ts` plus translated section titles.
- * {@link buildMarketingPageChrome} builds those titles once so all three
- * controllers share one set of `t()` calls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

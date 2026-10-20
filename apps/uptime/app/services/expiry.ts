@@ -26,8 +26,7 @@ export interface ExpiryClassification {
  *
  * @param expiresAt Expiry as epoch milliseconds, or `null` when unknown.
  * @param warningDays Days before expiry the date counts as `expiring`.
- * @param now Instant the days-left count is measured from, so callers that already
- *   hold a frozen clock classify against it rather than the wall clock.
+ * @param now Instant the days-left count is measured from, so callers that already hold a frozen clock classify against it rather than the wall clock.
  * @default Date.now()
  * @example classifyExpiry(Date.now() + 10 * DAY_MS, 30); // { status: "expiring", daysUntilExpiry: 9 }
  */

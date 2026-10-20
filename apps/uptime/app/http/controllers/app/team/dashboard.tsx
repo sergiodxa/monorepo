@@ -1,10 +1,6 @@
 /**
  * Team dashboard controller. Resolves the monitor-type tab from `?tab=`, falling back to
- * the persisted cookie then "http", and persists the choice back to the cookie. The stat
- * cards and tab table load via named `Frame`s pointed at their own fragment routes, so the
- * page shell renders immediately while their slowest fetch (Polar's usage API) streams in
- * behind each fallback. The quick check is the header's action and stays its own `Frame`,
- * isolating a check run to that bar.
+ * the persisted cookie then "http", and persists the choice back to the cookie.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,6 @@
 /**
  * API v1 item endpoints for a single alert: get/update/delete (`alerts:read`/
- * `alerts:write`) and its delivery-event history (`alerts:read`). `PATCH` reads a JSON
- * merge patch over the alert as its create body spells it, channel settings included;
- * `PUT` writes only `name`/`notifyOnRecovery`/`cooldownMinutes` and the scope pair.
+ * `alerts:write`) and its delivery-event history (`alerts:read`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

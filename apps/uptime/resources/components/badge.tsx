@@ -2,9 +2,6 @@
  * Maps this app's four monitor-status tones onto `@sdxc/ui`'s `Badge` props
  * (`up`→`success`, `degraded`→`warning`, `down`→`danger`, `neutral`→`neutral`,
  * always paired with the `"outline"` variant — a transparent chip with just a
- * colored border and text), so call sites name a tone and get the matching
- * color/variant pair automatically. Spread the result onto `@sdxc/ui`'s real
- * `Badge` directly: `<Badge {...badgeVariant(tone)}>{children}</Badge>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

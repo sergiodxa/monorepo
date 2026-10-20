@@ -1,10 +1,7 @@
 /**
- * Structured `funnel.*` records for each step between an anonymous URL probe
- * and a paying subscription, written onto the invocation's log as `funnel.*`
- * fields — so a question about one property, a campaign or a check result, is
- * a query — and as a note carrying the same properties. Every property type
- * carries hostnames and opaque ids only; {@link scrub} redacts any string
- * that looks like an address, URL, or token before it ships.
+ * Structured `funnel.*` records for each step between an anonymous URL probe and a
+ * paying subscription, written onto the invocation's log as `funnel.*` fields — so
+ * a question about one property, a campaign or a check result, is a query — and
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,8 +135,6 @@ function scrub(properties: FunnelProperties): Record<string, Log.Value> {
 /**
  * Records one step as `funnel.step` plus one `funnel.*` field per property, so the record
  * is queryable by any of them, and as a note so a record carrying two steps keeps both.
- * Swallows anything that goes wrong doing so: every caller sits on a path a person is
- * waiting on, so measuring a step always leaves that step to succeed or fail on its own.
  */
 function emit(
 	sink: FunnelEventSink | undefined,

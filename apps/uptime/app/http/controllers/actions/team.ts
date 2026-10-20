@@ -1,8 +1,6 @@
 /**
  * Form actions for team settings and membership: update/delete a team, and
- * remove/promote/demote a member. The router admits each by an admin ability, which the
- * owner holds too, and the policy keeps the owner's membership and role until the team
- * itself is deleted.
+ * remove/promote/demote a member.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

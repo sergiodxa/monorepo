@@ -1,10 +1,7 @@
 /**
  * Runs a customer's executable spec and reports what it concluded (ADR-027).
- *
  * Decides which capabilities exist (`http`, `url`, `jwt`, `sample`, `html`, `str`,
  * `spec`, and `browser` when Browser Run is bound), which hosts a verified domain
- * covers, and how many requests, how much time, and how large a response a run gets
- * before it is cut off.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -229,12 +226,8 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 const MISCONFIGURED = new Set(["permission-denied", "unknown-name", "ambiguous-name"]);
 
 /**
- * Which status a completed run reports.
- *
- * Checked ahead of the failing test's own error code, so a run cut off for exceeding one of
- * its caps is treated as a monitor problem to fix. Every cap reads the same way to a customer
- * — the run was stopped before it could answer — so each keeps the flow out of outage history
- * and away from the alert path.
+ * Which status a completed run reports. Checked ahead of the failing test's own error code,
+ * so a run cut off for exceeding one of its caps is treated as a monitor problem to fix.
  *
  * @param failed - The first failing test, or `undefined` when every test passed.
  * @param exhausted - Whether the run was cut off for passing its time, request or size cap.
@@ -478,8 +471,7 @@ function* fromExpression(expression: ExpressionNode): Generator<string> {
 /**
  * Wraps the `http` plugin so a run's cost is bounded before it starts: it may make at most
  * `maxRequests` calls, and none at all past `deadline`, each refusal failing the statement
- * that asked so the test reports it as an ordinary `ToolError`. The plugin enforces
- * `maxResponseBytes` itself, and a refusal under it counts here as the run being cut off.
+ * that asked so the test reports it as an ordinary `ToolError`.
  */
 function createRequestBudget(limits: {
 	maxRequests: number;

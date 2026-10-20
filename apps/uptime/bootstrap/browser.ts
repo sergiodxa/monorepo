@@ -1,9 +1,7 @@
 /**
  * Browser entry point that hydrates the uptime client. It registers a
- * module-scoped translator so every independently hydrated island
- * (`Avatar`, `Logo`, `CopyButton`, `RunMonitorButton`, `DocsNav`) can call
- * `intl`/`Trans` without an `IntlProvider` of its own, then runs remix/component's
- * client runtime, loading each island from the chunk the renderer named for it.
+ * module-scoped translator so every independently hydrated island (`Avatar`,
+ * `Logo`, `CopyButton`, `RunMonitorButton`, `DocsNav`) can call `intl`/`Trans`
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,7 +63,7 @@ setIntl(intl);
 
 run({
 	async loadModule(moduleUrl, exportName) {
-		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
+		let mod: unknown = await import(moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);

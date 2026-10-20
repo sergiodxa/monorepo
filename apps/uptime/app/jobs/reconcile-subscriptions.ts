@@ -1,18 +1,7 @@
 /**
  * Background job that repairs the local projection of billing state (ADR-005 §5). Deliveries
  * get missed — a deploy mid-delivery, a 500, a rotated signing secret — and a missed one is
- * invisible: the projection just keeps answering with what it last heard. This is the daily
- * sweep that notices, and the only billing traffic left on the entitlement path: one pass a
- * day instead of a point read per owner per minute.
- *
- * It sweeps in both directions. Every owner the projection already knows is re-read, which
- * catches a subscription that lapsed without anyone telling us; and the platform's own list of
- * live subscriptions is walked, which is the only way to find a customer whose very first
- * delivery never arrived and who therefore has no row to sweep.
- *
- * Every repair is recorded, and `subscriptions.repaired` is the number to alert on: a nonzero
- * count means webhook delivery is broken rather than this job having failed, which is exactly
- * the failure that would otherwise stay silent until a paying customer's monitors went quiet.
+ * invisible: the projection just keeps answering with what it last heard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

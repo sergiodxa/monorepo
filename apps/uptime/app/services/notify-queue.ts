@@ -2,11 +2,6 @@
  * Enqueues the `notify` queue messages the monitor sweeps produce (ADR-008). A status
  * transition detected by a sweep hands the notification off to the queue instead of
  * dispatching it inline, which keeps an HTTPS round trip to the email provider and the
- * alert pipeline's D1 lookups off the critical path of every sweep — and means a
- * provider outage delays notifications instead of stalling the sweep that detects them.
- *
- * The message deliberately carries only ids and statuses; the consumer reloads the
- * monitor row to build the alert's snapshot. See `app/jobs/notify.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

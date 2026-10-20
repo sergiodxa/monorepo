@@ -1,9 +1,6 @@
 /**
- * Form validation schema for the `update-emails` action.
- *
- * The form posts the emails the viewer wants, one per switch left on. A repeated field
- * with no minimum lets turning everything off arrive as an absent field; the action turns
- * the list into the refusals stored on the row.
+ * Form validation schema for the `update-emails` action. The form posts the emails the
+ * viewer wants, one per switch left on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,11 +1,7 @@
 /**
- * Edit DNS monitor page controller: settings form posting to
- * `update-dns-monitor`. Requires `requireUser` + `requireTeam` and 404s when
- * the monitor doesn't belong to the current team.
- *
- * Settings, zone import, and deletion post through separate `<form>`s
- * because each is a decision a visitor makes independently, at its own
- * moment.
+ * Edit DNS monitor page controller: settings form posting to `update-dns-monitor`.
+ * Requires `requireUser` + `requireTeam` and 404s when the monitor doesn't belong
+ * to the current team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

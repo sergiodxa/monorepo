@@ -1,9 +1,6 @@
 /**
- * One numbered item in a "how it works" list: a centered counter medallion
- * above a title and description, with a connector line toward the next
- * step. Both are pure CSS — a `counter()` in `::before`, a positioned
- * `::after` — so a row of steps needs no client script or index prop.
- * Reuses `@sdxc/ui`'s `Card.Title`/`Card.Description` for typography.
+ * One numbered item in a "how it works" list: a centered counter medallion above a
+ * title and description, with a connector line toward the next step.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

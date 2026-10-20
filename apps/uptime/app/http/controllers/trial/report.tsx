@@ -2,9 +2,6 @@
  * `GET /try/report/:token` — the seven-day health report as a durable page,
  * addressed by the watch's own token since a trial has no account to guard it.
  *
- * Every figure comes from `watchStats` and `incidentsFrom`, the same
- * functions the emails use, so a reader holding both sees one consistent week.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

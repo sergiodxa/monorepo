@@ -1,8 +1,6 @@
 /**
  * Background job that finds every team domain not yet verified and re-enqueues a
- * `verifyDomainOwnership` message for each, batched into one queue call. Runs every
- * 10 minutes so a domain the user just added — or one whose DNS record propagation
- * is still catching up — keeps getting retried without the user doing anything.
+ * `verifyDomainOwnership` message for each, batched into one queue call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

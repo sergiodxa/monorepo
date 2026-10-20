@@ -2,7 +2,6 @@
  * Form validation schemas for status-page create/update/delete actions. `slug` is
  * restricted to URL-safe characters (`docs/status-pages.md`); the five id-list
  * fields read every checked checkbox sharing that `name` via `f.fields()`, which is
- * how the curated monitor/DNS/TCP/flow/cron-job attachment lists are resubmitted.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

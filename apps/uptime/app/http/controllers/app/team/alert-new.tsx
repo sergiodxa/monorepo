@@ -1,9 +1,7 @@
 /**
- * New alert page controller. Requires `requireUser` + `requireTeam`.
- *
- * The fields sit in three bordered cards — scope, channel, and delivery —
- * inside one `<form>`, with the submit control anchored to the last card's
- * footer; the channel card comes from `AlertChannelFields`.
+ * New alert page controller. Requires `requireUser` + `requireTeam`. The fields
+ * sit in three bordered cards — scope, channel, and delivery — inside one
+ * `<form>`, with the submit control anchored to the last card's footer; the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,13 +1,7 @@
 /**
- * Client island: a real `<form>` posts to the run action so it works with no
- * JS; once hydrated, `on("submit")` intercepts it to `fetch()` the same action
+ * Client island: a real `<form>` posts to the run action so it works with no JS;
+ * once hydrated, `on("submit")` intercepts it to `fetch()` the same action
  * instead, keeping the button pending — a flow run can take most of thirty
- * seconds, long enough that a bare navigation would read as a hung page.
- *
- * The toast names the failing test and line, the one signal a flow run has
- * that no other monitor type does. Its label reads through `intl(handle)`
- * rather than `ctx.intl.t`, since it also renders server-side with no
- * request-scoped `ctx.intl` to read from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

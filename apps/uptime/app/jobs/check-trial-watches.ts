@@ -1,9 +1,6 @@
 /**
  * Background job that re-checks the URLs anonymous visitors left on the public try-it
- * page: one HTTP probe an hour for seven days, then a wrap-up. Shaped after the paid
- * monitor sweeps — the same atomic claim, bounded-concurrency probing, and `HttpCheck`
- * class — so a trial result means what a paid result means. Trial checks are free and
- * unbilled; the sweep's own cost lands on `PLATFORM_TEAM_ID`.
+ * page: one HTTP probe an hour for seven days, then a wrap-up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

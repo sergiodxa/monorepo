@@ -2,7 +2,6 @@
  * Where every declared job's handler comes from, and the registry both worker handlers
  * delegate to. Handlers are mapped as loaders, so an isolate serving requests imports
  * none of them: a module is pulled in only once a message has matched its job and parsed
- * against its schema.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,10 +81,6 @@ export const dispatcher = createJobDispatcher({
 	/**
 	 * The ledger is outermost so it counts the database the middleware inside it opens,
 	 * along with everything the handler then does through it.
-	 *
-	 * The flags come last because they cost nothing to publish: the subject is the job's
-	 * own name, so a rule scopes a knob to the sweep being measured rather than to every
-	 * sweep at once.
 	 */
 	middleware: [
 		costLedger(),

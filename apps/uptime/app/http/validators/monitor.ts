@@ -1,11 +1,6 @@
 /**
  * Form validation schemas for the HTTP monitor create/update web-form actions.
- * `UpdateMonitorSchema` extends the create fields with the target `monitor_id`. The
- * form only collects name/URL/interval/expected-status/region — method, timeout and
- * degraded-threshold aren't exposed there, so a create leaves them at their table
- * defaults and an update leaves an existing monitor's values untouched. The JSON API
- * (`app/http/controllers/api/monitor.ts` and `api/monitors.ts`) has its own, more
- * permissive schemas that do accept those fields.
+ * `UpdateMonitorSchema` extends the create fields with the target `monitor_id`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

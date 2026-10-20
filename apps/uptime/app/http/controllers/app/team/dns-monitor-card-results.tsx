@@ -1,9 +1,7 @@
 /**
  * DNS monitor detail page results-summary fragment controller: GET
  * /app/:team/dns/:monitorId/cards/results. Reduces checks into success rate and total
- * checks; the query runs once here instead of being repeated by the page. Response time
- * stays on the individual check, since resolver speed, not the monitored DNS record,
- * drives that figure.
+ * checks; the query runs once here instead of being repeated by the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

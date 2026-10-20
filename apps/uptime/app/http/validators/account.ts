@@ -2,10 +2,6 @@
  * Form validation for the irreversible half of the account page: the typed confirmation that
  * queues an account for deletion.
  *
- * The matching cancel action has no schema, and deliberately so: the request it calls off is
- * identified by who is signed in, so there is no field to validate, and undoing a destructive
- * request should not be gated behind ceremony of its own.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

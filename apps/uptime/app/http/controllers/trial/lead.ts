@@ -1,10 +1,7 @@
 /**
- * `POST /try/lead` turns a submitted probe into a week of hourly checks for the
- * email a visitor hands over: a lead row, a watch row, and a confirmation send, once the
- * form's honeypot fields verify.
- *
- * A free watch is capped to one per normalized URL every thirty days: the watch
- * row itself deletes after that window, so finding one live is the whole check.
+ * `POST /try/lead` turns a submitted probe into a week of hourly checks for the email a
+ * visitor hands over: a lead row, a watch row, and a confirmation send, once the form's
+ * honeypot fields verify.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -2,7 +2,6 @@
  * Form actions for cron-job monitor create/update/delete. Each follows the validate →
  * mutate → flash → redirect pattern: on validation failure the visitor is sent back to
  * the form with an error toast, translated and — for a rejected cron expression — naming
- * why the parser refused it; on success, to the monitor (or list).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

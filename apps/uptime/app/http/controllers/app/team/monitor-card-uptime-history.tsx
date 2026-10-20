@@ -2,8 +2,6 @@
  * Monitor detail page uptime-history fragment controller. GET
  * /app/:team/monitors/:monitorId/cards/uptime-history — loads the monitor's 90-day
  * daily stats and renders just the uptime bar, so the monitor page's history `Frame`
- * can swap it in over its skeleton. Fetches its stats independently since each `Frame`
- * loads on its own. Requires `requireUser` + `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

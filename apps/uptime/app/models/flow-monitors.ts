@@ -52,8 +52,7 @@ export const FlowMonitors = createModel(flowMonitors, {
 		/**
 		 * Records a run's outcome: inserts a history row and updates the monitor's cached fields.
 		 *
-		 * @returns The history row's id, the idempotency key the ping meter bills against: it is
-		 * the only thing about a completed run that is unique and already persisted.
+		 * @returns The history row's id, the idempotency key the ping meter bills against: it is the only thing about a completed run that is unique and already persisted.
 		 */
 		async recordCheckResult(monitorId: string, result: FlowCheckResult): Promise<string> {
 			let checkedAt = Date.now();

@@ -1,8 +1,7 @@
 /**
  * Who may do what in uptime: `member` runs the team's monitoring, `admin` also deletes monitors
  * and manages the team, its members, invites, domains and API keys, and `owner` holds everything
- * of its team. `operator` runs the app, across every team. An API key acts as the owner capped by
- * one `scope:<name>` role per scope it carries.
+ * of its team. `operator` runs the app, across every team.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

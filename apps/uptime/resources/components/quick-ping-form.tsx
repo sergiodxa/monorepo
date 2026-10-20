@@ -1,13 +1,6 @@
 /**
- * Client island: the dashboard header's quick-check form, a real `<form>`
- * posting to the run-ping action so it works as a plain navigating submit.
- * Once hydrated, `on("submit")` intercepts it instead, `fetch()`es the same
- * action, then reloads the enclosing `Frame` so only this bar re-renders.
- *
- * The form is its own `[popover]`, letting one form serve both layouts —
- * a `display: flex !important` header row at ≥768px, a sheet below — since
- * two forms would race to write the same session. Labels arrive as props,
- * translated by the caller ahead of this fragment's server-rendered pass.
+ * Client island: the dashboard header's quick-check form, a real `<form>` posting
+ * to the run-ping action so it works as a plain navigating submit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

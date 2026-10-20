@@ -1,9 +1,6 @@
 /**
  * Background job that checks one team domain's DNS TXT record for the ownership
- * token and marks it verified on a match. A DNS-over-HTTPS lookup of
- * `_ping-verification.<hostname>` must return a TXT record whose text is the literal
- * `ping_<teamDomainId>`. A miss or a failed lookup leaves the domain pending for the
- * every-ten-minutes sweep to retry.
+ * token and marks it verified on a match.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,9 +15,7 @@ import { apportionCostByTeam } from "~/app/services/cost";
 
 /**
  * Costs are apportioned to the domain's own team, since verifying it is work that team
- * asked for by adding the domain. A token split into several character-strings still
- * matches, and a name not yet published is a miss; any other lookup failure logs
- * `domains.lookup_failed` without `domain.verified` and leaves the retry to the sweep.
+ * asked for by adding the domain.
  */
 export default createJobHandler(jobs.verifyDomainOwnership, async (ctx) => {
 	let domain = await ctx.models.teamDomains.find(ctx.input.teamDomainId);

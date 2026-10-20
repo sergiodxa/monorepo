@@ -1,16 +1,7 @@
 /**
- * The paging vocabulary the whole `/api/v1/*` surface reads and advertises.
- *
- * Every list the API serves is append-only history — check results, alert events,
- * and the collections that grow alongside them — so all of them page by keyset:
- * a client walks a feed by following the `cursor` in the `Link` header instead of
- * paying a count query and a deepening offset per page.
- *
- * The names and the ordering are bound once here because both are wire contracts.
- * Binding the names through `createPaging()` is what stops a route accepting one
- * spelling while advertising another, and a cursor encodes the ordering it was
- * minted for, so changing what `newestFirst()` returns invalidates every cursor
- * already issued and must be planned like a schema change.
+ * The paging vocabulary the whole `/api/v1/*` surface reads and advertises. Every
+ * list the API serves is append-only history — check results, alert events, and
+ * the collections that grow alongside them — so all of them page by keyset: a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,15 +24,9 @@ import { apiSuccess } from "~/app/services/api/response";
 export const PAGING = createPaging({ perPage: 50, maxPerPage: 200 });
 
 /**
- * Builds the newest-first ordering a paginated endpoint seeks by.
- *
- * A timestamp alone repeats or skips rows that share it, which is routine when a
- * minute's worth of checks lands together, so `id` is always the tiebreaker; every
- * table the API pages declares it as the primary key.
- *
- * The timestamp is a parameter because the tables disagree about its name: most
- * stamp `created_at`, the TCP, DNS, and flow result tables stamp `checked_at`, and
- * an alert event stamps `sent_at`.
+ * Builds the newest-first ordering a paginated endpoint seeks by. A timestamp
+ * alone repeats or skips rows that share it, which is routine when a minute's
+ * worth of checks lands together, so `id` is always the tiebreaker; every table
  *
  * @param column The table's own timestamp column.
  * @returns The sort keys, most significant first.
@@ -60,15 +45,12 @@ export const NEWEST_FIRST: readonly OrderByTuple[] = newestFirst("created_at");
 
 /**
  * Answers with one page of a list, advertised in both `Link` and `meta.pagination`.
- *
  * A caller hands over the payload it serialized and the page it came from; the
  * cursors are read off that one page, so the header and the body cannot disagree
- * about where the next page is.
  *
  * @param data The serialized payload, shaped as the endpoint's own body.
  * @param page The page the payload was built from.
- * @param options The request URL the links are built from, the size asked for, and
- * a total for a collection whose rows are cheap to count.
+ * @param options The request URL the links are built from, the size asked for, and a total for a collection whose rows are cheap to count.
  * @returns The JSON response, carrying the paging headers.
  * @example
  * return apiPage({ results }, page.data, { url: ctx.url, perPage: params.data.perPage });

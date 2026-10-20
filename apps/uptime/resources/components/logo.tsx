@@ -1,8 +1,7 @@
 /**
- * Client island: a rounded-square ("squircle") team/brand logo. Renders
- * `src` when given, falling back to the name's initials when there's no
- * image or it fails to load, detected through a typed `error` listener via
- * the `on` mixin. Per the approved-islands list.
+ * Client island: a rounded-square ("squircle") team/brand logo. Renders `src` when
+ * given, falling back to the name's initials when there's no image or it fails to
+ * load, detected through a typed `error` listener via the `on` mixin.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

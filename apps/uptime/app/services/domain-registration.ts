@@ -86,7 +86,6 @@ export interface RegistrationPatch {
  * Turns one lookup into the monitor's new state. A success replaces everything; a name the
  * registry does not hold is `unavailable` for a week; any other failure keeps the stored
  * date, alerting from it while it is inside the warning window, and turns `error` once no
- * lookup has succeeded within that window.
  *
  * @param state - The monitor's stored registration fields.
  * @param lookup - What the registry answered.

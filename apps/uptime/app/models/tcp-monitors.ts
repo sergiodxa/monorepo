@@ -50,9 +50,7 @@ export const TcpMonitors = createModel(tcpMonitors, {
 		/**
 		 * Records a check's outcome: inserts a history row and updates the monitor's cached fields.
 		 *
-		 * @returns The history row's id. It is the only thing about a completed check that is
-		 * unique and already persisted, which is what makes it the idempotency key the ping
-		 * meter bills against: a redelivery of the same recorded check meters once.
+		 * @returns The history row's id. It is the only thing about a completed check that is unique and already persisted, which is what makes it the idempotency key the ping meter bills against: a redelivery of the same recorded check meters once.
 		 */
 		async recordCheckResult(monitorId: string, result: TcpCheckResult): Promise<string> {
 			let checkedAt = Date.now();

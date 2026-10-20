@@ -1,8 +1,7 @@
 /**
- * Turns a `s.parse()` failure inside an `/api/v1/*` controller into the API's own
- * 400 `validation-error` problem. Route params carrying a {@link typedId} schema reject a malformed or
- * wrong-resource identifier by throwing, and without this the throw would surface as
- * a 500 for what is really a caller mistake.
+ * Turns a `s.parse()` failure inside an `/api/v1/*` controller into the API's own 400
+ * `validation-error` problem. Route params carrying a {@link typedId} schema reject a malformed or
+ * wrong-resource identifier by throwing, and without this the throw would surface as a 500 for what is
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,8 +17,7 @@ import { apiProblems, problemInstance } from "~/app/services/api/problems";
 /**
  * Answers 400 when a controller's schema parse throws.
  *
- * @returns Middleware forwarding to the handler, converting a thrown
- * `ValidationError` into a `validation-error` problem.
+ * @returns Middleware forwarding to the handler, converting a thrown `ValidationError` into a `validation-error` problem.
  * @example
  * export default createController(monitorRoutes, {
  * 	middleware: [catchValidationError()],

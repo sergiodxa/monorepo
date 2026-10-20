@@ -1,11 +1,7 @@
 /**
  * Home controller — the public marketing homepage: hero, trust indicators, benefit
  * rows, feature and use-case grids, browser-flow examples, a pricing calculator, and
- * an FAQ, inside `MarketingLayout`. Serves as the top-of-funnel entry point and the
- * redirect target for unauthenticated `requireUser` guards. The pricing calculator is
- * the page's one `clientEntry` island; the hero's try-it form `POST`s straight to
- * `/try`, carrying the honeypot fields that route verifies, so the check runs on the
- * first click.
+ * an FAQ, inside `MarketingLayout`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,7 @@
 /**
  * Account page controller. Requires `requireUser` + `requireTeam`. The URL's `:team`
  * selects which shell wraps the page; the settings inside apply to the viewer across
- * every team they belong to. The Emails section carries `EMAIL_PREFERENCES_ANCHOR` so
- * digest unsubscribe links land directly on its switches.
+ * every team they belong to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

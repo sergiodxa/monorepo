@@ -1,10 +1,6 @@
 /**
- * The two numbers that decide how often an alert repeats: what a new one waits by default,
- * and the closest together two repeats can ever land.
- *
- * They live here, free of imports, because four layers quote them — the dispatcher, the form
- * validator, the create/edit form, and the REST API — and pulling either constant from the
- * dispatcher would drag `~/app/services/cost` and `cloudflare:workers` into the client bundle.
+ * The two numbers that decide how often an alert repeats: what a new one waits by default, and
+ * the closest together two repeats can ever land.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

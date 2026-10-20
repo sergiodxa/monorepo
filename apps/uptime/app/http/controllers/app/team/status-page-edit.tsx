@@ -1,8 +1,7 @@
 /**
- * Edit status page controller. All settings, including monitor attachments,
- * post through one `<form>` to `update-status-page`; only the delete flow
- * uses its own `<form>`. Fields are inlined here since the shared
- * status-page field block always renders the complete set of fields as one flat run.
+ * Edit status page controller. All settings, including monitor attachments, post
+ * through one `<form>` to `update-status-page`; only the delete flow uses its own
+ * `<form>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -79,9 +78,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 
 		/**
 		 * HTTP, DNS, TCP, and flow monitors render as one flat checkbox list; each keeps the
-		 * `name` of its source table so the update action can tell them apart. Only a flow's
-		 * name is carried over — its spec source stays out of the markup, here as on the
-		 * public page it curates (ADR-027 §8).
+		 * `name` of its source table so the update action can tell them apart.
 		 */
 		let selectableMonitors = [
 			...monitors.map((monitor) => ({

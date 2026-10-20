@@ -1,11 +1,7 @@
 /**
- * Analytics Engine service for ping results — writes data points to
- * `PING_RESULTS` and reads them back through the Analytics Engine SQL HTTP
- * API, with a KV-cached variant so the dashboard doesn't re-query on every
- * load. The SQL API supports no joins or subqueries, so a monitor's status
- * derives from its 24h success ratio (100% up, 0% down, otherwise
- * degraded). See `docs/adr/uptime/ADR-001-analytics-engine-migration.md`
- * for the schema.
+ * Analytics Engine service for ping results — writes data points to `PING_RESULTS`
+ * and reads them back through the Analytics Engine SQL HTTP API, with a KV-cached
+ * variant so the dashboard doesn't re-query on every load.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

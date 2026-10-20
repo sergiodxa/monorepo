@@ -1,9 +1,7 @@
 /**
  * Shared HTTP monitor form fields for the new-monitor and edit-monitor views,
  * split into a `"basics"` group (name, URL) and a `"checks"` group (interval,
- * expected status, region) that post to one `<form>`. Method, timeout, and
- * the degraded threshold keep their table defaults; SSL settings live in a
- * separate form.
+ * expected status, region) that post to one `<form>`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

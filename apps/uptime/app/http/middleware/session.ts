@@ -1,9 +1,7 @@
 /**
  * Session middleware factory. Builds cookie-based, KV-backed session handling for a
  * request: a one-year, httpOnly, signed session cookie backed by
- * `@sdxc/session-storage-kv` over the `KV` binding. It exists so request handlers can
- * read and write session data through `ctx.get(Session)` without knowing where
- * sessions are persisted.
+ * `@sdxc/session-storage-kv` over the `KV` binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

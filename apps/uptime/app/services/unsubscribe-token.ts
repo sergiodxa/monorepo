@@ -57,8 +57,6 @@ export async function signDigestUnsubscribeToken(claims: {
 /**
  * Verifies a digest unsubscribe token under the dedicated key first, then under
  * `COOKIE_SESSION_SECRET`, which signed every link mailed before the dedicated key existed.
- * Each fallback hit is counted as `unsubscribe.legacy_secret` on the request's log; the
- * fallback is removable once that counter stays at zero for 90 consecutive days.
  *
  * @param token - The path segment from the unsubscribe URL.
  * @returns The claims, or an `InvalidUnsubscribeTokenError` when neither key signed it.

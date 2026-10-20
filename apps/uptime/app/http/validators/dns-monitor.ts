@@ -1,13 +1,6 @@
 /**
  * Form validation schemas for the DNS monitor actions: create, update, delete, the manual
- * check, the review step, a single record toggle, and a zone-file re-import. A monitor
- * covers a whole domain, so there is no record type and no transcribed expected value to
- * validate — the expectation is imported, not typed.
- *
- * `UpdateDnsMonitorSchema` extends the create fields with the target `monitor_id` and its
- * own `is_enabled` default, for the reason every edit form here shares: an unchecked HTML
- * checkbox is simply absent from the body, so an update must default to `false` for
- * unchecking "Enabled" to disable the monitor instead of silently no-op'ing.
+ * check, the review step, a single record toggle, and a zone-file re-import.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -42,8 +42,7 @@ function toTarget(current: Record<string, JSONValue | undefined>): JSONObject {
  * integrations that already send JSON keep working against `PATCH`.
  *
  * @param request - The request, with its body unread.
- * @returns The patch, or the problem response to answer with: `415 unsupported-media-type`
- *   (with `Accept-Patch`) or `400 validation-error` for a body that is not JSON.
+ * @returns The patch, or the problem response to answer with: `415 unsupported-media-type` (with `Accept-Patch`) or `400 validation-error` for a body that is not JSON.
  */
 async function readApiPatch(request: Request): Promise<JSONValue | Response> {
 	let patch = await readMergePatch(request, { alsoAccept: ["application/json"] });
@@ -63,8 +62,7 @@ async function readApiPatch(request: Request): Promise<JSONValue | Response> {
  * @param request - The update request, with its body unread.
  * @param current - The resource's writable members, in the shape `schema` reads.
  * @param schema - The schema a whole resource must satisfy, usually the create body's.
- * @returns The update, or the problem response to answer with: `415 unsupported-media-type`
- *   (with `Accept-Patch`) or `400 validation-error`.
+ * @returns The update, or the problem response to answer with: `415 unsupported-media-type` (with `Accept-Patch`) or `400 validation-error`.
  * @example
  * let update = await readApiUpdate(ctx.request, writableMonitor(row), WRITABLE_MONITOR);
  * if (update instanceof Response) return update;

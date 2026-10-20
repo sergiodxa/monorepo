@@ -1,8 +1,6 @@
 /**
- * Email-safe uptime bar: a caption naming the range, one row of equal-width
- * table cells filled with each period's status colour, and a legend naming the
- * colours. Every part of it is a table with inline styles from `shared/palette`,
- * the one construction every mail client agrees on.
+ * Email-safe uptime bar: a caption naming the range, one row of equal-width table
+ * cells filled with each period's status colour, and a legend naming the colours.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,8 +84,7 @@ export function statusFill(status: UptimeBar.Status): string {
  *
  * @param status - Status being painted.
  * @param property - Whether it is being painted as a fill or as copy.
- * @returns The class name; an unchecked period names a fill only, since the
- * muted copy colour the kit already flips covers it as a word.
+ * @returns The class name; an unchecked period names a fill only, since the muted copy colour the kit already flips covers it as a word.
  * @example <td class={statusClass(status, "fill")} style={`background-color:${statusFill(status)};`} />
  */
 export function statusClass(status: UptimeBar.Status, property: "fill" | "ink"): string {

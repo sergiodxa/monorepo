@@ -2,7 +2,6 @@
  * Contained scroll-snap carousel for the `/browser-flows` examples section. The
  * viewport owns horizontal overflow so long monospace lines never widen the page;
  * each slide fills the viewport so Previous/Next (which page by `clientWidth`)
- * land on the next snap, and `carouselControls()` hydrates those invokers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

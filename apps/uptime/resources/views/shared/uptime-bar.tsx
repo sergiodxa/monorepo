@@ -1,11 +1,7 @@
 /**
- * Compact uptime bar: a row of thin bars covering the last
- * {@link UPTIME_WINDOW_DAYS} days, one per day, colored by that day's
- * `monitor_daily_stats.status`, with a range/uptime caption above and a
- * status legend below. Shared by the public status page and the monitor
- * detail page so both stay in step off one table. Captions and legend
- * labels arrive pre-translated through {@link UptimeBar.Props.labels} and
- * {@link UptimeBar.Props.formatUptime}.
+ * Compact uptime bar: a row of thin bars covering the last {@link
+ * UPTIME_WINDOW_DAYS} days, one per day, colored by that day's
+ * `monitor_daily_stats.status`, with a range/uptime caption above and a status
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

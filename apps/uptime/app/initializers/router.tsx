@@ -1,8 +1,7 @@
 /**
  * The uptime fetch-router: the global middleware stack, then every route mapped through
  * `lazy()`, so a cold isolate imports only the controllers it serves across the marketing
- * site, the signed-in app and the API. The chain ends by publishing the document's assets
- * as `ctx.assets`, then the renderer every page and frame streams through.
+ * site, the signed-in app and the API.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -217,10 +216,8 @@ export function createWebRouter(options: WebRouterOptions) {
 			createSessionMiddleware(options.kv, options.cookieSecret, options.secure),
 			auth,
 			/**
-			 * Publishes `ctx.flags` on every surface, machine ones included — the ad-hoc
-			 * ping endpoint reads a flag before it reads a body. The subject is the
-			 * signed-in viewer, so it stays after the auth guard; an endpoint whose
-			 * subject is the team names that team on the evaluation itself.
+			 * Publishes `ctx.flags` on every surface, machine ones included — the ad-hoc ping
+			 * endpoint reads a flag before it reads a body.
 			 */
 			featureFlags(flags, { context: () => ({ targetingKey: getViewer()?.id }) }),
 			/**
@@ -232,9 +229,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			/**
 			 * Publishes `ctx.attribution` and keeps the visitor's first and last touch in the
 			 * session, so the sign-in can copy the first onto the conversion row and a checkout
-			 * can carry both. Only a page navigation records anything, which leaves webhooks and
-			 * API calls untouched. `ref`/`source` and `campaign` stand in for the `utm_*` names
-			 * an outreach link is likelier to carry.
+			 * can carry both.
 			 */
 			attribution({
 				store: "session",
@@ -277,11 +272,9 @@ export function createWebRouter(options: WebRouterOptions) {
 			frameFailures(),
 		],
 		/**
-		 * Renders the translated 404 page for unmatched paths. A path under
-		 * {@link MACHINE_PATH_PREFIXES} lands here too; since `htmlOnly` skipped it
-		 * earlier, this resolves the language itself before rendering. Imported
-		 * eagerly, unlike every mapped controller: a request that matches no route
-		 * ends here, so deferring it would only delay the response it already owes.
+		 * Renders the translated 404 page for unmatched paths. A path under {@link
+		 * MACHINE_PATH_PREFIXES} lands here too; since `htmlOnly` skipped it earlier, this
+		 * resolves the language itself before rendering.
 		 */
 		defaultHandler(context) {
 			if (!isMachinePath(context.url.pathname)) return defaultHandler(context);
@@ -292,8 +285,7 @@ export function createWebRouter(options: WebRouterOptions) {
 	/**
 	 * The public try-it form's honeypot, on every route that renders the form or accepts it: the
 	 * landing page, `/try` and `/try/lead`. Its key derives from the session secret under a
-	 * `honeypot:` label, so no second secret is provisioned. A refused submission reaches the
-	 * controller, which answers a filled trap like a success and asks a person to send again.
+	 * `honeypot:` label, so no second secret is provisioned.
 	 */
 	let trialHoneypot = honeypot(new Honeypot({ secret: `honeypot:${options.cookieSecret}` }), {
 		onFailure: () => null,
@@ -341,10 +333,9 @@ export function createWebRouter(options: WebRouterOptions) {
 	);
 
 	/**
-	 * Public try-it surface: outside every auth guard since using it needs no
-	 * account. Each leaf guards itself instead — the honeypot ahead of `trial/guard.ts`
-	 * for `trial.check`'s POST, so a filled trap never costs a challenge verification or a
-	 * probe, the honeypot for `trial.lead`, an unguessable URL token for `trial.unsubscribe`.
+	 * Public try-it surface: outside every auth guard since using it needs no account. Each
+	 * leaf guards itself instead — the honeypot ahead of `trial/guard.ts` for `trial.check`'s
+	 * POST, so a filled trap never costs a challenge verification or a probe, the honeypot fo
 	 */
 	router.map(
 		routes.trial.check,
@@ -671,10 +662,6 @@ export function createWebRouter(options: WebRouterOptions) {
 	 * Each leaf group gets its own `router.map()` call. Every action takes the group's guards
 	 * as `lazy()`'s second argument, so an unauthorized request is answered before the
 	 * action's module is loaded.
-	 *
-	 * A group's actions come from several modules, so each one names its own loader.
-	 * The ones sharing a module also share its chunk, imported once for whichever
-	 * action is submitted first.
 	 */
 	router.map(routes.actions.monitor.http, {
 		actions: {
@@ -911,8 +898,7 @@ export function createWebRouter(options: WebRouterOptions) {
 	/**
 	 * A separate group from `actions` above (see `routes/web.ts`'s docblock on
 	 * `teamAdminActions`): each action adds the ability it performs to the same member-level
-	 * chain. Deleting the team is admitted by `team.update`, and the action itself tells an
-	 * admin apart from the owner, who alone may delete it.
+	 * chain.
 	 */
 	router.map(routes.teamAdminActions.team, {
 		actions: {

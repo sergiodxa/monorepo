@@ -1,11 +1,6 @@
 /**
  * Import policy for a pasted BIND zone file, the only channel through which the set of
  * *names* in a zone can reach this app — DNS refuses to enumerate a zone from outside it.
- * It keeps the tracked records inside the monitor's domain and reports every other entry
- * with its line and a reason, so an import can never quietly cover less than it claims.
- *
- * The pasted text is parsed and discarded: nothing here retains it, and callers persist
- * only the records this returns.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

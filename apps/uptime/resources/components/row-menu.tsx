@@ -1,13 +1,6 @@
 /**
- * A per-row kebab-icon actions menu, generic over its items, built on
- * `@sdxc/ui`'s `Menu`/`Popover` compound. Anchoring reuses the Popover API's
- * implicit-anchor behavior — the `commandfor` invoker relationship doubles as
- * the CSS anchor — so each row's independently positioned trigger gets a
- * correctly placed panel with no manual anchor-name wiring.
- *
- * The `menuKeys()` mixin adds the WAI-ARIA menu keyboard pattern over the
- * caller's own `[role^="menuitem"]` children, since each caller needs a
- * different action set.
+ * A per-row kebab-icon actions menu, generic over its items, built on `@sdxc/ui`'s
+ * `Menu`/`Popover` compound.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

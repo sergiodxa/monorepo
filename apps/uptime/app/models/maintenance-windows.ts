@@ -223,8 +223,7 @@ function startsOn(pattern: RecurringPattern, dayStart: number): boolean {
 /**
  * The recurring half of a window as an iCalendar event, or `null` when the row has no
  * readable pattern or one of zero length. An end at or before the start crosses midnight,
- * so `daily:23:00-01:00` lasts two hours. `DTSTART` is the first occurrence still running
- * when the row was created, and `SEQUENCE` grows with every edit through `updated_at`.
+ * so `daily:23:00-01:00` lasts two hours.
  */
 export function recurringEvent(window: SelectMaintenanceWindow): ICalendar.Event | null {
 	if (!window.is_recurring || !window.recurring_pattern) return null;

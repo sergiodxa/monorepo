@@ -2,9 +2,6 @@
  * Assembles everything a signed-in subject is entitled to take with them — identity,
  * preferences, team memberships, and the monitoring configuration of teams they own.
  *
- * Secrets, other members' identities, session state, and check history are excluded;
- * DNS records beyond a cap are truncated and disclosed via `dnsRecordsTruncated`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -291,7 +288,6 @@ async function exportOwnedTeam(
  * The part of an alert's configuration that is a setting rather than a credential. Slack,
  * Discord and PagerDuty return `null` because their configuration is itself the credential
  * — a webhook URL or a routing key — while an HTTP webhook exports its URL and keeps its
- * `secret` out of the file.
  */
 function alertDestination(config: AlertConfig): string | null {
 	if (config.strategy === "webhook") return config.config.url;
