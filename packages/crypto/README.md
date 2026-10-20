@@ -147,7 +147,20 @@ Cryptographically strong random bytes, the same as `crypto.getRandomValues(new U
 
 #### `randomToken(options?: randomToken.Options): string`
 
-A base64url token from `options.bytes` of entropy (default `32`). `options.prefix` is joined with `_`, so a leaked token is recognizable by kind: `randomToken({ prefix: "sk" })` is `"sk_..."`.
+A base64url token from `options.bytes` of entropy (default `32`). `options.prefix` is joined with `_`, so a leaked token is recognizable by kind: `randomToken({ prefix: "sk" })` is `"sk_..."`. Use this for URL-safe secrets; use `randomString` when you need a custom alphabet.
+
+#### `randomString(options?: randomString.Options): string`
+
+A string of `options.length` characters (default `32`) drawn uniformly from `options.alphabet` (default `A-Z a-z 0-9`, no punctuation). Sampling uses rejection over `crypto.getRandomValues`, so every alphabet index is equally likely. Throws a `RangeError` when `length` is not an integer from 0 to 65536, or when `alphabet` is empty or longer than 256 characters.
+
+```typescript
+import { randomString } from "@sdxc/crypto";
+
+let csrf = randomString({
+	length: 32,
+	alphabet: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+",
+});
+```
 
 ### Passwords
 
@@ -236,6 +249,10 @@ The `hash` option and its allowed names.
 #### `randomToken.Options`
 
 `bytes` and `prefix`.
+
+#### `randomString.Options`
+
+`length` and `alphabet`.
 
 #### `totp.SecretOptions`, `totp.CodeOptions`, `totp.VerifyOptions`, `totp.UriOptions`, `totp.Algorithm`
 
