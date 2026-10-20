@@ -99,3 +99,10 @@ cli.map(
 	commandset.typegen,
 	lazy(() => import("~/app/commands/typegen")),
 );
+
+declare module "@sdxc/cli" {
+	/** Types every command handler's `ctx` with what the middleware above publishes: `ctx.db`, `ctx.models`, `ctx.email` and `ctx.intl`. */
+	interface CLITypes {
+		cli: typeof cli;
+	}
+}

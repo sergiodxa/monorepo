@@ -119,7 +119,7 @@ describe("make model with fields", () => {
 		let factory = await readFile(join(root, "database/factories/post.ts"), "utf8");
 		expect(model).toContain('name: "posts",');
 		expect(model).toContain('author_id: c.integer().references("people", "posts_author_id_fkey"),');
-		expect(sql).toContain('CREATE TABLE "posts" (');
+		expect(sql).toMatch(/^-- CreatePosts: creates the posts table\.\n\nCREATE TABLE "posts" \(/);
 		expect(sql).toContain('"views_count" INTEGER NOT NULL,');
 		expect(sql).toContain('"is_draft" INTEGER NOT NULL,');
 		expect(sql).toContain('"author_id" INTEGER NOT NULL,');

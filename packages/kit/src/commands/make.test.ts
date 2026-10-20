@@ -792,7 +792,7 @@ describe("formatting", () => {
 
 describe("declaring and mapping", () => {
 	test(
-		"a job, controller, tool, resource and command are declared, mapped and type check in the app template",
+		"a job, controller, tool, resource and command are declared, mapped and type check in the app template, a command reading ctx.models",
 		{ timeout: 120_000 },
 		async () => {
 			let root = unwrap(await materialize("app"));
@@ -929,6 +929,19 @@ describe("declaring and mapping", () => {
 			expect(sitemap).toContain("\t\t\tadmin: {\n\t\t\t\tusers: { index: true },\n\t\t\t},\n");
 			expect(sitemap).not.toContain("ping");
 			expect(sitemap).not.toContain("keys");
+			await writeFile(
+				join(root, "app/commands/users/grant.ts"),
+				[
+					'import { createCommand, success } from "@sdxc/cli";',
+					'import commandset from "~/app/commands";',
+					"export default createCommand(commandset.users.grant, async (ctx) => {",
+					'\tlet post = await ctx.models.post.find("missing");',
+					'\tctx.stdout(`${post === null ? "none" : post.title}\\n`);',
+					"\treturn success();",
+					"});",
+					"",
+				].join("\n"),
+			);
 			let checked = await typecheck(root);
 
 			expect(checked.output).toContain("Found no type errors");

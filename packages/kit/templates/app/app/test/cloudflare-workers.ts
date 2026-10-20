@@ -8,6 +8,7 @@
 import {
 	createD1Database,
 	createKVNamespace,
+	createQueue,
 	createRateLimit,
 	createSendEmail,
 } from "@sdxc/cloudflare-mocks";
@@ -16,6 +17,7 @@ import {
 export const env = {
 	DB: createD1Database(),
 	EMAIL: createSendEmail(),
+	QUEUE: createQueue(),
 	RATE_LIMITER: createRateLimit(),
 	SESSIONS: createKVNamespace(),
 	SESSION_SECRET: "development-session-secret",

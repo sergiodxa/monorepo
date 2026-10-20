@@ -108,8 +108,9 @@ describe("scaffold", () => {
 				"show.test.tsx",
 				"show.tsx",
 			]);
-			expect(await read("database/migrations/0001_CreatePosts.sql")).toContain(
-				'CREATE TABLE "posts" (',
+			let migration = await read("database/migrations/0001_CreatePosts.sql");
+			expect(migration).toMatch(
+				/^-- CreatePosts: creates the posts table\.\n\nCREATE TABLE "posts" \(/,
 			);
 			expect(await read("app/models/index.ts")).toContain('post: () => import("./post"),');
 			let abilities = await read("app/policies/abilities.ts");

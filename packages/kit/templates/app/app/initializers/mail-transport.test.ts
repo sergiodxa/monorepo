@@ -1,13 +1,13 @@
 /**
  * The app's mail transport, delivering into the in-memory `send_email` stand-in tests receive
- * as the `EMAIL` binding.
+ * as the `EMAIL` binding, and its queue, handing deliveries to the `QUEUE` binding.
  */
 
 import { Mailer } from "@sdxc/mail";
 import { env } from "cloudflare:workers";
 import { describe, expect, test } from "vitest";
 
-import { transport } from "~/app/initializers/mail-transport";
+import { queue, transport } from "~/app/initializers/mail-transport";
 import { MAIL_FROM } from "~/config/constants";
 
 describe("transport", () => {
@@ -23,5 +23,11 @@ describe("transport", () => {
 		expect(env.EMAIL).toMatchObject({
 			messages: [expect.objectContaining({ subject: "Welcome" })],
 		});
+	});
+
+	test("queues a delivery for the email job on the QUEUE binding", async () => {
+		await queue({ email: "welcome", to: "ada@example.com", props: {} });
+
+		expect(env.QUEUE).toMatchObject({ messages: [expect.anything()] });
 	});
 });

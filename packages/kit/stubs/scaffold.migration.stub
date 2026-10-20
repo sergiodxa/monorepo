@@ -1,2 +1,3 @@
--- Creates the {{table}} table the {{Name}} model reads and writes.
+-- Create{{Plural}}: creates the {{table}} table.
+
 {{statement}}
