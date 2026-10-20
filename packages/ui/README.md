@@ -229,7 +229,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `YouTubeEmbed` — a lazy-loaded 16:9 YouTube player (`videoId`, `start?`, `title`) served from
   `www.youtube-nocookie.com`, which the page's `frame-src` has to allow.
 - `Text`, `Header`, `Keyboard`, `Typeset` — muted copy, a section label, a `<kbd>`, and typography
-  for rendered markup (`docs`, `chat`, `reading`).
+  for rendered markup. `Typeset` sets the body at 18px (`docs`), 20px (`reading`) or 15px (`chat`).
 - `ShortcutList` — a `<dl>` pairing actions with key caps.
 - `Highlight` — `{ text, match }` segments rendered with each match in a `<mark>`.
 - `HeadingScope`, `Heading` — a heading-depth scope, and the `<h1>`–`<h6>` that reads it.
