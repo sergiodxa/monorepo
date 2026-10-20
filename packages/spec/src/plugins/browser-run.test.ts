@@ -11,7 +11,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { isFailure, success } from "@sdxc/result";
+import { isFailure, isSuccess, success } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { Grants } from "../permissions.js";
@@ -335,5 +335,33 @@ describe(createBrowserRunPlugin.name, () => {
 		} finally {
 			await rm(root, { recursive: true, force: true });
 		}
+	});
+
+	test("trace.stop writes through the artifact store when the workspace has no filesystem", async () => {
+		let socket = new FakeSocket();
+		plugin = createBrowserRunPlugin({ browser: fakeBrowser(socket) });
+		let written = new Map<string, string>();
+		let context = createToolContext({
+			permissions: createPermissionSet(allowNet("app.example.test")),
+			artifacts: {
+				directory: "r2",
+				async write(name, contents) {
+					written.set(
+						name,
+						typeof contents === "string" ? contents : new TextDecoder().decode(contents),
+					);
+					return name;
+				},
+			},
+		});
+		await plugin.call("open", [value("https://app.example.test/")], context);
+		let started = await plugin.call("trace.start", [], context);
+		expect(isSuccess(started)).toBe(true);
+		let stopped = await plugin.call("trace.stop", [value("flow.json")], context);
+		if (isFailure(stopped)) throw new Error(stopped.error.message);
+		expect(stopped.data).toEqual({ path: "flow.json", event_count: 1 });
+		expect(JSON.parse(written.get("flow.json") ?? "null")).toEqual([
+			{ name: "test-event", ph: "I", ts: 1 },
+		]);
 	});
 });
