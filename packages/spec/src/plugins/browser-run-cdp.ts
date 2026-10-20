@@ -1,8 +1,8 @@
 /**
  * A thin CDP client over a Cloudflare Browser Run session: acquire, connect a
- * page target, send commands, and evaluate page-side scripts. The browser
- * plugin talks only through this surface so the tool layer stays free of
- * WebSocket plumbing.
+ * page target, send commands, subscribe to events, and collect Performance
+ * traces. The browser plugin talks only through this surface so the tool
+ * layer stays free of WebSocket plumbing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,8 @@ import { failure, isFailure, success } from "@sdxc/result";
 import type { SpecError } from "../errors.js";
 
 import { ToolError } from "../errors.js";
+
+import { DEFAULT_TRACE_CATEGORIES } from "./browser-diagnostics.js";
 
 /**
  * A Workers WebSocket after an Upgrade: the platform's `accept()` must run
@@ -76,6 +78,9 @@ interface PendingCommand {
 	timer: ReturnType<typeof setTimeout>;
 }
 
+/** A listener for one CDP event method, e.g. `Tracing.dataCollected`. */
+type EventListener = (params: Record<string, unknown>) => void;
+
 /**
  * A connected page session. Call {@link CdpSession.open} once per run and
  * {@link CdpSession.close} from the plugin's `dispose`.
@@ -87,7 +92,11 @@ export class CdpSession {
 	#browser: BrowserRunBinding;
 	#nextId = 0;
 	#pending = new Map<number, PendingCommand>();
+	#listeners = new Map<string, Set<EventListener>>();
 	#closed = false;
+	/** Trace events buffered while {@link CdpSession.startTrace} is active. */
+	#traceEvents: unknown[] = [];
+	#tracing = false;
 
 	private constructor(sessionId: string, socket: BrowserRunSocket, browser: BrowserRunBinding) {
 		this.sessionId = sessionId;
@@ -227,10 +236,135 @@ export class CdpSession {
 		}
 	}
 
+	/**
+	 * Start Chrome Performance tracing. Events arrive as `Tracing.dataCollected`
+	 * and buffer until {@link CdpSession.stopTrace}.
+	 *
+	 * @param categories - CDP category filter; defaults to the DevTools Performance set.
+	 */
+	async startTrace(
+		categories: string = DEFAULT_TRACE_CATEGORIES,
+	): Promise<Result<null, SpecError>> {
+		if (this.#tracing) {
+			return failure(new ToolError("browser.trace.start: a trace is already running"));
+		}
+		try {
+			this.#traceEvents = [];
+			this.#tracing = true;
+			this.on("Tracing.dataCollected", (params) => {
+				let batch = params.value;
+				if (!Array.isArray(batch)) return;
+				for (let event of batch) this.#traceEvents.push(event);
+			});
+			await this.send("Tracing.start", {
+				categories,
+				transferMode: "ReportEvents",
+			});
+			return success(null);
+		} catch (error) {
+			this.#tracing = false;
+			this.#traceEvents = [];
+			this.off("Tracing.dataCollected");
+			return failure(new ToolError(`browser.trace.start failed: ${describeError(error)}`));
+		}
+	}
+
+	/**
+	 * Stop the open Performance trace and return the collected events as a
+	 * chrome://tracing JSON array.
+	 */
+	async stopTrace(): Promise<Result<unknown[], SpecError>> {
+		if (!this.#tracing) {
+			return failure(
+				new ToolError("browser.trace.stop: no trace is running; call browser.trace.start first"),
+			);
+		}
+		try {
+			let complete = this.waitForEvent("Tracing.tracingComplete", 60_000);
+			await this.send("Tracing.end");
+			await complete;
+			this.off("Tracing.dataCollected");
+			this.#tracing = false;
+			let events = this.#traceEvents;
+			this.#traceEvents = [];
+			return success(events);
+		} catch (error) {
+			this.off("Tracing.dataCollected");
+			this.#tracing = false;
+			this.#traceEvents = [];
+			return failure(new ToolError(`browser.trace.stop failed: ${describeError(error)}`));
+		}
+	}
+
+	/** Whether {@link CdpSession.startTrace} is collecting events. */
+	get tracing(): boolean {
+		return this.#tracing;
+	}
+
+	/**
+	 * Enable the Performance domain when needed and return its metric list.
+	 */
+	async getMetrics(): Promise<Result<{ name: string; value: number }[], SpecError>> {
+		try {
+			await this.send("Performance.enable");
+			let result = (await this.send("Performance.getMetrics")) as {
+				metrics?: { name?: unknown; value?: unknown }[];
+			};
+			let metrics: { name: string; value: number }[] = [];
+			for (let entry of result.metrics ?? []) {
+				if (typeof entry.name !== "string" || typeof entry.value !== "number") continue;
+				metrics.push({ name: entry.name, value: entry.value });
+			}
+			return success(metrics);
+		} catch (error) {
+			return failure(new ToolError(`browser.metrics failed: ${describeError(error)}`));
+		}
+	}
+
+	/**
+	 * Subscribe to a CDP event method for the life of the session, or until
+	 * {@link CdpSession.off}.
+	 */
+	on(method: string, listener: EventListener): void {
+		let set = this.#listeners.get(method);
+		if (set === undefined) {
+			set = new Set();
+			this.#listeners.set(method, set);
+		}
+		set.add(listener);
+	}
+
+	/** Drop every listener for a CDP event method. */
+	off(method: string): void {
+		this.#listeners.delete(method);
+	}
+
+	/**
+	 * Resolve with the next params for a CDP event, or reject when the timeout
+	 * elapses first.
+	 */
+	waitForEvent(method: string, timeoutMs = 30_000): Promise<Record<string, unknown>> {
+		return new Promise((resolve, reject) => {
+			let timer = setTimeout(() => {
+				this.#listeners.get(method)?.delete(listener);
+				reject(new Error(`CDP event "${method}" timed out`));
+			}, timeoutMs);
+			let listener: EventListener = (params) => {
+				clearTimeout(timer);
+				this.#listeners.get(method)?.delete(listener);
+				resolve(params);
+			};
+			this.on(method, listener);
+		});
+	}
+
 	/** Best-effort teardown: close the socket and the Browser Run session. */
 	async close(): Promise<void> {
 		if (this.#closed) return;
 		this.#closed = true;
+		this.#tracing = false;
+		this.#traceEvents = [];
+		this.#listeners.clear();
 		this.#rejectAll(new Error("browser session closed"));
 		try {
 			this.#socket.close();
@@ -264,25 +398,41 @@ export class CdpSession {
 		});
 	}
 
-	/** Dispatch one JSON message from the socket onto a pending command. */
+	/**
+	 * Dispatch one JSON message: a command reply by id, or a CDP event by
+	 * method name when the payload carries no id.
+	 */
 	#onMessage(raw: string): void {
 		if (raw === "") return;
-		let message: { id?: number; result?: unknown; error?: { message?: string } };
+		let message: {
+			id?: number;
+			method?: string;
+			params?: Record<string, unknown>;
+			result?: unknown;
+			error?: { message?: string };
+		};
 		try {
 			message = JSON.parse(raw) as typeof message;
 		} catch {
 			return;
 		}
-		if (typeof message.id !== "number") return;
-		let pending = this.#pending.get(message.id);
-		if (pending === undefined) return;
-		clearTimeout(pending.timer);
-		this.#pending.delete(message.id);
-		if (message.error !== undefined) {
-			pending.reject(new Error(message.error.message ?? "CDP command failed"));
+		if (typeof message.id === "number") {
+			let pending = this.#pending.get(message.id);
+			if (pending === undefined) return;
+			clearTimeout(pending.timer);
+			this.#pending.delete(message.id);
+			if (message.error !== undefined) {
+				pending.reject(new Error(message.error.message ?? "CDP command failed"));
+				return;
+			}
+			pending.resolve(message.result);
 			return;
 		}
-		pending.resolve(message.result);
+		if (typeof message.method !== "string") return;
+		let listeners = this.#listeners.get(message.method);
+		if (listeners === undefined) return;
+		let params = message.params ?? {};
+		for (let listener of Array.from(listeners)) listener(params);
 	}
 
 	/** Fail every in-flight command, used when the socket closes. */

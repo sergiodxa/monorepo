@@ -22,6 +22,7 @@ Full API, options and examples: [packages/spec/README.md](packages/spec/README.m
 - A suite needs a base URL or a database connection read from the environment instead of a repeated flag.
 - A capability the built-ins do not cover has to be added as a plugin, in-process or as an external NDJSON-over-stdio executable.
 - Specs have to run somewhere with no process and no filesystem.
+- A browser suite needs a Chrome DevTools Protocol Performance trace, `Performance.getMetrics`, or a one-shot `browser.cdp` command (ADR-019).
 
 ## Using it
 

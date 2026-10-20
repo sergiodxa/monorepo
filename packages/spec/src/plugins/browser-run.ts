@@ -1,12 +1,15 @@
 /**
  * The `browser` capability backed by Cloudflare Browser Run: same tool surface
  * as the `agent-browser` plugin, with a CDP session so a Worker can drive a
- * real page. The binding is injected so this package never owns the remote
- * browser service (ADR-027 §9).
+ * real page — including Performance traces and one-shot CDP commands. The
+ * binding is injected so this package never owns the remote browser service
+ * (ADR-027 §9).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import { writeFile } from "node:fs/promises";
 
 import type { HTMLQueryError } from "@sdxc/html";
 import type { Result } from "@sdxc/result";
@@ -35,6 +38,15 @@ import {
 	parseQuery,
 	QUERY_PARAMS,
 } from "./addressing.js";
+import {
+	BROWSER_DIAGNOSTIC_TOOLS,
+	cdpResultToValue,
+	metricsToValue,
+	readCdpCall,
+	readTraceCategories,
+	readTraceStopPath,
+	traceStopValue,
+} from "./browser-diagnostics.js";
 import { CdpSession } from "./browser-run-cdp.js";
 import { nearMatches } from "./near-matches.js";
 
@@ -121,6 +133,7 @@ const ROLE_PARAM: ToolParam = {
 
 /** Descriptors of the tools this Browser Run backend implements. */
 const BROWSER_RUN_TOOLS: ToolDescriptor[] = [
+	...BROWSER_DIAGNOSTIC_TOOLS,
 	{
 		name: "open",
 		summary: 'Navigate the browser session to a target: `open "https://app.example.com/login"`.',
@@ -128,6 +141,7 @@ const BROWSER_RUN_TOOLS: ToolDescriptor[] = [
 		requires: "net",
 		params: navigationParams("open"),
 	},
+
 	{
 		name: "navigate",
 		summary: "Navigate the current browser session to another target.",
@@ -390,6 +404,14 @@ export function createBrowserRunPlugin(options: BrowserRunPluginOptions): Plugin
 				case "path":
 				case "title":
 					return await reading(tool, args, active);
+				case "trace.start":
+					return await traceStart(args, active);
+				case "trace.stop":
+					return await traceStop(args, context, active);
+				case "metrics":
+					return await metrics(args, active);
+				case "cdp":
+					return await cdp(args, active);
 				default: {
 					let names = BROWSER_RUN_TOOLS.map((descriptor) => descriptor.name).join(", ");
 					return failure(
@@ -400,6 +422,7 @@ export function createBrowserRunPlugin(options: BrowserRunPluginOptions): Plugin
 				}
 			}
 		},
+
 		async dispose() {
 			if (session === undefined) return;
 			await session.close();
@@ -440,6 +463,62 @@ function textParam(effect: string): ToolParam {
 		required: false,
 		summary: `The text this ${effect} into the addressed control.`,
 	};
+}
+
+/** `browser.trace.start [categories]` — begin CDP Performance tracing. */
+async function traceStart(args: ToolArg[], session: CdpSession): Promise<Result<Value, SpecError>> {
+	let categories = readTraceCategories(args);
+	if (isFailure(categories)) return categories;
+	let started = await session.startTrace(categories.data);
+	if (isFailure(started)) return started;
+	return success(null);
+}
+
+/**
+ * `browser.trace.stop [path]` — end the open trace, write chrome://tracing JSON
+ * into the workspace, and return `{ path, event_count }`.
+ */
+async function traceStop(
+	args: ToolArg[],
+	context: ToolContext,
+	session: CdpSession,
+): Promise<Result<Value, SpecError>> {
+	let relative = readTraceStopPath(args);
+	if (isFailure(relative)) return relative;
+	let resolved = context.workspace.resolve(relative.data);
+	if (isFailure(resolved)) return resolved;
+	let stopped = await session.stopTrace();
+	if (isFailure(stopped)) return stopped;
+	try {
+		await writeFile(resolved.data, JSON.stringify(stopped.data), "utf8");
+	} catch (error) {
+		let reason = error instanceof Error ? error.message : String(error);
+		return failure(new ToolError(`browser.trace.stop could not write ${relative.data}: ${reason}`));
+	}
+	return success(traceStopValue(relative.data, stopped.data.length));
+}
+
+/** `browser.metrics` — Performance.getMetrics as a flat name→value object. */
+async function metrics(args: ToolArg[], session: CdpSession): Promise<Result<Value, SpecError>> {
+	if (args.length > 0) {
+		return failure(new ToolError("browser.metrics takes no arguments"));
+	}
+	let collected = await session.getMetrics();
+	if (isFailure(collected)) return collected;
+	return success(metricsToValue(collected.data));
+}
+
+/** `browser.cdp method [params]` — one CDP command on the open session. */
+async function cdp(args: ToolArg[], session: CdpSession): Promise<Result<Value, SpecError>> {
+	let call = readCdpCall(args);
+	if (isFailure(call)) return call;
+	try {
+		let result = await session.send(call.data.method, call.data.params);
+		return cdpResultToValue(result);
+	} catch (error) {
+		let reason = error instanceof Error ? error.message : String(error);
+		return failure(new ToolError(`browser.cdp "${call.data.method}" failed: ${reason}`));
+	}
 }
 
 /** `browser.open` / `browser.navigate` — resolve, grant-check, then navigate. */

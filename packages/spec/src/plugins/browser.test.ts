@@ -233,6 +233,10 @@ describe(createBrowserPlugin.name, () => {
 		expect(plugin.namespace).toBe("browser");
 		let tools = plugin.describe();
 		expect(tools.map((tool) => tool.name)).toEqual([
+			"trace.start",
+			"trace.stop",
+			"metrics",
+			"cdp",
 			"open",
 			"navigate",
 			"reload",
@@ -276,6 +280,9 @@ describe(createBrowserPlugin.name, () => {
 	test("navigation, session setup and the interactions are actions", () => {
 		let byName = new Map(plugin.describe().map((tool) => [tool.name, tool.kind]));
 		for (let action of [
+			"trace.start",
+			"trace.stop",
+			"cdp",
 			"open",
 			"navigate",
 			"reload",
@@ -297,6 +304,7 @@ describe(createBrowserPlugin.name, () => {
 			expect(byName.get(action)).toBe("action");
 		}
 		for (let observable of [
+			"metrics",
 			"cookie",
 			"response_header",
 			"response_status",
