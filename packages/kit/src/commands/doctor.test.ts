@@ -440,7 +440,7 @@ export default defineCheck({
 
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(
-			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, ui, readme",
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, ui, readme",
 		);
 	});
 });
