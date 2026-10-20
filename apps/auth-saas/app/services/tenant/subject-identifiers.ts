@@ -1,8 +1,7 @@
 /**
  * Folding rules for the two identifier kinds a subject may hold: what turns two
  * spellings a person reads as the same address or handle into the one comparison form
- * the uniqueness index is built on. Kept standalone from the object's storage because
- * the rules are pure and worth testing without a database in front of them.
+ * the uniqueness index is built on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

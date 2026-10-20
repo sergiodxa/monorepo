@@ -1,9 +1,6 @@
 /**
  * The `HOSTNAMES_KV` cache mapping a hostname to its tenant resolution: what a request
- * needs to route to a tenant's Durable Object without a control-plane read. Holds both
- * positive resolutions and negative (miss) entries for hostnames that match no tenant,
- * so unknown traffic costs one D1 read per hostname per cache period rather than one
- * per request.
+ * needs to route to a tenant's Durable Object without a control-plane read.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,9 +37,6 @@ export const HOSTNAME_MISS_CACHE_TTL = 60;
  * Builds the KV key a hostname's resolution is cached under. The `hostname` must
  * already be lowercased, in its ASCII form, and without a port — the same form
  * `new URL(request.url).hostname` already produces per the URL spec, so callers
- * reading it from a request need no separate normalization step. The `v1` segment
- * lets a future change to {@link HostnameResolution}'s shape ship as a new prefix,
- * leaving old entries to expire unread rather than requiring a cache-wide purge.
  *
  * @param hostname - The already-normalized request hostname to build a cache key for.
  * @returns The namespaced KV key (e.g. `host:v1:example.com`).
@@ -57,8 +51,7 @@ export function hostnameCacheKey(hostname: string): string {
  * Reads a hostname's cached resolution.
  *
  * @param hostname - The already-normalized request hostname to look up.
- * @returns The cached resolution, `"miss"` when the hostname is negatively cached as
- * matching no tenant, or `null` when nothing is cached and D1 has to be read.
+ * @returns The cached resolution, `"miss"` when the hostname is negatively cached as matching no tenant, or `null` when nothing is cached and D1 has to be read.
  * @example
  * let cached = await readHostnameCache("acme.auth.example.com");
  * if (cached === "miss") return null;
@@ -115,7 +108,6 @@ export async function writeHostnameCacheMiss(hostname: string): Promise<void> {
  * Removes a hostname's cached entry, positive or negative, so the next request
  * re-reads D1. Called when a domain activates, is removed, or a tenant's status
  * changes — since a positive resolution and a miss tombstone share the same key,
- * activating a domain that was previously cached as a miss clears that tombstone too.
  *
  * @param hostname - The hostname whose cached entry should be evicted.
  * @returns A promise that resolves once the KV entry has been deleted.

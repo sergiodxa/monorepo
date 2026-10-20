@@ -1,18 +1,7 @@
 /**
  * One page of a tenant's directory as an export walks it: every subject's
- * identifiers, profile, declared attributes and role assignments, alongside
- * the credentials metadata a migration needs — that a password exists and
- * when it changed, each passkey's label and enrolment date, whether a second
- * factor is enrolled, and the ids of the subject's own live API keys. Kept
- * standalone from `subjects.ts` the way `subject-import.ts` is, because a row
- * here reads across several of that module's own tables plus `passwords.ts`,
- * `passkeys.ts`, `totp.ts` and `api-keys.ts` rather than writing to any of
- * them.
- *
- * A password hash is carried in the assembled row only when the caller passes
- * `includeCredentials: true`. Deciding when that is allowed is a caller
- * concern this module has no part in — it only ever does what the boolean it
- * was handed says.
+ * identifiers, profile, declared attributes and role assignments, alongside the
+ * credentials metadata a migration needs — that a password exists and when it
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -99,17 +88,13 @@ let ExportSubjectPageSchema = s.object({
 });
 
 /**
- * A page of the tenant's subjects, newest first, each fully assembled for
- * export — identifiers, profile, attributes, role assignments and credentials
- * metadata — paging the same keyset way `listSubjects` already pages a
- * directory listing, with both ordering columns in the projection so the
- * cursor a page hands back is minted from the row that actually came back.
+ * A page of the tenant's subjects, newest first, each fully assembled for export —
+ * identifiers, profile, attributes, role assignments and credentials metadata —
+ * paging the same keyset way `listSubjects` already pages a directory listing,
  *
  * @param db - The tenant's database.
- * @param input - Where to page from, how many subjects to a page, and whether
- * to carry each subject's own password hash alongside its metadata.
- * @returns A page of export rows and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @param input - Where to page from, how many subjects to a page, and whether to carry each subject's own password hash alongside its metadata.
+ * @returns A page of export rows and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function exportSubjectPage(
 	db: Database,

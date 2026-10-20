@@ -45,11 +45,9 @@ export type PatchedResource<Output> =
  * type was advertised, `application/json`; any other type is a `415` naming the patch type.
  *
  * @param request - The `PATCH` request, its body unread.
- * @param current - The resource's writable projection, a JSON object holding no `null`
- * members; an `undefined` member reads as absent.
+ * @param current - The resource's writable projection, a JSON object holding no `null` members; an `undefined` member reads as absent.
  * @param schema - The schema the patched resource must satisfy.
- * @returns The validated result and `changes`, the merge patch from `current` to it (a
- * removed member is `null`), or the `problem+json` refusal.
+ * @returns The validated result and `changes`, the merge patch from `current` to it (a removed member is `null`), or the `problem+json` refusal.
  * @example
  * let patched = await patchResource(ctx.request, writableClient(record), ClientBodySchema);
  * if (!patched.ok) return patched.response;

@@ -1,8 +1,6 @@
 /**
  * Defines and validates the custom-metadata shape attached to Cloudflare for SaaS
- * hostnames, which maps an incoming hostname to its owning tenant and region. Shared
- * by the hostname service (writer) and the worker entry (reader) as the single source
- * of truth for `request.cf.hostMetadata`.
+ * hostnames, which maps an incoming hostname to its owning tenant and region.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

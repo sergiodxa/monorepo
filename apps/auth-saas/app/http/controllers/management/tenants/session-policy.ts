@@ -1,12 +1,7 @@
 /**
  * `GET /tenants/:tenantId/session-policy` — the effective session, idle and
- * refresh-token lifetimes this tenant currently enforces, which of the
- * platform default or the tenant's own customization each one currently
- * resolves to, and the platform bounds a caller may write within. Reading
- * carries no entitlement gate on any tier: a tenant asking what its own
- * session lifetimes are is asking about its own security posture, and the
- * answer is also the paid capability's own argument for itself, so a Free
- * tenant reads the same document a Pro tenant does.
+ * refresh-token lifetimes this tenant currently enforces, which of the platform
+ * default or the tenant's own customization each one currently resolves to, and
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,8 +22,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `tenantSessionPolicyDescribe` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantSessionPolicyDescribe, createTenantSessionPolicyDescribeAction(options));

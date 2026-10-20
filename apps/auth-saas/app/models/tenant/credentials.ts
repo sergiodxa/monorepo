@@ -1,17 +1,6 @@
 /**
  * The remaining-credential predicate every credential removal shares: whether a
  * subject keeps at least one other way to sign in after one more is taken away.
- * Counts verified identifiers, passwords, passkeys and linked identities on
- * enabled connections — every table that can currently authenticate a subject —
- * which is why this lives above `subjects.ts`, `passwords.ts`, `passkeys.ts` and
- * `connection-sign-in.ts` rather than inside any one of them: each of those
- * already imports from `subjects.ts`, so a shared check any of them could import
- * would import itself back.
- *
- * A verified email identifier where magic-link sign-in is offered belongs in this
- * count too, once magic-link sign-in exists to offer — {@link hasMagicLinkCredential}
- * is the seam it lands in, answering `false` today rather than this function
- * needing a shape change once it does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,11 +26,6 @@ export type ExcludedCredential =
 /**
  * Whether a subject keeps at least one other verified identifier, password or
  * non-suspended passkey after the named one is removed.
- *
- * A password row has no id of its own worth excluding by, because removing a
- * password removes every row a subject holds at once (there is only ever one
- * credential to lose, not one row among several); the exclusion for that case is
- * "count nothing from the passwords table" rather than "count all but one row".
  *
  * @param db - The tenant's database.
  * @param subjectId - The subject a removal is being asked about.
@@ -104,7 +88,6 @@ export async function hasAnotherCredential(
  * Whether a subject holds a verified email identifier magic-link sign-in would
  * accept. Magic-link sign-in does not exist in this codebase yet, so this answers
  * `false` for every subject until it does — the seam {@link hasAnotherCredential}
- * reads rather than a clause it grows once that sign-in method is built.
  */
 async function hasMagicLinkCredential(_db: Database, _subjectId: string): Promise<boolean> {
 	return false;

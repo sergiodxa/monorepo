@@ -1,8 +1,7 @@
 /**
- * The one-time recovery-codes reveal both `/u/second-factor` and `/u/step-up`
- * show right after an enrolment their own fallback form just activated —
- * `activateTotpFactor` returns the codes exactly once, so this is the only
- * screen that will ever show them.
+ * The one-time recovery-codes reveal both `/u/second-factor` and `/u/step-up` show
+ * right after an enrolment their own fallback form just activated —
+ * `activateTotpFactor` returns the codes exactly once, so this is the only screen
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

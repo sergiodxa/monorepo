@@ -1,9 +1,7 @@
 /**
- * A real management router mapping every roles, permissions and consent
- * grants route, wired around the provisioned tenant and helpers
- * {@link buildManagementTestCore} builds, for driving the HTTP surface
- * through real requests the way `api-keys/test-harness.ts` drives the API
- * keys surface.
+ * A real management router mapping every roles, permissions and consent grants
+ * route, wired around the provisioned tenant and helpers {@link
+ * buildManagementTestCore} builds, for driving the HTTP surface through real
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,13 +1,7 @@
 /**
  * The subject export run itself: for every tenant with a queued or running export,
  * pages its own directory through the tenant's own object, writes each page's rows
- * as NDJSON to R2, folds the progress into the run's control-plane counters, and —
- * once every subject has been read — closes the run out. A run that carries
- * password hashes mails the tenant's owners once, at the moment it starts rather
- * than once it finishes, since the notice is about a credentials export having
- * begun rather than about one having completed. One tick advances every active
- * run by as much as its own time and page budget allow, so a run resumes exactly
- * where the previous tick left it rather than restarting.
+ * as NDJSON to R2, folds the progress into the run's control-plane counters, and
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,10 +38,7 @@ async function* noLines(): AsyncGenerator<string> {}
 
 /**
  * Appends newly-read rows to a run's output object, reading back whatever an
- * earlier tick already wrote first. An export can grow across many ticks over a
- * run that takes an hour, and each tick's own process exits with nothing held in
- * memory from the last one, so the object in R2 is the only place that growing
- * file can live between ticks.
+ * earlier tick already wrote first.
  *
  * @param bucket - The R2 bucket the output lives in.
  * @param key - The output's object key.

@@ -1,9 +1,7 @@
 /**
- * A real management router mapping every webhook endpoints and deliveries
- * route, wired around the provisioned tenant and helpers
- * {@link buildManagementTestCore} builds, for driving the HTTP surface through
- * real requests the way `clients/test-harness.ts` drives the clients and
- * secrets surface.
+ * A real management router mapping every webhook endpoints and deliveries route,
+ * wired around the provisioned tenant and helpers {@link buildManagementTestCore}
+ * builds, for driving the HTTP surface through real requests the way
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,10 +1,7 @@
 /**
- * Session policy: the five knobs a tenant's own `settings` row may customize, the
- * platform bounds and defaults each one is checked against, and the pure function that
- * resolves a tenant's stored values and its entitlement into the values `sessions.ts`,
- * `passwords.ts` and the token endpoint actually enforce. Leaf module — imports nothing
- * else among the tenant stores, the way `entitlements.ts` does — since nothing here needs to
- * reach another tenant table.
+ * Session policy: the five knobs a tenant's own `settings` row may customize, the platform
+ * bounds and defaults each one is checked against, and the pure function that resolves a
+ * tenant's stored values and its entitlement into the values `sessions.ts`, `passwords.ts`
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,10 +34,8 @@ export type SessionsAfterCredentialChange = "revoke-others" | "revoke-all";
 
 /**
  * The five knobs exactly as the tenant's `settings` row stores them: `null` in any
- * field means "not customized, use the platform default" — the distinction
- * {@link effectiveSessionPolicy}'s tighten-only comparison needs, since a customized
- * value that happens to equal the default is still customized for audit purposes even
- * though it resolves the same way.
+ * field means "not customized, use the platform default" — the distinction {@link
+ * effectiveSessionPolicy}'s tighten-only comparison needs, since a customized value
  */
 export interface StoredSessionPolicy {
 	sessionAbsoluteLifetimeMs: number | null;
@@ -71,16 +66,10 @@ export const DEFAULT_EFFECTIVE_SESSION_POLICY: EffectiveSessionPolicy = {
 /**
  * Resolves a tenant's stored session policy into the values actually enforced. While
  * entitled, every field the tenant stored is honored exactly as stored — it was already
- * bounds-checked at write time, so nothing here re-clamps it. Once the entitlement
- * lapses, each field falls back independently to whichever of its stored value and the
- * platform default is tighter, so a downgrade never loosens a tenant's sessions past
- * what it already had stored, and never grants back more than the platform default
- * either.
+ * bounds-checked at write time, so nothing here re-clamps it.
  *
- * @param input - The tenant's stored policy row, and whether its plan currently
- * entitles it to customize these values at all.
- * @returns The five values `sessions.ts`, `passwords.ts` and the token endpoint
- * actually enforce.
+ * @param input - The tenant's stored policy row, and whether its plan currently entitles it to customize these values at all.
+ * @returns The five values `sessions.ts`, `passwords.ts` and the token endpoint actually enforce.
  */
 export function effectiveSessionPolicy(input: {
 	stored: StoredSessionPolicy;
@@ -121,9 +110,6 @@ export function effectiveSessionPolicy(input: {
 				: REFRESH_TOKEN_LIFETIME_DEFAULT_MS;
 	}
 
-	// Unlimited (`null`) is the loosest value this field can hold, so any stored
-	// numeric limit is automatically tighter than the unlimited default and wins
-	// outright; a stored `null` falls back to the default, itself unlimited.
 	let concurrentSessionLimit: number | null;
 	if (hasEntitlement) {
 		concurrentSessionLimit = stored.concurrentSessionLimit;
@@ -133,9 +119,6 @@ export function effectiveSessionPolicy(input: {
 		concurrentSessionLimit = stored.concurrentSessionLimit;
 	}
 
-	// `revoke-all` is the more aggressive value, so it wins the tighten-only
-	// comparison outright; anything else falls back to the default, itself
-	// already the least aggressive value this field can hold.
 	let sessionsAfterCredentialChange: SessionsAfterCredentialChange;
 	if (hasEntitlement) {
 		sessionsAfterCredentialChange =
@@ -171,12 +154,9 @@ export type ValidateSessionPolicyResult =
 /**
  * Bounds-checks every field a `setSessionPolicy` call actually gave, refusing the first
  * one outside its range with a message naming the field, the value given, and the bound
- * it violated. A field the caller left out is never checked: leaving a column untouched
- * can never violate its own bound.
+ * it violated.
  *
- * @param input - The fields being written, and the absolute lifetime this same write
- * leaves in force — whichever the caller is also setting, or the one already stored —
- * since the idle timeout's own ceiling is that value rather than a fixed number.
+ * @param input - The fields being written, and the absolute lifetime this same write leaves in force — whichever the caller is also setting, or the one already stored — since the idle timeout's own ceiling is that value rather than a fixed number.
  * @returns Success, or which field and bound refused the write.
  */
 export function validateSessionPolicyInput(input: {

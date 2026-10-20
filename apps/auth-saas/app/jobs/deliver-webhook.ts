@@ -1,9 +1,6 @@
 /**
  * Sends one webhook delivery: prepares it against the tenant's own object, POSTs the
- * signed request, and settles the attempt with what came back. The queue's own retry
- * timing follows the row's own schedule exactly, because a `pending` settlement
- * retries this same message after the delay `settleDelivery` already chose rather
- * than a delay decided here.
+ * signed request, and settles the attempt with what came back.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,7 +56,6 @@ export default createJobHandler(jobs.deliverWebhook, async (ctx) => {
  * Sends the signed request and classifies what came back: a 2xx is delivered, any
  * other status is an HTTP error carrying a snippet of the body, the delivery timeout
  * firing is a timeout, and anything else `fetch` throws is treated as a connection or
- * TLS failure, the only other bucket a delivery attempt can land in.
  */
 async function attempt(
 	prepared: Extract<PrepareDeliveryResult, { ok: true }>,

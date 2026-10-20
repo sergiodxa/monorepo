@@ -2,23 +2,6 @@
  * Roles and permissions: the `roles`, `permissions`, `role_permissions` and
  * `role_assignments` tables, and the operations that define a tenant's own vocabulary
  * above the three roles the platform reserves at every scope, grant permissions to a
- * role, assign a role to a subject, and answer whether a subject's held role grants a
- * given permission.
- *
- * The three system roles — `owner`, `admin` and `member` — never get a row in `roles`.
- * Their keys, names, descriptions and grants are fixed in this module rather than
- * stored, so a scope answers a system-role check correctly from the instant it exists,
- * with nothing to seed and nothing a caller could forget to provision. A system role's
- * well-known key doubles as its id everywhere a stored role's id would otherwise be
- * expected — `role_assignments.role_id` at the tenant scope, and every input this
- * module calls `roleId` — so the two kinds of role share one namespace without a
- * system role ever needing a row to be addressable.
- *
- * An organization-scope assignment is not written here at all: it lives on
- * `organization_members.role`, already established by the organizations mechanism,
- * because a membership and its role share one lifecycle. `assignRole` writes through to
- * that column for an organization scope and to `role_assignments` for the tenant scope,
- * and every read that resolves a subject's role at a scope follows the same split.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -75,9 +58,6 @@ const SYSTEM_ROLE_DEFINITIONS: Record<SystemRoleKey, { name: string; description
  * The three operations an owner alone may perform. No operation in this pass exists yet
  * to ask for one of these by its own permission key, so these are reserved,
  * permission-key-shaped strings this module alone recognizes — not a tenant's to define
- * and not stored anywhere — purely so `authorizeSubject`'s admin check has something
- * concrete to exclude today and keeps excluding the same three once each operation is
- * built and starts asking with a key of its own.
  */
 export const DELETE_SCOPE_PERMISSION = "scope:delete";
 export const TRANSFER_OWNERSHIP_PERMISSION = "scope:transfer_ownership";
@@ -255,8 +235,6 @@ export async function resolveRole(
  * The permission keys a role grants: every declared permission for `owner` and `admin`
  * alike, since neither system role's fixed meaning restricts a tenant's own vocabulary
  * — the three operations `admin` is denied have no declared permission key of their
- * own for this resolution to leave out — nothing for `member`, and exactly what
- * {@link setRolePermissions} last wrote for a custom role.
  */
 async function resolveGrantedPermissions(db: Database, role: RoleRecord): Promise<string[]> {
 	if (role.system) {
@@ -317,8 +295,7 @@ let DefineRoleSchema = s.object({
  * three the platform reserves or with a role this scope already has.
  *
  * @param db - The tenant's database.
- * @param input - The scope and key the role is defined at, its name and description,
- * and who is defining it.
+ * @param input - The scope and key the role is defined at, its name and description, and who is defining it.
  * @returns The new role's record, or which rule refused the call.
  */
 export async function defineRole(db: Database, input: DefineRoleInput): Promise<DefineRoleResult> {
@@ -438,8 +415,7 @@ export type DeleteRoleResult =
  * cannot be deleted.
  *
  * @param db - The tenant's database.
- * @param input - The role to delete, the role its holders move to, and who is making
- * the call.
+ * @param input - The role to delete, the role its holders move to, and who is making the call.
  * @returns How many holders were reassigned, or which rule refused the call.
  */
 export async function deleteRole(db: Database, input: DeleteRoleInput): Promise<DeleteRoleResult> {
@@ -635,11 +611,9 @@ let SetRolePermissionsSchema = s.object({
  * Replaces a custom role's whole granted set: deletes every `role_permissions` row it
  * holds and writes the given keys in the same call, refusing a set whose serialized
  * form would exceed what a token's `permissions` claim may carry, and a key naming no
- * declared permission.
  *
  * @param db - The tenant's database.
- * @param input - The role to set, its whole new set of permission keys, and who is
- * making the call.
+ * @param input - The role to set, its whole new set of permission keys, and who is making the call.
  * @returns The set now granted, or which rule refused the call.
  */
 export async function setRolePermissions(
@@ -710,15 +684,10 @@ let AssignRoleSchema = s.object({
 
 /**
  * Assigns a role to a subject at a scope, replacing any role already held there — one
- * role per subject per scope. A tenant-scope assignment writes `role_assignments`; an
- * organization-scope assignment writes through to `organization_members.role` instead,
- * refusing an organization that does not exist or a subject with no membership in it —
- * assigning a role presupposes membership, it does not create one. Either scope refuses
- * a reassignment that would leave the scope with no `owner` at all.
+ * role per subject per scope.
  *
  * @param db - The tenant's database.
- * @param input - The subject, the scope the role is held at, the role's key, and who is
- * making the call.
+ * @param input - The subject, the scope the role is held at, the role's key, and who is making the call.
  * @returns The role now held, or which rule refused the call.
  */
 export async function assignRole(db: Database, input: AssignRoleInput): Promise<AssignRoleResult> {
@@ -844,10 +813,7 @@ let ListRolesSchema = s.object({ scope: s.string() });
 /**
  * Every role held at a scope: the three system roles first, always present since
  * neither needs a row to exist, followed by whatever custom roles this scope has
- * defined. Unpaginated — a scope's own role catalog is the three reserved keys
- * plus whatever a tenant has defined for itself, small enough that a caller
- * managing roles is better served seeing the whole list at once than paging
- * through a handful of rows.
+ * defined.
  *
  * @param db - The tenant's database.
  * @param input - The scope to list roles at.
@@ -867,11 +833,9 @@ export interface ListPermissionsResult {
 }
 
 /**
- * Every permission this tenant has declared. Tenant-wide rather than scoped to
- * one role or one scope, since `permissions` carries no scope column of its
- * own — a permission is granted to a role at whatever scope that role lives at,
- * not declared at one itself. Unpaginated — a tenant's own declared vocabulary
- * stays small enough for a caller managing roles to read in one call.
+ * Every permission this tenant has declared. Tenant-wide rather than scoped to one
+ * role or one scope, since `permissions` carries no scope column of its own — a
+ * permission is granted to a role at whatever scope that role lives at, not
  *
  * @param db - The tenant's database.
  * @returns Every permission this tenant has declared.
@@ -896,12 +860,9 @@ export interface ResolveRoleAndPermissionClaimsResult {
  * The role keys and the union of granted permission keys a subject holds across the
  * scopes a token's or a `/userinfo` response's `roles`/`permissions` claims name: the
  * tenant scope every session resolves, plus the active organization's scope when one is
- * given. The one place this resolution is written, so a token minted at sign-in and a
- * later `/userinfo` read of the same session answer from the same facts.
  *
  * @param db - The tenant's database.
- * @param input - The subject, and the active organization scope to resolve alongside
- * the tenant scope, or `null` for none.
+ * @param input - The subject, and the active organization scope to resolve alongside the tenant scope, or `null` for none.
  * @returns The role keys held, and the resolved permission keys they grant.
  */
 export async function resolveRoleAndPermissionClaims(
@@ -941,13 +902,6 @@ export interface AuthorizeSubjectResult {
 /**
  * The single-decision check every other authorization question in this mechanism
  * reduces to: does the role this subject holds at this scope grant this permission.
- * `owner` authorizes everything; `admin` authorizes everything except the three
- * operations {@link DELETE_SCOPE_PERMISSION}, {@link TRANSFER_OWNERSHIP_PERMISSION} and
- * {@link CHANGE_OWNER_ROLE_PERMISSION} name, regardless of whether the permission asked
- * for was even declared yet; `member` authorizes nothing. A custom role answers from
- * whatever {@link setRolePermissions} last wrote for it, including a permission
- * declared after the role was assigned — this reads the grant fresh every time rather
- * than from anything cached at assignment.
  *
  * @param db - The tenant's database.
  * @param input - The subject, the scope, and the permission being asked for.

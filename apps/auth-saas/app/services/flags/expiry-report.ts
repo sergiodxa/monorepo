@@ -1,12 +1,7 @@
 /**
- * The sweep that finds a rollout nobody has finished: a `release.*` flag
- * declares an owner and an expiry date in its `metadata`, and a rollout that
- * outlives that date is a branch nobody reads kept alive by a value in KV.
- * Nothing here sends the report anywhere yet — the internal-ops notification
- * channel this would ride on does not exist in this codebase, and wiring the
- * sweep itself onto a schedule belongs beside every other cron job this
- * platform still owes rather than inside the function that answers "which
- * flags are overdue."
+ * The sweep that finds a rollout nobody has finished: a `release.*` flag declares
+ * an owner and an expiry date in its `metadata`, and a rollout that outlives that
+ * date is a branch nobody reads kept alive by a value in KV.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,10 +48,8 @@ function ownedExpiry(metadata: Readonly<Record<string, unknown>> | undefined):
  * `metadata` holds — a withdrawal has none to outlive.
  *
  * @param store - The definition set to read.
- * @param now - The time to compare `expiresAt` against, defaulting to the
- * current time; a sweep passes its own so a run stays reproducible.
- * @returns Every overdue rollout, owner and key included, or the reason the
- * store could not be read.
+ * @param now - The time to compare `expiresAt` against, defaulting to the current time; a sweep passes its own so a run stays reproducible.
+ * @returns Every overdue rollout, owner and key included, or the reason the store could not be read.
  */
 export async function findOverdueReleaseFlags(
 	store: FlagStore,

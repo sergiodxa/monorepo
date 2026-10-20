@@ -1,9 +1,7 @@
 /**
- * What every route in this directory shares: reading the `:endpointId` path
- * param, the `problem+json` response for an endpoint the tenant does not
- * hold, the entitlement refusal outbound webhooks are gated behind, and
- * mapping a URL or event type refusal onto its own response, and projecting an
- * endpoint onto the writable members a merge patch edits.
+ * What every route in this directory shares: reading the `:endpointId` path param,
+ * the `problem+json` response for an endpoint the tenant does not hold, the
+ * entitlement refusal outbound webhooks are gated behind, and mapping a URL or
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -27,8 +27,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `webhookEndpointsRotateSecret` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(

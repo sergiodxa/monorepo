@@ -1,10 +1,7 @@
 /**
  * The centralized, type-safe route table for the management API, served on
- * `api.{PLATFORM_DOMAIN}`. This pass adds the tenant, member and domain
- * routes, plus the tenant's own second-factor policy, onto the subjects,
- * clients, API keys, webhook endpoints, roles, permissions, credentials,
- * sessions and audit events routes earlier passes already mapped; each later
- * resource-area pass extends this same table with its own routes.
+ * `api.{PLATFORM_DOMAIN}`. This pass adds the tenant, member and domain routes,
+ * plus the tenant's own second-factor policy, onto the subjects, clients, API
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

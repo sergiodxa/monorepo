@@ -1,8 +1,7 @@
 /**
  * One tenant's identity state — settings, subjects, clients, sessions and signing keys — in
  * the SQLite database Cloudflare gives its Durable Object, reachable by no query that could
- * reach another tenant's. Typed RPC methods only: a caller hands it a whole operation to
- * validate and perform, never a query to finish assembling elsewhere.
+ * reach another tenant's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -489,10 +488,7 @@ interface CostCounters {
 
 /**
  * Wraps the object's raw `SqlStorage` handle, forwarding every call unchanged and adding
- * each statement's own cursor counts into `counters`. A cursor only ever reports the one
- * statement that produced it, so this is the only way to total a whole RPC call's storage
- * activity without changing the adapter that turns `remix/data-table` operations into the
- * statements this handle actually runs.
+ * each statement's own cursor counts into `counters`.
  *
  * @param sql - The object's real storage handle.
  * @param counters - Where every statement's own counts accumulate.
@@ -540,8 +536,6 @@ export interface StorageFootprint {
  * Counts this tenant's live sessions whose next resolve would compute an earlier
  * expiry under `nextPolicy` than it would have under `currentPolicy` — the same
  * earlier-of-two-instants comparison `resolveSession` itself runs, evaluated against
- * both policies at once so `setSessionPolicy` can report the shortening it is about to
- * make before the tenant confirms it.
  *
  * @param db - The tenant's database.
  * @param currentPolicy - The effective policy in force before this write.
@@ -571,18 +565,14 @@ async function countSessionsShortenedBy(
 }
 
 /**
- * Whether a session policy field's currently effective value is the platform default
- * or the tenant's own stored customization — the same tighten-only comparison
+ * Whether a session policy field's currently effective value is the platform default or the
+ * tenant's own stored customization — the same tighten-only comparison
  * `effectiveSessionPolicy` runs for that one field, reported back for `describeSessionPolicy`
- * to render "which of the two is in force" without duplicating that comparison.
  *
  * @param stored - The field as `settings` stores it; `null` means never customized.
- * @param hasEntitlement - Whether this tenant's plan currently entitles it to customize
- * session policy at all.
- * @param storedIsTighter - Whether `stored` (once entitlement has lapsed) would win the
- * tighten-only comparison against the platform default for this field.
- * @returns `"tenant"` when the stored value is what is actually in force, `"default"`
- * when the platform default is.
+ * @param hasEntitlement - Whether this tenant's plan currently entitles it to customize session policy at all.
+ * @param storedIsTighter - Whether `stored` (once entitlement has lapsed) would win the tighten-only comparison against the platform default for this field.
+ * @returns `"tenant"` when the stored value is what is actually in force, `"default"` when the platform default is.
  */
 function sessionPolicyFieldSource<value>(
 	stored: value | null,
@@ -641,15 +631,12 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * This isolate's own record of which subjects today's daily active user meter has
 	 * already counted. Never persisted: an object evicted and rebuilt starts it empty
 	 * again, which costs one insert attempt per subject the meter re-meets rather than
-	 * any loss of accuracy.
 	 */
 	#dauCache: DauCache = createDauCache();
 
 	/**
-	 * This isolate's own map from an API key's id to the facts that verify it,
-	 * updated by the same call that revokes or rotates a key so a change lands
-	 * at once. Never persisted: an object evicted and rebuilt starts it empty
-	 * again, paying one storage read the next time each key is presented.
+	 * This isolate's own map from an API key's id to the facts that verify it, updated
+	 * by the same call that revokes or rotates a key so a change lands at once.
 	 */
 	#apiKeyCache: ApiKeyVerificationCache = new Map();
 
@@ -658,21 +645,14 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * This isolate's own copy of the tenant's one `settings` row, read once per
-	 * instance by {@link #settings} and invalidated by the one method that writes
-	 * it — a Durable Object is the only writer of its own settings, so the read
-	 * costs nothing per request once it has run the first time. Never persisted:
-	 * an object evicted and rebuilt starts it empty again, paying one storage
-	 * read the next time any of `#issuer`, `#mfaPolicy`, `#failureThreshold` or
-	 * `#effectiveSessionPolicy` needs the row.
+	 * instance by {@link #settings} and invalidated by the one method that writes it —
+	 * a Durable Object is the only writer of its own settings, so the read costs
 	 */
 	#settingsRow: TableRow<typeof settings> | null = null;
 
 	/**
-	 * The AES-GCM key TOTP secrets are sealed and opened with, imported once from
-	 * the tenant's own secret binding and reused. A constructor cannot `await`,
-	 * so this starts `null` and {@link #sealKey} imports it lazily on first use,
-	 * the same way {@link #dauEnforcement} reads its own state lazily rather than
-	 * at construction.
+	 * The AES-GCM key TOTP secrets are sealed and opened with, imported once from the
+	 * tenant's own secret binding and reused.
 	 */
 	#sealKeyPromise: Promise<CryptoKey> | null = null;
 
@@ -712,9 +692,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Runs `fn`, folding this object's own row counters and elapsed time into whatever it
-	 * resolves with as a `cost` envelope. Counters reset first, so a call this object makes
-	 * to itself while `fn` runs — there are none today — would still total correctly rather
-	 * than double-counting whatever the previous call left behind.
+	 * resolves with as a `cost` envelope.
 	 *
 	 * @param fn - The one RPC call's own work, its result otherwise unchanged.
 	 * @returns Whatever `fn` resolved with, plus the `cost` this call measured.
@@ -739,15 +717,10 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Provisions this tenant: waits on the schema the constructor already started
 	 * migrating, records the tenant's id and issuer in `settings`, and generates a
-	 * signing key for each algorithm that has none yet. A first boot and a catch-up boot
-	 * behind several releases take the same path, because both wait on the one migration
-	 * run the constructor starts; calling this again on an already-provisioned tenant
-	 * generates no redundant key.
+	 * signing key for each algorithm that has none yet.
 	 *
-	 * @param input - The tenant id this object is addressed by, and the issuer it mints
-	 * tokens under.
-	 * @returns The migration ids applied on this boot, the issuer now recorded, and the
-	 * key set now published for this tenant.
+	 * @param input - The tenant id this object is addressed by, and the issuer it mints tokens under.
+	 * @returns The migration ids applied on this boot, the issuer now recorded, and the key set now published for this tenant.
 	 */
 	async provision(input: { tenantId: string; issuer: string }): Promise<ProvisionResult> {
 		let { applied } = await this.#migrated;
@@ -784,14 +757,9 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * This tenant's one `settings` row, read from storage once per instance and
-	 * held from then on — `#issuer`, `#mfaPolicy`, `#failureThreshold` and
-	 * `#effectiveSessionPolicy` all read the same row through this one cache
-	 * rather than issuing their own separate reads of it, and `setMfaPolicy` and
-	 * `setSessionPolicy` — the two methods that write it — invalidate the cache
-	 * in the same call that writes. A tenant that has never provisioned has no
-	 * row at all, which every reader here already treats as its own set of
-	 * defaults.
+	 * This tenant's one `settings` row, read from storage once per instance and held
+	 * from then on — `#issuer`, `#mfaPolicy`, `#failureThreshold` and
+	 * `#effectiveSessionPolicy` all read the same row through this one cache rather
 	 */
 	async #settings(): Promise<TableRow<typeof settings> | null> {
 		if (this.#settingsRow === null) {
@@ -811,8 +779,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * The daily active user cap and whether it is hard, read from this tenant's own
 	 * enforcement record. `hard` is re-derived from the enforced plan being Free rather
-	 * than carried as a second stored flag, so the two can never disagree. A tenant
-	 * whose record has never been written enforces the Free cap.
+	 * than carried as a second stored flag, so the two can never disagree.
 	 */
 	async #dauEnforcement(): Promise<{ cap: number; hard: boolean }> {
 		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
@@ -822,11 +789,9 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * This tenant's own audit retention window, read from its own enforcement
-	 * record rather than fetched again from the Worker side — the record already
-	 * lands here on every plan change, the same mechanism {@link #dauEnforcement}
-	 * reads its own cap from. A tenant whose record has never been written
-	 * enforces the Free tier's window.
+	 * This tenant's own audit retention window, read from its own enforcement record
+	 * rather than fetched again from the Worker side — the record already lands here
+	 * on every plan change, the same mechanism {@link #dauEnforcement} reads its own
 	 */
 	async #auditRetentionDays(): Promise<number> {
 		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
@@ -835,10 +800,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Whether this tenant's own enforcement record currently entitles a named feature,
-	 * read locally from `entitlement_enforcement` — the same record
-	 * {@link #dauEnforcement} and {@link #auditRetentionDays} already read for their own
-	 * caps — rather than a further RPC round trip. A tenant whose record has never been
-	 * written entitles nothing.
+	 * read locally from `entitlement_enforcement` — the same record {@link
+	 * #dauEnforcement} and {@link #auditRetentionDays} already read for their own caps —
 	 */
 	async #isEntitled(feature: string): Promise<boolean> {
 		let record = await this.#db.findOne(entitlementEnforcement, { where: { id: "current" } });
@@ -855,10 +818,9 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * The AES-GCM key TOTP secrets are sealed and opened with, importing it from
-	 * this tenant's `TOTP_SEAL_KEY` secret binding on first use and caching the
-	 * result for the object's lifetime — importing is async and the key is
-	 * non-extractable, so there is nothing to gain from importing it twice.
+	 * The AES-GCM key TOTP secrets are sealed and opened with, importing it from this
+	 * tenant's `TOTP_SEAL_KEY` secret binding on first use and caching the result for
+	 * the object's lifetime — importing is async and the key is non-extractable, so th
 	 */
 	async #sealKey(): Promise<CryptoKey> {
 		this.#sealKeyPromise ??= importKey(this.env.TOTP_SEAL_KEY).then((result) => {
@@ -889,12 +851,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * This tenant's own effective session policy: every field it stored, honored
-	 * exactly once its plan entitles `session_policy`, or the tighter of that
-	 * value and the platform default once it does not — see
-	 * `session-policy.ts`'s own `effectiveSessionPolicy` for the comparison
-	 * itself. Reads the same cached `settings` row `#mfaPolicy` and
-	 * `#failureThreshold` already share, and the same entitlement record
-	 * `#dauEnforcement` and `#auditRetentionDays` already share.
+	 * exactly once its plan entitles `session_policy`, or the tighter of that value
+	 * and the platform default once it does not — see `session-policy.ts`'s own
 	 */
 	async #effectiveSessionPolicy(): Promise<EffectiveSessionPolicy> {
 		let [row, hasEntitlement] = await Promise.all([
@@ -917,10 +875,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Creates a subject with its claimed identifiers, profile and attributes.
 	 *
-	 * @param input - The identifiers to claim, the standard profile claims, and any
-	 * declared attributes to set.
-	 * @returns The new subject's id and each identifier's starting state, or which
-	 * identifier or attribute key the call was refused for.
+	 * @param input - The identifiers to claim, the standard profile claims, and any declared attributes to set.
+	 * @returns The new subject's id and each identifier's starting state, or which identifier or attribute key the call was refused for.
 	 */
 	async createSubject(input: CreateSubjectInput): Promise<WithCost<CreateSubjectResult>> {
 		await this.#migrated;
@@ -945,8 +901,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Writes a subject's profile columns and the attributes its actor may set.
 	 *
 	 * @param input - The subject, its profile and attribute changes, and who is asking.
-	 * @returns Success, or which attribute key the actor may not write, or that no such
-	 * subject exists.
+	 * @returns Success, or which attribute key the actor may not write, or that no such subject exists.
 	 */
 	async updateSubject(input: {
 		subjectId: string;
@@ -963,8 +918,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * an email address.
 	 *
 	 * @param input - The subject, the identifier's kind and value, and who is asking.
-	 * @returns The identifier's starting state — with a ticket to deliver for an email —
-	 * or which rule the call was refused for.
+	 * @returns The identifier's starting state — with a ticket to deliver for an email — or which rule the call was refused for.
 	 */
 	async addIdentifier(input: AddIdentifierInput): Promise<WithCost<AddIdentifierResult>> {
 		await this.#migrated;
@@ -975,8 +929,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Spends a verification ticket, proving the identifier it was minted for.
 	 *
 	 * @param input - The ticket as it was delivered to the address.
-	 * @returns The subject the address belongs to and whether it became primary, or why
-	 * the ticket does not work.
+	 * @returns The subject the address belongs to and whether it became primary, or why the ticket does not work.
 	 */
 	async verifyIdentifier(input: { ticket: string }): Promise<WithCost<VerifyIdentifierResult>> {
 		await this.#migrated;
@@ -1002,8 +955,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Removes an identifier, refusing to take a subject's last verified email address.
 	 *
 	 * @param input - The subject, the identifier's value as entered, and who is asking.
-	 * @returns The address promoted to primary (or none) and who to notify, or why the
-	 * removal was refused.
+	 * @returns The address promoted to primary (or none) and who to notify, or why the removal was refused.
 	 */
 	async removeIdentifier(input: {
 		subjectId: string;
@@ -1133,16 +1085,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * One page of the tenant's directory for export: every subject's identifiers,
-	 * profile, declared attributes, role assignments and credentials metadata,
-	 * paged the same keyset way `listSubjects` already pages a directory listing.
-	 * A password hash rides along only when `includeCredentials` is true —
-	 * deciding when that is allowed belongs to whatever calls this method, not
-	 * to this object.
+	 * profile, declared attributes, role assignments and credentials metadata, paged
+	 * the same keyset way `listSubjects` already pages a directory listing.
 	 *
-	 * @param input - Where to page from, how many subjects to a page, and
-	 * whether to carry each subject's own password hash.
-	 * @returns A page of export rows and the cursors around it, or that the
-	 * given cursor no longer matches this ordering.
+	 * @param input - Where to page from, how many subjects to a page, and whether to carry each subject's own password hash.
+	 * @returns A page of export rows and the cursors around it, or that the given cursor no longer matches this ordering.
 	 */
 	async exportSubjectPage(
 		input: ExportSubjectPageInput,
@@ -1199,17 +1146,12 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Validates and writes a partial update to this tenant's session policy — a field
-	 * left out of `input.policy` leaves that column untouched, the single-field-at-a-time
-	 * precedent {@link setMfaPolicy} already follows. Every given field is bounds-checked
-	 * against the platform's own ranges before anything is written; the idle timeout's own
-	 * ceiling is whichever absolute lifetime this same write leaves in force. The
-	 * entitlement that gates who may call this at all is the caller's own concern, decided
-	 * before this object is ever asked to perform the write.
+	 * Validates and writes a partial update to this tenant's session policy — a field left
+	 * out of `input.policy` leaves that column untouched, the single-field-at-a-time
+	 * precedent {@link setMfaPolicy} already follows.
 	 *
 	 * @param input - The fields to change, and who is changing them.
-	 * @returns The stored policy once written and how many live sessions the new values
-	 * shorten, or which field and bound refused the write.
+	 * @returns The stored policy once written and how many live sessions the new values shorten, or which field and bound refused the write.
 	 */
 	async setSessionPolicy(input: {
 		policy: SessionPolicyInput;
@@ -1312,9 +1254,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Reads this tenant's session policy: the effective values it currently enforces,
 	 * whether each one is the platform default or the tenant's own stored customization,
-	 * and the platform bounds a caller renders alongside them. Open on every tier — a
-	 * tenant asking what its own session lifetimes are is asking about its own security
-	 * posture, not exercising the paid capability to change them.
+	 * and the platform bounds a caller renders alongside them.
 	 *
 	 * @returns The effective policy, its per-field source, and the platform bounds.
 	 */
@@ -1412,8 +1352,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Mints a secret, seals it, and starts a ten-minute enrolment window.
 	 *
 	 * @param input - The subject enrolling a TOTP factor.
-	 * @returns The enrolment id, the `otpauth://` URI and the setup key to show
-	 * once, or that no such subject exists.
+	 * @returns The enrolment id, the `otpauth://` URI and the setup key to show once, or that no such subject exists.
 	 */
 	async beginTotpEnrolment(input: {
 		subjectId: string;
@@ -1430,10 +1369,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Spends an enrolment's sealed secret, verifies the submitted code, and only
 	 * then activates the factor and mints its recovery codes.
 	 *
-	 * @param input - The enrolment id, the code read off the app, and an
-	 * optional label.
-	 * @returns The activated factor and its fresh recovery codes, or why
-	 * activation was refused.
+	 * @param input - The enrolment id, the code read off the app, and an optional label.
+	 * @returns The activated factor and its fresh recovery codes, or why activation was refused.
 	 */
 	async activateTotpFactor(
 		input: ActivateTotpFactorInput,
@@ -1510,10 +1447,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * or a recovery code, extending the signed-in session's `amr` and, when asked,
 	 * remembering this browser for 30 days.
 	 *
-	 * @param input - The session the factor is owed on, the submission, whether
-	 * to remember this browser, and the request's origin.
-	 * @returns The remaining recovery-code count and a trusted-device token when
-	 * one was minted, or why the factor was not completed.
+	 * @param input - The session the factor is owed on, the submission, whether to remember this browser, and the request's origin.
+	 * @returns The remaining recovery-code count and a trusted-device token when one was minted, or why the factor was not completed.
 	 */
 	async completeSecondFactor(
 		input: CompleteSecondFactorInput,
@@ -1549,10 +1484,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * was demanded for — one call answers with the redirect a controller sends
 	 * the browser to next.
 	 *
-	 * @param input - The interaction the proof is scoped to, the session it
-	 * moves, and the code or recovery code submitted.
-	 * @returns The authorization outcome the resumed interaction reaches once
-	 * the step-up is proven, or why the step-up was refused.
+	 * @param input - The interaction the proof is scoped to, the session it moves, and the code or recovery code submitted.
+	 * @returns The authorization outcome the resumed interaction reaches once the step-up is proven, or why the step-up was refused.
 	 */
 	async completeStepUp(input: {
 		interactionId: string;
@@ -1597,8 +1530,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * {@link completeStepUp} does.
 	 *
 	 * @param input - The interaction and session the step-up moves past.
-	 * @returns The authorization outcome the resumed interaction reaches, or
-	 * that the session no longer resolves.
+	 * @returns The authorization outcome the resumed interaction reaches, or that the session no longer resolves.
 	 */
 	async completeStepUpViaEnrolment(input: {
 		interactionId: string;
@@ -1636,8 +1568,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Reads the tenant's password policy.
 	 *
-	 * @returns The minimum length, denied terms, expiry interval and history depth
-	 * currently in force.
+	 * @returns The minimum length, denied terms, expiry interval and history depth currently in force.
 	 */
 	async describePasswordPolicy(): Promise<WithCost<PasswordPolicy>> {
 		await this.#migrated;
@@ -1783,10 +1714,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Resolves an address, spends its two budgets, and mints a magic-link token and
 	 * code bound to the asking browser.
 	 *
-	 * @param input - The address as typed, the locale to remember for delivery, the
-	 * bound browser's nonce hash, and the clock to measure against.
-	 * @returns The token, code and expiry to deliver, that no account matches, or
-	 * how many seconds until the tighter of the two budgets next has room.
+	 * @param input - The address as typed, the locale to remember for delivery, the bound browser's nonce hash, and the clock to measure against.
+	 * @returns The token, code and expiry to deliver, that no account matches, or how many seconds until the tighter of the two budgets next has room.
 	 */
 	async beginMagicLinkSignIn(
 		input: BeginMagicLinkSignInInput,
@@ -1804,12 +1733,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * resolves to, creating it first when the attempt was minted for an address
 	 * with none yet.
 	 *
-	 * @param input - The credential presented, the bound browser's raw nonce, and
-	 * the clock to measure against.
-	 * @returns The subject and the session opened for it, that the credential never
-	 * resolved to a live attempt, that it resolved to one bound to a different
-	 * browser, how many attempts a wrong code leaves, or that the daily cap refused
-	 * this subject a session.
+	 * @param input - The credential presented, the bound browser's raw nonce, and the clock to measure against.
+	 * @returns The subject and the session opened for it, that the credential never resolved to a live attempt, that it resolved to one bound to a different browser, how many attempts a wrong code leaves, or that the daily cap refused this subject a session.
 	 */
 	async completeMagicLinkSignIn(
 		input: CompleteMagicLinkSignInInput,
@@ -1847,10 +1772,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Starts a passkey registration ceremony for an existing subject.
 	 *
-	 * @param input - The subject enrolling a credential, and the relying party id and
-	 * origins the Worker resolved for this tenant.
-	 * @returns The ceremony id to round-trip and the options to send to the browser, or
-	 * that no such subject exists.
+	 * @param input - The subject enrolling a credential, and the relying party id and origins the Worker resolved for this tenant.
+	 * @returns The ceremony id to round-trip and the options to send to the browser, or that no such subject exists.
 	 */
 	async beginPasskeyRegistration(
 		input: BeginPasskeyRegistrationInput,
@@ -1862,9 +1785,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Spends a registration ceremony's challenge and stores the credential it verifies.
 	 *
-	 * @param input - The ceremony id, the browser's response, an optional label, the
-	 * enrolling request's `User-Agent`, and the relying party id and origins the Worker
-	 * resolved.
+	 * @param input - The ceremony id, the browser's response, an optional label, the enrolling request's `User-Agent`, and the relying party id and origins the Worker resolved.
 	 * @returns The stored credential's public fields, or which check refused it.
 	 */
 	async enrolPasskey(input: EnrolPasskeyInput): Promise<WithCost<EnrolPasskeyResult>> {
@@ -1875,8 +1796,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Starts a usernameless passkey authentication ceremony.
 	 *
-	 * @param input - The relying party id and origins the Worker resolved for this
-	 * tenant.
+	 * @param input - The relying party id and origins the Worker resolved for this tenant.
 	 * @returns The ceremony id to round-trip and the options to send to the browser.
 	 */
 	async beginPasskeyAuthentication(
@@ -1890,10 +1810,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Verifies a passkey assertion and reports the credential it proved, without
 	 * opening a session.
 	 *
-	 * @param input - The ceremony id, the browser's response, and the relying party id
-	 * and origins the Worker resolved.
-	 * @returns The subject and credential the assertion proved, or which check refused
-	 * it.
+	 * @param input - The ceremony id, the browser's response, and the relying party id and origins the Worker resolved.
+	 * @returns The subject and credential the assertion proved, or which check refused it.
 	 */
 	async signInWithPasskey(
 		input: SignInWithPasskeyInput,
@@ -1947,8 +1865,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * remaining credential.
 	 *
 	 * @param input - The subject and the credential to revoke.
-	 * @returns Success, or that no such credential exists, or that it is the subject's
-	 * last remaining credential.
+	 * @returns Success, or that no such credential exists, or that it is the subject's last remaining credential.
 	 */
 	async revokePasskey(input: {
 		subjectId: string;
@@ -1969,19 +1886,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * The daily retention sweep: releases unverified identifiers whose ticket is gone or
 	 * expired and whose row has sat unproven for a week, clears expired passkey
-	 * ceremonies, clears expired TOTP enrolments, stale replay claims and expired
-	 * trusted devices, deletes sessions past their absolute expiry, deletes client secrets
-	 * past their rotation window, deletes pending interactions past their ten-minute
-	 * window, deletes authorization codes left unredeemed past their sixty seconds or
-	 * redeemed long enough ago that a replay is no longer worth recognizing, deletes
-	 * refresh tokens whose family is past its ninety-day ceiling, deletes connection
-	 * sign-in transactions past their ten-minute window and handoff tickets past
-	 * their thirty seconds, deletes organization invitations a week past their expiry
-	 * that were never accepted or revoked, deletes API keys past their expiry, deletes
-	 * idempotency records past their replay window, then arms tomorrow's run.
-	 *
-	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
-	 * retried by the platform, which would repeat a sweep that already ran.
+	 * ceremonies, clears expired TOTP enrolments, stale replay claims and expired trusted
 	 */
 	override async alarm(): Promise<void> {
 		try {
@@ -2074,10 +1979,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Resolves a bearer token to the session it authenticates.
 	 *
-	 * @param input - The token as the cookie carried it, and the resolving request's
-	 * origin.
-	 * @returns The session's subject, methods and clocks when it is live, or which
-	 * refusal applies.
+	 * @param input - The token as the cookie carried it, and the resolving request's origin.
+	 * @returns The session's subject, methods and clocks when it is live, or which refusal applies.
 	 */
 	async resolveSession(input: ResolveSessionInput): Promise<WithCost<ResolveSessionResult>> {
 		await this.#migrated;
@@ -2093,9 +1996,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * credential flows already proved on its own terms — an accepted
 	 * invitation's own token standing in for a password, passkey or magic link.
 	 *
-	 * @param input - The subject to open a session for, the methods that proved
-	 * it, whether the browser should keep it past its own lifetime, and the
-	 * request's origin.
+	 * @param input - The subject to open a session for, the methods that proved it, whether the browser should keep it past its own lifetime, and the request's origin.
 	 * @returns The opened session, ready to set as the response's cookie.
 	 */
 	async openSessionForSubject(
@@ -2108,8 +2009,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Lists a page of a subject's live sessions, newest first.
 	 *
-	 * @param input - The subject whose sessions to list, the caller's own session id,
-	 * and where to page from.
+	 * @param input - The subject whose sessions to list, the caller's own session id, and where to page from.
 	 * @returns A page of session summaries, or that the given cursor no longer matches.
 	 */
 	async listSubjectSessions(
@@ -2153,8 +2053,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * confidential.
 	 *
 	 * @param input - The whole record to register.
-	 * @returns The new record and the one-time plaintext secret, or which rule refused
-	 * the record.
+	 * @returns The new record and the one-time plaintext secret, or which rule refused the record.
 	 */
 	async registerClient(input: RegisterClientInput): Promise<WithCost<RegisterClientResult>> {
 		await this.#migrated;
@@ -2201,10 +2100,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Mints a successor secret and opens the overlap on the incumbent in one call.
 	 *
-	 * @param input - The client to rotate, and how many days the incumbent's window
-	 * lasts.
-	 * @returns The new secret and when the incumbent now expires, or why rotation was
-	 * refused.
+	 * @param input - The client to rotate, and how many days the incumbent's window lasts.
+	 * @returns The new secret and when the incumbent now expires, or why rotation was refused.
 	 */
 	async rotateClientSecret(
 		input: RotateClientSecretInput,
@@ -2241,8 +2138,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Toggles whether minting adds a `permissions` claim to this client's tokens.
 	 *
-	 * @param input - The client whose switch is being set, its new value, and who
-	 * is making the call.
+	 * @param input - The client whose switch is being set, its new value, and who is making the call.
 	 * @returns The updated record, or that no such client exists.
 	 */
 	async setClientPermissionClaim(
@@ -2292,22 +2188,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Validates and writes a social identity provider connection's whole
-	 * configuration: resolves a catalog entry or a from-scratch shape, validates
-	 * every mapping's target, seals the client secret when one is given, and
-	 * claims the slug.
+	 * configuration: resolves a catalog entry or a from-scratch shape, validates every
+	 * mapping's target, seals the client secret when one is given, and claims the
 	 *
-	 * `input.callbackOrigin` names the tenant's own platform subdomain, not
-	 * whatever host currently serves as `iss` — a custom domain attached later
-	 * changes the issuer this object records in `settings`, while the callback a
-	 * provider was told about must stay put for the tenant's life. The caller
-	 * (which already knows the control plane's own slug and platform domain)
-	 * supplies it; this object has no way to tell the two hosts apart once an
-	 * issuer has moved, since `settings` only ever remembers the current one.
-	 *
-	 * @param input - The whole connection to save, including the platform
-	 * subdomain origin the callback URL is built against.
-	 * @returns The connection's public record and the callback URL to register
-	 * with the provider, or which rule refused the save.
+	 * @param input - The whole connection to save, including the platform subdomain origin the callback URL is built against.
+	 * @returns The connection's public record and the callback URL to register with the provider, or which rule refused the save.
 	 */
 	async saveConnection(input: SaveConnectionInput): Promise<WithCost<SaveConnectionResult>> {
 		await this.#migrated;
@@ -2336,8 +2221,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Removes a connection and its mappings.
 	 *
-	 * @param input - The connection's slug, and whether a referencing identity
-	 * may be unlinked rather than block the removal.
+	 * @param input - The connection's slug, and whether a referencing identity may be unlinked rather than block the removal.
 	 * @returns Success, or that no such connection exists.
 	 */
 	async removeConnection(input: {
@@ -2352,8 +2236,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Mints a SCIM connection's bearer token, stores only its digest, and writes
 	 * its starting record.
 	 *
-	 * @param input - The connection's name, its delete policy and whether it
-	 * syncs groups, and who is creating it.
+	 * @param input - The connection's name, its delete policy and whether it syncs groups, and who is creating it.
 	 * @returns The connection's public record and the token to deliver once.
 	 */
 	async createScimConnection(
@@ -2368,8 +2251,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * outgoing one.
 	 *
 	 * @param input - The connection to rotate.
-	 * @returns The new token and when the outgoing one now expires, or that no
-	 * such connection exists.
+	 * @returns The new token and when the outgoing one now expires, or that no such connection exists.
 	 */
 	async rotateScimToken(input: RotateScimTokenInput): Promise<WithCost<RotateScimTokenResult>> {
 		await this.#migrated;
@@ -2405,10 +2287,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Provisions a user from a directory connection: adopts a subject already
 	 * carrying the resource's folded email, or mints a fresh one.
 	 *
-	 * @param input - The bearer token, the SCIM user resource, and the clock to
-	 * write with.
-	 * @returns The subject's representation and whether it was created, or
-	 * which rule refused the call.
+	 * @param input - The bearer token, the SCIM user resource, and the clock to write with.
+	 * @returns The subject's representation and whether it was created, or which rule refused the call.
 	 */
 	async scimProvisionUser(
 		input: ScimProvisionUserInput,
@@ -2424,10 +2304,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * representation flagged unchanged and writing nothing when the resource's
 	 * mapped digest already matches.
 	 *
-	 * @param input - The bearer token, the subject id, the replacement
-	 * resource, and the clock to write with.
-	 * @returns The current representation and whether anything changed, or
-	 * which rule refused the call.
+	 * @param input - The bearer token, the subject id, the replacement resource, and the clock to write with.
+	 * @returns The current representation and whether anything changed, or which rule refused the call.
 	 */
 	async scimReplaceUser(
 		input: ScimReplaceUserInput,
@@ -2443,8 +2321,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * the result the way a replace does. `active: false` blocks the subject and
 	 * revokes every session in the same call, and alone needs no `scim` feature.
 	 *
-	 * @param input - The bearer token, the subject id, the parsed operations,
-	 * and the clock to write with.
+	 * @param input - The bearer token, the subject id, the parsed operations, and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
 	async scimPatchUser(
@@ -2457,15 +2334,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Deletes a user per the connection's own policy: blocks and revokes its
-	 * sessions, or retires the subject outright, whatever the billing state. A `deleted` outcome also
-	 * clears the subject's passwords, passkeys, consent grants and second
-	 * factor, the same cascade {@link deleteSubject} runs for its own caller.
+	 * Deletes a user per the connection's own policy: blocks and revokes its sessions, or retires the
+	 * subject outright, whatever the billing state.
 	 *
-	 * @param input - The bearer token, the subject id, and the clock to write
-	 * with.
-	 * @returns Which effect ran and the subject it ran against, or which rule
-	 * refused the call.
+	 * @param input - The bearer token, the subject id, and the clock to write with.
+	 * @returns Which effect ran and the subject it ran against, or which rule refused the call.
 	 */
 	async scimDeleteUser(input: ScimDeleteUserInput): Promise<WithCost<ScimDeleteUserResult>> {
 		await this.#migrated;
@@ -2521,8 +2394,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Provisions a group, validating every member names an existing subject
 	 * before writing anything.
 	 *
-	 * @param input - The bearer token, the SCIM group resource, and the clock
-	 * to write with.
+	 * @param input - The bearer token, the SCIM group resource, and the clock to write with.
 	 * @returns The group's representation, or which rule refused the call.
 	 */
 	async scimProvisionGroup(
@@ -2537,8 +2409,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Replaces a group's display name and whole membership set.
 	 *
-	 * @param input - The bearer token, the group id, the replacement resource,
-	 * and the clock to write with.
+	 * @param input - The bearer token, the group id, the replacement resource, and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
 	async scimReplaceGroup(
@@ -2554,8 +2425,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Applies group PATCH operations: a plain `displayName` change, or a
 	 * membership `add`/`remove`.
 	 *
-	 * @param input - The bearer token, the group id, the operations to apply,
-	 * and the clock to write with.
+	 * @param input - The bearer token, the group id, the operations to apply, and the clock to write with.
 	 * @returns The updated representation, or which rule refused the call.
 	 */
 	async scimPatchGroup(
@@ -2569,8 +2439,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Deletes a group, its membership and its mappings, leaving the subjects
 	 * that belonged to it exactly as they are.
 	 *
-	 * @param input - The bearer token, the group id, and the clock to write
-	 * with.
+	 * @param input - The bearer token, the group id, and the clock to write with.
 	 * @returns Success, or which rule refused the call.
 	 */
 	async scimDeleteGroup(
@@ -2615,8 +2484,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Records what a synced group stands for — a role, or an organization when
 	 * that add-on is present — as plain data naming the target's kind and id.
 	 *
-	 * @param input - The connection and group being mapped, and the target it
-	 * now stands for.
+	 * @param input - The connection and group being mapped, and the target it now stands for.
 	 * @returns Success, or that no such group exists for this connection.
 	 */
 	async mapScimGroup(input: MapScimGroupInput): Promise<WithCost<MapScimGroupResult>> {
@@ -2628,8 +2496,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Creates an organization and writes its creator's `owner` membership in
 	 * the same call.
 	 *
-	 * @param input - The organization's name and slug, the subject creating
-	 * it, and who is making the call.
+	 * @param input - The organization's name and slug, the subject creating it, and who is making the call.
 	 * @returns The new organization's record, or which rule refused the call.
 	 */
 	async createOrganization(
@@ -2643,10 +2510,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Updates an organization's name, logo and metadata, leaving any field
 	 * left out exactly as it stood.
 	 *
-	 * @param input - The organization to update, the fields to change, and
-	 * who is making the call.
-	 * @returns The organization's record once updated, or that no such
-	 * organization exists.
+	 * @param input - The organization to update, the fields to change, and who is making the call.
+	 * @returns The organization's record once updated, or that no such organization exists.
 	 */
 	async updateOrganization(
 		input: UpdateOrganizationInput,
@@ -2673,10 +2538,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Invites an address to join an organization, minting a bearer token
 	 * stored only as its digest.
 	 *
-	 * @param input - The organization, the address and role being invited,
-	 * and who is sending it.
-	 * @returns The token to deliver once, with the address and locale to
-	 * deliver it to, or which rule refused the call.
+	 * @param input - The organization, the address and role being invited, and who is sending it.
+	 * @returns The token to deliver once, with the address and locale to deliver it to, or which rule refused the call.
 	 */
 	async inviteToOrganization(
 		input: InviteToOrganizationInput,
@@ -2703,10 +2566,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * identifier matches the invited address; anyone else is refused without
 	 * marking the invitation resolved.
 	 *
-	 * @param input - The bearer token, the subject accepting it, and the
-	 * clock to write with.
-	 * @returns The organization joined and the role granted, or which rule
-	 * refused the call.
+	 * @param input - The bearer token, the subject accepting it, and the clock to write with.
+	 * @returns The organization joined and the role granted, or which rule refused the call.
 	 */
 	async acceptOrganizationInvitation(
 		input: AcceptOrganizationInvitationInput,
@@ -2718,8 +2579,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Changes a membership's role to whatever string the caller gives.
 	 *
-	 * @param input - The membership to change, its new role, and who is
-	 * making the call.
+	 * @param input - The membership to change, its new role, and who is making the call.
 	 * @returns The role now stored, or which rule refused the call.
 	 */
 	async setMembershipRole(
@@ -2745,8 +2605,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Sets the organization a session is acting for, once the subject's own
 	 * membership and the session's own ownership both check out.
 	 *
-	 * @param input - The session to set it on, the subject it must belong
-	 * to, and the organization to activate.
+	 * @param input - The session to set it on, the subject it must belong to, and the organization to activate.
 	 * @returns The organization now active, or which rule refused the call.
 	 */
 	async setActiveOrganization(
@@ -2759,10 +2618,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Claims a domain for an organization, minting a TXT record to publish.
 	 *
-	 * @param input - The organization claiming the domain, the domain
-	 * itself, and whether it auto-joins or only suggests.
-	 * @returns The TXT record name and value to publish, or which rule
-	 * refused the call.
+	 * @param input - The organization claiming the domain, the domain itself, and whether it auto-joins or only suggests.
+	 * @returns The TXT record name and value to publish, or which rule refused the call.
 	 */
 	async addOrganizationDomain(
 		input: AddOrganizationDomainInput,
@@ -2776,8 +2633,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * already ran.
 	 *
 	 * @param input - The organization and domain now proven.
-	 * @returns When the domain was marked verified, or that no such claimed
-	 * domain exists.
+	 * @returns When the domain was marked verified, or that no such claimed domain exists.
 	 */
 	async confirmOrganizationDomain(
 		input: ConfirmOrganizationDomainInput,
@@ -2791,8 +2647,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Worker-side DNS lookup to check a real answer against.
 	 *
 	 * @param input - The organization and domain to describe.
-	 * @returns The TXT record name and value this domain expects, and
-	 * whether it is already verified, or that no such claimed domain exists.
+	 * @returns The TXT record name and value this domain expects, and whether it is already verified, or that no such claimed domain exists.
 	 */
 	async describeOrganizationDomain(
 		input: DescribeOrganizationDomainInput,
@@ -2806,8 +2661,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * automatically, and answers the organizations it only suggests.
 	 *
 	 * @param input - The subject to resolve, and the clock to write with.
-	 * @returns Every membership this call wrote, and every organization it
-	 * suggests instead.
+	 * @returns Every membership this call wrote, and every organization it suggests instead.
 	 */
 	async applyDomainMembership(
 		input: ApplyDomainMembershipInput,
@@ -2820,8 +2674,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Every organization a subject belongs to, for a switcher UI.
 	 *
 	 * @param input - The subject to resolve.
-	 * @returns Every membership the subject holds, most recently joined
-	 * first.
+	 * @returns Every membership the subject holds, most recently joined first.
 	 */
 	async describeSubjectOrganizations(
 		input: DescribeSubjectOrganizationsInput,
@@ -2834,8 +2687,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * A page of an organization's members, most recently joined first.
 	 *
 	 * @param input - The organization to list, and where to page from.
-	 * @returns A page of member summaries and the cursors around it, or that
-	 * the given cursor no longer matches this ordering.
+	 * @returns A page of member summaries and the cursors around it, or that the given cursor no longer matches this ordering.
 	 */
 	async readOrganizationMemberPage(
 		input: ReadOrganizationMemberPageInput,
@@ -2849,8 +2701,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * one of the three the platform reserves or with a role this scope
 	 * already has.
 	 *
-	 * @param input - The scope and key the role is defined at, its name and
-	 * description, and who is defining it.
+	 * @param input - The scope and key the role is defined at, its name and description, and who is defining it.
 	 * @returns The new role's record, or which rule refused the call.
 	 */
 	async defineRole(input: DefineRoleInput): Promise<WithCost<DefineRoleResult>> {
@@ -2868,8 +2719,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Updates a custom role's name and description, refusing a call naming one
 	 * of the three system roles outright.
 	 *
-	 * @param input - The role to update, the fields to change, and who is
-	 * making the call.
+	 * @param input - The role to update, the fields to change, and who is making the call.
 	 * @returns The role's record once updated, or which rule refused the call.
 	 */
 	async updateRole(input: UpdateRoleInput): Promise<WithCost<UpdateRoleResult>> {
@@ -2887,10 +2737,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Deletes a custom role, reassigning every current holder to another role
 	 * in the same call.
 	 *
-	 * @param input - The role to delete, the role its holders move to, and who
-	 * is making the call.
-	 * @returns How many holders were reassigned, or which rule refused the
-	 * call.
+	 * @param input - The role to delete, the role its holders move to, and who is making the call.
+	 * @returns How many holders were reassigned, or which rule refused the call.
 	 */
 	async deleteRole(input: DeleteRoleInput): Promise<WithCost<DeleteRoleResult>> {
 		await this.#migrated;
@@ -2907,8 +2755,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Defines a tenant's own permission, refusing a key beginning `auth:` —
 	 * reserved for this platform's own management-API permissions.
 	 *
-	 * @param input - The permission's key, name and description, and who is
-	 * defining it.
+	 * @param input - The permission's key, name and description, and who is defining it.
 	 * @returns The new permission's record, or which rule refused the call.
 	 */
 	async definePermission(input: DefinePermissionInput): Promise<WithCost<DefinePermissionResult>> {
@@ -2945,8 +2792,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * whose serialized form would exceed what a token's `permissions` claim
 	 * may carry.
 	 *
-	 * @param input - The role to set, its whole new set of permission keys,
-	 * and who is making the call.
+	 * @param input - The role to set, its whole new set of permission keys, and who is making the call.
 	 * @returns The set now granted, or which rule refused the call.
 	 */
 	async setRolePermissions(
@@ -2967,8 +2813,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * there. An organization-scope assignment writes through to
 	 * `organization_members.role` rather than a `role_assignments` row.
 	 *
-	 * @param input - The subject, the scope the role is held at, the role's
-	 * key, and who is making the call.
+	 * @param input - The subject, the scope the role is held at, the role's key, and who is making the call.
 	 * @returns The role now held, or which rule refused the call.
 	 */
 	async assignRole(input: AssignRoleInput): Promise<WithCost<AssignRoleResult>> {
@@ -2981,8 +2826,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * one screen or one `/userinfo` response to render.
 	 *
 	 * @param input - The subject and scope to describe.
-	 * @returns The held role (empty when none) and the permission keys it
-	 * resolves to.
+	 * @returns The held role (empty when none) and the permission keys it resolves to.
 	 */
 	async describeSubjectAccess(
 		input: DescribeSubjectAccessInput,
@@ -3019,8 +2863,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * The single-decision check: does the role a subject holds at a scope
 	 * grant a given permission.
 	 *
-	 * @param input - The subject, the scope, and the permission being asked
-	 * for.
+	 * @param input - The subject, the scope, and the permission being asked for.
 	 * @returns Whether the subject's held role grants it.
 	 */
 	async authorizeSubject(input: AuthorizeSubjectInput): Promise<WithCost<AuthorizeSubjectResult>> {
@@ -3052,10 +2895,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * than creating an authorization: every requested scope must already be one
 	 * the issuing subject holds.
 	 *
-	 * @param input - The subject the key acts as, its name, scopes and optional
-	 * expiry, and who is making the call.
-	 * @returns The new record and the one-time key value, or which rule refused
-	 * the call.
+	 * @param input - The subject the key acts as, its name, scopes and optional expiry, and who is making the call.
+	 * @returns The new record and the one-time key value, or which rule refused the call.
 	 */
 	async createApiKey(input: CreateApiKeyInput): Promise<WithCost<CreateApiKeyResult>> {
 		await this.#migrated;
@@ -3073,8 +2914,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * resolves to without opening a session. Counts the resolved subject toward
 	 * today's daily active users, the same meter a sign-in counts against.
 	 *
-	 * @param input - The presented value, and the clock to check its expiry
-	 * against.
+	 * @param input - The presented value, and the clock to check its expiry against.
 	 * @returns The resolved subject and scopes, or which check refused it.
 	 */
 	async authenticateApiKey(
@@ -3097,10 +2937,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * call, updating this instance's own verification cache so the incumbent's
 	 * new expiry is what a warm object checks next.
 	 *
-	 * @param input - The key to rotate, how many days the incumbent's window
-	 * lasts, and who is making the call.
-	 * @returns The new record and its one-time value, plus the incumbent's
-	 * updated expiry, or which rule refused the call.
+	 * @param input - The key to rotate, how many days the incumbent's window lasts, and who is making the call.
+	 * @returns The new record and its one-time value, plus the incumbent's updated expiry, or which rule refused the call.
 	 */
 	async rotateApiKey(input: RotateApiKeyInput): Promise<WithCost<RotateApiKeyResult>> {
 		await this.#migrated;
@@ -3141,8 +2979,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Lists a page of a subject's own API keys, newest first.
 	 *
 	 * @param input - The subject whose keys to list, and where to page from.
-	 * @returns A page of key summaries, or that the given cursor no longer
-	 * matches.
+	 * @returns A page of key summaries, or that the given cursor no longer matches.
 	 */
 	async listApiKeys(input: ListApiKeysInput): Promise<WithCost<ListApiKeysResult>> {
 		await this.#migrated;
@@ -3153,8 +2990,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Deletes API keys past their expiry, in one bounded batch, for the
 	 * scheduled handler driving retention.
 	 *
-	 * @param input - The clock to sweep against, and how many rows one call may
-	 * remove.
+	 * @param input - The clock to sweep against, and how many rows one call may remove.
 	 * @returns How many rows this call deleted, and whether the batch was full.
 	 */
 	async sweepExpiredApiKeys(
@@ -3215,10 +3051,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Validates and writes a new webhook endpoint record, minting its signing
 	 * secret and returning it once.
 	 *
-	 * @param input - The endpoint's URL, description and subscribed event
-	 * types, and who is registering it.
-	 * @returns The new record and the one-time plaintext secret, or which rule
-	 * refused it.
+	 * @param input - The endpoint's URL, description and subscribed event types, and who is registering it.
+	 * @returns The new record and the one-time plaintext secret, or which rule refused it.
 	 */
 	async registerWebhookEndpoint(
 		input: RegisterWebhookEndpointInput,
@@ -3259,8 +3093,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * `sealed_previous` for the rotation's overlap window.
 	 *
 	 * @param input - The endpoint to rotate, and who is making the call.
-	 * @returns The updated record and the new one-time secret, or that no such
-	 * endpoint exists.
+	 * @returns The updated record and the new one-time secret, or that no such endpoint exists.
 	 */
 	async rotateEndpointSecret(
 		input: RotateEndpointSecretInput,
@@ -3303,8 +3136,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Lists a page of this tenant's own webhook endpoints, newest first.
 	 *
 	 * @param input - Where to page from.
-	 * @returns A page of endpoint records, or that the given cursor no longer
-	 * matches.
+	 * @returns A page of endpoint records, or that the given cursor no longer matches.
 	 */
 	async listWebhookEndpoints(
 		input: ListWebhookEndpointsInput = {},
@@ -3314,15 +3146,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Leases a pending delivery for one attempt and signs it under every
-	 * currently live secret its endpoint holds. Never gated: a tenant
-	 * delivering to an endpoint it already registered is protocol surface, not
-	 * something a lapsed subscription blocks.
+	 * Leases a pending delivery for one attempt and signs it under every currently
+	 * live secret its endpoint holds.
 	 *
-	 * @param input - The delivery to prepare, and the clock to measure its
-	 * secrets' rotation windows against.
-	 * @returns The request to send and which attempt this now is, or that the
-	 * delivery does not exist or is no longer pending.
+	 * @param input - The delivery to prepare, and the clock to measure its secrets' rotation windows against.
+	 * @returns The request to send and which attempt this now is, or that the delivery does not exist or is no longer pending.
 	 */
 	async prepareDelivery(input: PrepareDeliveryInput): Promise<WithCost<PrepareDeliveryResult>> {
 		await this.#migrated;
@@ -3336,10 +3164,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Records one delivery attempt and decides what happens next.
 	 *
-	 * @param input - The delivery this attempt belongs to, how it went, and
-	 * the clock to measure the next attempt against.
-	 * @returns The row's status after recording the attempt, or that no such
-	 * delivery exists.
+	 * @param input - The delivery this attempt belongs to, how it went, and the clock to measure the next attempt against.
+	 * @returns The row's status after recording the attempt, or that no such delivery exists.
 	 */
 	async settleDelivery(input: SettleDeliveryInput): Promise<WithCost<SettleDeliveryResult>> {
 		await this.#migrated;
@@ -3350,8 +3176,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * The pending deliveries already past their own `next_attempt_at`, for the
 	 * scheduled sweep to enqueue.
 	 *
-	 * @param input - The clock to compare `next_attempt_at` against, and how
-	 * many rows one call may return.
+	 * @param input - The clock to compare `next_attempt_at` against, and how many rows one call may return.
 	 * @returns The due deliveries, and whether the batch was full.
 	 */
 	async claimDueDeliveries(
@@ -3366,8 +3191,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * event type and endpoint.
 	 *
 	 * @param input - The delivery to replay, and who asked for it.
-	 * @returns The new pending row, or that the original delivery or its
-	 * endpoint no longer exists.
+	 * @returns The new pending row, or that the original delivery or its endpoint no longer exists.
 	 */
 	async replayDelivery(input: ReplayDeliveryInput): Promise<WithCost<ReplayDeliveryResult>> {
 		await this.#migrated;
@@ -3377,10 +3201,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * A page of one endpoint's own delivery log, most recently created first.
 	 *
-	 * @param input - The endpoint whose deliveries to read, and where to page
-	 * from.
-	 * @returns A page of delivery summaries, or that the given cursor no
-	 * longer matches.
+	 * @param input - The endpoint whose deliveries to read, and where to page from.
+	 * @returns A page of delivery summaries, or that the given cursor no longer matches.
 	 */
 	async readDeliveryPage(input: ReadDeliveryPageInput): Promise<WithCost<ReadDeliveryPageResult>> {
 		await this.#migrated;
@@ -3392,10 +3214,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * own retention window, at most `limit` per call, for the scheduled sweep
 	 * to call repeatedly.
 	 *
-	 * @param input - How many rows one call may remove, and the clock to
-	 * measure the window against.
-	 * @returns How many rows this call deleted, and whether the batch was
-	 * full.
+	 * @param input - How many rows one call may remove, and the clock to measure the window against.
+	 * @returns How many rows this call deleted, and whether the batch was full.
 	 */
 	async sweepWebhookDeliveries(
 		input: { now?: number; limit?: number } = {},
@@ -3417,10 +3237,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * service provider's key pair and certificate the first time so the
 	 * identifiers an identity provider is configured with are fixed from then on.
 	 *
-	 * @param input - The connection to save; the platform-subdomain origin its
-	 * identifiers are built against is filled in here rather than asked of a caller.
-	 * @returns What an identity provider is configured from, or which rule refused
-	 * the save.
+	 * @param input - The connection to save; the platform-subdomain origin its identifiers are built against is filled in here rather than asked of a caller.
+	 * @returns What an identity provider is configured from, or which rule refused the save.
 	 */
 	async saveEnterpriseConnection(
 		input: Omit<SaveEnterpriseConnectionInput, "callbackOrigin">,
@@ -3470,8 +3288,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * The metadata document an identity provider is handed for one connection.
 	 *
 	 * @param input - The connection's slug.
-	 * @returns The document and the identifiers it describes, or that no such
-	 * SAML connection exists.
+	 * @returns The document and the identifiers it describes, or that no such SAML connection exists.
 	 */
 	async describeSamlServiceProvider(input: {
 		slug: string;
@@ -3492,8 +3309,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * a sign-in page taking an address rather than showing a list of providers.
 	 *
 	 * @param input - The domain a sign-in address named.
-	 * @returns The one enabled connection scoped to the organization that
-	 * verified-claims this domain, or that none does.
+	 * @returns The one enabled connection scoped to the organization that verified-claims this domain, or that none does.
 	 */
 	async resolveOrganizationConnection(input: {
 		domain: string;
@@ -3506,8 +3322,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Starts a sign-in against an enterprise connection, answering the redirect a
 	 * controller sends the browser to next.
 	 *
-	 * @param input - The connection, and the pending authorization request and
-	 * hostname the sign-in answers back to.
+	 * @param input - The connection, and the pending authorization request and hostname the sign-in answers back to.
 	 * @returns The provider's sign-on URL, or which rule refused the start.
 	 */
 	async beginSamlSignIn(
@@ -3526,14 +3341,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Verifies a posted SAML response and opens a session from it, counting the
-	 * sign-in against this tenant's daily active user meter the same way every
-	 * other credential path does. The whole check runs here, where the
-	 * certificates, the private key and the replay table already are.
+	 * sign-in against this tenant's daily active user meter the same way every other
+	 * credential path does.
 	 *
-	 * @param input - The connection, the decoded response the browser posted,
-	 * the relay state naming the transaction, and the request's `User-Agent`.
-	 * @returns The subject signed in and the ticket that hands the session back,
-	 * or why the assertion was refused.
+	 * @param input - The connection, the decoded response the browser posted, the relay state naming the transaction, and the request's `User-Agent`.
+	 * @returns The subject signed in and the ticket that hands the session back, or why the assertion was refused.
 	 */
 	async signInWithSamlResponse(
 		input: Omit<SignInWithSamlResponseInput, "callbackOrigin">,
@@ -3575,10 +3387,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Starts a sign-in against a connection's provider, answering the redirect a
 	 * controller sends the browser to next.
 	 *
-	 * @param input - The connection, the pending authorization request and
-	 * hostname the callback answers back to, and any extra scopes or `prompt`.
-	 * @returns The provider's authorization URL, or that no such enabled
-	 * connection exists, or that its kind has no sign-in flow yet.
+	 * @param input - The connection, the pending authorization request and hostname the callback answers back to, and any extra scopes or `prompt`.
+	 * @returns The provider's authorization URL, or that no such enabled connection exists, or that its kind has no sign-in flow yet.
 	 */
 	async beginConnectionSignIn(
 		input: BeginConnectionSignInInput,
@@ -3596,11 +3406,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * resolves to, counting the sign-in against this tenant's daily active user
 	 * meter the same way every other credential path does.
 	 *
-	 * @param input - The connection, the callback URL exactly as the browser
-	 * reached it, and the request's `User-Agent`.
-	 * @returns The resolved subject, the hostname to hand the browser back to, and
-	 * the handoff ticket to redirect there with, or which check refused the
-	 * callback.
+	 * @param input - The connection, the callback URL exactly as the browser reached it, and the request's `User-Agent`.
+	 * @returns The resolved subject, the hostname to hand the browser back to, and the handoff ticket to redirect there with, or which check refused the callback.
 	 */
 	async completeConnectionSignIn(
 		input: CompleteConnectionSignInInput,
@@ -3626,15 +3433,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Spends a completed sign-in's handoff ticket and resumes the pending
-	 * authorization request it was answering — one call answers with the redirect
-	 * a controller sends the browser to next, the same composition
-	 * {@link completeStepUp} runs for its own proof.
+	 * authorization request it was answering — one call answers with the redirect a
+	 * controller sends the browser to next, the same composition {@link
 	 *
-	 * @param input - The ticket as the redirect carried it, the hostname the
-	 * resume request landed on, and the request's `User-Agent`.
-	 * @returns The session token to set as the browser's cookie alongside the
-	 * authorization outcome the resumed interaction reaches, or that the ticket is
-	 * unknown, already spent, expired, or named a different hostname.
+	 * @param input - The ticket as the redirect carried it, the hostname the resume request landed on, and the request's `User-Agent`.
+	 * @returns The session token to set as the browser's cookie alongside the authorization outcome the resumed interaction reaches, or that the ticket is unknown, already spent, expired, or named a different hostname.
 	 */
 	async resumeConnectionSignIn(
 		input: ResumeConnectionSignInInput,
@@ -3668,8 +3471,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * live session carrying that connection kind's method family in its `amr`.
 	 *
 	 * @param input - The subject, the connection's slug, and who is asking.
-	 * @returns Success, or that no such identity exists, or that it is the
-	 * subject's last remaining credential.
+	 * @returns Success, or that no such identity exists, or that it is the subject's last remaining credential.
 	 */
 	async unlinkIdentity(input: UnlinkIdentityInput): Promise<WithCost<UnlinkIdentityResult>> {
 		await this.#migrated;
@@ -3681,10 +3483,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Spends a confirmed-path ticket once the named subject has presented a
 	 * credential for it, writing the identity it names.
 	 *
-	 * @param input - The subject completing the link, the ticket they presented
-	 * a credential for, and who is asking.
-	 * @returns Success, or that the ticket does not work, or that the provider
-	 * identity it named was linked to somebody else in the meantime.
+	 * @param input - The subject completing the link, the ticket they presented a credential for, and who is asking.
+	 * @returns Success, or that the ticket does not work, or that the provider identity it named was linked to somebody else in the meantime.
 	 */
 	async linkIdentity(input: LinkIdentityInput): Promise<WithCost<LinkIdentityResult>> {
 		await this.#migrated;
@@ -3699,10 +3499,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Adds a linked identity's own provider address as the subject's own
 	 * identifier, verifying it at once when the provider already proved it.
 	 *
-	 * @param input - The subject, the connection whose identity names the
-	 * address to adopt, and who is asking.
-	 * @returns The address adopted and its verified state, or which rule
-	 * refused the adoption.
+	 * @param input - The subject, the connection whose identity names the address to adopt, and who is asking.
+	 * @returns The address adopted and its verified state, or which rule refused the adoption.
 	 */
 	async adoptIdentityAddress(
 		input: AdoptIdentityAddressInput,
@@ -3714,9 +3512,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Decides what a consent screen should show for one authorization request.
 	 *
-	 * @param input - The subject and client an authorization request named, the scopes
-	 * it asked for, whether the client is first-party, and whether consent or silence
-	 * was demanded.
+	 * @param input - The subject and client an authorization request named, the scopes it asked for, whether the client is first-party, and whether consent or silence was demanded.
 	 * @returns The decision, with the assembled screen only when one is shown.
 	 */
 	async evaluateConsent(input: EvaluateConsentInput): Promise<WithCost<EvaluateConsentResult>> {
@@ -3727,8 +3523,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Records the decision a person took on a consent screen.
 	 *
-	 * @param input - The subject and client the decision concerns, whether it was an
-	 * approval, and the scopes it covers.
+	 * @param input - The subject and client the decision concerns, whether it was an approval, and the scopes it covers.
 	 * @returns The full resulting scope set on approval, or that nothing was recorded.
 	 */
 	async recordConsentDecision(
@@ -3782,10 +3577,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Validates an `/authorize` request, resolves whichever of the caller's candidate
 	 * sessions applies, evaluates consent and mints a code, all as one operation.
 	 *
-	 * @param input - The request's raw query parameters, the caller's candidate session
-	 * ids, and the clock to validate and decide against.
-	 * @returns The outcome this request reaches on its own: a rendered or redirected
-	 * error, a redirected code, or a parked interaction for a sign-in or consent page.
+	 * @param input - The request's raw query parameters, the caller's candidate session ids, and the clock to validate and decide against.
+	 * @returns The outcome this request reaches on its own: a rendered or redirected error, a redirected code, or a parked interaction for a sign-in or consent page.
 	 */
 	async beginAuthorization(
 		input: Omit<BeginAuthorizationInput, "issuer">,
@@ -3802,10 +3595,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Continues a parked interaction with the session its caller asserts just
 	 * authenticated.
 	 *
-	 * @param input - The interaction to resume, the session that authenticated it, and
-	 * the clock to decide against.
-	 * @returns The outcome this resumption reaches on its own, the same as
-	 * {@link beginAuthorization} answers with.
+	 * @param input - The interaction to resume, the session that authenticated it, and the clock to decide against.
+	 * @returns The outcome this resumption reaches on its own, the same as {@link beginAuthorization} answers with.
 	 */
 	async resumeAuthorization(
 		input: Omit<ResumeAuthorizationInput, "issuer">,
@@ -3823,10 +3614,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * the response a device with no browser worth using polls the token endpoint
 	 * with next.
 	 *
-	 * @param input - The client asking for the grant, the scope it requests, and
-	 * the clock to mint against.
-	 * @returns The minted codes and polling parameters, or which rule refused the
-	 * request.
+	 * @param input - The client asking for the grant, the scope it requests, and the clock to mint against.
+	 * @returns The minted codes and polling parameters, or which rule refused the request.
 	 */
 	async beginDeviceAuthorization(
 		input: Omit<BeginDeviceAuthorizationInput, "issuer">,
@@ -3844,8 +3633,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * the polling interval and redeeming the row atomically so two concurrent polls
 	 * cannot both mint.
 	 *
-	 * @param input - The presented device code, the client's credentials, and the
-	 * clock to mint against.
+	 * @param input - The presented device code, the client's credentials, and the clock to mint against.
 	 * @returns The minted token set, or the error this poll was refused for.
 	 */
 	async redeemDeviceCode(
@@ -3863,10 +3651,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Resolves a presented user code to the pending row it names and the
 	 * consent screen it should be approved or denied through.
 	 *
-	 * @param input - The presented user code, the approving session, and the
-	 * clock to check expiry against.
-	 * @returns The screen to render and the row's own id, or which rule
-	 * refused the code.
+	 * @param input - The presented user code, the approving session, and the clock to check expiry against.
+	 * @returns The screen to render and the row's own id, or which rule refused the code.
 	 */
 	async beginDeviceApproval(
 		input: BeginDeviceApprovalInput,
@@ -3878,8 +3664,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Records the decision a person took on a device's own consent screen.
 	 *
-	 * @param input - The row being decided, the deciding session, whether it
-	 * was approved, and the clock to stamp the decision with.
+	 * @param input - The row being decided, the deciding session, whether it was approved, and the clock to stamp the decision with.
 	 * @returns Which decision was recorded, or that the row no longer took one.
 	 */
 	async decideDeviceApproval(
@@ -3926,13 +3711,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Turns an authorization code into a token set: authenticates the client,
-	 * redeems the code, verifies its bindings and PKCE challenge, mints and
-	 * signs, and starts a refresh token family when the grant covers
-	 * `offline_access`.
+	 * Turns an authorization code into a token set: authenticates the client, redeems
+	 * the code, verifies its bindings and PKCE challenge, mints and signs, and starts
+	 * a refresh token family when the grant covers `offline_access`.
 	 *
-	 * @param input - The presented code and verifier, the redirect the client
-	 * used, the client's credentials, and the clock to mint against.
+	 * @param input - The presented code and verifier, the redirect the client used, the client's credentials, and the clock to mint against.
 	 * @returns The minted token set, or the error this exchange was refused for.
 	 */
 	async exchangeCode(input: Omit<ExchangeCodeInput, "issuer">): Promise<WithCost<TokenOutcome>> {
@@ -3949,8 +3732,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * presentation of the same token by revoking its whole family and ending the
 	 * session behind it.
 	 *
-	 * @param input - The presented refresh token, an optional narrower scope,
-	 * the client's credentials, and the clock to mint against.
+	 * @param input - The presented refresh token, an optional narrower scope, the client's credentials, and the clock to mint against.
 	 * @returns The minted token set, or the error this rotation was refused for.
 	 */
 	async refreshTokens(input: Omit<RefreshTokensInput, "issuer">): Promise<WithCost<TokenOutcome>> {
@@ -3963,15 +3745,11 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Exchanges a client id and secret for a token about the client itself,
-	 * carrying no subject, session or refresh token. Issuing to a client that
-	 * already carries the grant on its own record is protocol surface, so
-	 * this stays open to every tenant regardless of its own add-on standing.
+	 * Exchanges a client id and secret for a token about the client itself, carrying
+	 * no subject, session or refresh token.
 	 *
-	 * @param input - The client's credentials, the scope and resource
-	 * requested, and the clock to mint against.
-	 * @returns The minted access token, or the error this grant was refused
-	 * for.
+	 * @param input - The client's credentials, the scope and resource requested, and the clock to mint against.
+	 * @returns The minted access token, or the error this grant was refused for.
 	 */
 	async issueClientCredentialsToken(
 		input: Omit<IssueClientCredentialsTokenInput, "issuer">,
@@ -3985,14 +3763,12 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Authenticates a client's own credentials without minting anything, for
-	 * a caller that only needs to know whether the presenter is who it
-	 * claims — a client-authenticated endpoint verifying someone else's
-	 * credential, rather than the token endpoint minting one.
+	 * Authenticates a client's own credentials without minting anything, for a caller
+	 * that only needs to know whether the presenter is who it claims — a
+	 * client-authenticated endpoint verifying someone else's credential, rather than
 	 *
 	 * @param input - The client's id and secret, and how it presented itself.
-	 * @returns Success, or the status and description an HTTP layer answers
-	 * with.
+	 * @returns Success, or the status and description an HTTP layer answers with.
 	 */
 	async authenticateClient(
 		input: AuthenticateClientInput,
@@ -4006,8 +3782,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * and the JWKS document are built from, in one call.
 	 *
 	 * @param input - The clock the key set's publish window is measured against.
-	 * @returns The tenant's scope and claim catalog, the published key set, and how long
-	 * the documents may be cached for.
+	 * @returns The tenant's scope and claim catalog, the published key set, and how long the documents may be cached for.
 	 */
 	async publishMetadata(input: { now: number }): Promise<WithCost<PublishMetadataResult>> {
 		await this.#migrated;
@@ -4024,8 +3799,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Assembles the claims a subject's granted scopes carry for `/userinfo`.
 	 *
-	 * @param input - The subject id a verified access token named, and the scopes its
-	 * grant covers.
+	 * @param input - The subject id a verified access token named, and the scopes its grant covers.
 	 * @returns The subject's claims, or that the subject id no longer resolves.
 	 */
 	async resolveUserInfo(input: ResolveUserInfoInput): Promise<WithCost<ResolveUserInfoResult>> {
@@ -4038,10 +3812,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * window its plan now allows — as one whole operation, called from the
 	 * control plane's projection write.
 	 *
-	 * @param input - The plan, its features, the DAU cap and audit retention
-	 * window it now enforces, and when this took effect.
-	 * @returns The plan now enforced, and how many audit rows the new
-	 * retention window pruned.
+	 * @param input - The plan, its features, the DAU cap and audit retention window it now enforces, and when this took effect.
+	 * @returns The plan now enforced, and how many audit rows the new retention window pruned.
 	 */
 	async applyEntitlements(
 		input: ApplyEntitlementsInput,
@@ -4078,10 +3850,8 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * A page of this tenant's audit log over a time window, for the dashboard and
 	 * the management API to share as a single call per page.
 	 *
-	 * @param input - The inclusive time window to read, optional filters, and
-	 * where to page from.
-	 * @returns A page of rows and the cursors around them, or that the given
-	 * cursor no longer matches this ordering.
+	 * @param input - The inclusive time window to read, optional filters, and where to page from.
+	 * @returns A page of rows and the cursors around them, or that the given cursor no longer matches this ordering.
 	 */
 	async readAuditPage(input: ReadAuditPageInput): Promise<WithCost<ReadAuditPageResult>> {
 		await this.#migrated;
@@ -4092,8 +3862,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Deletes audit rows older than this tenant's own retention window, at most
 	 * `limit` per call, for the scheduled sweep to call repeatedly.
 	 *
-	 * @param input - How many rows one call may remove, and the clock to
-	 * measure the window against.
+	 * @param input - How many rows one call may remove, and the clock to measure the window against.
 	 * @returns How many rows this call deleted, and the oldest row still on hand.
 	 */
 	async enforceAuditRetention(
@@ -4111,8 +3880,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * Rows after a durable position, for the streaming and export add-on this
 	 * contributes to. Nothing calls this yet.
 	 *
-	 * @param input - The position already drained, and how many rows one call
-	 * may return.
+	 * @param input - The position already drained, and how many rows one call may return.
 	 * @returns Rows after that position, and the position to resume from next.
 	 */
 	async drainAuditEvents(input: DrainAuditEventsInput): Promise<WithCost<DrainAuditEventsResult>> {
@@ -4125,8 +3893,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	 * of what the daily storage sweep needs to model this tenant's storage footprint in
 	 * one call.
 	 *
-	 * @returns Every table's own row count, keyed by table name, and the database's
-	 * size in bytes.
+	 * @returns Every table's own row count, keyed by table name, and the database's size in bytes.
 	 */
 	async reportStorageFootprint(): Promise<WithCost<StorageFootprint>> {
 		await this.#migrated;
@@ -4192,9 +3959,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Answers whether an import of roughly `estimatedRows` more subjects still fits
 	 * under this object's own storage ceiling, projected from its current size — the
-	 * one question only this object can answer before a run starts moving rows
-	 * through it. The run itself, and the id it is tracked under, are the
-	 * control-plane job's own bookkeeping and never reach this object.
+	 * one question only this object can answer before a run starts moving rows through
 	 *
 	 * @param input - How many subjects the run is about to write.
 	 * @returns Success, or that the projected size would cross the ceiling.
@@ -4217,12 +3982,9 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Validates or writes one already-assembled batch of import rows, sequentially,
-	 * answering one outcome per row in the same order. Pacing the rows across calls
-	 * and persisting how far a run has gotten are the control-plane job's own concern;
-	 * this method only ever sees the one batch it is handed.
+	 * answering one outcome per row in the same order.
 	 *
-	 * @param input - Whether to only check the batch or write it, and the rows
-	 * themselves.
+	 * @param input - Whether to only check the batch or write it, and the rows themselves.
 	 * @returns One outcome per row, in the order the rows were given.
 	 */
 	async importSubjects(input: {
@@ -4249,8 +4011,7 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Writes one summary audit row for a finished import run's totals.
 	 *
-	 * @param input - How many rows the run processed, how many subjects it created,
-	 * and how many rows failed.
+	 * @param input - How many rows the run processed, how many subjects it created, and how many rows failed.
 	 * @returns Success, once the row is written.
 	 */
 	async completeImportRun(input: {

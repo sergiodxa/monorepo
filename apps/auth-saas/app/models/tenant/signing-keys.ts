@@ -2,7 +2,6 @@
  * A tenant's signing keys, one rotating per algorithm, and its declared custom claims.
  * Every export here but `currentSigningKeyPair` returns a published key set, so a caller
  * holds exactly what a relying party may see; `currentSigningKeyPair` hands the minting
- * operation the live pair, and only a signed token string crosses back out from there.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -121,10 +120,9 @@ export interface AdvanceSigningKeysInput {
 let AdvanceSigningKeysSchema = s.object({ now: s.optional(s.number()) });
 
 /**
- * Performs every rotation transition due at the given time, for each algorithm in
- * {@link SIGNING_ALGORITHMS} — staging a successor, promoting a staged key and retiring
- * the incumbent, deleting a key past its publish window — and returns the published set.
- * Safe to call when nothing is due, which lets a scheduled job call it on every tenant.
+ * Performs every rotation transition due at the given time, for each algorithm in {@link
+ * SIGNING_ALGORITHMS} — staging a successor, promoting a staged key and retiring the
+ * incumbent, deleting a key past its publish window — and returns the published set.
  *
  * @param db - The tenant's database.
  * @param input - The clock to advance the rotation against.
@@ -196,9 +194,7 @@ export async function publishKeySet(
 
 /**
  * Generates a signing key for an algorithm that has none, staged and signing at once, so
- * a token can always be signed. Provisioning calls it for every algorithm; minting calls
- * it for a tenant provisioned before an algorithm existed; {@link advanceSigningKeys}
- * calls it whenever an algorithm's keys have somehow lapsed.
+ * a token can always be signed.
  *
  * @param db - The tenant's database.
  * @param now - When the key starts signing.

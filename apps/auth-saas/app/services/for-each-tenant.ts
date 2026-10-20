@@ -1,10 +1,7 @@
 /**
  * Fans a callback out across every provisioned tenant's own Durable Object, paging
  * through the control plane's tenant list so a cron that needs to reach into every
- * tenant's storage does not carry its own pagination and stub-resolution logic. One
- * tenant's own failure is caught and logged rather than stopping the rest of the
- * sweep, the same isolation the daily domain refresh already gives each domain it
- * walks.
+ * tenant's storage does not carry its own pagination and stub-resolution logic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,8 +35,7 @@ export interface ForEachProvisionedTenantResult {
  * @param models - The control plane's models.
  * @param tenant - The tenant Durable Object namespace binding.
  * @param callback - The work to run against one tenant's own object.
- * @param options - An abort signal to stop paging early, and how many tenants to
- * read from the control plane per page.
+ * @param options - An abort signal to stop paging early, and how many tenants to read from the control plane per page.
  * @returns How many tenants the callback ran for.
  * @example
  * await forEachProvisionedTenant(ctx.models, env.TENANT, async (stub, tenantId) => {

@@ -24,8 +24,7 @@ function stringField(form: FormData, name: string): string | null {
  * Mints a device and user code pair for a client carrying the device grant.
  *
  * @param ctx - The request context (provides `tenantStub`).
- * @returns The RFC 8628 device authorization response, or the OAuth error the
- * tenant's device authorization module refused the request for.
+ * @returns The RFC 8628 device authorization response, or the OAuth error the tenant's device authorization module refused the request for.
  * @example
  * router.map(routes.deviceAuthorization, deviceAuthorization);
  */

@@ -2,16 +2,6 @@
  * A fully-provisioned tenant, a sibling tenant for cross-tenant tests, and the
  * token-signing and request-building helpers every resource area's own
  * HTTP-surface test shares, the way `scim/test-harness.ts` drives the SCIM
- * surface. A resource area builds its own router around this core and its own
- * `buildXHarness` that calls {@link buildManagementTestCore}, the way
- * `subjects/test-harness.ts` and `clients/test-harness.ts` each do.
- *
- * Every signed token is a real, machine-credential access token minted by a
- * freshly-constructed platform tenant object, through the same
- * client-credentials grant any tenant's own clients use — {@link
- * usePlatformTenantForTesting} points the management API's own bearer
- * verification at this same object, so a test never has to reach the real
- * `TENANT` binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,11 +55,9 @@ export function fakeLimiter(success = true): RateLimiterBinding {
 export const HOSTNAME_ZONE_ID = "zone-1";
 
 /**
- * Builds a `HostnameClient` pointed at a test zone, so every resource area's
- * own harness satisfies `ManagementControllerOptions` even when its routes
- * never call it. The tenants resource area's own domain routes do call it,
- * and point their tests' MSW handlers at this same zone, the way
- * `app/services/domain.test.ts` already drives that client.
+ * Builds a `HostnameClient` pointed at a test zone, so every resource area's own
+ * harness satisfies `ManagementControllerOptions` even when its routes never call
+ * it.
  */
 export function fakeHostnameClient(): HostnameClient {
 	return new HostnameClient({
@@ -88,11 +76,9 @@ export interface ManagementTestCore {
 	otherTenantId: string;
 	tenantDO: TenantObject;
 	/**
-	 * A plain `Database` bound to `tenantDO`'s own storage, for a test that
-	 * needs to set up or inspect a row no RPC method hands back on its own —
-	 * the same direct access `clients.test.ts` and its siblings already drive
-	 * their own tables through, pointed at the storage this harness's router
-	 * actually serves from.
+	 * A plain `Database` bound to `tenantDO`'s own storage, for a test that needs to
+	 * set up or inspect a row no RPC method hands back on its own — the same direct
+	 * access `clients.test.ts` and its siblings already drive their own tables
 	 */
 	tenantDb: Database;
 	/** Signs a management access token the way the token endpoint mints one. */
@@ -112,8 +98,7 @@ export interface BuildManagementTestCoreOptions {
  * HTTP-surface test shares.
  *
  * @param options - The scope a signed token carries by default.
- * @returns The provisioned state and helpers a resource area's own harness
- * wraps a router around.
+ * @returns The provisioned state and helpers a resource area's own harness wraps a router around.
  */
 export async function buildManagementTestCore(
 	options: BuildManagementTestCoreOptions,
@@ -170,11 +155,9 @@ export async function buildManagementTestCore(
 	let agentClients = new Map<string, { clientId: string; secret: string; scopes: Set<string> }>();
 
 	/**
-	 * Registers, and binds to `tenantId`, the one agent client every token
-	 * minted for it reuses — widening its own registered ceiling whenever a
-	 * later call asks for a scope narrower tests never named up front, so a
-	 * resource area's own finer-grained scope (`export:credentials` alongside
-	 * `export:read`, say) is never refused for a reason no test itself states.
+	 * Registers, and binds to `tenantId`, the one agent client every token minted for
+	 * it reuses — widening its own registered ceiling whenever a later call asks for a
+	 * scope narrower tests never named up front, so a resource area's own finer-grain
 	 */
 	async function agentClientFor(
 		tenantId: string,

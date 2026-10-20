@@ -1,15 +1,7 @@
 /**
  * Organizations: a tenant's own customers, the memberships their people hold, the
  * invitations that add one, and the email domains that earn membership automatically
- * once verified. Rows inside this tenant's own object — a tenant's customer, never a
- * customer of the platform's own, which is a different level entirely with its own
- * word, its own id prefix and its own store.
- *
- * `setActiveOrganization` writes the session row token minting reads the `org` claim
- * from. The Worker-side DNS lookup that proves a domain lives in
- * `app/services/organization-domains.ts`; {@link confirmOrganizationDomain} only marks
- * what that lookup already found, and {@link describeOrganizationDomain} is what it
- * reads the expected record from.
+ * once verified.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -181,12 +173,10 @@ export function organizationDomainVerificationName(domain: string): string {
 /**
  * Writes a membership if the subject does not already hold one, leaving an existing
  * membership's role and `joined_via` untouched — a subject who already belongs keeps
- * whatever brought them in the first time, and a second route earning nothing new is
- * not an error.
+ * whatever brought them in the first time, and a second route earning nothing new i
  *
  * @param db - The tenant's database.
- * @param input - The organization and subject, how they are joining, and the clock to
- * write with.
+ * @param input - The organization and subject, how they are joining, and the clock to write with.
  * @returns Whether this call actually wrote the membership.
  */
 async function writeMembershipIfAbsent(
@@ -252,8 +242,7 @@ let CreateOrganizationSchema = s.object({
  * it.
  *
  * @param db - The tenant's database.
- * @param input - The organization's name and slug, the subject creating it, and who is
- * making the call.
+ * @param input - The organization's name and slug, the subject creating it, and who is making the call.
  * @returns The new organization's record, or which rule refused the call.
  */
 export async function createOrganization(
@@ -334,10 +323,8 @@ export type UpdateOrganizationResult =
  * exactly as it stood.
  *
  * @param db - The tenant's database.
- * @param input - The organization to update, the fields to change, and who is making
- * the call.
- * @returns The organization's record once updated, or that no such organization
- * exists.
+ * @param input - The organization to update, the fields to change, and who is making the call.
+ * @returns The organization's record once updated, or that no such organization exists.
  */
 export async function updateOrganization(
 	db: Database,
@@ -456,15 +443,11 @@ let InviteToOrganizationSchema = s.object({
 /**
  * Invites an address to join an organization. Any existing member may invite — the
  * role vocabulary a finer check would need does not exist yet, so authorization here
- * stops at "already belongs to this organization" rather than reaching for a
- * permission this codebase has nowhere to declare. Folds the address, claims the
- * open-invitation uniqueness, and mints a bearer token stored only as its digest.
+ * stops at "already belongs to this organization" rather than reaching for a permiss
  *
  * @param db - The tenant's database.
- * @param input - The organization, the address and role being invited, and who is
- * sending it.
- * @returns The token to deliver once, with the address and locale to deliver it to, or
- * which rule refused the call.
+ * @param input - The organization, the address and role being invited, and who is sending it.
+ * @returns The token to deliver once, with the address and locale to deliver it to, or which rule refused the call.
  */
 export async function inviteToOrganization(
 	db: Database,
@@ -592,7 +575,6 @@ export interface AcceptOrganizationInvitationInput {
 	 * The already-signed-in subject accepting the invitation. Resolving or creating a
 	 * subject for someone with no account yet is a hosted sign-up flow's job, run before
 	 * this is called — this call only ever binds a ticket to a subject that already
-	 * exists.
 	 */
 	subjectId: string;
 	at?: number;
@@ -606,15 +588,11 @@ export type AcceptOrganizationInvitationResult =
 /**
  * Accepts an invitation: the ticket is checked against the signed-in subject's own
  * verified email identifier matching the invited address, and only a match writes the
- * membership. A subject signed in as anyone else is refused without marking the
- * invitation resolved, so it stays open for the address it actually named — a
- * forwarded invitation still reaches the person it was sent to.
+ * membership.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the subject accepting it, and the clock to write
- * with.
- * @returns The organization joined and the role granted, or which rule refused the
- * call.
+ * @param input - The bearer token, the subject accepting it, and the clock to write with.
+ * @returns The organization joined and the role granted, or which rule refused the call.
  */
 export async function acceptOrganizationInvitation(
 	db: Database,
@@ -749,18 +727,6 @@ export type RemoveMembershipResult = { ok: true } | { ok: false; reason: "not-fo
  * sessions naming this organization, so a token minted after removal never carries an
  * `org` claim the person no longer belongs to.
  *
- * A grant recorded under this organization would be revoked here too, matching what
- * removing a SCIM-provisioned subject already does for its own consent grants — but a
- * grant is one merged row per subject and client, unioning every scope a subject ever
- * agreed to for that client regardless of which organization was active when each
- * agreement happened. Tagging that row with an organization id would revoke consent an
- * unrelated authorization also relies on, or leave this removal unable to find what it
- * should revoke once a later authorization (with no organization active, or a
- * different one) overwrote the tag. Scoping revocation correctly needs consent tracked
- * per organization rather than merged away the moment it is granted, which is a
- * reshape of that mechanism, not a column added to this one. Left as a gap for
- * whoever takes on that reshape, rather than forced here.
- *
  * @param db - The tenant's database.
  * @param input - The membership to remove, and who is making the call.
  * @returns Success, or that no such membership exists.
@@ -819,13 +785,10 @@ let SetActiveOrganizationSchema = s.object({
 /**
  * Sets the organization a session is acting for: authorizes that the subject holds a
  * membership in it and that the session actually belongs to that subject, then writes
- * `active_organization_id` on the session row. The next ID token and access token
- * minted from this session name the organization in their `org` claim; nothing already
- * issued changes.
+ * `active_organization_id` on the session row.
  *
  * @param db - The tenant's database.
- * @param input - The session to set it on, the subject it must belong to, and the
- * organization to activate.
+ * @param input - The session to set it on, the subject it must belong to, and the organization to activate.
  * @returns The organization now active, or which rule refused the call.
  */
 export async function setActiveOrganization(
@@ -882,13 +845,10 @@ export type AddOrganizationDomainResult =
 
 /**
  * Claims a domain for an organization: folds it with the same rule an email address's
- * own domain half already gets, mints a TXT record to publish, and answers it. The
- * domain does not grant membership until {@link confirmOrganizationDomain} marks it
- * verified.
+ * own domain half already gets, mints a TXT record to publish, and answers it.
  *
  * @param db - The tenant's database.
- * @param input - The organization claiming the domain, the domain itself, and whether
- * it auto-joins or only suggests.
+ * @param input - The organization claiming the domain, the domain itself, and whether it auto-joins or only suggests.
  * @returns The TXT record name and value to publish, or which rule refused the call.
  */
 export async function addOrganizationDomain(
@@ -1008,8 +968,7 @@ export type DescribeOrganizationDomainResult =
  *
  * @param db - The tenant's database.
  * @param input - The organization and domain to describe.
- * @returns The TXT record name and value this domain expects, and whether it is
- * already verified, or that no such claimed domain exists.
+ * @returns The TXT record name and value this domain expects, and whether it is already verified, or that no such claimed domain exists.
  */
 export async function describeOrganizationDomain(
 	db: Database,
@@ -1061,13 +1020,11 @@ export interface ApplyDomainMembershipResult {
 /**
  * Reads a subject's own verified email domains and matches them against this tenant's
  * verified organization domains: an `auto_join` match not already a membership writes
- * one, and a `suggest` match is offered back without writing anything. An unverified
- * address earns nothing, since it proves no domain to match against.
+ * one, and a `suggest` match is offered back without writing anything.
  *
  * @param db - The tenant's database.
  * @param input - The subject to resolve, and the clock to write with.
- * @returns Every membership this call wrote, and every organization it suggests
- * instead.
+ * @returns Every membership this call wrote, and every organization it suggests instead.
  */
 export async function applyDomainMembership(
 	db: Database,
@@ -1127,12 +1084,9 @@ export interface EnsureConnectionMembershipInput {
  * Writes the membership an assertion arriving through an organization-scoped
  * connection earns, with `joined_via: "connection"` — the directory that asserted the
  * person is that organization's own, so a sign-in through it is itself the proof a
- * domain-earned membership gets from a verified address. A subject already a member
- * keeps whatever `joined_via` first brought them in.
  *
  * @param db - The tenant's database.
- * @param input - The organization and subject signing in through its connection, and
- * the clock to write with.
+ * @param input - The organization and subject signing in through its connection, and the clock to write with.
  * @returns Whether this call actually wrote the membership.
  */
 export async function ensureConnectionMembership(
@@ -1227,8 +1181,7 @@ let ReadOrganizationMemberPageSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The organization to list, and where to page from.
- * @returns A page of member summaries and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @returns A page of member summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function readOrganizationMemberPage(
 	db: Database,
@@ -1280,8 +1233,7 @@ export interface SweepExpiredOrganizationInvitationsResult {
 /**
  * Deletes invitations a week past their expiry that were never accepted or revoked, in
  * one bounded batch, for the tenant object's own daily sweep — the same shape every
- * other retention sweep there already follows. An accepted or revoked invitation is
- * left standing as history regardless of age.
+ * other retention sweep there already follows.
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.

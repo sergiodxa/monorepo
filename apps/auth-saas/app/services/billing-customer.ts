@@ -44,20 +44,14 @@ async function adoptProviderCustomerByEmail(
 }
 
 /**
- * Ensures a control-plane customer is joined to a provider customer, creating
- * one at the platform when none exists yet. A `conflict` from `create` is the
- * create racing itself, resolved by re-reading with `customers.find({ externalId
- * })`; when that still finds nothing, the conflict was an email the provider
- * already held under a different record, adopted instead by
- * `customers.findByEmail` and `customers.update({ externalId })`.
+ * Ensures a control-plane customer is joined to a provider customer, creating one
+ * at the platform when none exists yet.
  *
  * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param customer - The control-plane customer to join.
- * @param contact - The email (and optional name) to create a provider customer
- * with, when this customer has none yet.
- * @returns The provider's own customer id, or the failure the join could not
- * recover from.
+ * @param contact - The email (and optional name) to create a provider customer with, when this customer has none yet.
+ * @returns The provider's own customer id, or the failure the join could not recover from.
  * @example
  * let joined = await ensureProviderCustomer(models, polar, customer, { email: "jane@example.com" });
  */

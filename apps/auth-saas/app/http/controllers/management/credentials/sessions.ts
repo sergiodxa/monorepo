@@ -1,9 +1,7 @@
 /**
  * A subject's own live sessions: `GET .../sessions` pages them, `DELETE
- * .../sessions/:sessionId` ends one, and `POST .../sessions/revoke-all` ends
- * every one it holds in a single call. A session id is a TypeID, Crockford
- * base32 with an underscore separator, an alphabet with no `.` in it, so it
- * travels safely as a path segment.
+ * .../sessions/:sessionId` ends one, and `POST .../sessions/revoke-all` ends every
+ * one it holds in a single call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,8 +43,7 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
 /**
  * Builds the `sessionsList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.sessionsList, createSessionsListAction(options));
@@ -67,8 +64,7 @@ export function createSessionsListAction(options: ManagementControllerOptions) {
 
 			let result = await ctx.tenantStub.listSubjectSessions({
 				subjectId,
-				// A management caller holds no session of its own to flag as current, so
-				// every row in the page answers `isCurrent: false`.
+
 				callerSessionId: "",
 				cursor: paging.data.cursor,
 				limit: paging.data.perPage,
@@ -92,8 +88,7 @@ export function createSessionsListAction(options: ManagementControllerOptions) {
 /**
  * Builds the `sessionsRevoke` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.sessionsRevoke, createSessionsRevokeAction(options));
@@ -127,8 +122,7 @@ export function createSessionsRevokeAction(options: ManagementControllerOptions)
 /**
  * Builds the `sessionsRevokeAll` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.sessionsRevokeAll, createSessionsRevokeAllAction(options));

@@ -1,18 +1,7 @@
 /**
- * The entitlement flag catalog: one boolean handle per feature slug `PLANS`
- * or `ADDONS` can grant, plus the two numeric limits a plan carries, derived
- * from the catalog rather than hand-listed a second time here — so a feature
- * slug added to a plan or an add-on gets its flag for free.
- *
- * Also carries the per-tenant context builder `EntitlementProvider` reads.
- * Nothing installs it on a router yet: there is no tenant-scoped
- * administrative route on the platform Worker for a paid capability to
- * gate, so there is nowhere to mount `featureFlags(flags, { context: ... })`
- * with it that would not make every other route — `/`, `/health`, the
- * billing routes that resolve their own `:tenantId` and need no gate — pay
- * for a context resolution it never uses. A route that resolves both a
- * tenant and its entitlement row calls `buildTenantFlagContext` itself, once
- * that route exists, and hands the result to the client it evaluates through.
+ * The entitlement flag catalog: one boolean handle per feature slug `PLANS` or
+ * `ADDONS` can grant, plus the two numeric limits a plan carries, derived from the
+ * catalog rather than hand-listed a second time here — so a feature slug added to
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -68,12 +57,8 @@ export const entitlements = defineFlags({
 });
 
 /**
- * Builds the context `EntitlementProvider` reads for one tenant: its plan
- * facts, and the entitlement projection resolved beside it. A tenant with no
- * projection yet answers an empty entitlement map, which denies every
- * boolean grant rather than throwing — the right direction here, since a
- * missing row is a tenant nothing has ever billed rather than one billing
- * temporarily can't reach.
+ * Builds the context `EntitlementProvider` reads for one tenant: its plan facts,
+ * and the entitlement projection resolved beside it.
  *
  * @param tenant - The tenant a request has already resolved.
  * @param entitlement - The tenant's entitlement projection, or null when none has been written yet.

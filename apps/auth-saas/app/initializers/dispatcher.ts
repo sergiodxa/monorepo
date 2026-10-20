@@ -26,10 +26,9 @@ import { tenant } from "~/app/jobs/middleware/tenant";
 import registry from "~/app/models";
 
 /**
- * The registry both worker handlers run through. Every job gets the control-plane
- * database and its models, the custom-hostname client, the tenant Durable Object namespace and a
- * mailer, since building each is a constructor call apiece and no job pays for I/O
- * it skips.
+ * The registry both worker handlers run through. Every job gets the control-plane database and
+ * its models, the custom-hostname client, the tenant Durable Object namespace and a mailer,
+ * since building each is a constructor call apiece and no job pays for I/O it skips.
  */
 export const dispatcher = createJobDispatcher({
 	logger,

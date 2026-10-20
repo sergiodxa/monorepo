@@ -1,9 +1,7 @@
 /**
- * A real management router mapping every passkeys, password, second-factor
- * and session route, wired around the provisioned tenant and helpers
- * {@link buildManagementTestCore} builds, for driving the HTTP surface
- * through real requests the way `roles/test-harness.ts` drives the roles
- * surface.
+ * A real management router mapping every passkeys, password, second-factor and
+ * session route, wired around the provisioned tenant and helpers {@link
+ * buildManagementTestCore} builds, for driving the HTTP surface through real
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

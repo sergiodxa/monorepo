@@ -1,8 +1,6 @@
 /**
  * Resolves the platform dashboard's own session and its membership of a tenant, and
- * builds the sign-in redirect a page with no valid session sends a visitor to. The
- * platform tenant's own Durable Object is reached directly, since `ctx.tenantStub`
- * exists only on the tenant router a hostname resolves to.
+ * builds the sign-in redirect a page with no valid session sends a visitor to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,8 +30,7 @@ export interface DashboardSession {
  * object, when it carries one that still resolves as `"active"`.
  *
  * @param ctx - The request context (provides `request`).
- * @returns The live session's subject id, or `null` when there is no cookie or it no
- * longer resolves.
+ * @returns The live session's subject id, or `null` when there is no cookie or it no longer resolves.
  */
 export async function resolveDashboardSession(
 	ctx: RequestContext,

@@ -1,13 +1,6 @@
 /**
  * Scopes and grants: what a client may ask for, what a person has agreed to give it, and
- * the consent screen that sits between the two. A scope is a name a client requests; a
- * grant is a person's standing decision about one client, one row per subject and client
- * pair.
- *
- * Deciding what a screen should show and recording the decision a person took are kept as
- * two separate functions here, because they answer to different callers: one resolves a
- * client and a session and only ever reads, the other receives a submitted decision and is
- * the only one that writes.
+ * the consent screen that sits between the two.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,13 +79,11 @@ let DefineScopesSchema = s.object({
 
 /**
  * Adds scopes to this tenant's own catalog, one row per name, leaving a name
- * already present untouched — the same guard the standard OIDC scopes'
- * seeding migration applies, so a caller may run this on every boot without
- * overwriting a tenant's own edits to a row it already wrote.
+ * already present untouched — the same guard the standard OIDC scopes' seeding
+ * migration applies, so a caller may run this on every boot without overwriting a
  *
  * @param db - The tenant's database.
- * @param input - The scopes to add, each named, titled and described the way
- * a consent screen renders it.
+ * @param input - The scopes to add, each named, titled and described the way a consent screen renders it.
  */
 export async function defineScopes(db: Database, input: DefineScopesInput): Promise<void> {
 	let parsed = s.parse(DefineScopesSchema, input);
@@ -142,8 +133,7 @@ export interface EvaluateConsentInput {
 /**
  * What evaluating consent answers: skip straight to the scopes already in force, show a
  * screen for the person to decide on, or refuse because a screen would be needed and the
- * caller asked for no interaction. `not-found` is for a client or subject id that does not
- * resolve in this tenant; only `show` can reach it, since skipping needs neither record.
+ * caller asked for no interaction.
  */
 export type EvaluateConsentResult =
 	| { decision: "skip"; grantedScopes: string[] }
@@ -161,19 +151,12 @@ let EvaluateConsentSchema = s.object({
 });
 
 /**
- * Decides what a consent screen should show for one authorization request, without
- * writing anything. A first-party client skips unconditionally; otherwise a stored grant
- * that already covers every requested scope skips too, unless `promptConsent` forces a
- * screen anyway. A request outside the stored grant, or with no grant at all, shows one,
- * listing which of the requested scopes are already granted and which are new. When a
- * screen would be needed but the caller demands no interaction, the refusal comes back
- * instead of a screen, so the caller can answer with `consent_required` rather than render
- * anything.
+ * Decides what a consent screen should show for one authorization request, without writing
+ * anything. A first-party client skips unconditionally; otherwise a stored grant that
+ * already covers every requested scope skips too, unless `promptConsent` forces a screen
  *
  * @param db - The tenant's database.
- * @param input - The subject and client an authorization request named, the scopes it
- * asked for, whether the client is first-party, and whether consent or silence was
- * demanded.
+ * @param input - The subject and client an authorization request named, the scopes it asked for, whether the client is first-party, and whether consent or silence was demanded.
  * @returns The decision, with the assembled screen only when one is shown.
  */
 export async function evaluateConsent(
@@ -315,11 +298,9 @@ let RecordConsentDecisionSchema = s.object({
  * Records the decision a person took on a consent screen. Approval unions the agreed
  * scopes into the subject's existing grant for this client, creating the row when none
  * exists yet, so a later request asking for fewer scopes never drops what an earlier one
- * already won. Denial changes nothing, leaving the client free to be granted later.
  *
  * @param db - The tenant's database.
- * @param input - The subject and client the decision concerns, whether it was an
- * approval, and the scopes it covers.
+ * @param input - The subject and client the decision concerns, whether it was an approval, and the scopes it covers.
  * @returns The full resulting scope set on approval, or that nothing was recorded.
  */
 export async function recordConsentDecision(
@@ -373,8 +354,7 @@ export type RevokeGrantResult = { kind: "revoked" } | { kind: "unknown" };
 /**
  * Ends a subject's standing decision for one client, deleting the grant row. Reaching the
  * refresh tokens that decision authorized happens once a table exists to act on, the way
- * `deleteSubject`'s own caller grew to also delete passwords and passkeys once those
- * tables existed.
+ * `deleteSubject`'s own caller grew to also delete passwords and passkeys once those tab
  *
  * @param db - The tenant's database.
  * @param input - The subject and client whose grant to revoke.
@@ -433,8 +413,7 @@ let ListGrantsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The subject whose grants to list, and where to page from.
- * @returns A page of grant summaries and the cursors around it, or that the given cursor
- * no longer matches this ordering.
+ * @returns A page of grant summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function listGrants(db: Database, input: ListGrantsInput): Promise<ListGrantsResult> {
 	let parsed = s.parse(ListGrantsSchema, input);

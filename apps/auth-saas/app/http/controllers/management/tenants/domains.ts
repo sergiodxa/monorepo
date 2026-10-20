@@ -1,11 +1,7 @@
 /**
  * The domain sub-resource under a tenant: `GET .../domains` lists them, `POST
  * .../domains` attaches a custom domain for a tenant holding the `custom_domain`
- * entitlement — registering it with Cloudflare and recording the DV
- * verification record it answers with — `GET
- * .../domains/:domainId/verification` reads one domain's verification and
- * activation state, and `DELETE .../domains/:domainId` removes one,
- * deregistering it from Cloudflare too.
+ * entitlement — registering it with Cloudflare and recording the DV verification
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,8 +48,7 @@ async function findOwnDomain(
 /**
  * Builds the `tenantDomainsList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantDomainsList, createTenantDomainsListAction(options));
@@ -75,8 +70,7 @@ export function createTenantDomainsListAction(options: ManagementControllerOptio
 /**
  * Builds the `tenantDomainsAttach` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantDomainsAttach, createTenantDomainsAttachAction(options));
@@ -115,8 +109,7 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
 /**
  * Builds the `tenantDomainsVerification` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantDomainsVerification, createTenantDomainsVerificationAction(options));
@@ -140,8 +133,7 @@ export function createTenantDomainsVerificationAction(options: ManagementControl
 /**
  * Builds the `tenantDomainsRemove` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantDomainsRemove, createTenantDomainsRemoveAction(options));

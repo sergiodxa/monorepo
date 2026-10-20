@@ -2,7 +2,6 @@
  * The identifier sub-resource under a subject: `POST .../:subjectId/identifiers` adds one,
  * `POST /tenants/:tenantId/subjects/identifiers/verify` spends a ticket that alone names its
  * subject, `.../identifiers/primary` moves the primary, and `DELETE .../identifiers?value=`
- * removes one by its value, since no identifier carries an id of its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -79,8 +78,7 @@ function addIdentifierFailure(result: Exclude<AddIdentifierResult, { ok: true }>
 /**
  * Builds the `subjectIdentifiersAdd` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectIdentifiersAdd, createSubjectIdentifiersAddAction(options));
@@ -124,8 +122,7 @@ function verifyIdentifierFailure(result: Exclude<VerifyIdentifierResult, { ok: t
  * subject collection rather than under one subject's path, since the ticket
  * alone resolves which subject and identifier it belongs to.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectIdentifiersVerify, createSubjectIdentifiersVerifyAction(options));
@@ -160,8 +157,7 @@ function setPrimaryIdentifierFailure(
 /**
  * Builds the `subjectIdentifiersSetPrimary` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(
@@ -203,8 +199,7 @@ function removeIdentifierFailure(result: Exclude<RemoveIdentifierResult, { ok: t
 /**
  * Builds the `subjectIdentifiersRemove` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectIdentifiersRemove, createSubjectIdentifiersRemoveAction(options));

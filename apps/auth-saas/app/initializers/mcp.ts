@@ -1,8 +1,6 @@
 /**
  * The platform's MCP server: the management API exposed as one tool per OpenAPI operation,
- * for an agent holding a bearer token from the platform tenant's own OIDC engine. The tools
- * are generated, so one handler serves them all and each is mapped in a loop, behind the
- * ability its operation needs.
+ * for an agent holding a bearer token from the platform tenant's own OIDC engine.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

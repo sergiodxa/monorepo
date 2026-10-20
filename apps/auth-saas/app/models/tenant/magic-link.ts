@@ -1,8 +1,6 @@
 /**
  * Magic link sign-in: the `magic_link_attempts` and `magic_link_bursts` tables, and
- * the operations over them. A request mints a token and a code together, both bound
- * to the browser that asked; completion spends either one in a single conditional
- * write, so two attempts racing to finish the same attempt cannot both win.
+ * the operations over them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,7 +33,6 @@ const CODE_ATTEMPT_LIMIT = 5;
  * Crockford's base32 alphabet: the 32 symbols a 36-character alphanumeric set
  * leaves once `I`, `L`, `O` and `U` are dropped, so no two symbols left in it read
  * as the same shape and a person copying one off a screen never has to guess which
- * letter or digit they are looking at.
  */
 const CODE_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 
@@ -91,7 +88,6 @@ const magicLinkAttemptRowId = typeid("mlnk");
  * Checks and spends one request against an address's own burst budget: a window
  * whose 15 minutes have elapsed resets its count before the cap is compared, and a
  * spend that clears the cap is written in the same call that decided it may,
- * nested under the mail envelope every credential kind already spends against.
  */
 async function checkAndSpendMagicLinkBurst(
 	db: Database,
@@ -169,25 +165,11 @@ export type BeginMagicLinkSignInResult =
  * Resolves an address, spends its two budgets, supersedes any outstanding attempt
  * of its own, and mints a fresh token and code together — for an address that
  * matches a subject, one that does not but the tenant lets become one, and one
- * that does not while the tenant keeps that off alike, so the write this call
- * performs costs the same regardless of which of the three an outside observer's
- * timing measurement could otherwise tell apart. Only the last of those three
- * mints a row nothing can ever complete, `completable` false, since there is no
- * subject for a later completion to create; an address that spends either its
- * burst budget or the shared mail envelope instead answers before reaching any of
- * this, since a rate-limit refusal reveals a fact about the budget rather than
- * about the address.
  *
  * @param db - The tenant's database.
- * @param input - The address as typed, the locale to remember for delivery, the
- * bound browser's nonce hash, the resume destination to store against the
- * minted attempt, and the clock to measure against.
- * @param jitSubjectCreationAllowed - Whether this tenant lets an address with no
- * matching subject mint a completable attempt, the subject created only once that
- * attempt completes; omitted, the platform default of off.
- * @returns The token, code and expiry to deliver, that no account matches (an
- * uncompletable attempt was still minted, to keep this call's own cost the
- * same), or how many seconds until the tighter of the two budgets next has room.
+ * @param input - The address as typed, the locale to remember for delivery, the bound browser's nonce hash, the resume destination to store against the minted attempt, and the clock to measure against.
+ * @param jitSubjectCreationAllowed - Whether this tenant lets an address with no matching subject mint a completable attempt, the subject created only once that attempt completes; omitted, the platform default of off.
+ * @returns The token, code and expiry to deliver, that no account matches (an uncompletable attempt was still minted, to keep this call's own cost the same), or how many seconds until the tighter of the two budgets next has room.
  */
 export async function beginMagicLinkSignIn(
 	db: Database,
@@ -280,34 +262,13 @@ export type CompleteMagicLinkSignInResult =
 /**
  * Spends a token or a code and opens a session in the same call. A link is looked
  * up by its own token hash first, read-only: a wrong browser nonce against a token
- * that still resolves answers `wrong_browser` without touching the row, and only a
- * matching nonce reaches the one conditional write that actually consumes it, so
- * two completions racing the same token can never both win. A code is looked up by
- * the bound browser's own nonce hash rather than compared against every
- * outstanding row, since it is always typed back into the same browser the link
- * was requested from; a wrong guess costs one of its five remaining attempts and a
- * fifth wrong guess destroys the row outright, the same way a token's own
- * exhaustion would leave nothing left to retry against. Consuming a row minted for
- * an address with no subject yet creates one now, verified, since completing this
- * flow is the proof — unless the row was minted uncompletable, which refuses here
- * with the same answer an expired or already-consumed one gets. A successful
- * completion hands back the resume destination the request stored on this row,
- * rather than trusting one a caller's own URL might carry, since the token
- * travels through a channel that can rewrite it before the person ever sees it.
+ * that still resolves answers `wrong_browser` without touching the row, and only
  *
  * @param db - The tenant's database.
- * @param input - The credential presented, the bound browser's raw nonce, and the
- * clock to measure against.
- * @param metering - The daily active user meter to record this sign-in against,
- * when the caller has one; omitted, no meter is touched and no sign-in is ever
- * refused for it.
- * @param sessionPolicy - The tenant's own effective session policy the opened
- * session is bound by; omitted, the platform defaults.
- * @returns The subject, the session opened for it, and the resume destination
- * stored against the attempt; that the credential never resolved to a live,
- * completable attempt; that it resolved to one bound to a different browser; how
- * many attempts a wrong code leaves; or that the daily cap refused this subject a
- * session.
+ * @param input - The credential presented, the bound browser's raw nonce, and the clock to measure against.
+ * @param metering - The daily active user meter to record this sign-in against, when the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session is bound by; omitted, the platform defaults.
+ * @returns The subject, the session opened for it, and the resume destination stored against the attempt; that the credential never resolved to a live, completable attempt; that it resolved to one bound to a different browser; how many attempts a wrong code leaves; or that the daily cap refused this subject a session.
  */
 export async function completeMagicLinkSignIn(
 	db: Database,
@@ -338,9 +299,6 @@ export async function completeMagicLinkSignIn(
 			return { outcome: "wrong_browser" };
 		}
 
-		// The single conditional write: two completions of the same token racing
-		// here can both have read the row above as live, but only one of these
-		// statements still finds a row matching its own `WHERE` clause to update.
 		let consumption = await db
 			.query(magicLinkAttempts)
 			.where(and(eq("token_hash", tokenHash), isNull("consumed_at"), gt("expires_at", now)))
@@ -383,10 +341,6 @@ export async function completeMagicLinkSignIn(
 		if (!consumedRow) return { outcome: "invalid" };
 	}
 
-	// A row minted for an address with no subject while just-in-time creation was
-	// off consumes the same as any other, so nothing about reaching this point
-	// told the caller apart from a completable one; only here does it refuse,
-	// with the same `invalid` an expired or already-consumed row answers.
 	if (!consumedRow.completable) return { outcome: "invalid" };
 
 	let subjectId = consumedRow.subject_id;
@@ -399,10 +353,6 @@ export async function completeMagicLinkSignIn(
 		if (!created.ok) return { outcome: "invalid" };
 		subjectId = created.subjectId;
 	} else {
-		// A blocked subject answers the same `invalid` an expired or already-consumed
-		// row would, matching this flow's own rule that nothing here distinguishes a
-		// refusal an attacker could learn from — a block is a fact about the subject,
-		// not something this credential is allowed to reveal on its way to refusing it.
 		let subjectRow = await db.find(subjects, { id: subjectId });
 		if (subjectRow?.status === "blocked") return { outcome: "invalid" };
 	}

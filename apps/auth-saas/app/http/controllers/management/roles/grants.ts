@@ -1,9 +1,7 @@
 /**
- * The OAuth consent grants a subject has agreed to: `GET .../grants` pages
- * them, most recently agreed to first, and `POST .../grants/:clientId/revoke`
- * ends the subject's standing decision for one client. Defining a grant has
- * no route of its own — a grant is created by a subject consenting at
- * `/authorize`, never administratively.
+ * The OAuth consent grants a subject has agreed to: `GET .../grants` pages them,
+ * most recently agreed to first, and `POST .../grants/:clientId/revoke` ends the
+ * subject's standing decision for one client.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,8 +38,7 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
 /**
  * Builds the `subjectGrantsList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectGrantsList, createSubjectGrantsListAction(options));
@@ -96,8 +93,7 @@ function grantNotFound(): Response {
 /**
  * Builds the `subjectGrantsRevoke` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectGrantsRevoke, createSubjectGrantsRevokeAction(options));

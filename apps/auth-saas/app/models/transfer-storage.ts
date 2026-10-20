@@ -1,17 +1,7 @@
 /**
- * The R2 plumbing a subject import or export run writes and reads its NDJSON
- * files through, and the single-use ticket a management API download route
- * later exchanges for one of those files: {@link writeTransferFile} and
- * {@link readTransferFileLines} adapt the `R2Bucket` binding's byte-oriented
- * API to the line-oriented one a batching job wants, and
- * {@link mintTransferDownloadTicket}/{@link spendTransferDownloadTicket} carry
- * a run's finished object to a download link, following the same
- * delete-then-check-expiry idiom `pending_link_tickets` and
- * `password_reset_tickets` already use.
- *
- * The ticket table lives at the control-plane level rather than inside a
- * tenant's own object, matching where the run that names it —
- * `tenant_import_runs` — is itself tracked.
+ * The R2 plumbing a subject import or export run writes and reads its NDJSON files
+ * through, and the single-use ticket a management API download route later
+ * exchanges for one of those files: {@link writeTransferFile} and {@link
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,11 +48,9 @@ export const transferDownloadTickets = table({
 export type TransferDownloadTicketRow = TableRow<typeof transferDownloadTickets>;
 
 /**
- * Writes NDJSON to R2, one line per element of `lines`, each newline-terminated
- * as it is written rather than joined in memory first, and each copied byte for
- * byte so a row moved between files keeps its exact text. A caller already
- * holding a `ReadableStream` of properly newline-delimited bytes may pass that
- * directly instead.
+ * Writes NDJSON to R2, one line per element of `lines`, each newline-terminated as
+ * it is written rather than joined in memory first, and each copied byte for byte
+ * so a row moved between files keeps its exact text.
  *
  * @param bucket - The R2 bucket a transfer run's files live in.
  * @param key - The object key to write.
@@ -83,19 +71,16 @@ export async function writeTransferFile(
 /** Options narrowing where {@link readTransferFileLines} starts yielding. */
 export interface ReadTransferFileLinesOptions {
 	/**
-	 * How many rows to skip before the first one yielded, matching a run's
-	 * own `cursor`. It counts rows, so blank lines never shift where a run
-	 * resumes. Skipped rows are read and discarded from the start of the
-	 * object, a cost that grows with the cursor on a very large file.
+	 * How many rows to skip before the first one yielded, matching a run's own
+	 * `cursor`. It counts rows, so blank lines never shift where a run resumes.
 	 */
 	skip?: number;
 }
 
 /**
- * Reads an NDJSON object back one line at a time, the reverse of
- * {@link writeTransferFile}, optionally skipping past rows a previous tick
- * already consumed. Each line comes without its `\n` or a `\r` before it, and
- * blank lines are dropped.
+ * Reads an NDJSON object back one line at a time, the reverse of {@link
+ * writeTransferFile}, optionally skipping past rows a previous tick already
+ * consumed. Each line comes without its `\n` or a `\r` before it, and blank lines
  *
  * @param bucket - The R2 bucket the object lives in.
  * @param key - The object key to read.

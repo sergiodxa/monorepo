@@ -1,8 +1,7 @@
 /**
- * `GET /tenants/:tenantId` — a tenant's own public record: name, slug,
- * issuer, region, status and billing state, leaving out its billing customer
- * id and the payment provider's own subscription linkage as platform-internal
- * detail rather than a fact about the tenant a caller here administers.
+ * `GET /tenants/:tenantId` — a tenant's own public record: name, slug, issuer,
+ * region, status and billing state, leaving out its billing customer id and the
+ * payment provider's own subscription linkage as platform-internal detail rather
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +24,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `tenantRead` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantRead, createTenantReadAction(options));

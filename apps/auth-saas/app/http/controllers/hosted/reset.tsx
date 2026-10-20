@@ -1,13 +1,7 @@
 /**
- * `GET/POST /u/reset` — two states behind one path, told apart by whether its
- * own `ticket` query parameter is present: without one, the request form,
- * which always renders the same confirmation `beginPasswordReset` itself
- * never distinguishes; with one, the new-password form `completePasswordReset`
- * spends. Neither leg opens a session — a reset revokes every one the
- * subject held — so a completed reset offers `/u/sign-in` for signing in fresh.
- * The request leg sends only when `beginPasswordReset` hands back an address,
- * which is also null when its own rate envelope is spent, so a send attempt
- * never varies the confirmation the two cases already share.
+ * `GET/POST /u/reset` — two states behind one path, told apart by whether its own
+ * `ticket` query parameter is present: without one, the request form, which always
+ * renders the same confirmation `beginPasswordReset` itself never distinguishes;
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -141,15 +135,11 @@ export const resetShow = createAction(routes.hostedResetShow, async (ctx) => {
 });
 
 /**
- * Begins a reset for the submitted identifier, or spends the ticket the
- * request's own query names to complete one. The request leg renders its
- * confirmation from the schema's own success alone, never from
- * `beginPasswordReset`'s answer, so a resolved and an unresolved identifier
- * reach the same response.
+ * Begins a reset for the submitted identifier, or spends the ticket the request's
+ * own query names to complete one.
  *
  * @param ctx - The request context (provides `formData`, `render` and `tenantStub`).
- * @returns The confirmation or new-password-written response, or this same
- * screen re-rendered with an error.
+ * @returns The confirmation or new-password-written response, or this same screen re-rendered with an error.
  * @example
  * router.map(routes.hostedResetSubmit, resetSubmit);
  */

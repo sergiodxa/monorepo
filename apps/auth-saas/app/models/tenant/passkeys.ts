@@ -3,11 +3,6 @@
  * WebAuthn sign-in hangs off, and the operations over them. Kept as a module the
  * tenant object delegates to rather than written inline, the way `subjects.ts` is.
  *
- * `@sdxc/passkey`'s `RelyingParty` does the cryptography — verifying an attestation,
- * checking a signature, catching a counter regression. What lives here is wiring: it
- * stores the challenge a ceremony issues, spends it exactly once, and turns what the
- * package verifies into the rows a tenant's sign-in reads back.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -89,9 +84,7 @@ export interface PasskeySummary {
 
 /**
  * Builds the relying party a call was not handed one for, from the id and origins the
- * caller resolved outside this object. Neither is derived here: a tenant object has no
- * D1 access to look up a custom domain, so the Worker resolves the tenant's platform
- * subdomain and any attached domain into `origins` before it calls in.
+ * caller resolved outside this object.
  */
 function defaultRelyingParty(relyingPartyId: string, origins: string[]): RelyingParty {
 	return new RelyingParty({
@@ -106,12 +99,6 @@ function defaultRelyingParty(relyingPartyId: string, origins: string[]): Relying
  * Turns a `User-Agent` into a label a subject recognizes in their credential list. A
  * phone or tablet reads as the device it names — its model where the string gives one,
  * its platform otherwise; anything else reads as its browser and operating system.
- * A header that never arrived, or one neither rule recognizes, falls back to a generic
- * name rather than a guess.
- *
- * A real device model would come from the credential's AAGUID, but that needs a lookup
- * dataset this platform does not have, so an unrecognized agent goes straight to the
- * same generic fallback an unknown AAGUID would.
  */
 function labelFromUserAgent(userAgent: string | undefined): string {
 	if (!userAgent) return "Passkey";
@@ -142,12 +129,9 @@ export type BeginPasskeyRegistrationResult =
  * parks the challenge for the matching {@link enrolPasskey} call to spend.
  *
  * @param db - The tenant's database.
- * @param input - The subject enrolling a credential, and the relying party id and
- * origins the Worker resolved for this tenant.
- * @param rp - Relying party to issue the ceremony from; built from `input` when
- * omitted.
- * @returns The ceremony id to round-trip and the options to send to the browser, or
- * that no such subject exists.
+ * @param input - The subject enrolling a credential, and the relying party id and origins the Worker resolved for this tenant.
+ * @param rp - Relying party to issue the ceremony from; built from `input` when omitted.
+ * @returns The ceremony id to round-trip and the options to send to the browser, or that no such subject exists.
  */
 export async function beginPasskeyRegistration(
 	db: Database,
@@ -205,14 +189,10 @@ export type EnrolPasskeyResult =
  * Spends a registration ceremony's challenge and, once the response verifies, stores
  * the credential. The challenge row is deleted the moment it is found to belong to
  * this ceremony and not yet expired, ahead of running any cryptography, so a replayed
- * response finds nothing left to verify against.
  *
  * @param db - The tenant's database.
- * @param input - The ceremony id issued by {@link beginPasskeyRegistration}, the
- * browser's response, an optional label, the enrolling request's `User-Agent`, and the
- * relying party id and origins the Worker resolved.
- * @param rp - Relying party to verify the response with; built from `input` when
- * omitted.
+ * @param input - The ceremony id issued by {@link beginPasskeyRegistration}, the browser's response, an optional label, the enrolling request's `User-Agent`, and the relying party id and origins the Worker resolved.
+ * @param rp - Relying party to verify the response with; built from `input` when omitted.
  * @returns The stored credential's public fields, or which check refused it.
  */
 export async function enrolPasskey(
@@ -294,8 +274,7 @@ export interface BeginPasskeyAuthenticationResult {
  *
  * @param db - The tenant's database.
  * @param input - The relying party id and origins the Worker resolved for this tenant.
- * @param rp - Relying party to issue the ceremony from; built from `input` when
- * omitted.
+ * @param rp - Relying party to issue the ceremony from; built from `input` when omitted.
  * @returns The ceremony id to round-trip and the options to send to the browser.
  */
 export async function beginPasskeyAuthentication(
@@ -356,32 +335,14 @@ export type SignInWithPasskeyResult =
  * Spends an authentication ceremony's challenge, verifies the assertion against the
  * credential it names, records the counter and last-use time, and opens a session —
  * a credential checked in one call and a session opened in another is one operation
- * split in half. A counter that fails to advance past what is stored is a clone
- * signal rather than an ordinary failed attempt: the credential is suspended and the
- * reason names that outcome on its own, distinct from every other way an assertion
- * can fail.
  *
  * @param db - The tenant's database.
- * @param input - The ceremony id issued by {@link beginPasskeyAuthentication}, the
- * browser's response, the relying party id and origins the Worker resolved, whether to
- * remember the session past its own lifetime, and the request's origin.
- * @param metering - The daily active user meter to record this sign-in against, when
- * the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
- * @param resolveOrganizationMemberships - Whether to run {@link applyDomainMembership}
- * against the signed-in subject once the session opens; omitted, no domain is ever
- * read and neither result field is ever set, the same as every existing caller.
- * @param rp - Relying party to verify the response with; built from `input` when
- * omitted.
- * @param sessionPolicy - The tenant's own effective session policy the opened session
- * is bound by; omitted, the platform defaults.
- * @returns The subject, credential and opened session, or which check refused it.
- *
- * A verified assertion carries user verification on every ceremony already, so it
- * is a complete second factor on its own: this never checks the subject's own TOTP
- * factor, and `amr` already carries `webauthn` on the session it opens. A subject
- * holding both a passkey and a TOTP factor satisfies a sign-in demand with either
- * alone; only a later step-up asks a session that signed in this way to prove
- * itself again.
+ * @param input - The ceremony id issued by {@link beginPasskeyAuthentication}, the browser's response, the relying party id and origins the Worker resolved, whether to remember the session past its own lifetime, and the request's origin.
+ * @param metering - The daily active user meter to record this sign-in against, when the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
+ * @param resolveOrganizationMemberships - Whether to run {@link applyDomainMembership} against the signed-in subject once the session opens; omitted, no domain is ever read and neither result field is ever set, the same as every existing caller.
+ * @param rp - Relying party to verify the response with; built from `input` when omitted.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session is bound by; omitted, the platform defaults.
+ * @returns The subject, credential and opened session, or which check refused it. A verified assertion carries user verification on every ceremony already, so it is a complete second factor on its own: this never checks the subject's own TOTP factor, and `amr` already carries `webauthn` on the session it opens. A subject holding both a passkey and a TOTP factor satisfies a sign-in demand with either alone; only a later step-up asks a session that signed in this way to prove itself again.
  */
 export async function signInWithPasskey(
 	db: Database,
@@ -525,8 +486,7 @@ export interface ListPasskeysResult {
 /**
  * Lists every passkey a subject holds, newest first — what an administrator
  * removing a credential needs to see before naming one, and every field a
- * credential list renders: never the public key or any other credential
- * material.
+ * credential list renders: never the public key or any other credential material.
  *
  * @param db - The tenant's database.
  * @param input - The subject whose credentials to list.
@@ -595,12 +555,8 @@ export type RevokePasskeyResult =
  *
  * @param db - The tenant's database.
  * @param input - The subject and the credential to revoke.
- * @param hasOtherCredential - Whether the subject holds a credential besides this
- * passkey — a password, a verified identifier, or another passkey. Computed here from
- * this subject's other passkeys and verified identifiers when omitted; a caller that
- * also knows about passwords passes the fuller answer.
- * @returns Success, or that no such credential exists, or that it is the subject's
- * last remaining credential.
+ * @param hasOtherCredential - Whether the subject holds a credential besides this passkey — a password, a verified identifier, or another passkey. Computed here from this subject's other passkeys and verified identifiers when omitted; a caller that also knows about passwords passes the fuller answer.
+ * @returns Success, or that no such credential exists, or that it is the subject's last remaining credential.
  */
 export async function revokePasskey(
 	db: Database,

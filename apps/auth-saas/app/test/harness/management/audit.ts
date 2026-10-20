@@ -2,7 +2,6 @@
  * A real management router mapping the audit events route, wired around the
  * provisioned tenant and helpers {@link buildManagementTestCore} builds, for
  * driving the HTTP surface through real requests the way
- * `credentials/test-harness.ts` drives the credentials and sessions surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

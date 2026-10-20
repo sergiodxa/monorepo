@@ -1,12 +1,7 @@
 /**
- * A real management router mapping every tenant, member, domain, MFA-policy
- * and session-policy route, wired around the provisioned tenant and helpers
- * {@link buildManagementTestCore} builds, for driving the HTTP surface
- * through real requests the way `roles/test-harness.ts` drives the roles
- * surface. A domain attach or remove call reaches Cloudflare's
- * custom-hostname API for real, through a `HostnameClient` pointed at the
- * zone a test's own MSW handlers answer for, the way
- * `app/services/domain.test.ts` already drives that same client.
+ * A real management router mapping every tenant, member, domain, MFA-policy and
+ * session-policy route, wired around the provisioned tenant and helpers {@link
+ * buildManagementTestCore} builds, for driving the HTTP surface through real
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

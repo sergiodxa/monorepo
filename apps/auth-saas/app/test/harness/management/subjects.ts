@@ -2,7 +2,6 @@
  * A real management router mapping every subjects and identifiers route, wired
  * around the provisioned tenant and helpers {@link buildManagementTestCore}
  * builds, for driving the HTTP surface through real requests the way
- * `scim/test-harness.ts` drives the SCIM surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

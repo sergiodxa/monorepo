@@ -1,17 +1,7 @@
 /**
- * `/scim/v2/Users` and `/scim/v2/Users/{id}`: create, read, replace, patch,
- * delete and list, each resolving its own bearer token against a connection
- * inside the tenant object and translating between the wire shape and
- * `scim.ts`'s own RPC input and output.
- *
- * `createScimUsersController` builds all six actions against one `RateLimit`
- * binding rather than each action reaching `cloudflare:workers` for it
- * itself, so a test can hand in a fake limiter the same way
- * `rate-limit.test.ts` already does for `checkRateLimit`. A `DELETE` and a
- * pure `active: false` `PATCH` are admitted whatever this tenant's billing
- * state, so those two actions gate on the token and the write budget only,
- * enforcing the entitlement themselves, conditionally, once their own
- * handler has seen what the request actually asks for.
+ * `/scim/v2/Users` and `/scim/v2/Users/{id}`: create, read, replace, patch, delete
+ * and list, each resolving its own bearer token against a connection inside the
+ * tenant object and translating between the wire shape and `scim.ts`'s own RPC
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -138,12 +128,9 @@ export function createScimUsersController(limiter: RateLimit) {
 		}),
 
 		/**
-		 * Applies a PATCH to the user's current representation. A patch whose
-		 * every operation sets `active` to `false` — the deactivation most
-		 * providers send in place of `DELETE` — is admitted whatever this
-		 * tenant's billing state; anything that also touches another attribute
-		 * still needs the entitlement, since it is provisioning as much as a
-		 * create or a replace.
+		 * Applies a PATCH to the user's current representation. A patch whose every
+		 * operation sets `active` to `false` — the deactivation most providers send in
+		 * place of `DELETE` — is admitted whatever this tenant's billing state; anything
 		 */
 		patch: createAction(routes.scimUsersPatch, {
 			middleware: [gate],

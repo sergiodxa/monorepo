@@ -1,10 +1,7 @@
 /**
  * `POST /oauth/token` — the management API's own token endpoint: exchanges a
- * machine client's id and secret for a short-lived access token about that
- * client, through the platform tenant's own, ordinary client-credentials
- * grant. `client_credentials` is the only grant this endpoint answers; it
- * never issues a code or a refresh token — a person's own token comes from
- * the platform tenant's own authorization-code flow instead, not from here.
+ * machine client's id and secret for a short-lived access token about that client,
+ * through the platform tenant's own, ordinary client-credentials grant.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,8 +29,7 @@ function resources(form: FormData): string[] {
  * platform tenant's own token endpoint under its own signing key.
  *
  * @param ctx - The request context.
- * @returns The minted access token as OAuth-shaped JSON with `Cache-Control:
- * no-store`, or the error the grant was refused for.
+ * @returns The minted access token as OAuth-shaped JSON with `Cache-Control: no-store`, or the error the grant was refused for.
  * @example
  * router.map(routes.token, token);
  */

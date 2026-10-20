@@ -1,9 +1,7 @@
 /**
- * `POST /tenants/:tenantId/session-policy` — writes a partial update to the
- * five knobs governing this tenant's own session, idle and refresh-token
- * lifetimes, gated on the paid entitlement that sells the ability to shorten
- * the platform defaults to a number a tenant's own compliance obligation
- * names. A field left out of the body leaves that column untouched.
+ * `POST /tenants/:tenantId/session-policy` — writes a partial update to the five
+ * knobs governing this tenant's own session, idle and refresh-token lifetimes,
+ * gated on the paid entitlement that sells the ability to shorten the platform
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,8 +44,7 @@ function setSessionPolicyFailure(result: Extract<SetSessionPolicyResult, { ok: f
 /**
  * Builds the `tenantSessionPolicySet` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantSessionPolicySet, createTenantSessionPolicySetAction(options));

@@ -41,9 +41,7 @@ export function turnstileProvider(provider: Captcha): Middleware {
 
 /**
  * Every failure, `unavailable` included, continues to the handler, which re-renders its form
- * with a localized message and lets an unchallenged sign-in through without a token. Declared
- * by the submitting action itself, it runs after the route's rate-limit guards, so a refused
- * request never spends a verification.
+ * with a localized message and lets an unchallenged sign-in through without a token.
  *
  * @returns The middleware publishing `ctx.captcha`, for a submitting action's own `middleware`.
  * @example

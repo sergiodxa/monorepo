@@ -1,9 +1,7 @@
 /**
- * The plan and add-on catalog: `PLANS` and `ADDONS` are the one place the
- * price, the cap, the retention and the feature set a slug grants are written
- * down, so the number a page would render and the number a gate enforces stay
- * the same number. `app/initializers/billing.ts` merges these slugs with the sandbox
- * or production Polar organization's own ids to construct the provider.
+ * The plan and add-on catalog: `PLANS` and `ADDONS` are the one place the price, the
+ * cap, the retention and the feature set a slug grants are written down, so the
+ * number a page would render and the number a gate enforces stay the same number.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -140,9 +138,8 @@ function featureSlugs(): readonly string[] {
 
 /**
  * Narrows a raw slug-to-id map to the slugs named, skipping a slug with no
- * configured id rather than passing `undefined` through: a checkout or a
- * catalog read against a slug this leaves out gets the "unknown product"
- * failure `@sdxc/billing` already produces for it.
+ * configured id rather than passing `undefined` through: a checkout or a catalog
+ * read against a slug this leaves out gets the "unknown product" failure
  */
 function narrowToConfigured(
 	slugs: readonly string[],

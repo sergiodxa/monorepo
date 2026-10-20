@@ -1,26 +1,7 @@
 /**
  * The account-linking decision: whether a provider's response proves enough to
  * attach a resolved sign-in to a subject a matching address already belongs to, or
- * whether it has to be confirmed first. {@link evaluateAutomaticLink} is pure — it
- * takes what a caller already resolved (the response, the connection's authority
- * and setting, and the one subject a folded address matched) and answers which
- * path applies, carrying which condition fell short when it did not clear every
- * one. It assumes its caller already found exactly one subject the address
- * belongs to, since finding none is the existing `on_unknown_subject` path and
- * finding more than one cannot happen once a folded address is already unique to
- * a single subject in the tenant.
- *
- * {@link isConnectionAuthoritativeForEmail} resolves the other input a caller
- * needs first: whether the connection may be believed about this one address,
- * either because the catalog (or the connection's own override) marks it a
- * per-response authority, or because it owns a verified domain the address falls
- * inside.
- *
- * {@link mintLinkTicket} and {@link spendLinkTicket} carry a sign-in through the
- * confirmed path: a single-use, hashed ticket naming the subject and provider
- * identity a later credential proves, following the same delete-then-check-expiry
- * idiom `connection_handoffs` and `password_reset_tickets` already use, so a
- * replayed spend always finds nothing left to take.
+ * whether it has to be confirmed first.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,7 +22,6 @@ import { organizationDomains } from "~/app/models/tenant/organizations";
  * How long a confirmed-path ticket names its subject and provider identity before
  * it expires — the same half hour a password reset ticket gives someone to act on
  * a message they were sent, long enough to sign in with a credential they already
- * hold without leaving the ticket answerable indefinitely.
  */
 const LINK_TICKET_TTL_MS = 30 * 60 * 1000;
 
@@ -54,9 +34,6 @@ const pendingLinkTicketRowId = typeid("linktkt");
 /**
  * The subject and provider identity a confirmed-path sign-in is waiting to attach,
  * named by a single-use ticket rather than by anything a caller presents itself.
- * Carries what completing the link needs to write once a credential proves the
- * subject: the claims a resolved sign-in already mapped, and the provider's
- * refresh token, sealed the same way a completed sign-in seals one.
  */
 export const pendingLinkTickets = table({
 	name: "pending_link_tickets",
@@ -110,9 +87,6 @@ function domainOf(email: string): string | null {
  * Whether a connection may be believed about one address without asking the
  * subject to prove it again: either the connection is marked a per-response
  * authority — the catalog's own judgement, or a tenant's override for a
- * from-scratch connection — or it owns an organization whose claim on the
- * address's domain has been verified. A domain claim is read fresh rather than
- * cached, since it is only ever the authority for addresses inside it.
  *
  * @param db - The tenant's database.
  * @param connection - The connection an address's authority is being asked about.
@@ -174,20 +148,10 @@ export type AutomaticLinkDecision =
 /**
  * The automatic linking rule: an identity attaches to the subject a folded address
  * already matched with nothing further proved only when every condition below
- * holds. Falling short of any one of them takes the confirmed path instead — the
- * subject stands untouched and a ticket is minted for a credential to complete the
- * link with — rather than refusing the sign-in outright.
+ * holds.
  *
- * Assumes its caller already resolved the one subject a folded address matches;
- * finding none is the existing `on_unknown_subject` path, not this rule, and
- * finding more than one cannot happen once a folded address is already unique to
- * a single subject in the tenant, so this function's own `matchedSubject: null`
- * case only guards against being called before that resolution ran.
- *
- * @param input - The response's email and its own verified claim, the connection's
- * authority and `auto_link` setting, and the one subject the address matched.
- * @returns `automatic` once every condition holds, or `confirmed` naming which one
- * did not.
+ * @param input - The response's email and its own verified claim, the connection's authority and `auto_link` setting, and the one subject the address matched.
+ * @returns `automatic` once every condition holds, or `confirmed` naming which one did not.
  */
 export function evaluateAutomaticLink(input: EvaluateAutomaticLinkInput): AutomaticLinkDecision {
 	if (input.responseEmail === null) return { outcome: "confirmed", reason: "no-response-email" };
@@ -230,8 +194,7 @@ export interface MintLinkTicketInput {
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The connection, provider identity and matched subject the ticket
- * names, and the claims and refresh token a later spend needs to complete the link.
+ * @param input - The connection, provider identity and matched subject the ticket names, and the claims and refresh token a later spend needs to complete the link.
  * @returns The plaintext ticket to hand back to the sign-in page.
  */
 export async function mintLinkTicket(
@@ -291,11 +254,6 @@ export type SpendLinkTicketResult =
 /**
  * Spends a confirmed-path ticket: everything it named, with its refresh token
  * opened back to the plaintext a later `upsertConnectionIdentity` call takes.
- *
- * The ticket is deleted the moment its row is found, before its expiry is even
- * checked, so a replayed spend always finds nothing left to take — the same rule
- * a password reset ticket and a connection handoff ticket answer a second
- * attempt with.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.

@@ -1,10 +1,6 @@
 /**
- * Client ID Metadata Documents: a relying party whose own `client_id` is an `https://`
- * URL it controls, resolved by fetching that URL rather than reading a stored
- * registration row. Fetching the same URL again is exactly as authoritative as a stored
- * record would be, so a client identified this way is never written to the tenant's own
- * client table — the authorize and consent steps read this module's resolution instead
- * of `app/models/tenant/clients.ts`'s own lookup whenever a presented `client_id` has this shape.
+ * Client ID Metadata Documents: a relying party whose own `client_id` is an `https://` URL it
+ * controls, resolved by fetching that URL rather than reading a stored registration row.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,8 +15,7 @@ const MAX_BODY_BYTES = 5 * 1024;
 /**
  * Every fetched document, keyed by its own URL and shared across every tenant this
  * instance serves: the content a URL answers with is public and identifies the same
- * client regardless of which tenant is asking, so nothing about caching it this way
- * leaks one tenant's data into another's.
+ * client regardless of which tenant is asking, so nothing about caching it this wa
  */
 const cache = new Map<string, { resolution: CimdResolution; cachedAt: number }>();
 
@@ -58,11 +53,9 @@ function tryParseUrl(value: string): URL | null {
  * Whether a `client_id` names a Client ID Metadata Document rather than an opaque id
  * this tenant issued itself: an absolute `https:` URL, carrying no userinfo or fragment
  * component and at least one path segment beyond the root, the shape the specification
- * requires so the URL can double as the document's own fetchable address.
  *
  * @param clientId - The `client_id` an authorize or token request presented.
- * @returns Whether this `client_id` should be resolved by fetching it rather than by a
- * registry lookup.
+ * @returns Whether this `client_id` should be resolved by fetching it rather than by a registry lookup.
  */
 export function isClientIdUrl(clientId: string): boolean {
 	let parsed = tryParseUrl(clientId);
@@ -91,9 +84,6 @@ function stringArray(value: unknown): string[] {
  * Fetches and validates the document at a candidate CIMD URL: a plain `GET`, no
  * redirect followed, a `200` response read no further than the specification's own
  * size recommendation, and the document's own `client_id` checked against the exact
- * URL it was fetched from — the anti-impersonation check that keeps a metadata host
- * from vouching for an identity it does not itself serve. `redirect_uris` must name at
- * least one URI, the minimum a consent screen and a redirect-target check both need.
  */
 async function fetchCimdDocument(clientId: string): Promise<CimdResolution> {
 	let response: Response;
@@ -152,8 +142,7 @@ async function fetchCimdDocument(clientId: string): Promise<CimdResolution> {
  * Resolves a CIMD `client_id`, reusing a still-fresh cached document rather than
  * fetching again within the same authorize/consent round trip.
  *
- * @param clientId - The `https://` URL presented as `client_id`; call {@link isClientIdUrl}
- * first to know a lookup belongs here rather than in the tenant's own client table.
+ * @param clientId - The `https://` URL presented as `client_id`; call {@link isClientIdUrl} first to know a lookup belongs here rather than in the tenant's own client table.
  * @param now - The clock a cached entry's freshness is measured against.
  * @returns The resolved client record, or why the document was refused.
  */

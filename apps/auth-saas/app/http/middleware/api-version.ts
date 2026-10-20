@@ -32,8 +32,7 @@ export type ResolveApiVersionResult =
  * published one when the header is absent.
  *
  * @param request - The incoming request.
- * @returns The resolved version, or every version this API does publish when the
- * given one is not among them.
+ * @returns The resolved version, or every version this API does publish when the given one is not among them.
  * @example
  * let resolved = resolveApiVersion(ctx.request);
  * if (!resolved.ok) return unpublishedApiVersion(resolved.published);

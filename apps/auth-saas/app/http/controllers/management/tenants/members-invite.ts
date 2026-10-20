@@ -2,11 +2,6 @@
  * `POST /tenants/:tenantId/members/invite`: invites an address to administer the
  * tenant's dashboard, for a person with no platform dashboard account yet — the
  * email flow `members.ts`'s own direct-grant route cannot offer, since that route
- * requires an already-known `subjectId`. Mints a single-use, hashed, time-boxed
- * token the same way every other ticket in this codebase does, supersedes any
- * invitation already outstanding for the same tenant and address, and emails the
- * token as an accept link — never echoing the plaintext token back through the
- * response itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,8 +44,7 @@ function invalidEmail(): Response {
  * Builds the `tenantMembersInvite` action. A second invitation to the same address
  * replaces any invitation still outstanding, so one address holds one live token.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantMembersInvite, createTenantMembersInviteAction(options));

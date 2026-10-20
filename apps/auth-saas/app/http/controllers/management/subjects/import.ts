@@ -1,11 +1,7 @@
 /**
- * `POST /tenants/:tenantId/subjects/import?mode=validate|apply` — begins a
- * subject import run. The request body IS the NDJSON source file: it streams
- * straight to R2 while this route counts its own rows in the same pass, so
- * the run it queues always carries a real declared total, closing the gap
- * where the cron job's own storage-ceiling check has nothing to project
- * against. There is no separate "get an upload URL" step, since this route
- * is the only caller a signed-upload mechanism would ever serve.
+ * `POST /tenants/:tenantId/subjects/import?mode=validate|apply` — begins a subject
+ * import run. The request body IS the NDJSON source file: it streams straight to
+ * R2 while this route counts its own rows in the same pass, so the run it queues a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,11 +63,8 @@ function lineTooLong(error: JSONL.JSONLError): Response {
 }
 
 /**
- * The rows of an NDJSON request body, each yielded as its raw text so the
- * stored source file keeps the uploaded bytes of every row. Calls `onLine`
- * once per row, so a caller streaming them into R2 counts them in the same
- * pass, and ends at a row over {@link MAX_IMPORT_LINE_BYTES}, handing its
- * failure to `onError`.
+ * The rows of an NDJSON request body, each yielded as its raw text so the stored
+ * source file keeps the uploaded bytes of every row.
  *
  * @yields Each non-blank NDJSON line of the body, in order.
  */
@@ -93,8 +86,7 @@ async function* readRequestBodyLines(
 /**
  * Builds the `subjectsImportBegin` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectsImportBegin, createSubjectsImportBeginAction(options));

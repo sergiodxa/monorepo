@@ -1,8 +1,6 @@
 /**
  * English translation dictionary for the hosted sign-in, consent and error screens —
- * the only bundle shipped today. Every visible string on those pages reads from here
- * through `ctx.intl.t(...)`, so a later locale is a sibling file away rather than a
- * change to the screens themselves.
+ * the only bundle shipped today.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

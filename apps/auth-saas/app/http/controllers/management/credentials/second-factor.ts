@@ -1,12 +1,7 @@
 /**
- * The administrative second-factor actions a subject cannot take on its own:
- * `POST .../second-factor/reset` strips a subject's whole TOTP state and
- * marks it owing a fresh enrolment, and `POST
- * .../second-factor/trusted-devices/:deviceId/revoke` ends one remembered
- * browser's excuse from proving it again. The current state — the active
- * factor, its recovery codes and its trusted devices — is already part of
- * `subjectsRead`'s own payload, so this resource exposes no read route of
- * its own.
+ * The administrative second-factor actions a subject cannot take on its own: `POST
+ * .../second-factor/reset` strips a subject's whole TOTP state and marks it owing
+ * a fresh enrolment, and `POST .../second-factor/trusted-devices/:deviceId/revoke
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,8 +41,7 @@ function mountedMiddleware(options: ManagementControllerOptions) {
 /**
  * Builds the `secondFactorReset` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.secondFactorReset, createSecondFactorResetAction(options));
@@ -79,8 +73,7 @@ export function createSecondFactorResetAction(options: ManagementControllerOptio
 /**
  * Builds the `secondFactorTrustedDevicesRevoke` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(

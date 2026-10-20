@@ -70,9 +70,7 @@ function isJSONMediaType(mediaType: string): boolean {
 
 /**
  * Whether an operation's own declared request body travels as JSON (or a JSON-derived
- * media type such as a merge patch). An operation whose body is declared only in another
- * media type — the token endpoint's form encoding, a subject import's NDJSON upload — is
- * left out of the generated set, since its tool's handler forwards every body as JSON.
+ * media type such as a merge patch).
  */
 function hasJSONCompatibleBody(operation: AnyOperation): boolean {
 	let body = operation.spec.body as AnySchema | Record<string, AnySchema> | undefined;
@@ -102,8 +100,7 @@ function representativeBodySchema(operation: AnyOperation): AnySchema | null {
  * Whether a query schema requires at least one key. The real route parses an absent query
  * string as `{}`, so a query whose every key is optional is itself an optional argument.
  *
- * @throws Error When the schema cannot describe itself, which only a change to the
- * operation, not a call, can fix.
+ * @throws Error When the schema cannot describe itself, which only a change to the operation, not a call, can fix.
  */
 function requiresAnyKey(operation: AnyOperation, schema: AnySchema): boolean {
 	let described = s.toJSONSchema(schema, { direction: "input", refs: "inline" });
@@ -144,7 +141,6 @@ function toolDescription(operation: AnyOperation): string {
  * The hints a client weighs before running a tool without asking: read-only for a
  * `GET`, destructive for a `DELETE` or a same-effect removal reachable another way
  * (blocking, revoking, removing an identifier) — `unblock` restores access, so it stays
- * non-destructive. Every generated tool acts on this platform alone.
  */
 function toolAnnotations(operation: AnyOperation): ToolAnnotations {
 	let method = operation.route.method;

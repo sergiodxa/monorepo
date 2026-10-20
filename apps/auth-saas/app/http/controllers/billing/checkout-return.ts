@@ -1,9 +1,6 @@
 /**
  * `GET /billing/checkout/return` — where Polar sends a buyer back once a hosted
- * checkout is done (ADR-018). Settles the checkout, attaches whatever
- * subscription it produced to its tenant, and refreshes that tenant's
- * entitlement projection — the same read the webhook performs, safe to run
- * twice.
+ * checkout is done (ADR-018).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,8 +16,7 @@ import routes from "~/routes/web";
 /**
  * Settles a returning checkout.
  *
- * @returns `200` with the tenant's plan once settled, `400` when the request
- * carries no `checkout_id`, or `502` when the platform could not settle it.
+ * @returns `200` with the tenant's plan once settled, `400` when the request carries no `checkout_id`, or `502` when the platform could not settle it.
  * @example
  * router.map(routes.billing.checkoutReturn, checkoutReturn);
  */

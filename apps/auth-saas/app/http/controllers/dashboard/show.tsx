@@ -1,12 +1,7 @@
 /**
- * `GET /dashboard` — every tenant the signed-in subject administers.
- * `POST /dashboard/tenants` — creates another tenant under the subject's own
- * existing customer: a customer owns one or more tenants (the target
- * architecture's own model), and every subject reaching this page already owns
- * exactly one customer from signing up, so a second tenant joins that same
- * customer rather than minting a new billing identity for it. The customer is
- * read off whichever tenant the subject already administers, since the control
- * plane keeps no direct subject-to-customer row of its own.
+ * `GET /dashboard` — every tenant the signed-in subject administers. `POST
+ * /dashboard/tenants` — creates another tenant under the subject's own existing
+ * customer: a customer owns one or more tenants (the target architecture's own
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -101,13 +96,10 @@ async function renderCreateTenantIssue(
 /**
  * `POST /dashboard/tenants` — provisions a new tenant under the subject's own
  * existing customer, writes the owning membership, and redirects back to the
- * dashboard. A subject with no administered tenant yet (unreachable through this
- * app's own signup flow, which always grants one) gets a freshly-created customer
- * instead, so this action never fails for a state nothing else can produce.
+ * dashboard.
  *
  * @param ctx - The request context (provides `formData`, `render` and `db`).
- * @returns The redirect to `/dashboard` on success, or this page re-rendered with an
- * error.
+ * @returns The redirect to `/dashboard` on success, or this page re-rendered with an error.
  * @example
  * router.map(routes.dashboard.createTenant, dashboardCreateTenant);
  */

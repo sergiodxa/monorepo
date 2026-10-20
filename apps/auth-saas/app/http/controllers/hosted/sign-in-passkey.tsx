@@ -1,10 +1,7 @@
 /**
  * The passkey ceremony's two JSON endpoints, posted to by the hydrated island on
  * `/u/sign-in`: begin issues a ceremony's options, verify spends the browser's
- * assertion, opens a session on success, and resolves where the browser goes
- * next — the same outcome-to-destination mapping every hosted screen shares,
- * answered as `{ redirect }` instead of an HTTP redirect since this is a `fetch()`
- * response the island reads to navigate itself.
+ * assertion, opens a session on success, and resolves where the browser goes next
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,8 +46,7 @@ let VerifyBodySchema = s.object({
  * parameter names.
  *
  * @param ctx - The request context (provides `tenantStub`, `request` and `intl`).
- * @returns `{ redirect }` naming where the island should navigate next, or
- * `{ error }` when the ceremony or the interaction did not resolve.
+ * @returns `{ redirect }` naming where the island should navigate next, or `{ error }` when the ceremony or the interaction did not resolve.
  * @example
  * router.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
  */

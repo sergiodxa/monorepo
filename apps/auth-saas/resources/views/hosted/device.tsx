@@ -1,8 +1,7 @@
 /**
- * The `/device` screen's own two states around the consent screen it shares
- * with `/u/consent`: the plain code-entry form a person lands on with nothing
- * yet typed, and the confirmation a decision leaves them on once the code is
- * resolved either way.
+ * The `/device` screen's own two states around the consent screen it shares with
+ * `/u/consent`: the plain code-entry form a person lands on with nothing yet
+ * typed, and the confirmation a decision leaves them on once the code is resolved
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

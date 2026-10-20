@@ -1,8 +1,7 @@
 /**
  * `POST /billing/tenants/:tenantId/checkout` — opens a hosted checkout for one of
  * this tenant's plans or add-ons (ADR-018), for the tenant's owner alone, since a
- * checkout bills the owning customer. A future dashboard UI posts here and is
- * redirected to Polar's hosted page.
+ * checkout bills the owning customer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,10 +33,9 @@ let CheckoutForm = f.object({
 });
 
 /**
- * Builds the return URL Polar redirects the buyer to once the hosted checkout
- * is done. `{CHECKOUT_ID}` is Polar's own template placeholder, substituted with
- * the real checkout id at redirect time — built by string concatenation rather
- * than `URLSearchParams`, which would percent-encode the braces.
+ * Builds the return URL Polar redirects the buyer to once the hosted checkout is
+ * done. `{CHECKOUT_ID}` is Polar's own template placeholder, substituted with the
+ * real checkout id at redirect time — built by string concatenation rather than
  */
 function checkoutReturnUrl(requestUrl: string): string {
 	let base = new URL(routes.billing.checkoutReturn.href(), requestUrl);
@@ -47,9 +45,7 @@ function checkoutReturnUrl(requestUrl: string): string {
 /**
  * Opens a hosted checkout for a tenant's base plan or an add-on.
  *
- * @returns A `303` redirect to the hosted checkout, `401` with no dashboard
- * session, `403` for anyone but the tenant's owner, or `502` when the platform
- * could not open a session.
+ * @returns A `303` redirect to the hosted checkout, `401` with no dashboard session, `403` for anyone but the tenant's owner, or `502` when the platform could not open a session.
  * @example
  * router.map(routes.billing.checkout, checkout);
  */

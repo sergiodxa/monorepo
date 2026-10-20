@@ -1,8 +1,6 @@
 /**
  * Sessions: the record a subject's proof of authentication survives in once a password
- * or a passkey has verified it, and the operations over it. Opening one is folded into
- * the credential-verifying call that needed it, so the only way a row comes to exist is
- * {@link openSession}; everything else here reads, slides or ends one.
+ * or a passkey has verified it, and the operations over it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -116,9 +114,7 @@ export type OpenSessionResult =
 /**
  * Cross-cutting metering a caller opts a session-opening call into: the tenant
  * object's own instance-local cache of today's subjects, the cap currently
- * enforced, and whether that cap refuses a genuinely new subject rather than
- * only reporting it. Omitted entirely, this call meters nothing — the shape
- * every existing caller keeps.
+ * enforced, and whether that cap refuses a genuinely new subject rather than only
  */
 export interface OpenSessionMetering {
 	cache: DauCache;
@@ -135,23 +131,13 @@ let OpenSessionSchema = s.object({
 
 /**
  * Opens a session for a subject that just proved itself: mints a bearer token, stores
- * its digest, and sets both clocks from the tenant's default lifetimes. Called by a
- * credential-verifying operation once it has decided a subject may sign in, never on
- * its own — a credential checked in one call and a session opened in another is one
- * operation split in half.
+ * its digest, and sets both clocks from the tenant's default lifetimes.
  *
  * @param db - The tenant's database.
- * @param input - The subject the session belongs to, the methods that proved it, whether
- * the browser should keep it past its own lifetime, and the request's origin.
- * @param metering - The daily active user meter to record this authentication against,
- * when the caller has one; omitted, no meter is touched and no session is ever refused —
- * the overload below narrows such a call's return type to always-succeeds, exactly as it
- * always has.
- * @param policy - The tenant's own effective session policy; omitted, the platform
- * defaults, the same lifetimes this function has always opened a session with.
- * @returns The new session's id and the token to set as the cookie's value, with the
- * clocks the caller may need to shape a response around, or that a hard daily cap
- * refused this subject a session.
+ * @param input - The subject the session belongs to, the methods that proved it, whether the browser should keep it past its own lifetime, and the request's origin.
+ * @param metering - The daily active user meter to record this authentication against, when the caller has one; omitted, no meter is touched and no session is ever refused — the overload below narrows such a call's return type to always-succeeds, exactly as it always has.
+ * @param policy - The tenant's own effective session policy; omitted, the platform defaults, the same lifetimes this function has always opened a session with.
+ * @returns The new session's id and the token to set as the cookie's value, with the clocks the caller may need to shape a response around, or that a hard daily cap refused this subject a session.
  */
 export function openSession(
 	db: Database,
@@ -257,9 +243,7 @@ export async function openSession(
 /**
  * Keeps a subject's live sessions within its concurrent limit, right after the
  * session that may have just crossed it was created — a session created in one
- * call and trimmed in another would be one operation split in half. Bounded by
- * the limit itself rather than a scan: at most one page of the subject's own
- * sessions is ever read, and the revoke touches only the rows beyond it.
+ * call and trimmed in another would be one operation split in half.
  *
  * @param db - The tenant's database.
  * @param subjectId - The subject whose live sessions to bound.
@@ -301,15 +285,11 @@ export type ExtendSessionFactorResult =
 /**
  * Adds one proof to a live session without opening a new one: `totp.ts`'s own
  * demand at sign-in extends `amr` alone, and its step-up additionally moves
- * `auth_time` to the instant just verified and records the `acr` that instant
- * now stands for — the same session a credential check opened, carrying one
- * more fact about it rather than a second row.
+ * `auth_time` to the instant just verified and records the `acr` that instant now
  *
  * @param db - The tenant's database.
- * @param input - The session to extend, the `amr` entry it earns, and the
- * `acr`/`auth_time` a step-up moves.
- * @returns The session's `amr` and `auth_time` once extended, or that no live
- * session matches.
+ * @param input - The session to extend, the `amr` entry it earns, and the `acr`/`auth_time` a step-up moves.
+ * @returns The session's `amr` and `auth_time` once extended, or that no live session matches.
  */
 export async function extendSessionFactor(
 	db: Database,
@@ -368,16 +348,12 @@ let ResolveSessionSchema = s.object({
 
 /**
  * Resolves a bearer token to the session it authenticates: hashes it, looks up the row,
- * refuses a revoked or expired one, and otherwise slides the idle window. The slide is
- * throttled to once a minute, so a page and the form post it renders share one write; a
- * resolve inside that window reads the row without touching it.
+ * refuses a revoked or expired one, and otherwise slides the idle window.
  *
  * @param db - The tenant's database.
  * @param input - The token as the cookie carried it, and the resolving request's origin.
- * @param policy - The tenant's own effective session policy; omitted, the platform
- * defaults, the same lifetimes this function has always resolved against.
- * @returns The session's subject, methods and clocks when it is live, or which refusal
- * applies.
+ * @param policy - The tenant's own effective session policy; omitted, the platform defaults, the same lifetimes this function has always resolved against.
+ * @returns The session's subject, methods and clocks when it is live, or which refusal applies.
  */
 export async function resolveSession(
 	db: Database,
@@ -397,11 +373,8 @@ export async function resolveSession(
 
 	/**
 	 * The earlier of two instants governs: the one stored on the row from whatever
-	 * policy was in force when it was written or last slid, and the one the
-	 * tenant's current policy implies from the row's own `created_at` and
-	 * `last_seen_at`. A shortened policy reaches every live session on its very
-	 * next resolve this way, with nothing rewritten ahead of time; a lengthened
-	 * one never overrides what a row already has stored.
+	 * policy was in force when it was written or last slid, and the one the tenant's
+	 * current policy implies from the row's own `created_at` and `last_seen_at`.
 	 */
 	let effectiveExpiresAt = Math.min(row.expires_at, row.created_at + policy.absoluteLifetimeMs);
 	let effectiveIdleExpiresAt = Math.min(
@@ -479,10 +452,8 @@ let ListSubjectSessionsSchema = s.object({
  * revocation runs from.
  *
  * @param db - The tenant's database.
- * @param input - The subject whose sessions to list, the caller's own session id (to
- * flag which row is `isCurrent`), and where to page from.
- * @returns A page of session summaries and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @param input - The subject whose sessions to list, the caller's own session id (to flag which row is `isCurrent`), and where to page from.
+ * @returns A page of session summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function listSubjectSessions(
 	db: Database,
@@ -618,8 +589,7 @@ let RevokeSubjectSessionsSchema = s.object({
  * trim calls to end other authentications of the subject at once.
  *
  * @param db - The tenant's database.
- * @param input - The subject, why, and either a session id to leave standing or the
- * exact ids to revoke.
+ * @param input - The subject, why, and either a session id to leave standing or the exact ids to revoke.
  * @returns How many sessions were revoked.
  */
 export async function revokeSubjectSessions(
@@ -644,9 +614,6 @@ export async function revokeSubjectSessions(
 		{ where },
 	);
 
-	// One row for the whole call rather than one per session: a bulk revoke can
-	// end dozens of sessions at once, and the fact worth recording is the
-	// subject's sessions being ended, not each row that happened to carry it.
 	if (result.affectedRows > 0) {
 		await writeAuditEvent(db, {
 			action: "session.revoked",
@@ -675,8 +642,7 @@ export interface ClearActiveOrganizationResult {
 /**
  * Clears `active_organization_id` off every live session naming an organization, scoped
  * to one subject when a removed membership calls this, or every subject when the
- * organization itself is deleted. A session cleared this way keeps standing; it simply
- * mints no `org` claim until something sets an active organization on it again.
+ * organization itself is deleted.
  *
  * @param db - The tenant's database.
  * @param input - The organization to clear, and optionally the one subject to scope it to.
@@ -717,8 +683,7 @@ let SweepExpiredSessionsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a caller
- * sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredSessions(
 	db: Database,
@@ -731,8 +696,7 @@ export async function sweepExpiredSessions(
 	/**
 	 * `deleteMany` cannot take a `limit` on its own here: a Durable Object's SQL storage
 	 * has no transaction statements, and the driver needs one to bound a delete by row
-	 * count. Selecting the batch's ids first and deleting exactly those keeps the sweep
-	 * bounded without one.
+	 * count.
 	 */
 	let batch = await db.findMany(sessions, {
 		where: lt("expires_at", now),

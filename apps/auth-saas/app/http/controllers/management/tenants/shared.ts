@@ -1,11 +1,7 @@
 /**
- * What every route in this directory shares: the auth and rate-limit
- * middleware a control-plane route mounts, reading and writing a tenant,
- * membership or domain row straight through `ctx.models` since each already
- * lives in the control plane. Also serializes a row into the camelCase shape
- * the management API answers with, parses the `:membershipId`/`:domainId`
- * path params, and builds the `problem+json` responses for a membership or
- * domain the caller's own tenant does not hold.
+ * What every route in this directory shares: the auth and rate-limit middleware a
+ * control-plane route mounts, reading and writing a tenant, membership or domain
+ * row straight through `ctx.models` since each already lives in the control plane.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,8 +23,7 @@ import { managementProblem } from "~/app/http/problem";
 /**
  * Builds the auth and rate-limit middleware a control-plane route mounts.
  *
- * @param options - The auth and rate-limit options every management resource
- * controller shares.
+ * @param options - The auth and rate-limit options every management resource controller shares.
  * @param bucket - Which budget this route spends from.
  * @returns The middleware, for a route's own `middleware` array.
  */

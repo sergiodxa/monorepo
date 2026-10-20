@@ -1,9 +1,7 @@
 /**
  * Publishes the tenant the Worker already resolved as `ctx.tenant`, and a stub for
  * its Durable Object as `ctx.tenantStub`, reading both off the internal headers
- * `forwardToTenant` sets before handing a request to the tenant router. The tenant
- * is resolved once, on the platform Worker's own hostname lookup, well before this
- * router ever sees the request; these headers are how that resolution crosses in.
+ * `forwardToTenant` sets before handing a request to the tenant router.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,8 +42,7 @@ declare module "remix/router" {
  * Reads the tenant a request was already resolved to off its internal headers, and
  * publishes both the tenant's own facts and a stub for its Durable Object.
  *
- * @param resolveStub - Opens a stub for a tenant's Durable Object, called per
- * request so a test can hand in a constructed object instead of a binding.
+ * @param resolveStub - Opens a stub for a tenant's Durable Object, called per request so a test can hand in a constructed object instead of a binding.
  * @returns The middleware, for the tenant router's chain.
  * @example
  * createRouter({ middleware: [tenant((id) => env.TENANT.getByName(id))] });

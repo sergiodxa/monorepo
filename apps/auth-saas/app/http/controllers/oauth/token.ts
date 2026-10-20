@@ -1,8 +1,7 @@
 /**
- * `POST /oauth/token` — the token endpoint: turns an authorization code, a
- * refresh token, or an approved device code into a token set, or a client's
- * own credentials into a token about that client, authenticating it from
- * whichever credential shape it presented.
+ * `POST /oauth/token` — the token endpoint: turns an authorization code, a refresh
+ * token, or an approved device code into a token set, or a client's own
+ * credentials into a token about that client, authenticating it from whichever
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,13 +44,7 @@ function stringField(form: FormData, name: string): string | null {
 /**
  * Resolves which of the token endpoint's three credential shapes a request
  * presented: `Basic` in `Authorization`, `client_secret` in the form body, or a
- * form-only `client_id` with no secret at all. A `client_id` presented both in the
- * header and the body is refused here, before either value reaches the exchange
- * the client actually asked for.
- *
- * Exported so another client-authenticated endpoint on this same tenant
- * hostname reads a presented credential exactly the way the token endpoint
- * does, rather than parsing `Authorization` and form fields a second time.
+ * form-only `client_id` with no secret at all.
  */
 export function resolveClientAuth(request: Request, form: FormData): ClientAuthResult {
 	let authorization = request.headers.get("Authorization");
@@ -106,10 +99,9 @@ export function resolveClientAuth(request: Request, form: FormData): ClientAuthR
 }
 
 /**
- * Renders a client-facing token error, adding the `Basic` challenge OAuth 2.1
- * asks for at `401`. Exported so another endpoint answering the same client
+ * Renders a client-facing token error, adding the `Basic` challenge OAuth 2.1 asks
+ * for at `401`. Exported so another endpoint answering the same client
  * authentication failure renders it identically rather than reassembling the
- * `WWW-Authenticate` header of its own accord.
  */
 export function tokenError(status: number, error: string, description: string): Response {
 	let headers = status === 401 ? { "WWW-Authenticate": "Basic" } : undefined;
@@ -120,8 +112,7 @@ export function tokenError(status: number, error: string, description: string): 
  * Turns an authorization code or a refresh token into a token set.
  *
  * @param ctx - The request context (provides `tenantStub`).
- * @returns The minted token set as OAuth-shaped JSON with `Cache-Control:
- * no-store`, or the error the tenant's token module refused the request for.
+ * @returns The minted token set as OAuth-shaped JSON with `Cache-Control: no-store`, or the error the tenant's token module refused the request for.
  * @example
  * router.map(routes.token, token);
  */

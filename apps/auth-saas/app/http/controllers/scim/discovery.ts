@@ -1,10 +1,7 @@
 /**
  * `/scim/v2/ServiceProviderConfig`, `/scim/v2/ResourceTypes` and
  * `/scim/v2/Schemas` — static capability documents rendered straight from the
- * Worker, with no call to the tenant object: a client's capability
- * negotiation reads these before it ever presents a token, so they describe
- * exactly the subset this implementation serves rather than what a future
- * pass might add.
+ * Worker, with no call to the tenant object: a client's capability negotiation
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

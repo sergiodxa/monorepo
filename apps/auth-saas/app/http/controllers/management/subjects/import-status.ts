@@ -1,10 +1,7 @@
 /**
- * `GET /tenants/:tenantId/subjects/import/:runId` — an import run's own
- * status and running counts, plus a fresh one-time download link for its
- * failure report once the run has finished and written one. A new ticket is
- * minted on every poll that has a report to offer rather than reused across
- * polls, since a ticket is single-use and cheap to mint, and reusing one
- * would leave it sitting unexpired but already handed out.
+ * `GET /tenants/:tenantId/subjects/import/:runId` — an import run's own status and
+ * running counts, plus a fresh one-time download link for its failure report once
+ * the run has finished and written one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,8 +26,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `subjectsImportStatus` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectsImportStatus, createSubjectsImportStatusAction(options));

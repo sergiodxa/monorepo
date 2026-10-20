@@ -1,9 +1,7 @@
 /**
- * `POST /billing/tenants/:tenantId/portal` — opens Polar's hosted billing
- * portal for the customer that owns this tenant (ADR-018), for the tenant's
- * owner alone: the portal holds the customer's payment method and the invoices
- * of every tenant it owns. Plan changes live in the dashboard instead, since a
- * change made in the portal names a subscription and not a tenant.
+ * `POST /billing/tenants/:tenantId/portal` — opens Polar's hosted billing portal
+ * for the customer that owns this tenant (ADR-018), for the tenant's owner alone:
+ * the portal holds the customer's payment method and the invoices of every tenant
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,9 +25,7 @@ let Params = s.object({ tenantId: s.string() });
 /**
  * Opens a portal session for the tenant's owning customer.
  *
- * @returns A `303` redirect to the hosted portal, `401` with no dashboard
- * session, `403` for anyone but the tenant's owner, `404` when its provider
- * customer does not exist, or `502` when the platform could not open a session.
+ * @returns A `303` redirect to the hosted portal, `401` with no dashboard session, `403` for anyone but the tenant's owner, `404` when its provider customer does not exist, or `502` when the platform could not open a session.
  * @example
  * router.map(routes.billing.portal, portal);
  */

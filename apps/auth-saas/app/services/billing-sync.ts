@@ -2,9 +2,6 @@
  * Keeping a tenant's entitlement projection in step with the provider (ADR-018):
  * the webhook handlers `POST /webhooks/billing` dispatches to, the reprojection
  * they and a checkout return share, and the reconciliation sweep that catches a
- * missed delivery. Every path re-reads `entitlements.of()` and rewrites the
- * projection from that snapshot rather than diffing a payload, so a replayed,
- * reordered, or missed delivery all converge on the same state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,9 +53,7 @@ export async function resolveTenantForSubscription(
 
 /**
  * Attaches a subscription a completed checkout produced to the tenant it was
- * opened for: as the tenant's base plan, or as a new add-on row. Idempotent, so
- * both the checkout-return route and the `checkout.completed` handler can call
- * it for the same checkout without producing two add-on rows.
+ * opened for: as the tenant's base plan, or as a new add-on row.
  *
  * @param models - The control plane's models.
  * @param checkout - The checkout attempt row the subscription was opened for.
@@ -113,11 +108,9 @@ function basePlanSlug(tenant: TenantRow, snapshot: EntitlementState): keyof type
  * snapshot's own `features` map is the union across every tenant the customer owns.
  *
  * @param models - The control plane's models.
- * @param billing - The configured billing platform, for reading each held
- * product's features.
+ * @param billing - The configured billing platform, for reading each held product's features.
  * @param tenantId - The tenant to reproject.
- * @param snapshot - An already-read snapshot for this tenant's customer; read
- * fresh from `entitlements.of()` when omitted.
+ * @param snapshot - An already-read snapshot for this tenant's customer; read fresh from `entitlements.of()` when omitted.
  */
 export async function reprojectTenant(
 	models: Models,
@@ -183,11 +176,9 @@ export async function reprojectTenant(
 		});
 	} catch (error) {
 		/**
-		 * The projection write above already landed, so a tenant whose object
-		 * cannot be reached right now still reads correctly from
-		 * `tenant_entitlements`; only its object-side cap and retention window
-		 * stay stale until the next successful projection, the same billing
-		 * outage degradation this function already accepts for `read_at`.
+		 * The projection write above already landed, so a tenant whose object cannot be
+		 * reached right now still reads correctly from `tenant_entitlements`; only its
+		 * object-side cap and retention window stay stale until the next successful
 		 */
 		currentLog()?.warn("billing.entitlements_push_failed", {
 			tenant: tenant.id,
@@ -220,10 +211,9 @@ async function reprojectCustomerTenants(
 }
 
 /**
- * Builds the `BillingWebhookHandlers` map `POST /webhooks/billing` dispatches
- * to. Takes `models` and `billing` explicitly rather than closing over module-scope
+ * Builds the `BillingWebhookHandlers` map `POST /webhooks/billing` dispatches to.
+ * Takes `models` and `billing` explicitly rather than closing over module-scope
  * singletons, so a test builds the same handlers against `MemoryBilling` and an
- * isolated database.
  *
  * @param models - The control plane's models.
  * @param billing - The configured billing platform.
@@ -251,11 +241,9 @@ export function createBillingWebhookHandlers(
 
 			if (!tenant) {
 				/**
-				 * The checkout that would have named this tenant went missing; the
-				 * checkout's own metadata is the only remaining way to attach it, and
-				 * attaches it as the base plan, which is the case this fallback exists
-				 * for — an add-on whose checkout event was lost is left for the
-				 * reconciliation sweep once its tenant is known some other way.
+				 * The checkout that would have named this tenant went missing; the checkout's own
+				 * metadata is the only remaining way to attach it, and attaches it as the base
+				 * plan, which is the case this fallback exists for — an add-on whose checkout
 				 */
 				let tenantId = subscription.metadata.tenant;
 				if (tenantId === undefined) return;
@@ -403,10 +391,9 @@ export function createBillingWebhookHandlers(
 
 		async "customer.updated"(event: BillingEventOf<"customer.updated">) {
 			/**
-			 * `customers` keeps no email column of its own — ADR-018 only adds the
-			 * provider join columns — so there is nothing local to overwrite here;
-			 * re-running the projection is what keeps a plan or feature change that
-			 * coincided with this delivery in step.
+			 * `customers` keeps no email column of its own — ADR-018 only adds the provider
+			 * join columns — so there is nothing local to overwrite here; re-running the
+			 * projection is what keeps a plan or feature change that coincided with this
 			 */
 			await reprojectCustomerTenants(models, billing, event.customer.id);
 		},
@@ -414,15 +401,13 @@ export function createBillingWebhookHandlers(
 }
 
 /**
- * Refreshes every entitlement projection last read more than an hour ago,
- * catching a delivery the webhook endpoint never received. Safe to call
- * repeatedly and from anywhere: each row re-reads `entitlements.of()` the same
- * way a handler does.
+ * Refreshes every entitlement projection last read more than an hour ago, catching
+ * a delivery the webhook endpoint never received. Safe to call repeatedly and from
+ * anywhere: each row re-reads `entitlements.of()` the same way a handler does.
  *
  * @param models - The control plane's models.
  * @param billing - The configured billing platform.
- * @param options - `olderThanMs` overrides the one-hour staleness window;
- * `now` overrides the clock, for tests.
+ * @param options - `olderThanMs` overrides the one-hour staleness window; `now` overrides the clock, for tests.
  * @returns How many stale projections were refreshed.
  */
 export async function sweepStaleProjections(

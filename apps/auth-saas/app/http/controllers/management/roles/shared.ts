@@ -1,13 +1,7 @@
 /**
- * What every route in this directory shares: reading the `:roleId` path
- * param, the `problem+json` response for a role or permission the tenant
- * does not hold, and the entitlement refusal defining or changing one is
- * gated behind.
- *
- * A permission key is read from a query parameter rather than a path
- * segment: `remix/route-pattern` treats a raw `.` as a structural delimiter
- * within a dynamic segment, and a permission key such as `billing.view`
- * carries one as ordinary data.
+ * What every route in this directory shares: reading the `:roleId` path param, the
+ * `problem+json` response for a role or permission the tenant does not hold, and
+ * the entitlement refusal defining or changing one is gated behind.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

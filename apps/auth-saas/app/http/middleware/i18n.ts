@@ -1,14 +1,7 @@
 /**
  * Language resolution for the hosted sign-in, consent and error screens:
  * `ui_locales` from the authorization request, then `Accept-Language`, then
- * English. There is no tenant-level default and no stored subject preference to
- * read yet, so those steps the ADR's own order names are skipped until something
- * writes either.
- *
- * `ui_locales` only ever arrives as an `/authorize` query parameter, so each hosted
- * screen's own GET carries it forward as a query parameter on the next link or form
- * action rather than a hidden field, keeping it visible to this detector on every
- * request in the flow, GET or POST.
+ * English.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

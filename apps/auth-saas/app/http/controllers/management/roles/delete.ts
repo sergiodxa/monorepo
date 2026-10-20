@@ -45,8 +45,7 @@ function deleteRoleFailure(result: Exclude<DeleteRoleResult, { ok: true }>): Res
 /**
  * Builds the `rolesDelete` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.rolesDelete, createRolesDeleteAction(options));

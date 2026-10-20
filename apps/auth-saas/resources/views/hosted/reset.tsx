@@ -1,8 +1,6 @@
 /**
- * The `/u/reset` screen: a request form asking for the identifier, and — once
- * a `ticket` names a pending reset — the new-password form it authorizes.
- * `requested` renders identically whether or not the identifier resolved,
- * since `beginPasswordReset` itself never says which happened.
+ * The `/u/reset` screen: a request form asking for the identifier, and — once a
+ * `ticket` names a pending reset — the new-password form it authorizes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

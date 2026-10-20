@@ -2,14 +2,6 @@
  * The rate limit classes protecting a tenant's anonymous surfaces: interactive
  * credential submissions, the mail-sending routes, the token endpoint,
  * `/authorize`, `/oauth/device_authorization`, `/device`'s own code lookup, the
- * magic-link request route's own per-connecting-address budget, and the
- * read-only protocol endpoints. Each is one `rateLimit` registration, and
- * every route it is mounted on shares that one registration's budget — an
- * address (or, for mail-sending, a submitted identifier; for a device's own
- * code lookup, the approving session) spends from the same counter regardless
- * of which of a class's routes it hit. The management API's own tiered rate
- * limiting lives in `management-rate-limit.ts` instead, since it is keyed on a
- * resolved caller rather than an address.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -33,15 +25,9 @@ import { recordAttackSignal } from "~/app/services/attack-signals";
 import { foldIdentifier } from "~/app/services/tenant/subject-identifiers";
 
 /**
- * Wraps a class's own middleware so a refusal it already decided also
- * records the tenant's own attack signal — observed from the response
- * rather than threaded through `onLimit`, since three of the five classes
- * below answer with the shared default JSON refusal rather than a page of
- * their own. `Retry-After` rides only the response an evaluated,
- * budget-exceeded decision builds; the backend-unavailable refusal a closed
- * policy answers instead carries neither it nor any other quota header, so
- * checking for it tells the two refusals apart without reading `onLimit`'s
- * own return value.
+ * Wraps a class's own middleware so a refusal it already decided also records the
+ * tenant's own attack signal — observed from the response rather than threaded
+ * through `onLimit`, since three of the five classes below answer with the shared
  *
  * @param surface - The attack-signal surface this class's own refusals belong to.
  * @param analytics - Where to record the signal; omitted, this wraps to a no-op.
@@ -107,17 +93,12 @@ export const CREDENTIAL_WINDOW = "10 seconds";
 export const CREDENTIAL_FAILURE_SPEND = 4;
 
 /**
- * Guards every interactive credential surface — sign-in, sign-up, the
- * password reset form, magic-link's own request and completion, and the
- * second-factor completion — with one shared
- * per-address budget. Closed, since an uncounted attempt here is unlimited
- * guessing rather than a refused one. Exposes the same adapter and namespaced
- * key on the context as `credentialRateLimit`, so a wrong credential can spend
- * past the request itself.
+ * Guards every interactive credential surface — sign-in, sign-up, the password
+ * reset form, magic-link's own request and completion, and the second-factor
+ * completion — with one shared per-address budget.
  *
  * @param limiter - The `CREDENTIAL_RATE_LIMITER` binding.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for a route's own `middleware` array.
  * @example
  * router.map(routes.hostedSignInSubmit, {
@@ -183,20 +164,13 @@ export interface MailSendingRateLimitOptions {
 }
 
 /**
- * Guards every mail-sending surface — the password reset request, sign-up's
- * own verification send, and the verification resend — with one shared
- * budget keyed on the identifier a request actually submitted, or its
- * connecting address when it names none. Closed, since an uncounted attempt
- * here is unlimited mail rather than a refused one.
- *
- * `KVAdapter` carries this class's hour-long window, since a rate limiter
- * binding only ever declares a 10- or 60-second period; every other class's
- * window fits that period and sits over `CloudflareAdapter` instead.
+ * Guards every mail-sending surface — the password reset request, sign-up's own
+ * verification send, and the verification resend — with one shared budget keyed on
+ * the identifier a request actually submitted, or its connecting address when it
  *
  * @param kv - The `MAIL_RATE_LIMIT_KV` namespace.
  * @param options - A `skip` predicate for a route whose own leg sends no mail.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for a route's own `middleware` array.
  * @example
  * router.map(routes.hostedResetSubmit, {
@@ -241,8 +215,7 @@ const TOKEN_WINDOW = "10 seconds";
  * outage never stops every tenant's clients from exchanging tokens at once.
  *
  * @param limiter - The `TOKEN_RATE_LIMITER` binding.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for the token route's own `middleware` array.
  * @example
  * router.map(routes.token, {
@@ -278,8 +251,7 @@ const AUTHORIZATION_WINDOW = "10 seconds";
  * never stops an authorization request already underway.
  *
  * @param limiter - The `AUTHORIZATION_RATE_LIMITER` binding.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for the authorize route's own `middleware` array.
  * @example
  * router.map(routes.authorize, {
@@ -316,8 +288,7 @@ const PROTOCOL_WINDOW = "10 seconds";
  * a relying party resolving a tenant's metadata or a subject's claims.
  *
  * @param limiter - The `PROTOCOL_RATE_LIMITER` binding.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for each protected route's own `middleware` array.
  * @example
  * router.map(routes.userinfoGet, {
@@ -351,8 +322,7 @@ const DEVICE_AUTHORIZATION_WINDOW = "60 seconds";
  * outage never stops a device starting a fresh sign-in.
  *
  * @param limiter - The `DEVICE_AUTHORIZATION_RATE_LIMITER` binding.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for the device authorization route's own `middleware` array.
  * @example
  * router.map(routes.deviceAuthorization, {
@@ -396,16 +366,10 @@ const DEVICE_APPROVAL_ADDRESS_WINDOW = "1 hour";
  * Guards `/device`'s own code lookup with two budgets at once — the approving
  * session's own five-per-ten-minutes, and the connecting address's twenty-per-
  * hour — so a wrong user code costs both counters the moment `hostedDeviceShow`
- * looks it up. Both are `KVAdapter`s, since neither window fits a rate limiter
- * binding's own 60-second ceiling. Skipped entirely for a plain page load with
- * no `user_code` yet to look up, so the budget is spent only by an actual
- * guess. Closed, since an uncounted guess here is unlimited guessing rather
- * than a refused one.
  *
  * @param sessionKv - The `DEVICE_APPROVAL_SESSION_RATE_LIMIT_KV` namespace.
  * @param addressKv - The `DEVICE_APPROVAL_ADDRESS_RATE_LIMIT_KV` namespace.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for `/device`'s own `GET` route `middleware` array.
  * @example
  * router.map(routes.hostedDeviceShow, {
@@ -462,19 +426,12 @@ const MAGIC_LINK_LIMIT = 10;
 const MAGIC_LINK_WINDOW = "1 hour";
 
 /**
- * Guards `/u/magic-link`'s request leg with a per-connecting-address budget,
- * on top of the object's own per-address burst — this one stops a single
- * client spraying many addresses, the way the object's own budget cannot,
- * since that one is scoped to one address at a time. A `KVAdapter`, since an
- * hour-long window is longer than a rate limiter binding can declare. Closed,
- * since an uncounted request here is unlimited spraying rather than a refused
- * one; distinct from `mailSendingRateLimit`, which this route does not also
- * mount, since the object's own mail envelope already spends the identical
- * per-address concern that class exists to cover.
+ * Guards `/u/magic-link`'s request leg with a per-connecting-address budget, on
+ * top of the object's own per-address burst — this one stops a single client
+ * spraying many addresses, the way the object's own budget cannot, since that one
  *
  * @param kv - The `MAGIC_LINK_RATE_LIMIT_KV` namespace.
- * @param analytics - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
+ * @param analytics - Where to record a refusal as the tenant's own attack signal; omitted, nothing is recorded.
  * @returns The middleware, for the magic-link request route's own `middleware` array.
  * @example
  * router.map(routes.hostedMagicLinkSubmit, {

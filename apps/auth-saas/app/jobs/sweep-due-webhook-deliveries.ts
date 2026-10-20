@@ -1,10 +1,7 @@
 /**
  * The cron backstop for outbound webhook delivery: claims every tenant's own pending
  * deliveries already past their next attempt and fans one `deliverWebhook` message out
- * per delivery. A delivery's own row already carries when it is next due, so this
- * sweep's five-minute cadence only decides how soon a due delivery gets picked up —
- * the gap between attempts comes from `deliverWebhook`'s own retry delay, which keeps
- * running however often or rarely this fires.
+ * per delivery.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

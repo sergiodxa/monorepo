@@ -2,14 +2,6 @@
  * Social identity provider connections: the `connections` and `connection_mappings`
  * tables, and the configuration operations over them — the catalog and generic
  * connections a tenant sets up so its sign-in page can offer a provider a person
- * already holds an account with. Building and running the actual sign-in flow
- * against a connection is a later pass's job; everything here is configuration:
- * saving a connection's shape and credentials, enabling and removing it, and
- * describing what a sign-in page renders buttons from.
- *
- * Reads `attributeDefinitions` from `subjects.ts` to validate a mapping's `target`,
- * the one cross-reference this module needs — the same way `credentials.ts` reads
- * from `subjects.ts`, `passwords.ts` and `passkeys.ts` for its own single check.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,10 +29,8 @@ const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
 const connectionRowId = typeid("conn");
 
 /**
- * A tenant's configured social identity provider, either pre-filled from
- * {@link ConnectionCatalogEntry} or supplied from scratch. Created disabled and
- * refused a `true` `enabled` write until it holds a sealed client secret, so a
- * half-configured provider never appears on a sign-in page.
+ * A tenant's configured social identity provider, either pre-filled from {@link
+ * ConnectionCatalogEntry} or supplied from scratch.
  */
 export const connections = table({
 	name: "connections",
@@ -48,9 +38,7 @@ export const connections = table({
 	columns: {
 		id: c.text(),
 		slug: c.text(),
-		// Plain text rather than a narrow enum: a later addition extends this same
-		// table with a directory-routed kind, and a text column needs no migration
-		// to accept it.
+
 		kind: c.text(),
 		catalog_entry: c.text().nullable(),
 		display_name: c.text(),
@@ -168,9 +156,7 @@ let SaveConnectionSchema = s.object({
 	/**
 	 * The tenant's own platform-subdomain origin, filled in by the tenant object from
 	 * its `#issuer()` rather than asked of a caller — the same way `exchangeCode` and
-	 * `publishMetadata` fill in `issuer` themselves. Named apart from the connection's
-	 * own `issuer` field, which is the *provider's* discovery URL for an OIDC
-	 * connection and would otherwise collide with this one.
+	 * `publishMetadata` fill in `issuer` themselves.
 	 */
 	callbackOrigin: s.string(),
 });
@@ -412,19 +398,11 @@ export type SaveConnectionResult =
  * Validates and writes a connection's whole configuration in one call: resolves a
  * catalog entry or a from-scratch shape, validates every mapping's `target` against
  * a standard profile column or a declared attribute key, seals the client secret
- * when one is given, and claims the slug. Creates a new connection when
- * `connectionId` is omitted, refusing a slug already claimed by another; updates the
- * named one otherwise, refusing an attempt to change its slug.
- *
- * A connection is written disabled by default and stays however it was left on an
- * update — enabling one is {@link setConnectionEnabled}'s job, not this call's.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The whole connection to save, and the origin its callback URL is
- * built against.
- * @returns The connection's public record and the callback URL to register with the
- * provider, or which rule refused the save.
+ * @param input - The whole connection to save, and the origin its callback URL is built against.
+ * @returns The connection's public record and the callback URL to register with the provider, or which rule refused the save.
  */
 export async function saveConnection(
 	db: Database,
@@ -500,8 +478,7 @@ export async function saveConnection(
 			email_authority: resolved.shape.emailAuthority,
 			auto_link: parsed.autoLink ?? false,
 			on_unknown_subject: parsed.onUnknownSubject ?? "create",
-			// A social connection is never organization-scoped — only an enterprise
-			// (`saml`) connection is, through `saveEnterpriseConnection`.
+
 			organization_id: null,
 			created_at: now,
 			updated_at: now,
@@ -539,9 +516,8 @@ export type SetConnectionEnabledResult =
 
 /**
  * Turns a connection on or off. A connection that authenticates with a client
- * secret is enabled only once one is sealed, since a half-configured provider
- * must never appear on a sign-in page; a connection whose readiness is a set of
- * certificates has that checked by the call that owns them.
+ * secret is enabled only once one is sealed, since a half-configured provider must
+ * never appear on a sign-in page; a connection whose readiness is a set of
  *
  * @param db - The tenant's database.
  * @param input - The connection's slug, and whether it should now be enabled.
@@ -580,19 +556,12 @@ export async function setConnectionEnabled(
 export type RemoveConnectionResult = { ok: true } | { ok: false; reason: "not-found" };
 
 /**
- * Removes a connection and its mappings.
- *
- * Account linking — the identity record a subject signed in through this
- * connection would be attached to — is a later addition's job and does not exist
- * in this codebase yet, so there is currently nothing for `unlinkIdentities` to
- * check against: removal always proceeds. Once that identity table exists, this is
- * where it is read: refuse when a live identity still references this connection
- * unless `unlinkIdentities` is `true`, and unlink each one before the delete below
- * rather than growing a second removal path.
+ * Removes a connection and its mappings. Account linking — the identity record a
+ * subject signed in through this connection would be attached to — is a later
+ * addition's job and does not exist in this codebase yet, so there is currently
  *
  * @param db - The tenant's database.
- * @param input - The connection's slug, and whether a referencing identity may be
- * unlinked rather than block the removal.
+ * @param input - The connection's slug, and whether a referencing identity may be unlinked rather than block the removal.
  * @returns Success, or that no such connection exists.
  */
 export async function removeConnection(

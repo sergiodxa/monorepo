@@ -2,14 +2,6 @@
  * TOTP second-factor enrolment and its recovery codes: the tenant's own record of
  * an authenticator enrolment awaiting proof, the one active factor a subject
  * holds, the ten backup codes issued alongside it, and the browsers that have
- * proven the factor recently enough to skip it again. Kept as a module the
- * tenant object delegates to rather than written inline, the way `subjects.ts`
- * and `passkeys.ts` already are.
- *
- * The shared secret only ever exists in the clear inside this module, and only
- * for as long as one call needs it open: `beginTotpEnrolment` seals it the
- * moment `totp.generateSecret` mints it, and every later call opens the sealed
- * column, uses the plaintext, and lets it go out of scope with the call.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,19 +38,16 @@ import {
 } from "~/app/services/tenant/authentication-backoff";
 
 /**
- * How long an enrolment stands before its sealed secret is swept away unused.
- * Ten minutes covers switching to an authenticator app, scanning or typing the
- * setup key, and coming back, without leaving an unproven secret sitting in the
- * enrolments table indefinitely.
+ * How long an enrolment stands before its sealed secret is swept away unused. Ten
+ * minutes covers switching to an authenticator app, scanning or typing the setup
+ * key, and coming back, without leaving an unproven secret sitting in the
  */
 const ENROLMENT_TTL_MS = 10 * 60 * 1000;
 
 /**
- * How long a `totp_claims` row is kept once written. Claims exist only to block
- * a code being replayed inside the drift window RFC 6238 verification accepts —
- * 90 seconds either side of the current step at most — so anything older than a
- * few minutes is pure cruft the sweep can drop without narrowing what the
- * window itself already protects.
+ * How long a `totp_claims` row is kept once written. Claims exist only to block a
+ * code being replayed inside the drift window RFC 6238 verification accepts — 90
+ * seconds either side of the current step at most — so anything older than a few
  */
 const CLAIM_RETENTION_MS = 5 * 60 * 1000;
 
@@ -123,7 +112,6 @@ export const totpClaims = table({
  * The replay guard a step-up claims against, scoped to one interaction rather than
  * the subject at large: the same code proven for a different, concurrent step-up is
  * never mistaken for a replay of this one, since only a second submission against
- * this exact interaction conflicts on the unique index.
  */
 export const totpStepUpClaims = table({
 	name: "totp_stepup_claims",
@@ -167,9 +155,8 @@ export type TotpFactorRow = TableRow<typeof totpFactors>;
 
 /**
  * Clears every trusted device a subject holds, called wherever the factor a
- * remembered browser was excused from proving stops being the one it would
- * face next: activating a factor (the first one, or a replacement) and the
- * administrator reset both change what a device would need to have proven.
+ * remembered browser was excused from proving stops being the one it would face
+ * next: activating a factor (the first one, or a replacement) and the
  */
 async function clearTrustedDevices(db: Database, subjectId: string): Promise<void> {
 	await db.deleteMany(trustedDevices, { where: { subject_id: subjectId } });
@@ -203,10 +190,7 @@ async function hashRecoveryCode(folded: string): Promise<string> {
 
 /**
  * Whether `error` is the unique-index conflict a replayed claim throws, rather
- * than some other failure. Matched on the underlying driver's own message
- * rather than an error code, since Node's `node:sqlite` and Bun's `bun:sqlite`
- * disagree on the code (`ERR_SQLITE_ERROR` against `SQLITE_CONSTRAINT_*`) but
- * agree on wording it as a "constraint failed".
+ * than some other failure.
  */
 function isReplayConflict(error: unknown): boolean {
 	if (!(error instanceof DataTableDatabaseError)) return false;
@@ -217,12 +201,8 @@ function isReplayConflict(error: unknown): boolean {
 
 /**
  * Claims a submission's digest against the subject-scoped replay guard before
- * anything about the submission is checked: the unique index on
- * `(subject_id, code_hash)` makes a second claim of the same digest a conflict,
- * refused here rather than discovered by comparing timestamps after the fact.
- * Claiming ahead of verifying keeps the mutual exclusion in one statement, with
- * no read-modify-write spanning the `await` that would otherwise derive whether
- * the submission is even valid.
+ * anything about the submission is checked: the unique index on `(subject_id,
+ * code_hash)` makes a second claim of the same digest a conflict, refused here
  */
 async function claimTotpCode(
 	db: Database,
@@ -241,9 +221,8 @@ async function claimTotpCode(
 
 /**
  * Claims a submission's digest against one step-up interaction rather than the
- * subject at large, so the same code proven for a different, concurrent step-up
- * is never refused as a replay here — only a second submission against this
- * exact interaction is.
+ * subject at large, so the same code proven for a different, concurrent step-up is
+ * never refused as a replay here — only a second submission against this exact
  */
 async function claimStepUpCode(
 	db: Database,
@@ -321,9 +300,8 @@ async function spendRecoveryCode(
 
 /**
  * Whether `submission` proves ownership of a subject's active factor: a current
- * TOTP code checked first, since that is the proof an authenticator app hands
- * back on every ordinary use, and a recovery code as the fallback for a subject
- * that no longer has the app.
+ * TOTP code checked first, since that is the proof an authenticator app hands back
+ * on every ordinary use, and a recovery code as the fallback for a subject that no
  */
 async function proveFactorOwnership(
 	db: Database,
@@ -379,16 +357,13 @@ export type BeginTotpEnrolmentResult =
 
 /**
  * Mints a secret, seals it into `totp_enrolments`, and answers the `otpauth://`
- * URI and the base32 setup key once — the secret crosses the boundary here
- * because handing it to an authenticator app is the point of the call, and
- * nothing afterwards ever returns it again.
+ * URI and the base32 setup key once — the secret crosses the boundary here because
+ * handing it to an authenticator app is the point of the call, and nothing
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key, imported once and reused.
  * @param input - The subject enrolling, and the tenant's own issuer for the URI.
- * @returns The enrolment id to spend with {@link activateTotpFactor}, the URI to
- * render as a QR code, and the setup key to offer as a manual fallback, or that
- * no such subject exists.
+ * @returns The enrolment id to spend with {@link activateTotpFactor}, the URI to render as a QR code, and the setup key to offer as a manual fallback, or that no such subject exists.
  */
 export async function beginTotpEnrolment(
 	db: Database,
@@ -431,26 +406,12 @@ export type ActivateTotpFactorResult =
 
 /**
  * Spends an enrolment's sealed secret and, only once a submitted code verifies
- * against it, activates the factor and mints the ten recovery codes alongside
- * it. The enrolment row is deleted the moment it is found, ahead of opening or
- * verifying anything, so a second attempt against the same enrolment always
- * finds nothing left to spend regardless of whether this one succeeds.
- *
- * A wrong code here is a failed setup, not a lockout: nothing about this call
- * claims the submission against a replay guard, since no factor exists yet for
- * a replay to threaten. Activating a new factor replaces any prior one a
- * subject held: a second authenticator app is treated as a second scan of the
- * same QR code rather than a second factor alongside the first, so a subject
- * holds at most one at a time. Every trusted device the subject held is
- * cleared alongside it, since a browser excused from proving the old factor
- * has proven nothing about the one that now stands in its place.
+ * against it, activates the factor and mints the ten recovery codes alongside it.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The enrolment id from {@link beginTotpEnrolment}, the code read
- * off the app, and an optional label for the credential list.
- * @returns The activated factor's label and activation time with its fresh
- * recovery codes, or why activation was refused.
+ * @param input - The enrolment id from {@link beginTotpEnrolment}, the code read off the app, and an optional label for the credential list.
+ * @returns The activated factor's label and activation time with its fresh recovery codes, or why activation was refused.
  */
 export async function activateTotpFactor(
 	db: Database,
@@ -513,8 +474,7 @@ export type RegenerateRecoveryCodesResult =
  *
  * @param db - The tenant's database.
  * @param input - The subject regenerating its codes.
- * @returns The fresh set once, matching {@link activateTotpFactor}'s own answer
- * shape, or that the subject holds no factor to regenerate codes for.
+ * @returns The fresh set once, matching {@link activateTotpFactor}'s own answer shape, or that the subject holds no factor to regenerate codes for.
  */
 export async function regenerateRecoveryCodes(
 	db: Database,
@@ -548,19 +508,14 @@ export type RemoveTotpFactorResult =
 	| { ok: false; reason: "invalid-submission" };
 
 /**
- * Removes a subject's factor and every recovery code, requiring proof of a
- * current TOTP code or an unused recovery code first, and refusing outright
- * under a tenant policy of `required` — removal would leave the subject with no
- * factor, which the policy does not allow. A trusted device's own remembered
- * window keeps running past this call: a factor being enrolled again, or an
- * administrator reset, are what end it.
+ * Removes a subject's factor and every recovery code, requiring proof of a current
+ * TOTP code or an unused recovery code first, and refusing outright under a tenant
+ * policy of `required` — removal would leave the subject with no factor, which t
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The subject removing its factor, and the code or recovery
- * code proving it.
- * @param policy - The tenant's own MFA policy, read by the caller from
- * `settings` — this module has no table of its own to read it from.
+ * @param input - The subject removing its factor, and the code or recovery code proving it.
+ * @param policy - The tenant's own MFA policy, read by the caller from `settings` — this module has no table of its own to read it from.
  * @returns Success, or why the removal was refused.
  */
 export async function removeTotpFactor(
@@ -630,18 +585,12 @@ export type CompleteSecondFactorResult =
  * Completes the second factor a sign-in demanded: claims the submission against
  * the subject-scoped replay guard, accepts a current code or a recovery code,
  * extends the session's `amr` with `otp`, and, when asked, mints a trusted-device
- * token remembering this browser for 30 days. A replay and a wrong submission
- * both refuse cleanly, distinguishable so a screen can say which happened.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The session the factor is owed on, the code or recovery code
- * submitted, whether to remember this browser, and the request's origin.
- * @param failureThreshold - How many consecutive wrong codes the tenant tolerates
- * before a backoff window opens; omitted, the same default every unconfigured
- * tenant enforces.
- * @returns The remaining recovery-code count and a trusted-device token when one
- * was minted, or why the factor was not completed.
+ * @param input - The session the factor is owed on, the code or recovery code submitted, whether to remember this browser, and the request's origin.
+ * @param failureThreshold - How many consecutive wrong codes the tenant tolerates before a backoff window opens; omitted, the same default every unconfigured tenant enforces.
+ * @returns The remaining recovery-code count and a trusted-device token when one was minted, or why the factor was not completed.
  */
 export async function completeSecondFactor(
 	db: Database,
@@ -749,9 +698,6 @@ export async function completeSecondFactor(
 		detail: { method: "totp", step: "second_factor", trustedDevice: input.trustDevice },
 	});
 
-	// A last-recovery-code-spent notice would mail the subject here once a caller
-	// with `@sdxc/mail` access can reach this call; nothing sends one yet.
-
 	return { ok: true, recoveryCodesRemaining, trustedDeviceToken };
 }
 
@@ -762,12 +708,10 @@ export type CompleteSecondFactorViaEnrolmentResult =
 /**
  * Completes a sign-in's second-factor demand for a subject who just enrolled the
  * fresh factor an administrator reset had cleared: `activateTotpFactor` already
- * proved the code that activated it, so this only extends the session's `amr`
- * and clears `mfa_reset_required`, with no second proof to claim.
+ * proved the code that activated it, so this only extends the session's `amr` and
  *
  * @param db - The tenant's database.
- * @param input - The session the demand moves past, and the subject whose
- * `mfa_reset_required` flag this clears.
+ * @param input - The session the demand moves past, and the subject whose `mfa_reset_required` flag this clears.
  * @returns Success once both are written, or that the session no longer resolves.
  */
 export async function completeSecondFactorViaEnrolment(
@@ -827,25 +771,11 @@ export type CompleteStepUpResult =
  * Proves a step-up's own demand: claims the submission against this interaction
  * rather than the subject at large, accepts a current code or a recovery code,
  * and, once proven, moves the session's `auth_time` to this instant, mints its
- * `acr` as `mfa`, and extends `amr` with `otp` — the fact a caller resumes the
- * parked interaction against once this answers success.
- *
- * A step-up accepting a passkey assertion as its third proof is in the ADR this
- * mechanism follows, but is not wired here: the RPC this answers takes a single
- * text `submission`, and `passkeys.ts` exposes no bare "verify this assertion for
- * this subject" primitive separate from `signInWithPasskey`'s whole sign-in flow.
- * Building one is a real WebAuthn ceremony of its own — its own challenge storage
- * and relying-party wiring — not a thin reuse, so it is left for a pass that
- * decides that surface deliberately rather than growing it here as a side effect.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The interaction the proof is scoped to, the session it moves,
- * and the code or recovery code submitted.
- * @param failureThreshold - How many consecutive wrong codes the tenant tolerates
- * before a backoff window opens; omitted, the same default every unconfigured
- * tenant enforces. Shares the same counter {@link completeSecondFactor} writes,
- * since both prove ownership of the same factor row.
+ * @param input - The interaction the proof is scoped to, the session it moves, and the code or recovery code submitted.
+ * @param failureThreshold - How many consecutive wrong codes the tenant tolerates before a backoff window opens; omitted, the same default every unconfigured tenant enforces. Shares the same counter {@link completeSecondFactor} writes, since both prove ownership of the same factor row.
  * @returns Success once the session is moved, or why the step-up was refused.
  */
 export async function completeStepUp(
@@ -919,10 +849,9 @@ export type CompleteStepUpViaEnrolmentResult =
 	| { ok: false; reason: "session-not-found" };
 
 /**
- * Moves a step-up straight through for a subject who just enrolled a fresh
- * factor to answer it: `activateTotpFactor` already proved the code that
- * activated the factor, so this only moves the session the same way
- * {@link completeStepUp} does, with no second proof to claim.
+ * Moves a step-up straight through for a subject who just enrolled a fresh factor
+ * to answer it: `activateTotpFactor` already proved the code that activated the
+ * factor, so this only moves the session the same way {@link completeStepUp} does,
  *
  * @param db - The tenant's database.
  * @param input - The session the step-up moves, and the clock it moves it to.
@@ -956,18 +885,13 @@ export type ResetSecondFactorResult =
 	| { ok: false; reason: "not-found" };
 
 /**
- * The administrator path: removes the factor, every recovery code and every
- * trusted device, revokes every session, and marks the subject as owing a
- * fresh enrolment at its next sign-in. Mailing the subject is a Worker-side
- * concern this call does not perform — a tenant object has no `@sdxc/mail`
- * access — so it answers the address a caller should notify instead, unconditionally,
- * with no rate-limit check standing between a compromised account and its owner
- * hearing about it.
+ * The administrator path: removes the factor, every recovery code and every trusted
+ * device, revokes every session, and marks the subject as owing a fresh enrolment at
+ * its next sign-in.
  *
  * @param db - The tenant's database.
  * @param input - The subject being reset, who is resetting it, and why.
- * @returns The address to notify (or `null` when the subject has none verified),
- * or that no such subject exists.
+ * @returns The address to notify (or `null` when the subject has none verified), or that no such subject exists.
  */
 export async function resetSecondFactor(
 	db: Database,

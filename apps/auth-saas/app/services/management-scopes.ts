@@ -64,9 +64,7 @@ export const MANAGEMENT_SCOPE_TITLES: Record<ManagementScope, string> = {
 
 /**
  * Adds the management API's own scope vocabulary to the platform tenant's scope
- * catalog, leaving a name already present untouched. The platform tenant is the
- * only tenant this vocabulary is ever asked to grant access to, so nothing calls
- * this against any other tenant's own catalog.
+ * catalog, leaving a name already present untouched.
  *
  * @param platform - A stub for the platform tenant's own Durable Object.
  * @example

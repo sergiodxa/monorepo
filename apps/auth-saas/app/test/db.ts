@@ -2,7 +2,6 @@
  * In-memory {@link Database} harness for auth-saas unit tests. Applies every
  * control-plane D1 migration, in order, to a fresh `@sdxc/cloudflare-mocks` D1
  * database and wraps it with the real `@sdxc/data-table-d1` adapter, so a model or
- * service test exercises the same generated SQL production runs against.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

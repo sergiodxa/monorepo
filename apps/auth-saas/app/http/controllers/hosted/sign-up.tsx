@@ -1,16 +1,7 @@
 /**
- * `GET/POST /u/sign-up` — an identifier, a password, and an optional display
- * name. `createSubject` claims the identifier unverified; `addIdentifier`
- * mints the ticket that proves it, per `subjects.ts`'s own split between the
- * two; `setPassword` writes the credential last, once the address is
- * claimed. No session opens here — `signInWithPassword` only ever resolves a
- * verified identifier, so a fresh signup lands on `/u/verify` instead of
- * completing any authorization it may have arrived from.
- *
- * The verification email sends before the password is written, so a subject
- * always exists once a send is attempted; a failed send carries forward as
- * `sendFailed` on the `/u/verify` redirect rather than rolling the subject
- * back, since losing an account is worse than one waiting on a resend.
+ * `GET/POST /u/sign-up` — an identifier, a password, and an optional display name.
+ * `createSubject` claims the identifier unverified; `addIdentifier` mints the
+ * ticket that proves it, per `subjects.ts`'s own split between the two;
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -105,9 +96,8 @@ export const signUpShow = createAction(routes.hostedSignUpShow, async (ctx) => {
 
 /**
  * Creates the subject, mints its email's verification ticket, and writes its
- * password, in that order — then sends the browser to `/u/verify` with the
- * new subject id, since nothing yet delivers the ticket anywhere for the
- * person to follow.
+ * password, in that order — then sends the browser to `/u/verify` with the new
+ * subject id, since nothing yet delivers the ticket anywhere for the person to
  *
  * @param ctx - The request context (provides `formData`, `render` and `tenantStub`).
  * @returns The redirect to `/u/verify` on success, or this same page re-rendered with an error.

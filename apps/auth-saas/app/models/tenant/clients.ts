@@ -1,8 +1,6 @@
 /**
  * Clients and client secrets: the `clients` and `client_secrets` tables, and the
- * operations over them. A client is a relying party registered in a tenant; a
- * confidential one authenticates at the token endpoint with a secret from this
- * module, a public one carries none and relies on PKCE instead.
+ * operations over them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -149,8 +147,7 @@ export type RedirectUriValidation =
 /**
  * Validates a redirect URI the way a client's record is written, not the way an
  * incoming request is matched against it: absolute, no fragment, `https` unless the
- * host is a loopback address, in which case `http` is allowed too. Any other scheme is
- * a native app's own, and is accepted without further checks.
+ * host is a loopback address, in which case `http` is allowed too.
  *
  * @param uri - The URI as the caller wrote it.
  * @returns Success, or which rule refused the URI.
@@ -398,8 +395,7 @@ let RegisterClientSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The whole record to register.
- * @returns The new record and the one-time plaintext secret (`null` for a public
- * client), or which rule refused the record.
+ * @returns The new record and the one-time plaintext secret (`null` for a public client), or which rule refused the record.
  */
 export async function registerClient(
 	db: Database,
@@ -558,13 +554,11 @@ let RotateClientSecretSchema = s.object({
 /**
  * Mints a successor secret and opens the overlap on the incumbent in one call: the
  * incumbent — the live secret with no `expires_at` yet — is stamped with one, and the
- * new secret takes its place with none of its own. Refuses a third secret while two
- * are already live, the ceiling both may verify under at once.
+ * new secret takes its place with none of its own.
  *
  * @param db - The tenant's database.
  * @param input - The client to rotate, and how many days the incumbent's window lasts.
- * @returns The new secret and when the incumbent now expires, or why rotation was
- * refused.
+ * @returns The new secret and when the incumbent now expires, or why rotation was refused.
  */
 export async function rotateClientSecret(
 	db: Database,
@@ -621,8 +615,6 @@ let RevokeClientSecretSchema = s.object({ clientId: s.string(), secretId: s.stri
 /**
  * Closes one secret's window immediately by stamping its `expires_at` at the current
  * time, the same state a rotation's incumbent reaches at the end of its overlap.
- * Refuses to take a confidential client's last live secret, which would leave it
- * unable to authenticate at all.
  *
  * @param db - The tenant's database.
  * @param input - The client the secret belongs to, and the secret to revoke.
@@ -686,8 +678,7 @@ let SweepExpiredClientSecretsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a caller
- * sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredClientSecrets(
 	db: Database,
@@ -768,8 +759,7 @@ let SetClientPermissionClaimSchema = s.object({ clientId: s.string(), include: s
  * switch — this is the second half of that pair alone.
  *
  * @param db - The tenant's database.
- * @param input - The client whose switch is being set, its new value, and who is
- * making the call.
+ * @param input - The client whose switch is being set, its new value, and who is making the call.
  * @returns The updated record, or that no such client exists.
  */
 export async function setClientPermissionClaim(
@@ -811,7 +801,6 @@ export type DeleteClientResult = { ok: true } | { ok: false; reason: "not-found"
  * Deletes a client and its secrets — everything a client owns today. A caller that
  * also knows about a client's consents and issued tokens deletes those first, the way
  * `deleteSubject`'s own caller deletes a subject's passwords and passkeys before this
- * kind of call.
  *
  * @param db - The tenant's database.
  * @param input - The client to delete.
@@ -890,8 +879,7 @@ let ListClientsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - Where to page from.
- * @returns A page of client summaries and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @returns A page of client summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function listClients(
 	db: Database,
@@ -935,16 +923,7 @@ export type VerifyClientSecretResult = { ok: true } | { ok: false };
 
 /**
  * Checks a presented secret against every one of a client's live secrets, so a
- * rotation in progress is invisible to whichever one a caller still holds. Stamps
- * `last_used_at` on the secret that matched at most once a minute, so a client
- * exchanging tokens every few seconds — the client credentials grant's own caller,
- * most of all — writes that row about as often as a person signs in, and rehashes
- * past policy on the secret that matched, the same as a password verify does for a
- * password hash.
- *
- * Not an RPC method itself: `exchangeCode` and the refresh exchange call this inside
- * the operation that already resolves the client, rather than checking a secret in a
- * round trip of its own.
+ * rotation in progress is invisible to whichever one a caller still holds.
  *
  * @param db - The tenant's database.
  * @param input - The client presenting a secret, and the secret itself.

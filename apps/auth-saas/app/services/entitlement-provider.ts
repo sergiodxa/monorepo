@@ -1,9 +1,7 @@
 /**
- * The flag provider that turns a tenant's entitlement projection into
- * answers: a key under the "entitlement." namespace is resolved from the
- * request's own context rather than from a rule set, and every other key
- * reaches the wrapped provider, which is what makes the namespace a real
- * boundary rather than a naming convention.
+ * The flag provider that turns a tenant's entitlement projection into answers: a
+ * key under the "entitlement." namespace is resolved from the request's own
+ * context rather than from a rule set, and every other key reaches the wrapped
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,11 +68,8 @@ function featureSlugOf(key: string): string {
 
 /**
  * Wraps a provider with the tenant entitlement namespace. Constructed over an
- * `EngineProvider`, it answers every "entitlement.*" boolean from the
- * evaluation context's own `entitlement` map, answers its two known numeric
- * keys from the plan tier the context names, and hands every other key to
- * the engine underneath — which is where a release flag or a kill switch is
- * declared.
+ * `EngineProvider`, it answers every "entitlement.*" boolean from the evaluation
+ * context's own `entitlement` map, answers its two known numeric keys from the
  *
  * @example
  * let provider = new EntitlementProvider(new EngineProvider(createEngine({ store })));

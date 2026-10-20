@@ -43,8 +43,7 @@ import routes from "~/routes/management";
 /**
  * Resolves a dashboard request's `__Host-session` cookie against the platform's own
  * identity tenant — the Durable Object addressed by the platform's own domain name,
- * the one hostname every deploy already names, so no separate provisioning step is
- * owed to reach it.
+ * the one hostname every deploy already names, so no separate provisioning step i
  */
 async function resolveDashboardSubjectId(ctx: RequestContext): Promise<string | null> {
 	let sessionToken = await sessionCookie.parse(ctx.request.headers.get("Cookie"));

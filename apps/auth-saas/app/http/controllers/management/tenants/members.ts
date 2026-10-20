@@ -1,10 +1,7 @@
 /**
  * The member sub-resource under a tenant: `GET .../members` lists them, `POST
- * .../members` grants a subject access at a role — a direct grant rather than
- * an email invitation, since no separate invitation mechanism exists in this
- * codebase today — `PUT .../members/:membershipId` changes a membership's
- * role, and `DELETE .../members/:membershipId` revokes one, each refusing to
- * leave the tenant without an owner.
+ * .../members` grants a subject access at a role — a direct grant rather than an
+ * email invitation, since no separate invitation mechanism exists in this codebase
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,8 +52,7 @@ function lastOwner(): Response {
 /**
  * Builds the `tenantMembersList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantMembersList, createTenantMembersListAction(options));
@@ -78,8 +74,7 @@ export function createTenantMembersListAction(options: ManagementControllerOptio
 /**
  * Builds the `tenantMembersCreate` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantMembersCreate, createTenantMembersCreateAction(options));
@@ -111,8 +106,7 @@ export function createTenantMembersCreateAction(options: ManagementControllerOpt
 /**
  * Builds the `tenantMembersUpdateRole` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantMembersUpdateRole, createTenantMembersUpdateRoleAction(options));
@@ -150,8 +144,7 @@ export function createTenantMembersUpdateRoleAction(options: ManagementControlle
 /**
  * Builds the `tenantMembersRemove` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantMembersRemove, createTenantMembersRemoveAction(options));

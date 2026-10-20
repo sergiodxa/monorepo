@@ -1,8 +1,7 @@
 /**
  * `POST /signup/resend` — re-sends a pending signup's own verification ticket. The
  * unverified address is looked up server-side by the subject id in the URL, never
- * trusted from a value a client-supplied form field could otherwise carry, so a
- * caller cannot resend to an address they don't already control the ticket for.
+ * trusted from a value a client-supplied form field could otherwise carry, so a c
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,7 +37,6 @@ function renderPending(
  * Resends the verification ticket for the subject's own outstanding unverified
  * email. Answers the same "check your email" screen whether or not a fresh ticket
  * actually went out, the same framing an unresolved-but-plausible resend already
- * carries elsewhere in this app.
  *
  * @param ctx - The request context (provides `render` and `mail`).
  * @returns The "check your email" state again, noting the resend when one went out.

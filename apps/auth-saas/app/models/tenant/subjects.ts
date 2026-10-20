@@ -1,8 +1,6 @@
 /**
  * Subjects, their identifiers and their declared attributes: the tables a tenant's
- * every other feature hangs off, and the operations over them. Kept as a module the
- * tenant object delegates to rather than written inline, so the object's own file stays
- * about wiring a request to a method rather than about what a method does.
+ * every other feature hangs off, and the operations over them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,7 +69,7 @@ export const subjects = table({
 		zoneinfo: c.text().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
-		// Set by an administrator second-factor reset; a sign-in reads it to demand a fresh enrolment.
+
 		mfa_reset_required: c.boolean().default(false),
 	},
 });
@@ -130,9 +128,7 @@ export type AttributeValue = string | number | boolean | null;
 
 /**
  * Who is asking. `subject` is the account acting on itself through a self-service
- * screen; `admin` is a tenant-privileged actor such as the dashboard. Kept to these two
- * because nothing here needs a finer distinction yet — a later caller with one adds a
- * member to this union rather than replacing it.
+ * screen; `admin` is a tenant-privileged actor such as the dashboard.
  */
 export type Actor = { kind: "subject" } | { kind: "admin" };
 
@@ -172,18 +168,11 @@ export type CreateSubjectResult =
 
 /**
  * Validates and folds every identifier, claims their uniqueness, and creates the
- * subject with them attached. An identifier with no `verifiedAt` given is written
- * unverified, and minting a verification ticket is {@link addIdentifier}'s job, so an
- * email claimed that way waits for its own call before it can sign anyone in. A caller
- * that already knows an identifier was proven elsewhere — an import asserting its own
- * directory's history — passes the moment it was proven and the row is written
- * verified from the start.
+ * subject with them attached.
  *
  * @param db - The tenant's database.
- * @param input - The identifiers to claim, the standard profile claims, and any declared
- * attributes to set.
- * @returns The new subject's id and each identifier's starting state, or which
- * identifier or attribute key the call was refused for.
+ * @param input - The identifiers to claim, the standard profile claims, and any declared attributes to set.
+ * @returns The new subject's id and each identifier's starting state, or which identifier or attribute key the call was refused for.
  */
 export async function createSubject(
 	db: Database,
@@ -301,8 +290,6 @@ export async function createSubject(
  * Resolves the subject already holding a verified email identifier, for a caller
  * with no subject id of its own to look up by — the platform's own accept-invitation
  * route reaching across into a tenant it does not otherwise operate inside of, the
- * same verified-identifier lookup `beginMagicLinkSignIn` already keys its own
- * just-in-time creation decision on.
  *
  * @param db - The tenant's database.
  * @param email - The address as typed.
@@ -341,10 +328,8 @@ export type UpdateSubjectResult =
  * meaning of `null`, so a later read reports the attribute absent.
  *
  * @param db - The tenant's database.
- * @param input - The subject to update, the profile columns and attributes to change,
- * and who is asking.
- * @returns Success, or which attribute key the actor may not write, or that no such
- * subject exists.
+ * @param input - The subject to update, the profile columns and attributes to change, and who is asking.
+ * @returns Success, or which attribute key the actor may not write, or that no such subject exists.
  */
 export async function updateSubject(
 	db: Database,
@@ -438,14 +423,11 @@ export type AddIdentifierResult =
 /**
  * Folds and claims a new identifier for an existing subject. An email is written
  * unverified with a fresh single-use ticket for the caller to deliver; a username has no
- * proof to carry and is usable immediately. Calling again for the same subject's own
- * unverified row replaces its outstanding ticket, which is how a resend works.
+ * proof to carry and is usable immediately.
  *
  * @param db - The tenant's database.
- * @param input - The subject to attach the identifier to, its kind and value, and who is
- * asking.
- * @returns The identifier's starting state — with a ticket to deliver for an email — or
- * which rule the call was refused for.
+ * @param input - The subject to attach the identifier to, its kind and value, and who is asking.
+ * @returns The identifier's starting state — with a ticket to deliver for an email — or which rule the call was refused for.
  */
 export async function addIdentifier(
 	db: Database,
@@ -590,8 +572,7 @@ export type VerifyIdentifierResult =
  *
  * @param db - The tenant's database.
  * @param input - The ticket as it was delivered to the address.
- * @returns The subject the address belongs to and whether it became primary, or why the
- * ticket does not work.
+ * @returns The subject the address belongs to and whether it became primary, or why the ticket does not work.
  */
 export async function verifyIdentifier(
 	db: Database,
@@ -689,19 +670,13 @@ export type RemoveIdentifierResult =
 	| { ok: false; reason: "last-verified-identifier" };
 
 /**
- * Removes an identifier, refusing to take a subject's last verified email address
- * when it is also their last remaining credential of any kind. Removing the primary
- * promotes the oldest remaining verified email in the same operation, and every
- * verified address left is reported so the caller can announce the change to each one.
+ * Removes an identifier, refusing to take a subject's last verified email address when
+ * it is also their last remaining credential of any kind.
  *
  * @param db - The tenant's database.
  * @param input - The subject, the identifier's value as entered, and who is asking.
- * @param hasOtherCredential - Whether the subject holds a credential besides this
- * identifier — a password, a passkey, or another verified identifier. Computed here
- * from identifiers alone when omitted, which is what this module can see on its own;
- * a caller that also knows about passwords and passkeys passes the fuller answer.
- * @returns The address promoted to primary (or none) and who to notify, or why the
- * removal was refused.
+ * @param hasOtherCredential - Whether the subject holds a credential besides this identifier — a password, a passkey, or another verified identifier. Computed here from identifiers alone when omitted, which is what this module can see on its own; a caller that also knows about passwords and passkeys passes the fuller answer.
+ * @returns The address promoted to primary (or none) and who to notify, or why the removal was refused.
  */
 export async function removeIdentifier(
 	db: Database,
@@ -847,10 +822,6 @@ export type DeleteSubjectResult = { ok: true } | { ok: false; reason: "not-found
  * Removes a subject, its identifiers, its attributes and its sessions, and retires the
  * id for good — a relying party's foreign key never gets handed to someone else.
  *
- * Its passwords and passkeys leave with it too, deleted by the caller alongside this
- * call: they live in tables of their own that importing here would cycle back to this
- * one, since both already import from it.
- *
  * @param db - The tenant's database.
  * @param input - The subject to delete.
  * @returns Success, or that no such subject exists.
@@ -920,8 +891,7 @@ export type RemoveAttributeResult = { ok: true } | { ok: false; reason: "not-fou
 /**
  * Removes an attribute's definition. A subject's stored values for the key are left in
  * place rather than deleted with it: the key was refused only where writing or reading
- * it requires a definition, so a tenant that redeclares the key later gets its
- * subjects' values back rather than a silently emptied column.
+ * it requires a definition, so a tenant that redeclares the key later gets its subje
  *
  * @param db - The tenant's database.
  * @param input - The key to remove.
@@ -961,8 +931,6 @@ export interface TrustedDeviceSummary {
  * Everything `describeSubject` reports about a subject's second factor. Computed by
  * `totp.ts` from tables this module does not import — subjects.ts already sits
  * beneath every credential module, so a subject with none of this state yet
- * describes it as {@link NO_SECOND_FACTOR} rather than this module reading the
- * tables itself.
  */
 export interface SecondFactorState {
 	totpFactor: TotpFactorSummary;
@@ -1003,21 +971,13 @@ export type DescribeSubjectResult =
 
 /**
  * Assembles everything one account screen renders: profile, every identifier with its
- * state and which is primary, the attributes this audience may see, which
- * credentials exist, the second-factor state a caller computed for it, and every
- * connection the subject has ever linked an identity through.
- *
- * The credential list is empty for every subject today; it starts listing passwords and
- * passkeys once those tables exist to describe.
+ * state and which is primary, the attributes this audience may see, which credentials
+ * exist, the second-factor state a caller computed for it, and every connection the
  *
  * @param db - The tenant's database.
  * @param input - The subject to describe and who is looking.
- * @param secondFactor - The subject's TOTP factor, recovery codes and trusted
- * devices, computed by a caller that can read `totp.ts`'s tables. Defaults to
- * {@link NO_SECOND_FACTOR} for a caller that has not computed it.
- * @param identities - The subject's linked identities, computed by a caller
- * that can read `connection-sign-in.ts`'s own tables. Defaults to an empty
- * list for a caller that has not computed it.
+ * @param secondFactor - The subject's TOTP factor, recovery codes and trusted devices, computed by a caller that can read `totp.ts`'s tables. Defaults to {@link NO_SECOND_FACTOR} for a caller that has not computed it.
+ * @param identities - The subject's linked identities, computed by a caller that can read `connection-sign-in.ts`'s own tables. Defaults to an empty list for a caller that has not computed it.
  * @returns The assembled view, or that no such subject exists.
  */
 export async function describeSubject(
@@ -1098,8 +1058,7 @@ let ListSubjectsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - Where to page from, and an optional status to filter on.
- * @returns A page of subject summaries and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @returns A page of subject summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function listSubjects(
 	db: Database,
@@ -1217,10 +1176,8 @@ function profileChanges(profile: SubjectProfile): Record<string, string | null> 
 
 /**
  * Maps a subject row's snake_case columns back to the API's camelCase claims.
- * Exported so a caller assembling a subject's projection from outside this
- * module — an export page's own row, alongside its identifiers and
- * credentials — reads the same mapping `describeSubject` renders from,
- * rather than a second copy of it.
+ * Exported so a caller assembling a subject's projection from outside this module
+ * — an export page's own row, alongside its identifiers and credentials — reads
  */
 export function profileOf(row: SubjectRow): SubjectProfile {
 	return {

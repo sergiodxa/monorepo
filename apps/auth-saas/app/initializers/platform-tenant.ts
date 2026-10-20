@@ -1,11 +1,7 @@
 /**
- * Where every part of the management API reaches the platform tenant's own
- * Durable Object and its own OIDC issuer — the authorization server every
- * management credential, machine or human, is verified against. Overridable
- * only for tests, which construct their own platform tenant object the way
- * `@sdxc/cloudflare-mocks` builds one for any other Durable Object test,
- * rather than reaching the real `TENANT` binding a plain Vitest run has no
- * use for.
+ * Where every part of the management API reaches the platform tenant's own Durable
+ * Object and its own OIDC issuer — the authorization server every management
+ * credential, machine or human, is verified against.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,11 +28,9 @@ export function platformTenantIssuer(): string {
 }
 
 /**
- * Points every later call to {@link platformTenantStub} and
- * {@link platformTenantIssuer} at a test's own constructed platform tenant
- * object and issuer, instead of the real `TENANT` binding. Call once, in a
- * shared test harness's own setup, before a router reaching either function
- * serves its first request.
+ * Points every later call to {@link platformTenantStub} and {@link
+ * platformTenantIssuer} at a test's own constructed platform tenant object and
+ * issuer, instead of the real `TENANT` binding.
  *
  * @param stub - Opens the test's own constructed platform tenant object.
  * @param issuer - The issuer that object was provisioned under.

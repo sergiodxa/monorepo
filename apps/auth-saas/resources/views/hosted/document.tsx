@@ -1,8 +1,7 @@
 /**
  * The document shell every hosted sign-in, consent and error screen renders inside:
  * `@sdxc/ui`'s reset and theme, this app's default unbranded palette, a centered
- * single-column page, and the client entry that hydrates the passkey island. Every tenant
- * renders from this one theme until an entitlement can apply a brand record over it.
+ * single-column page, and the client entry that hydrates the passkey island.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

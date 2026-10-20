@@ -1,11 +1,7 @@
 /**
- * The `/u/magic-link` and `/u/magic-link/complete` screens: a request form
- * asking for the address, a confirmation that renders identically whichever of
+ * The `/u/magic-link` and `/u/magic-link/complete` screens: a request form asking
+ * for the address, a confirmation that renders identically whichever of
  * `beginMagicLinkSignIn`'s three outcomes actually happened (with its own
- * code-entry form, since the person may finish by typing the code rather than
- * following the link), the link-landing page whose hidden field carries the
- * token into its own `POST`, and the distinct outcomes a completion attempt can
- * still land on once the uniform first response is behind it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

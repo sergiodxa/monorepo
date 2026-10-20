@@ -1,14 +1,7 @@
 /**
  * Outbound webhook deliveries: the `webhook_deliveries` table, the fan-out that
  * turns a succeeded audit event into one pending row per matching enabled
- * endpoint, and the operations a delivery's whole lifecycle runs through —
- * leasing an attempt, signing it under every currently live secret, recording
- * how it went, and replaying, paging or sweeping the rows that result.
- *
- * Nothing here makes a network request: `prepareDelivery` hands back a signed
- * request's own pieces and `settleDelivery` only ever records what a caller
- * already observed, so a later pass's Worker-side sender is the only thing
- * that still needs building before a delivery actually reaches a receiver.
+ * endpoint, and the operations a delivery's whole lifecycle runs through — leasing
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -86,12 +79,9 @@ export const webhookDeliveries = table({
 export type WebhookDeliveryRow = TableRow<typeof webhookDeliveries>;
 
 /**
- * Mints this tenant's next delivery sequence: the current highest one, read
- * back and incremented by one — the same running-max idiom the audit log's
- * own id mint uses, safe under the identical single-writer assumption a
- * Durable Object already gives every other table here. Monotonic across
- * every endpoint, so a receiver comparing two deliveries learns which
- * happened first no matter which endpoint received either one.
+ * Mints this tenant's next delivery sequence: the current highest one, read back
+ * and incremented by one — the same running-max idiom the audit log's own id mint
+ * uses, safe under the identical single-writer assumption a Durable Object already
  */
 async function mintDeliverySequence(db: Database): Promise<number> {
 	let last = await db.findOne(webhookDeliveries, { where: {}, orderBy: ["sequence", "desc"] });
@@ -164,19 +154,11 @@ export interface EnqueueMatchingDeliveriesResult {
 
 /**
  * Writes one pending `webhook_deliveries` row for every enabled endpoint
- * subscribed to `event.action`, from exactly what `writeAuditEvent` was
- * already given for its own audit row — no call site anywhere in this
- * codebase needs to change for its audit write to also produce matching
- * deliveries.
- *
- * Only a succeeded outcome ever reaches an endpoint: a refused sign-in or a
- * rejected write is not the kind of business event a tenant's own systems
- * should react to, so a failed or denied event still gets its audit row and
- * simply produces no delivery.
+ * subscribed to `event.action`, from exactly what `writeAuditEvent` was already
+ * given for its own audit row — no call site anywhere in this codebase needs to
  *
  * @param db - The tenant's database.
- * @param event - The action, its outcome, the target it names, and whatever
- * detail the operation already gathered for its own audit row.
+ * @param event - The action, its outcome, the target it names, and whatever detail the operation already gathered for its own audit row.
  * @returns How many delivery rows this call wrote.
  */
 export async function enqueueMatchingDeliveries(
@@ -237,19 +219,14 @@ export type PrepareDeliveryResult =
 let PrepareDeliverySchema = s.object({ deliveryId: s.string() });
 
 /**
- * Leases a pending delivery for this attempt and signs its stored payload
- * under every currently live secret: the endpoint's current one, plus its
- * previous one while a rotation's overlap window has not yet closed. Two
- * live secrets sign the same delivery id and timestamp twice, so the two
- * signatures combine into one `webhook-signature` header value a receiver
- * verifying against either secret accepts.
+ * Leases a pending delivery for this attempt and signs its stored payload under
+ * every currently live secret: the endpoint's current one, plus its previous one
+ * while a rotation's overlap window has not yet closed.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The delivery to prepare, and the clock to measure its
- * secrets' rotation windows against.
- * @returns The request to send and which attempt this now is, or that the
- * delivery does not exist or is no longer pending.
+ * @param input - The delivery to prepare, and the clock to measure its secrets' rotation windows against.
+ * @returns The request to send and which attempt this now is, or that the delivery does not exist or is no longer pending.
  */
 export async function prepareDelivery(
 	db: Database,
@@ -344,16 +321,12 @@ const deliveryBackoff = createBackoff({
 
 /**
  * Records one delivery attempt and decides what happens next: a `delivered`
- * outcome closes the row and resets its endpoint's own failure streak; any
- * other outcome schedules the next attempt with jitter, or — on the eighth —
- * exhausts the row and lengthens that streak, disabling the endpoint once it
- * reaches {@link DISABLE_AFTER_CONSECUTIVE_FAILURES}.
+ * outcome closes the row and resets its endpoint's own failure streak; any other
+ * outcome schedules the next attempt with jitter, or — on the eighth — exhausts
  *
  * @param db - The tenant's database.
- * @param input - The delivery this attempt belongs to, how it went, and the
- * clock to measure the next attempt against.
- * @returns The row's status after recording the attempt, or that no such
- * delivery exists.
+ * @param input - The delivery this attempt belongs to, how it went, and the clock to measure the next attempt against.
+ * @returns The row's status after recording the attempt, or that no such delivery exists.
  */
 export async function settleDelivery(
 	db: Database,
@@ -475,8 +448,7 @@ let ClaimDueDeliveriesSchema = s.object({
  * for what is owed, and this is the sweep's own view onto it.
  *
  * @param db - The tenant's database.
- * @param input - The clock to compare `next_attempt_at` against, and how
- * many rows one call may return.
+ * @param input - The clock to compare `next_attempt_at` against, and how many rows one call may return.
  * @returns The due deliveries, and whether the batch was full.
  */
 export async function claimDueDeliveries(
@@ -515,16 +487,12 @@ export type ReplayDeliveryResult =
 let ReplayDeliverySchema = s.object({ deliveryId: s.string() });
 
 /**
- * Writes a **new** delivery row carrying the original's payload, event type
- * and endpoint, with its own fresh id and sequence and `replayOf` naming the
- * original. A retry reuses its delivery id so a receiver de-duplicating on
- * `webhook-id` collapses one delivery's own attempts; a replay is a
- * deliberate second delivery, so it gets an id of its own instead.
+ * Writes a **new** delivery row carrying the original's payload, event type and
+ * endpoint, with its own fresh id and sequence and `replayOf` naming the original.
  *
  * @param db - The tenant's database.
  * @param input - The delivery to replay, and who asked for it.
- * @returns The new pending row, or that the original delivery or its
- * endpoint no longer exists.
+ * @returns The new pending row, or that the original delivery or its endpoint no longer exists.
  */
 export async function replayDelivery(
 	db: Database,
@@ -587,10 +555,8 @@ let ReadDeliveryPageSchema = s.object({
  * Never projects `payload`.
  *
  * @param db - The tenant's database.
- * @param input - The endpoint whose deliveries to read, and where to page
- * from.
- * @returns A page of delivery summaries and the cursors around it, or that
- * the given cursor no longer matches this ordering.
+ * @param input - The endpoint whose deliveries to read, and where to page from.
+ * @returns A page of delivery summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function readDeliveryPage(
 	db: Database,
@@ -658,13 +624,11 @@ let SweepWebhookDeliveriesSchema = s.object({
 
 /**
  * Deletes delivered or exhausted rows older than the tenant's own retention
- * window, at most `limit` per call, the same batch-bounded shape the audit
- * log's own retention sweep already uses — a `pending` row is never a
- * candidate, regardless of age, since it still has work to do.
+ * window, at most `limit` per call, the same batch-bounded shape the audit log's
+ * own retention sweep already uses — a `pending` row is never a candidate,
  *
  * @param db - The tenant's database.
- * @param input - The retention window to enforce, the clock to measure it
- * from, and how many rows one call may remove.
+ * @param input - The retention window to enforce, the clock to measure it from, and how many rows one call may remove.
  * @returns How many rows this call deleted, and whether the batch was full.
  */
 export async function sweepWebhookDeliveries(

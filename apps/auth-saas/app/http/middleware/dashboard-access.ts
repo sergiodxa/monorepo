@@ -21,12 +21,9 @@ import policy from "~/app/policies/policy";
 
 /**
  * Builds the member gate. Reads `:tenantId` off the matched route's own params, so it is
- * mounted on each tenant-scoped route itself rather than the router's global chain. A
- * subject outside the tenant and one refused an ability answer alike, so a refusal never
- * reveals whether a tenant id exists.
+ * mounted on each tenant-scoped route itself rather than the router's global chain.
  *
- * @returns The middleware, for a route's own `middleware` array; it answers `401` with
- * no live session and `403` for a subject outside the tenant or refused an ability.
+ * @returns The middleware, for a route's own `middleware` array; it answers `401` with no live session and `403` for a subject outside the tenant or refused an ability.
  * @example
  * createAction(routes.billing.portal, {
  * 	middleware: [dashboardAccess(), requireAbility(abilities.billing.manage)],

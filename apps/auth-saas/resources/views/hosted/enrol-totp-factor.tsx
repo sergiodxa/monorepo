@@ -2,7 +2,6 @@
  * The enrolment form both `/u/second-factor` (an administrator reset) and
  * `/u/step-up` (no factor at all) fall back to: the `otpauth://` URI as a QR code,
  * the setup key and link that carry the same secret for anyone who cannot scan,
- * and the code the authenticator app shows back once added.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

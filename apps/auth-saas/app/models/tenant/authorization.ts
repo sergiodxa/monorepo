@@ -2,10 +2,6 @@
  * The authorization endpoint's whole operation: the `authorization_requests` and
  * `authorization_codes` tables, and `beginAuthorization`/`resumeAuthorization`, which
  * validate a request, resolve whichever session applies, evaluate consent and mint a
- * code, all in one call. Everything past a verified client and redirect target answers
- * with a `redirect`, carrying an OAuth error onto that exact target; everything before
- * it answers with a `render`, since there is nowhere trustworthy yet to send the
- * browser back to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,8 +42,6 @@ interface AuthorizingClient {
  * Resolves the client an `/authorize` request names: a Client ID Metadata Document,
  * fetched fresh (or from this instance's short-lived cache) for a `client_id` shaped
  * as an `https://` URL, or a row from the tenant's own client table for an opaque id
- * this tenant issued itself. A CIMD client is never disabled — that column exists only
- * on a stored row — and carries whichever scopes its own document declared.
  */
 async function resolveAuthorizingClient(
 	db: Database,
@@ -93,10 +87,9 @@ const SWEEP_BATCH_SIZE = 500;
 const PROMPT_VALUES = new Set(["none", "login", "consent", "select_account"]);
 
 /**
- * How long a step-up's own proof stands once verified, independent of the
- * session's own lifetime — the ceiling `acr_values=mfa` accepts a fresh `auth_time`
- * against before demanding the factor again. A `max_age` requested alongside
- * `acr_values` narrows this further; it never widens it.
+ * How long a step-up's own proof stands once verified, independent of the session's
+ * own lifetime — the ceiling `acr_values=mfa` accepts a fresh `auth_time` against
+ * before demanding the factor again.
  */
 const STEP_UP_WINDOW_MS = 15 * 60 * 1000;
 
@@ -158,8 +151,6 @@ export type AuthorizationCodeRow = TableRow<typeof authorizationCodes>;
  * What `beginAuthorization` and `resumeAuthorization` both answer with. `redirect`
  * carries the complete `Location` value, success or error; `render` is for a failure
  * with nowhere verified yet to send the browser back to; `authenticate` and `consent`
- * park the request under an interaction id for a page that does not exist here to
- * resume.
  */
 export type AuthorizationOutcome =
 	| { kind: "redirect"; location: string }
@@ -364,8 +355,6 @@ interface DecisionContext {
  * The session, prompt and consent decision `beginAuthorization` and `resumeAuthorization`
  * share. A fresh call may find no session, one, or several; a resumed call is given
  * exactly one candidate — the session its caller asserts just authenticated — so the
- * forced-login checks that exist to get a browser to that authentication never run
- * again on the way back from it.
  */
 async function decide(db: Database, ctx: DecisionContext): Promise<AuthorizationOutcome> {
 	let { request, issuer, now, candidateSessions, existingInteractionId, justAuthenticated } = ctx;
@@ -393,9 +382,6 @@ async function decide(db: Database, ctx: DecisionContext): Promise<Authorization
 	}
 
 	if (!justAuthenticated && candidateSessions.length > 1) {
-		// Choosing among several sessions is a page this endpoint does not render; parking
-		// the same way a fresh sign-in would lets the hosted UI show its own chooser and
-		// come back with the one session it settled on.
 		if (promptNone) {
 			return redirectError(
 				request,
@@ -452,8 +438,7 @@ async function decide(db: Database, ctx: DecisionContext): Promise<Authorization
 		subjectId: session.subject_id,
 		clientId: request.clientId,
 		requestedScopes: request.scopes,
-		// `clients.ts` has no column recording a client's own party today, so every
-		// client is evaluated as third-party until one exists to read instead.
+
 		isFirstParty: false,
 		promptConsent,
 		silent: promptNone,
@@ -510,11 +495,9 @@ export interface BeginAuthorizationInput {
  * Validates an `/authorize` request end to end and answers with one outcome: an error
  * rendered directly when there is no verified redirect target yet to answer through, an
  * error or a code redirected onto that target once there is, or a parked interaction for
- * a sign-in or consent page that does not exist here to render.
  *
  * @param db - The tenant's database.
- * @param input - The request's raw query parameters, the caller's candidate session ids,
- * and the clock to validate and decide against.
+ * @param input - The request's raw query parameters, the caller's candidate session ids, and the clock to validate and decide against.
  * @returns The outcome this request reaches on its own, with no round trip still owed.
  */
 export async function beginAuthorization(
@@ -544,8 +527,6 @@ export async function beginAuthorization(
 		return render("invalid_request", "redirect_uri does not match a registered value.");
 	}
 
-	// Every failure from here on has a verified target: it answers by redirecting an
-	// OAuth error onto it rather than rendering one of our own pages.
 	let state = query.state ?? null;
 	let target: RedirectTarget = { redirectUri: requestedRedirectUri, state };
 
@@ -660,7 +641,6 @@ export interface ResumeAuthorizationInput {
 	 * Set when the person explicitly refused a shown consent screen. Answers with
 	 * `access_denied` on the request's verified target directly, independent of the
 	 * session or of whatever `evaluateConsent` would otherwise decide — a refusal is
-	 * final regardless of what is or isn't already granted.
 	 */
 	denied?: boolean;
 }
@@ -668,15 +648,11 @@ export interface ResumeAuthorizationInput {
 /**
  * Continues a parked interaction with the session its caller asserts just authenticated,
  * running the same decision `beginAuthorization` runs from the stored request rather
- * than a fresh query. An interaction that no longer resolves, or whose ten minutes ran
- * out, answers with a rendered error rather than trying to redirect through a request it
- * can no longer stand behind.
+ * than a fresh query.
  *
  * @param db - The tenant's database.
- * @param input - The interaction to resume, the session that authenticated it, whether
- * the person refused a shown consent screen, and the clock to decide against.
- * @returns The outcome this resumption reaches on its own, with no round trip still
- * owed.
+ * @param input - The interaction to resume, the session that authenticated it, whether the person refused a shown consent screen, and the clock to decide against.
+ * @returns The outcome this resumption reaches on its own, with no round trip still owed.
  */
 export async function resumeAuthorization(
 	db: Database,
@@ -737,8 +713,7 @@ let SweepExpiredAuthorizationRequestsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a caller
- * sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredAuthorizationRequests(
 	db: Database,
@@ -786,12 +761,10 @@ let SweepExpiredAuthorizationCodesSchema = s.object({
  * Deletes authorization codes in one bounded batch, for the scheduled handler driving
  * retention: an unredeemed row whose sixty seconds ran out with no exchange ever
  * landing, or a redeemed row old enough that a replay against it is no longer worth
- * keeping the row around to recognize.
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a caller
- * sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredAuthorizationCodes(
 	db: Database,

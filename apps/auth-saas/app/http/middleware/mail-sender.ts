@@ -1,9 +1,6 @@
 /**
  * Publishes the platform's own configured sender address as `ctx.platformSender`, the
- * same address the mail middleware's `from` was itself built from. A hosted-flow
- * controller reads it back to build a per-tenant `from` override, rather than
- * re-reading the app's own configuration a second time — one value, set once, read
- * wherever a message is sent.
+ * same address the mail middleware's `from` was itself built from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
