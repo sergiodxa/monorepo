@@ -32,8 +32,12 @@ const REVALIDATE = "public, max-age=3600";
  * Answers a `GET` for `<page>.png` with that page's card. A repeat request is answered from the edge
  * cache; a `v` naming a stored card is served without rendering its page; otherwise the page is
  * rendered, its card read from storage or drawn, stored after the response, and returned.
+ *
+ * @param fetchPage Answers a request through the router installing this middleware.
  */
-export default function socialCards(): Middleware {
+export default function socialCards(
+	fetchPage: (request: Request) => Promise<Response>,
+): Middleware {
 	return async (context, next) => {
 		let { pathname } = context.url;
 		if (context.request.method !== "GET" || !pathname.endsWith(".png")) return next();
@@ -55,7 +59,7 @@ export default function socialCards(): Middleware {
 			if (stored) return respond(png(stored, IMMUTABLE));
 		}
 
-		let page = await renderPage(pagePath);
+		let page = await renderPage(fetchPage, pagePath);
 		if (!page) return next();
 
 		let content = socialCardContent(page);
@@ -85,12 +89,10 @@ export default function socialCards(): Middleware {
 
 /**
  * Renders the page through the site's own router and reads its title and description,
- * or `null` when the path is not a page. The router is imported on demand because it
- * installs this middleware too.
+ * or `null` when the path is not a page.
  */
-async function renderPage(pagePath: string) {
-	let { createWebRouter } = await import("~/app/initializers/router");
-	let response = await createWebRouter().fetch(new Request(absoluteUrl(pagePath)));
+async function renderPage(fetchPage: (request: Request) => Promise<Response>, pagePath: string) {
+	let response = await fetchPage(new Request(absoluteUrl(pagePath)));
 	if (response.status !== 200) return null;
 	if (!response.headers.get("content-type")?.includes("text/html")) return null;
 	return readPageFacts(await response.text(), pagePath);

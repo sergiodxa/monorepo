@@ -55,7 +55,7 @@ export function createWebRouter() {
 			trace(),
 			canonicalHost(),
 			frameTransforms(),
-			socialCards(),
+			socialCards((request): Promise<Response> => router.fetch(request)),
 			userAgent(),
 			formData(),
 			cop(),
