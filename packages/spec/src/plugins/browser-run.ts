@@ -476,7 +476,8 @@ async function traceStart(args: ToolArg[], session: CdpSession): Promise<Result<
 
 /**
  * `browser.trace.stop [path]` — end the open trace, write chrome://tracing JSON
- * into the workspace, and return `{ path, event_count }`.
+ * into the workspace when one exists, or through the run's artifact store when
+ * the host has no filesystem (Workers), and return `{ path, event_count }`.
  */
 async function traceStop(
 	args: ToolArg[],
@@ -485,17 +486,37 @@ async function traceStop(
 ): Promise<Result<Value, SpecError>> {
 	let relative = readTraceStopPath(args);
 	if (isFailure(relative)) return relative;
-	let resolved = context.workspace.resolve(relative.data);
-	if (isFailure(resolved)) return resolved;
 	let stopped = await session.stopTrace();
 	if (isFailure(stopped)) return stopped;
-	try {
-		await writeFile(resolved.data, JSON.stringify(stopped.data), "utf8");
-	} catch (error) {
-		let reason = error instanceof Error ? error.message : String(error);
-		return failure(new ToolError(`browser.trace.stop could not write ${relative.data}: ${reason}`));
+	let body = JSON.stringify(stopped.data);
+	let resolved = context.workspace.resolve(relative.data);
+	if (isSuccess(resolved)) {
+		try {
+			await writeFile(resolved.data, body, "utf8");
+		} catch (error) {
+			let reason = error instanceof Error ? error.message : String(error);
+			return failure(
+				new ToolError(`browser.trace.stop could not write ${relative.data}: ${reason}`),
+			);
+		}
+		return success(traceStopValue(relative.data, stopped.data.length));
 	}
-	return success(traceStopValue(relative.data, stopped.data.length));
+	if (context.artifacts !== undefined) {
+		let written = await context.artifacts.write(relative.data, body);
+		if (written === undefined) {
+			return failure(
+				new ToolError(
+					`browser.trace.stop could not store ${relative.data} in the run's artifact store`,
+				),
+			);
+		}
+		return success(traceStopValue(relative.data, stopped.data.length));
+	}
+	return failure(
+		new ToolError(
+			`browser.trace.stop could not write ${relative.data}: this run has no filesystem and no artifact store`,
+		),
+	);
 }
 
 /** `browser.metrics` — Performance.getMetrics as a flat name→value object. */
