@@ -1,8 +1,7 @@
 /**
  * Route table for the job board. Four patterns: the board itself, which both lists and
  * accepts a posting, one position on its own, the outbox that shows what the app mailed,
- * and the MCP endpoint an agent speaks to. Every pattern is linked from a page, so patterns
- * are added, not reshaped.
+ * and the MCP endpoint an agent speaks to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -3,10 +3,6 @@
  * itself from the same address its control links to, and a fragment is what belongs inside a
  * document that already has a head, a body and a shell around it.
  *
- * It rides in the address rather than in a header because the client runtime resolves an
- * ordinary link navigation through the same resolver a frame goes through, and the address
- * is the one thing only a frame has.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
