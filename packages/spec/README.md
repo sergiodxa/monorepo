@@ -245,6 +245,7 @@ two namespaces share is an error naming both.
 | `fs`      | `write`, `read`, `mkdir`, `copy`, `remove`, `exists`, `file`, `directory`                                | none                       |
 | `cli`     | `run`, `start`, `output`, `stop`                                                                         | `--allow-run`              |
 | `http`    | `get`, `post`, `put`, `patch`, `delete`                                                                  | `--allow-net`              |
+| `mcp`     | `discover`, `list_tools`, `call`                                                                         | `--allow-net`              |
 | `html`    | `title`, `meta`, `rel`, `text`, `element`, `heading`, `link`, `button`, `checkbox`, `cell`, `definition` | none                       |
 | `browser` | actions, observables and `fetch.<verb>` (below)                                                          | `--allow-net`              |
 | `db`      | `query`, `run_file`                                                                                      | `--allow-db`               |
@@ -279,9 +280,27 @@ come in any order: `headers { … }`, `json <value>`, `form { … }`, `text "<st
 `bearer <token>`, `basic <user> <pass>`. A request takes one body, one `headers` block and one
 auth option, and an explicit `authorization` header wins over `bearer`/`basic`.
 
+#### `mcp`
+
+`discover`, `list_tools` and `call` talk to a Streamable HTTP MCP server (the protocol
+[`@sdxc/mcp`](https://www.npmjs.com/package/@sdxc/mcp) serves) over `fetch`. Each call posts one
+JSON-RPC message with the required headers and `_meta`, so a suite names a tool without spelling
+the protocol. Targets resolve through bases like `http`; every request needs `--allow-net`.
+
+- `discover <target> [on …] [headers …] [bearer …] [basic …]` →
+  `{ status, ok, capabilities, instructions, supported_versions, json, error }`
+- `list_tools <target> […]` → `{ status, ok, tools, json, error }`
+- `call <target> <name> [arguments] […]` →
+  `{ status, ok, result_type, is_error, text, content, json, error }`
+
+`ok` is true only when the HTTP status is 2xx and the body carries no JSON-RPC error. A tool that
+answers with `isError: true` still leaves `ok` true — that is a successful protocol exchange whose
+result the suite asserts with `is_error`. `text` is the first text content block; `json` prefers
+`structuredContent`, otherwise the parsed text when it is JSON.
+
 #### Bases
 
-`http`, `browser` and `browser.fetch` resolve a `/path` target against a base from
+`http`, `mcp`, `browser` and `browser.fetch` resolve a `/path` target against a base from
 `spec/config.jsonc`; `on "name"` picks one when several exist. A target with a scheme ignores the
 bases. A base whose variable is unset and has no `default` stops the run naming the variable.
 
@@ -490,15 +509,20 @@ Every built-in plugin, or the named subset.
 
 #### Plugin factories
 
-`createFsPlugin`, `createCliPlugin`, `createHttpPlugin`, `createBrowserPlugin`, `createHtmlPlugin`,
-`createDbPlugin`, `createEnvPlugin`, `createUrlPlugin`, `createJwtPlugin`, `createSamplePlugin`,
-`createStrPlugin` and `createSpecPlugin` each build one namespace and take no arguments, except
-`createBrowserRunPlugin` (from `@sdxc/spec/browser-run`), which takes a Browser Run binding:
+`createFsPlugin`, `createCliPlugin`, `createHttpPlugin`, `createMcpPlugin`, `createBrowserPlugin`,
+`createHtmlPlugin`, `createDbPlugin`, `createEnvPlugin`, `createUrlPlugin`, `createJwtPlugin`,
+`createSamplePlugin`, `createStrPlugin` and `createSpecPlugin` each build one namespace and take no
+arguments, except `createBrowserRunPlugin` (from `@sdxc/spec/browser-run`), which takes a Browser
+Run binding:
 
 #### `createHttpPlugin(options?: HttpPluginOptions): Plugin`
 
 `maxResponseBytes` caps each response body, refusing it with a `ResponseTooLargeError` as soon as
 the declared length or the streamed bytes pass the cap. Omitted, bodies are read whole.
+
+#### `createMcpPlugin(options?: McpPluginOptions): Plugin`
+
+The same `maxResponseBytes` cap as `createHttpPlugin`, applied to each MCP JSON-RPC response.
 
 #### `createBrowserRunPlugin(options: BrowserRunPluginOptions): Plugin` (`@sdxc/spec/browser-run`)
 
@@ -545,7 +569,7 @@ Every failure is a `SpecError` with a stable `code` (`DiagnosticCode`), optional
 
 The language core for a runtime with no process or filesystem: `loadSources`, `runTests`,
 `createNoFilesystemWorkspace`, `parseGrants`, the base and connection sets, the errors, and the
-`http`, `html`, `url`, `jwt`, `sample`, `str` and `spec` plugin factories.
+`http`, `mcp`, `html`, `url`, `jwt`, `sample`, `str` and `spec` plugin factories.
 
 ### Types
 

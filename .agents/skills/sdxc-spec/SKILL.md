@@ -1,6 +1,6 @@
 ---
 name: sdxc-spec
-description: "@sdxc/spec is an executable specification runner: `.spec` files written as given/when/then run against a real app in an isolated workspace, under explicit `--allow-*` grants. Use when writing or debugging a `.spec` suite, reading a permission denial, configuring `spec/config.jsonc` bases and databases, reaching for the `fs`/`cli`/`http`/`html`/`browser`/`db` capabilities, writing a plugin, or calling `runSuite` programmatically."
+description: "@sdxc/spec is an executable specification runner: `.spec` files written as given/when/then run against a real app in an isolated workspace, under explicit `--allow-*` grants. Use when writing or debugging a `.spec` suite, reading a permission denial, configuring `spec/config.jsonc` bases and databases, reaching for the `fs`/`cli`/`http`/`mcp`/`html`/`browser`/`db` capabilities, writing a plugin, or calling `runSuite` programmatically."
 ---
 
 # @sdxc/spec
@@ -17,7 +17,7 @@ Full API, options and examples: [packages/spec/README.md](packages/spec/README.m
 
 ## When to reach for it
 
-- Behavior needs an acceptance test that exercises the real app — its CLI, its HTTP API, its rendered HTML, its database — rather than a unit under mocks.
+- Behavior needs an acceptance test that exercises the real app — its CLI, its HTTP API, its MCP tools, its rendered HTML, its database — rather than a unit under mocks.
 - A run failed with `Permission denied` and the flag that would unblock it has to be chosen.
 - A suite needs a base URL or a database connection read from the environment instead of a repeated flag.
 - A capability the built-ins do not cover has to be added as a plugin, in-process or as an external NDJSON-over-stdio executable.
