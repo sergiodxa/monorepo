@@ -1,9 +1,6 @@
 /**
  * The sales page's marketing copy: hero, "what's inside" blocks, testimonial,
- * package descriptions, upgrade call-out, and footer. Copy lives here as data
- * so it can be rewritten without touching markup; prose carrying inline links
- * stays in the view, since flattening an anchor into a string here would just
- * hide the markup elsewhere.
+ * package descriptions, upgrade call-out, and footer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

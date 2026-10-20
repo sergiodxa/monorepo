@@ -1,8 +1,7 @@
 /**
- * View for the 404 page. Renders the status and a one-line explanation,
- * matching the plain treatment the site has always given a missing URL: on
- * this four-page site, the footer's links already reach everywhere a
- * visitor might go.
+ * View for the 404 page. Renders the status and a one-line explanation, matching
+ * the plain treatment the site has always given a missing URL: on this four-page
+ * site, the footer's links already reach everywhere a visitor might go.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

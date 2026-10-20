@@ -1,8 +1,7 @@
 /**
  * The sales page's frequently asked questions, grouped into the two columns the page
- * renders them in. They live here as data because the copy changes far more often
- * than the layout, and answers about licensing, team seats, and purchasing-power-parity
- * pricing are commitments to a buyer.
+ * renders them in. They live here as data because the copy changes far more often than
+ * the layout, and answers about licensing, team seats, and purchasing-power-parity
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

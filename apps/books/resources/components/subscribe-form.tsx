@@ -1,9 +1,6 @@
 /**
- * The email-capture form shared by every page that collects an address: a
- * heading, an email field with a submit button, a reassurance line, and an
- * error slot. It relies on native `<form method="post">` submission and the
- * browser's own progress indication, keeping this site free of client-side
- * JavaScript.
+ * The email-capture form shared by every page that collects an address: a heading,
+ * an email field with a submit button, a reassurance line, and an error slot.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

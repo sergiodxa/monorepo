@@ -1,8 +1,6 @@
 /**
  * Route table for the books funnel: the four pages, the two form endpoints, the sample's
- * EPUB download, the checkout redirect, and the Polar webhook. Every pattern is a published
- * contract — the checkout URL is linked from the pricing page, the webhook URL is registered
- * in Polar's dashboard — so patterns stay fixed once published.
+ * EPUB download, the checkout redirect, and the Polar webhook.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

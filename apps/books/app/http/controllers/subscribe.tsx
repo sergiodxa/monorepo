@@ -1,8 +1,7 @@
 /**
  * Subscribe controller. Validates and screens the homepage's email form, subscribes the
  * address to the newsletter with the visitor's IP, and maps each refusal to the copy a
- * visitor reads. Success — including an address that was already on the list — redirects
- * to the sales page, which is the funnel's actual next step.
+ * visitor reads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,10 +1,7 @@
 /**
  * Checkout controller. Opens a hosted checkout for the requested package and
  * redirects to it: list price for Essentials, the current launch campaign for
- * Complete. Because the URL is a shareable GET, `:type` is checked against the
- * published package names before any billing call, keeping every checkout tied
- * to a package the visitor actually chose. The visitor's first and last touch ride
- * along as checkout metadata, so the paid order names the campaign that sold it.
+ * Complete.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,10 +68,9 @@ export default createAction(routes.api.checkout, async (ctx) => {
 		email: customerEmail,
 		discount: discount?.id,
 		/**
-		 * Complete sells behind the launch campaign, so its hosted page collects
-		 * no code: a buyer typing one would take a second reduction off a price
-		 * that is already reduced. Essentials sells at list price, where a code
-		 * is the only discount there is.
+		 * Complete sells behind the launch campaign, so its hosted page collects no code:
+		 * a buyer typing one would take a second reduction off a price that is already
+		 * reduced.
 		 */
 		allowDiscountCodes: product !== Product.Complete,
 		metadata: toMetadata(ctx.attribution),

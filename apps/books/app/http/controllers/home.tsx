@@ -23,9 +23,7 @@ const TITLE = "React Router OAuth2 Handbook";
  * Renders the homepage document.
  *
  * @param ctx - The request context, for its URL and renderer.
- * @param options - `error` shows a subscribe failure under the email field, and `status`
- * lets the subscribe endpoint answer 400 while still returning the page. `confirmEmail` is the
- * address a typo suggestion was shown for, prefilled so resubmitting it keeps it.
+ * @param options - `error` shows a subscribe failure under the email field, and `status` lets the subscribe endpoint answer 400 while still returning the page. `confirmEmail` is the address a typo suggestion was shown for, prefilled so resubmitting it keeps it.
  * @returns The rendered HTML response.
  */
 export function renderHome(

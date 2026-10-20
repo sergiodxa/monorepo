@@ -2,8 +2,6 @@
  * Upgrade controller. Renders the upgrade form, then resolves the submitted
  * address against the billing platform: a reader who already bought Essentials
  * gets a discounted Complete checkout, and anyone else is sent to the ordinary
- * Complete checkout with their address carried along, so a mistaken upgrade
- * attempt still ends in a purchase.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,8 +40,7 @@ const MAX_ORDER_PAGES = 5;
 
 /**
  * @param ctx - The request context, for its URL and renderer.
- * @param options - `error` shows a validation failure under the email field, and `status`
- * lets the form endpoint answer 400 while still returning the page.
+ * @param options - `error` shows a validation failure under the email field, and `status` lets the form endpoint answer 400 while still returning the page.
  * @returns The rendered HTML response.
  */
 function renderUpgrade(ctx: AppContext, options: { error?: string; status?: number } = {}) {

@@ -1,8 +1,6 @@
 /**
  * Sample-chapter controller. GET renders the offer and its email field; POST subscribes the
- * address and answers with the chapter itself. The chapter is the response to the POST and
- * is stored nowhere, so reloading the page asks for an address again — the gate the whole
- * page exists for.
+ * address and answers with the chapter itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,9 +45,7 @@ const GENERIC_MESSAGE = "Something went wrong, please try again.";
  * Renders the page in its locked state: the offer, the email field, and any error.
  *
  * @param ctx - The request context, for its URL and renderer.
- * @param options - `error` shows a failure under the email field, and `status` lets the form
- * endpoint answer 400 while still returning the page. `confirmEmail` is the address a typo
- * suggestion was shown for, prefilled so resubmitting it keeps it.
+ * @param options - `error` shows a failure under the email field, and `status` lets the form endpoint answer 400 while still returning the page. `confirmEmail` is the address a typo suggestion was shown for, prefilled so resubmitting it keeps it.
  * @returns The rendered HTML response.
  */
 function renderForm(
