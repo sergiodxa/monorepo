@@ -14,6 +14,7 @@ import type { UptimeModels } from "~/app/models";
 import type { BatchedSweepResult } from "~/app/services/retention";
 
 import jobs from "~/app/jobs";
+import { deleteExpiredFlowTraces, flowTraces } from "~/app/models/flow-traces";
 import { apportionCost } from "~/app/services/cost";
 import { deleteOlderThan } from "~/app/services/retention";
 
@@ -103,6 +104,13 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 		let swept = await deleteOlderThan(ctx.db, entry.table, entry.dateColumn, cutoff);
 		tables.push(record(entry.table, swept));
 	}
+
+	/**
+	 * Trace objects outlive neither the seven-day window nor a result that is about to
+	 * be deleted: drop R2 first, then null `trace_key`, so a download never points at a
+	 * missing object (ADR-037).
+	 */
+	tables.push(record("flow_traces", await deleteExpiredFlowTraces(ctx.db, flowTraces(), now)));
 
 	tables.push(...(await sweepTrial(ctx.models, now)));
 

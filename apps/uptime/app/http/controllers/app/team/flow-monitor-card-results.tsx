@@ -149,6 +149,9 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 										<Table.Column>
 											{ctx.intl.t("page.flowMonitorDetail.results.columns.duration")}
 										</Table.Column>
+										<Table.Column>
+											{ctx.intl.t("page.flowMonitorDetail.results.columns.trace")}
+										</Table.Column>
 									</Table.Row>
 								</Table.Header>
 								<Table.Body>
@@ -177,6 +180,21 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 											<Table.Cell>{result.requests_made}</Table.Cell>
 											<Table.Cell>
 												{result.duration_ms === null ? "—" : `${result.duration_ms}ms`}
+											</Table.Cell>
+											<Table.Cell>
+												{result.trace_key === null ? (
+													"—"
+												) : (
+													<a
+														href={routes.app.team.flowMonitors.trace.href({
+															team: ctx.team.slug,
+															monitorId: monitor.id,
+															resultId: result.id,
+														})}
+													>
+														{ctx.intl.t("page.flowMonitorDetail.trace.download")}
+													</a>
+												)}
 											</Table.Cell>
 										</Table.Row>
 									))}

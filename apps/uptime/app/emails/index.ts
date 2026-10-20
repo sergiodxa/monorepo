@@ -69,6 +69,12 @@ const TEAM_DIGEST_MONITOR = s.object({
 	uptime: s.nullable(s.string()),
 });
 
+/** One yesterday flow run that still has a downloadable Performance trace (ADR-037). */
+const TEAM_DIGEST_TRACE = s.object({
+	monitorName: s.string(),
+	downloadUrl: s.string(),
+});
+
 /** The links and the team every team digest carries. */
 const TEAM_DIGEST = {
 	teamName: s.string(),
@@ -130,7 +136,14 @@ export default emails({
 		invite: email({ props: s.object({ team: s.string(), url: s.string() }) }),
 		/** Tells a former member that their team went with its owner's account. */
 		deleted: email({ props: s.object({ team: s.string() }) }),
-		dailyDigest: email({ props: s.object({ ...TEAM_DIGEST, date: s.string() }) }),
+		dailyDigest: email({
+			props: s.object({
+				...TEAM_DIGEST,
+				date: s.string(),
+				/** Yesterday's flow runs with a still-stored Performance trace (ADR-037). */
+				traces: s.array(TEAM_DIGEST_TRACE),
+			}),
+		}),
 		weeklyDigest: email({
 			props: s.object({
 				...TEAM_DIGEST,

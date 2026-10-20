@@ -9,7 +9,8 @@
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
-import { describe, expect, test } from "vitest";
+import { createMemoryFileStorage } from "remix/file-storage/memory";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { FlowCheckResult } from "~/app/services/flow-check";
 
@@ -17,6 +18,17 @@ import { createTestDatabase } from "~/app/test/db";
 import { bindModels, recordJobs } from "~/app/test/models";
 import { DEFAULT_FLOW_INTERVAL_SECONDS } from "~/config/pricing";
 import { flowMonitorResults, flowMonitors } from "~/database/schema";
+
+/** In-memory store every `recordCheckResult` upload in this file writes to. */
+let TRACE_STORAGE = createMemoryFileStorage();
+
+vi.mock("~/app/models/flow-traces", async (importOriginal) => {
+	let original = await importOriginal<typeof import("~/app/models/flow-traces")>();
+	return {
+		...original,
+		flowTraces: () => TRACE_STORAGE,
+	};
+});
 
 /** A spec source the model stores verbatim; no run reads it here. */
 const SOURCE = 'test("home", async () => {});';
@@ -41,9 +53,13 @@ function outcome(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
 		failureDetail: null,
 		durationMs: 120,
 		errorMessage: null,
+		traceJson: null,
 		...overrides,
 	};
 }
+
+/** Team id every fixture monitor in this file is created under. */
+const TEAM_ID = "team-1";
 
 describe("flowMonitors.create", () => {
 	test("creates a flow monitor for a team, hourly and due at once", async () => {
@@ -164,6 +180,10 @@ describe("flowMonitors.claimDue", () => {
 });
 
 describe("flowMonitors.recordCheckResult", () => {
+	beforeEach(() => {
+		TRACE_STORAGE = createMemoryFileStorage();
+	});
+
 	test("inserts a history row and updates the monitor's cached fields", async () => {
 		let { models } = setup();
 		let monitor = unwrap(
@@ -180,6 +200,7 @@ describe("flowMonitors.recordCheckResult", () => {
 				failedAtLine: 3,
 				failureDetail: "expected 200, got 500",
 			}),
+			{ teamId: TEAM_ID },
 		);
 
 		let [result] = await models.flowMonitorResults.recent(monitor.id);
@@ -188,10 +209,29 @@ describe("flowMonitors.recordCheckResult", () => {
 		expect(result?.requests_made).toBe(3);
 		expect(result?.failed_test).toBe("home");
 		expect(result?.failed_at_line).toBe(3);
+		expect(result?.trace_key).toBeNull();
 
 		let updated = await models.flowMonitors.find(monitor.id);
 		expect(updated?.last_status).toBe("down");
 		expect(updated?.last_checked_at).toBe(result?.checked_at);
+	});
+
+	test("uploads a Performance trace and stores its R2 key on the result", async () => {
+		let { models } = setup();
+		let monitor = unwrap(
+			await models.flowMonitors.create({ team_id: "team-1", name: "Checkout", source: SOURCE }),
+		);
+		let json = '{"traceEvents":[{"name":"EvaluateScript"}]}';
+
+		let id = await models.flowMonitors.recordCheckResult(monitor.id, outcome({ traceJson: json }), {
+			teamId: TEAM_ID,
+		});
+
+		let [result] = await models.flowMonitorResults.recent(monitor.id);
+		expect(result?.trace_key).toBe(`flow-traces/${TEAM_ID}/${monitor.id}/${id}.json`);
+		let stored = await TRACE_STORAGE.get(result?.trace_key ?? "");
+		expect(stored).not.toBeNull();
+		expect(await stored?.text()).toBe(json);
 	});
 });
 
@@ -205,10 +245,14 @@ describe("flowMonitorResults.recent", () => {
 			await models.flowMonitors.create({ team_id: "team-1", name: "Signup", source: SOURCE }),
 		);
 
-		await models.flowMonitors.recordCheckResult(monitor.id, outcome({ status: "up" }));
+		await models.flowMonitors.recordCheckResult(monitor.id, outcome({ status: "up" }), {
+			teamId: TEAM_ID,
+		});
 		await new Promise((resolve) => setTimeout(resolve, 2));
-		await models.flowMonitors.recordCheckResult(monitor.id, outcome({ status: "error" }));
-		await models.flowMonitors.recordCheckResult(other.id, outcome());
+		await models.flowMonitors.recordCheckResult(monitor.id, outcome({ status: "error" }), {
+			teamId: TEAM_ID,
+		});
+		await models.flowMonitors.recordCheckResult(other.id, outcome(), { teamId: TEAM_ID });
 
 		let results = await models.flowMonitorResults.recent(monitor.id);
 		expect(results.map((result) => result.status)).toEqual(["error", "up"]);
@@ -225,8 +269,8 @@ describe("flowMonitors.delete", () => {
 		let other = unwrap(
 			await models.flowMonitors.create({ team_id: "team-1", name: "Signup", source: SOURCE }),
 		);
-		await models.flowMonitors.recordCheckResult(monitor.id, outcome());
-		await models.flowMonitors.recordCheckResult(other.id, outcome());
+		await models.flowMonitors.recordCheckResult(monitor.id, outcome(), { teamId: TEAM_ID });
+		await models.flowMonitors.recordCheckResult(other.id, outcome(), { teamId: TEAM_ID });
 
 		unwrap(await models.flowMonitors.delete(monitor.id));
 

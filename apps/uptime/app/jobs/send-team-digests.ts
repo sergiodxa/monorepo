@@ -10,11 +10,16 @@ import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer, MailError, SentMessage } from "@sdxc/mail";
 import type { Result } from "@sdxc/result";
+import type { Database } from "remix/data-table";
 
 import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
+import { DAY_MS } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
 
-import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";
+import type {
+	TeamDigestMonitor as MonitorReport,
+	TeamDigestTrace,
+} from "~/app/emails/shared/team-digest";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/models/team-digests";
 import type { OptionalEmail, SelectTeam, SelectUserPreferences } from "~/database/schema";
@@ -23,9 +28,11 @@ import emails from "~/app/emails";
 import {
 	teamDigestDashboardUrl,
 	teamDigestPreferencesUrl,
+	teamDigestTraceDownloadUrl,
 	teamDigestUnsubscribeUrl,
 } from "~/app/emails/shared/team-digest";
 import { features } from "~/app/initializers/flags";
+import { listDigestFlowTraces } from "~/app/models/flow-traces";
 import {
 	listDigestMonitors,
 	listDigestRecipients,
@@ -68,6 +75,8 @@ interface TeamDigestContext {
 	team: SelectTeam;
 	/** Its monitors' windows, sorted by name. */
 	monitors: MonitorReport[];
+	/** Yesterday's flow Performance traces still in R2; only the daily digest renders them. */
+	traces: TeamDigestTrace[];
 	/** The team's own week, one segment per day; only the weekly digest renders it. */
 	segments: UptimeBar.Status[];
 	/** The team's uptime over the window, already formatted; `null` when nothing was checked. */
@@ -212,9 +221,18 @@ async function digestTeam(
 		return { sent: 0, skipped: members.length };
 	}
 
+	/**
+	 * Only the daily digest announces new traces (ADR-037): the weekly already
+	 * covers seven days of monitor health, and a second mention would outlive the
+	 * seven-day R2 window for older runs.
+	 */
+	let traces =
+		period === "daily" ? await loadDailyTraces(ctx.db, team.id, team.slug, reported.until) : [];
+
 	let context: TeamDigestContext = {
 		team,
 		monitors: monitors.map(toReport),
+		traces,
 		segments: teamSegments(monitors, reported.days),
 		uptime: teamUptime(monitors),
 	};
@@ -299,7 +317,7 @@ async function sendDigest(
 	},
 ): Promise<Result<SentMessage, MailError>> {
 	let { period, context, to, unsubscribeUrl, window: reported, locale } = send;
-	let { team, monitors, segments, uptime } = context;
+	let { team, monitors, traces, segments, uptime } = context;
 
 	let shared = {
 		teamName: team.name,
@@ -313,7 +331,7 @@ async function sendDigest(
 		return await mailer.send(emails.teams.dailyDigest, {
 			to,
 			locale,
-			props: { ...shared, date: reported.until },
+			props: { ...shared, date: reported.until, traces },
 		});
 	}
 
@@ -322,6 +340,31 @@ async function sendDigest(
 		locale,
 		props: { ...shared, since: reported.since, until: reported.until, segments, uptime },
 	});
+}
+
+/**
+ * Yesterday's flow runs that still have a Performance trace in R2, as the daily
+ * digest lists them with download links.
+ *
+ * @param db - Database handle.
+ * @param teamId - Team whose flows to report.
+ * @param teamSlug - Slug used to build absolute download URLs.
+ * @param day - The UTC day the digest reports, as `YYYY-MM-DD`.
+ */
+async function loadDailyTraces(
+	db: Database,
+	teamId: string,
+	teamSlug: string,
+	day: string,
+): Promise<TeamDigestTrace[]> {
+	let since = startOfDay(new Date(`${day}T00:00:00.000Z`), BOUND_ZONE).getTime();
+	let until = since + DAY_MS;
+	let rows = await listDigestFlowTraces(db, teamId, since, until);
+
+	return rows.map((row) => ({
+		monitorName: row.monitorName,
+		downloadUrl: teamDigestTraceDownloadUrl(teamSlug, row.monitorId, row.resultId),
+	}));
 }
 
 /**

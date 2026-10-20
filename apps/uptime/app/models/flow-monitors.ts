@@ -17,6 +17,7 @@ import { fail } from "remix/data-table";
 import type { FlowCheckResult } from "~/app/services/flow-check";
 import type { SelectFlowMonitor } from "~/database/schema";
 
+import { flowTraceKey, flowTraces, storeFlowTrace } from "~/app/models/flow-traces";
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/services/scheduling";
 import { DEFAULT_FLOW_INTERVAL_SECONDS, isFlowIntervalSeconds } from "~/config/pricing";
 import { flowMonitors } from "~/database/schema";
@@ -50,13 +51,32 @@ export const FlowMonitors = createModel(flowMonitors, {
 		},
 
 		/**
-		 * Records a run's outcome: inserts a history row and updates the monitor's cached fields.
+		 * Records a run's outcome: inserts a history row, uploads a Performance
+		 * trace when the flow recorded one (ADR-037), and updates the monitor's
+		 * cached fields.
 		 *
 		 * @returns The history row's id, the idempotency key the ping meter bills against: it is the only thing about a completed run that is unique and already persisted.
 		 */
-		async recordCheckResult(monitorId: string, result: FlowCheckResult): Promise<string> {
+		async recordCheckResult(
+			monitorId: string,
+			result: FlowCheckResult,
+			options: { teamId: string },
+		): Promise<string> {
 			let checkedAt = Date.now();
 			let id = generateUUID();
+			let traceKey: string | null = null;
+			if (result.traceJson !== null) {
+				try {
+					let key = flowTraceKey(options.teamId, monitorId, id);
+					traceKey = await storeFlowTrace(flowTraces(), key, result.traceJson);
+				} catch {
+					/**
+					 * A failed upload must not lose the check result; the run still
+					 * happened and the assertion detail is what alerts quote.
+					 */
+					traceKey = null;
+				}
+			}
 
 			unwrap(
 				await this.context.models.flowMonitorResults.create({
@@ -72,6 +92,7 @@ export const FlowMonitors = createModel(flowMonitors, {
 					failure_detail: result.failureDetail,
 					duration_ms: result.durationMs,
 					error_message: result.errorMessage,
+					trace_key: traceKey,
 					checked_at: checkedAt,
 				}),
 			);
