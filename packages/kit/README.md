@@ -51,25 +51,25 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 
 ### Commands
 
-| Command             | What it does                                                                       |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `sdxc create`       | Writes a new project from the built-in `app` template or a GitHub repository       |
-| `sdxc init`         | Writes `.config/sdxc.jsonc` with every key at its default                          |
-| `sdxc make`         | Writes a controller, job, model, migration or other file, declared and mapped      |
-| `sdxc scaffold`     | Writes a resource's model, migration, pages or JSON endpoints, and tests           |
-| `sdxc destroy`      | Removes what `sdxc make` wrote, its mapping and its declaration, once confirmed    |
-| `sdxc routes`       | Prints every route with its controller and middleware                              |
-| `sdxc models`       | Prints each model's table and whether the migrations create it                     |
-| `sdxc schedule`     | Lists scheduled jobs, their next runs and the Worker triggers that fire them       |
-| `sdxc middleware`   | Prints each router's global middleware and every chain in `app/http/middleware`    |
-| `sdxc initializers` | Lists the initializers, their exports and the factories that build them            |
-| `sdxc notes`        | Lists the `TODO`, `FIXME`, `HACK` and `OPTIMIZE` comments in the app's code        |
-| `sdxc stats`        | Counts lines of code per kind of code, and the code to test ratio                  |
-| `sdxc run`          | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime    |
-| `sdxc doctor`       | Lints the project: release drift, secrets, migrations, layout and its own checks   |
-| `sdxc ui`           | Copies `@sdxc/ui` components into the project and points imports at the copies     |
-| `sdxc upgrade`      | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt        |
-| `sdxc deploy`       | Builds, then runs the app's own `db migrate --remote` and `deploy`, once confirmed |
+| Command             | What it does                                                                            |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `sdxc create`       | Writes a new project from the built-in `app` template or a GitHub repository            |
+| `sdxc init`         | Writes `.config/sdxc.jsonc` with every key at its default                               |
+| `sdxc make`         | Writes a controller, job, model, migration or other file, declared and mapped           |
+| `sdxc scaffold`     | Writes a resource's model, migration, pages or JSON endpoints, and tests                |
+| `sdxc destroy`      | Removes what `sdxc make` wrote, its mapping and its declaration, once confirmed         |
+| `sdxc routes`       | Prints every route with its controller and middleware                                   |
+| `sdxc models`       | Prints each model's table and whether the migrations create it                          |
+| `sdxc schedule`     | Lists scheduled jobs, their next runs and the Worker triggers that fire them            |
+| `sdxc middleware`   | Prints each router's global middleware and every chain in `app/http/middleware`         |
+| `sdxc initializers` | Lists the initializers, their exports and the factories that build them                 |
+| `sdxc notes`        | Lists the `TODO`, `FIXME`, `HACK` and `OPTIMIZE` comments in the app's code             |
+| `sdxc stats`        | Counts lines of code per kind of code, and the code to test ratio                       |
+| `sdxc run`          | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime         |
+| `sdxc doctor`       | Lints the project: release drift, secrets, migrations, layout, JSDoc and its own checks |
+| `sdxc ui`           | Copies `@sdxc/ui` components into the project and points imports at the copies          |
+| `sdxc upgrade`      | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt             |
+| `sdxc deploy`       | Builds, then runs the app's own `db migrate --remote` and `deploy`, once confirmed      |
 
 Commands run from the project root, the nearest directory with a `package.json`. `sdxc <command> --help` prints a command's arguments and flags, and `--help --json` prints them as data for an agent. Every command that runs tasks also takes `--no-progress`.
 
