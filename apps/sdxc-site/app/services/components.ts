@@ -99,6 +99,21 @@ export function importPath(module: ComponentModule): string {
 }
 
 /**
+ * Every component with the summary its listing shows. The tree and the explorer share
+ * this list so a tile's line matches the page's opening clause.
+ */
+export async function listComponentListings(): Promise<
+	Array<ComponentEntry & { summary: string }>
+> {
+	let document = await readDocument();
+
+	return document.entries.map((entry) => ({
+		...entry,
+		summary: document.references[entry.slug]?.summary ?? "",
+	}));
+}
+
+/**
  * One component's reference.
  *
  * @param slug - The module's file name, as the URL carries it.
