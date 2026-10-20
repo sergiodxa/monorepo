@@ -92,6 +92,24 @@ A trace is recorded only when the flow source calls `browser.trace.start` /
 screenshots — it would multiply R2 cost and the redaction surface without an
 explicit ask in the source.
 
+### 6. R2 cost rides the infra ledger into Polar Cost Insights
+
+R2 is platform cost, not a customer meter — there is no `flow_trace` usage event
+and no change to `ping` / `flow_run`. The cost ledger (ADR-007) gains three
+append-only resources priced from `@sdxc/cloudflare-pricing/r2`:
+
+| Resource | When recorded |
+| -------- | ------------- |
+| `r2ClassAOperations` | Each successful `PutObject` in `storeFlowTrace` |
+| `r2ClassBOperations` | Each `GetObject` in `readFlowTrace` (including misses) |
+| `r2StorageGbDay` | Daily `reportCosts` listing of live `flow-traces/` objects, apportioned by team |
+
+Deletes are free on R2 Standard and are not recorded. The Analytics Engine point
+was already full (nineteen resources + priced total = twenty doubles), so R2
+quantities ride a second point tagged `blob4 = "r2"`; the daily report merges
+both queries before pricing. The rate card version bumps when these resources
+are appended.
+
 ## Consequences
 
 ### Positive
@@ -99,6 +117,7 @@ explicit ask in the source.
 - Customers who instrument a flow get a downloadable chrome://tracing file.
 - Retention and the daily digest reuse existing jobs and email habits.
 - Cost stays opt-in and time-bounded.
+- Per-team R2 spend shows up in Polar Cost Insights next to the rest of the infra ledger.
 
 ### Negative
 
@@ -106,6 +125,7 @@ explicit ask in the source.
 - Traces can hold sensitive page content; auth on download is mandatory, and
   docs must say traces are short-lived.
 - Large uploads count against the Worker subrequest / CPU budget of the check.
+- A second Analytics Engine data point per flush when any R2 quantity is non-zero.
 
 ### Neutral
 
@@ -125,6 +145,7 @@ explicit ask in the source.
 5. Download route + results-card button; locale strings.
 6. `CleanJob` deletes expired objects and nulls keys.
 7. Daily digest section for yesterday's traces.
+8. Cost ledger R2 resources + overflow AE point; daily storage listing.
 
 ## Alternatives Considered
 

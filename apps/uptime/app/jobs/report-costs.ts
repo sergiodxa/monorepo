@@ -21,10 +21,12 @@ import type { CostQuantities } from "~/app/services/cost-rates";
 
 import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
+import { flowTraces } from "~/app/models/flow-traces";
 import { getYesterdayDateUtc, utcDayBounds } from "~/app/models/monitor-daily-stats";
 import { queryAnalytics } from "~/app/services/analytics";
 import {
 	apportionCost,
+	dailyCostOverflowQuery,
 	dailyCostQuery,
 	OVERFLOW_TEAM_ID,
 	PLATFORM_TEAM_ID,
@@ -75,7 +77,18 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 		return ctx.retry({ cause: result.error });
 	}
 
-	let byTeam = summariseByTeam(result.data.map(toDailyTeamCost));
+	let rows = result.data.map(toDailyTeamCost);
+	let overflowSql = dailyCostOverflowQuery(day);
+	if (overflowSql !== null) {
+		let overflow = await queryAnalytics<Record<string, unknown>>(overflowSql);
+		if (isFailure(overflow)) {
+			ctx.log.fail(overflow.error);
+			return ctx.retry({ cause: overflow.error });
+		}
+		rows.push(...overflow.data.map(toDailyTeamCost));
+	}
+
+	let byTeam = summariseByTeam(rows);
 	let unattributedCents = 0;
 
 	for (let teamId of UNREPORTABLE_TEAM_IDS) {
@@ -146,7 +159,9 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 /**
  * Estimates each team's stored bytes as retained result rows × a mean row size, since
  * nothing reports a real per-team byte count, and apportions this job's own ledger by
- * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day.
+ * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day. Live flow
+ * Performance traces are listed from R2 so each team's GB-day is the bytes still stored
+ * (ADR-037).
  */
 async function recordStorage(ctx: CurrentJobContext): Promise<void> {
 	let result = await ctx.db.exec(
@@ -177,7 +192,52 @@ async function recordStorage(ctx: CurrentJobContext): Promise<void> {
 	recordCost("kvStorageGbDay", (gbByTeam.size * KV_MEAN_BYTES_PER_TEAM) / BYTES_PER_GB);
 	apportionCost(gbByTeam);
 
-	ctx.log.set({ costs: { storage_teams: gbByTeam.size, storage_d1_gb: d1Gb } });
+	let r2GbByTeam = await listFlowTraceStorageGbByTeam();
+	let r2Gb = 0;
+	for (let gb of r2GbByTeam.values()) r2Gb += gb;
+	if (r2GbByTeam.size > 0) {
+		recordCost("r2StorageGbDay", r2Gb);
+		apportionCost(r2GbByTeam);
+	}
+
+	ctx.log.set({
+		costs: {
+			storage_teams: gbByTeam.size,
+			storage_d1_gb: d1Gb,
+			storage_r2_teams: r2GbByTeam.size,
+			storage_r2_gb: r2Gb,
+		},
+	});
+}
+
+/**
+ * Live Performance-trace bytes per team, as GB, from a metadata listing of `FLOW_TRACES`.
+ * The object key's second segment is the team id (`flow-traces/<team>/…`).
+ */
+async function listFlowTraceStorageGbByTeam(): Promise<Map<string, number>> {
+	let storage = flowTraces();
+	let gbByTeam = new Map<string, number>();
+	let cursor: string | undefined;
+
+	do {
+		let page = await storage.list({
+			prefix: "flow-traces/",
+			cursor,
+			limit: 1_000,
+			includeMetadata: true,
+		});
+
+		for (let file of page.files) {
+			let teamId = file.key.split("/")[1];
+			if (teamId === undefined || teamId === "") continue;
+			let bytes = "size" in file ? file.size : 0;
+			gbByTeam.set(teamId, (gbByTeam.get(teamId) ?? 0) + bytes / BYTES_PER_GB);
+		}
+
+		cursor = page.cursor;
+	} while (cursor !== undefined);
+
+	return gbByTeam;
 }
 
 /**

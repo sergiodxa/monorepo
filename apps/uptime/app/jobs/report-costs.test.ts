@@ -12,7 +12,7 @@ import type { UsageEvent } from "@sdxc/billing";
 import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import { BillingError } from "@sdxc/billing";
-import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { createAnalyticsEngine, createEnv, createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { failure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -35,11 +35,15 @@ const ANALYTICS_URL =
  */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
+/** In-memory `FLOW_TRACES` bucket the daily storage estimate lists. */
+let flowTracesBucket = createR2Bucket();
+
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
 		CLOUDFLARE_ACCOUNT_ID: "test-account",
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
 		COSTS: costs,
+		FLOW_TRACES: flowTracesBucket,
 	}),
 }));
 
@@ -91,21 +95,27 @@ beforeEach(() => {
 	({ db } = createTestDatabase());
 	record = {};
 	costs.reset();
+	flowTracesBucket.reset();
 	ingestMock.mockClear();
 	ingestMock.mockImplementation(realIngest);
 	queries = [];
 });
 
 /**
- * Serves the cost dataset the job prices its report from.
+ * Serves the cost dataset the job prices its report from. The overflow (R2) query
+ * answers empty unless `overflow` is given, so core rows are not double-counted.
  *
- * @param rows - Rows the daily cost query answers with.
+ * @param rows - Rows the daily core cost query answers with.
+ * @param overflow - Rows the R2 overflow query answers with.
  */
-function serve(rows: Record<string, unknown>[]) {
+function serve(rows: Record<string, unknown>[], overflow: Record<string, unknown>[] = []) {
 	server.use(
 		http.post(ANALYTICS_URL, async ({ request }) => {
-			queries.push(await request.text());
-			return HttpResponse.json({ data: rows });
+			let sql = await request.text();
+			queries.push(sql);
+			return HttpResponse.json({
+				data: sql.includes("blob4 = 'r2'") ? overflow : rows,
+			});
 		}),
 	);
 }
@@ -283,12 +293,17 @@ describe("reportCosts", () => {
 				{ touch: true },
 			);
 		}
+		await flowTracesBucket.put(
+			`flow-traces/${team.id}/monitor-1/result-1.json`,
+			"x".repeat(2_000_000),
+		);
 		serve([costRow(team.id)]);
 
 		await run();
 
-		expect(record).toMatchObject({ "costs.storage_teams": 1 });
+		expect(record).toMatchObject({ "costs.storage_teams": 1, "costs.storage_r2_teams": 1 });
 		expect(record["costs.storage_d1_gb"]).toBeCloseTo((5 * 200) / 1_000_000_000, 12);
+		expect(record["costs.storage_r2_gb"]).toBeCloseTo(2_000_000 / 1_000_000_000, 12);
 	});
 
 	test("asks the queue to redeliver when the cost dataset cannot be read", async () => {
