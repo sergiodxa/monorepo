@@ -18,8 +18,7 @@ import routes from "~/routes/tenant";
  * against it, and answers with whatever `beginAuthorization` decides.
  *
  * @param ctx - The request context (provides `tenantStub` and `render`).
- * @returns The response this request reaches on its own: a redirect, a rendered
- * error, or a redirect onward to a hosted sign-in or consent screen.
+ * @returns The response this request reaches on its own: a redirect, a rendered error, or a redirect onward to a hosted sign-in or consent screen.
  * @example
  * router.map(routes.authorize, authorize);
  */

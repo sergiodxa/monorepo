@@ -2,8 +2,6 @@
  * `POST /oauth/register` — RFC 7591 Dynamic Client Registration: a relying party
  * registers itself against this tenant ahead of its first `/authorize` call and
  * gets back a client id — a secret too, for a confidential client — reusing the
- * exact record and validation `registerClient` already applies to every client
- * this tenant holds, whether a dashboard wrote it or a caller registered it here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,8 +59,7 @@ function describeRegistrationFailure(failure: Exclude<RegisterClientResult, { ok
  * it holds any credential at all.
  *
  * @param ctx - The request context (provides `tenantStub` and `request`).
- * @returns The freshly registered client as an RFC 7591 registration response, or a
- * `400 invalid_client_metadata` naming which rule refused it.
+ * @returns The freshly registered client as an RFC 7591 registration response, or a `400 invalid_client_metadata` naming which rule refused it.
  * @example
  * router.map(routes.register, register);
  */

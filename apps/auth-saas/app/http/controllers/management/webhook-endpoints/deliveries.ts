@@ -46,8 +46,7 @@ function deliveryNotFound(): Response {
 /**
  * Builds the `webhookDeliveriesList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.webhookDeliveriesList, createWebhookDeliveriesListAction(options));
@@ -95,8 +94,7 @@ function deliveryIdParam(ctx: { params: Record<string, string | undefined> }): s
 /**
  * Builds the `webhookDeliveriesReplay` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.webhookDeliveriesReplay, createWebhookDeliveriesReplayAction(options));

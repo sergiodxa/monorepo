@@ -18,7 +18,7 @@ run({
 	 * @returns The requested export (expected to be a component function).
 	 */
 	async loadModule(moduleUrl, exportName) {
-		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
+		let mod: unknown = await import(moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);

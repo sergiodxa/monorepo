@@ -2,11 +2,6 @@
  * Turns an `AuthorizationOutcome` into a `Response`, the one mapping `/authorize`,
  * `/u/sign-in` and `/u/consent` all share: `redirect` is a real `302` onto its
  * target; `authenticate` is a `302` to `/u/sign-in`; `consent` either renders the
- * consent screen inline (when the caller is already `/u/consent`) or `302`s
- * there. `render` is the one exception: `/authorize` has no verified redirect
- * target at all yet, so it renders `/u/error`'s content inline rather than
- * sending the browser anywhere; every other caller already stands on its own
- * hosted page and `302`s to `/u/error` instead, the same as any other outcome.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,11 +32,7 @@ export interface RespondToOutcomeOptions {
 	/**
 	 * Renders a `step-up` outcome inline instead of redirecting to it. Only
 	 * `/u/step-up`'s own controllers pass this; every other caller reaches
-	 * `/u/step-up` through the redirect. A subject with no factor is rendered by
-	 * the caller directly instead — `respondToAuthorizationOutcome` only ever
-	 * shows the code-entry state, since assembling the enrolment form needs a
-	 * fresh `beginTotpEnrolment` call this mapper has no reason to make on every
-	 * outcome it resolves.
+	 * `/u/step-up` through the redirect.
 	 */
 	renderStepUpInline?: boolean;
 	/** The step-up form's own action, required whenever `renderStepUpInline` is set and the subject holds a factor. */
@@ -69,22 +60,18 @@ function tenantUrl(ctx: RequestContext, path: string): URL {
  * A real `302` to `location`, with mutable headers — unlike `Response.redirect()`,
  * whose headers the platform guards as immutable, a caller here still needs to
  * append the `__Host-session` `Set-Cookie` a sign-in or a passkey verification
- * just opened.
  */
 function redirectTo(location: string): Response {
 	return new Response(null, { status: 302, headers: { Location: location } });
 }
 
 /**
- * Reads a `return_to` query parameter, for a screen with no interaction row of
- * its own to resume — a code the person already holds rather than a protocol
- * request parked server-side. Accepted only as a same-origin relative path, so
- * a crafted value on `/u/sign-in` or `/u/second-factor` can never redirect the
- * browser off this tenant's own host once signed in.
+ * Reads a `return_to` query parameter, for a screen with no interaction row of its
+ * own to resume — a code the person already holds rather than a protocol request
+ * parked server-side.
  *
  * @param ctx - The request context (provides `url`).
- * @returns The path to return to, or `null` when none was given or it does not
- * look like one of this tenant's own paths.
+ * @returns The path to return to, or `null` when none was given or it does not look like one of this tenant's own paths.
  */
 export function safeReturnTo(ctx: RequestContext): string | null {
 	let value = ctx.url.searchParams.get("return_to");
@@ -110,8 +97,7 @@ export function redirectToReturnTo(ctx: RequestContext, returnTo: string): Respo
  * `/u/error` itself and, inline, by `/authorize`'s own `render`-class failures.
  *
  * @param ctx - The request context (provides `render`, `locale` and `intl`).
- * @param description - The already-composed, developer-facing sentence the
- * failing operation answered with.
+ * @param description - The already-composed, developer-facing sentence the failing operation answered with.
  * @returns The rendered error page, at `400`.
  */
 export async function renderErrorPage(ctx: RequestContext, description: string): Promise<Response> {
@@ -201,9 +187,7 @@ export async function renderStepUpPage(
 /**
  * Resolves the URL a `redirect`, `authenticate` or `consent` outcome sends the
  * browser to next — the piece the passkey verify endpoint also needs, since it
- * answers in JSON rather than an HTTP redirect of its own. A `render` outcome has
- * no such destination when rendered inline, so it resolves to `null` here;
- * `redirectToErrorPage` is `/u/error`'s own equivalent for that outcome.
+ * answers in JSON rather than an HTTP redirect of its own.
  *
  * @param ctx - The request context (provides `request`).
  * @param outcome - The outcome to resolve a destination for.
@@ -235,7 +219,6 @@ export function resolveOutcomeRedirect(
 		return url.toString();
 	}
 
-	// outcome.kind === "consent"
 	let url = tenantUrl(ctx, routes.hostedConsentShow.href());
 	url.searchParams.set("interaction", outcome.interactionId);
 	if (uiLocales) url.searchParams.set("ui_locales", uiLocales);
@@ -247,8 +230,7 @@ export function resolveOutcomeRedirect(
  *
  * @param ctx - The request context (provides `render`, `locale`, `intl` and `request`).
  * @param outcome - The outcome a `beginAuthorization`/`resumeAuthorization` call answered with.
- * @param options - Whether to render a `consent` or `render` outcome inline, and
- * the `ui_locales` value to carry forward onto a redirect.
+ * @param options - Whether to render a `consent` or `render` outcome inline, and the `ui_locales` value to carry forward onto a redirect.
  * @returns The response this outcome resolves to.
  */
 export async function respondToAuthorizationOutcome(

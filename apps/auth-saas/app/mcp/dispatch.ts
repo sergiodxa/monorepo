@@ -1,10 +1,7 @@
 /**
  * Where an MCP tool call reaches the real management route: the `SELF` service
  * binding, so a tool's forwarded request runs the same Worker's own routing and
- * controllers in-process rather than a second, parallel implementation of what
- * a management operation does. Overridable only for tests, the same way
- * `platform-tenant.ts` swaps the platform tenant's own Durable Object for one a
- * test constructs itself.
+ * controllers in-process rather than a second, parallel implementation of what a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

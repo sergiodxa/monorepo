@@ -2,10 +2,6 @@
  * `GET/POST /signup` — an organization name, an email, and a password. Claims the
  * email as an unverified platform subject, mints its verification ticket, and holds
  * the organization name in `pending_signups` until the address verifies — nothing is
- * provisioned yet, since an open, unauthenticated form that spent a Durable Object per
- * submission would cost real money on every unproven request. The password writes
- * last, once the address is claimed, so a submission that fails partway never leaves a
- * credential attached to an identifier nobody has proven yet.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -62,10 +58,9 @@ interface AddressRefusal {
 }
 
 /**
- * Screens an organization owner's address before anything is claimed. A likely typo of a
- * common provider is offered first, since the disposable list holds many typo domains, and
+ * Screens an organization owner's address before anything is claimed. A likely typo of a common
+ * provider is offered first, since the disposable list holds many typo domains, and
  * `confirmedEmail` naming the address keeps it; a disposable domain or one that cannot receive
- * mail then refuses, while a failed lookup passes, so a resolver outage never blocks a sign-up.
  *
  * @param t - The request's translator.
  * @param address - The parsed address.
@@ -144,15 +139,11 @@ export const signupShow = createAction(routes.signup.show, async (ctx) => {
 
 /**
  * Claims the organization's email as an unverified platform subject, mints its
- * verification ticket, writes the pending signup row the organization name lives
- * in until that ticket is spent, then writes the password. Sends the verification
- * email and lands on `/signup/pending` regardless of whether the send succeeded,
- * since a subject that already exists is recoverable through a resend but one rolled
- * back for a delivery failure would not be.
+ * verification ticket, writes the pending signup row the organization name lives in
+ * until that ticket is spent, then writes the password.
  *
  * @param ctx - The request context (provides `formData`, `render`, `db` and `mail`).
- * @returns The redirect to `/signup/pending` on success, or this same page re-rendered
- * with an error.
+ * @returns The redirect to `/signup/pending` on success, or this same page re-rendered with an error.
  * @example
  * router.map(routes.signup.submit, signupSubmit);
  */

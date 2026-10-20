@@ -1,8 +1,7 @@
 /**
  * `db migrate`: applies every control-plane migration in `database/migrations/` the database
  * lacks. Locally it writes the SQLite file `bun dev` serves from; with `--remote` it runs
- * `wrangler d1 migrations apply` against the production database. Tenant chains run in each
- * tenant's Durable Object instead.
+ * `wrangler d1 migrations apply` against the production database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

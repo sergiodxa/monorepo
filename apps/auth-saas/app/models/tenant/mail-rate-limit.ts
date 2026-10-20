@@ -1,10 +1,7 @@
 /**
  * The send envelope shared by every operation that mints a ticket to mail somewhere:
  * up to 5 sends an hour and 15 a day, per address, counted together regardless of
- * which kind of ticket triggered them. Lives above `subjects.ts` and `passwords.ts`
- * rather than inside either — both already import from the other's neighborhood, so
- * a shared check either one called would import itself back; this module imports
- * from neither and reads only its own table.
+ * which kind of ticket triggered them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,12 +50,10 @@ export interface CheckAndSpendMailEnvelopeInput {
  * Checks and spends one send against an address's shared envelope: a window whose
  * hour or day has elapsed resets its count before either cap is compared, so the
  * refusal a stale window would otherwise cause never happens, and a spend that
- * clears both caps is written in the same call that decided it may.
  *
  * @param db - The tenant's database.
  * @param input - The address to spend against, and the clock to measure against.
- * @returns Success, once the spend is recorded, or how many seconds until the
- * tighter of the two caps next has room.
+ * @returns Success, once the spend is recorded, or how many seconds until the tighter of the two caps next has room.
  */
 export async function checkAndSpendMailEnvelope(
 	db: Database,

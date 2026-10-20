@@ -36,8 +36,7 @@ function registerClientFailure(result: Exclude<RegisterClientResult, { ok: true 
 /**
  * Builds the `clientsRegister` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.clientsRegister, createClientsRegisterAction(options));

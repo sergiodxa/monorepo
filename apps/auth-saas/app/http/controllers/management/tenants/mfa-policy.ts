@@ -1,8 +1,7 @@
 /**
- * `POST /tenants/:tenantId/mfa-policy` — sets whether every subject must
- * enroll a second factor to sign in, an existing tenant-object setting this
- * pass exposes over the management API alongside the tenant's control-plane
- * record.
+ * `POST /tenants/:tenantId/mfa-policy` — sets whether every subject must enroll a
+ * second factor to sign in, an existing tenant-object setting this pass exposes
+ * over the management API alongside the tenant's control-plane record.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +24,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `tenantMfaPolicySet` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.tenantMfaPolicySet, createTenantMfaPolicySetAction(options));

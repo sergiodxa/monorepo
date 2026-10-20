@@ -1,20 +1,7 @@
 /**
  * Reports one settled UTC day's usage and cost to the billing provider, per
  * tenant, so revenue, consumption and cost join on the customer record that
- * already holds revenue. Reads the day's active-user counts straight from
- * `tenant_usage_day` and the day's cost from the cost ledger's own analytics
- * dataset, then hands both to the provider as one `usage.ingest` call.
- *
- * Nothing here runs on a schedule yet — a scheduled job, once one exists,
- * calls `reportDailyUsage` once a day, the same way `closeTenantMeteringDay`,
- * the mail rate limit's sweep and the entitlement projection's own sweeps are
- * still waiting on one shared trigger. Reporting a day also depends on two
- * other jobs having already run for it: `closeTenantMeteringDay`, which is
- * what fills `tenant_usage_day` in the first place, and the cost ledger's own
- * `flush`, which is what writes the analytics points this reads back. Both
- * are real and tested, and neither has a live caller yet either, so a day
- * reported today reads whatever those two happened to produce for it — most
- * likely nothing, until all three are wired to a trigger together.
+ * already holds revenue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -95,12 +82,7 @@ function formatUtcDateTime(epochMs: number): string {
 /**
  * Reads back the ledger's own analytics dataset for one UTC day, summed per
  * tenant. One request covers every tenant at once — `flush`'s blobs carry the
- * source, the tenant id and the rate-card version, but no day or date of
- * their own, so day-scoping here has nothing to filter on but Analytics
- * Engine's own recorded write time for each point; that is a real limitation
- * of what the ledger currently writes, not a guess on this function's part,
- * and it means a point replayed or backfilled for a past day would be
- * attributed to whichever day it was actually written on instead.
+ * source, the tenant id and the rate-card version, but no day or date of their
  *
  * @param day - The UTC day to sum cost for, as `dayOf` keys it.
  * @returns Each tenant's summed cost for that day, in cents, keyed by tenant id.
@@ -144,10 +126,9 @@ async function queryDailyCostByTenant(day: number): Promise<Map<string, number>>
 }
 
 /**
- * Formats a cost in cents as the plain decimal string `Cost.amount` requires:
- * nine places, so a per-tenant daily fraction of a cent survives rather than
- * rounding to zero or, as a JavaScript number would past `1e-6`, printing in
- * exponential notation a billing platform's parser rejects.
+ * Formats a cost in cents as the plain decimal string `Cost.amount` requires: nine
+ * places, so a per-tenant daily fraction of a cent survives rather than rounding
+ * to zero or, as a JavaScript number would past `1e-6`, printing in exponential no
  *
  * @param cents - The cost, in cents.
  * @returns `cents` as a fixed nine-decimal-place string.
@@ -157,24 +138,15 @@ function costToDecimalString(cents: number): string {
 }
 
 /**
- * Reports one settled UTC day's usage to the billing provider: for every
- * tenant that closed a metering day, one `auth.dau` event carrying that day's
- * distinct authenticating subjects and one `infra.cost` event carrying that
- * day's modelled cost, both named to the customer that owns the tenant.
- *
- * Every event's `externalId` is derived from the tenant, the day and the
- * event's own name rather than from the moment of sending, so a retried
- * delivery and a re-run of the same day both collapse to one counted event
- * at the provider.
+ * Reports one settled UTC day's usage to the billing provider: for every tenant
+ * that closed a metering day, one `auth.dau` event carrying that day's distinct
+ * authenticating subjects and one `infra.cost` event carrying that day's modelled
  *
  * @param models - The control plane's models.
  * @param billing - The configured billing provider.
  * @param options - The day to report; defaults to yesterday, UTC.
  * @returns How many tenant-days were reported, and every one left out and why.
- * @throws The provider's own `BillingError` when it reports a retryable
- * failure, so a caller running this on a schedule retries the whole day; a
- * non-retryable failure is logged and swallowed instead, since the next run
- * costs nothing.
+ * @throws The provider's own `BillingError` when it reports a retryable failure, so a caller running this on a schedule retries the whole day; a non-retryable failure is logged and swallowed instead, since the next run costs nothing.
  */
 export async function reportDailyUsage(
 	models: Models,

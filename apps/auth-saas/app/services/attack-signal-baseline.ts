@@ -2,17 +2,6 @@
  * The trailing-baseline comparison behind the daily attack-signal alert: how many
  * failed sign-ins a tenant saw in the last hour, set against how many its own past
  * week saw per hour on average, and the line that separates ordinary variation from
- * something worth mailing an owner about.
- *
- * The average divides by the baseline window's own hour count rather than the
- * number of rows the read returns, since `readFailedSignInsByHour` reports only the
- * hours that saw at least one failure — dividing by row count would drop every
- * quiet hour from the average instead of counting it as a zero.
- *
- * "Well above" is read as more than triple the trailing hourly average, with a
- * floor under it: the recent count must also clear a fixed minimum, so a tenant
- * whose own trailing average sits near zero does not turn an ordinary handful of
- * failures into an alert on the strength of the multiple alone.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

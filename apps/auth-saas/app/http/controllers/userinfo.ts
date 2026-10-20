@@ -18,25 +18,14 @@ import { AccessToken } from "~/app/models/tenant/tokens";
 import routes from "~/routes/tenant";
 
 /**
- * Verifies the bearer access token and assembles the claims its granted scopes
- * carry. Every request fetches the tenant's current JWKS from its Durable Object
- * rather than a cache: the caching layer this endpoint deserves is not built yet,
- * so a verification here costs one round trip rather than none.
- *
- * Takes the request and the tenant facts as plain arguments, rather than the
- * router's request context, so the one implementation serves both the `GET` and
- * the `POST` route this endpoint accepts.
- *
- * `Cache-Control` states the access token's own remaining lifetime, so a relying
- * party caching this response never holds it past what the token itself is good for.
- * Every refusal's challenge carries `resource_metadata` (RFC 9728), pointing the client
- * at the tenant's userinfo metadata and, through it, at the issuer.
+ * Verifies the bearer access token and assembles the claims its granted scopes carry.
+ * Every request fetches the tenant's current JWKS from its Durable Object rather than a
+ * cache: the caching layer this endpoint deserves is not built yet, so a verification h
  *
  * @param request - The incoming request, read for its `Authorization` header.
  * @param tenant - The tenant this request was resolved to.
  * @param tenantStub - A stub for the tenant's Durable Object.
- * @returns The subject's claims as JSON, or a `401`/`403` naming why the token
- * was refused.
+ * @returns The subject's claims as JSON, or a `401`/`403` naming why the token was refused.
  */
 async function respondToUserinfo(
 	request: Request,

@@ -19,12 +19,8 @@ import {
 import { tenantRouter } from "~/app/initializers/tenant-router";
 
 /**
- * The hosted pages this platform's own bare domain answers directly, addressed
- * at the platform tenant's own subject store rather than a signed-up
- * customer's. Matched exactly, never by prefix, so a path that merely shares a
- * segment with one of these (`/u/sign-up` alongside `/u/sign-in`) stays a 404;
- * a hosted path added later reaches this domain only by a deliberate addition
- * here.
+ * The hosted pages this platform's own bare domain answers directly, addressed at
+ * the platform tenant's own subject store rather than a signed-up customer's.
  */
 const PLATFORM_HOSTED_PATHS = new Set([
 	"/u/sign-in",
@@ -46,12 +42,6 @@ type ForwardContext = Pick<RequestContext, "request" | "url" | "formData">;
  * Forwards a request to the tenant router carrying the platform tenant's own
  * synthetic identity: it has no control-plane row to resolve one from, being
  * addressed purely by the Durable Object name every other platform-tenant call
- * already uses.
- *
- * A `GET`/`HEAD` request's body is untouched, so the original request crosses
- * over unchanged. Anything else already had its body drained by the platform
- * router's own `formData()` middleware, so it is rebuilt from the parsed fields,
- * with the original `Content-Type` dropped so the multipart header takes its place.
  *
  * @param ctx - The request context (provides `request` and `formData`).
  * @returns The tenant router's response for that request.

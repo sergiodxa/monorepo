@@ -1,9 +1,7 @@
 /**
- * `GET /u/error` — a terminal protocol failure with a correlation id, reached by
- * a `302` from every hosted screen's own `render`-class failure (an unknown or
- * expired interaction, most often). `/authorize` is the one exception: it has no
- * verified redirect target to have landed the browser on in the first place, so
- * it renders this same content inline instead of redirecting here.
+ * `GET /u/error` — a terminal protocol failure with a correlation id, reached by a
+ * `302` from every hosted screen's own `render`-class failure (an unknown or
+ * expired interaction, most often).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

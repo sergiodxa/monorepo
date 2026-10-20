@@ -1,8 +1,7 @@
 /**
- * What every route in this directory shares: reading the `:keyId` path param,
- * the `problem+json` response for a key the tenant does not hold, the
- * entitlement refusal machine-to-machine access is gated behind, and the
- * refusal for a tenant that has not chosen its own key prefix yet.
+ * What every route in this directory shares: reading the `:keyId` path param, the
+ * `problem+json` response for a key the tenant does not hold, the entitlement
+ * refusal machine-to-machine access is gated behind, and the refusal for a tenant
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

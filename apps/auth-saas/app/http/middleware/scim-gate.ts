@@ -1,9 +1,7 @@
 /**
  * Gates every `/scim/v2/*` resource route on a well-formed bearer token and a
  * per-token write budget, both checked before the tenant object is asked to do
- * anything. The budget is keyed on the `sha256` of the token, since the thing
- * throttled is one connection's sync worker, whichever network it calls from. The
- * tenant object resolves the token and checks the `scim` entitlement itself.
+ * anything.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,8 +33,7 @@ async function digestToken(value: string): Promise<string> {
 /**
  * Builds the SCIM gate for a `/scim/v2/*` resource route.
  *
- * @param limiter - The `RateLimit` binding this connection's writes share,
- * keyed on the presented token.
+ * @param limiter - The `RateLimit` binding this connection's writes share, keyed on the presented token.
  * @returns The middleware, for a route's own `middleware` array.
  * @example
  * router.map(routes.scimUsersCreate, { middleware: [scimGate(env.MANAGEMENT_RATE_LIMITER)], handler });

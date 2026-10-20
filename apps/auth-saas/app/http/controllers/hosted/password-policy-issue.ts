@@ -1,8 +1,7 @@
 /**
  * Maps a `PasswordPolicyFailure` — the refusal shape `setPassword` and
  * `completePasswordReset` both answer with — to the `Form.Issue` its field
- * renders, so hosted sign-up and reset and platform sign-up share one
- * translation of every password policy refusal.
+ * renders, so hosted sign-up and reset and platform sign-up share one translation
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

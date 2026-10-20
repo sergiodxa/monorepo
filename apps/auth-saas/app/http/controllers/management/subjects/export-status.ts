@@ -1,24 +1,7 @@
 /**
- * `GET /tenants/:tenantId/subjects/export/:runId` — an export run's own
- * status and running counts, plus a fresh one-time download link for its
- * output once the run has finished and written one. A new ticket is minted
- * on every poll that has output to offer, the same way the import status
- * route mints one on every poll that has a report, rather than reused across
- * polls.
- *
- * Reading a run's status and counts never needs `export:credentials`, even
- * for a run that itself carries password hashes — knowing a run exists and
- * how far it has gotten is not the same as being able to read the hashes it
- * may carry. That gate belongs at the one place credentials actually become
- * reachable: this route mints a download ticket for a credentials-bearing
- * run's output only for a caller who currently holds `export:credentials`,
- * so a ticket for such a run is never handed to a caller who could not have
- * begun that run in the first place. `export:read` alone still sees the
- * run's status and counts, just without a `exportDownloadUrl` in the body.
- * The download route itself stays exactly as ticket-only as import's own —
- * mounted with no bearer auth of its own — because by the time a ticket
- * exists at all, it was only ever minted for a caller already cleared to
- * hold it.
+ * `GET /tenants/:tenantId/subjects/export/:runId` — an export run's own status and
+ * running counts, plus a fresh one-time download link for its output once the run
+ * has finished and written one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,8 +26,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `subjectsExportStatus` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectsExportStatus, createSubjectsExportStatusAction(options));

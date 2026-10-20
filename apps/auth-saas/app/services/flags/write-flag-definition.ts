@@ -1,10 +1,7 @@
 /**
- * The write path a release flag or kill switch definition goes through: a
- * schema check against exactly what the engine would refuse, a version guard
- * so two edits in flight resolve as a conflict rather than a silent overwrite,
- * and a `flag_change` row appended once the write lands. Nothing here is
- * mounted on a route yet — a staff-authenticated one calls it once platform
- * staff have a way to sign in at all.
+ * The write path a release flag or kill switch definition goes through: a schema
+ * check against exactly what the engine would refuse, a version guard so two edits
+ * in flight resolve as a conflict rather than a silent overwrite, and a `flag_chan
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,9 +49,8 @@ export type WriteFlagDefinitionResult =
 
 /**
  * Writes one flag definition: checks the draft with `FLAG_DEFINITION_SCHEMA`,
- * declines a write whose `expectedVersion` has moved since the caller read
- * it, and otherwise merges the accepted definition into the store's set under
- * a freshly minted revision — recording the change once the write lands.
+ * declines a write whose `expectedVersion` has moved since the caller read it, and
+ * otherwise merges the accepted definition into the store's set under a freshly
  *
  * @param store - The definition set to read from and write back to.
  * @param models - The control plane's models.
@@ -100,10 +96,9 @@ export async function writeFlagDefinition(
 }
 
 /**
- * Answers "who would this draft serve" without touching the store: parses
- * the edited set exactly as the engine would and resolves every flag it
- * carries against a context typed into a form, so a rollout is checked
- * before it ever reaches KV.
+ * Answers "who would this draft serve" without touching the store: parses the
+ * edited set exactly as the engine would and resolves every flag it carries
+ * against a context typed into a form, so a rollout is checked before it ever
  *
  * @param draft - The definition set as an editor is currently drafting it.
  * @param context - The tenant context to preview the draft against.

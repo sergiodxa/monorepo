@@ -2,10 +2,6 @@
  * The subject import run itself: for every tenant with a queued or running import,
  * reads its source file from R2 batch by batch, writes each batch through the
  * tenant's own object, folds the outcomes into the run's control-plane counters,
- * and — once a run's file is exhausted — writes its failure report, mints a
- * download ticket for it, and closes the run out. One tick advances every active
- * run by as much as its own time and batch budget allow, so a run resumes exactly
- * where the previous tick left it rather than restarting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,10 +40,7 @@ function toReportLine(outcome: Extract<ImportRowOutcome, { ok: false }>): string
 
 /**
  * Appends newly-failed lines to a run's report object, reading back whatever an
- * earlier tick already wrote first. A report can grow across many ticks over a
- * run that takes an hour, and each tick's own process exits with nothing held in
- * memory from the last one, so the object in R2 is the only place that growing
- * file can live between ticks.
+ * earlier tick already wrote first.
  *
  * @param bucket - The R2 bucket the report lives in.
  * @param key - The report's object key.
@@ -201,13 +194,6 @@ export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 
 		if (sourceExhausted) {
 			let final = await ctx.models.tenantImportRuns.find(run.id);
-
-			// A download ticket is single-use and its plaintext exists only at the
-			// moment it is minted — minting one here, with no request waiting to
-			// carry it anywhere, would create a row nobody could ever spend. The
-			// route that answers "where can I download this run's report" mints
-			// its own ticket on demand from `run.report_key` when a customer
-			// actually asks for one.
 
 			await stub.completeImportRun({
 				processed: final?.processed ?? 0,

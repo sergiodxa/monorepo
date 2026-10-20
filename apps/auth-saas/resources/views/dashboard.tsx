@@ -1,9 +1,6 @@
 /**
  * `remix/component` views for the platform's own administrative dashboard: the tenant list
  * and create-tenant form, and a tenant's agent-clients list and registration form.
- * Rendered inside `landing.tsx`'s own `PublicDocument` shell, with the same plain
- * English copy and module-level `css()` mixins `signup.tsx` already established —
- * this router carries no i18n middleware, so every string here is written directly.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -317,10 +314,7 @@ export namespace AgentClientsPage {
 
 /**
  * `GET/POST /dashboard/tenants/:tenantId/agent-clients` — every machine credential
- * registered against a tenant, and a form to register another one. A registration's
- * plaintext secret is rendered once, on the response to that same submission; no
- * later load of this page ever shows it again, since nothing but this response ever
- * carries it.
+ * registered against a tenant, and a form to register another one.
  *
  * @param handle - Component handle exposing the screen's props.
  * @returns A render function producing the agent-clients page's markup.

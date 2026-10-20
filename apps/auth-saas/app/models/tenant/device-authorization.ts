@@ -1,24 +1,7 @@
 /**
  * The device authorization grant's whole mechanism, both sides of it: the
- * `device_authorizations` table, the two codes a device mints and polls with, and
- * the pending row a person approves or denies from the phone or laptop they read the
- * code on — for a device with no browser worth using — a television app, a set-top
- * box, a command-line tool — to sign a person in from a screen it shows and a device
- * they already hold instead.
- *
- * The device code is machine-to-machine and as long as anything else this platform
- * mints; only its digest is stored, the same way a session token or an authorization
- * code never touches the database in the clear. The user code is read off a screen and
- * typed with a remote control, so it is drawn from twenty consonants by rejection
- * sampling rather than a modulo, which would bias some letters over others.
- *
- * Redemption reuses the authorization code's own atomic statement — an `UPDATE …
- * WHERE redeemed_at IS NULL … RETURNING *` — so two concurrent polls of an approved
- * row cannot both mint tokens, and minting itself reuses the token endpoint's own
- * shared steps rather than a second copy of them. Approval reuses that same
- * statement shape to guard against a second decision on one row, and reuses the
- * consent screen and its own scope-union so a device's approval and a browser's
- * are one surface and one standing grant.
+ * `device_authorizations` table, the two codes a device mints and polls with, and the
+ * pending row a person approves or denies from the phone or laptop they read the code
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -85,9 +68,7 @@ const USER_CODE_LENGTH = 8;
 /**
  * The largest byte value rejection sampling accepts for this alphabet: with 256
  * possible byte values and 20 symbols, 240 is the widest range divisible by 20, so
- * every accepted byte maps onto a symbol with equal probability. A byte at or past
- * this ceiling is redrawn rather than reduced by modulo, which would make the low
- * four symbols of the alphabet very slightly more likely than the rest.
+ * every accepted byte maps onto a symbol with equal probability.
  */
 const USER_CODE_REJECTION_CEILING = 256 - (256 % USER_CODE_ALPHABET.length);
 
@@ -144,9 +125,7 @@ async function mintDeviceCode(): Promise<{ deviceCode: string; deviceCodeHash: s
 /**
  * Draws an eight-symbol user code from the twenty-consonant alphabet by rejection
  * sampling over random bytes, so every symbol is equally likely rather than biased
- * by a modulo. Answers both the folded form stored and compared — upper case, no
- * separator, since the alphabet carries no lower case to fold away — and the
- * hyphenated form a screen displays.
+ * by a modulo.
  */
 function generateUserCode(): { folded: string; display: string } {
 	let symbols = "";
@@ -166,10 +145,7 @@ function generateUserCode(): { folded: string; display: string } {
 
 /**
  * Whether `error` is the unique-index conflict a colliding user code throws,
- * rather than some other failure. Matched on the underlying driver's own message
- * the same way a replayed TOTP claim is recognized, since Node's `node:sqlite` and
- * Bun's `bun:sqlite` disagree on the error code but agree on wording it as a
- * "constraint failed".
+ * rather than some other failure.
  */
 function isUserCodeConflict(error: unknown): boolean {
 	if (!(error instanceof DataTableDatabaseError)) return false;
@@ -189,8 +165,7 @@ interface MintPendingRowInput {
 /**
  * Writes a fresh pending row under a freshly drawn user code, retrying with a new
  * code on a collision against the pending-codes index — a code space of 25.6
- * billion against a pending set in the thousands, so a collision is a retry
- * rather than a design problem.
+ * billion against a pending set in the thousands, so a collision is a retry rather
  */
 async function mintPendingRow(
 	db: Database,
@@ -265,10 +240,8 @@ export type BeginDeviceAuthorizationResult =
  * the RFC 8628 response a device polls the token endpoint with next.
  *
  * @param db - The tenant's database.
- * @param input - The client asking for the grant, the scope it requests, and the
- * clock and issuer to mint against.
- * @returns The minted codes and polling parameters, or which rule refused the
- * request.
+ * @param input - The client asking for the grant, the scope it requests, and the clock and issuer to mint against.
+ * @returns The minted codes and polling parameters, or which rule refused the request.
  */
 export async function beginDeviceAuthorization(
 	db: Database,
@@ -338,13 +311,10 @@ let RedeemDeviceCodeSchema = s.object({
 /**
  * Turns a device code into a token set once a person has approved it: authenticates
  * the client, enforces the polling interval, and redeems the row atomically so two
- * concurrent polls cannot both mint. The subject, session, `auth_time` and `amr` an
- * approval recorded are what the tokens carry, not whatever the live session holds
- * by the time redemption lands.
+ * concurrent polls cannot both mint.
  *
  * @param db - The tenant's database.
- * @param input - The presented device code, the client's credentials, and the clock
- * and issuer to mint against.
+ * @param input - The presented device code, the client's credentials, and the clock and issuer to mint against.
  * @returns The minted token set, or the error this poll was refused for.
  */
 export async function redeemDeviceCode(
@@ -422,9 +392,6 @@ export async function redeemDeviceCode(
 	}
 
 	if (row.last_polled_at !== null && parsed.now < row.last_polled_at + row.interval_s * 1000) {
-		// A control rather than advice: a device that ignores `slow_down` is answered
-		// `slow_down` again on a longer clock next time, since the stored interval —
-		// not merely the answer — is what rose.
 		await db.update(
 			deviceAuthorizations,
 			{ id: row.id },
@@ -450,10 +417,6 @@ export async function redeemDeviceCode(
 		};
 	}
 
-	// The redemption itself is the single statement the authorization code uses:
-	// `UPDATE … WHERE redeemed_at IS NULL … RETURNING *`. Two concurrent polls both
-	// read the row above as approved and unredeemed, but only one of these
-	// statements finds a row still matching its own `WHERE` clause to update.
 	let redemption = await db
 		.query(deviceAuthorizations)
 		.where(
@@ -524,8 +487,6 @@ export async function redeemDeviceCode(
 		});
 		refreshToken = issued.token;
 
-		// Named on the row itself so a replay of this same device code, however much
-		// later, still finds the family a reuse response revokes.
 		await db.update(deviceAuthorizations, { id: redeemedRow.id }, { token_family_id: familyId });
 	}
 
@@ -563,17 +524,13 @@ export type BeginDeviceApprovalResult =
 	| { ok: false; reason: "unknown" | "expired" };
 
 /**
- * Resolves the pending row a presented user code names, and the consent screen
- * it should be approved or denied through: the same shape and the same
+ * Resolves the pending row a presented user code names, and the consent screen it
+ * should be approved or denied through: the same shape and the same
  * `evaluateConsent` call an authorization request's own consent screen goes
- * through, forcing a screen every time regardless of any standing grant, since
- * an explicit look at what is being approved is this flow's only defence.
  *
  * @param db - The tenant's database.
- * @param input - The presented user code, the approving session, and the clock
- * to check expiry against.
- * @returns The screen to render and the row's own id, or which rule refused
- * the code.
+ * @param input - The presented user code, the approving session, and the clock to check expiry against.
+ * @returns The screen to render and the row's own id, or which rule refused the code.
  */
 export async function beginDeviceApproval(
 	db: Database,
@@ -601,18 +558,14 @@ export async function beginDeviceApproval(
 			gt("idle_expires_at", parsed.now),
 		),
 	});
-	// A session that stopped resolving between the controller's own check and
-	// this call is refused the same as a code nobody recognizes, since nothing
-	// more specific is owed for a race this rare.
+
 	if (!session) return { ok: false, reason: "unknown" };
 
 	let consent = await evaluateConsent(db, {
 		subjectId: session.subject_id,
 		clientId: row.client_id,
 		requestedScopes: row.scopes as string[],
-		// Shown every time, never skipped for a standing grant: the code's own
-		// screen is the one place this flow lets a person see what they are
-		// about to approve.
+
 		isFirstParty: false,
 		promptConsent: true,
 		silent: false,
@@ -643,16 +596,11 @@ export type DecideDeviceApprovalResult =
 
 /**
  * Records the decision a person took on a device's own consent screen. Approval
- * writes the approving session's `subject_id`, `session_id`, `auth_time` and
- * `amr` onto the row, so a token minted on the next poll carries them exactly
- * as a browser sign-in would, and unions the requested scopes into the
- * subject's standing grant for the client the same way a browser's own consent
- * decision does. Denial only marks the row refused. Either way, a row already
- * decided, redeemed, or gone is refused rather than decided twice.
+ * writes the approving session's `subject_id`, `session_id`, `auth_time` and `amr`
+ * onto the row, so a token minted on the next poll carries them exactly as a
  *
  * @param db - The tenant's database.
- * @param input - The row being decided, the deciding session, whether it was
- * approved, and the clock to stamp the decision with.
+ * @param input - The row being decided, the deciding session, whether it was approved, and the clock to stamp the decision with.
  * @returns Which decision was recorded, or that the row no longer took one.
  */
 export async function decideDeviceApproval(
@@ -681,9 +629,6 @@ export async function decideDeviceApproval(
 			}
 		: { denied_at: parsed.now };
 
-	// The same atomic pattern `redeemDeviceCode` redeems with: the `WHERE`
-	// clause only matches a row still undecided, so a second decision — or one
-	// racing a poll that already redeemed the first — finds nothing to update.
 	let decision = await db
 		.query(deviceAuthorizations)
 		.where(
@@ -731,12 +676,10 @@ let SweepDeviceAuthorizationsSchema = s.object({
  * Deletes device authorizations in one bounded batch, for the scheduled handler
  * driving retention: an undecided, denied or never-redeemed row whose ten minutes
  * ran out, or a redeemed row old enough that a replay against it is no longer worth
- * keeping the row around to recognize.
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a
- * caller sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepDeviceAuthorizations(
 	db: Database,

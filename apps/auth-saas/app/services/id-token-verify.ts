@@ -35,9 +35,7 @@ const ID_TOKEN_ALGORITHMS: JWK.Algorithm[] = [JWK.Algorithm.ES256];
  * @param options - Where the signing provider answers, and the client it issued to.
  * @param options.origin - Scheme and host the provider serves its documents on.
  * @param options.audience - The client id the token carries as its audience.
- * @returns The verified token, and `null` where a check on it failed. Its echoed `nonce`
- *   reaches the caller unchecked, since only the login that started the flow knows the
- *   value it has to match.
+ * @returns The verified token, and `null` where a check on it failed. Its echoed `nonce` reaches the caller unchecked, since only the login that started the flow knows the value it has to match.
  * @example
  * let idToken = await verifyIdToken(raw, { origin: baseUrl, audience: "dashboard" });
  * if (!idToken || idToken.nonce !== expectedNonce) return renderError("…");

@@ -1,15 +1,7 @@
 /**
  * `/scim/v2/Groups` and `/scim/v2/Groups/{id}`: create, read, replace, patch,
- * delete and list, each resolving its own bearer token against a connection
- * inside the tenant object and translating between the wire shape and
- * `scim.ts`'s own RPC input and output.
- *
- * `createScimGroupsController` builds all six actions against one
- * `RateLimit` binding, the same shape `createScimUsersController` takes, so
- * a test can hand in a fake limiter. Every action here is gated on the full
- * entitlement check — a group carries no `active` state, so the
- * billing-state carve-out a user's deactivation and deletion get has no
- * group-side counterpart.
+ * delete and list, each resolving its own bearer token against a connection inside
+ * the tenant object and translating between the wire shape and `scim.ts`'s own RPC
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

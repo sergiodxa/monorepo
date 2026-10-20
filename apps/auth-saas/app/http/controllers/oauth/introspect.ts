@@ -1,8 +1,7 @@
 /**
- * `POST /api-keys/introspect` — the tenant's own backend verifies a presented
- * API key, authenticating itself the same way it would at the token endpoint,
- * and reads back the resolved subject, scopes and expiry rather than the
- * credential itself.
+ * `POST /api-keys/introspect` — the tenant's own backend verifies a presented API
+ * key, authenticating itself the same way it would at the token endpoint, and
+ * reads back the resolved subject, scopes and expiry rather than the credential
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,11 +16,9 @@ import routes from "~/routes/tenant";
 import { resolveClientAuth, tokenError } from "./token";
 
 /**
- * The introspection request's own body: the presented key under RFC 7662's
- * `token` name, plus a `client_id`/`client_secret` pair carried alongside it
- * for a caller authenticating with `client_secret_post` — the JSON-bodied
- * equivalent of the form fields `client_secret_post` reads at the token
- * endpoint.
+ * The introspection request's own body: the presented key under RFC 7662's `token`
+ * name, plus a `client_id`/`client_secret` pair carried alongside it for a caller
+ * authenticating with `client_secret_post` — the JSON-bodied equivalent of the fo
  */
 let IntrospectBodySchema = s.object({
 	token: s.string(),
@@ -32,16 +29,10 @@ let IntrospectBodySchema = s.object({
 /**
  * Verifies a presented API key on the caller's own behalf. The caller
  * authenticates as a registered client first — `client_secret_basic` or
- * `client_secret_post`, the same two schemes the token endpoint accepts from
- * a confidential client — and only then does the key it presented get
- * resolved. Every way a key fails to resolve, from malformed to expired to
- * revoked to simply unknown, answers the same `{ active: false }` at `200`,
- * the one shape RFC 7662 asks an introspection response to collapse them
- * into; only a caller that fails its own authentication answers differently.
+ * `client_secret_post`, the same two schemes the token endpoint accepts from a
  *
  * @param ctx - The request context (provides `tenantStub` and `request`).
- * @returns The resolved subject, scopes and expiry as RFC 7662-shaped JSON,
- * or the caller's own authentication failure.
+ * @returns The resolved subject, scopes and expiry as RFC 7662-shaped JSON, or the caller's own authentication failure.
  * @example
  * router.map(routes.apiKeysIntrospect, introspect);
  */

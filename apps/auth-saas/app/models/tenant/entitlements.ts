@@ -1,9 +1,7 @@
 /**
  * What the tenant object enforces about its own plan (ADR-018): the DAU cap and
- * audit retention window that live inside the object rather than in the
- * control plane, written by `applyEntitlements` as one whole operation. Leaf
- * module — imports no other tenant store, the way `mail-rate-limit.ts`
- * does — since nothing here needs to reach another tenant table.
+ * audit retention window that live inside the object rather than in the control
+ * plane, written by `applyEntitlements` as one whole operation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,10 +53,8 @@ export interface ApplyEntitlementsResult {
  * whatever it held before.
  *
  * @param db - The tenant's database.
- * @param input - The plan, its features, the DAU cap and audit retention
- * window it now enforces, and when this took effect.
- * @returns The plan now enforced, and how many audit rows the new retention
- * window pruned.
+ * @param input - The plan, its features, the DAU cap and audit retention window it now enforces, and when this took effect.
+ * @returns The plan now enforced, and how many audit rows the new retention window pruned.
  * @example
  * let { plan, prunedRows } = await applyEntitlements(db, {
  * 	plan: "pro",

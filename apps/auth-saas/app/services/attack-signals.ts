@@ -2,13 +2,6 @@
  * Attack signals: one analytics data point per security-relevant outcome on a
  * tenant-facing surface, written through `env.ANALYTICS` the same binding and
  * dataset the cost ledger writes to, distinguished from a cost row by its own
- * `kind` blob. Unlike the cost ledger, nothing here accumulates across a
- * request — a call site that already knows an outcome records it immediately,
- * as its own discrete event, through {@link recordAttackSignal}.
- *
- * {@link readFailedSignInsByHour} reads the same dataset back through
- * Cloudflare's Analytics Engine SQL API, the way `usage-reporting.ts` already
- * reads the cost ledger's own rows back.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -56,13 +49,9 @@ export interface AttackSignalEnv {
 const ATTACK_SIGNAL_KIND = "attack_signal";
 
 /**
- * Writes one attack signal as its own analytics data point, indexed by tenant
- * id: `blob1` carries the fixed {@link ATTACK_SIGNAL_KIND} tag, so a query can
- * always tell this row apart from a cost-ledger row sharing the same dataset,
- * and `double1` carries a constant `1` to sum for a count.
- *
- * Catches and logs its own failure rather than throwing: instrumentation
- * failing the request it observes would be worse than no instrumentation.
+ * Writes one attack signal as its own analytics data point, indexed by tenant id:
+ * `blob1` carries the fixed {@link ATTACK_SIGNAL_KIND} tag, so a query can always
+ * tell this row apart from a cost-ledger row sharing the same dataset, and `double
  *
  * @param env - Where `ANALYTICS` is bound.
  * @param signal - The outcome to record.
@@ -121,10 +110,9 @@ export interface FailedSignInsByHour {
 }
 
 /**
- * A tenant id is interpolated into the raw SQL string this call sends, so
- * this rejects anything outside a typeid's own charset before it ever
- * reaches the query, the same defense `usage-reporting.ts`'s `assertValidDay`
- * gives the day it interpolates.
+ * A tenant id is interpolated into the raw SQL string this call sends, so this
+ * rejects anything outside a typeid's own charset before it ever reaches the
+ * query, the same defense `usage-reporting.ts`'s `assertValidDay` gives the day it
  *
  * @param tenantId - The tenant id to validate.
  */
@@ -145,18 +133,13 @@ function formatUtcDateTime(epochMs: number): string {
 }
 
 /**
- * Reads back a tenant's failed sign-ins, bucketed by hour, over a window —
- * the query a security dashboard's own trailing-baseline comparison would
- * run, proving the write shape {@link recordAttackSignal} lays down is
- * genuinely queryable.
+ * Reads back a tenant's failed sign-ins, bucketed by hour, over a window — the
+ * query a security dashboard's own trailing-baseline comparison would run, proving
+ * the write shape {@link recordAttackSignal} lays down is genuinely queryable.
  *
- * @param engine - The account and API token the Analytics Engine SQL API
- * authenticates with; the same credential `domain.ts`'s `HostnameClient`
- * already holds for the account's other Cloudflare API calls.
- * @param input - The tenant to read, and the window's start (inclusive) and
- * end (exclusive), in epoch milliseconds.
- * @returns Each hour in the window that saw at least one failed sign-in, with
- * its count, oldest first.
+ * @param engine - The account and API token the Analytics Engine SQL API authenticates with; the same credential `domain.ts`'s `HostnameClient` already holds for the account's other Cloudflare API calls.
+ * @param input - The tenant to read, and the window's start (inclusive) and end (exclusive), in epoch milliseconds.
+ * @returns Each hour in the window that saw at least one failed sign-in, with its count, oldest first.
  */
 export async function readFailedSignInsByHour(
 	engine: AttackSignalQueryEngine,

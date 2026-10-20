@@ -2,15 +2,6 @@
  * The token endpoint's whole operation: the `refresh_tokens` table, and
  * `exchangeCode`/`refreshTokens`, which authenticate the calling client, redeem an
  * authorization code or a refresh token, mint and sign an access token and (when
- * the grant covers `openid`) an ID token, and rotate a refresh token when the
- * grant covers `offline_access`. A token is the one bearer value allowed to cross
- * the object's boundary, because producing it is the operation; the signing key
- * itself never leaves.
- *
- * Rotation makes a stolen refresh token detectable rather than merely
- * short-lived: presenting one a second time revokes every token in its family and
- * ends the session behind it, and answers exactly like an expired token would, so
- * neither an attacker nor a client racing itself learns which case it hit.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -92,8 +83,7 @@ export type RefreshTokenRow = TableRow<typeof refreshTokenRows>;
 /**
  * An ID token's claims, following the base class's own subclassing pattern:
  * registered claims a token of this kind always carries are narrowed to their
- * non-null type, and the claims beyond the registered set get accessors of
- * their own.
+ * non-null type, and the claims beyond the registered set get accessors of their
  */
 export class IdToken extends JWT {
 	override get subject(): string {
@@ -151,7 +141,6 @@ export class AccessToken extends JWT {
  * What `exchangeCode` and `refreshTokens` both answer with: a minted set on
  * success, or an error. `status` extends the ADR's `400 | 401` with `500` for the
  * one case that is not a client's fault — no signing key exists for this tenant —
- * since a token endpoint has nowhere else to put a server malfunction.
  */
 export type TokenOutcome =
 	| {
@@ -183,10 +172,6 @@ export type AuthenticateClientResult =
 /**
  * The row a client identified by a Client ID Metadata Document authenticates as: a
  * public client with no secret, minting under the algorithm every client defaults to.
- * Nothing here is read from storage, since the URL naming this client is never written
- * to the tenant's own client table; the authorization code this client redeems already
- * bound its granted scopes and redirect target at the authorize step, so this row only
- * has to carry what minting a token still reads off it.
  */
 function cimdClientRow(clientId: string): ClientRow {
 	let now = Date.now();
@@ -211,22 +196,9 @@ function cimdClientRow(clientId: string): ClientRow {
 }
 
 /**
- * Resolves and authenticates the client presenting one credential shape: `none`
- * is valid only for a public client, whose proof is PKCE rather than a secret;
- * `basic`/`post` is valid only for a confidential client whose own registered
- * method matches the scheme presented exactly. A failure from a client that
- * authenticated through the `Authorization` header answers at 401, the one case
- * OAuth 2.1 asks for a `WWW-Authenticate` challenge rather than a plain 400 — the
- * caller already holds the `basic` scheme it used to reach here, so no header
- * value needs to cross back for it to build one.
- *
- * A `client_id` shaped as an `https://` URL identifies a Client ID Metadata Document
- * rather than a row in this tenant's own client table; such a client is always public,
- * so it authenticates only with `none`, exactly as a public row would.
- *
- * Exported so a caller that only needs to know whether a client is who it
- * claims — minting nothing — reaches the same check `exchangeCode` and
- * `refreshTokens` already authenticate through.
+ * Resolves and authenticates the client presenting one credential shape: `none` is
+ * valid only for a public client, whose proof is PKCE rather than a secret;
+ * `basic`/`post` is valid only for a confidential client whose own registered method
  */
 export async function authenticateClient(
 	db: Database,
@@ -383,11 +355,6 @@ async function addCustomClaims(
  * Adds the `roles` claim naming the role key a subject holds at the token's scopes —
  * the tenant scope every session resolves, plus one more for the active organization
  * when the session carries one — to the access token, and to the ID token when the
- * grant mints one. Every grant reaches this, not only an `openid` one: a role is a
- * fact about the session, not about whether an identity token was asked for. A
- * client whose `include_permissions` switch is on also gets a `permissions` claim,
- * the union of what those same roles grant, resolved in the same turn the token is
- * minted.
  */
 async function addRoleClaims(
 	db: Database,
@@ -428,14 +395,7 @@ export type MintTokensResult =
 
 /**
  * Builds and signs the access token and, when the grant covers `openid`, the ID
- * token, injecting custom claims and the scope-gated profile claims along the
- * way. The one step every successful grant runs through, so the two token kinds
- * are assembled identically regardless of which grant minted them.
- *
- * Exported so a grant whose subject, session and scopes come from somewhere
- * other than a live session or a fresh authorization — a device authorization's
- * own recorded approval, for one — mints through this exact step rather than a
- * second copy of it.
+ * token, injecting custom claims and the scope-gated profile claims along the way.
  */
 export async function mintTokens(db: Database, input: MintTokensInput): Promise<MintTokensResult> {
 	let keyPair = await currentSigningKeyPair(db);
@@ -492,9 +452,6 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 
 	await addCustomClaims(db, accessClaims, idClaims, input.subjectId, input.scopes);
 
-	// A session with no active organization mints no `org` claim at all, and a granted
-	// scope set that never asked for `organization` gets none either — both existing
-	// facts about every session today, so this stays purely additive.
 	if (input.activeOrganizationId !== null && input.scopes.includes("organization")) {
 		accessClaims.org = input.activeOrganizationId;
 		if (idClaims) idClaims.org = input.activeOrganizationId;
@@ -519,8 +476,7 @@ export async function mintTokens(db: Database, input: MintTokensInput): Promise<
 /**
  * The key a client's ID token is signed with: the access token's ES256 key, or the
  * RS256 signing key for a client registered for RS256, generated on first use for a
- * tenant provisioned before RS256 keys existed. The JWKS is read from the tenant on
- * every request, so a relying party meeting the new `kid` finds it published.
+ * tenant provisioned before RS256 keys existed.
  */
 async function idTokenSigningKey(
 	db: Database,
@@ -626,13 +582,9 @@ let ExchangeCodeSchema = s.object({
  * Turns an authorization code into a token set, the whole exchange in one round
  * trip: authenticate the client, redeem the code atomically, verify its bindings
  * and its PKCE challenge, mint and sign, and — when the grant covers
- * `offline_access` — start a refresh token family. A code minted for a subject
- * who is since blocked refuses exactly like an unknown or already-used code,
- * giving nothing away about which case it hit.
  *
  * @param db - The tenant's database.
- * @param input - The presented code and verifier, the redirect the client used,
- * the client's credentials, and the clock and issuer to mint against.
+ * @param input - The presented code and verifier, the redirect the client used, the client's credentials, and the clock and issuer to mint against.
  * @returns The minted token set, or the error this exchange was refused for.
  */
 export async function exchangeCode(db: Database, input: ExchangeCodeInput): Promise<TokenOutcome> {
@@ -660,9 +612,6 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 	}
 	let codeHash = Hex.encode(hashed.data);
 
-	// No await runs between hashing the presented code and this statement, so the
-	// check-and-claim is one atomic step: two concurrent exchanges of the same
-	// code cannot both see `redeemed_at` still null.
 	let redemption = await db
 		.query(authorizationCodes)
 		.where(and(eq("code_hash", codeHash), isNull("redeemed_at"), gt("expires_at", parsed.now)))
@@ -751,8 +700,6 @@ export async function exchangeCode(db: Database, input: ExchangeCodeInput): Prom
 		});
 		refreshToken = issued.token;
 
-		// Named on the code's own row so a replay of this same code, however much
-		// later, still finds the family a reuse response revokes.
 		await db.update(authorizationCodes, { id: redeemedRow.id }, { token_family_id: familyId });
 	}
 
@@ -790,18 +737,11 @@ let RefreshTokensSchema = s.object({
 
 /**
  * Rotates a refresh token: authenticate the client, redeem the presented token
- * atomically (scoped to the authenticated client, so a token belonging to
- * another one is never claimed), mint a fresh token set for the same or a
- * narrower scope, and issue the family's next token. Presenting a token a
- * second time revokes the whole family and ends the session behind it, then
- * answers exactly like an expired token would. A token redeemed for a subject
- * who is since blocked gets the same treatment: the family and session are
- * revoked and the call refuses exactly like an expired token, so the token is
- * fully neutralized on the first attempt to use it rather than merely refused.
+ * atomically (scoped to the authenticated client, so a token belonging to another
+ * one is never claimed), mint a fresh token set for the same or a narrower scope,
  *
  * @param db - The tenant's database.
- * @param input - The presented refresh token, an optional narrower scope, the
- * client's credentials, and the clock and issuer to mint against.
+ * @param input - The presented refresh token, an optional narrower scope, the client's credentials, and the clock and issuer to mint against.
  * @returns The minted token set, or the error this rotation was refused for.
  */
 export async function refreshTokens(
@@ -832,9 +772,6 @@ export async function refreshTokens(
 	}
 	let tokenHash = Hex.encode(hashed.data);
 
-	// No await runs between hashing the presented token and this statement. The
-	// client id is part of the same atomic check, so a token minted for another
-	// client is never claimed here rather than claimed and then rejected.
 	let redemption = await db
 		.query(refreshTokenRows)
 		.where(
@@ -855,9 +792,6 @@ export async function refreshTokens(
 		let existing = await db.findOne(refreshTokenRows, { where: { token_hash: tokenHash } });
 
 		if (existing !== null && existing.redeemed_at !== null) {
-			// Both an attacker and the legitimate client may hold this token, and
-			// there is no way to tell which one just presented it, so the whole
-			// family and the session behind it end rather than only this token.
 			await revokeFamily(db, existing.family_id, parsed.now);
 			await revokeSession(db, {
 				subjectId: existing.subject_id,
@@ -888,10 +822,6 @@ export async function refreshTokens(
 
 	let subject = await db.find(subjects, { id: redeemedRow.subject_id });
 	if (subject?.status === "blocked") {
-		// The presented token is already consumed by the redemption above either way,
-		// so revoking the whole family and the session behind it here neutralizes a
-		// blocked subject's refresh token on first use rather than leaving it merely
-		// refused for a later attempt to trip over again.
 		await revokeFamily(db, redeemedRow.family_id, parsed.now);
 		await revokeSession(db, {
 			subjectId: redeemedRow.subject_id,
@@ -968,15 +898,11 @@ let IssueClientCredentialsTokenSchema = s.object({
 
 /**
  * Exchanges a client id and secret for a token about the client itself: no
- * subject, no session, no ID token and no refresh token, because the client
- * holds the credential that mints the next one. `authenticateClient` already
- * refuses a public client presenting `basic`/`post` — it holds no secret to
- * authenticate with — so the grant reaches only a confidential client, the one
- * kind whose whole security is the secret it just proved.
+ * subject, no session, no ID token and no refresh token, because the client holds
+ * the credential that mints the next one.
  *
  * @param db - The tenant's database.
- * @param input - The client's credentials, the scope and resource requested,
- * and the clock and issuer to mint against.
+ * @param input - The client's credentials, the scope and resource requested, and the clock and issuer to mint against.
  * @returns The minted access token, or the error this grant was refused for.
  */
 export async function issueClientCredentialsToken(
@@ -1072,8 +998,7 @@ let SweepExpiredRefreshTokensSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a
- * caller sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredRefreshTokens(
 	db: Database,

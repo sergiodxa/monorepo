@@ -1,8 +1,6 @@
 /**
  * The `/u/error` screen: a terminal protocol failure with a correlation id a
- * support conversation can reference. Rendered inline rather than redirected to,
- * since a `render`-class failure means there is nowhere trustworthy yet to send
- * the browser back to.
+ * support conversation can reference.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

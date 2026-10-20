@@ -1,10 +1,7 @@
 /**
  * The daily active user meter: `dau_seen` and `dau_day`, and the operations over
  * them. A distinct subject counts once a UTC day; the object instance's own
- * `DauCache` answers a repeat authentication without touching storage, and only
- * a genuinely new subject reaches `dau_seen`. Leaf module — imports nothing else
- * among the tenant stores, the way `mail-rate-limit.ts` does — since nothing here
- * needs to reach another tenant table.
+ * `DauCache` answers a repeat authentication without touching storage, and only a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -120,27 +117,12 @@ function report(row: DauDayRow, cap: number): RecordAuthenticationResult {
 /**
  * Records one authentication against the day's distinctness meter: a cache hit
  * costs nothing beyond reading the day's own row back; a cache miss inserts into
- * `dau_seen` and, only for a genuinely new subject, bumps `dau_day.subjects` —
- * the insert and the bump run with no other write between them, so two
- * closely-timed requests for the same subject can never double-count it.
- *
- * A subject already counted today always proceeds, even past a hard cap. A
- * genuinely new subject that would take a hard-capped tenant past its cap is
- * refused and left out of `dau_seen`, so the very next attempt — once the cap
- * lifts or the day rolls over — is judged fresh rather than remembered as spent.
- *
- * `dau_day.notices` records the highest notice this day has earned, once, so a
- * future notifier reading it back knows whether it already sent the warning or
- * the cap email for today without sending either one here.
+ * `dau_seen` and, only for a genuinely new subject, bumps `dau_day.subjects` — the
  *
  * @param db - The tenant's database.
- * @param cache - This object instance's own record of today's subjects; rolled
- * over to a fresh set, and `dau_seen` pruned, the first time a call's day differs
- * from what it already held.
- * @param input - The subject authenticating, the cap and whether it is hard, and
- * the clock to measure the day against.
- * @returns The day's figures once counted, or that a hard cap refused this
- * subject a place in today's count.
+ * @param cache - This object instance's own record of today's subjects; rolled over to a fresh set, and `dau_seen` pruned, the first time a call's day differs from what it already held.
+ * @param input - The subject authenticating, the cap and whether it is hard, and the clock to measure the day against.
+ * @returns The day's figures once counted, or that a hard cap refused this subject a place in today's count.
  */
 export async function recordAuthentication(
 	db: Database,
@@ -168,8 +150,6 @@ export async function recordAuthentication(
 	cache.subjects.add(input.subjectId);
 
 	if (inserted.affectedRows === 0) {
-		// Already in `dau_seen` from before this cache existed — an evicted and
-		// rebuilt object meeting a subject it (or a predecessor) already counted.
 		return report(await ensureDauDayRow(db, day), input.cap);
 	}
 
@@ -206,9 +186,8 @@ export interface DailyUsage {
 
 /**
  * Marks a day closed and prunes `dau_seen` outside the window a late close might
- * still need. Safe to call twice: a day already closed answers the figures
- * already stored rather than recomputing or erroring, and a day with no rows at
- * all — a tenant that authenticated nobody — closes at zero.
+ * still need. Safe to call twice: a day already closed answers the figures already
+ * stored rather than recomputing or erroring, and a day with no rows at all — a te
  *
  * @param db - The tenant's database.
  * @param input - The day to close.

@@ -1,8 +1,7 @@
 /**
  * Implements every generated management tool with one handler: rebuilds the request its
  * operation describes from the call's parsed `params`, `query` and `body`, attaches the
- * caller's already-verified bearer token, and forwards it to the real management route,
- * whose response, scope enforcement included, becomes the tool's result unchanged.
+ * caller's already-verified bearer token, and forwards it to the real management rout
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

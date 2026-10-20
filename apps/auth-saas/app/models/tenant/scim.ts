@@ -2,10 +2,6 @@
  * SCIM provisioning: the tenant-object side of an inbound directory sync — the
  * `scim_connections`, `scim_groups`, `scim_group_members`, `scim_group_mappings` and
  * `scim_links` tables, and the connection, token, user and group operations over them.
- * Building the `/scim/v2/*` HTTP surface, the entitlement gate and rate limiting is a
- * later pass's job; everything here is the RPC surface that pass calls into, each
- * method resolving its own presented bearer token to a connection in the same turn as
- * the operation it authorizes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -247,10 +243,8 @@ let CreateScimConnectionSchema = s.object({
  * record.
  *
  * @param db - The tenant's database.
- * @param input - The connection's name, its delete policy and whether it syncs groups,
- * and who is creating it.
- * @returns The connection's public record and the token to deliver once — nothing
- * after this call ever returns it again.
+ * @param input - The connection's name, its delete policy and whether it syncs groups, and who is creating it.
+ * @returns The connection's public record and the token to deliver once — nothing after this call ever returns it again.
  */
 export async function createScimConnection(
 	db: Database,
@@ -309,8 +303,7 @@ export type RotateScimTokenResult =
  *
  * @param db - The tenant's database.
  * @param input - The connection to rotate.
- * @returns The new token and when the outgoing one now expires, or that no such
- * connection exists.
+ * @returns The new token and when the outgoing one now expires, or that no such connection exists.
  */
 export async function rotateScimToken(
 	db: Database,
@@ -351,9 +344,7 @@ export type DeleteScimConnectionResult = { ok: true } | { ok: false; reason: "no
 
 /**
  * Removes a connection and everything scoped to it: its groups, their membership and
- * mappings, and its links to platform subjects. The subjects it provisioned are left
- * exactly as they are — a connection is the sync channel, not the identities it
- * delivered.
+ * mappings, and its links to platform subjects.
  *
  * @param db - The tenant's database.
  * @param input - The connection to remove.
@@ -410,8 +401,7 @@ export type ResolveScimTokenResult =
 /**
  * Resolves a presented bearer token to the connection it authorizes: checked first
  * against the connection's current digest, then against its incumbent digest when that
- * has not passed its 72-hour expiry yet. Every provisioning operation calls this first,
- * in the same turn as the write it authorizes.
+ * has not passed its 72-hour expiry yet.
  *
  * @param db - The tenant's database.
  * @param token - The bearer token as presented.
@@ -662,14 +652,11 @@ export type ScimProvisionUserResult =
 /**
  * Provisions a user: resolves the connection, folds the resource's primary email, and
  * either adopts a subject already carrying that folded address (writing the link
- * without creating a second subject) or mints a fresh one. A folded address already
- * linked to this connection under a different `externalId` refuses with a uniqueness
- * conflict rather than silently reassigning it.
+ * without creating a second subject) or mints a fresh one.
  *
  * @param db - The tenant's database.
  * @param input - The bearer token, the SCIM user resource, and the clock to write with.
- * @returns The subject's representation and whether it was created, or which rule
- * refused the call.
+ * @returns The subject's representation and whether it was created, or which rule refused the call.
  */
 export async function scimProvisionUser(
 	db: Database,
@@ -846,13 +833,10 @@ export type ScimReplaceUserResult =
  * Replaces a user's mapped attributes wholesale. When the resource's mapped digest
  * matches what `scim_links` already holds, answers the current representation flagged
  * unchanged without writing anything — the back-pressure point that keeps a periodic
- * full resync of an unchanged directory cheap.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the subject id, the replacement resource, and the
- * clock to write with.
- * @returns The current representation and whether anything changed, or which rule
- * refused the call.
+ * @param input - The bearer token, the subject id, the replacement resource, and the clock to write with.
+ * @returns The current representation and whether anything changed, or which rule refused the call.
  */
 export async function scimReplaceUser(
 	db: Database,
@@ -955,8 +939,7 @@ export type ScimPatchUserResult =
  * applies or none does; `active: false` blocks the subject and revokes every session.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the subject id, the parsed operations, and the clock
- * to write with.
+ * @param input - The bearer token, the subject id, the parsed operations, and the clock to write with.
  * @returns The updated representation, or which rule refused the call.
  */
 export async function scimPatchUser(
@@ -1010,15 +993,11 @@ export type ScimDeleteUserResult =
 /**
  * Deletes a user per the connection's own policy: `block` flips its status and revokes
  * its sessions, leaving the subject and its links in place; `delete` retires the
- * subject outright and removes this module's own rows naming it. A caller that also
- * knows about a subject's passwords, passkeys and second factor deletes those
- * alongside a `deleted` outcome, the same seam `deleteSubject` already leaves open to
- * its own caller.
+ * subject outright and removes this module's own rows naming it.
  *
  * @param db - The tenant's database.
  * @param input - The bearer token, the subject id, and the clock to write with.
- * @returns Which effect ran and the subject it ran against, or which rule refused the
- * call.
+ * @returns Which effect ran and the subject it ran against, or which rule refused the call.
  */
 export async function scimDeleteUser(
 	db: Database,
@@ -1132,8 +1111,7 @@ export type ScimReadUserPageResult =
 /**
  * A page of this connection's users, ordered by creation, with `totalResults` exact —
  * a directory is bounded by its plan's subject cap, so counting it exactly costs
- * nothing a cursor would have saved. A representation spans several tables, so the
- * filter runs over the assembled resources, restricted to `SCIM_USER_FILTER_PATHS`.
+ * nothing a cursor would have saved.
  *
  * @param db - The tenant's database.
  * @param input - The bearer token and the parsed list query.
@@ -1241,8 +1219,7 @@ export type ScimProvisionGroupResult =
  * anything, then creates the group and its membership rows in one call.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the SCIM group resource, and the clock to write
- * with.
+ * @param input - The bearer token, the SCIM group resource, and the clock to write with.
  * @returns The group's representation, or which rule refused the call.
  */
 export async function scimProvisionGroup(
@@ -1313,8 +1290,7 @@ export type ScimReplaceGroupResult =
  * Replaces a group's display name and whole membership set.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the group id, the replacement resource, and the
- * clock to write with.
+ * @param input - The bearer token, the group id, the replacement resource, and the clock to write with.
  * @returns The updated representation, or which rule refused the call.
  */
 export async function scimReplaceGroup(
@@ -1428,8 +1404,7 @@ function translatePathlessGroupValue(op: "add" | "replace", value: unknown): Gro
 /**
  * Interprets one PATCH operation as group changes: `displayName` set, and `members`
  * added, replaced, removed by value list, removed wholesale, or removed through a value
- * filter (`members[value eq "…"]`). A group holds thousands of members, so each change
- * touches only the rows it names.
+ * filter (`members[value eq "…"]`).
  *
  * @returns The changes, or `null` when the operation targets anything else
  */
@@ -1473,8 +1448,7 @@ function translateGroupOperation(operation: Patch.Operation): GroupChange[] | nu
  * applied, so a request mixing one unsupported form with valid ones writes nothing.
  *
  * @param db - The tenant's database.
- * @param input - The bearer token, the group id, the parsed operations, and the clock to
- * write with.
+ * @param input - The bearer token, the group id, the parsed operations, and the clock to write with.
  * @returns The updated representation, or which rule refused the call.
  */
 export async function scimPatchGroup(
@@ -1741,13 +1715,10 @@ export type MapScimGroupResult = { ok: true } | { ok: false; reason: "not-found"
 
 /**
  * Records what a synced group stands for — a role, or an organization when that
- * add-on is present — as plain data naming the target's kind and id. Neither target
- * table exists in this codebase yet, so this call validates nothing about the target
- * beyond storing what it was told.
+ * add-on is present — as plain data naming the target's kind and id.
  *
  * @param db - The tenant's database.
- * @param input - The connection and group being mapped, and the target it now stands
- * for.
+ * @param input - The connection and group being mapped, and the target it now stands for.
  * @returns Success, or that no such group exists for this connection.
  */
 export async function mapScimGroup(

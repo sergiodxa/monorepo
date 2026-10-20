@@ -1,14 +1,6 @@
 /**
- * `GET/POST /dashboard/tenants/:tenantId/agent-clients` — every machine credential
- * registered against a tenant, and a form to register another one. Registration
- * itself is dogfooded through the real, public `POST /tenants/:tenantId/agent-clients`
- * Management API route, called over a self-referencing service binding, rather than
- * through `ctx.models.agentClientBindings`/tenant-DO RPCs directly — the dashboard is the first
- * UI consumer of that API and exercises it exactly as any other caller would.
- *
- * The page-level guard (does the signed-in subject administer this tenant at all) is
- * independent of, and runs before, whatever the dogfooded Management API call itself
- * also enforces: a subject with no membership here never even reaches the call.
+ * `GET/POST /dashboard/tenants/:tenantId/agent-clients` — every machine credential registered
+ * against a tenant, and a form to register another one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -140,8 +132,7 @@ export const dashboardAgentClientsShow = createAction(
  * once on this same response.
  *
  * @param ctx - The request context (provides `formData`, `render`, `params` and `db`).
- * @returns The agent-clients page carrying the freshly-minted secret, this page
- * re-rendered with an error, or a redirect.
+ * @returns The agent-clients page carrying the freshly-minted secret, this page re-rendered with an error, or a redirect.
  * @example
  * router.map(routes.dashboard.registerAgentClient, dashboardAgentClientsRegister);
  */

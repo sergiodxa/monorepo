@@ -1,8 +1,7 @@
 /**
- * Opening the hosted billing portal for a tenant's owning customer (ADR-018):
- * one customer holds one portal session however many tenants they own, since
- * the payment method and invoices live on the customer rather than any one
- * tenant.
+ * Opening the hosted billing portal for a tenant's owning customer (ADR-018): one
+ * customer holds one portal session however many tenants they own, since the
+ * payment method and invoices live on the customer rather than any one tenant.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,8 +26,7 @@ export type OpenPortalResult =
  *
  * @param models - The control plane's models.
  * @param billing - The configured billing platform.
- * @param input - The tenant whose owning customer's portal to open, and where
- * to return them.
+ * @param input - The tenant whose owning customer's portal to open, and where to return them.
  * @returns The hosted portal URL to redirect to, or why one could not be opened.
  */
 export async function openPortal(

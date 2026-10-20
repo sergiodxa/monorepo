@@ -2,9 +2,6 @@
  * The one hydrated island a hosted screen needs: a passkey ceremony has no
  * markup-only form, so this button runs it in the browser and degrades to nothing
  * more than a plain button when the script never loads — the password form beside
- * it stays reachable either way. Copy is passed in as already-translated props,
- * the same way every `@sdxc/ui` example takes its strings, so the island carries
- * no i18n runtime of its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

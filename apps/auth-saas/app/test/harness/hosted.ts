@@ -2,7 +2,6 @@
  * A fully-provisioned tenant, a registered client, and a real tenant router
  * mapping every hosted-screen, `/authorize`, `/oauth/token` and `/oauth/register`
  * route, for driving the hosted sign-in, sign-up, verify, reset, magic-link,
- * consent, error and token-exchange flow through real HTTP requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -200,8 +199,7 @@ export async function createTestClient(tenantDO: Tenant, scopes: string[] = ["op
 /**
  * Creates a subject with a verified email and a set password, ready to sign in
  * with. A username identifier has no ticket to verify it through today —
- * `passwords.test.ts`'s own fixtures sign in against a verified email for the
- * same reason.
+ * `passwords.test.ts`'s own fixtures sign in against a verified email for the same
  */
 export async function createTestSubjectWithPassword(
 	tenantDO: Tenant,

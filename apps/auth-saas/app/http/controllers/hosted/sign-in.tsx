@@ -1,14 +1,6 @@
 /**
  * `GET/POST /u/sign-in` — identifier and password, and a passkey button (see
- * `sign-in-passkey.tsx` for the ceremony's own two endpoints). The interaction id,
- * `login_hint`, `forced` and `ui_locales` all round-trip as query parameters on
- * this page's own URL, carried onto its form and passkey actions unchanged, so
- * the flow state itself never leaves the interaction row a person can edit.
- *
- * A caller with no interaction of its own to resume — `/device`'s own approval
- * screen, which parks nothing server-side beyond the row its code already
- * names — carries a `return_to` path instead, and is sent back there directly
- * once signed in rather than through `resumeAuthorization`.
+ * `sign-in-passkey.tsx` for the ceremony's own two endpoints).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -104,12 +96,10 @@ export const signInShow = createAction(routes.hostedSignInShow, async (ctx) => {
 /**
  * Verifies the submitted identifier and password, and on success sets the
  * `__Host-session` cookie and resumes the named interaction with the session it
- * just opened. A wrong password re-renders this same page with an error rather
- * than redirecting, so the browser never loses the interaction it was resuming.
+ * just opened.
  *
  * @param ctx - The request context (provides `formData`, `render` and `tenantStub`).
- * @returns The response `resumeAuthorization` reaches on a successful sign-in, or
- * this same page re-rendered with an error.
+ * @returns The response `resumeAuthorization` reaches on a successful sign-in, or this same page re-rendered with an error.
  * @example
  * router.map(routes.hostedSignInSubmit, signInSubmit);
  */
@@ -230,8 +220,6 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, {
 				uiLocales: ctx.url.searchParams.get("ui_locales"),
 			});
 		} else {
-			// `returnTo` is the only other way this action was reached — the top
-			// guard already refused any request carrying neither.
 			response = redirectToReturnTo(ctx, returnTo as string);
 		}
 

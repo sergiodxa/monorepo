@@ -1,10 +1,7 @@
 /**
- * Two reachable routes that answer `501` rather than the router's generic
- * `404`: `POST /scim/v2/Bulk`, since an envelope moves a burst rather than
- * reducing it against one single-threaded object, and `GET /scim/v2/Me`,
- * since the token names a connection and there is no person for the alias to
- * resolve to. Both match what `ServiceProviderConfig` already advertises as
- * unsupported.
+ * Two reachable routes that answer `501` rather than the router's generic `404`:
+ * `POST /scim/v2/Bulk`, since an envelope moves a burst rather than reducing it
+ * against one single-threaded object, and `GET /scim/v2/Me`, since the token names
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

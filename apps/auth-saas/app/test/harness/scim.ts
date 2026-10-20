@@ -1,8 +1,7 @@
 /**
- * A fully-provisioned tenant, an entitled or un-entitled `scim` feature, a
- * SCIM connection and its bearer token, and a real tenant router mapping
- * every `/scim/v2/*` route, for driving the SCIM HTTP surface through real
- * requests the way `oauth/token.test.ts` drives the token endpoint.
+ * A fully-provisioned tenant, an entitled or un-entitled `scim` feature, a SCIM
+ * connection and its bearer token, and a real tenant router mapping every
+ * `/scim/v2/*` route, for driving the SCIM HTTP surface through real requests the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

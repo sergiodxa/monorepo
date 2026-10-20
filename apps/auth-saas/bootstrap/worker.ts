@@ -2,8 +2,6 @@
  * The Cloudflare Worker entry point. Routes every incoming request to the right place —
  * static assets, the platform Worker router, the management API router on its own
  * `api.` hostname, or a tenant Durable Object (resolved via Cloudflare for SaaS
- * `hostMetadata` or a KV-cached control-plane lookup). Also re-exports the
- * {@link Tenant} Durable Object.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -61,9 +59,6 @@ function isPlatformHost(hostname: string): boolean {
  * Resolves hostnames `hostMetadata` can't cover via a KV-cached control-plane lookup.
  * Filters out only deleted tenants: a suspended tenant still resolves, because
  * suspension is answered inside the request rather than at resolution, which keeps
- * the management surface reachable and lets a reinstated tenant serve immediately
- * rather than waiting out a cache entry. A hostname matching nothing is negatively
- * cached so repeated unknown-hostname traffic costs one D1 read per minute.
  */
 async function resolveHostname(hostname: string): Promise<ResolvedTenant | null> {
 	let cached = await readHostnameCache(hostname);
@@ -90,14 +85,9 @@ async function resolveHostname(hostname: string): Promise<ResolvedTenant | null>
 }
 
 /**
- * Hands a request resolved to a tenant to the tenant router: a request naming
- * this tenant is met with what is true about it today, through the typed RPC
- * methods its Durable Object exposes, rather than a route this Worker
- * assembles by hand. The resolved tenant crosses into that router on internal
- * headers stamped onto the request here, since it is resolved once, on this
- * hostname lookup, before the tenant router ever sees the request. Rate
- * limiting is each protected route's own `rateLimit` registration inside that
- * router, rather than a check this forwarding step makes uniformly.
+ * Hands a request resolved to a tenant to the tenant router: a request naming this
+ * tenant is met with what is true about it today, through the typed RPC methods
+ * its Durable Object exposes, rather than a route this Worker assembles by hand.
  */
 async function forwardToTenant(request: Request, target: ResolvedTenant): Promise<Response> {
 	let headers = new Headers(request.headers);
@@ -118,8 +108,7 @@ export default {
 	 * tenant Durable Object by host and path.
 	 *
 	 * @param request - The incoming request.
-	 * @returns The response from assets, the platform router, the management
-	 * router, or a tenant DO (or a 404 when the host cannot be resolved).
+	 * @returns The response from assets, the platform router, the management router, or a tenant DO (or a 404 when the host cannot be resolved).
 	 */
 	async fetch(request) {
 		let url = new URL(request.url);

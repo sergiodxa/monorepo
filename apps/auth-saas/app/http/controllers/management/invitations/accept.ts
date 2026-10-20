@@ -1,13 +1,7 @@
 /**
  * `POST /invitations/accept` — spends a tenant member invitation's own emailed
- * token: resolves or creates the invited address's own platform dashboard
- * subject, grants the real membership the invitation named, and signs that
- * subject into the platform dashboard. Reached by someone holding nothing but
- * the token the invitation's own email carried — no management bearer token
- * names a caller here, the same way an import or export download ticket is the
- * caller's whole credential — so this route names no tenant of its own in its
- * path (the token already names the tenant it was minted for) and is mounted
- * with no `managementAuth` middleware at all.
+ * token: resolves or creates the invited address's own platform dashboard subject,
+ * grants the real membership the invitation named, and signs that subject into the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

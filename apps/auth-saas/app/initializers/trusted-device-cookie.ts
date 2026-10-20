@@ -1,10 +1,7 @@
 /**
  * The sign-in host's trusted-device cookie: an HTTP artifact carrying the token a
  * `completeSecondFactor` call minted, checked back against a subject's remembered
- * browsers on a later sign-in. Kept as its own cookie under its own secret rather
- * than folded into `session-cookie.ts`: a stolen trusted-device token only ever
- * excuses a factor demand for the subject it names, while a stolen session token is
- * the session itself, and the two are different capabilities worth different keys.
+ * browsers on a later sign-in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

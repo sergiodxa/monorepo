@@ -1,9 +1,7 @@
 /**
  * Public (pre-authentication) `remix/component` views for platform self-serve onboarding: the
- * `/signup` form, its "check your email" and "invalid or expired ticket" states, and
- * the confirmation screen a freshly-provisioned tenant's new owner lands on. Rendered
- * inside `landing.tsx`'s own `PublicDocument` shell, with the same plain English copy
- * and module-level `css()` mixins that shell's other screens already use.
+ * `/signup` form, its "check your email" and "invalid or expired ticket" states, and the
+ * confirmation screen a freshly-provisioned tenant's new owner lands on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

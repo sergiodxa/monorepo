@@ -42,8 +42,7 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
 /**
  * Builds the `permissionsList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.permissionsList, createPermissionsListAction(options));
@@ -79,8 +78,7 @@ function definePermissionFailure(result: Exclude<DefinePermissionResult, { ok: t
 /**
  * Builds the `permissionsDefine` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.permissionsDefine, createPermissionsDefineAction(options));
@@ -115,8 +113,7 @@ function removePermissionFailure(result: Exclude<RemovePermissionResult, { ok: t
 /**
  * Builds the `permissionsRemove` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.permissionsRemove, createPermissionsRemoveAction(options));

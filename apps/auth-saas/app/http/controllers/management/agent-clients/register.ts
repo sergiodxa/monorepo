@@ -1,8 +1,7 @@
 /**
  * `POST /tenants/:tenantId/agent-clients` — registers a machine credential: an
- * OAuth client of the platform tenant, granted only the client_credentials
- * grant, bound at registration to the one tenant it may reach, and holding
- * only scopes its registering caller holds there itself.
+ * OAuth client of the platform tenant, granted only the client_credentials grant,
+ * bound at registration to the one tenant it may reach, and holding only scopes
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -49,8 +48,7 @@ function firstScopeNotHeld(requested: string[], held: string[]): string | undefi
 /**
  * Builds the `agentClientsRegister` action.
  *
- * @param options - The auth and rate-limit options every management resource
- * controller shares.
+ * @param options - The auth and rate-limit options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.agentClientsRegister, createAgentClientsRegisterAction(options));

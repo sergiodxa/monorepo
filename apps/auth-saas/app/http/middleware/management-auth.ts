@@ -1,9 +1,7 @@
 /**
  * Resolves a management API request's caller into a tenant id and a scope set,
- * from either a bearer token issued by the platform tenant's own token endpoint
- * or a dashboard session naming a member of the tenant the URL's `:tenantId`
- * segment addresses, then binds that caller as `ctx.access` against the management
- * policy, so a route's `requireAbility` refuses with the scope it needs.
+ * from either a bearer token issued by the platform tenant's own token endpoint or
+ * a dashboard session naming a member of the tenant the URL's `:tenantId` segment
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -128,11 +126,8 @@ export interface ManagementAuthOptions {
 	/** The management API's own issuer, `https://api.{PLATFORM_DOMAIN}`. */
 	issuer: string;
 	/**
-	 * Resolves a dashboard request's session into the platform member's subject
-	 * id, or `null` when the request carries no session that still resolves.
-	 * Injected the same way `tenant()`'s Durable Object stub is, so this
-	 * middleware never has to know how the platform's own member identity is
-	 * reached.
+	 * Resolves a dashboard request's session into the platform member's subject id, or
+	 * `null` when the request carries no session that still resolves.
 	 */
 	resolveDashboardSubjectId: (ctx: RequestContext) => Promise<string | null>;
 }
@@ -140,9 +135,7 @@ export interface ManagementAuthOptions {
 /**
  * Verifies a presented bearer token against the platform tenant's own published
  * keys and issuer, the one check any caller of the platform tenant's token
- * endpoint must pass regardless of which resource server it then reaches —
- * the management API through {@link resolveBearerCaller} below, or another
- * protected resource verifying the same token before forwarding it onward.
+ * endpoint must pass regardless of which resource server it then reaches — the
  *
  * @param token - The bearer credential as presented.
  * @returns The verified token, or `null` when it does not verify.
@@ -163,17 +156,9 @@ export async function verifyManagementBearerToken(token: string): Promise<Access
 }
 
 /**
- * Resolves a presented bearer token into who it speaks for. A machine
- * credential names its one reachable tenant at registration, in
- * the agent client bindings model — checked here the same way a membership is
- * checked, since neither a machine credential nor a person's own token ever
- * needs to carry a tenant claim itself. A token with no binding is a person's
- * own, obtained through an ordinary authorization-code-with-PKCE consent:
- * which tenant it reaches, and at what scopes, is resolved fresh against the
- * URL's own `:tenantId` and that subject's membership there — the
- * intersection of the role's own scope ceiling and whatever the token's own
- * consent actually granted, since a consent may have granted fewer scopes
- * than the role would otherwise allow.
+ * Resolves a presented bearer token into who it speaks for. A machine credential
+ * names its one reachable tenant at registration, in the agent client bindings
+ * model — checked here the same way a membership is checked, since neither a
  */
 async function resolveBearerCaller(
 	ctx: RequestContext,
@@ -231,17 +216,11 @@ async function resolveBearerCaller(
 }
 
 /**
- * Builds the auth-resolution middleware. Reads `:tenantId` off the matched
- * route's own params, so it is mounted on each tenant-scoped route itself —
- * the same per-route placement `scimGate` already uses — rather than the
- * router's global chain, where params from a route not yet matched are not
- * there to read. Publishes the management API's resource server as
- * `ctx.managementApi`, and binds `ctx.access`: an agent client holds its scopes' roles,
- * a person their membership role cut to their token's consent, a dashboard session its
- * role. The `billing` fact loads only when a paid ability is checked.
+ * Builds the auth-resolution middleware. Reads `:tenantId` off the matched route's own
+ * params, so it is mounted on each tenant-scoped route itself — the same per-route
+ * placement `scimGate` already uses — rather than the router's global chain, where
  *
- * @param options - The management API's own issuer, and how to resolve a dashboard
- * session's subject id.
+ * @param options - The management API's own issuer, and how to resolve a dashboard session's subject id.
  * @returns The middleware, for a route's own `middleware` array.
  * @example
  * router.map(routes.subjectsRead, {

@@ -30,8 +30,7 @@ import { MANAGEMENT_SCOPE_DESCRIPTIONS as SCOPE_DESCRIPTIONS } from "~/app/servi
  * `X-API-Version` date it describes; each later published date gets its own document.
  *
  * @param issuer - The management API's own origin, `https://api.{PLATFORM_DOMAIN}`.
- * @returns The builder, for `openapiHandler` to build on first request and for the
- * conformance recorder.
+ * @returns The builder, for `openapiHandler` to build on first request and for the conformance recorder.
  * @example
  * router.map(routes.openapi, openapiHandler(() => buildManagementDocument(issuer).build()));
  */

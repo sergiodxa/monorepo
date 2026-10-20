@@ -1,8 +1,6 @@
 /**
- * The sign-in flow against a SAML connection: the request that starts it, and
- * the one operation that turns a posted response into a session. Everything
- * runs inside the tenant object, where the certificates, the private key, the
- * replay table and the subject already are.
+ * The sign-in flow against a SAML connection: the request that starts it, and the
+ * one operation that turns a posted response into a session.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -59,15 +57,9 @@ const EMAIL_NAME_ID_FORMATS = new Set([
 ]);
 
 /**
- * The response's own email, read off an assertion a caller already verified.
- * SAML carries no separate "verified" claim the way an OIDC ID token does — the
+ * The response's own email, read off an assertion a caller already verified. SAML
+ * carries no separate "verified" claim the way an OIDC ID token does — the
  * assertion's signature is the only proof there is, and `signInWithSamlResponse`
- * has already checked it by the time this runs, so any address this finds counts
- * as verified in the same response that carried it.
- *
- * Prefers the NameID when its own Format says it is an email address, since that
- * is the identifier the IdP itself chose to assert the person by; falls back to
- * an `email` attribute for an IdP that sends one alongside an opaque NameID.
  */
 function responseEmailFromAssertion(assertion: SAML.Assertion): string | null {
 	if (assertion.nameId && EMAIL_NAME_ID_FORMATS.has(assertion.nameId.format ?? "")) {
@@ -84,8 +76,7 @@ function responseEmailFromAssertion(assertion: SAML.Assertion): string | null {
 /**
  * The one `email`-kind identifier a folded address matches in this tenant, or
  * `null` for no match, more than one, or an address that fails to fold — a folded
- * address is unique to at most one subject by construction, so more than one
- * match here would mean that invariant had already broken.
+ * address is unique to at most one subject by construction, so more than one match
  */
 async function findSoleMatchingEmailIdentifier(
 	db: Database,
@@ -111,7 +102,6 @@ const CLOCK_SKEW = "60 seconds";
  * The longest a provider-started assertion is honored, whatever window the
  * assertion itself claimed. Nothing binds such an assertion to the browser
  * presenting it, so the window is the only thing narrowing what a captured
- * document is worth.
  */
 const IDP_INITIATED_WINDOW_MS = 5 * 60 * 1000;
 
@@ -121,8 +111,7 @@ const SWEEP_BATCH_SIZE = 500;
 /**
  * The sign-in in flight against a SAML connection. The row's own id travels as
  * `RelayState` and comes back with the response, which is what matches an
- * assertion to a request without reading anything out of a document that has
- * not been verified.
+ * assertion to a request without reading anything out of a document that has not
  */
 export const samlTransactions = table({
 	name: "saml_transactions",
@@ -272,8 +261,7 @@ export type SignInWithSamlResponseResult =
  * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The posted response and where it arrived.
  * @param metering - The daily-active-subject enforcement a session open reports through.
- * @param sessionPolicy - The tenant's own effective session policy the opened session
- * is bound by; omitted, the platform defaults.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session is bound by; omitted, the platform defaults.
  * @returns The subject signed in and the ticket that hands the session back, or why not.
  */
 export async function signInWithSamlResponse(
@@ -356,9 +344,6 @@ export async function signInWithSamlResponse(
 	let subjectRow = await db.find(subjects, { id: resolved.subjectId });
 	if (subjectRow?.status === "blocked") return { ok: false, reason: "subject-blocked" };
 
-	// The directory that asserted this person is that organization's own, so a
-	// sign-in through its connection is itself the proof a domain-earned
-	// membership gets from a verified address.
 	if (connection.organization_id) {
 		await ensureConnectionMembership(db, {
 			organizationId: connection.organization_id,
@@ -415,19 +400,8 @@ export async function signInWithSamlResponse(
 }
 
 /**
- * Resolves the platform subject a verified assertion signs in, creating one
- * where the connection provisions from the directory and refusing where it does
- * not. Attributes map by the connection's own rules, on creation and again on
- * every sign-in for the mappings that ask for it.
- *
- * Account linking runs here for a provider identity this tenant has never seen:
- * when the assertion names an address that already belongs to exactly one
- * existing subject, the automatic linking rule decides whether to sign the
- * caller in as that subject with nothing further proved, or to answer
- * `link_required` with a ticket for a credential to complete the link with
- * instead. An address matching nobody at all, or an assertion naming none, is
- * not a linking decision, and `on_unknown_subject` runs exactly as it always has
- * for it.
+ * Resolves the platform subject a verified assertion signs in, creating one where
+ * the connection provisions from the directory and refusing where it does not.
  */
 async function resolveSubject(
 	db: Database,
@@ -578,9 +552,7 @@ async function resolveSubject(
 
 /**
  * The replay store one verification consults, scoped to the connection so two
- * providers cannot collide on an assertion id either of them chose. Presence is
- * the whole signal, and the row outlives the assertion's own window by exactly
- * as long as the verification asks for.
+ * providers cannot collide on an assertion id either of them chose.
  */
 function assertionReplayStore(db: Database, connectionId: string): SAML.ReplayStore {
 	return {

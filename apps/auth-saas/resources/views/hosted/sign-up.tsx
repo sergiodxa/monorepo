@@ -1,8 +1,7 @@
 /**
  * The `/u/sign-up` screen: an identifier, a password, and an optional display
- * name. Legal acknowledgement and any tenant-declared required profile field
- * have no backing configuration anywhere in this app yet, so this screen asks
- * for nothing beyond what a subject and a password actually need.
+ * name. Legal acknowledgement and any tenant-declared required profile field have
+ * no backing configuration anywhere in this app yet, so this screen asks for
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

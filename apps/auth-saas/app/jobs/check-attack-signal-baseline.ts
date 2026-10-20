@@ -1,9 +1,7 @@
 /**
  * The daily attack-signal alert: for every provisioned tenant, reads the last hour
  * of failed sign-ins against the tenant's own trailing week, and mails every owner
- * once when that hour stands well above baseline. A tenant already alerted today is
- * skipped before either read runs, so a redelivered or overlapping run never sends
- * a second message for the same day.
+ * once when that hour stands well above baseline.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -1,8 +1,6 @@
 /**
  * Password credentials: the `passwords`, `password_policy` and
- * `password_reset_tickets` tables, and the operations over them. A subject holds
- * several password rows and only the newest authenticates; the rest exist to be
- * derived against so a reuse is refused.
+ * `password_reset_tickets` tables, and the operations over them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -204,10 +202,8 @@ interface WrittenPassword {
 }
 
 /**
- * Enforces policy, refuses a reuse, and writes a subject's new password in one operation.
- * Every rule and the reuse check run on {@link hashedForm}, the form that is hashed. A stored hash
- * that cannot be verified lets the write through, logged, so a damaged row never locks a
- * subject out of reset; a match against any other row still refuses.
+ * Enforces policy, refuses a reuse, and writes a subject's new password in one operation. Every
+ * rule and the reuse check run on {@link hashedForm}, the form that is hashed.
  *
  * @param db - The tenant's database.
  * @param input - The subject the password belongs to and the candidate itself.
@@ -290,23 +286,11 @@ export type ImportPasswordHashResult =
 	| { ok: false; reason: "unrecognized-hash" };
 
 /**
- * Writes an already-hashed password directly to a subject's row, for a
- * directory arriving from elsewhere with a hash this platform's own format
- * already covers. No plaintext is ever seen on this path, so none of
- * {@link writeNewPassword}'s policy checks — length, common-password,
- * similar-to-identifier — apply; those are about a person choosing a
- * plaintext, and an imported hash is neither chosen here nor rehashable to
- * check against.
- *
- * The one check this path keeps is recognition: the hash must be one
- * `password.recognizes` accepts as this platform's own format, so a value
- * imported this way verifies at the subject's next sign-in exactly like any
- * other stored hash, and upgrades itself the same way if it trails current
- * policy.
+ * Writes an already-hashed password directly to a subject's row, for a directory
+ * arriving from elsewhere with a hash this platform's own format already covers.
  *
  * @param db - The tenant's database.
- * @param input - The subject the hash belongs to, the hash itself, and
- * whether the subject must change it at next sign-in.
+ * @param input - The subject the hash belongs to, the hash itself, and whether the subject must change it at next sign-in.
  * @returns The new row's id, or why the import was refused.
  */
 export async function importPasswordHash(
@@ -406,17 +390,11 @@ export type ChangePasswordResult =
 
 /**
  * Verifies a subject's current password and writes a new one in its place, running
- * the same policy and reuse check every path that writes a password runs. Revokes the
- * subject's other sessions per the tenant's own policy: `revoke-others` spares the
- * session performing the change, the way this has always worked; `revoke-all` ends it
- * too, because the person changing it is present to sign in again.
+ * the same policy and reuse check every path that writes a password runs.
  *
  * @param db - The tenant's database.
- * @param input - The subject, its current password, the replacement, and the session
- * performing the change.
- * @param sessionsAfterCredentialChange - The tenant's own effective policy for what a
- * credential change does to a subject's other sessions; omitted, `revoke-others`, the
- * behavior this function has always had.
+ * @param input - The subject, its current password, the replacement, and the session performing the change.
+ * @param sessionsAfterCredentialChange - The tenant's own effective policy for what a credential change does to a subject's other sessions; omitted, `revoke-others`, the behavior this function has always had.
  * @param options - Whether the breached-password lookup runs.
  * @returns The new row's id and expiry, or why the change was refused.
  */
@@ -530,26 +508,13 @@ function identifierKindOf(value: string): IdentifierKind {
  * Verifies a password sign-in and opens a session in the same call — a credential
  * checked in one call and a session opened in another is one operation split in half.
  *
- * An unknown identifier, a subject with no password, and a blocked subject all
- * derive the candidate against a fixed dummy hash before answering, the same
- * derivation a wrong password pays, so the time an answer takes says nothing about
- * which of those it was.
- *
  * @param db - The tenant's database.
- * @param input - The identifier as typed, the candidate password, whether to remember
- * the session past its own lifetime, and the request's origin.
- * @param metering - The daily active user meter to record this sign-in against, when
- * the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
- * @param mfaPolicy - The tenant's own MFA policy; omitted, a subject with no factor is
- * never routed to enrol one before this call reports success, the same as every
- * existing caller that does not read the policy at all.
- * @param resolveOrganizationMemberships - Whether to run {@link applyDomainMembership}
- * against the signed-in subject once the session opens; omitted, no domain is ever
- * read and neither result field is ever set, the same as every existing caller.
- * @param failureThreshold - How many consecutive failures the tenant tolerates before
- * a backoff window opens; omitted, the same default every unconfigured tenant enforces.
- * @param sessionPolicy - The tenant's own effective session policy the opened session
- * is bound by; omitted, the platform defaults.
+ * @param input - The identifier as typed, the candidate password, whether to remember the session past its own lifetime, and the request's origin.
+ * @param metering - The daily active user meter to record this sign-in against, when the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
+ * @param mfaPolicy - The tenant's own MFA policy; omitted, a subject with no factor is never routed to enrol one before this call reports success, the same as every existing caller that does not read the policy at all.
+ * @param resolveOrganizationMemberships - Whether to run {@link applyDomainMembership} against the signed-in subject once the session opens; omitted, no domain is ever read and neither result field is ever set, the same as every existing caller.
+ * @param failureThreshold - How many consecutive failures the tenant tolerates before a backoff window opens; omitted, the same default every unconfigured tenant enforces.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session is bound by; omitted, the platform defaults.
  * @returns The subject and what it still owes, or why sign-in was refused.
  */
 export async function signInWithPassword(
@@ -729,15 +694,13 @@ export interface ClearAuthenticationBackoffInput {
 export type ClearAuthenticationBackoffResult = { ok: true } | { ok: false; reason: "not-found" };
 
 /**
- * Resets whatever backoff state a subject has accumulated — its password row's
- * own failure count and window, its TOTP factor's own, or both when it holds
- * both — the administrator's one undo for a lockout nobody but them can see
- * building, across every credential a subject might hold.
+ * Resets whatever backoff state a subject has accumulated — its password row's own
+ * failure count and window, its TOTP factor's own, or both when it holds both —
+ * the administrator's one undo for a lockout nobody but them can see building,
  *
  * @param db - The tenant's database.
  * @param input - The subject to clear, who is clearing it, and why.
- * @returns Success, or that the subject holds neither a password row nor a
- * TOTP factor to clear.
+ * @returns Success, or that the subject holds neither a password row nor a TOTP factor to clear.
  */
 export async function clearAuthenticationBackoff(
 	db: Database,
@@ -775,8 +738,6 @@ export interface BeginPasswordResetInput {
  * A ticket and an address to deliver it to. The shape is identical whether or not
  * the identifier resolved: `address` is `null` both when there is no such subject
  * and when the subject has no verified address to send to, and `ticket` is always a
- * freshly minted value — one that was persisted and can complete a reset, or one
- * that was not and cannot. A caller cannot tell which from the return value alone.
  */
 export interface BeginPasswordResetResult {
 	ok: true;
@@ -833,7 +794,6 @@ export async function beginPasswordReset(
 	 * A spent envelope nulls `address` exactly the way an unresolved identifier
 	 * already does, rather than adding a refusal shape of its own — the request leg's
 	 * response is built from `address` alone, so this is what keeps a rate-limited
-	 * mailbox indistinguishable from one that never resolved.
 	 */
 	if (subjectId !== null && address !== null && addressFolded !== null) {
 		let envelope = await checkAndSpendMailEnvelope(db, { address: addressFolded });
@@ -874,15 +834,6 @@ export type CompletePasswordResetResult =
  * Spends a password reset ticket, writes the new password it authorized, and revokes
  * every session the subject holds — a reset is what someone locked out does, and the
  * browser completing it may not be theirs.
- *
- * The ticket is deleted the moment its row is found, before its expiry or the new
- * password's policy is checked, so a ticket is spent by one attempt regardless of
- * whether that attempt's new password is accepted — a second attempt with the same
- * ticket always finds nothing to spend.
- *
- * Marking the resolved address verified is `subjects.ts`'s data to write and it
- * exposes no write path for it today; this returns the subject so a caller with one
- * can, but does not attempt it here.
  *
  * @param db - The tenant's database.
  * @param input - The ticket as delivered, and the new password it authorizes.
@@ -990,8 +941,7 @@ export type RemovePasswordResult =
 /**
  * Whether a subject would keep a way to sign in after every password row is gone,
  * counting only a verified identifier — the one other credential this module can
- * read without writing to a table it does not own. The fallback this module runs on
- * its own when a caller has not computed the fuller cross-credential answer.
+ * read without writing to a table it does not own.
  */
 async function hasOtherReadableCredential(db: Database, subjectId: string): Promise<boolean> {
 	let count = await db.count(subjectIdentifiers, {
@@ -1007,9 +957,7 @@ async function hasOtherReadableCredential(db: Database, subjectId: string): Prom
  *
  * @param db - The tenant's database.
  * @param input - The subject to remove the password from.
- * @param hasOtherCredential - Whether the subject holds a credential besides its
- * password — a verified identifier or a passkey. Computed here from identifiers alone
- * when omitted; a caller that also knows about passkeys passes the fuller answer.
+ * @param hasOtherCredential - Whether the subject holds a credential besides its password — a verified identifier or a passkey. Computed here from identifiers alone when omitted; a caller that also knows about passkeys passes the fuller answer.
  * @returns Success, or why the removal was refused.
  */
 export async function removePassword(

@@ -1,14 +1,7 @@
 /**
- * `GET /tenants/:tenantId/subjects/import/:runId/download?ticket=...` —
- * spends a single-use download ticket and streams the report it named back
- * as an attachment. The ticket is the whole authorization for this route:
- * it was minted from a status poll a `subjects:read`-scoped caller already
- * made, so it stands in as a signed URL good for the one download it names,
- * usable with no fresh bearer token the way any other signed download link
- * is. It still carries the tenant it was minted for, and this route checks
- * that tenant against the `:tenantId` its own path names before it streams
- * anything, so a ticket minted for one tenant can never be honored against
- * another tenant's URL even though the ticket alone already authorizes it.
+ * `GET /tenants/:tenantId/subjects/import/:runId/download?ticket=...` — spends a
+ * single-use download ticket and streams the report it named back as an
+ * attachment.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -43,8 +36,7 @@ function reportNotFound(): Response {
  * middleware of its own: the ticket in the query string is this route's
  * entire credential.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares; only `r2` is read here.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares; only `r2` is read here.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectsImportDownload, createSubjectsImportDownloadAction(options));

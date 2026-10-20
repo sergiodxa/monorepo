@@ -1,10 +1,7 @@
 /**
- * What every route in this directory shares: reading the `:clientId` path
- * param, the `problem+json` response for a client the tenant does not hold,
- * the entitlement refusal a machine-access grant type is gated behind, and
- * mapping a redirect URI, grant type, response type or auth method refusal
- * onto its own response, and projecting a client onto the writable members a merge
- * patch edits.
+ * What every route in this directory shares: reading the `:clientId` path param,
+ * the `problem+json` response for a client the tenant does not hold, the
+ * entitlement refusal a machine-access grant type is gated behind, and mapping a
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

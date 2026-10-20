@@ -1,9 +1,7 @@
 /**
  * Opening a hosted checkout for a tenant and settling its return (ADR-018): the
  * intent is durable — a `billing_checkouts` row — before anything leaves the
- * process, so a retried open reuses the same `attempt_id` and a completed
- * checkout resolves back to a tenant through that row rather than through
- * metadata a delivery may not carry.
+ * process, so a retried open reuses the same `attempt_id` and a completed checkout
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,8 +42,7 @@ export type OpenCheckoutResult =
  * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param input - The tenant, buyer contact, and what is being bought.
- * @returns The hosted checkout URL to redirect the buyer to, or why one could
- * not be opened.
+ * @returns The hosted checkout URL to redirect the buyer to, or why one could not be opened.
  */
 export async function openCheckout(
 	models: Models,
@@ -107,16 +104,14 @@ export type FinishCheckoutResult =
 	| { ok: false; error: BillingError };
 
 /**
- * Settles a checkout a buyer has just returned from: reads its final state
- * with `checkouts.finish`, attaches the subscription it produced to the tenant
- * the `billing_checkouts` row names, and reprojects that tenant's entitlements.
- * Safe to run twice for the same checkout — attaching and reprojecting both are.
+ * Settles a checkout a buyer has just returned from: reads its final state with
+ * `checkouts.finish`, attaches the subscription it produced to the tenant the
+ * `billing_checkouts` row names, and reprojects that tenant's entitlements.
  *
  * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param checkoutId - The checkout session id the return URL carried.
- * @returns The tenant the checkout was opened for (null when this checkout was
- * not opened through {@link openCheckout}), or the failure `finish` reported.
+ * @returns The tenant the checkout was opened for (null when this checkout was not opened through {@link openCheckout}), or the failure `finish` reported.
  */
 export async function finishCheckout(
 	models: Models,

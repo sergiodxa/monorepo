@@ -1,16 +1,7 @@
 /**
- * `POST /tenants/:tenantId/subjects/export` — begins a subject export run.
- * Unlike import, this route has no file to stream: the request body carries
- * only the one flag that shapes what the run will carry, `includeCredentials`,
- * so it is parsed as a small JSON body the same way `set-session-policy.ts`
- * parses its own body-only write, rather than a query parameter.
- *
- * `export:read` alone begins a run that leaves out password hashes.
- * Asking for `includeCredentials: true` additionally requires
- * `export:credentials`, checked and refused on its own rather than folded
- * into a silent downgrade to `false` — a caller who asked for credentials and
- * did not get them needs to know that, not receive a run that quietly
- * carries less than it asked for.
+ * `POST /tenants/:tenantId/subjects/export` — begins a subject export run. Unlike
+ * import, this route has no file to stream: the request body carries only the one
+ * flag that shapes what the run will carry, `includeCredentials`, so it is parsed
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,8 +26,7 @@ import routes from "~/routes/management";
 /**
  * Builds the `subjectsExportBegin` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.subjectsExportBegin, createSubjectsExportBeginAction(options));

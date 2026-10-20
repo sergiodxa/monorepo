@@ -2,7 +2,6 @@
  * The tenant object's schema migrations, and the runner it applies them with. SQL bodies
  * are inlined at build time because a Durable Object has no filesystem, and the runner
  * journals each one in the same turn it runs it, so an interrupted script never leaves a
- * journal row for work it did not finish.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -105,18 +104,9 @@ const schemaMigrations = table({
 });
 
 /**
- * Applies whatever has not run yet against one tenant's database.
- *
- * Safe to call on every boot: an id already in the journal is skipped, so the cost for an
- * up-to-date object is a single read. The journal table is created ahead of the registry
- * itself, guarded, so a database with nothing applied yet still has somewhere to read
- * from; `0001-init` declares the same table again, also guarded, so the two never
- * disagree about its shape.
- *
- * Nothing here awaits real I/O between running a migration's script and recording that it
- * ran: both are `SqlStorage` calls with no network round trip, so they land in the
- * object's current turn and commit together. A script that throws leaves no journal row
- * for the work it did not finish, and the next boot retries it from its first statement.
+ * Applies whatever has not run yet against one tenant's database. Safe to call on every
+ * boot: an id already in the journal is skipped, so the cost for an up-to-date object is
+ * a single read.
  *
  * @param driver - The tenant's database.
  * @returns The ids applied by this call, empty when there was nothing to do.

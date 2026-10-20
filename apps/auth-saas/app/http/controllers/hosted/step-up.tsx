@@ -1,9 +1,7 @@
 /**
  * `GET/POST /u/step-up` — a relying party's `acr_values=mfa` demand, asking a
  * session that already signed in to prove its factor again, freshly, before
- * resuming. A subject with no factor at all is offered enrolment instead of a
- * code field, the same fallback `second-factor.tsx` renders for an
- * administrator reset.
+ * resuming.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -91,8 +89,7 @@ export const stepUpShow = createAction(routes.hostedStepUpShow, async (ctx) => {
  * Proves the step-up and resumes the interaction in one call.
  *
  * @param ctx - The request context (provides `tenantStub` and `formData`).
- * @returns The response the resumed interaction reaches once the step-up is
- * proven, or this same page re-rendered with an error.
+ * @returns The response the resumed interaction reaches once the step-up is proven, or this same page re-rendered with an error.
  * @example
  * router.map(routes.hostedStepUpSubmit, stepUpSubmit);
  */
@@ -137,11 +134,9 @@ export const stepUpSubmit = createAction(routes.hostedStepUpSubmit, async (ctx) 
  * Activates the factor a subject with none held, and shows its recovery codes
  * once. A wrong code has nothing left to retry against — `activateTotpFactor`
  * spends the enrolment row on any attempt — so this redirects back to a fresh
- * enrolment rather than re-rendering a dead one.
  *
  * @param ctx - The request context (provides `tenantStub` and `formData`).
- * @returns The recovery-codes reveal on success, or a redirect back to a fresh
- * enrolment.
+ * @returns The recovery-codes reveal on success, or a redirect back to a fresh enrolment.
  * @example
  * router.map(routes.hostedStepUpEnrolSubmit, stepUpEnrolSubmit);
  */

@@ -2,8 +2,6 @@
  * The centralized, type-safe route table for requests already resolved to one
  * tenant: discovery, JWKS, `/userinfo`, the token and dynamic client registration
  * endpoints, `/authorize`, the hosted sign-in, sign-up, verify, reset, magic-link,
- * consent and error pages served under `/u/`, and the device authorization grant's
- * own verification screen at `/device`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

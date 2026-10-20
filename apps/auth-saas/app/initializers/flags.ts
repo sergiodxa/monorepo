@@ -1,10 +1,7 @@
 /**
- * The platform's flag client: an `EntitlementProvider` wrapping an engine
- * over a Cloudflare KV-backed store, built once at module scope the same way
- * `billing.ts` and `session-cookie.ts` build their own singletons. Every
- * entitlement key resolves the way it already did; every other key —
- * `release.*` and `kill.*` handles a future capability declares — now has a
- * real definition set to read from.
+ * The platform's flag client: an `EntitlementProvider` wrapping an engine over a
+ * Cloudflare KV-backed store, built once at module scope the same way `billing.ts`
+ * and `session-cookie.ts` build their own singletons.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,10 +23,9 @@ import { env } from "cloudflare:workers";
 import { EntitlementProvider } from "~/app/services/entitlement-provider";
 
 /**
- * Reads the `INTERNAL_TENANT_IDS` secret — a JSON array of tenant ids — into
- * a plain list, answering an empty list for anything that is not that shape
- * rather than throwing at module load, the same defensive parse `billing.ts`
- * gives its own JSON secrets.
+ * Reads the `INTERNAL_TENANT_IDS` secret — a JSON array of tenant ids — into a
+ * plain list, answering an empty list for anything that is not that shape rather
+ * than throwing at module load, the same defensive parse `billing.ts` gives its
  *
  * @param raw - The secret's raw value, or `undefined` when unset.
  * @returns The tenant ids the "internal" segment matches.
@@ -50,10 +46,9 @@ export function parseInternalTenantIds(raw: string | undefined): readonly string
 }
 
 /**
- * The condition the "internal" segment stands for: every tenant in the given
- * list, matched on the field a rollout's own targeting key already carries —
- * so a flag written to target tenants and a flag written to target this
- * segment read the same subject.
+ * The condition the "internal" segment stands for: every tenant in the given list,
+ * matched on the field a rollout's own targeting key already carries — so a flag
+ * written to target tenants and a flag written to target this segment read the sam
  *
  * @param tenantIds - The tenant ids the segment matches.
  */
@@ -63,9 +58,8 @@ export function internalSegmentCondition(tenantIds: readonly string[]): Conditio
 
 /**
  * Wraps a store, adding the "internal" segment to whatever it reads, so a
- * targeting rule references it by name without that name ever having to be
- * written into the definition set the store persists. The wrapped store's own
- * `segments` still travel through underneath it.
+ * targeting rule references it by name without that name ever having to be written
+ * into the definition set the store persists.
  */
 export class InternalSegmentFlagStore implements FlagStore {
 	#wrapped: FlagStore;
@@ -126,9 +120,8 @@ export function logFlagsError(details: EventDetails): void {
 
 /**
  * The raw store the write path and the expiry report read and write through
- * directly, holding exactly what an operator wrote — the "internal" segment
- * lives beside it in {@link InternalSegmentFlagStore} rather than in here, so
- * neither of them has to know that segment exists.
+ * directly, holding exactly what an operator wrote — the "internal" segment lives
+ * beside it in {@link InternalSegmentFlagStore} rather than in here, so neither of
  */
 export const flagStore = new WorkerKVFlagStore(env.FLAGS);
 

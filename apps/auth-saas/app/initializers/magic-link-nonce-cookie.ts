@@ -1,10 +1,7 @@
 /**
- * The sign-in host's magic-link nonce cookie: an HTTP artifact carrying the raw
- * value `beginMagicLinkSignIn` binds a token and a code to, so only the browser
- * that asked can complete either one. Kept as its own cookie under its own secret
- * rather than folded into `session-cookie.ts`, the same way `trusted-device-cookie.ts`
- * is: a stolen nonce only ever lets someone try to complete a sign-in already
- * bound to it, while a stolen session token is the session itself.
+ * The sign-in host's magic-link nonce cookie: an HTTP artifact carrying the raw value
+ * `beginMagicLinkSignIn` binds a token and a code to, so only the browser that asked
+ * can complete either one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -34,7 +31,6 @@ const MAGIC_LINK_NONCE_MAX_AGE_SECONDS = 10 * 60;
  * Mints a fresh 256-bit nonce for a request beginning a magic-link sign-in. Only
  * its hash ever reaches the tenant object; the raw value travels solely in this
  * cookie, so the browser never has to read anything back to prove it is the one
- * that asked.
  *
  * @returns A URL-safe random nonce.
  */

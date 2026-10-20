@@ -2,7 +2,6 @@
  * Authenticates every call to the platform's MCP server before any tool runs: the
  * same bearer credential the management API itself accepts, verified once here so a
  * tool handler only ever has to forward it, and bound as `ctx.access` at its scopes'
- * roles, so a tool outside the token's consent refuses before anything is forwarded.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -50,10 +49,7 @@ function unauthorized(detail: string, error?: "invalid_token"): Response {
 /**
  * Refuses a request with no bearer token, or one that does not verify against the
  * platform tenant's own published keys, before `mcp.fetch` — and so any tool — ever
- * runs. A verified token is published on the request context as `ctx.mcpBearerToken`,
- * the same string a generated tool's handler forwards to the real management route.
- * Its access holds only its scopes' roles: the tenant a person's membership role is
- * read at is a tool argument, so the management route it reaches applies that role.
+ * runs.
  *
  * @returns The middleware, for the MCP route's own `middleware` array.
  * @example

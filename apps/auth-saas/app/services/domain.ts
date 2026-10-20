@@ -1,9 +1,7 @@
 /**
  * Domain lifecycle operations for tenant custom domains (ADR-005): attaching one
  * through Cloudflare for SaaS, refreshing its verification/certificate status, and
- * removing it. Each function is given the `HostnameClient` it calls, rather than
- * building one from the environment, so a caller controls which Cloudflare
- * credentials and zone the operation runs against.
+ * removing it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,8 +22,7 @@ const PENDING_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 /**
  * Attaches a custom domain to a tenant: registers a Cloudflare for SaaS custom
  * hostname asking for a DV certificate validated over TXT, and records the domain
- * `pending` with the TXT record the customer has to publish. Whether the tenant may
- * attach one is the attach route's `custom_domain` entitlement gate.
+ * `pending` with the TXT record the customer has to publish.
  *
  * @param models - The control plane's models.
  * @param hostnameClient - Client for the Cloudflare zone the hostname is registered on.
@@ -66,17 +63,12 @@ export async function attachCustomDomain(
 /**
  * Refreshes a domain's verification/certificate status against Cloudflare, the way
  * the dashboard does when the page opens and the daily cron does for every pending
- * domain. Looks the hostname up by name rather than by a stored Cloudflare id, since
- * the `domains` row keeps none (ADR-003) — the hostname itself is what both sides key
- * on. Promotes to `active` once Cloudflare reports the hostname and its certificate
- * are both active, and fails a domain still pending after seven days so the customer
- * can attach it again. Invalidates the hostname cache on either transition.
+ * domain.
  *
  * @param models - The control plane's models.
  * @param hostnameClient - Client for the Cloudflare zone the hostname was registered on.
  * @param domain - The domain row to refresh.
- * @returns A promise resolving to the domain row: updated on a status transition, or
- * the row passed in when nothing changed yet.
+ * @returns A promise resolving to the domain row: updated on a status transition, or the row passed in when nothing changed yet.
  * @example
  * for (let domain of await ctx.models.domains.pending().all()) {
  * 	await refreshDomainStatus(ctx.models, hostnameClient, domain);

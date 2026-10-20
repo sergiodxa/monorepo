@@ -2,7 +2,6 @@
  * The platform's configured billing provider and the `WebhookStore` its webhook
  * endpoint is mounted with, both built once at module scope the same way
  * `session-cookie.ts` reads `SESSION_SECRET` — read from the Worker's own secret
- * bindings, with nothing reaching the network until a call actually needs it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,10 +20,7 @@ import { buildFeatureMap, buildProductMap } from "~/app/services/billing/catalog
 /**
  * Parses a JSON-encoded id map secret — `POLAR_PRODUCT_IDS`, `POLAR_FEATURE_IDS`
  * or `POLAR_METER_IDS` — into our own slugs mapped to Polar's ids, answering `{}`
- * for anything that is not a JSON object of strings rather than throwing at
- * module load. A slug this then leaves unconfigured gets the "unknown product"
- * failure `@sdxc/billing` already produces for it, which is the same shape of
- * failure a genuinely unset secret would produce.
+ * for anything that is not a JSON object of strings rather than throwing at module
  *
  * @param raw - The secret's raw value, or `undefined` when unset.
  * @returns Our own slugs mapped to Polar's ids.
@@ -50,10 +46,9 @@ export function parseIdMap(raw: string | undefined): Record<string, string> {
 }
 
 /**
- * The platform's Polar organization. `products`, `features` and `meters` merge
- * the plan and add-on catalog's own slugs (`PLANS`/`ADDONS`) with this
- * environment's own ids, read from bindings since sandbox and production
- * share none of them.
+ * The platform's Polar organization. `products`, `features` and `meters` merge the
+ * plan and add-on catalog's own slugs (`PLANS`/`ADDONS`) with this environment's
+ * own ids, read from bindings since sandbox and production share none of them.
  */
 export const polar: Billing = new PolarBilling({
 	accessToken: env.POLAR_ACCESS_TOKEN,

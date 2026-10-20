@@ -1,14 +1,7 @@
 /**
  * `GET /u/verify` — the landing page a verification link lands on (`?ticket=`),
  * and the "check your email" state `/u/sign-up` lands on (`?subject=`); `POST
- * /u/verify/resend` is that state's own resend control. Nothing is signed in
- * at either point, so the resend reads the subject's own unverified email
- * back through `describeSubject` and mints a fresh ticket for that same
- * address — a subject id alone grants no capability, since every write here
- * still runs through the subject's own row rather than a client-supplied value.
- * A resend sends the fresh ticket over mail the same way the original did; the
- * response says a link went out whether or not a fresh one actually did, the
- * same framing an unresolved-but-plausible resend already carries.
+ * /u/verify/resend` is that state's own resend control.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

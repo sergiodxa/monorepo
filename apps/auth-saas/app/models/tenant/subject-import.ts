@@ -1,9 +1,6 @@
 /**
  * One row of a tenant's directory arriving from elsewhere: validates it against every
- * rule a write would enforce without writing anything, or applies it. Kept standalone
- * from `subjects.ts` because a row bundles several of that module's own writes —
- * `createSubject`, a password hash, a set of role assignments — into the one outcome an
- * import report renders one line from.
+ * rule a write would enforce without writing anything, or applies it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -114,16 +111,10 @@ export type ImportRowOutcome =
  * Runs every check a write would enforce, against one row, with nothing written: folds
  * and checks each identifier against the tenant's existing directory and against the
  * rest of the row, checks each declared attribute key is defined, checks each declared
- * role resolves at its scope, and checks a declared password hash is one the platform
- * recognizes. Every problem found is collected rather than stopping at the first, since
- * this is the dry run a customer runs to fix everything a file has wrong in one pass.
  *
  * @param db - The tenant's database.
  * @param row - The row to check.
- * @returns A preview subject id and the row's external id on a clean row, or every
- * problem the row would be refused for. The preview id is minted the same way
- * {@link createSubject}'s own id would be, but never written — applying the row mints an
- * independent one.
+ * @returns A preview subject id and the row's external id on a clean row, or every problem the row would be refused for. The preview id is minted the same way {@link createSubject}'s own id would be, but never written — applying the row mints an independent one.
  */
 export async function validateImportRow(
 	db: Database,
@@ -216,18 +207,11 @@ export async function validateImportRow(
 /**
  * Writes one import row: creates the subject with its identifiers written verified
  * exactly where the row marked them so, imports its password hash when one came, and
- * assigns its declared roles. A step after the subject is created that fails — an
- * unrecognized hash, a role that does not resolve — is not rolled back: the subject and
- * whatever earlier step already succeeded stay written, and the outcome names the step
- * that failed. A file with a partial problem is exactly the case a customer fixes and
- * resubmits rather than starting the whole row over, so the row is left as far along as
- * it honestly got.
+ * assigns its declared roles.
  *
  * @param db - The tenant's database.
  * @param row - The row to write.
- * @returns The new subject's id and the row's external id once every declared step
- * succeeds, or the problem that stopped the row and the external id to match it back to
- * the file.
+ * @returns The new subject's id and the row's external id once every declared step succeeds, or the problem that stopped the row and the external id to match it back to the file.
  */
 export async function applyImportRow(
 	db: Database,
@@ -349,8 +333,7 @@ export interface CompleteImportRunInput {
  * totals alone — the one fact only this object can attest to.
  *
  * @param db - The tenant's database.
- * @param input - How many rows the run processed, how many subjects it created, and
- * how many rows failed.
+ * @param input - How many rows the run processed, how many subjects it created, and how many rows failed.
  * @returns Success, once the row is written.
  */
 export async function completeImportRun(

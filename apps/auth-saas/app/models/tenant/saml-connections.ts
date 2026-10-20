@@ -1,8 +1,7 @@
 /**
  * The SAML half of an enterprise connection: the provider's endpoints, the
  * certificate set a rotation moves through, and the service provider's own key
- * pair and certificate. Everything a tenant configures once and a sign-in then
- * reads, kept beside the connection record rather than inside it.
+ * pair and certificate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -124,8 +123,7 @@ export type CertificateUse = "signing" | "encryption";
 /**
  * The three URLs a connection is identified by at the identity provider. All of
  * them are built from the tenant's platform subdomain and the connection's own
- * immutable slug, so they are fixed for the connection's life and a provider
- * that registered them once never has to be told again.
+ * immutable slug, so they are fixed for the connection's life and a provider that
  */
 export interface SamlServiceProviderUrls {
 	entityId: string;
@@ -207,7 +205,6 @@ export type SaveEnterpriseConnectionResult =
  * Writes an enterprise connection's whole configuration, generating the service
  * provider's key pair and certificate the first time and keeping them on every
  * save afterwards, so the identifiers an identity provider was configured with
- * survive a tenant editing anything else about the connection.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
@@ -449,8 +446,7 @@ export type RefreshConnectionMetadataResult =
 /**
  * Re-reads a provider's metadata into the connection: endpoints replaced,
  * certificates added, and one absent long enough to be a decision rather than a
- * blip retired. Nothing is removed, so a provider that briefly published an
- * incomplete document locks nobody out.
+ * blip retired.
  *
  * @param db - The tenant's database.
  * @param input - The connection's slug and the metadata document as fetched.
@@ -729,14 +725,12 @@ export type SetEnterpriseConnectionEnabledResult =
 	| { ok: false; reason: "no-trusted-certificate" };
 
 /**
- * Turns an enterprise connection on or off. Enabling one takes a sign-on
- * endpoint and a certificate currently inside its own window, because those are
- * what a sign-in against it actually needs, and a connection that would refuse
- * every assertion must never appear as a route somebody's address resolves to.
+ * Turns an enterprise connection on or off. Enabling one takes a sign-on endpoint
+ * and a certificate currently inside its own window, because those are what a
+ * sign-in against it actually needs, and a connection that would refuse every
  *
  * @param db - The tenant's database.
- * @param input - The connection's slug, whether it should now be enabled, and
- * the moment its certificates are judged against.
+ * @param input - The connection's slug, whether it should now be enabled, and the moment its certificates are judged against.
  * @returns The connection's public record, or which rule refused the change.
  */
 export async function setEnterpriseConnectionEnabled(
@@ -774,12 +768,10 @@ export type ResolveOrganizationConnectionResult =
  * Resolves the enterprise connection a verified email domain routes to, for a
  * future sign-in page that takes an address, matches its domain against verified
  * organization domains, and sends the browser to the connection that owns it
- * rather than a list nobody should see every other customer's entry on.
  *
  * @param db - The tenant's database.
  * @param input - The domain a sign-in address named.
- * @returns The one enabled `saml` connection scoped to the organization that
- * verified-claims this domain, or that none does.
+ * @returns The one enabled `saml` connection scoped to the organization that verified-claims this domain, or that none does.
  */
 export async function resolveOrganizationConnection(
 	db: Database,

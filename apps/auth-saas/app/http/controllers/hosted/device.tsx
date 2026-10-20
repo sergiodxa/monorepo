@@ -1,12 +1,7 @@
 /**
- * `GET/POST /device` — RFC 8628's verification URI: a person enters or
- * confirms the code their device is showing, and approves or denies the
- * sign-in it asked for. There is no interaction row to park here the way
- * `/authorize` parks one, since nothing but the code itself is in flight, so a
- * session-less visit carries a `return_to` back to this same request instead
- * of a resumable interaction id, and the consent step reuses `ConsentScreen`
- * and its rendering exactly the way `/u/consent` does — one surface and one
- * set of copy, whether the approval came from a browser or a device.
+ * `GET/POST /device` — RFC 8628's verification URI: a person enters or confirms
+ * the code their device is showing, and approves or denies the sign-in it asked
+ * for.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,10 +30,9 @@ function redirectToSignIn(ctx: { request: Request }, userCode: string | null): R
 }
 
 /**
- * Renders the code-entry form for no session or no code yet, or the consent
- * screen once both are in hand — approving from a device is always something
- * an authenticated person did, so a session-less visit is sent to sign in and
- * back rather than shown anything about the code it named.
+ * Renders the code-entry form for no session or no code yet, or the consent screen
+ * once both are in hand — approving from a device is always something an
+ * authenticated person did, so a session-less visit is sent to sign in and back
  *
  * @param ctx - The request context (provides `tenantStub`, `render` and `request`).
  * @returns The response this GET reaches on its own.
@@ -98,9 +92,7 @@ export const hostedDeviceShow = createAction(routes.hostedDeviceShow, async (ctx
 
 /**
  * Records the submitted approve/deny decision and renders the confirmation a
- * person leaves this screen on either way. The form carries the pending row's
- * own id rather than the code, the same way `/u/consent`'s own form carries an
- * interaction id rather than resubmitting whatever a client first asked for.
+ * person leaves this screen on either way.
  *
  * @param ctx - The request context (provides `tenantStub`, `formData` and `render`).
  * @returns The response this POST reaches on its own.

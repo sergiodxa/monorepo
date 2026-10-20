@@ -1,13 +1,6 @@
 /**
  * Outbound webhook endpoints: the `webhook_endpoints` table and the operations that
- * register, update, rotate and remove a tenant's own registered receivers. An
- * endpoint names a URL, the event types it subscribes to — drawn from the same
- * closed catalog the audit log writes against, so the two vocabularies can never
- * drift apart — and the signing secret a delivery is authenticated with.
- *
- * A secret only ever exists in the clear for the one call that mints it: sealed the
- * moment it is generated, handed back once in that call's own result, and opened
- * again only by whatever later pass signs a delivery with it.
+ * register, update, rotate and remove a tenant's own registered receivers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -74,10 +67,7 @@ function tryParseUrl(url: string): URL | null {
 /**
  * Whether `hostname`, exactly as `URL` reports it, names an address rather than a
  * DNS name: a bracketed IPv6 literal, or a host that — once its dots are stripped —
- * is nothing but digits, which catches both dotted-decimal IPv4 and the
- * undotted-decimal form some resolvers still accept as one. `localhost` is folded
- * in too, since it resolves to a loopback address by convention rather than by
- * being spelled as one.
+ * is nothing but digits, which catches both dotted-decimal IPv4 and the undotted-de
  */
 function isLiteralAddressHost(hostname: string): boolean {
 	if (hostname.startsWith("[") && hostname.endsWith("]")) return true;
@@ -102,9 +92,7 @@ export type WebhookUrlValidation =
 /**
  * Validates a webhook endpoint's URL the way its record is written, not the way a
  * redirect URI is matched: `https`, a public hostname rather than a literal
- * address, no userinfo, and the scheme's own default port. There is no loopback
- * exception here — an endpoint a delivery reaches over the open internet never
- * gets the allowance a native app's own redirect does.
+ * address, no userinfo, and the scheme's own default port.
  *
  * @param url - The URL as the caller wrote it.
  * @returns Success, or which rule refused the URL.
@@ -218,10 +206,8 @@ let RegisterWebhookEndpointSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The endpoint's URL, description and subscribed event types, and
- * who is registering it.
- * @returns The new record and the one-time plaintext secret, or which rule
- * refused it.
+ * @param input - The endpoint's URL, description and subscribed event types, and who is registering it.
+ * @returns The new record and the one-time plaintext secret, or which rule refused it.
  */
 export async function registerWebhookEndpoint(
 	db: Database,
@@ -361,8 +347,7 @@ let RotateEndpointSecretSchema = s.object({ endpointId: s.string() });
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The endpoint to rotate, and who is making the call.
- * @returns The updated record and the new one-time secret, or that no such
- * endpoint exists.
+ * @returns The updated record and the new one-time secret, or that no such endpoint exists.
  */
 export async function rotateEndpointSecret(
 	db: Database,
@@ -485,8 +470,7 @@ let ListWebhookEndpointsSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - Where to page from.
- * @returns A page of endpoint records and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @returns A page of endpoint records and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function listWebhookEndpoints(
 	db: Database,

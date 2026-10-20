@@ -1,8 +1,7 @@
 /**
  * The MCP server's own RFC 9728 protected-resource metadata, naming the platform
  * tenant's own OIDC issuer as its authorization server — the one already published
- * for the management API, since a bearer token minted there is the same one this
- * server accepts, forwarded straight through to the real management route.
+ * for the management API, since a bearer token minted there is the same one this s
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

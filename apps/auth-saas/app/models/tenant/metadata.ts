@@ -2,8 +2,6 @@
  * Discovery and `/userinfo`: the read-only surfaces that describe a tenant to the clients
  * that use it. `publishMetadata` reads the tenant facts and key set in one call, and both
  * metadata documents are built from those same facts, so they never disagree.
- * `resolveUserInfo` assembles the claims a subject's granted scopes carry, omitting a
- * claim rather than nulling it whenever the tenant's schema has nowhere for its value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -80,12 +78,8 @@ let PublishMetadataSchema = s.object({
  * call, so a cold cache costs one round trip rather than three.
  *
  * @param db - The tenant's database.
- * @param input - The clock the key set's publish window is measured against, the
- * issuer the Worker resolved for this tenant's hostname, and whether this tenant
- * currently holds the device grant add-on, which is what gates whether
- * `device_authorization_endpoint` and its grant type URN appear at all.
- * @returns The tenant's scope and claim catalog, the published key set, and how long
- * the documents may be cached for.
+ * @param input - The clock the key set's publish window is measured against, the issuer the Worker resolved for this tenant's hostname, and whether this tenant currently holds the device grant add-on, which is what gates whether `device_authorization_endpoint` and its grant type URN appear at all.
+ * @returns The tenant's scope and claim catalog, the published key set, and how long the documents may be cached for.
  */
 export async function publishMetadata(
 	db: Database,
@@ -197,14 +191,10 @@ let ResolveUserInfoSchema = s.object({
 /**
  * Assembles the claims a subject's granted scopes carry for `/userinfo`. `sub` is always
  * present. A profile or email claim appears only when the subject actually holds a value
- * for it, the same omit-rather-than-null rule the token endpoint's own claim assembly
- * follows; a claim the tenant's schema has no column or table for — `address`, or a
- * `profile`-scope claim beyond the ones a subject can hold — never appears, regardless of
- * which scopes were granted.
+ * for it, the same omit-rather-than-null rule the token endpoint's own claim assembly fol
  *
  * @param db - The tenant's database.
- * @param input - The subject id a verified access token named, the scopes its grant
- * covers, and its session and client, for the `roles` and `permissions` claims.
+ * @param input - The subject id a verified access token named, the scopes its grant covers, and its session and client, for the `roles` and `permissions` claims.
  * @returns The subject's claims, or that the subject id no longer resolves.
  */
 export async function resolveUserInfo(

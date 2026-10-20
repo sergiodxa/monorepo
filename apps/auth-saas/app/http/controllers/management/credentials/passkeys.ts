@@ -1,9 +1,7 @@
 /**
- * The passkeys enrolled under a subject: `GET .../passkeys` lists them,
- * `PATCH .../passkeys/:credentialId` renames one, and `DELETE
- * .../passkeys/:credentialId` removes one, refusing to take a subject's last
- * remaining way to sign in. A credential id is base64url without padding, an
- * alphabet with no `.` in it, so it travels safely as a path segment.
+ * The passkeys enrolled under a subject: `GET .../passkeys` lists them, `PATCH
+ * .../passkeys/:credentialId` renames one, and `DELETE .../passkeys/:credentialId`
+ * removes one, refusing to take a subject's last remaining way to sign in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -44,8 +42,7 @@ function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" 
 /**
  * Builds the `passkeysList` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.passkeysList, createPasskeysListAction(options));
@@ -69,8 +66,7 @@ export function createPasskeysListAction(options: ManagementControllerOptions) {
 /**
  * Builds the `passkeysRename` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.passkeysRename, createPasskeysRenameAction(options));
@@ -110,8 +106,7 @@ function revokePasskeyFailure(result: Exclude<RevokePasskeyResult, { ok: true }>
 /**
  * Builds the `passkeysRevoke` action.
  *
- * @param options - The auth, rate-limit and tenant-stub options every
- * management resource controller shares.
+ * @param options - The auth, rate-limit and tenant-stub options every management resource controller shares.
  * @returns The action, ready for `router.map`.
  * @example
  * router.map(routes.passkeysRevoke, createPasskeysRevokeAction(options));

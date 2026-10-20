@@ -1,12 +1,6 @@
 /**
  * `GET/POST /u/second-factor` — the code a password or magic-link sign-in
- * demanded, or the fresh enrolment an administrator reset owes instead. `mode`
- * round-trips as a query parameter the way `sign-in.tsx`'s own flow state does,
- * set once by `sign-in.tsx` from `signInWithPassword`'s own answer, so this
- * screen never has to re-derive which state it is in.
- *
- * Carries `interaction` or `return_to` through unchanged, whichever
- * `sign-in.tsx` handed it, and resumes the same way at the end of every leg.
+ * demanded, or the fresh enrolment an administrator reset owes instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -74,8 +68,6 @@ async function resume(
 		return respondToAuthorizationOutcome(ctx, outcome, { uiLocales });
 	}
 
-	// `readResume` never returns both fields empty on a route this module's own
-	// top guard already let through.
 	return redirectToReturnTo(ctx, value.returnTo as string);
 }
 
@@ -143,8 +135,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
  * Completes the factor a sign-in demanded and resumes the interaction.
  *
  * @param ctx - The request context (provides `tenantStub`, `formData` and `request`).
- * @returns The response `resumeAuthorization` reaches once the factor is proven,
- * or this same page re-rendered with an error.
+ * @returns The response `resumeAuthorization` reaches once the factor is proven, or this same page re-rendered with an error.
  * @example
  * router.map(routes.hostedSecondFactorSubmit, secondFactorSubmit);
  */
@@ -230,14 +221,12 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 });
 
 /**
- * Activates the fresh factor an administrator reset owes, and shows its
- * recovery codes once. A wrong code has nothing left to retry against —
- * `activateTotpFactor` spends the enrolment row on any attempt — so this
- * redirects back to a fresh enrolment rather than re-rendering a dead one.
+ * Activates the fresh factor an administrator reset owes, and shows its recovery
+ * codes once. A wrong code has nothing left to retry against —
+ * `activateTotpFactor` spends the enrolment row on any attempt — so this redirects
  *
  * @param ctx - The request context (provides `tenantStub`, `formData` and `request`).
- * @returns The recovery-codes reveal on success, or a redirect back to a fresh
- * enrolment.
+ * @returns The recovery-codes reveal on success, or a redirect back to a fresh enrolment.
  * @example
  * router.map(routes.hostedSecondFactorEnrolSubmit, secondFactorEnrolSubmit);
  */

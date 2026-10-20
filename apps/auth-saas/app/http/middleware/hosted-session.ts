@@ -1,8 +1,6 @@
 /**
  * Reads the `__Host-session` cookie a hosted screen's request carries, if any, and
  * resolves it against the tenant, and serializes the cookie a sign-in just opened.
- * A browser carries at most one of these cookies today, so every caller here
- * deals in zero or one session id, never a list.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,8 +16,7 @@ import { sessionCookie } from "~/app/initializers/session-cookie";
  * it carries one that still resolves as `"active"`.
  *
  * @param ctx - The request context (provides `request` and `tenantStub`).
- * @returns The live session and subject id, or `null` when there is no cookie or
- * it no longer resolves.
+ * @returns The live session and subject id, or `null` when there is no cookie or it no longer resolves.
  */
 export async function activeSession(
 	ctx: RequestContext,
@@ -38,8 +35,7 @@ export async function activeSession(
  * that still resolves as `"active"`.
  *
  * @param ctx - The request context (provides `request` and `tenantStub`).
- * @returns The live session id, or `null` when there is no cookie or it no longer
- * resolves.
+ * @returns The live session id, or `null` when there is no cookie or it no longer resolves.
  */
 export async function activeSessionId(ctx: RequestContext): Promise<string | null> {
 	return (await activeSession(ctx))?.sessionId ?? null;

@@ -1,8 +1,7 @@
 /**
  * `POST /dashboard/sign-out` — revokes the session at the platform tenant itself,
  * then clears the platform's own `__Host-session` cookie and redirects to the
- * marketing homepage. Clearing the cookie alone would leave the token it carried
- * live until its own natural expiry, reachable by anyone who had already copied it.
+ * marketing homepage.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

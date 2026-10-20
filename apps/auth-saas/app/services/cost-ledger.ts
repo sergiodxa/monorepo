@@ -2,10 +2,6 @@
  * The async-local ledger: one per unit of work — a `fetch` request, a queue message, a
  * scheduled job — so concurrent work in one invocation each gets its own with no
  * crosstalk, the same way `@sdxc/logger`'s `currentLog` carries a request's own log
- * without being handed it. A call site records through {@link recordCost}, a free
- * function that costs nothing on a path no ledger ever wraps; the invocation's own
- * middleware wraps its work in {@link runWithLedger} and calls {@link flush} once at the
- * end to price what accumulated and write it where it joins to revenue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,10 +37,8 @@ const STORAGE = new AsyncLocalStorage<LedgerState>();
  * Adds to the running quantities of the ledger open around this call, or does nothing at
  * all outside one. A call site that never runs under a ledger — nothing wraps it yet, or
  * never will — costs exactly what it already costs, so instrumenting a new path never
- * requires guarding the call.
  *
- * @param quantities - However much of each resource this call consumed; a partial set is
- * fine.
+ * @param quantities - However much of each resource this call consumed; a partial set is fine.
  * @example recordCost({ kvReads: 1 });
  */
 export function recordCost(quantities: Partial<CostQuantities>): void {
@@ -62,8 +56,7 @@ export function recordCost(quantities: Partial<CostQuantities>): void {
  * however deep, across however many awaited calls — adds to this one unit of work's own
  * quantities rather than nowhere.
  *
- * @param tenantId - The tenant this unit of work is attributed to, or `"platform"` for
- * scheduled work serving no particular tenant.
+ * @param tenantId - The tenant this unit of work is attributed to, or `"platform"` for scheduled work serving no particular tenant.
  * @param source - What kind of invocation this is, for the rate card's own modelled CPU.
  * @param fn - The unit of work; call {@link flush} from inside it, once, before it returns.
  * @returns Whatever `fn` returned.
@@ -88,9 +81,6 @@ export interface FlushEnv {
  * Prices what accumulated plus the invocation's request, modelled CPU and log events into one
  * data point: cents in `double1`, quantities in `blob4` in {@link COST_RESOURCES} order, so the
  * list outgrows Analytics Engine's 20 doubles a point without moving the cents column.
- *
- * Catches and logs its own failure rather than rethrowing: instrumentation failing the
- * request it measures would be worse than no instrumentation.
  *
  * @param env - Where `ANALYTICS` is bound.
  */

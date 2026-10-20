@@ -41,7 +41,6 @@ export function resetPasswordLink(ctx: RequestContext, ticket: string): string {
  * Builds the magic-link landing route's absolute link for a sign-in token. The
  * token is the only thing this URL carries — no interaction id or return path —
  * since the resume destination lives on the attempt itself, not on anything this
- * link could be rewritten to say.
  *
  * @param ctx - The request context (provides `tenant`).
  * @param token - The token `beginMagicLinkSignIn` minted for the address.

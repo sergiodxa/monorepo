@@ -2,37 +2,6 @@
  * The social identity provider sign-in flow: `beginConnectionSignIn` starts a login
  * against a connection's provider, `completeConnectionSignIn` spends its callback, maps
  * the claims it returned, resolves or mints the subject they belong to, and opens a
- * session; `resumeConnectionSignIn` spends the single-use ticket that hands the
- * completed sign-in back to the host the flow actually started on. Building on the
- * catalog and configuration `connections.ts` already owns, never redesigning it.
- *
- * `RelyingParty` from `@sdxc/auth` is built around a live `Request`/`Response` and a
- * session store with synchronous `get`/`set`/`unset` — a shape a tenant Durable
- * Object's RPC methods, which take and return plain serializable values, do not have
- * on hand. `TransactionStore` below is the adapter: an in-memory store satisfying
- * that interface for the one call it is used in, with `connection_transactions`
- * doing the actual carrying across the two separate invocations `authorize` and
- * `callback` run in. A synthetic `Request` stands in for the browser's real one,
- * built from the platform's own knowledge of where a call answers from, and
- * `authorize`'s `Response` is read for its `Location` header, never handed back
- * whole, since a `Response` does not itself cross the boundary either.
- *
- * Only a `kind: "oidc"` connection reaches a provider through here. `RelyingParty`'s
- * own `callback` requires a token response to carry an `id_token` — the one claim
- * a pure OAuth2 provider, publishing no discovery document and no ID token, never
- * sends — so a `kind: "oauth2"` connection is refused before it ever asks a
- * provider for anything.
- *
- * `callback` no longer assumes the access token it gets back is a JWT: `@sdxc/auth`
- * decodes it where it can and answers `null` where it cannot, which is the common
- * case for a real third-party provider's access token — OAuth2 leaves its shape
- * entirely to the issuer, and none of this catalog's real providers issue one that
- * decodes as a JWT. This module never reads the decoded form; it reads the token's
- * own lifetime from `grant.expiresAt` (derived from the token response's own
- * `expires_in`, not a JWT's `exp` claim) rather than from the access token itself.
- * Sealing and serving the access token for a later bearer-token read is
- * `getProviderToken`'s job, not built in this pass — `grant.accessTokenRaw` is
- * already the right value for it to seal once it exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -102,26 +71,15 @@ const HANDOFF_TICKET_TTL_MS = 30 * 1000;
 const SWEEP_BATCH_SIZE = 500;
 
 /**
- * The session key `RelyingParty` itself writes its login transaction under,
- * read directly off `packages/auth/src/relying-party.ts` since the package keeps
- * it to itself. `beginConnectionSignIn` never needs to know it — it only reads
- * back whatever `TransactionStore` captured — but `completeConnectionSignIn` has
- * to seed a fresh store under this exact key before `callback` ever reads it,
- * since that call is a separate Durable Object invocation from the one that
- * wrote it.
+ * The session key `RelyingParty` itself writes its login transaction under, read
+ * directly off `packages/auth/src/relying-party.ts` since the package keeps it to
+ * itself.
  */
 const RELYING_PARTY_TRANSACTION_KEY = "auth:transaction";
 
 /**
  * The identity a subject signed in through once: which connection, which provider
- * subject, and the sealed provider tokens a later read opens. Reusing this row on a
- * returning sign-in is what keeps one provider account resolving to one platform
- * subject rather than minting a new one every time.
- *
- * `linked_by`, `linked_at` and the rest of the account-linking columns describe how
- * the row came to exist and what the provider last asserted, read and written by
- * `account-linking.ts` rather than by this module — {@link upsertConnectionIdentity}
- * only ever touches the token columns it already owned before those existed.
+ * subject, and the sealed provider tokens a later read opens.
  */
 export const connectionIdentities = table({
 	name: "connection_identities",
@@ -147,9 +105,7 @@ export const connectionIdentities = table({
 
 /**
  * The single-use, thirty-second ticket that hands a completed sign-in back to the
- * host it actually started on. It names the session already opened for the
- * subject rather than authorizing anything itself — spending it is
- * {@link resumeConnectionSignIn}'s whole job.
+ * host it actually started on.
  */
 export const connectionHandoffs = table({
 	name: "connection_handoffs",
@@ -177,12 +133,7 @@ const connectionHandoffRowId = typeid("conho");
 
 /**
  * A synthetic `AuthSession.Store` standing in for the browser's cookie session,
- * since a Durable Object's RPC methods have no live request to carry one. `get`,
- * `set` and `unset` run against a plain in-memory map, which is enough for the one
- * call this store is built for: `RelyingParty` reads and writes the transaction
- * key synchronously within that single call, and whatever it wrote is read back
- * — or, for a fresh call answering an earlier one, seeded in — by the caller
- * around it.
+ * since a Durable Object's RPC methods have no live request to carry one.
  */
 class TransactionStore implements AuthSession.Store {
 	#values: Map<string, unknown>;
@@ -220,8 +171,7 @@ async function openClientSecret(
 /**
  * Builds the relying party for one connection's sign-in flow: an `Issuer` resolved
  * through discovery from the connection's own `issuer`, sharing the isolate's memos
- * with every other login against the same provider, and a `subject` hook reading
- * the connection's own configured claim rather than assuming `sub`.
+ * with every other login against the same provider, and a `subject` hook reading t
  */
 function buildRelyingParty(
 	connection: ConnectionRow,
@@ -256,7 +206,6 @@ export function mappingsToApply(
  * The response's own email and whether it asserted that address verified, read
  * directly off the ID token's claims rather than through the connection's
  * configurable mappings — those only ever populate profile and attribute columns,
- * never an identifier.
  */
 function responseEmailFromClaims(claims: RelyingParty.Grant["claims"]): {
 	email: string | null;
@@ -272,7 +221,6 @@ function responseEmailFromClaims(claims: RelyingParty.Grant["claims"]): {
  * The one `email`-kind identifier a folded address matches in this tenant, or
  * `null` for no match, more than one, or an address that fails to fold — a folded
  * address is unique to at most one subject by construction, so more than one match
- * here would mean that invariant had already broken.
  */
 async function findSoleMatchingEmailIdentifier(
 	db: Database,
@@ -310,17 +258,7 @@ export function applyMappings(
 /**
  * Writes or refreshes the identity linking one connection's provider subject to a
  * platform subject. Only the refresh token crosses this boundary as the raw string
- * a later redemption would present: `RelyingParty`'s own `Grant` hands back the
- * access token already decoded into claims rather than the wire string a bearer
- * call needs, so this pass has nothing genuine to seal there yet and leaves that
- * column `null` until a later pass has one to write.
- *
- * A row this call creates defaults to `linked_by: "jit"` and no provider address,
- * still the same unconditional creation it always was for a caller with nothing
- * else to report. A caller that already ran the account-linking decision passes
- * `linkedBy` and the provider's address explicitly instead. Every call stamps
- * `last_sign_in_at`, on a fresh row and on a refreshed one alike, since a provider
- * identity resolving to a session either way is itself a sign-in through it.
+ * a later redemption would present: `RelyingParty`'s own `Grant` hands back the a
  */
 export async function upsertConnectionIdentity(
 	db: Database,
@@ -422,11 +360,7 @@ export interface BeginConnectionSignInInput {
 	prompt?: string;
 	/**
 	 * The tenant's own platform-subdomain origin, the one host a provider's console
-	 * was ever told about. Named apart from `hostname`, which is wherever the
-	 * sign-in page actually served from and where the flow hands back to —
-	 * `saveConnection` takes the same `callbackOrigin` for the identical reason:
-	 * this object's own recorded issuer can drift to a custom domain, so only the
-	 * caller that already knows the platform subdomain can supply it.
+	 * was ever told about.
 	 */
 	callbackOrigin: string;
 }
@@ -446,19 +380,14 @@ let BeginConnectionSignInSchema = s.object({
 });
 
 /**
- * Starts a sign-in against a connection's provider: builds the relying party,
- * asks it for the authorization redirect, and records the transaction it wrote —
- * the `state`, the nonce and the PKCE verifier `RelyingParty` mints for itself —
- * in `connection_transactions`, alongside the hostname and pending authorization
- * request this login answers back to once its callback lands.
+ * Starts a sign-in against a connection's provider: builds the relying party, asks
+ * it for the authorization redirect, and records the transaction it wrote — the
+ * `state`, the nonce and the PKCE verifier `RelyingParty` mints for itself — in
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The connection to sign in against, the pending authorization
- * request and hostname the callback answers back to, and any additional scopes
- * or `prompt` this login asks for beyond the connection's own configured scopes.
- * @returns The provider's authorization URL to redirect the browser to, or that
- * no such enabled connection exists, or that its kind has no sign-in flow yet.
+ * @param input - The connection to sign in against, the pending authorization request and hostname the callback answers back to, and any additional scopes or `prompt` this login asks for beyond the connection's own configured scopes.
+ * @returns The provider's authorization URL to redirect the browser to, or that no such enabled connection exists, or that its kind has no sign-in flow yet.
  */
 export async function beginConnectionSignIn(
 	db: Database,
@@ -538,30 +467,13 @@ let CompleteConnectionSignInSchema = s.object({
  * Spends a connection's callback: resolves the transaction its `state` names,
  * exchanges the code, verifies the ID token, maps the resulting claims through the
  * connection's saved mappings, resolves the platform subject they belong to — the
- * same provider subject resolving to the same platform subject on a returning
- * sign-in — seals the provider's refresh token against it, opens a session, and
- * mints the handoff ticket that carries the browser back to wherever the flow
- * actually started.
- *
- * Account linking runs here for a provider identity this tenant has never seen:
- * when the response names an address that already belongs to exactly one existing
- * subject, the automatic linking rule decides whether to sign the caller in as
- * that subject with nothing further proved, or to answer `link_required` with a
- * ticket for a credential to complete the link with instead. An address matching
- * nobody at all, or a response naming none, is not a linking decision, and
- * `on_unknown_subject` runs exactly as it always has for it.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The connection the callback answers, the callback URL exactly as
- * the browser reached it, and the request's `User-Agent` for the session it opens.
- * @param metering - The daily active user meter to record this sign-in against,
- * when the caller has one; omitted, no meter is touched and no sign-in is ever
- * refused for it.
- * @param sessionPolicy - The tenant's own effective session policy the opened
- * session is bound by; omitted, the platform defaults.
- * @returns The resolved subject, the hostname the flow started on, and the
- * handoff ticket to redirect there with, or which check refused the callback.
+ * @param input - The connection the callback answers, the callback URL exactly as the browser reached it, and the request's `User-Agent` for the session it opens.
+ * @param metering - The daily active user meter to record this sign-in against, when the caller has one; omitted, no meter is touched and no sign-in is ever refused for it.
+ * @param sessionPolicy - The tenant's own effective session policy the opened session is bound by; omitted, the platform defaults.
+ * @returns The resolved subject, the hostname the flow started on, and the handoff ticket to redirect there with, or which check refused the callback.
  */
 export async function completeConnectionSignIn(
 	db: Database,
@@ -585,9 +497,6 @@ export async function completeConnectionSignIn(
 	});
 	if (!transactionRow) return { ok: false, reason: "invalid-transaction" };
 
-	// Consumed the moment it is found, before its expiry is even checked, so a
-	// replayed callback always finds nothing to spend — the same rule a password
-	// reset ticket answers a second attempt with.
 	await db.delete(connectionTransactions, { id: transactionRow.id });
 	if (transactionRow.expires_at <= Date.now()) return { ok: false, reason: "invalid-transaction" };
 
@@ -818,14 +727,10 @@ let ResumeConnectionSignInSchema = s.object({
  * Spends a completed sign-in's handoff ticket on the hostname it names, so the
  * session {@link completeConnectionSignIn} already opened is handed to whichever
  * host the flow actually started on, and continues the pending authorization
- * request that flow was answering.
  *
  * @param db - The tenant's database.
- * @param input - The ticket as the redirect carried it, the hostname the resume
- * request landed on, and the request's `User-Agent`.
- * @returns The subject, session and pending authorization request the ticket
- * named, for the caller to write the session cookie and resume with, or that the
- * ticket is unknown, already spent, expired, or named a different hostname.
+ * @param input - The ticket as the redirect carried it, the hostname the resume request landed on, and the request's `User-Agent`.
+ * @returns The subject, session and pending authorization request the ticket named, for the caller to write the session cookie and resume with, or that the ticket is unknown, already spent, expired, or named a different hostname.
  */
 export async function resumeConnectionSignIn(
 	db: Database,
@@ -841,9 +746,6 @@ export async function resumeConnectionSignIn(
 	});
 	if (!row) return { ok: false, reason: "invalid-ticket" };
 
-	// Spent by the first attempt regardless of what it turns out to answer, the
-	// same rule a password reset ticket applies to its own row: a replay always
-	// finds nothing left to spend.
 	await db.delete(connectionHandoffs, { id: row.id });
 
 	if (row.expires_at <= Date.now()) return { ok: false, reason: "invalid-ticket" };
@@ -880,24 +782,12 @@ export type UnlinkIdentityResult =
 
 /**
  * Removes a subject's identity at one connection, refusing to take its last
- * remaining way to sign in. An administrator's unlink also revokes every live
- * session carrying that connection kind's method family in its `amr`, since an
- * identity removed administratively should stop being a way in; a subject
- * unlinking their own identity leaves its own sessions standing.
- *
- * An OIDC identity's stored refresh token is surrendered at the provider's own
- * revocation endpoint before the row is dropped, best-effort: a provider that
- * publishes no revocation endpoint, refuses the request, or cannot be reached
- * never blocks the local unlink, since this tenant's own directory row is the
- * source of truth for whether the identity is linked. A SAML connection, and
- * an OIDC identity that never had a refresh token to seal, have nothing to
- * revoke and skip the attempt entirely.
+ * remaining way to sign in.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
  * @param input - The subject, the connection's slug, and who is asking.
- * @returns Success, or that no such identity exists, or that it is the
- * subject's last remaining credential.
+ * @returns Success, or that no such identity exists, or that it is the subject's last remaining credential.
  */
 export async function unlinkIdentity(
 	db: Database,
@@ -965,10 +855,6 @@ export async function unlinkIdentity(
 				},
 			);
 
-			// One row for the whole call rather than one per session, the same
-			// reasoning `revokeSubjectSessions` already follows for its own bulk
-			// revoke: the fact worth recording is the subject's sessions being
-			// ended by this unlink, not each row that happened to carry it.
 			await writeAuditEvent(db, {
 				action: "session.revoked",
 				actor: input.actor,
@@ -1004,18 +890,13 @@ export type LinkIdentityResult =
 	| { ok: false; reason: "already-linked" };
 
 /**
- * Spends a confirmed-path ticket once the named subject has presented a
- * credential for it, writing the identity it names. Refuses a ticket
- * presented by a subject other than the one it names, without revealing which
- * subject that was, and refuses a provider identity somebody else already
- * linked between the ticket's mint and this spend.
+ * Spends a confirmed-path ticket once the named subject has presented a credential
+ * for it, writing the identity it names.
  *
  * @param db - The tenant's database.
  * @param sealKey - The tenant object's own AES-GCM key.
- * @param input - The subject completing the link, the ticket they presented a
- * credential for, and who is asking.
- * @returns Success, or that the ticket does not work, or that the provider
- * identity it named was linked to somebody else in the meantime.
+ * @param input - The subject completing the link, the ticket they presented a credential for, and who is asking.
+ * @returns Success, or that the ticket does not work, or that the provider identity it named was linked to somebody else in the meantime.
  */
 export async function linkIdentity(
 	db: Database,
@@ -1082,19 +963,12 @@ export type AdoptIdentityAddressResult =
 	| { ok: false; reason: "rate-limited"; retryAfterSeconds: number };
 
 /**
- * Adds a linked identity's own provider address as the subject's own
- * identifier, subject to the same uniqueness every address claim answers to.
- * The provider already proved control of the address when it asserted it
- * verified, so an address the identity itself carries verified is verified
- * again here in the same call rather than sent through a second, redundant
- * verification email.
+ * Adds a linked identity's own provider address as the subject's own identifier,
+ * subject to the same uniqueness every address claim answers to.
  *
  * @param db - The tenant's database.
- * @param input - The subject, the connection whose identity names the address
- * to adopt, and who is asking.
- * @returns The address adopted and its verified state — with a ticket to
- * deliver when the provider had not itself proved it — or which rule refused
- * the adoption.
+ * @param input - The subject, the connection whose identity names the address to adopt, and who is asking.
+ * @returns The address adopted and its verified state — with a ticket to deliver when the provider had not itself proved it — or which rule refused the adoption.
  */
 export async function adoptIdentityAddress(
 	db: Database,
@@ -1141,11 +1015,8 @@ export async function adoptIdentityAddress(
 }
 
 /**
- * A subject's linked identities as an account screen renders them, each
- * joined to its own connection's slug so no further lookup is needed. A
- * caller passes this into `subjects.ts`'s own `describeSubject` rather than
- * that module reading this one itself, the same pattern `totp.ts`'s own
- * `describeSecondFactor` already follows for the identical layering problem.
+ * A subject's linked identities as an account screen renders them, each joined to
+ * its own connection's slug so no further lookup is needed.
  *
  * @param db - The tenant's database.
  * @param subjectId - The subject to describe.
@@ -1191,8 +1062,7 @@ export interface SweepExpiredConnectionTransactionsResult {
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a
- * caller sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredConnectionTransactions(
 	db: Database,
@@ -1232,13 +1102,11 @@ export interface SweepExpiredConnectionHandoffsResult {
 /**
  * Deletes handoff tickets past their thirty-second window, in one bounded batch,
  * for the scheduled handler driving retention — almost always tickets a browser
- * never came back to spend, since a real sign-in redeems one in a fraction of
- * that time.
+ * never came back to spend, since a real sign-in redeems one in a fraction of that
  *
  * @param db - The tenant's database.
  * @param input - The clock to sweep against, and how many rows one call may remove.
- * @returns How many rows this call deleted, and whether the batch was full — a
- * caller sees `more: true` and runs the sweep again.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredConnectionHandoffs(
 	db: Database,

@@ -1,9 +1,7 @@
 /**
- * The consecutive-failure backoff shared by every credential surface that
- * carries a `failed_attempts`/`retry_after`/`last_failure_at` triple on its
- * own row: a password's newest row and a subject's TOTP factor both grow the
- * same counter, earn the same doubling delay once it crosses the tenant's
- * threshold, and decay the same way after a day of quiet.
+ * The consecutive-failure backoff shared by every credential surface that carries
+ * a `failed_attempts`/`retry_after`/`last_failure_at` triple on its own row: a
+ * password's newest row and a subject's TOTP factor both grow the same counter,
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,10 +28,9 @@ export interface BackoffState {
 }
 
 /**
- * What a wrong attempt writes onto a credential row: the counter climbed by
- * one, or restarted at one when the previous failure is more than a day old,
- * and the backoff that count now earns once it reaches the tenant's own
- * threshold.
+ * What a wrong attempt writes onto a credential row: the counter climbed by one,
+ * or restarted at one when the previous failure is more than a day old, and the
+ * backoff that count now earns once it reaches the tenant's own threshold.
  */
 export function nextFailureState(
 	current: BackoffState,

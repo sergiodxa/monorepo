@@ -2,8 +2,6 @@
  * Gates a management API route on the resolved caller's own request budget,
  * reusing the same `MANAGEMENT_RATE_LIMITER` binding `scim-gate.ts` already wires
  * up, keyed on the caller `managementAuth` already resolved — the management
- * client id, or the member id — rather than the address it happens to call from.
- * Mounted after `managementAuth`, whose caller this middleware reads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -90,8 +88,6 @@ export function managementRateLimit(
 		let key = `mgmt:${bucket}:${caller.actor.type}:${caller.actor.id}`;
 		let decision = await adapter.consume(key);
 
-		// A limiter that cannot answer lets the request through rather than failing
-		// closed, the same choice `ServiceClient`'s own budget spend makes.
 		if (isFailure(decision)) return next();
 
 		if (!decision.data.allowed) {

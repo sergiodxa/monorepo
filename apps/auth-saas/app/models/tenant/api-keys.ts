@@ -1,16 +1,6 @@
 /**
  * API keys: the `api_keys` table and the tiny `api_key_settings` row that holds a
- * tenant's own key prefix, and the operations over them. An API key is a long-lived
- * opaque credential an administrative operation mints for one of a tenant's own end
- * users, so that person can script against the tenant's API without driving a browser
- * flow, and it is verified by a row lookup and a constant-time digest compare on every
- * call rather than a signature check.
- *
- * A presented key carries the id of its own row, so `authenticateApiKey` finds the row
- * rather than searching for it, and the secret half is 256 bits no search can walk, so
- * storage keeps a SHA-256 digest compared in constant time. The verification facts a
- * warm caller already resolved live in a cache this module reads and writes but never
- * owns the lifetime of — that belongs to whichever object instance hands one in.
+ * tenant's own key prefix, and the operations over them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -70,10 +60,7 @@ const PREFIX_SHAPE = /^[a-z]{2,12}$/;
 
 /**
  * A presented key's whole shape: a prefix, a TypeID suffix locating the row, and a
- * secret — in that order, joined by `_`. The suffix's length is fixed at 26
- * characters, over the same Crockford Base32 alphabet a TypeID always encodes to,
- * which is what lets this pattern find the boundary between the id and the secret
- * even though the secret's own base64url alphabet can itself contain `_`.
+ * secret — in that order, joined by `_`.
  */
 const PRESENTED_KEY_SHAPE = /^([a-z]{2,12})_([0-9abcdefghjkmnpqrstvwxyz]{26})_(.+)$/;
 
@@ -149,7 +136,6 @@ function toApiKeyRecord(row: ApiKeyRow): ApiKeyRecord {
  * What a warm object instance answers `authenticateApiKey` with, with no storage
  * read: the facts a presented key's secret and clocks are checked against, plus
  * `lastUsedAt`, so the once-a-minute stamp throttle reads the same warm state
- * rather than paying a read of its own.
  */
 export interface ApiKeyVerificationFacts {
 	subjectId: string;
@@ -225,8 +211,7 @@ let SetApiKeyPrefixSchema = s.object({ prefix: s.string() });
 /**
  * Sets this tenant's own key prefix, once. A call naming the prefix already in
  * force is a no-op success, so a retried request never turns into a refusal; a
- * call naming a different one is refused outright, since every key already
- * minted carries the prefix chosen when it was.
+ * call naming a different one is refused outright, since every key already minted
  *
  * @param db - The tenant's database.
  * @param input - The prefix to set, and who is making the call.
@@ -288,15 +273,12 @@ let CreateApiKeySchema = s.object({
 
 /**
  * Mints an API key for one of this tenant's own end users, narrowing rather than
- * creating an authorization: every requested scope must already be one the
- * issuing subject holds at the tenant scope. Refuses outright until this
- * tenant's own key prefix has been set once.
+ * creating an authorization: every requested scope must already be one the issuing
+ * subject holds at the tenant scope.
  *
  * @param db - The tenant's database.
- * @param input - The subject the key acts as, its name, scopes and optional
- * expiry, and who is making the call.
- * @returns The new record and the one-time key value — never stored anywhere
- * else — or which rule refused the call.
+ * @param input - The subject the key acts as, its name, scopes and optional expiry, and who is making the call.
+ * @returns The new record and the one-time key value — never stored anywhere else — or which rule refused the call.
  */
 export async function createApiKey(
 	db: Database,
@@ -358,9 +340,7 @@ export interface AuthenticateApiKeySuccess {
 /**
  * Cross-cutting metering a caller opts an authentication call into: the tenant
  * object's own instance-local cache of today's subjects, the cap currently
- * enforced, and whether that cap refuses a genuinely new subject rather than
- * only reporting it — the exact shape `openSession`'s own metering carries.
- * Omitted entirely, this call meters nothing.
+ * enforced, and whether that cap refuses a genuinely new subject rather than only
  */
 export interface AuthenticateApiKeyMetering {
 	cache: DauCache;
@@ -385,18 +365,13 @@ let AuthenticateApiKeySchema = s.object({ presented: s.string(), now: s.optional
 
 /**
  * Verifies a presented API key value: parses its shape, resolves the row a warm
- * cache already holds or reads once and remembers, compares the secret's digest
- * in constant time, enforces its expiry and revocation and the subject's own
- * status, and stamps `last_used_at` at most once a minute.
+ * cache already holds or reads once and remembers, compares the secret's digest in
+ * constant time, enforces its expiry and revocation and the subject's own status,
  *
  * @param db - The tenant's database.
  * @param input - The presented value, and the clock to check its expiry against.
- * @param cache - The calling object instance's own verification cache; read on a
- * hit and populated on a miss, so a warm object answers with no storage read.
- * @param metering - The daily active user meter to record this authentication
- * against, when the caller has one; omitted, no meter is touched and no
- * authentication is ever refused for it — the overload below narrows such a call's
- * return type accordingly, exactly as `openSession`'s does.
+ * @param cache - The calling object instance's own verification cache; read on a hit and populated on a miss, so a warm object answers with no storage read.
+ * @param metering - The daily active user meter to record this authentication against, when the caller has one; omitted, no meter is touched and no authentication is ever refused for it — the overload below narrows such a call's return type accordingly, exactly as `openSession`'s does.
  * @returns The resolved subject and scopes, or which check refused it.
  */
 export function authenticateApiKey(
@@ -454,8 +429,6 @@ export async function authenticateApiKey(
 	if (facts.revokedAt !== null) return { ok: false, reason: "revoked" };
 	if (facts.expiresAt <= now) return { ok: false, reason: "expired" };
 
-	// A subject that no longer resolves leaves nothing for the key to act as, the
-	// same as one explicitly blocked.
 	let subject = await db.find(subjects, { id: facts.subjectId });
 	if (!subject || subject.status === "blocked") return { ok: false, reason: "subject-blocked" };
 
@@ -510,18 +483,14 @@ export type RotateApiKeyResult =
 let RotateApiKeySchema = s.object({ keyId: s.string(), overlap: s.optional(s.number()) });
 
 /**
- * Mints a successor key — a new row, new id, new secret, carrying the
- * incumbent's own subject and scopes forward — and opens the incumbent's
- * overlap window in the same call, updating the instance's own verification
- * cache so the incumbent's new expiry is what a warm object checks next.
+ * Mints a successor key — a new row, new id, new secret, carrying the incumbent's
+ * own subject and scopes forward — and opens the incumbent's overlap window in the
+ * same call, updating the instance's own verification cache so the incumbent's ne
  *
  * @param db - The tenant's database.
- * @param input - The key to rotate, how many days the incumbent's window lasts,
- * and who is making the call.
- * @param cache - The calling object instance's own verification cache, updated
- * for the incumbent's new expiry in the same call.
- * @returns The new record and its one-time value, plus the incumbent's updated
- * expiry, or which rule refused the call.
+ * @param input - The key to rotate, how many days the incumbent's window lasts, and who is making the call.
+ * @param cache - The calling object instance's own verification cache, updated for the incumbent's new expiry in the same call.
+ * @returns The new record and its one-time value, plus the incumbent's updated expiry, or which rule refused the call.
  */
 export async function rotateApiKey(
 	db: Database,
@@ -598,8 +567,7 @@ let RevokeApiKeySchema = s.object({ keyId: s.string(), reason: s.string() });
  *
  * @param db - The tenant's database.
  * @param input - The key to revoke, why, and who is making the call.
- * @param cache - The calling object instance's own verification cache, evicted
- * of this key in the same call.
+ * @param cache - The calling object instance's own verification cache, evicted of this key in the same call.
  * @returns Success, or that no such key exists.
  */
 export async function revokeApiKey(
@@ -672,8 +640,7 @@ let ListApiKeysSchema = s.object({
  *
  * @param db - The tenant's database.
  * @param input - The subject whose keys to list, and where to page from.
- * @returns A page of key summaries and the cursors around it, or that the given
- * cursor no longer matches this ordering.
+ * @returns A page of key summaries and the cursors around it, or that the given cursor no longer matches this ordering.
  */
 export async function listApiKeys(
 	db: Database,
@@ -750,10 +717,8 @@ let SweepExpiredApiKeysSchema = s.object({
  * handler driving retention.
  *
  * @param db - The tenant's database.
- * @param input - The clock to sweep against, and how many rows one call may
- * remove.
- * @returns How many rows this call deleted, and whether the batch was full — a
- * caller sees `more: true` and runs the sweep again.
+ * @param input - The clock to sweep against, and how many rows one call may remove.
+ * @returns How many rows this call deleted, and whether the batch was full — a caller sees `more: true` and runs the sweep again.
  */
 export async function sweepExpiredApiKeys(
 	db: Database,

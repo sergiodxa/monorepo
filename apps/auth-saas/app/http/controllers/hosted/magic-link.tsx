@@ -1,20 +1,7 @@
 /**
  * `GET/POST /u/magic-link` — the request screen, whose `POST` mints the
- * `__Host-magic-link` nonce cookie, begins the attempt, sends whichever
- * message the outcome earns, and renders the same "check your email"
- * confirmation regardless of which of the three outcomes actually happened,
- * since the page, the status and the structure are the one thing this path
- * may never let vary by account existence. `GET/POST /u/magic-link/complete`
- * — the mailed link's own landing page, whose `GET` renders a form holding the
- * token in a hidden field rather than consuming it, and whose `POST` spends
- * either that token or a code typed back on the confirmation screen.
- *
- * Unlike `sign-in.tsx`'s own flow state, the interaction id and `return_to`
- * this screen resumes with are never read back off a later request's own
- * query: `beginMagicLinkSignIn` stores them against the attempt the moment it
- * mints one, and `completeMagicLinkSignIn` hands them back on success, so
- * nothing about where a completed sign-in resumes can be steered by a link
- * rewritten between the mailbox and the person who reads it.
+ * `__Host-magic-link` nonce cookie, begins the attempt, sends whichever message
+ * the outcome earns, and renders the same "check your email" confirmation
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -167,8 +154,7 @@ function renderConfirmation(
  * its own gave instead.
  *
  * @param ctx - The request context (provides `render`, `locale` and `intl`).
- * @returns The rendered magic-link request screen, or the `/u/error` page when
- * neither was given.
+ * @returns The rendered magic-link request screen, or the `/u/error` page when neither was given.
  * @example
  * router.map(routes.hostedMagicLinkShow, magicLinkShow);
  */
@@ -185,14 +171,9 @@ export const magicLinkShow = createAction(routes.hostedMagicLinkShow, async (ctx
  * Begins the attempt, mints and sets the browser nonce cookie, sends whichever
  * message the outcome earns, and renders the shared confirmation — the request,
  * the response's status and its structure never vary by whether the address
- * resolved to a subject, only what (if anything) lands in the mailbox does. The
- * interaction id or `return_to` this request names is stored against the
- * attempt itself, so a later completion resumes from there rather than from
- * anything its own request carries.
  *
  * @param ctx - The request context (provides `formData`, `render` and `tenantStub`).
- * @returns The confirmation screen, identical across every outcome, or the
- * request form re-rendered with a validation or Turnstile error.
+ * @returns The confirmation screen, identical across every outcome, or the request form re-rendered with a validation or Turnstile error.
  * @example
  * router.map(routes.hostedMagicLinkSubmit, magicLinkSubmit);
  */
@@ -263,14 +244,12 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, {
 });
 
 /**
- * The mailed link's own landing page: renders a form holding the token in a
- * hidden field, consuming nothing on this `GET`. The tenant's security policy
- * sends `Referrer-Policy: no-referrer`, keeping the token in this URL out of
- * `Referer`.
+ * The mailed link's own landing page: renders a form holding the token in a hidden
+ * field, consuming nothing on this `GET`. The tenant's security policy sends
+ * `Referrer-Policy: no-referrer`, keeping the token in this URL out of `Referer`.
  *
  * @param ctx - The request context (provides `render`, `locale` and `intl`).
- * @returns The rendered landing page, or a redirect back to the request screen
- * when this request carries no token to land on.
+ * @returns The rendered landing page, or a redirect back to the request screen when this request carries no token to land on.
  * @example
  * router.map(routes.hostedMagicLinkCompleteShow, magicLinkCompleteShow);
  */
@@ -305,15 +284,12 @@ export const magicLinkCompleteShow = createAction(
 );
 
 /**
- * Spends the token the landing page's hidden field carries, or the code typed
- * back on the confirmation screen, reading the bound browser's nonce off its
- * own cookie. On success, opens the session and resumes the interaction or
- * `return_to` the attempt itself was minted with, or sends the browser into
- * the second-factor flow first when the subject holds one.
+ * Spends the token the landing page's hidden field carries, or the code typed back
+ * on the confirmation screen, reading the bound browser's nonce off its own
+ * cookie.
  *
  * @param ctx - The request context (provides `formData`, `render`, `request` and `tenantStub`).
- * @returns The response the resumed interaction or `return_to` reaches, a
- * redirect into the second-factor flow, or this flow's own error screens.
+ * @returns The response the resumed interaction or `return_to` reaches, a redirect into the second-factor flow, or this flow's own error screens.
  * @example
  * router.map(routes.hostedMagicLinkCompleteSubmit, magicLinkCompleteSubmit);
  */

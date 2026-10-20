@@ -1,10 +1,6 @@
 /**
  * The sender identity every hosted-flow message carries: the platform's own verified
- * address, with a display name derived from the tenant sending it. `ctx.tenant` names
- * only the tenant's id, region and issuer today — no `tenants.name` from the control
- * plane reaches the Worker router — so the name is stood in for by the issuer's own
- * subdomain label, which is at least particular to the tenant rather than identical
- * across every one of them.
+ * address, with a display name derived from the tenant sending it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,13 +31,10 @@ export function parseSenderAddress(raw: string): Address {
 
 /**
  * Derives a display name from a tenant's own issuer hostname: the subdomain label a
- * default tenant is provisioned under, capitalized. Real per-tenant branding needs the
- * control plane's own tenant name and a verified sending domain, neither of which
- * crosses into this router yet, so this is a fallback rather than that name.
+ * default tenant is provisioned under, capitalized.
  *
  * @param issuer - The resolved tenant's issuer, as `ctx.tenant.issuer` carries it.
- * @returns The derived display name, or a generic fallback when the issuer carries
- * nothing to derive one from.
+ * @returns The derived display name, or a generic fallback when the issuer carries nothing to derive one from.
  */
 export function senderNameFromIssuer(issuer: string): string {
 	let hostname: string;
