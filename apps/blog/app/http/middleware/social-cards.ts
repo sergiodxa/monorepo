@@ -43,8 +43,12 @@ const LISTING_CACHE_CONTROL = "public, max-age=3600, s-maxage=3600";
  * Answers a `GET` for `<page>.png` with that page's card: the stored one, or one rendered,
  * stored after the response, and returned. A `.png` path naming no published page continues
  * to the router. The drawing code and fonts load on the first card drawn.
+ *
+ * @param fetchPage Answers a request through the router installing this middleware.
  */
-export default function socialCards(): Middleware {
+export default function socialCards(
+	fetchPage: (request: Request) => Promise<Response>,
+): Middleware {
 	return async (context, next) => {
 		let { pathname } = context.url;
 		if (context.request.method !== "GET" || !pathname.endsWith(".png")) return next();
@@ -52,7 +56,7 @@ export default function socialCards(): Middleware {
 		let env = currentEnv();
 		if (pagePath.endsWith(".png") || !env) return next();
 
-		let html = await renderPage(env, pagePath);
+		let html = await renderPage(fetchPage, pagePath);
 		let content = html === null ? null : readSocialCard(html, pagePath);
 		if (!content) return next();
 
@@ -82,15 +86,16 @@ export default function socialCards(): Middleware {
 
 /**
  * Renders the page through the blog's own router as an anonymous visitor asking for HTML,
- * or `null` when the path is not a page that answers 200. The router is imported on demand
- * because it installs this middleware too.
+ * or `null` when the path is not a page that answers 200.
  */
-async function renderPage(env: App.Env, pagePath: string): Promise<string | null> {
-	let { createWebRouter } = await import("~/app/initializers/router");
+async function renderPage(
+	fetchPage: (request: Request) => Promise<Response>,
+	pagePath: string,
+): Promise<string | null> {
 	let request = new Request(new URL(pagePath, PROFILE.canonical.origin), {
 		headers: { accept: "text/html" },
 	});
-	let response = await createWebRouter(env).fetch(request);
+	let response = await fetchPage(request);
 	if (response.status !== 200) return null;
 	if (!response.headers.get("content-type")?.includes("text/html")) return null;
 	return await response.text();

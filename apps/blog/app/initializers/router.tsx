@@ -224,7 +224,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 				nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
 			}),
 			asyncContext(),
-			socialCards(),
+			socialCards((request): Promise<Response> => router.fetch(request)),
 			database(createDatabase()),
 			models(registry, (ctx) => ({ db: ctx.db })),
 			previews(mail, {
