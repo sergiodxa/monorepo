@@ -27,22 +27,22 @@ controller, command, MCP tool or scaffold removes the blank page and names the r
 
 ### Configuration
 
-| Key          | Default | Meaning                                                                                      |
-| ------------ | ------- | -------------------------------------------------------------------------------------------- |
+| Key          | Default | Meaning                                                                                          |
+| ------------ | ------- | ------------------------------------------------------------------------------------------------ |
 | `make.specs` | `true`  | Write a pairing `.spec` for controllers, commands, MCP tools, and one feature suite per scaffold |
 
 `--spec` / `--no-spec` override the setting for one run, parallel to `--test` / `--no-test`.
 
 ### Pairing paths and stubs
 
-| Generator                         | Spec path                         | Stub(s)                                              | Capability |
-| --------------------------------- | --------------------------------- | ---------------------------------------------------- | ---------- |
-| `make controller` (web)           | `spec/<name>.spec`                | `controller.spec.stub`                               | `browser`  |
-| `make controller` (`--routes api`) | `spec/<name>.spec`               | `controller.api.spec.stub`                           | `http`     |
-| `make command`                    | `spec/commands/<name>.spec`       | `command.spec.stub`                                  | `cli`      |
-| `make mcp` (tool)                 | `spec/mcp/<name>.spec`            | `mcp.spec.stub`                                      | `mcp`      |
-| `make mcp --resource`             | none                              | (resources have no pairing `.spec`)                  | —          |
-| `scaffold`                        | `spec/<plural>.spec`              | `scaffold.spec.stub` with `{{uses}}` / `{{cases}}`   | mixed      |
+| Generator                          | Spec path                   | Stub(s)                                            | Capability |
+| ---------------------------------- | --------------------------- | -------------------------------------------------- | ---------- |
+| `make controller` (web)            | `spec/<name>.spec`          | `controller.spec.stub`                             | `browser`  |
+| `make controller` (`--routes api`) | `spec/<name>.spec`          | `controller.api.spec.stub`                         | `http`     |
+| `make command`                     | `spec/commands/<name>.spec` | `command.spec.stub`                                | `cli`      |
+| `make mcp` (tool)                  | `spec/mcp/<name>.spec`      | `mcp.spec.stub`                                    | `mcp`      |
+| `make mcp --resource`              | none                        | (resources have no pairing `.spec`)                | —          |
+| `scaffold`                         | `spec/<plural>.spec`        | `scaffold.spec.stub` with `{{uses}}` / `{{cases}}` | mixed      |
 
 Scaffold emits one suite for the whole feature. `{{uses}}` and `{{cases}}` list only the
 surfaces the run wrote (pages, `--api`, `--mcp`, `--command`).
