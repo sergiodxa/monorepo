@@ -69,7 +69,7 @@ const TEAM_DIGEST_MONITOR = s.object({
 	uptime: s.nullable(s.string()),
 });
 
-/** One yesterday flow run that still has a downloadable Performance trace (ADR-037). */
+/** One yesterday flow run that still has a downloadable Performance trace. */
 const TEAM_DIGEST_TRACE = s.object({
 	monitorName: s.string(),
 	downloadUrl: s.string(),
@@ -140,7 +140,7 @@ export default emails({
 			props: s.object({
 				...TEAM_DIGEST,
 				date: s.string(),
-				/** Yesterday's flow runs with a still-stored Performance trace (ADR-037). */
+				/** Yesterday's flow runs with a still-stored Performance trace. */
 				traces: s.array(TEAM_DIGEST_TRACE),
 			}),
 		}),

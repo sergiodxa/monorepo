@@ -493,7 +493,7 @@ export function dailyCostQuery(day: string): string {
 /**
  * SQL summing one UTC day of overflow cost resources (R2 Class A/B and storage) per team.
  * Those quantities ride a second data point tagged `blob4 = "r2"` because the core point
- * already fills Analytics Engine's twenty doubles (ADR-037).
+ * already fills Analytics Engine's twenty doubles.
  *
  * @param day - The UTC day to sum, `YYYY-MM-DD`.
  * @returns Query text for the Analytics Engine SQL API, or `null` when the card has no overflow.

@@ -1,5 +1,5 @@
 /**
- * Chrome DevTools Performance traces for flow monitor runs (ADR-037): upload to
+ * Chrome DevTools Performance traces for flow monitor runs: upload to
  * R2 after a check, download for a team member, and delete after seven days.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -20,7 +20,7 @@ import { recordCost } from "~/app/services/cost";
 import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/services/retention";
 import { flowMonitorResults, flowMonitors } from "~/database/schema";
 
-/** How long a trace object is kept in R2, matching ADR-037. */
+/** How long a trace object is kept in R2 before CleanJob deletes it. */
 export const FLOW_TRACE_RETENTION_DAYS = 7;
 
 /** Content type every stored chrome://tracing JSON is written with. */
@@ -88,7 +88,7 @@ interface ExpiredTraceRow {
 /**
  * Deletes R2 Performance traces older than {@link FLOW_TRACE_RETENTION_DAYS} and
  * nulls `trace_key` on those result rows so the download control disappears. The
- * result row itself keeps its longer history window (ADR-020).
+ * result row itself keeps its longer history window.
  *
  * @param db - Database holding `flow_monitor_results`.
  * @param storage - The R2 (or in-memory) store the keys point at.
@@ -148,7 +148,7 @@ export interface DigestFlowTrace {
 
 /**
  * Flow runs on `[since, until)` that still have an R2 Performance trace, newest
- * first. The daily digest lists these so a member knows a report is ready (ADR-037).
+ * first. The daily digest lists these so a member knows a report is ready.
  *
  * @param db - Database handle.
  * @param teamId - Team whose flows to report.

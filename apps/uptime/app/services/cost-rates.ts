@@ -60,14 +60,14 @@ export const COST_RATE_CARD = defineRateCard({
 	/** Browser Run session time a browser flow opened (ADR-027 §7). */
 	browserSecond: BROWSER_SECOND_CENTS,
 	/**
-	 * R2 Standard Class A — Put/List for flow Performance traces (ADR-037). Appended past
+	 * R2 Standard Class A — Put/List for flow Performance traces. Appended past
 	 * the nineteen resources that fill one Analytics Engine point; the ledger writes them
 	 * on a second point tagged `blob4 = "r2"` (see {@link COST_AE_CORE_COUNT}).
 	 */
 	r2ClassAOperations: centsPerUnit(R2.CLASS_A_OPERATIONS),
-	/** R2 Standard Class B — Get/Head for flow Performance-trace downloads (ADR-037). */
+	/** R2 Standard Class B — Get/Head for flow Performance-trace downloads. */
 	r2ClassBOperations: centsPerUnit(R2.CLASS_B_OPERATIONS),
-	/** R2 Standard storage for live flow Performance traces, as GB-days (ADR-037). */
+	/** R2 Standard storage for live flow Performance traces, as GB-days. */
 	r2StorageGbDay: centsPerGbDay(R2.STORAGE),
 });
 

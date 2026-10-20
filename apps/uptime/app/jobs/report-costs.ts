@@ -160,8 +160,7 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
  * Estimates each team's stored bytes as retained result rows × a mean row size, since
  * nothing reports a real per-team byte count, and apportions this job's own ledger by
  * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day. Live flow
- * Performance traces are listed from R2 so each team's GB-day is the bytes still stored
- * (ADR-037).
+ * Performance traces are listed from R2 so each team's GB-day is the bytes still stored.
  */
 async function recordStorage(ctx: CurrentJobContext): Promise<void> {
 	let result = await ctx.db.exec(

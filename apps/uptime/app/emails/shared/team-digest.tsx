@@ -310,7 +310,7 @@ export interface TeamDigestTrace {
 
 /**
  * Optional daily-digest section: yesterday's flow runs that recorded a Chrome
- * Performance trace, each with a download link (ADR-037). Renders nothing when
+ * Performance trace, each with a download link. Renders nothing when
  * the day produced no traces, so teams without browser traces see no change.
  *
  * @example <TeamDigestTraceList traces={traces} t={t} />

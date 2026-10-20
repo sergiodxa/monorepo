@@ -1,5 +1,5 @@
 /**
- * Download a flow run's Chrome Performance trace from R2 (ADR-037).
+ * Download a flow run's Chrome Performance trace from R2.
  * GET /app/:team/flows/:monitorId/results/:resultId/trace
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

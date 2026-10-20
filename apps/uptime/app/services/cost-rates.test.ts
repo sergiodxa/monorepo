@@ -61,7 +61,7 @@ describe("COST_RESOURCES", () => {
 
 	/**
 	 * Analytics Engine accepts twenty doubles. The first nineteen resources share a point
-	 * with the priced total; R2 resources past that index ride a second point (ADR-037).
+	 * with the priced total; R2 resources past that index ride a second point.
 	 */
 	test("keeps the core point inside twenty doubles and parks R2 on the overflow", () => {
 		expect(COST_AE_CORE_COUNT + 1).toBeLessThanOrEqual(20);

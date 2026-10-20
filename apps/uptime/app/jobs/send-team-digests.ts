@@ -222,7 +222,7 @@ async function digestTeam(
 	}
 
 	/**
-	 * Only the daily digest announces new traces (ADR-037): the weekly already
+	 * Only the daily digest announces new traces: the weekly already
 	 * covers seven days of monitor health, and a second mention would outlive the
 	 * seven-day R2 window for older runs.
 	 */

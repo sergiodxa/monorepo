@@ -118,7 +118,7 @@
 			"preview_bucket_name": "social-cards",
 		},
 		/**
-		 * Chrome DevTools Performance traces from browser flow monitors (ADR-037).
+		 * Chrome DevTools Performance traces from browser flow monitors.
 		 * Objects under `flow-traces/` are deleted after seven days by CleanJob; a
 		 * bucket lifecycle rule with the same window is optional belt-and-braces.
 		 */

@@ -459,7 +459,7 @@ describe("sendTeamDigests monitors", () => {
 
 	/**
 	 * A deliberate `browser.trace.stop` yesterday should surface once in the daily
-	 * digest with a download link, and not in the weekly (ADR-037).
+	 * digest with a download link, and not in the weekly.
 	 */
 	test("lists yesterday's flow Performance traces on the daily digest only", async () => {
 		let { db } = createTestDatabase();
