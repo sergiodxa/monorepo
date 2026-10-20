@@ -112,7 +112,6 @@ export default createAction(routes.api.show, async (ctx) => {
 						<UiPackageHero
 							name={entry.name}
 							description={entry.description}
-							componentCount={uiComponents.length}
 							packages={[entry.name, ...entry.peers]}
 							manager={manager}
 							markdownHref={markdownHref}
