@@ -43,6 +43,17 @@ describe(Typeset.name, () => {
 		expect(css).toContain("animation-timeline: scroll(self inline)");
 	});
 
+	test("sets long-form body copy at 18px for docs and 20px for reading", async () => {
+		let css = await typesetCss();
+
+		expect(css).toContain("--ui-typeset-size: 1.125rem");
+		expect(css).toContain("--ui-typeset-size: 1.25rem");
+		expect(css).toContain("--ui-typeset-size: 0.9375rem");
+		expect(css).not.toContain("--ui-typeset-size: 1rem");
+		expect(css).toContain("font-size: var(--ui-typeset-size, 1.125rem)");
+		expect(css).toContain("font-size: calc(var(--ui-typeset-size, 1.125rem) * 2)");
+	});
+
 	test("lets a vertical wheel over a code block chain to the page", async () => {
 		let css = await typesetCss();
 

@@ -44,6 +44,23 @@ const CONTAINER_NAME = "ui-typeset";
 /** Rhythm context {@link Typeset} falls back to when `preset` is omitted. */
 const DEFAULT_PRESET: Typeset.Preset = "docs";
 
+/**
+ * Body size each preset writes to `--ui-typeset-size`. On a 16px root, `docs`
+ * is 18px and `reading` is 20px, so long-form copy is large enough to read;
+ * `chat` is 15px for a turn taken in a denser column.
+ */
+const PRESET_BODY_SIZE: Record<Typeset.Preset, string> = {
+	docs: "1.125rem",
+	chat: "0.9375rem",
+	reading: "1.25rem",
+};
+
+/**
+ * Size body copy and headings compute from. Clearing `--ui-typeset-size`
+ * still leaves the docs body, which is the preset a host uses by default.
+ */
+const TYPESET_SIZE = `var(--ui-typeset-size, ${PRESET_BODY_SIZE.docs})`;
+
 /** CSS length each edge of a wide table's own fade tapers over. */
 const TABLE_FADE_SIZE = "2.5rem";
 
@@ -97,9 +114,9 @@ const TABLE_FADE_KEYFRAMES: Record<string, Styles> = {
  */
 export namespace Typeset {
 	/**
-	 * Rhythm context: `"docs"` is the spacious default, `"chat"` tightens the
-	 * scale for a conversational bubble's denser turn-taking, and `"reading"`
-	 * opens both further for a long-form article.
+	 * Rhythm context. `"docs"` sets the body at 18px, the size for a page meant
+	 * to be read. `"reading"` sets it at 20px for a long-form article. `"chat"`
+	 * sets it at 15px for a turn in a denser column.
 	 */
 	export type Preset = "docs" | "chat" | "reading";
 
@@ -150,21 +167,21 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 					container(CONTAINER_NAME),
 					keyframes(TABLE_FADE_KEYFRAMES_NAME, TABLE_FADE_KEYFRAMES),
 					raw({
-						fontSize: "var(--ui-typeset-size, 1rem)",
+						fontSize: TYPESET_SIZE,
 						lineHeight: "var(--ui-typeset-leading, 1.75)",
 
 						'&[data-preset="docs"]': {
-							"--ui-typeset-size": "1rem",
+							"--ui-typeset-size": PRESET_BODY_SIZE.docs,
 							"--ui-typeset-leading": "1.75",
 							"--ui-typeset-flow": "1.25em",
 						},
 						'&[data-preset="chat"]': {
-							"--ui-typeset-size": "0.9375rem",
+							"--ui-typeset-size": PRESET_BODY_SIZE.chat,
 							"--ui-typeset-leading": "1.5",
 							"--ui-typeset-flow": "0.75em",
 						},
 						'&[data-preset="reading"]': {
-							"--ui-typeset-size": "1.125rem",
+							"--ui-typeset-size": PRESET_BODY_SIZE.reading,
 							"--ui-typeset-leading": "1.8",
 							"--ui-typeset-flow": "1.5em",
 						},
@@ -177,22 +194,22 @@ export function Typeset(handle: Handle<Typeset.Props>) {
 						},
 
 						"& :where(h1)": {
-							fontSize: "calc(var(--ui-typeset-size, 1rem) * 2)",
+							fontSize: `calc(${TYPESET_SIZE} * 2)`,
 						},
 						"& :where(h2)": {
-							fontSize: "calc(var(--ui-typeset-size, 1rem) * 1.5)",
+							fontSize: `calc(${TYPESET_SIZE} * 1.5)`,
 						},
 						"& :where(h3)": {
-							fontSize: "calc(var(--ui-typeset-size, 1rem) * 1.25)",
+							fontSize: `calc(${TYPESET_SIZE} * 1.25)`,
 						},
 						"& :where(h4)": {
-							fontSize: "calc(var(--ui-typeset-size, 1rem) * 1.125)",
+							fontSize: `calc(${TYPESET_SIZE} * 1.125)`,
 						},
 						"& :where(h5)": {
-							fontSize: "var(--ui-typeset-size, 1rem)",
+							fontSize: TYPESET_SIZE,
 						},
 						"& :where(h6)": {
-							fontSize: "calc(var(--ui-typeset-size, 1rem) * 0.875)",
+							fontSize: `calc(${TYPESET_SIZE} * 0.875)`,
 						},
 
 						"& :where(ul)": {
