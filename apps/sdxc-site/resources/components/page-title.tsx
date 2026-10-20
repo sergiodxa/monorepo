@@ -65,7 +65,7 @@ export default function PageTitle(handle: Handle<PageTitle.Props>) {
 				</h1>
 
 				{children ? (
-					<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{children}</p>
+					<p mix={[m(0), text("xl"), leading("relaxed"), fg("neutral")]}>{children}</p>
 				) : null}
 			</div>
 		);
