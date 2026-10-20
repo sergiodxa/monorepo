@@ -20,11 +20,6 @@ type InsertRow<sourceTable extends AnyTable> = Partial<TableRow<sourceTable>>;
  * How long a post from a feed stays in the reader's timeline, measured from when it was
  * published. The `CHECK` constraint in `0006-shared-feed-objects.sql` repeats these
  * names, so the database refuses anything a form somehow lets through.
- *
- * It is a per-subscription answer because two people following one newspaper disagree
- * about it all the time — one wants the day's headlines gone by evening, the other keeps
- * them for the weekend — and neither is wrong, so neither answer belongs in the object
- * they share.
  */
 export const VELOCITIES = ["breaking", "news", "article", "essay", "evergreen"] as const;
 
@@ -33,11 +28,8 @@ export type Velocity = (typeof VELOCITIES)[number];
 
 /**
  * How long each of them holds a post, and `null` for the one that never lets go.
- *
  * Measured from when the world saw the post rather than from when this system found it,
  * which is the opposite of the rule the feed side prunes by and for the opposite reason:
- * a headline published four hours ago is stale whether it was discovered four hours ago
- * or four minutes ago.
  */
 export const VELOCITY_WINDOW_MS: Record<Velocity, number | null> = {
 	breaking: 3 * 60 * 60 * 1000,
@@ -56,17 +48,8 @@ export const DEFAULT_VELOCITY: Velocity = "evergreen";
 
 /**
  * Posts one reader's object keeps across every feed they follow, by the tier they are on.
- *
- * A budget rather than a per-feed number, because a per-feed number is wrong at both
- * ends: a reader following one feed would be held to a cap sized for somebody following
- * two hundred, and a reader following two hundred would be allowed two hundred times more
- * than one of them. The object is what has a limit, so the object is what gets the figure,
- * and a feed's share of it is this divided by how many feeds the reader follows.
- *
- * Each figure is a count of rows priced at two kilobytes apiece, against the ten
- * gigabytes an object gets: half a gigabyte, three, and six. They sit that far inside the
- * object because a write to a full one fails and takes the sweep that would make room with
- * it, where a budget reached is back-pressure the interface explains.
+ * A budget rather than a per-feed number, because a per-feed number is wrong at both ends:
+ * a reader following one feed would be held to a cap sized for somebody following two hun
  */
 export const TIER_BUDGETS: Record<Tier, number> = {
 	free: 250_000,
@@ -75,12 +58,9 @@ export const TIER_BUDGETS: Record<Tier, number> = {
 };
 
 /**
- * Posts a reader may keep saved, by the tier they are on.
- *
- * The numbers are about what a person can meaningfully keep rather than about storage —
- * the largest of them is fifty megabytes against a budget measured in gigabytes. Reaching
- * one refuses the next save rather than evicting the oldest, because evicting would delete
- * the one thing in this design a reader explicitly asked to keep.
+ * Posts a reader may keep saved, by the tier they are on. The numbers are about what a
+ * person can meaningfully keep rather than about storage — the largest of them is fifty
+ * megabytes against a budget measured in gigabytes.
  */
 export const TIER_SAVED_LIMITS: Record<Tier, number> = {
 	free: 1_000,
@@ -89,12 +69,8 @@ export const TIER_SAVED_LIMITS: Record<Tier, number> = {
 };
 
 /**
- * Labels one reader may have.
- *
- * A hundred keeps the picker the same kind of thing as the rail: one unpaged read, drawn
- * whole, scannable without a search box of its own. Somebody with four hundred labels has
- * a second junk drawer with a worse interface, and the honest moment to say so is at the
- * hundred-and-first rather than when they are looking for something.
+ * Labels one reader may have. A hundred keeps the picker the same kind of thing as the
+ * rail: one unpaged read, drawn whole, scannable without a search box of its own.
  */
 export const TAG_LIMIT = 100;
 
@@ -123,10 +99,6 @@ export const PIN_LIMIT = 10;
  * Below what measured rate a feed is quiet: one post a week, against the thirty-day window
  * the measurement is taken over, so a monthly newsletter at 0.03 and a three-a-month blog
  * at 0.1 are in while a twice-weekly feed is out.
- *
- * It is the same judgement as the rate above which a feed publishes enough to be worth
- * offering a velocity for, read from the other end: that one decides when a feed is busy,
- * this one when it publishes so little that it disappears.
  */
 export const QUIET_POSTS_PER_DAY = 1 / 7;
 
@@ -155,9 +127,6 @@ export const PUSH_FAILURE_LIMIT = 10;
  * What a rule may look at, which is what crosses the RPC boundary from the feed's own
  * object. The `CHECK` constraint in `0011-filter-rules.sql` repeats these names, so the
  * database refuses anything a form somehow lets through.
- *
- * `summary` is the one with a surprise in it: it is capped at what the timeline renders,
- * so a rule matching on it matches the line under the title rather than the article.
  */
 export const RULE_FIELDS = ["title", "url", "summary", "author"] as const;
 
@@ -167,11 +136,6 @@ export type RuleField = (typeof RULE_FIELDS)[number];
 /**
  * What a rule does with a post it matched. `drop` refuses the item before it is written,
  * `mark_read` writes it already read, and `flag` writes it with a mark the timeline shows.
- *
- * Saving is absent: a save is exempt from velocity, from the read-age reclamation and from
- * the budget, against a cap that refuses rather than evicts, so a rule that saved would
- * spend a reader's own allowance on machine picks. Flagging carries no exemption, which is
- * what makes it the positive action a rule may take.
  */
 export const RULE_ACTIONS = ["drop", "mark_read", "flag"] as const;
 
@@ -219,9 +183,6 @@ export const RULE_PREVIEW_POSTS = 200;
  * The schemes a document may be painted in. The `CHECK` constraint in
  * `0015-presentation.sql` repeats these names, so the database refuses anything a form
  * somehow lets through.
- *
- * They are the vocabulary the theme layer already reads off an ancestor class, so the
- * stored answer reaches `<html>` untranslated.
  */
 export const THEMES = ["system", "light", "dark"] as const;
 
@@ -246,10 +207,6 @@ export const DEFAULT_READING_FACE: ReadingFace = "sans";
 /**
  * How one subscription's posts are drawn. `text` is the dense list every surface renders,
  * and `image` is the picture-first reading a feed of drawings wants.
- *
- * A mode rather than a boolean, so a third rendering is a value rather than a second
- * column, and per subscription for the reason {@link VELOCITIES} is: two people following
- * one comic disagree about whether they want the picture or the line, and neither is wrong.
  */
 export const PRESENTATIONS = ["text", "image"] as const;
 
@@ -359,7 +316,6 @@ export const feeds = table({
 		 * Whether this reader wants to hear about this publisher. Off at every level and
 		 * through every change of state: following, importing and changing plan each leave it
 		 * where it was, because a reader who upgrades bought a faster check and not an alarm
-		 * clock.
 		 */
 		notify: c.boolean().default(false),
 		/** How this subscription's posts are drawn, which is the reader's own answer for it. */
@@ -374,13 +330,9 @@ export const feeds = table({
 });
 
 /**
- * One browser the reader asked to be reached on.
- *
- * `p256dh` and `auth` are the client's public key and auth secret exactly as the Push API
- * hands them over, and are what the payload is encrypted under. `user_agent` is what lets
- * the settings page name a device instead of showing a 200-character URL, and `locale` is
- * the language that browser was reading the app in, which is the language its notification
- * is written in.
+ * One browser the reader asked to be reached on. `p256dh` and `auth` are the client's
+ * public key and auth secret exactly as the Push API hands them over, and are what the
+ * payload is encrypted under.
  */
 export const pushSubscriptions = table({
 	name: "push_subscriptions",
@@ -438,8 +390,6 @@ export const feedItems = table({
 		/**
 		 * The folder of the subscription this post belongs to, copied in when the post is
 		 * written, which is what makes a folder's timeline the seek every other timeline is.
-		 * It is rewritten whenever the subscription moves, since it is the reader's own
-		 * answer rather than the publisher's and it orders nothing.
 		 */
 		folder_id: c.text().nullable(),
 		/**
@@ -453,12 +403,9 @@ export const feedItems = table({
 });
 
 /**
- * Named groups of subscriptions, each with a stream of its own.
- *
- * Flat: no parent, no position, no depth. The list is short and it is drawn in the order
- * the names read, the way the rail draws subscriptions, and the unique title in
- * `0007-folders.sql` is what both keeps two rows from reading alike and makes filing by
- * name an upsert.
+ * Named groups of subscriptions, each with a stream of its own. Flat: no parent, no
+ * position, no depth. The list is short and it is drawn in the order the names read, the
+ * way the rail draws subscriptions, and the unique title in `0007-folders.sql` is what
  */
 export const folders = table({
 	name: "folders",
@@ -473,12 +420,9 @@ export const folders = table({
 });
 
 /**
- * The labels a reader puts on the posts they kept.
- *
- * Held by an id rather than by the name, which is what makes renaming one write a single
- * row however many posts carry it and keeps a URL built from a label working after it is
- * renamed. {@link tags.slug} is the folded form uniqueness is taken over, so `Rust` and
- * `rust` are one label wearing the name it was first given.
+ * The labels a reader puts on the posts they kept. Held by an id rather than by the
+ * name, which is what makes renaming one write a single row however many posts carry it
+ * and keeps a URL built from a label working after it is renamed.
  */
 export const tags = table({
 	name: "tags",
@@ -496,16 +440,9 @@ export const tags = table({
 });
 
 /**
- * Which posts carry which label, one row per pairing.
- *
- * `published_at` is a copy of the post's own. It is what puts the filter and both ordering
- * columns into one index, since no index spans two tables, and it is safe to copy because
- * that column is frozen against a publisher's edits: it leads the timeline's ordering, and
- * a row moving within that ordering would make an in-flight cursor skip posts. The copy is
- * written once, by the statement that applies the label.
- *
- * Every row here belongs to a saved post by construction, so a query for a reader's kept
- * posts under one label needs no `saved_at` filter: the join is the filter.
+ * Which posts carry which label, one row per pairing. `published_at` is a copy of the
+ * post's own. It is what puts the filter and both ordering columns into one index, since
+ * no index spans two tables, and it is safe to copy because that column is frozen against
  */
 export const itemTags = table({
 	name: "item_tags",
@@ -520,14 +457,8 @@ export const itemTags = table({
 
 /**
  * The rules a reader writes about what a post says, applied as items arrive and before
- * they are written.
- *
- * Every matching rule applies and `drop` dominates, so there is no position column and no
- * ordering: three actions of which one dominates and the other two commute cannot produce
- * an interaction an order would resolve differently.
- *
- * {@link rules.feed_id} is this app's own subscription id rather than the catalog's, and
- * `null` is what makes a rule cover feeds the reader has not followed yet.
+ * they are written. Every matching rule applies and `drop` dominates, so there is no
+ * position column and no ordering: three actions of which one dominates and the other two
  */
 export const rules = table({
 	name: "rules",
@@ -591,11 +522,9 @@ export const TOKEN_USE_STAMP_MS = 60 * 60 * 1000;
 export const AGENT_DAILY_CALLS = 500;
 
 /**
- * The tokens a reader minted for an agent, each one a name, a scope and an expiry.
- *
- * The signed value a client holds carries the reader's subject and a row id and nothing
+ * The tokens a reader minted for an agent, each one a name, a scope and an expiry. The
+ * signed value a client holds carries the reader's subject and a row id and nothing
  * else, so everything that can change after minting lives here and is read on every
- * request: a revocation takes effect on the next call, with no cache to invalidate.
  */
 export const tokens = table({
 	name: "tokens",
@@ -621,10 +550,8 @@ export type InsertToken = InsertRow<typeof tokens>;
 
 /**
  * The queries a reader kept, each one a narrowing of the reading queue and nothing more.
- *
  * A row here holds what the queue's own controls hold — words, a read state, and the
  * subscription the search is scoped to — so the rail draws it as that queue's address and
- * opening it runs the statement typing those words runs.
  */
 export const searches = table({
 	name: "searches",

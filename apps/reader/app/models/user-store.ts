@@ -1,15 +1,6 @@
 /**
  * The per-reader Durable Object's RPC surface, which `bootstrap/worker.ts` exports to the
- * runtime as `UserDO`, and the typed stub the Worker reaches it through. One object holds
- * one person's settings, the feeds they follow and their own copy of every post from them,
- * so the reading queue is a single indexed query over their own rows rather than a merge
- * across feeds.
- *
- * It fetches nothing. A feed is retrieved once, by the object named after that feed, and
- * what this holds is a projection of it: the items this reader has ruled on, in the order
- * their timeline reads. The two are joined by a cursor — the greatest revision this reader
- * has accounted for — and a reader finds out there is more by comparing that against the
- * head the feed publishes, rather than by being told.
+ * runtime as `UserDO`, and the typed stub the Worker reaches it through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -225,7 +216,6 @@ const SEEK_OPERATORS: Record<string, string> = { eq: "=", gt: ">", lt: "<" };
  * Unread posts per feed, as the feed list shows them. `feed_items_feed_timeline_idx` leads
  * with `feed_id`, so rows arrive already gathered by the column this groups on and nothing
  * has to stand in for that order; the unread index holds exactly the rows being counted and
- * still loses, because it leads with `published_at`, the order the timeline reads in.
  */
 const UNREAD_COUNTS_SQL =
 	"SELECT feed_id, COUNT(*) AS unread FROM feed_items WHERE read_at IS NULL GROUP BY feed_id";
@@ -252,8 +242,7 @@ type TimelineRow = Pick<
 /**
  * The rules one synchronization run evaluates, and what each of them has matched so far in
  * it. The table is read once for the run rather than once per item, and the counts are held
- * here until the run ends, so fifty rules cost at most fifty small updates however many
- * items arrived.
+ * here until the run ends, so fifty rules cost at most fifty small updates however many it
  */
 interface RuleRun {
 	rules: SelectRule[];
@@ -280,12 +269,7 @@ interface RuleVerdict {
 
 /**
  * The values that cross the RPC boundary, and the shapes a controller renders from.
- *
- * Three rules govern everything here. No `Result` crosses: it is structured-cloneable,
- * but the platform serializes an `Error` by name and message and drops the subclass, so
- * an `instanceof` check is always false on the far side. No `Date` crosses, for the same
- * reason every stored timestamp is an integer. And every failure is a discriminated
- * union the caller can switch on, narrowed on this side of the boundary.
+ * Three rules govern everything here.
  */
 export namespace UserStore {
 	/** A reader's preferences, as one row of `settings` reads. */
@@ -311,10 +295,8 @@ export namespace UserStore {
 
 	/**
 	 * What a reader may change about how their pages look, as one row of `settings` reads.
-	 *
 	 * It is two fields rather than a whole settings object because the document shell asks
 	 * for it on every page the reader is signed in on, and because it is what the cookie
-	 * carrying the answer to the first paint holds.
 	 */
 	export interface Presentation {
 		/** The scheme every page is painted in, in the vocabulary `<html>` wears. */
@@ -692,10 +674,9 @@ export namespace UserStore {
 		 */
 		readState?: ReadState;
 		/**
-		 * What the reader typed into the search box, which narrows the page alongside
-		 * {@link readState}: a post's title, summary or author has to contain every word,
-		 * a quoted phrase as written, and none of the words led by `-`. Text holding nothing
-		 * but space narrows nothing, so an empty search box reads as the whole queue.
+		 * What the reader typed into the search box, which narrows the page alongside {@link
+		 * readState}: a post's title, summary or author has to contain every word, a quoted
+		 * phrase as written, and none of the words led by `-`.
 		 */
 		query?: string;
 		/** One subscription the page is narrowed to, or `null` for every followed feed. */
@@ -884,8 +865,7 @@ export namespace UserStore {
 	/**
 	 * What checking one feed on the spot came back with. `inserted` counts the posts the
 	 * reader had not seen, which is the answer they asked the question for; `updated`
-	 * counts entries the publisher revised. A 304 reports both as zero, since the stored
-	 * copy is current and the reader's answer is the same either way.
+	 * counts entries the publisher revised.
 	 */
 	export type CheckResult =
 		| { ok: true; inserted: number; updated: number }
@@ -893,9 +873,7 @@ export namespace UserStore {
 
 	/**
 	 * What the reader has waiting that they have not got yet, worked out by comparing each
-	 * subscription's cursor against the head its feed published. It is a count and the
-	 * feeds it came from, never a promise of fresher posts: the page has already been read
-	 * out of local storage by the time this is known.
+	 * subscription's cursor against the head its feed published.
 	 */
 	export interface Freshness {
 		/** The subscriptions with something above their cursor, as this app's own feed ids. */
@@ -1098,10 +1076,9 @@ export namespace UserStore {
 		| {
 				ok: false;
 				/**
-				 * `unknown-token` for a signed value naming a row this reader never had;
-				 * `revoked` and `expired` for one they no longer honour; `tier` for an
-				 * account whose plan does not answer an agent; `budget` for one that has
-				 * spent its day.
+				 * `unknown-token` for a signed value naming a row this reader never had; `revoked`
+				 * and `expired` for one they no longer honour; `tier` for an account whose plan
+				 * does not answer an agent; `budget` for one that has spent its day.
 				 */
 				reason: "unknown-token" | "revoked" | "expired" | "tier" | "budget";
 		  };
@@ -1153,7 +1130,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Creates the reader's row if this is their first sign-in, and arms the refresh
 	 * schedule. Idempotent, because it runs on every completed sign-in rather than once:
 	 * there is no user table and no sign-up step, so a first login is what creates a
-	 * reader.
 	 */
 	async ensureUser(subject: string, email?: string | null): Promise<UserStore.Settings> {
 		let row = await this.#settingsRow(subject);
@@ -1183,11 +1159,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Records the scheme and the reading face, and answers what is now stored.
-	 *
-	 * Both values are narrowed here rather than at the form, so a submission nothing on the
-	 * page could have produced writes the default instead of reaching the `CHECK` that would
-	 * refuse it.
+	 * Records the scheme and the reading face, and answers what is now stored. Both values
+	 * are narrowed here rather than at the form, so a submission nothing on the page could
+	 * have produced writes the default instead of reaching the `CHECK` that would refuse it.
 	 *
 	 * @param input - The scheme and the face the reader picked.
 	 */
@@ -1206,10 +1180,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Writes what the platform says this reader holds, and answers what that did to their
 	 * tier. It is the only way the column moves: this object never computes a tier, never
 	 * raises one, and has no path to the platform or to the catalog through which it could.
-	 *
-	 * Upgrades land at once, a cancellation the reader asked for drops as they asked, and
-	 * anything else that would lower the tier opens a fortnight's grace and drops only once
-	 * that has run out. Nothing is deleted either way.
 	 *
 	 * @param snapshot - What the platform answered, and when it answered it.
 	 * @example let applied = await userStore(subject).setTier({ entitled, cancelled, readAt, source });
@@ -1281,9 +1251,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * What this reader may do, and where they stand against it. Every number comes from
 	 * this object's own rows, so the panel that explains an over-limit state costs the same
 	 * local queries a limit check does.
-	 *
-	 * A limit the reader is over is reported rather than acted on: a tier change deletes
-	 * nothing, and coming back is one column write.
 	 */
 	async entitlement(): Promise<UserStore.Entitlement> {
 		let row = await this.#settingsRow();
@@ -1324,11 +1291,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Checks every followed feed now, reporting what the sweep as a whole found.
-	 *
-	 * Each feed is asked of the object that owns it, so a reader sweeping their
-	 * subscriptions fetches nothing themselves and a feed two of them share is retrieved
-	 * once. What comes back into this object afterwards is the reader's own copy.
+	 * Checks every followed feed now, reporting what the sweep as a whole found. Each
+	 * feed is asked of the object that owns it, so a reader sweeping their subscriptions
+	 * fetches nothing themselves and a feed two of them share is retrieved once.
 	 */
 	async checkAllFeedsNow(): Promise<UserStore.CheckAllResult> {
 		let result: UserStore.CheckAllResult = {
@@ -1357,8 +1322,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				if (synchronized.items > 0) result.withNewPosts += 1;
 			});
 
-			// A reader's own sweep brings their posts up to date exactly as the scheduled one
-			// does, so the settings page reports it the same way rather than reading stale.
 			await this.#stampRefreshed(now);
 		} catch (error) {
 			/**
@@ -1382,8 +1345,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		/**
 		 * Counted before the write rather than read back from it. What a write reports is
 		 * rows of storage, and a post lives in the table and in whichever partial indexes it
-		 * qualifies for, so marking one read writes several rows. The reader is told about
-		 * posts.
+		 * qualifies for, so marking one read writes several rows.
 		 */
 		let posts = await this.#models.posts.ofSubscription(feedId).unread().count();
 		if (posts === 0) return 0;
@@ -1406,8 +1368,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** Every subscription, in the shape an export writes them. */
 	async exportFeeds(): Promise<UserStore.FeedExport[]> {
-		// The whole list, unpaged: a document holding some of a reader's subscriptions is
-		// one they would restore an incomplete library from.
 		let rows = await this.#models.subscriptions
 			.followed()
 			.orderBy("created_at", "desc")
@@ -1463,16 +1423,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * its document named, and reports what became of the rest. One unreachable feed in a
 	 * document of fifty leaves the other forty-nine followed.
 	 *
-	 * A feed the reader already follows stays exactly where they put it: a document arriving
-	 * from somewhere else is not a licence to refile a list somebody has already organized.
-	 *
 	 * @param entries - The subscriptions the document listed, each with its folder's name.
 	 */
 	async importFeeds(entries: readonly UserStore.ImportEntry[]): Promise<UserStore.ImportResult> {
 		let result: UserStore.ImportResult = { added: 0, alreadyFollowing: 0, failed: [] };
 
-		// A document listing the same URL twice names one subscription, and the second pass
-		// would otherwise race the first into the unique index on `feed_url`.
 		let requested = new Map<string, UserStore.ImportEntry>();
 		for (let entry of entries) {
 			if (!requested.has(entry.feedUrl)) requested.set(entry.feedUrl, entry);
@@ -1505,8 +1460,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				} else if (followed.reason === "already-following") result.alreadyFollowing += 1;
 				else result.failed.push(entry.feedUrl);
 			} catch {
-				// Whatever went wrong belongs to this URL alone, so the rest of the document
-				// still lands and the reader is told which one did not.
 				result.failed.push(entry.feedUrl);
 			}
 		});
@@ -1516,10 +1469,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Every followed feed in the order their names read, each with its unread count.
-	 *
 	 * Unpaged, because the one place a reader meets this list is the rail, which draws all
-	 * of it and scrolls within its own column. A page of it would be a rail that stops
-	 * partway down somebody's subscriptions with no way on.
+	 * of it and scrolls within its own column.
 	 */
 	async listFeeds(): Promise<UserStore.FeedSummary[]> {
 		let [rows, unread, filed] = await Promise.all([
@@ -1562,10 +1513,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Subscribes to whatever feed `input` leads to, accepting either a feed URL or a page
 	 * that advertises one, and stores the page of posts the feed hands back so the queue is
 	 * never empty the moment a feed is followed.
-	 *
-	 * The feed itself is fetched by the object named after it, which is what makes the
-	 * second follower of a feed cost no request at all: they reach an object that has
-	 * already done the work and is already being polled for everybody.
 	 */
 	async followFeed(input: string): Promise<UserStore.FollowResult> {
 		let target = normalizeFeedUrl(input);
@@ -1577,8 +1524,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		/**
 		 * Checked here rather than in the form that offers it, because an OPML import, the
 		 * public API and a replayed submission all reach this method without passing one.
-		 * A feed already followed is answered above, so nothing this refuses would have left
-		 * the count where it was.
 		 */
 		let room = await this.#roomForFeed();
 		if (room !== null) return { ok: false, reason: "over-limit", feedId: null, limit: room };
@@ -1587,7 +1532,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * The one external request made outside a feed's own object, and the step that
 		 * decides what two people are following: it reports the address the response finally
 		 * came from, so a person who pastes a site and a person who pastes its feed converge
-		 * on one name.
 		 */
 		let discovered = await Feed.discover(target);
 		if (isFailure(discovered)) return { ok: false, reason: "unreachable", feedId: null };
@@ -1620,8 +1564,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		/**
 		 * Written straight through rather than inside a transaction scope. A Durable Object
 		 * refuses `BEGIN` and `SAVEPOINT` outright, and has no need of them: every write a
-		 * turn makes is coalesced into one atomic commit and discarded together if the turn
-		 * throws.
+		 * turn makes is coalesced into one atomic commit and discarded together if the tur
 		 */
 		let created = unwrap(
 			await this.#models.subscriptions.create({
@@ -1665,16 +1608,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		/**
 		 * Set to the head the feed reported alongside the page, so a subscription starts
 		 * current and what reaches the reader from here is what the feed publishes next.
-		 *
-		 * Not the greatest revision among the items handed over: a feed numbers entries in
-		 * the order it discovered them, which is the order the document listed them, so
-		 * whether a newest-first page carries the highest revisions or the lowest is a
-		 * decision the publisher made. Reading the head makes a new subscription mean the
-		 * same thing either way — the newest page, and everything after it.
-		 *
-		 * This is not the cursor taking its value from the shared index. That head is a hint
-		 * which may lag; this one came back from the feed itself, in the same answer as the
-		 * items, and names exactly what that object had decided by the time it answered.
 		 */
 		await this.#models.subscriptions.write(subscriptionId, { cursor: joined.head });
 
@@ -1686,9 +1619,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Retrieves one feed on the spot and reports what came back, for a reader who knows a
 	 * site has just published and would rather not wait out the schedule.
-	 *
-	 * It resolves however the retrieval went, so a feed whose origin is down answers the
-	 * reader instead of failing the request they made.
 	 *
 	 * @param feedId - The subscription to check.
 	 * @example let checked = await userStore(subject).checkFeedNow(feedId);
@@ -1710,8 +1640,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		try {
 			let synchronized = await this.#syncFeed(feed);
 
-			// The origin answered, so this reader's copy is current as of now — a 304 included,
-			// which says the stored copy was already the current one.
 			await this.#stampRefreshed(now);
 
 			return { ok: true, inserted: synchronized.items, updated: 0 };
@@ -1719,8 +1647,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			/**
 			 * The feed answered and this reader's copy did not follow, which is the same news
 			 * to somebody standing in front of a page: they asked for this feed to be checked
-			 * and it has not been. Told as a refusal rather than thrown, so the page they are
-			 * on renders with the outcome on it.
+			 * and it has not been.
 			 */
 			console.error("reader synchronization of one feed failed", error);
 
@@ -1731,11 +1658,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Drops a subscription and every post behind it, and tells the feed it has one fewer
 	 * subscriber — which is what eventually stops the feed being polled at all.
-	 *
-	 * The posts go first, so a turn that fails between the two leaves the feed still
-	 * followed rather than its posts orphaned under a subscription that is gone. Saved posts
-	 * are the exception: they survive, and the subscription's row survives with them to hold
-	 * the feed's name, marked as no longer followed so every list leaves it out.
 	 */
 	async unfollowFeed(feedId: string): Promise<boolean> {
 		let feed = await this.#models.subscriptions.find(feedId);
@@ -1776,12 +1698,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The first page of the queue, and what the reader has waiting that they have not got
-	 * yet — which is the question the reading page actually asks.
-	 *
-	 * The page comes out of local storage and is answered immediately. The staleness beside
-	 * it is derived rather than stored: each subscription's cursor is compared against the
-	 * head its feed published, so there is no flag to leave set, nothing a lost message can
-	 * miss, and no path that can write one and forget the other.
+	 * yet — which is the question the reading page actually asks. The page comes out of
+	 * local storage and is answered immediately.
 	 *
 	 * @param options - Which posts the page holds, where to page from, and how much of it.
 	 * @example let opened = await userStore(viewer.id).openReader({ readState: "unread" });
@@ -1827,15 +1745,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Brings stale subscriptions up to date, a bounded number at a time, and reports what it
-	 * left behind.
-	 *
-	 * Nothing renders behind this. It runs after a page has been answered, so a reader back
-	 * after a month gets their timeline in one indexed seek and the feeds they are missing
-	 * over the seconds and minutes after it.
+	 * left behind. Nothing renders behind this.
 	 *
 	 * @param feedIds - The subscriptions to bring up to date; every stale one when omitted.
-	 * @param trigger - What started it, which is the whole of what decides whether the run
-	 * ends in a notification.
+	 * @param trigger - What started it, which is the whole of what decides whether the run ends in a notification.
 	 */
 	async synchronize(
 		feedIds?: string[],
@@ -1847,10 +1760,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Brings an already-derived list of stale subscriptions up to date, a bounded number at
 	 * a time, and reports what it left behind.
-	 *
-	 * The staleness is taken as given so a caller that has just read the heads pays for one
-	 * bulk read rather than two: the comparison is the same one either way, and reading it
-	 * twice would double the only line of this work that grows with the subscription list.
 	 *
 	 * @param due - The subscriptions with something above their cursor.
 	 */
@@ -1938,14 +1847,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * One post and the subscription it came from, for the page that reads it on its own.
-	 *
 	 * The tier comes back with it because extraction is a tier's to allow and the tier
-	 * lives on this object's own row: deciding it here means the page renders what the
-	 * reader is entitled to rather than what it remembered to check.
+	 * lives on this object's own row: deciding it here means the page renders what the r
 	 *
 	 * @param itemId - The post to open.
-	 * @returns The post, its feed and what the tier allows, or `null` for a post this
-	 * reader does not hold.
+	 * @returns The post, its feed and what the tier allows, or `null` for a post this reader does not hold.
 	 */
 	async openPost(itemId: string): Promise<UserStore.OpenedPost | null> {
 		let row = await this.#models.posts.find(itemId);
@@ -1976,9 +1882,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Keeps a post, or stops keeping it. A kept post is exempt from every rule that deletes
 	 * one: the budget's reclamation, its feed's velocity, and the sweep behind both.
-	 *
-	 * A full shelf refuses rather than making room, because making room would delete the one
-	 * thing in this object a reader explicitly asked to keep.
 	 *
 	 * @param itemId - The post to keep.
 	 * @param saved - Whether to keep it; `false` puts it back under whatever rule would take it.
@@ -2030,11 +1933,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * The posts across every followed feed, newest first, narrowed to the read state the
 	 * caller chooses and to the words they searched for. It answers the unread ones when
 	 * they choose no state, and every post when they search for nothing.
-	 *
-	 * Each state is served by an index of its own, so paging the read posts of a reader
-	 * who has read years of them costs what paging the unread ones does. A search rides on
-	 * those same indexes for its ordering and matches the text off the row, which is what
-	 * lets the two narrowings compose into one read.
 	 *
 	 * @param options - Which posts to page, where to page from, and how much of it.
 	 * @example let page = await userStore(viewer.id).readingQueue({ readState: "all" });
@@ -2098,11 +1996,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * One folder's posts, read and unread alike, newest first — every post of every feed
 	 * filed there, as one stream.
-	 *
-	 * The folder is on the post itself, so this is the page one feed's timeline is with the
-	 * leading column changed: one equality, a range on the cursor, and fifty entries walked
-	 * from where it lands. Neither the reader's history nor how many feeds are in the folder
-	 * enters what a page costs.
 	 *
 	 * @param folderId - The folder being read.
 	 * @param options - Where to page from, and how much of it.
@@ -2198,16 +2091,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Files a feed into a folder, or takes it out of the one it is in.
-	 *
-	 * The subscription moves and its posts move with it, which is what every later page of
-	 * that folder is a seek because of. The write is bounded by this feed's share of the
-	 * budget and is paid once, where the reader filed the feed, rather than on every page
-	 * they read it on.
-	 *
-	 * Filing by name creates the folder when the reader has none by that name, which is
-	 * where most folders come from and what lets an import file a feed under the name its
-	 * document used.
+	 * Files a feed into a folder, or takes it out of the one it is in. The subscription
+	 * moves and its posts move with it, which is what every later page of that folder is a
+	 * seek because of.
 	 *
 	 * @param feedId - The subscription to file.
 	 * @param target - The folder, the name to file it under, or `null` to unfile it.
@@ -2282,11 +2168,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Makes a label to put on the posts the reader keeps.
-	 *
-	 * Uniqueness is over the folded name, so a reader who already has `Rust` and asks for
-	 * `rust` is told they have it and which one it is rather than given a second row nothing
-	 * could tell apart.
+	 * Makes a label to put on the posts the reader keeps. Uniqueness is over the folded
+	 * name, so a reader who already has `Rust` and asks for `rust` is told they have it and
+	 * which one it is rather than given a second row nothing could tell apart.
 	 *
 	 * @param name - What to call it, which no other label of this reader's may be called.
 	 */
@@ -2316,11 +2200,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Renames a label, which writes one row and rewrites no post: everything else holds it
-	 * by its id, which a name never was.
-	 *
-	 * A name whose folded form is another label's is refused and names that one. Merging is
-	 * a different verb — it is destructive, the two sets could never be told apart again,
-	 * and a reader who wanted it asked for a rename.
+	 * by its id, which a name never was. A name whose folded form is another label's is
+	 * refused and names that one.
 	 *
 	 * @param tagId - The label to rename.
 	 * @param name - What to call it instead.
@@ -2381,19 +2262,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Puts a label on a post, keeping the post as it does.
-	 *
-	 * One gesture rather than two verbs with an order to get wrong: a label is a reason to
-	 * have kept something, and a reason without the keeping is a promise this design cannot
-	 * honour — the post would sit under a rule that may take it tomorrow. So labelling the
-	 * post past the shelf's last place is refused for exactly the reason keeping it is, and
-	 * nothing is written.
+	 * Puts a label on a post, keeping the post as it does. One gesture rather than two
+	 * verbs with an order to get wrong: a label is a reason to have kept something, and a
+	 * reason without the keeping is a promise this design cannot honour — the post would
 	 *
 	 * @param itemId - The post to label.
 	 * @param target - The label, by id, or the name to label it with.
-	 * @param create - Whether a name the reader has no label for makes one. A rule applies
-	 * labels and may not create them, so no rule grows the list past its cap, invents a name
-	 * that passed no validation, or resurrects a deleted one.
+	 * @param create - Whether a name the reader has no label for makes one. A rule applies labels and may not create them, so no rule grows the list past its cap, invents a name that passed no validation, or resurrects a deleted one.
 	 */
 	async tagItem(
 		itemId: string,
@@ -2480,13 +2355,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The kept posts under one label, newest first, paged by the keyset every other list in
-	 * this app pages by.
-	 *
-	 * The seek is written against the join table's own copies of the ordering columns, which
-	 * is what makes a page a range scan down one index rather than a filter, a join and a
-	 * sort into a temporary b-tree — while the projection returns the post's own `id` and
-	 * `published_at` under those names, so this list mints the app's one cursor shape rather
-	 * than a second spelling no other list could follow.
+	 * this app pages by. The seek is written against the join table's own copies of the
+	 * ordering columns, which is what makes a page a range scan down one index rather than a
 	 *
 	 * @param tagId - The label being read.
 	 * @param options - Where to page from, and how much of it.
@@ -2534,19 +2404,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Every rule the reader has written, in the order they wrote them.
-	 *
-	 * Read whole, because the table is capped at a few dozen rows: there is no paging, no
-	 * search over it and no index beyond the primary key, and the list a reader reasons
-	 * about is the list they can see at once.
+	 * Every rule the reader has written, in the order they wrote them. Read whole,
+	 * because the table is capped at a few dozen rows: there is no paging, no search over
+	 * it and no index beyond the primary key, and the list a reader reasons about is the
 	 */
 	/**
 	 * The queries the reader kept, in the order their names read, which is the order the
-	 * rail draws them in.
-	 *
-	 * Unpaged and countless. The table is capped at {@link SAVED_SEARCH_LIMIT} rows, and a
-	 * number beside each entry would be a scan per entry on every page of the app, paid by
-	 * readers who are not searching.
+	 * rail draws them in. Unpaged and countless.
 	 */
 	async listSearches(): Promise<UserStore.SavedSearch[]> {
 		let rows = await this.#models.searches.alphabetical();
@@ -2561,11 +2425,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Keeps a query, so a search worth typing twice is typed once.
-	 *
-	 * A full shelf refuses rather than making room: the twenty-first is the one the reader
-	 * is asking for, and evicting one of the twenty they chose would answer a request they
-	 * did not make.
+	 * Keeps a query, so a search worth typing twice is typed once. A full shelf refuses
+	 * rather than making room: the twenty-first is the one the reader is asking for, and
+	 * evicting one of the twenty they chose would answer a request they did not make.
 	 *
 	 * @param draft - The name, the words, the read state and whatever feed it is scoped to.
 	 */
@@ -2645,8 +2507,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * and a query that narrows nothing are refused wherever they are submitted from.
 	 *
 	 * @param draft - What was submitted.
-	 * @param excluding - A saved search the name may already belong to, which is the one
-	 * being rewritten.
+	 * @param excluding - A saved search the name may already belong to, which is the one being rewritten.
 	 */
 	async #searchDraft(
 		draft: UserStore.SavedSearchDraft,
@@ -2703,11 +2564,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Writes a rule, which acts on tomorrow's arrivals and reaches back into nothing.
-	 *
-	 * The count is checked here rather than in the form, because the form is one of several
+	 * Writes a rule, which acts on tomorrow's arrivals and reaches back into nothing. The
+	 * count is checked here rather than in the form, because the form is one of several
 	 * ways to reach this object and the cap is a property of the reader rather than of the
-	 * page they happened to use.
 	 *
 	 * @param draft - The field, the text and the action, with the feed it is scoped to.
 	 */
@@ -2801,11 +2660,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * What a candidate rule would have caught among the reader's newest posts.
-	 *
-	 * This is the whole of the retroactivity this feature has, and it is read-only: nothing
-	 * is written, no rule is created and no post is touched. It is also the answer to "why is
-	 * this rule not working", since it matches against posts the reader can still see.
+	 * What a candidate rule would have caught among the reader's newest posts. This is the
+	 * whole of the retroactivity this feature has, and it is read-only: nothing is written,
+	 * no rule is created and no post is touched.
 	 *
 	 * @param draft - The candidate, which may never have been written.
 	 */
@@ -2840,10 +2697,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Applies a candidate's action to the posts it matched among the reader's newest ones.
-	 *
 	 * It is bounded by the page the preview was, so it is an act taken on specific posts the
 	 * reader looked at rather than a rule granted the power to reach backwards, and it runs
-	 * whether or not the candidate was ever saved as a rule.
 	 *
 	 * @param draft - The candidate whose matches are being acted on.
 	 */
@@ -2897,11 +2752,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Decides how a notified feed reaches the reader.
-	 *
-	 * Email is refused here rather than hidden in the form, because the switch and the plan
-	 * can disagree: a lapse leaves a reader's stored answer alone and stops the sending, and
-	 * the refusal is what lets the page say so.
+	 * Decides how a notified feed reaches the reader. Email is refused here rather than
+	 * hidden in the form, because the switch and the plan can disagree: a lapse leaves a
+	 * reader's stored answer alone and stops the sending, and the refusal is what lets the
 	 *
 	 * @param input - Which channels to turn on.
 	 */
@@ -2952,7 +2805,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Records the zone quiet hours are computed in, as the only participant that knows it
 	 * reported it. A reader signed in from two zones keeps whichever opened the app last, on
 	 * every device, which is acceptable because a suppressed notification is held rather
-	 * than dropped.
 	 *
 	 * @param timeZone - An IANA name, as `Intl.DateTimeFormat` resolved it.
 	 */
@@ -2968,10 +2820,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Records a browser the reader asked to be reached on, or updates the one already
 	 * holding that endpoint.
-	 *
-	 * A browser that re-subscribes hands back the endpoint it already had, so this is an
-	 * upsert on it: a reader signing in twice on one device keeps one row and receives one
-	 * notification rather than two.
 	 *
 	 * @param input - The endpoint and key material the Push API handed the browser.
 	 */
@@ -3073,13 +2921,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The strip above the river: every pinned feed, and the newest few posts of it the
-	 * reader has not read.
-	 *
-	 * Its own question, bounded by the pins rather than by how much anybody published, and
-	 * carrying no cursor. The river beneath it runs the statement it runs today under the
-	 * predicate it runs today, so a pinned feed's newest post appears in both — one
-	 * screenful of duplication rather than a predicate the reader can change mid-scroll,
-	 * which is the class of bug the keyset design exists to make impossible.
+	 * reader has not read. Its own question, bounded by the pins rather than by how much
+	 * anybody published, and carrying no cursor.
 	 */
 	async pinnedStrip(): Promise<UserStore.PinnedFeed[]> {
 		/** Pin order is an ordering the reader produced, which is what the timestamp is for. */
@@ -3117,11 +2960,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Writes down what one feed publishes, as that feed's own object measured it.
-	 *
-	 * The measurement is taken once per feed and shared by everybody following it, so the
-	 * reader is asked nothing and nothing is recomputed here — a local recount would measure
-	 * this reader's velocity as much as the publisher's rate.
+	 * Writes down what one feed publishes, as that feed's own object measured it. The
+	 * measurement is taken once per feed and shared by everybody following it, so the reader
+	 * is asked nothing and nothing is recomputed here — a local recount would measure this
 	 *
 	 * @param feedId - The subscription the rate belongs to.
 	 * @param postsPerDay - What the feed publishes, or `null` before anything is known.
@@ -3158,12 +2999,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Writes the row describing a token the caller has already signed.
-	 *
-	 * The signed value is minted outside this object, because it is the Worker that holds
-	 * the key; what arrives here is the id it named and a digest of it, so nothing
-	 * replayable is ever stored. Entitlement and the cap are decided here rather than
-	 * beside the form, since this object is what every path reaches.
+	 * Writes the row describing a token the caller has already signed. The signed value
+	 * is minted outside this object, because it is the Worker that holds the key; what
+	 * arrives here is the id it named and a digest of it, so nothing replayable is ever
 	 *
 	 * @param draft - The id, the name, the scope and the digest of the signed value.
 	 */
@@ -3218,12 +3056,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * What one presented token may do right now, which is the whole of the agent surface's
-	 * authorization.
-	 *
-	 * Every answer is read from this object's own rows, never from the token: a token
-	 * minted while paid would otherwise keep working for a year after a cancellation, and
-	 * a revoked one would work forever. The daily budget is spent on the same wake, which
-	 * is what makes a per-account bill bounded rather than approximately bounded.
+	 * authorization. Every answer is read from this object's own rows, never from the
+	 * token: a token minted while paid would otherwise keep working for a year after a
 	 *
 	 * @param tokenId - The row id the signed value named.
 	 * @example let allowed = await userStore(subject).authorizeAgent(tokenId);
@@ -3272,16 +3106,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Runs whatever the three due times say is due, advances them, and arms the next wake.
-	 *
 	 * What a wake is for is derived rather than remembered: the alarm carries no identity,
-	 * so leftovers, a scheduled check and the retention sweep each have one due time with
-	 * one writer, and no job can arm a wake another silently consumes. A wake that finds
-	 * nothing due re-arms and returns, which is a clock moving under a schedule.
-	 *
-	 * Leftovers run first, because leftovers are work a reader is already waiting for.
-	 *
-	 * It never rejects. A rejected alarm is retried by the platform, which would re-run a
-	 * check against objects that already answered.
+	 * so leftovers, a scheduled check and the retention sweep each have one due time wit
 	 */
 	override async alarm(): Promise<void> {
 		let now = Date.now();
@@ -3331,12 +3157,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The reader's settings row, written on first use when nothing has written it yet.
-	 *
 	 * Every path that touches settings comes through here, so the row's existence stops
-	 * depending on which entry point reached the object first. A session outlives a
-	 * deploy and there is no sign-up step, so a reader can hold an object that following
-	 * a feed created and no sign-in ever provisioned: reading their cadence answered
-	 * nothing, writing it failed on the missing row, and stamping a refresh matched none.
+	 * depending on which entry point reached the object first.
 	 *
 	 * @param subject - The reader this object holds, for a caller that already knows it.
 	 */
@@ -3347,9 +3169,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Whether this reader has room for another subscription, answering the refusal to
 	 * report when they have not and `null` when they have.
-	 *
-	 * Both numbers are rows of this object, so the comparison is one local query in code
-	 * that was going to read the count anyway.
 	 */
 	async #roomForFeed(): Promise<UserStore.Limit | null> {
 		let tier = storedTier(await this.#settingsRow());
@@ -3363,15 +3182,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Posts this reader's object holds before it reclaims, and then refuses, which is the
 	 * budget of the tier they are on.
-	 *
-	 * The tier is read from this object's own settings, so the sweep and the back-pressure
-	 * check decide from a local row rather than from a billing store that can be slow or
-	 * absent. A tier recorded too low pauses a feed and deletes nothing, which is what makes
-	 * a copied value safe to act on here.
-	 *
-	 * The scale on top of it takes the reader as its subject, because the person who meets
-	 * a budget is the one who notices: a rule can widen it for them without moving what
-	 * anybody else on their tier was sold.
 	 */
 	async #budget(tier?: Tier): Promise<number> {
 		let applied = tier ?? storedTier(await this.#settingsRow());
@@ -3382,12 +3192,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Writes one wide event about what this object just did.
-	 *
-	 * Opened here rather than read off the request, because a Durable Object answers in its
-	 * own context and the log the Worker opened for the request does not reach it. Counts
-	 * and feed identifiers only: nothing about what the reader reads, beyond the subject
-	 * this object is already named for.
+	 * Writes one wide event about what this object just did. Opened here rather than read
+	 * off the request, because a Durable Object answers in its own context and the log the
+	 * Worker opened for the request does not reach it.
 	 *
 	 * @param kind - What kind of invocation produced this, which the platform groups by.
 	 * @param fields - The event's name and its measurements.
@@ -3397,12 +3204,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * The reader this object holds, which is the name it was addressed by.
-	 *
-	 * Only an id built from a raw hex string or minted unique carries no name, and this
-	 * object's rows are keyed on the reader's subject, so such an id leaves nothing to
-	 * write one as. That is a mistake in how the object was reached rather than news
-	 * about the reader, so it is raised where it was made.
+	 * The reader this object holds, which is the name it was addressed by. Only an id
+	 * built from a raw hex string or minted unique carries no name, and this object's
+	 * rows are keyed on the reader's subject, so such an id leaves nothing to write one
 	 */
 	#subject(): string {
 		let name = this.ctx.id.name;
@@ -3458,11 +3262,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Writes the due times this reader's tier and last open imply, and arms the alarm at
 	 * the earliest of them.
 	 *
-	 * The check lands on a grid phase-shifted by the subject, so recomputing it on every
-	 * open answers the same moment rather than pushing the wake away from a reader who
-	 * keeps opening the app. The sweep's due time is kept where it is for the same reason,
-	 * and set only when the tier has a wake to run it on.
-	 *
 	 * @param row - The settings row as the caller's own writes left it.
 	 */
 	async #reschedule(row: SelectSettings): Promise<void> {
@@ -3479,12 +3278,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The freshness comparison a reader pays for, run without a reader waiting on it.
-	 *
 	 * Exactly what an open does, minus the timeline nobody is there to read: the heads are
 	 * read once, in bulk, and the stale list they derive is handed straight to the same
-	 * bounded synchronization a request works under. The bounds do not move because nobody
-	 * is waiting — a bigger batch holds this single-threaded object longer and widens the
-	 * burst the feed objects take — so leftovers go to the catch-up as they always do.
 	 *
 	 * @param tier - The tier the lease left the reader on, for the event this writes.
 	 */
@@ -3550,10 +3345,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Tells the reader what has arrived since the last time they were told, and moves the
 	 * one timestamp all of it is derived from when at least one channel accepted.
-	 *
-	 * Advanced on one acceptance rather than on all of them: requiring all would let a
-	 * single broken endpoint re-notify every working one on every check, and requiring none
-	 * would drop the notification whenever the first send failed.
 	 */
 	async #notify(): Promise<void> {
 		let now = Date.now();
@@ -3679,13 +3470,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Clears the labels of posts that are going.
-	 *
-	 * Four paths remove a post — unsaving, the velocity sweep, the budget's reclamation and
-	 * unfollowing a feed — and each of them comes through here in the same batch it deletes
-	 * with. A cascade would be tidier and would put the correctness of a bulk sweep behind
-	 * whether a pragma is set the way the platform happens to set it today; each of those
-	 * methods already owns its deletes, so writing both is one line and depends on nothing.
+	 * Clears the labels of posts that are going. Four paths remove a post — unsaving, the
+	 * velocity sweep, the budget's reclamation and unfollowing a feed — and each of them
+	 * comes through here in the same batch it deletes with.
 	 *
 	 * @param itemIds - The posts whose labels go with them.
 	 */
@@ -3756,22 +3543,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Brings one subscription up to date, a page at a time, and stops where the reader has
-	 * no room left.
-	 *
-	 * The cursor is written after the items, never before. A run that dies between the two
-	 * leaves a cursor pointing at work already done, and the retry upserts rows it already
-	 * wrote, which changes nothing; a cursor advanced first would skip whatever it skipped
-	 * past, permanently, and no later check would notice, because the comparison that would
-	 * have caught it is the one the cursor just satisfied.
-	 *
-	 * What the cursor may pass is anything the reader has ruled on: an item stored and an
-	 * item dropped for being older than this feed's velocity are both decided. An item whose
-	 * write failed, or that this run never reached, is neither.
-	 *
-	 * An empty page answered under a higher head takes the cursor to that head. A tick can be
-	 * spent on a row that was never written, and this reader would otherwise sit below a head
-	 * they can never reach; the head here is the true one, read from the feed in the same call.
+	 * Brings one subscription up to date, a page at a time, and stops where the reader has no
+	 * room left. The cursor is written after the items, never before.
 	 */
 	async #syncFeed(
 		feed: SelectFeed,
@@ -3793,9 +3566,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		/**
 		 * A reader over their budget with nothing left to reclaim stops taking posts rather
-		 * than deleting ones nobody agreed to lose. The subscription stays stale and says so,
-		 * which is back-pressure rather than data loss: nothing they have is taken, and what
-		 * they have not got yet waits.
+		 * than deleting ones nobody agreed to lose.
 		 */
 		if (await this.#isPaused(feed)) return { items: 0, paused: true, ruled: 0 };
 
@@ -3857,22 +3628,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Decides a feed's items and writes the ones this reader keeps, while they are still in
 	 * memory and before any of them is a row.
 	 *
-	 * Velocity is applied first: an item already older than this subscription's velocity is
-	 * not stored at all, so a reader returning after a month to a feed they read for
-	 * headlines materializes the last few hours, and the rules never see the rest. It is also
-	 * the honest order for the counters, since an item velocity refused was never in the
-	 * timeline for a rule to have done anything to.
-	 *
-	 * Then every applicable rule runs, and `drop` dominates: an item one rule would flag and
-	 * another would drop is dropped. A rule reaches only items this reader does not have —
-	 * an item the publisher edited is applied as an ordinary edit — so the ids a rule matched
-	 * are read back before anything is acted on, which is the one query rules add and is paid
-	 * only when a rule fires.
-	 *
-	 * @param folderId - The folder the subscription is filed in as this run holds it, which
-	 * the copies are written into so an item arriving twice lands where its feed is now.
-	 * @param run - The rules this run evaluates and the tally they are counted into, or
-	 * `null` for a path that takes no rules.
+	 * @param folderId - The folder the subscription is filed in as this run holds it, which the copies are written into so an item arriving twice lands where its feed is now.
+	 * @param run - The rules this run evaluates and the tally they are counted into, or `null` for a path that takes no rules.
 	 */
 	async #materialize(
 		subscriptionId: string,
@@ -3955,8 +3712,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Writes a page of items as this reader's own copies, in the chunks the bind limit
 	 * allows.
 	 *
-	 * @param marks - The arrival marks a rule left on some of them, or `null` for a page no
-	 * rule decided.
+	 * @param marks - The arrival marks a rule left on some of them, or `null` for a page no rule decided.
 	 */
 	async #writeItems(
 		subscriptionId: string,
@@ -3991,10 +3747,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Reads a submitted rule as one this object will act on, or answers why it is not one.
-	 *
 	 * Both named lists are checked here as well as by the column's `CHECK`, so a caller gets
-	 * a refusal it can render rather than a constraint violation, and a rule naming a feed
-	 * the reader does not follow is refused rather than stored as a rule about nothing.
+	 * a refusal it can render rather than a constraint violation, and a rule naming a feed t
 	 *
 	 * @param draft - The rule as a form submitted it.
 	 */
@@ -4051,8 +3805,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Writes what a run's rules matched, one small update per rule that matched anything.
 	 *
 	 * @param run - The run whose tally is being settled.
-	 * @param now - Epoch milliseconds the run finished at, which is when each rule last
-	 * matched.
+	 * @param now - Epoch milliseconds the run finished at, which is when each rule last matched.
 	 */
 	async #countMatches(run: RuleRun, now: number): Promise<void> {
 		for (let [ruleId, count] of run.matched) {
@@ -4074,10 +3827,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Lets go of a feed the reader unfollowed once the last post they kept from it goes.
-	 *
 	 * Such a row outlives the subscription for one reason — to hold the feed's name for the
 	 * saved list to show — so it has nothing left to do the moment that list stops naming
-	 * it. A feed the reader still follows is untouched.
 	 *
 	 * @param subscriptionId - The feed the unsaved post belonged to.
 	 */
@@ -4107,9 +3858,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async #isPaused(feed: SelectFeed): Promise<boolean> {
 		/**
 		 * The share this feed is held to, then its own rows, and the object's whole count
-		 * only for a feed already over that share. A feed inside its share cannot pause
-		 * whatever else the object holds, so the common answer costs two counts a small
-		 * table and one index answer rather than a scan of every post the reader has.
+		 * only for a feed already over that share.
 		 */
 		let budget = await this.#budget();
 		let followed = await this.#models.subscriptions.followed().count();
@@ -4126,18 +3875,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Takes what the reader has agreed to lose, and nothing else.
-	 *
-	 * Two rules, and both are the reader's own: a velocity they set on a feed, and a budget
-	 * they are over. Nothing is deleted for being old on an object with room for it — a
-	 * sweep that dropped posts read a year ago would fire on an object holding a thousand
-	 * rows as readily as on one holding a million, and take reading history from somebody
-	 * using a thousandth of their space.
-	 *
-	 * The budget it holds the object to is the one the reader's tier carries, so an upgrade
-	 * raises it with the column write that records it and a downgrade lowers it without
-	 * taking a post: an object over a lowered budget with nothing read has nothing to
-	 * reclaim, and stopping is what it does then.
+	 * Takes what the reader has agreed to lose, and nothing else. Two rules, and both are
+	 * the reader's own: a velocity they set on a feed, and a budget they are over.
 	 *
 	 * @param now - Epoch milliseconds the velocities are measured against.
 	 */
@@ -4232,10 +3971,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * The subscription already holding `feedUrl`, or `null` for a feed nobody here follows.
-	 *
-	 * It finds a row the reader has unfollowed as readily as one they follow, because such
-	 * a row is still theirs: it was kept to hold the name of a feed they saved posts from,
-	 * and following that feed again is picking it back up rather than starting a second one.
+	 * It finds a row the reader has unfollowed as readily as one they follow, because such a
+	 * row is still theirs: it was kept to hold the name of a feed they saved posts from, an
 	 */
 	async #subscriptionByUrl(feedUrl: string): Promise<SelectFeed | null> {
 		return await this.#models.subscriptions.byUrl(feedUrl);
@@ -4290,12 +4027,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Pages a composed timeline and resolves the feeds its posts came from.
-	 *
 	 * The ordering is left off the query handed in: `Pagination.byKeyset()` owns it,
 	 * because it needs the sort keys both to seek and to mint the cursor.
 	 *
-	 * @param withTags - Whether the page's posts carry the labels on them, which the two
-	 * surfaces that draw chips ask for and no surface rendering a river does.
+	 * @param withTags - Whether the page's posts carry the labels on them, which the two surfaces that draw chips ask for and no surface rendering a river does.
 	 */
 	async #page<whereArg, columnArg>(
 		query: KeysetQuery<TimelineRow, whereArg, columnArg>,
@@ -4337,10 +4072,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * One page of a searched list: the step's floor, the page inside it, the boundary the
 	 * page stopped at, and the record of what the walk cost.
-	 *
-	 * A search adopts the ordering of the list it narrows and adds a predicate to it, so
-	 * everything that differs between the queue and a label's posts is in the plan handed
-	 * in and everything that is the same about a bounded search is here.
 	 *
 	 * @param plan - How the narrowed list is read, and how far its walk is measured.
 	 * @param options - Where to page from, how much of it, and which posts.
@@ -4537,9 +4268,6 @@ interface SearchPlan<whereArg, columnArg> {
  * Where a search page's walk starts, as epoch milliseconds, or `null` for a page whose
  * cursor already bounds it above.
  *
- * A cursor that no longer decodes leaves the page to the pager, which refuses it and says
- * so, so this reads it for the moment it carries and answers with the clock otherwise.
- *
  * @param cursor - The cursor this page was asked for by, or `null` for the newest.
  * @param now - Epoch milliseconds the search is being run at.
  */
@@ -4612,10 +4340,6 @@ function searchStop(at: {
  * a step that fills no page still continues, so the boundary is minted from the floor the
  * scan reached rather than from a row that came back.
  *
- * Both are spelled with the ordering columns every other list mints, so a reader who
- * searches, pages, clears the box and keeps paging follows one the plain timeline seeks
- * with.
- *
  * @param minted - What the pager minted from the rows this page returned.
  * @param at - Where the step started, where it stopped, and what stopped it there.
  */
@@ -4680,16 +4404,8 @@ interface TaggedState {
 
 /**
  * The kept posts under one label, as a query {@link Pagination.byKeyset} can seek, order
- * and limit.
- *
- * It is spelled out here rather than built by the query builder because the seek runs
- * against the join table's own copies of the ordering columns while the projection returns
- * the post's: one index carries the equality and both ordering columns in that order, so a
- * page is a range scan down it, and the page still mints the cursor shape every other list
- * in this app mints.
- *
- * `saved_at is not null` appears nowhere in it. Every row of the join table belongs to a
- * kept post by construction, so the join is the filter.
+ * and limit. It is spelled out here rather than built by the query builder because the
+ * seek runs against the join table's own copies of the ordering columns while the
  */
 class TaggedQuery implements KeysetQuery<TimelineRow, Predicate, string> {
 	#db: Database;
@@ -4775,8 +4491,7 @@ function taggedStatement(state: TaggedState): SqlStatement {
  * given, so the comparisons and the `and`/`or` nesting below are the whole of what arrives.
  *
  * @param predicate - What the pager composed for this page.
- * @param quote - How an ordering column is spelled in the statement being built, which a
- * page seeking a join table's own copies of those columns answers differently.
+ * @param quote - How an ordering column is spelled in the statement being built, which a page seeking a join table's own copies of those columns answers differently.
  */
 function seekSql(predicate: Predicate, quote: (column: string) => string): SqlStatement {
 	if (predicate.type === "logical") {
@@ -4966,8 +4681,7 @@ function toFolder(row: SelectFolder): UserStore.Folder {
 /**
  * A feed row and its unread count as the feed list renders them.
  *
- * @param folder - The group it is filed in, which a caller that has already read the
- * reader's folders passes rather than making this read one per row.
+ * @param folder - The group it is filed in, which a caller that has already read the reader's folders passes rather than making this read one per row.
  */
 function toFeedSummary(
 	row: SelectFeed,
@@ -5069,9 +4783,7 @@ export function isReadingFace(value: unknown): value is ReadingFace {
 
 /**
  * Reads what somebody pasted as an HTTP URL, so a bare `example.com` reaches discovery
- * the way typing it into a browser would. The fragment is dropped: it addresses a place
- * inside a document rather than a document, so two pastes differing only by one name the
- * same subscription.
+ * the way typing it into a browser would.
  */
 function normalizeFeedUrl(input: string): string | null {
 	let trimmed = input.trim();
@@ -5080,8 +4792,7 @@ function normalizeFeedUrl(input: string): string | null {
 	/**
 	 * A subscribe button hands out `feed://example.com/rss`, or `feed:` wrapped around a
 	 * whole address, and a reader who clicked one and pasted what they got is holding the
-	 * feed they meant. The scheme says "this is a feed" rather than how to fetch it, so it
-	 * comes off and what is underneath is read as the address it is.
+	 * feed they meant.
 	 */
 	let addressed = trimmed.replace(/^feeds?:(\/\/)?/i, "");
 	if (addressed.length === 0) return null;
@@ -5143,30 +4854,15 @@ const ITEM_COLUMNS = [
 ] as const;
 
 /**
- * The statement that writes a page of a feed's items as this reader's own copies.
- *
- * An upsert on the canonical id rather than an insert, which is what makes synchronization
+ * The statement that writes a page of a feed's items as this reader's own copies. An
+ * upsert on the canonical id rather than an insert, which is what makes synchronization
  * idempotent: a run that died before it wrote its cursor re-applies the same items on the
- * retry and changes nothing. Three columns are left out of the update deliberately —
- * `read_at`, so a publisher's correction does not resurrect a post the reader has already
- * read; `id`, the key their copy is joined by; and `published_at`, the leading cursor
- * column, whose movement would make a cursor already in flight skip posts mid-scroll.
- * `saved_at` is left out for the same reason as `read_at`: it is the reader's answer, not
- * the publisher's.
- *
- * `folder_id` is written on both paths, because its one source is the subscription this
- * statement is already holding: an item arriving twice lands in the folder its feed is in
- * now, and a move that failed between the subscription and its posts heals here.
  *
  * @param subscriptionId - This reader's own handle for the feed the items came from.
- * @param incoming - The items to write.
- * `read_at` and `flagged_at` are written on insert alone, which is what lets a rule mark an
- * arriving item while leaving both of them the reader's own answer from then on.
- *
+ * @param incoming - The items to write. `read_at` and `flagged_at` are written on insert alone, which is what lets a rule mark an arriving item while leaving both of them the reader's own answer from then on.
  * @param now - Epoch milliseconds the copies are stamped with.
  * @param folderId - The folder that subscription is filed in, or `null` for an unfiled one.
- * @param marks - The arrival marks rules left, by item id, or `null` for a page no rule
- * decided.
+ * @param marks - The arrival marks rules left, by item id, or `null` for a page no rule decided.
  */
 function upsertItems(
 	subscriptionId: string,
@@ -5237,7 +4933,6 @@ function readStateWhere(readState: UserStore.ReadState): Predicate<"read_at"> | 
  * What one read state narrows a hand-written statement by, or `null` for the state that
  * narrows nothing. It is the clause {@link readStateWhere} builds as a predicate, spelled
  * out in SQL because the search statement composes its own text rather than going through
- * the query builder, and both spellings match the partial index that serves them.
  *
  * @param readState - Which posts the caller asked for.
  */

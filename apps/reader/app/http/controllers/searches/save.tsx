@@ -1,11 +1,7 @@
 /**
  * Saved-search creation for `POST /searches`. It keeps the narrowing the reader is standing
  * in — the words, the read state and whatever feed they scoped to — and sends them back to
- * exactly that queue.
- *
- * It renders nothing. A saved search is a link rather than a surface, so the outcome
- * travels in the queue's own query and the queue says it, which leaves one renderer of
- * that list and one place for it to be described.
+ * exactly that queue. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

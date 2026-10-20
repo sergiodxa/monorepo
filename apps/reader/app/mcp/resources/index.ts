@@ -2,11 +2,6 @@
  * The three things a reader can hand their agent directly, declared as URI patterns: one
  * of their feeds, one of their posts, and the shelf of everything they kept.
  *
- * A scheme of this app's own rather than `https://`, because none of these is fetchable:
- * every one belongs to exactly one reader and is reached through `resources/read` rather
- * than by address. A post's contents carry the publisher's own link, which is the address
- * a client can follow.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

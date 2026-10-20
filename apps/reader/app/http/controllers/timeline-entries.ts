@@ -2,10 +2,6 @@
  * Turns the posts a store answered with into the rows a timeline prints, and the short
  * times that run down the column beside them.
  *
- * The queue, a single feed and a search show the same row and differ only in where their
- * posts came from, so the mapping lives here and each controller says whether its posts
- * come from more than one feed.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -102,18 +98,10 @@ export function exactDate(moment: number, locale: string): string {
 
 /**
  * A post's address as a link may carry it: an absolute `http` or `https` URL, which is
- * what a browser opens as a web page. The publisher wrote that address and it is stored
- * as written, so anything else — a scheme of its own, an address relative to a site this
- * app is not — leaves the title plain text rather than a link somewhere unintended.
- *
- * Campaign metadata and click identifiers come off here rather than out of the row: the
- * stored address is the publisher's own, so nothing about this can make the database
- * disagree with the feed, and a new identifier added to the list next year reaches every
- * post already held.
+ * what a browser opens as a web page.
  *
  * @param stored - The address the post carries, as the store answered with it.
- * @param keepParameters - Whether this feed's reader asked for the address exactly as
- * stored, which is what a publisher who routes on a parameter the list names is fixed by.
+ * @param keepParameters - Whether this feed's reader asked for the address exactly as stored, which is what a publisher who routes on a parameter the list names is fixed by.
  */
 function linkable(stored: string | null, keepParameters: boolean): string | null {
 	if (stored === null || !URL.canParse(stored)) return null;
@@ -182,12 +170,9 @@ export function taggingCopy(intl: I18n): TagChips.Copy {
  *
  * @param ctx - The request's dictionary and language, which every label is resolved through.
  * @param items - The posts to print, in the order they are printed.
- * @param feedTitles - Feed titles by id for a surface holding posts from many feeds; `null`
- * on a surface showing one feed, whose every row would otherwise name the same source.
- * @param tagging - Whether each row carries the strip of labels and the field that adds
- * one, which the surfaces whose posts are kept by definition ask for and no river does.
- * @param keepParameters - The subscriptions whose reader asked for a post's address exactly
- * as the publisher wrote it; every other row's link has its tracking parameters removed.
+ * @param feedTitles - Feed titles by id for a surface holding posts from many feeds; `null` on a surface showing one feed, whose every row would otherwise name the same source.
+ * @param tagging - Whether each row carries the strip of labels and the field that adds one, which the surfaces whose posts are kept by definition ask for and no river does.
+ * @param keepParameters - The subscriptions whose reader asked for a post's address exactly as the publisher wrote it; every other row's link has its tracking parameters removed.
  * @example timelineEntries(ctx, page.items, new Map(page.feeds.map((f) => [f.id, f.title])));
  */
 export function timelineEntries(

@@ -1,19 +1,7 @@
 /**
- * The mark at the end of a post's row that keeps it, and the one that stops keeping it.
- *
- * A kept post is exempt from every rule that deletes one, so this is the only control in
- * the app whose answer is "never mind what any of that says". It is a form rather than a
- * link, since following it changes what the reader keeps, and a link is what a prefetcher
- * and a mail scanner follow on their own. Without script it posts and the server answers
- * with the page again, which is the whole of the behaviour.
- *
- * With script it is the row that changes rather than the page, for the reason the
- * mark-read control is: a reader eight pages into their queue keeps those eight pages and
- * the place they had scrolled to.
- *
- * The shelf has a limit and it refuses rather than making room, so this control has a
- * refusal to say that the mark-read one does not: a full shelf is told to the reader in
- * the label, where they read it and go and unsave something.
+ * The mark at the end of a post's row that keeps it, and the one that stops keeping it. A
+ * kept post is exempt from every rule that deletes one, so this is the only control in
+ * the app whose answer is "never mind what any of that says".
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -45,10 +33,8 @@ const TOGGLE_SIZE = "1.75rem";
 
 /**
  * Declared as a `type` to satisfy the serializable-props constraint a client entry's props
- * are checked against.
- *
- * Kept to what one row cannot work out for itself, since a queue scrolled several pages
- * deep carries hundreds of these.
+ * are checked against. Kept to what one row cannot work out for itself, since a queue
+ * scrolled several pages deep carries hundreds of these.
  */
 export type SaveToggleProps = {
 	/** Where the submission goes, which names the post. */
@@ -105,9 +91,7 @@ export const SaveToggle = clientEntry(
 
 		/**
 		 * Keeps the post, showing it kept first: a hand moving down a list is faster than a
-		 * round trip, and a mark that waits for one lags behind it. A move the server refuses
-		 * is put back, and says why — a full shelf is a different sentence from a failure,
-		 * because the reader can do something about it.
+		 * round trip, and a mark that waits for one lags behind it.
 		 */
 		async function move(next: boolean) {
 			let previous = isSaved;
@@ -165,11 +149,6 @@ export const SaveToggle = clientEntry(
 					{/**
 					 * A square box in place of the padding a worded button carries, so one glyph
 					 * centres in it rather than sitting in a pill.
-					 *
-					 * The mark is the whole control, so `label` is what names it: it reaches a screen
-					 * reader through `aria-label` and a pointer through the native tooltip `title`
-					 * gives. A refusal is said in both, so a reader who saw the mark flip back is told
-					 * why rather than left to wonder.
 					 */}
 					<Button
 						type="submit"

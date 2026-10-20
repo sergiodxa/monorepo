@@ -1,22 +1,7 @@
 /**
  * Single-feed controller for `GET /reading/:feed`: one feed's posts, read and unread
- * alike, newest first, headed by the feed's name — which is the link to the site behind
- * it — and, on that same line, the ways to act on the feed as a whole: check it now, take
- * its unread posts out of the queue, and stop following it.
- *
- * It sits under the queue because it is the same list narrowed to one publisher. What that
- * publisher says about itself and how its last checks went are here too: a reader looks at
- * a feed's health while they are looking at the feed. The checks belong to the feed rather
- * than to any one follower, so that half is asked of the feed's own object — one call, on
- * the one page about one feed, which answers with the feed's true head as well.
- *
- * How long this feed's posts stay is the reader's own answer and sits beside it. What the
- * feed actually publishes is measured, and where the two disagree the page says so and
- * leaves the setting alone: a measurement is a good reason to ask a reader a question and
- * a bad reason to delete their posts.
- *
- * The feed is looked up in the reader's own storage, so a feed somebody else follows is
- * as absent here as one nobody does, and both answer `404`.
+ * alike, newest first, headed by the feed's name — which is the link to the site behind it
+ * — and, on that same line, the ways to act on the feed as a whole: check it now, take its
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -95,9 +80,6 @@ import routes from "~/routes/web";
 /**
  * The URL of one page of a feed, which is what the timeline's older and newer links carry:
  * the cursor alone would resolve against whatever page the browser is on.
- *
- * The feed rides in the path rather than in the query, and this surface narrows its posts
- * by nothing else, so a page of it is that path and a cursor.
  *
  * @param feedId - The feed being paged through.
  * @param cursor - The boundary the store minted, or `null` for the newest page.
@@ -369,12 +351,7 @@ export default createAction(routes.feed, {
 
 		/**
 		 * An author every post on the page shares is the feed's own name said again on every
-		 * row, which the heading above them already says once. Dropping it gives a phone back
-		 * a line per row, and gives the rest of them a column that means something: a name
-		 * here now tells one post from another rather than repeating where they all came from.
-		 *
-		 * It is read off the page in hand, so a feed whose authors vary from one page to the
-		 * next names them on the pages where they vary and not on the pages where they do not.
+		 * row, which the heading above them already says once.
 		 */
 		let authors = new Set(entries.map((entry) => entry.source));
 		if (authors.size === 1) for (let entry of entries) entry.source = null;
@@ -398,10 +375,6 @@ export default createAction(routes.feed, {
 		 * What a list is allowed to do beyond printing its rows, both of which a reader can be
 		 * put back to the far side of without a deploy: fetching the page below as they arrive
 		 * at it, and keeping a post out of everything that empties the queue.
-		 *
-		 * Turning the paging off leaves the links that walk the list by hand, which is what a
-		 * browser running no script is served — so the way back is a path already walked rather
-		 * than one this switch invents.
 		 */
 		let [paging, saving] = await Promise.all([
 			ctx.flags.get(features.infinitePagination),
@@ -416,8 +389,7 @@ export default createAction(routes.feed, {
 		/**
 		 * A frame asked for the piece continuing a feed already on screen, so it is answered
 		 * with that piece: the rows, numbered on from the page it continues, and whatever
-		 * carries the reader on from the end it continues. The chrome, the feed's name and
-		 * everything said about the feed are already in the document this is written into.
+		 * carries the reader on from the end it continues.
 		 */
 		if (isFrameRequest(ctx.request)) {
 			return ctx.render(
@@ -449,12 +421,6 @@ export default createAction(routes.feed, {
 		 * What the publisher says this feed is, and how the last checks of it went. A reader
 		 * asks after a feed's health while they are looking at the feed, so it is read here
 		 * rather than off a list of every feed they follow.
-		 *
-		 * The checks are the feed's own rather than this reader's — one fetch serves everybody
-		 * following it — so they are asked of the object that made them. One call, on the one
-		 * page that is about one feed, and it is made below the frame branch above so paging
-		 * this list costs nothing. An object that has never answered leaves every line of this
-		 * reading as a feed nobody has checked yet, which is what it is.
 		 */
 		let [health, folders] = await Promise.all([
 			feedStore(feed.feedId).health(),
@@ -491,10 +457,6 @@ export default createAction(routes.feed, {
 		 * What the feed actually publishes, against what this reader asked to keep of it. The
 		 * rate is measured once for the feed and shared by everybody following it, so a busy
 		 * feed is known to be busy the first time anybody looks.
-		 *
-		 * It produces a sentence and nothing else. The subscription is left exactly as the
-		 * reader set it, including the Evergreen it starts at, because a rule that deletes a
-		 * post they have not read is theirs to ask for.
 		 */
 		let postsPerDay = health?.postsPerDay ?? null;
 
@@ -508,8 +470,7 @@ export default createAction(routes.feed, {
 		/**
 		 * How much a feed has to publish before the question is worth a reader's attention is
 		 * a judgement about people rather than about storage, and nobody has yet watched one
-		 * being asked. It is read from a flag so the answer can move on evidence rather than
-		 * on a deploy, and so it can be asked of one reader before it is asked of everybody.
+		 * being asked.
 		 */
 		let busyRate = await ctx.flags.get(features.velocitySuggestionRate);
 
@@ -529,8 +490,7 @@ export default createAction(routes.feed, {
 						{/**
 						 * A `POST` rather than a link: checking a feed reaches out to its origin and
 						 * writes what came back, which is not something a prefetcher should do by
-						 * following a URL. The mark rides inside the form's own submit, so what a
-						 * reader presses is still the button that sends it.
+						 * following a URL.
 						 */}
 						<form method="post" action={routes.feeds.refresh.href({ feedId })}>
 							<Button
@@ -548,12 +508,9 @@ export default createAction(routes.feed, {
 						</form>
 
 						{/**
-						 * A `POST` rather than a link, for the reason the check is one: a prefetcher or
-						 * a mail scanner follows a `GET`, and following this one would take a feed out of
-						 * a reader's queue without them asking for it.
-						 *
-						 * It submits on the first click. The reach is a single feed, the page names which
-						 * one, and every post it touches keeps its own way back to unread.
+						 * A `POST` rather than a link, for the reason the check is one: a prefetcher or a
+						 * mail scanner follows a `GET`, and following this one would take a feed out of a
+						 * reader's queue without them asking for it. It submits on the first click.
 						 */}
 						<form method="post" action={routes.feeds.read.href({ feedId })}>
 							<Button
@@ -571,15 +528,9 @@ export default createAction(routes.feed, {
 						</form>
 
 						{/**
-						 * Everything else a feed can be told, behind one trigger. Checking it and
-						 * marking it read are what a reader reaches for while reading; pinning it,
-						 * filing it, how long its posts stay and whether it may interrupt are decided
-						 * once and then left alone, and eight controls on one line made the two that
-						 * are pressed often as hard to find as the six that are not.
-						 *
-						 * The rows that submit carry their own form, so each is the same single POST
-						 * it was on the line. The two that choose open their own menu from here, which
-						 * is the nesting the menu already answers for.
+						 * Everything else a feed can be told, behind one trigger. Checking it and marking
+						 * it read are what a reader reaches for while reading; pinning it, filing it, how
+						 * long its posts stay and whether it may interrupt are decided once and then left
 						 */}
 						<Button
 							commandfor={moreMenuId(feedId)}
@@ -618,10 +569,9 @@ export default createAction(routes.feed, {
 							</form>
 
 							{/**
-							 * Whether a check that finds posts here is worth interrupting the reader for.
-							 * It is a judgement about this publisher, so it is stored on the subscription
-							 * and every browser they are reached on shares it; how they are reached is set
-							 * once, on the settings page, rather than again per feed.
+							 * Whether a check that finds posts here is worth interrupting the reader for. It
+							 * is a judgement about this publisher, so it is stored on the subscription and
+							 * every browser they are reached on shares it; how they are reached is set once,
 							 */}
 							<form method="post" action={routes.feeds.notify.href({ feedId })}>
 								<input type="hidden" name={NOTIFY_FIELD} value={feed.notify ? "false" : "true"} />
@@ -639,10 +589,8 @@ export default createAction(routes.feed, {
 
 							{/**
 							 * A post's outbound link is rendered with its campaign metadata and click
-							 * identifiers removed, which leaves the reader's arrival unattributed and is
-							 * what almost every publisher's server is indifferent to. This is for the one
-							 * that is not: a site routing on a parameter the strip removes answers a broken
-							 * address, and the reader fixes that publisher here rather than the feature.
+							 * identifiers removed, which leaves the reader's arrival unattributed and is what
+							 * almost every publisher's server is indifferent to.
 							 */}
 							<form method="post" action={routes.feeds.linkParameters.href({ feedId })}>
 								<input
@@ -664,14 +612,8 @@ export default createAction(routes.feed, {
 							<Menu.Separator />
 
 							{/**
-							 * How long this feed's posts stay, which is the one control on this page that
-							 * can take away a post the reader has not read. It is a thing done to this
-							 * feed, like checking it or letting it go, so it belongs among these rather
-							 * than in a section of the page to read past on the way to the posts.
-							 *
-							 * The row wears the answer, so the setting is legible without opening
-							 * anything, and choosing is the whole interaction: one click decides, where a
-							 * field and a submit asked for two.
+							 * How long this feed's posts stay, which is the one control on this page that can
+							 * take away a post the reader has not read.
 							 */}
 							<Menu.Item
 								commandfor={velocityMenuId(feedId)}
@@ -726,10 +668,9 @@ export default createAction(routes.feed, {
 
 						<Menu id={velocityMenuId(feedId)} aria-label={ctx.intl.t("feeds.velocity.legend")}>
 							{/**
-							 * One form around every row, so each row is a submit carrying its own value.
-							 * The name leads and the span follows it quietly: a reader picking between
-							 * these is matching a kind of feed to a length of time, and the two read as
-							 * one line rather than as a phrase to parse.
+							 * One form around every row, so each row is a submit carrying its own value. The
+							 * name leads and the span follows it quietly: a reader picking between these is
+							 * matching a kind of feed to a length of time, and the two read as one line rather
 							 */}
 							<form method="post" action={routes.feeds.velocity.href({ feedId })}>
 								<Text mix={[p(2), pb(1), text("xs"), fg("neutral.muted")]}>
@@ -755,11 +696,9 @@ export default createAction(routes.feed, {
 						</Menu>
 
 						{/**
-						 * Every folder the reader has is a submit of its own, the one it is in is
-						 * marked, and the field at the foot files it under a name they type — which
-						 * is where most folders come from. Without script the menu is a popover the
-						 * browser opens itself and each row is a plain submit, so it is the same
-						 * control either way.
+						 * Every folder the reader has is a submit of its own, the one it is in is marked,
+						 * and the field at the foot files it under a name they type — which is where most
+						 * folders come from.
 						 */}
 						<Menu id={folderMenuId(feedId)} aria-label={ctx.intl.t("folders.file.legend")}>
 							<form method="post" action={routes.folders.file.href({ feedId })}>
@@ -836,21 +775,13 @@ export default createAction(routes.feed, {
 					 * The warning the reader has to read before the feed goes, kept off the page
 					 * itself: the prompt is a native `dialog` the trigger opens through Invoker
 					 * Commands, so the sentence costs nothing until it is the thing being decided.
-					 *
-					 * Level 2, since the layout's own page heading is the document's only `h1`.
-					 *
-					 * The confirmation posts `_method`, since a browser form sends `GET` and `POST`
-					 * alone and `methodOverride()` reads the declared `DELETE` back out of it.
 					 */}
 					<HeadingScope level={2}>
 						<Confirm
 							id={unfollowPromptId(feedId)}
 							/**
-							 * Letting go of a feed is left to the browser to navigate, so the list it
-							 * answers with arrives as a new document and this prompt goes with the old
-							 * one. A patched page keeps the state a reader owns — an open `dialog`, a
-							 * typed-in field — which is the right call nearly everywhere and the wrong
-							 * one for a prompt whose whole purpose is to be finished with.
+							 * Letting go of a feed is left to the browser to navigate, so the list it answers
+							 * with arrives as a new document and this prompt goes with the old one.
 							 */
 							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
 							title={ctx.intl.t("feeds.unfollow.title")}
@@ -896,11 +827,9 @@ export default createAction(routes.feed, {
 						</div>
 
 						{/**
-						 * The measurement, put to the reader as a question and left there. It reads
-						 * beside what the feed is rather than beside the control that answers it,
-						 * because it is news about the feed: how much it publishes, and that nothing
-						 * currently leaves. Nothing here changes a setting — a measurement is a good
-						 * reason to ask somebody a question and a bad reason to delete their posts.
+						 * The measurement, put to the reader as a question and left there. It reads beside
+						 * what the feed is rather than beside the control that answers it, because it is
+						 * news about the feed: how much it publishes, and that nothing currently leaves.
 						 */}
 						{isBusy && postsPerDay !== null && (
 							<Text mix={[text("xs"), fg("neutral.muted")]}>

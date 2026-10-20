@@ -2,19 +2,6 @@
  * Folder controller for `GET /reading/folders/:folder`: every post of every feed a reader
  * filed under one name, newest first, as one stream.
  *
- * It sits under the queue because that is what it is — the queue narrowed to a group the
- * reader chose, one step out from a single publisher's page. The page is read from the
- * folder carried on each post rather than gathered from the feeds in the folder, so it
- * seeks like every other list here and a page costs the page.
- *
- * The ways to act on the folder are on its own line: renaming it, making another, and
- * letting it go. A folder holds no posts, so the last of those takes none — its feeds come
- * back unfiled — which is what the prompt says rather than asking anybody to confirm a
- * loss that is not happening.
- *
- * The folder is looked up in the reader's own storage, so one somebody else made is as
- * absent here as one nobody did, and both answer `404`.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -383,15 +370,8 @@ export default createAction(routes.folder, {
 			>
 				<div mix={[vstack({ gap: 6 })]}>
 					{/**
-					 * What deleting the folder does, which is nothing to any post: the feeds come
-					 * back unfiled and everything in them stays. The prompt is a native `dialog` the
-					 * trigger opens through Invoker Commands, so the sentence costs nothing until it
-					 * is the thing being decided.
-					 *
-					 * Level 2, since the layout's own page heading is the document's only `h1`.
-					 *
-					 * The confirmation posts `_method`, since a browser form sends `GET` and `POST`
-					 * alone and `methodOverride()` reads the declared `DELETE` back out of it.
+					 * What deleting the folder does, which is nothing to any post: the feeds come back
+					 * unfiled and everything in them stays.
 					 */}
 					<HeadingScope level={2}>
 						<Confirm

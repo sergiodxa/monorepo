@@ -20,10 +20,6 @@ const TOP_FRAME_SRC_HEADER = "x-remix-top-frame-src";
  * Keeps a failed fragment to the region it was drawn into: a blocking frame whose request
  * throws fails the whole document around it, and an error page written into a region puts a
  * second document inside the first. Redirects pass through, since the renderer follows them.
- *
- * The note's way on is the document the frame sits in — named by the renderer, or by the
- * browser's `Referer` for a frame the client reloads — because the fragment's own address
- * answers only a piece of a page.
  */
 export let frameFallback: Middleware = async (ctx, next) => {
 	let response: Response;

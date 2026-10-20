@@ -32,10 +32,8 @@ function isPurchasable(tier: Tier): tier is Exclude<Tier, "free"> {
 
 /**
  * POST /billing/checkout/:plan — starts a purchase and hands the reader to the platform.
- *
  * A failure returns them to the settings page rather than to an error screen: nothing has
  * been charged, nothing has changed, and the panel they pressed from is where the offer
- * is.
  */
 export default createAction(routes.billing.checkout, {
 	middleware: [requireUser],

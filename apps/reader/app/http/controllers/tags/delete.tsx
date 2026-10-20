@@ -2,11 +2,6 @@
  * Label deletion for `DELETE /tags/:tagId`. It takes the label away and returns the reader
  * to the posts they have kept.
  *
- * Deleting a label deletes no post and unsaves none: losing the label is not losing the
- * thing it was on, and somebody who wanted the posts gone unsaves them. How many posts stop
- * carrying it is the only consequence there is, which is what the prompt on the label's page
- * says before this runs.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

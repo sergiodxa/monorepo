@@ -2,12 +2,6 @@
  * Folder deletion for `DELETE /folders/:folderId`. It takes the folder away and returns
  * the reader to their queue.
  *
- * A folder holds no posts, so deleting one deletes none: its feeds come back unfiled,
- * exactly as they were before anybody made it, and their posts come with them. That is
- * what the prompt on the folder's page says before this runs, which is why nothing travels
- * back to be said afterwards — there is no folder left to say it on, and nothing happened
- * that a reader has to be told about after the fact.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

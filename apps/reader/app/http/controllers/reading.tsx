@@ -1,30 +1,6 @@
 /**
  * Reading-queue controller for `GET /reading`: the posts of every followed feed, newest
- * first, and the app's landing spot after sign-in. It is the app's only list of posts, and
- * the header's own controls are what narrow it — to what is read or unread, to the words
- * a reader searched for, or to both at once, which is the pairing a page of its own for
- * each could never offer.
- *
- * The header also carries the two things a reader does to their subscriptions as a whole:
- * checking every feed on the spot, and following another one. The subscriptions themselves
- * are in the sidebar beside this, which is what leaves this surface the posts.
- *
- * Both narrowings ride in the URL, so a queue is a link a reader can keep, share and
- * reload rather than a state the page forgets.
- *
- * The store answers with posts and, beside them, the feeds those posts came from. Turning
- * that into the row a reader sees happens here, where the dictionary and the request's
- * language are, so the list itself prints text it is handed.
- *
- * Opening the queue is also where a reader finds out how much they are missing. The store
- * compares each subscription's cursor against the head its feed published and hands back
- * that count with the page, so this says what is waiting in the same breath as it shows
- * what is here — and then fetches it behind the response, never in front of it. A reader
- * back after a month gets their timeline in one indexed seek and the feeds they are
- * missing over the seconds after it.
- *
- * The page is exported because a refused follow is answered with the page it was submitted
- * from.
+ * first, and the app's landing spot after sign-in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -313,9 +289,6 @@ function markNote(intl: I18n, params: URLSearchParams): Note | null {
  * this is an ordinary visit. The sentences read in the order a reader asks the questions
  * in: how many were reached, what came back, and what did not answer.
  *
- * A sweep that left some feeds unreached is a warning rather than a failure, the same tone
- * a single feed's failed check earns, since the feeds that did answer are current.
- *
  * @param intl - The request's dictionary.
  * @param params - The query the page was asked for with.
  */
@@ -372,9 +345,6 @@ export namespace ReadingQueue {
 /**
  * Renders the reading queue: the chrome, the header's controls, and one page of the posts
  * the narrowing asks for.
- *
- * Every label is resolved here, because the views print the strings they are handed and
- * the dictionary belongs with the request that detected the language.
  *
  * @param ctx - The request's renderer, dictionary, language and query.
  * @param view - How the queue is narrowed, which the header's controls all carry.
@@ -436,7 +406,6 @@ export async function renderReadingQueue(
 		 * Behind the response rather than in front of it. The page below is already read, and
 		 * the posts this brings in reach the reader through the frames that refetch as they
 		 * move — so nothing here is waited on, and a reader missing two hundred feeds is not
-		 * held while they are fetched.
 		 */
 		if (freshness.count > 0) waitUntil(store.synchronize(freshness.stale));
 	}
@@ -533,10 +502,6 @@ export async function renderReadingQueue(
 	 * What a list is allowed to do beyond printing its rows, both of which a reader can be
 	 * put back to the far side of without a deploy: fetching the page below as they arrive
 	 * at it, and keeping a post out of everything that empties the queue.
-	 *
-	 * Turning the paging off leaves the links that walk the list by hand, which is what a
-	 * browser running no script is served — so the way back is a path already walked rather
-	 * than one this switch invents.
 	 */
 	let [paging, saving] = await Promise.all([
 		ctx.flags.get(features.infinitePagination),
@@ -568,8 +533,7 @@ export async function renderReadingQueue(
 	/**
 	 * A frame asked for the piece that continues a queue already on screen, so it is
 	 * answered with that piece: the rows, numbered on from where the page above stopped,
-	 * and whatever carries the reader on from the end of them. The chrome, the heading and
-	 * the header's controls are all already in the document this is written into.
+	 * and whatever carries the reader on from the end of them.
 	 */
 	if (isFrame) {
 		return ctx.render(
@@ -621,8 +585,6 @@ export async function renderReadingQueue(
 	/**
 	 * What the reader has not got yet, which is news about the queue rather than the outcome
 	 * of anything they pressed, so it stands on its own line and keeps the page's own tone.
-	 * It counts feeds rather than posts: how much each of them holds is exactly what has not
-	 * been read yet.
 	 */
 	let waiting =
 		freshness && freshness.count > 0
@@ -636,13 +598,7 @@ export async function renderReadingQueue(
 			heading={heading}
 			/**
 			 * On the queue's own line, acting on what the heading names and staying in reach
-			 * however far down the list a reader has read. They have that row to themselves, so
-			 * a hand going for a post's own mark or for the older-posts link lands nowhere near
-			 * them.
-			 *
-			 * The filters lead, since choosing which posts the page holds comes before acting on
-			 * them; a queue with nothing in it has nothing to clear, so that offer waits for
-			 * posts while the filters stay, which is how a reader leaves an empty view.
+			 * however far down the list a reader has read.
 			 */
 			actions={
 				<>
@@ -685,10 +641,9 @@ export async function renderReadingQueue(
 					{entries.length > 0 && (
 						<Button
 							/**
-							 * The app's own colour rather than the warning one: a sweep takes nothing
-							 * away. Every post it touches is still here and the read filter beside this
-							 * is where they are found, so the red is left for unfollowing, which does
-							 * delete what it names.
+							 * The app's own colour rather than the warning one: a sweep takes nothing away.
+							 * Every post it touches is still here and the read filter beside this is where
+							 * they are found, so the red is left for unfollowing, which does delete what it
 							 */
 							commandfor={MARK_ALL_PROMPT_ID}
 							command="show-modal"
@@ -711,9 +666,6 @@ export async function renderReadingQueue(
 					 * Keeping the query being read, or letting go of one already kept. It is offered
 					 * only where there is a query to keep, and it posts the narrowing as fields rather
 					 * than the address, so what is kept is a queue of this app's.
-					 *
-					 * A saved search is a link rather than a surface, so both outcomes come back to
-					 * this same page and are said in the same line every other action is said in.
 					 */}
 					{hasQuery &&
 						!isRefusedQuery &&
@@ -791,11 +743,6 @@ export async function renderReadingQueue(
 					 * Following another feed belongs beside the list its posts will join, and needs
 					 * one field to do it. The return key sends it, the way the sidebar's search box is
 					 * sent, so nothing takes width from the row for a button saying what the field
-					 * already says.
-					 *
-					 * Last on the row, where a field belongs among marks, and holding a width it will
-					 * not be squeezed past: an address is typed into this, so the row wraps and gives
-					 * it a line of its own before it shrinks to something nobody can read.
 					 */}
 					<form
 						id={FOLLOW_FORM_ID}
@@ -805,8 +752,6 @@ export async function renderReadingQueue(
 						 * Submitted by the browser itself rather than fetched and patched in. Following
 						 * changes the sidebar, the queue and what the field should say next, so there is
 						 * no part of this page worth preserving across it — and the browser's own
-						 * submission is the one that cannot arrive without the field a reader typed
-						 * into, because it is the same thing that refuses to send an empty one.
 						 */
 						mix={[
 							attrs({ "data-rmx-document": "" }),
@@ -857,14 +802,7 @@ export async function renderReadingQueue(
 				{/**
 				 * The warning the reader reads before the queue goes, kept off the page itself: the
 				 * prompt is a native `dialog` the trigger opens through Invoker Commands, so the
-				 * sentence costs nothing until it is the thing being decided. One sweep takes every
-				 * unread post and nothing here records which they were, so the prompt is the whole
-				 * of the undo this offers.
-				 *
-				 * Level 2, since the layout's own page heading is the document's only `h1`.
-				 *
-				 * The route answers `POST`, which is what a browser form sends, so the confirmation
-				 * submits its own method and carries no override field.
+				 * sentence costs nothing until it is the thing being decided.
 				 */}
 				{entries.length > 0 && (
 					<HeadingScope level={2}>
@@ -873,10 +811,7 @@ export async function renderReadingQueue(
 							color="brand"
 							/**
 							 * The sweep is left to the browser to navigate, so the page it answers with
-							 * arrives as a new document and this prompt goes with the old one. A patched
-							 * page keeps the state a reader owns — an open `dialog`, a typed-in field —
-							 * which is the right call nearly everywhere and the wrong one for a prompt
-							 * whose whole purpose is to be finished with.
+							 * arrives as a new document and this prompt goes with the old one.
 							 */
 							parts={{ form: [attrs({ "data-rmx-document": "" })] }}
 							title={ctx.intl.t("timeline.markAllRead.title")}
@@ -897,7 +832,6 @@ export async function renderReadingQueue(
 				 * The refusal reports here, above the list, where this surface says what every
 				 * other action did. The field it belongs to is one line up in the header with no
 				 * room beneath it for a sentence, so the field points at this note by name and
-				 * holds the address that was refused, and the two are read as one thing.
 				 */}
 				{submission.error && (
 					<Alert id={FOLLOW_ERROR_ID} color="danger" mix={pageNote()}>
@@ -931,10 +865,7 @@ export async function renderReadingQueue(
 				{/**
 				 * The feeds the reader pinned, each with the newest few posts of it they have not
 				 * read. It is a card per feed rather than one list, so a busy pin does not bury a
-				 * quiet one, and it asks its own bounded question: the queue below keeps every
-				 * column and predicate it had, so a pin cannot move a post out from under anybody
-				 * mid-scroll. A pinned feed's newest post therefore appears twice, which is the
-				 * visible price of not letting a pin touch the timeline's predicate.
+				 * quiet one, and it asks its own bounded question: the queue below keeps every col
 				 */}
 				{pinned.length > 0 && (
 					<section aria-label={ctx.intl.t("feeds.pin.label")} mix={[flex(), flexWrap(), gap(4)]}>
@@ -1014,7 +945,6 @@ export async function renderReadingQueue(
  * The submitted form: the address, and the narrowing the queue this was sent from is
  * reading under. An absent or non-text field reads as the empty string, which the store
  * refuses as an address exactly as it refuses a reader's typo, so one branch answers both,
- * and which the queue reads as no narrowing at all.
  */
 const FollowForm = f.object({
 	url: f.field(s.defaulted(s.string(), "")),
@@ -1082,13 +1012,9 @@ export default createController(routes.reading, {
 		},
 
 		/**
-		 * POST /reading — follows whatever feed an address leads to.
-		 *
-		 * It is posted to the queue's own address rather than to the subscriptions, because
-		 * the queue is what answers it: a refused address comes back on this page, and the
-		 * address a reader is left on has to be one they can reload. An address answering no
-		 * `GET` leaves a reload re-sending the submission that got them there, which arrives
-		 * without the field they typed into and is refused as an address they never gave.
+		 * POST /reading — follows whatever feed an address leads to. It is posted to the
+		 * queue's own address rather than to the subscriptions, because the queue is what
+		 * answers it: a refused address comes back on this page, and the address a reader is
 		 */
 		async action(ctx) {
 			let viewer = getViewer();
@@ -1112,13 +1038,6 @@ export default createController(routes.reading, {
 			 * A submission carrying no address at all is not a reader's typo, and must not be
 			 * answered as one. The field refuses an empty value before the browser sends it, so
 			 * nobody can submit one on purpose: what arrives this way is a request replayed
-			 * without the body that gave it meaning — a restored history entry, a resend on a
-			 * page that was reloaded. Telling the reader that what they typed is not an address,
-			 * while what they typed is still sitting in the box, is the one answer that can only
-			 * be read as a lie.
-			 *
-			 * The queue answers instead, through a redirect, which also turns the entry the
-			 * reader is standing on back into one a reload simply repeats.
 			 */
 			if (url.trim().length === 0) {
 				currentLog()?.set({ "follow.refused": "empty-submission" });
@@ -1149,8 +1068,7 @@ export default createController(routes.reading, {
 			/**
 			 * The queue comes back carrying the refusal and the address that earned it, so the
 			 * reader reads why, corrects what they typed, and keeps the posts they were reading
-			 * under them. The field has no room beneath it for a sentence, so the queue reports
-			 * it where it reports every other outcome and the field points at that note by name.
+			 * under them.
 			 */
 			return renderReadingQueue(
 				ctx,

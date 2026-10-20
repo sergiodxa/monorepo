@@ -1,11 +1,7 @@
 /**
  * The reader's fetch-router: the global middleware chain (head requests, async context,
  * logging, form data, method override, session, auth, flags, language, cross-origin
- * protection, security headers, document assets, HTML rendering) and every route mapped to
- * its controller. The worker and every router-level test build it through `createWebRouter()`.
- *
- * Every route is mapped through `lazy()`, so the URL surface is complete at startup while
- * each controller is imported by the first request that reaches it.
+ * protection, security headers, document assets, HTML rendering) and every route mapped to its
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -54,12 +50,9 @@ import routes from "~/routes/web";
 const WEBSUB_CALLBACK = "/websub/{feedId}/{token}";
 
 /**
- * The agent endpoint, in the pattern language `cop()` matches bypasses by.
- *
- * It states its own provenance instead of a browser's: every call carries a bearer token
- * this deployment signed, and nothing there reads a cookie, so a client that happens to
- * run inside a browser is a caller like any other rather than a request made on a
- * reader's behalf by a page they did not visit.
+ * The agent endpoint, in the pattern language `cop()` matches bypasses by. It states its
+ * own provenance instead of a browser's: every call carries a bearer token this
+ * deployment signed, and nothing there reads a cookie, so a client that happens to run
  */
 const AGENT_ENDPOINT = "/mcp";
 
@@ -134,8 +127,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			/**
 			 * A publisher's hub is a cross-origin caller by construction, and a notification is
 			 * exactly the unsafe cross-origin `POST` the default refusal is written to reject, so
-			 * the callback states its own provenance instead: an unguessable token in the path
-			 * and an HMAC over the delivery.
+			 * the callback states its own provenance instead: an unguessable token in the path an
 			 */
 			cop({ insecureBypassPatterns: [WEBSUB_CALLBACK, AGENT_ENDPOINT] }),
 			/**
@@ -366,7 +358,6 @@ export function createWebRouter(options: WebRouterOptions) {
 	 * The agent surface. A browser's `GET` renders the page explaining how to connect; an
 	 * agent's `POST` is answered by the protocol handler, behind the credential middleware
 	 * that turns a token into one reader, the access its tier and scope bind, and the burst
-	 * limiter keyed on that token.
 	 */
 	router.map(
 		routes.mcp.index,
@@ -377,8 +368,6 @@ export function createWebRouter(options: WebRouterOptions) {
 		/**
 		 * Imported here rather than through `lazy()`, because `requireAgent` publishes the agent
 		 * the handlers read, so this stays an action object, whose `handler` must be a function.
-		 * The server is built at module scope, so deferring the import keeps it off a cold
-		 * start for every reader who never speaks to an agent.
 		 */
 		handler: async (ctx) => (await import("~/app/initializers/mcp")).default.fetch(ctx),
 	});

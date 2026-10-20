@@ -3,10 +3,6 @@
  * that is the prompt a model chooses by, and the schema its arguments must satisfy, which
  * validates a call and is published to the model as JSON Schema.
  *
- * Every one of them is a projection of an RPC the web app already runs, so there is no
- * second data path here — only a schema, a bound and a shape. No argument names a reader:
- * the token decided which object answers, and no method below takes a subject.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

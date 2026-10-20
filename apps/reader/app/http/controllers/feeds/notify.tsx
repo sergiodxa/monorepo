@@ -1,11 +1,7 @@
 /**
  * Notify controller for `POST /feeds/:feedId/notify`. It opts one subscription in to
- * notifications, or out of them, and returns the reader to the feed's own page.
- *
- * It renders nothing. The outcome travels in the `notify` query parameter of the redirect,
- * so the feed page is the single place that says what happened, in its own copy. The
- * answer is about a publisher rather than about a device, so it is shared by every browser
- * the reader is reached on.
+ * notifications, or out of them, and returns the reader to the feed's own page. It renders
+ * nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

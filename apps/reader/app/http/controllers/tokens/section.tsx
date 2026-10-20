@@ -2,9 +2,6 @@
  * The agent section of the settings page: what the Model Context Protocol endpoint is, the
  * tokens this reader minted for it, and the two forms that mint and revoke one.
  *
- * It lives beside the controllers that act on a token rather than inside the settings page,
- * so the surface and the two routes acting on it are read together.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

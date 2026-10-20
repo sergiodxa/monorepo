@@ -2,16 +2,6 @@
  * Post controller for `GET /reading/:feed/:item`: one post read here rather than at the
  * publisher. What the feed gave — title, author, date, excerpt and the link — is rendered
  * from the reader's own row and is complete before anything external is asked for, and the
- * article behind the link is folded in underneath it.
- *
- * The cache is consulted while the page is being built, because a hit is one read and
- * waiting on it beats sending a page that immediately replaces itself. A miss leaves a
- * frame in the article's place, resolved the way the timeline resolves the page below it,
- * so a reader has the post the instant they ask for it and the article a moment later.
- *
- * Nothing this page does is written into the reader's object, so every way the fetch can
- * fail is a sentence in place of the article and the excerpt and the link stay exactly
- * where they were.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -100,17 +90,9 @@ function ArticleBody(handle: Handle<{ article: Extracted | null; copy: string; b
 }
 
 /**
- * The post's own audio or video, played by the browser's own element.
- *
- * `controls` and nothing else: the browser's player is keyboard operable, labelled for a
- * screen reader, wired to the operating system's media keys, present on the lock screen and
- * remembers a playback rate, and a hand-built transport gets none of that without being
- * rebuilt.
- *
- * `preload="none"` because a page of posts each fetching metadata is a page of requests to
- * somebody's CDN for a file nobody pressed play on. The element fetches from the publisher's
- * host with the reader's address, as an image would, and what bounds that is the referrer
- * meta the document shell carries.
+ * The post's own audio or video, played by the browser's own element. `controls` and nothing
+ * else: the browser's player is keyboard operable, labelled for a screen reader, wired to
+ * the operating system's media keys, present on the lock screen and remembers a playback
  */
 function MediaPlayer(
 	handle: Handle<{
@@ -143,7 +125,6 @@ function MediaPlayer(
 		 * Both elements go out without a `<track>`. A caption file is something a publisher
 		 * would have to have written and advertised, and no feed format carries one, so a
 		 * `<track>` here would point at nothing — the honest alternative to captions this app
-		 * cannot supply is the label naming what the element plays.
 		 */
 		if (isVideo) {
 			return (
@@ -215,16 +196,12 @@ export default createAction(routes.post, {
 		/**
 		 * Three things have to be true before this app asks a publisher for anything: the
 		 * post has an address, the reader's tier carries extraction, and the switch is on.
-		 * The reader's object answers the last two together, so off means nothing here
-		 * fetches, for everybody at once.
 		 */
 		let mayExtract = item.url !== null && extract;
 
 		/**
 		 * A frame asked for the article alone, so it is answered with the article alone:
-		 * everything else is already in the document this is written into. This is the only
-		 * path that reaches a publisher, which is what keeps a timeline, a poll and a
-		 * synchronization from extracting anything.
+		 * everything else is already in the document this is written into.
 		 */
 		if (isFrameRequest(ctx.request)) {
 			let article =

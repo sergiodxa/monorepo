@@ -3,9 +3,6 @@
  * subject and the id of the row describing it, signed under one Worker secret, so
  * verifying it names the object to open with no lookup and no index every reader shares.
  *
- * Nothing that can go stale is signed in: the scope, the expiry and the revocation live on
- * the row and are read on every request.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -92,10 +89,8 @@ export async function mintAgentToken(subject: string): Promise<MintedToken> {
 
 /**
  * Reads a presented token, answering who it belongs to, or `null` for one this deployment
- * did not mint.
- *
- * A token whose signature does not verify is answered before anything is read, so a forged
- * value wakes no object.
+ * did not mint. A token whose signature does not verify is answered before anything is
+ * read, so a forged value wakes no object.
  *
  * @param raw - Whatever arrived in the `Authorization` header.
  * @example let credential = await readAgentToken(presented);

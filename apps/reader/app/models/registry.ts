@@ -3,11 +3,6 @@
  * names a feed by the id it assigns the first time anybody follows it, and the billing
  * projection, which records what the payment platform last said about a reader.
  *
- * Every function here belongs to the follow path, to the end of a feed's life, or to a
- * delivery from the platform. Nothing that renders a page reaches this database: a
- * subscription stores the feed's id and a reader's object stores their tier, so both are
- * reachable without a lookup.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -32,11 +27,9 @@ let database: Database | undefined;
 let models: CatalogModels | undefined;
 
 /**
- * Opens the catalog's connection, once per isolate.
- *
- * `now` is overridden to epoch-ms because the timestamp columns hold milliseconds since
- * the epoch: D1 binds an integer, which sorts and compares correctly against every row
- * already stored.
+ * Opens the catalog's connection, once per isolate. `now` is overridden to epoch-ms
+ * because the timestamp columns hold milliseconds since the epoch: D1 binds an integer,
+ * which sorts and compares correctly against every row already stored.
  */
 function connect(): Database {
 	return (database ??= new Database(createD1DatabaseAdapter(env.PLATFORM_DB), {
@@ -56,11 +49,6 @@ function catalog(): CatalogModels {
  * Exchanges a canonical feed URL for the id that names its Durable Object, minting one
  * for a URL nobody has followed yet and returning the existing id for one somebody has.
  *
- * Call this with the URL the follow path has already normalized and resolved through
- * discovery, since the URL is what decides whether two people are following one feed.
- * Concurrent first follows of one URL converge: both pass through `UNIQUE (feed_url)`,
- * and the loser of the race is handed the winner's id.
- *
  * @param feedUrl - The canonical URL, as discovery finally reported it
  * @param title - The feed's title, denormalized so a list reads without waking the object
  * @returns The feed's id, which `env.FEED.getByName` addresses its object by
@@ -71,10 +59,6 @@ function catalog(): CatalogModels {
 export async function registerFeed(feedUrl: string, title: string): Promise<string> {
 	let minted = TypeID.fromUUID("feed", generateUUID()).toString();
 
-	// Written as DO UPDATE rather than DO NOTHING, and the difference is the whole
-	// statement: SQLite returns no row for a conflicting insert that does nothing, so
-	// every follower after the first would get back nothing at all. Writing the URL onto
-	// itself is what makes the statement always answer with an id.
 	let { rows = [] } = await connect().exec(sql`
 		insert into feeds (id, feed_url, title, created_at)
 		values (${minted}, ${feedUrl}, ${title}, ${Date.now()})
@@ -93,9 +77,6 @@ export async function registerFeed(feedUrl: string, title: string): Promise<stri
  * call it where a poll stores an item, so a `304` and an idle feed both leave it alone
  * and the column means what a list of feeds would suggest it means.
  *
- * Best-effort, because the items are already stored by the time it runs: a failed write
- * costs a wrong timestamp in an administrative list and nothing else.
- *
  * @param feedId - The feed whose stamp moves
  * @returns Whether the stamp landed, so a caller that logs its poll can say it did not
  */
@@ -109,14 +90,8 @@ export async function stampActivity(feedId: string): Promise<boolean> {
 
 /**
  * Writes what a feed calls itself, once its own object has read the document and knows.
- *
  * The id is minted from a URL, before anything has been fetched, so the row starts out
- * named after the address it was created from. The name a list of feeds should show is
- * the one the publisher gave, and the object holding the feed is the only thing that has
- * read it.
- *
- * Best-effort, for the reason the activity stamp is: this runs after the feed is stored,
- * and a title that lags costs a readable line in an administrative list and nothing else.
+ * named after the address it was created from.
  *
  * @param feedId - The feed being named
  * @param title - The title the feed document carries
@@ -131,15 +106,9 @@ export async function renameFeed(feedId: string, title: string): Promise<boolean
 }
 
 /**
- * Marks a feed as having lost its last subscriber, which starts its grace period.
- *
- * The row stays. A feed serving out its week is visible as exactly that, and a reader who
- * follows it again inside the week is handed the same id and the same object, with its
- * items still in place.
- *
- * Best-effort, because the subscriber has already gone by the time it runs: it is called
- * from inside an alarm that must never reject and from an unfollow the reader has already
- * been told succeeded, and a row left unmarked costs an administrative list its accuracy.
+ * Marks a feed as having lost its last subscriber, which starts its grace period. The row
+ * stays. A feed serving out its week is visible as exactly that, and a reader who follows
+ * it again inside the week is handed the same id and the same object, with its items st
  *
  * @param feedId - The feed whose last subscriber just left
  */
@@ -153,11 +122,7 @@ export async function retireFeed(feedId: string): Promise<void> {
 
 /**
  * Returns a retired feed to service, for a subscriber arriving inside its grace period.
- *
- * Safe on a feed that was never retired: it clears a column that is already clear. Also
- * best-effort, for the reason retiring is — the subscription it accompanies is already
- * written, and a feed listed as retired while somebody reads it is a wrong line in a list
- * rather than anything a reader meets.
+ * Safe on a feed that was never retired: it clears a column that is already clear.
  *
  * @param feedId - The feed somebody has just followed again
  */
@@ -171,10 +136,7 @@ export async function reviveFeed(feedId: string): Promise<void> {
 
 /**
  * Drops a feed from the catalog, which the purge does alongside clearing the object's
- * storage and its head key.
- *
- * Call it only from that purge. A row deleted while the object still holds items would
- * hand the next follower a new id, a new object, and no way ever to reach the old one.
+ * storage and its head key. Call it only from that purge.
  *
  * @param feedId - The feed being purged
  * @returns Whether a row was there to delete
@@ -214,9 +176,6 @@ export async function findBillingCustomerByProviderId(
 /**
  * Records that a reader is a customer of one connection, which is what puts them in the
  * daily sweep's bounded walk.
- *
- * Written as one upsert rather than a read and a write: D1 runs no interactive
- * transaction, so a checkout completing twice has to converge on one row by itself.
  *
  * @param subject - The reader's OIDC subject
  * @param connection - The credential set that issued the id

@@ -2,10 +2,6 @@
  * Serves a different flag definition to the app's own instance, so a test can exercise
  * the branch behind a flag rather than only the one that ships.
  *
- * It swaps the provider rather than mocking the client, which is what keeps the test on
- * the path the app walks: the definition is parsed, the evaluation resolves against it,
- * and what the page reads is what a rule would really have answered.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

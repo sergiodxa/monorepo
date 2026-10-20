@@ -65,9 +65,6 @@ export type SyncFailure = BillingError | UnknownCustomerError;
  * Re-reads what a customer holds on the platform, writes that into the projection, and
  * hands the snapshot to the reader's object, which decides what it does to their tier.
  *
- * A failed read writes nothing and lowers nothing, so an outage at the platform can never
- * be what downgrades somebody.
- *
  * @param customerId - The customer to re-read, as the platform names them
  * @param source - Which path asked, for the record it leaves
  * @example let synced = await syncCustomer(event.order.customerId, "webhook");
@@ -174,9 +171,6 @@ export async function syncCustomer(
  * Re-reads a reader's tier when the stored one has gone unconfirmed for a day, which is
  * what a sign-in does about a delivery that never arrived.
  *
- * A reader who has never reached a checkout costs one local comparison and no call at
- * all, since there is nothing the platform could say about them.
- *
  * @param subject - The reader's OIDC subject
  * @param checkedAt - Epoch milliseconds a snapshot last confirmed their tier
  * @param now - Epoch milliseconds staleness is measured from
@@ -206,9 +200,6 @@ export interface ReconcileResult {
 /**
  * Walks every reader holding a customer record and re-reads what the platform says about
  * them, which is what recovers a delivery nobody ever received.
- *
- * It is bounded by how many readers have reached a checkout rather than by how many
- * readers exist, so it stays affordable at any size the free tier reaches.
  *
  * @param pageSize - Readers one page holds
  * @example let swept = await reconcileBilling();

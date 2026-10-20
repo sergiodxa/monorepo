@@ -2,11 +2,6 @@
  * The filter surface for `/rules`: every rule the reader has written, the form that writes
  * another, and the preview of one they are still typing.
  *
- * `GET` draws the list and, when the query carries a candidate, what that candidate would
- * have caught among the reader's newest posts — which is the only thing here that looks
- * backwards, and it looks without writing. `POST` writes a rule, and reports what it did in
- * the query of the redirect that lands the reader back on this page.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -516,8 +511,7 @@ export default createController(routes.rules, {
 			/**
 			 * Applying a preview is offered on every plan, so only the switch refuses it: with
 			 * filters off there is nothing here to show and no way to put anything here, and a
-			 * reader following a bookmark is sent to the queue rather than shown a page whose
-			 * every control refuses.
+			 * reader following a bookmark is sent to the queue rather than shown a page whos
 			 */
 			if (!entitlement.can.rules.apply) {
 				return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });

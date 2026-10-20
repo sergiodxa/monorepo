@@ -3,10 +3,6 @@
  * on a miss, and whatever comes back — an article, a refusal, a timeout or nothing at
  * all — is one of five outcomes the reading page has copy for.
  *
- * Nothing here writes into a reader's object. An extraction lives in the shared cache
- * for as long as a link circulates and nowhere else, so no failure of this can touch a
- * timeline, a cursor or a saved post.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -86,8 +82,7 @@ function hostOf(url: string): string {
 /**
  * What the origin's `robots.txt` decided, from the shared cache or from the origin itself,
  * held for the lifetime the decision carries: a day for a file read or missing, an hour for
- * an unreachable origin, which refuses every path until then. A non-public origin is never
- * asked, since `distill` refuses its articles before any request.
+ * an unreachable origin, which refuses every path until then.
  */
 async function robotsFor(url: string): Promise<RobotsFetch.Outcome | undefined> {
 	let address = addressable(url);
@@ -107,11 +102,9 @@ async function robotsFor(url: string): Promise<RobotsFetch.Outcome | undefined> 
 }
 
 /**
- * What the shared cache already holds for a post, or `null` when it holds nothing.
- *
- * One KV read, which is what lets a page that is about to render decide whether to print
- * the article inline or leave a frame to go and get it — waiting on a read beats
- * rendering a page that immediately replaces itself.
+ * What the shared cache already holds for a post, or `null` when it holds nothing. One
+ * KV read, which is what lets a page that is about to render decide whether to print the
+ * article inline or leave a frame to go and get it — waiting on a read beats rendering a
  *
  * @param url - The post's address.
  */
@@ -122,12 +115,8 @@ export async function peekArticle(url: string): Promise<Article | null> {
 
 /**
  * The article for one post: a cache read, and on a miss one retrieval, one parse and one
- * write.
- *
- * Every outcome is a rendered state rather than an error, so a caller answers its reader
- * the same way whichever row of the table this lands on. An unreachable cache costs a
- * fetch and answers anyway; a response asking not to be archived is read for this reader
- * and written for nobody.
+ * write. Every outcome is a rendered state rather than an error, so a caller answers its
+ * reader the same way whichever row of the table this lands on.
  *
  * @param post - The post's address, and the summary an extraction has to beat.
  * @example let article = await readArticle({ url: item.url, summary: item.summary });
@@ -219,8 +208,7 @@ export async function readArticle(post: ArticleRequest): Promise<Article> {
 	/**
 	 * A response carrying `X-Robots-Tag: noarchive` is read for whoever asked and held
 	 * for nobody, so that publisher's pages cost one fetch per open rather than one per
-	 * article. A body past the cap is one the extractor got wrong, and is answered with
-	 * rather than kept.
+	 * article.
 	 */
 	if (mayCache && (article.html?.length ?? 0) <= MAX_STORED_BYTES) {
 		await cache.write(key, article, { ttl: isThin ? FAILURE_TTL : ARTICLE_TTL });

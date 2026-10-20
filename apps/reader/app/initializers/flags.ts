@@ -2,14 +2,6 @@
  * The app's feature flags: the definitions every evaluation resolves against, the typed
  * catalog a call site names one by, and the instance every surface evaluates through.
  *
- * Definitions are written here rather than read from storage, so changing one is an edit
- * and a deploy — the review a constant already gets, with the targeting a constant has no
- * room for. What earns a flag is a number nobody has measured yet, or a feature worth
- * turning off faster than a revert: everything else stays a constant.
- *
- * Both of this app's object types evaluate too, so a rule can widen one feed's polling or
- * one reader's budget without touching anybody else's.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -58,8 +50,6 @@ export const FLAG_SET: StoredFlagSet = {
 		 * What a feed's own cadence is multiplied by before its alarm is armed. The band
 		 * its publishing rate puts it in decides the shape; this decides the scale, so a
 		 * deployment can back the whole system off an incident without flattening the
-		 * table. Subjects are feeds, so a rule on `targetingKey` slows one publication
-		 * while the rest stay where they are.
 		 */
 		"feed-poll-multiplier": {
 			variants: { normal: POLL_MULTIPLIER, relaxed: 4, "backed-off": 24 },
@@ -69,7 +59,6 @@ export const FLAG_SET: StoredFlagSet = {
 		 * What the tier's budget is multiplied by before the object starts reclaiming, and
 		 * then refusing. The tier carries the number and this carries the exception to it:
 		 * subjects are readers, so the budget can be widened for somebody who has met it
-		 * without moving what anybody else, on any tier, was sold.
 		 */
 		"reader-budget-scale": {
 			variants: { standard: BUDGET_SCALE, generous: 5 },
@@ -97,7 +86,6 @@ export const FLAG_SET: StoredFlagSet = {
 		 * Whether a reader may label the posts they keep. It sits beside keeping because it
 		 * is the surface built on top of it — a label is a reason to have kept something —
 		 * and because turning it off has to be faster than a revert while the table behind
-		 * it is new.
 		 */
 		tags: {
 			variants: { on: true, off: false },
@@ -107,7 +95,6 @@ export const FLAG_SET: StoredFlagSet = {
 		 * Whether the surface where a reader writes filter rules is drawn. The rules
 		 * themselves are a tier's to allow; this is what decides whether the app offers the
 		 * page at all, so the newest thing that refuses an arriving post can be taken off
-		 * faster than a revert while the table behind it is new.
 		 */
 		"filter-rules": {
 			variants: { on: true, off: false },
@@ -116,8 +103,7 @@ export const FLAG_SET: StoredFlagSet = {
 		/**
 		 * How far back one page of a search walks before it stops and offers to carry on.
 		 * The tier decides how far a search may reach at all; this decides how much of that
-		 * span one page pays for. Subjects are readers, so an archive dense enough to make a
-		 * step expensive can be given a shorter one without moving anybody else's.
+		 * span one page pays for.
 		 */
 		"reader-search-step-days": {
 			variants: { season: SEARCH_STEP_DAYS, month: 30, year: 365 },
@@ -126,8 +112,7 @@ export const FLAG_SET: StoredFlagSet = {
 		/**
 		 * Whether a post's page reaches out for the article behind it. The tier decides who
 		 * is offered it; this is the operational switch a tier is not — one edit turns the
-		 * fetching off for everybody, on a publisher's complaint, a CPU line moving the
-		 * wrong way, or a bug in the sanitizer, without waiting for a revert.
+		 * fetching off for everybody, on a publisher's complaint, a CPU line moving the wr
 		 */
 		"article-extraction": {
 			variants: { on: true, off: false },
@@ -167,9 +152,6 @@ export const features = defineFlags({
 /**
  * The instance every surface evaluates through, installed on a request by the router's
  * middleware and reached directly by the two object types.
- *
- * The provider is built the first time an evaluation needs one rather than at module
- * scope, so loading this module in a Worker does no work.
  */
 export const flags = createFlags({
 	provider: () => new EngineProvider(createEngine({ store: new InMemoryFlagStore(FLAG_SET) })),
@@ -177,11 +159,9 @@ export const flags = createFlags({
 });
 
 /**
- * A client bound to one subject, for the objects, which have no request to carry one.
- *
- * A Durable Object answers in its own context, so the middleware that publishes
+ * A client bound to one subject, for the objects, which have no request to carry one. A
+ * Durable Object answers in its own context, so the middleware that publishes
  * `ctx.flags` never runs there: it names its own subject instead — the reader it holds,
- * or the feed it is.
  *
  * @param targetingKey - The reader's subject, or the feed's id.
  * @example let client = await flagsFor(this.#subject());

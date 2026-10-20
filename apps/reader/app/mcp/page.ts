@@ -2,10 +2,6 @@
  * What a page of posts looks like once it has crossed to a model: the fields a reader would
  * see in a row, the feed each came from, and one opaque reference to the page after it.
  *
- * A model pays for what comes back in context tokens, so nothing here carries a body, a
- * second copy of a feed's details, or a backwards cursor a model would pick the wrong one
- * of. Every string on it was written by a publisher, so it is data rather than instruction.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -51,12 +47,8 @@ export function agentStore() {
  * Projects one timeline page for a model, reporting a page reference it can no longer
  * follow as something it can act on.
  *
- * A cursor that no longer decodes answers a failure rather than the first page, because
- * silently restarting looks to an agent like a loop that never ends.
- *
  * @param result - The page the reader's own object answered with.
- * @throws ToolError When the cursor the model passed back no longer decodes, or the query
- * it searched with holds nothing to find.
+ * @throws ToolError When the cursor the model passed back no longer decodes, or the query it searched with holds nothing to find.
  */
 export function agentPage(result: UserStore.TimelineResult): AgentPage {
 	if (!result.ok && result.reason === "bad-query") {

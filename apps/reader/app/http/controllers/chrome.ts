@@ -1,20 +1,6 @@
 /**
- * The chrome's own copy, the reader wearing it, and the feeds the rail lists under its
- * Feeds heading, which every signed-in page hands the layout along with what that page
- * itself shows.
- *
- * It sits beside the pages rather than inside the layout so the layout stays a thing that
- * prints what it is given, and beside all of them rather than in each so the app's sections
- * are named once however many surfaces lead back to them.
- *
- * The sidebar is on every page, so its list would be a second read of the reader's object on
- * every request — including the pages with no other reason to open it. It holds every feed
- * a reader follows, since the sidebar is now the whole of the subscription list. It is kept in
- * KV instead, holding the four fields a sidebar row draws and nothing else. A cache is a second
- * place the truth lives, so this one is written to be wrong only in ways nobody notices:
- * every change a reader makes themselves clears it as they make it, and what arrives behind
- * their back waits out {@link RAIL_TTL}. A miss, an expiry, or a KV that cannot be reached
- * all end in the same place, which is the object itself.
+ * The chrome's own copy, the reader wearing it, and the feeds the rail lists under its Feeds
+ * heading, which every signed-in page hands the layout along with what that page itself shows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -41,13 +27,9 @@ import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /**
- * How long a reader's cached rail list stands.
- *
- * Every count the reader moves themselves is purged as they move it, so this covers only
- * what arrives while they are not looking: the posts a feed published, which are polled
- * once a day and reach the reader when they next open the reader. Minutes against a day is
- * fresh enough that a new post reaches the rail in the same sitting, and long enough that a
- * session's worth of pages costs one read rather than one per page.
+ * How long a reader's cached rail list stands. Every count the reader moves themselves is
+ * purged as they move it, so this covers only what arrives while they are not looking: the
+ * posts a feed published, which are polled once a day and reach the reader when they next
  */
 const RAIL_TTL = "5 minutes";
 
@@ -97,11 +79,9 @@ export interface CachedFeed {
 }
 
 /**
- * One folder as the rail draws it: the feeds filed there and what they add up to.
- *
- * The count is the sum of the counts beneath it rather than a number of its own, so a
+ * One folder as the rail draws it: the feeds filed there and what they add up to. The
+ * count is the sum of the counts beneath it rather than a number of its own, so a
  * heading showing eleven shows it because the rows under it show four, three, three and
- * one — there is no second query to disagree with them.
  */
 export interface RailFolder {
 	id: string;
@@ -153,12 +133,8 @@ export async function forgetRailSearches(subject: string): Promise<void> {
  * The queries the rail lists, from the cache where it holds them and from the reader's own
  * object where it does not.
  *
- * The sidebar is drawn on every page, so this stays beside the feed list in KV rather than
- * becoming a second read of the reader's object on every request.
- *
  * @param subject - The reader whose kept queries are being drawn.
- * @returns Every query they kept, or none where neither the cache nor the object answers,
- * since a rail missing a band is a page a reader can still read and act on.
+ * @returns Every query they kept, or none where neither the cache nor the object answers, since a rail missing a band is a page a reader can still read and act on.
  */
 export async function railSearches(subject: string): Promise<CachedSearch[]> {
 	let cached = await railCache().fetch<CachedSearch[]>(
@@ -214,8 +190,7 @@ export async function forgetRailFeeds(subject: string): Promise<void> {
  * object where it does not.
  *
  * @param subject - The reader whose subscriptions are being drawn.
- * @returns Every feed the reader follows, or none of them when neither the cache nor the
- * object answers, since a rail missing its list is a page a reader can still read and act on.
+ * @returns Every feed the reader follows, or none of them when neither the cache nor the object answers, since a rail missing its list is a page a reader can still read and act on.
  */
 export async function railFeeds(subject: string): Promise<CachedFeed[]> {
 	let cached = await railCache().fetch<CachedFeed[]>(
@@ -267,14 +242,6 @@ export async function railFeeds(subject: string): Promise<CachedFeed[]> {
  * The rail's feeds in the order their names read, so a reader looking for one by name runs
  * their eye down the column rather than remembering when they followed it.
  *
- * Ordered by the language the request arrived in rather than by the bytes the names are
- * stored as, which is what puts "ábaco" among the As for a Spanish reader instead of past
- * "Zebra" at the end.
- *
- * Sorted here rather than on the way into the cache: the language belongs to the request
- * and the cache is keyed on the reader alone, so one reader's entry is read back by
- * requests in either language and each orders it for itself.
- *
  * @param feeds - The feeds as they were cached or read.
  * @param locale - The request's language.
  */
@@ -285,15 +252,12 @@ export function sortByTitle(feeds: CachedFeed[], locale: string): CachedFeed[] {
 
 /**
  * The rail's folders, each holding the feeds filed in it, in the order their names read.
- *
  * Both the grouping and the counts come off the list the request already holds, so drawing
- * the rail under folder names costs the same read it costs without them. A folder nothing
- * is filed in has no row here, since what a folder draws is the feeds beneath it.
+ * the rail under folder names costs the same read it costs without them.
  *
  * @param feeds - The feeds as they were cached or read.
  * @param locale - The request's language, which orders the names.
- * @returns The folders, the feeds a reader pinned, the ones left unfiled, and the quiet
- * ones the rail draws last.
+ * @returns The folders, the feeds a reader pinned, the ones left unfiled, and the quiet ones the rail draws last.
  */
 export function groupByFolder(
 	feeds: CachedFeed[],
@@ -318,10 +282,7 @@ export function groupByFolder(
 		if (feed.folderId === null) {
 			/**
 			 * Nobody grouped it and it publishes almost nothing, so it goes in the group that
-			 * keeps it from being buried by a feed that publishes hourly. The threshold is read
-			 * against a measurement rather than a preference, which is why a feed near the line
-			 * cannot flicker between page loads: a thirty-day mean moves no faster than a
-			 * publisher does.
+			 * keeps it from being buried by a feed that publishes hourly.
 			 */
 			if (feed.postsPerDay !== null && feed.postsPerDay < QUIET_POSTS_PER_DAY) {
 				quiet.push(feed);
@@ -381,10 +342,6 @@ export function sidebarFeedsSrc(currentPath: string): string {
 /**
  * The sections' names, the signed-in reader, and where the sidebar's feed band is fetched
  * from, spread into the layout by every page that wears it.
- *
- * The feeds themselves are not here: they are drawn into a frame of their own, so a count
- * beside a feed's name can be redrawn when the reader marks a post read several pages into
- * a queue, without fetching the page they are standing on.
  *
  * @param ctx - The request, for the dictionary the names are read from.
  * @returns Every prop the layout's own chrome is drawn from, ready to spread.

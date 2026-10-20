@@ -1,10 +1,7 @@
 /**
- * The credential every agent request is answered under: it reads the presented token,
- * asks the reader's own object what that token may do right now, and publishes the answer
- * for the tools and resources below it.
- *
- * Nothing is cached between the row and the request, which is what makes a revocation take
- * effect on the next call and a cancelled subscription stop working the same day.
+ * The credential every agent request is answered under: it reads the presented token, asks
+ * the reader's own object what that token may do right now, and publishes the answer for
+ * the tools and resources below it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -123,11 +120,8 @@ function presented(ctx: RequestContext): string | null {
 
 /**
  * Answers a refusal the reader's own object reported, in the status each reason deserves.
- *
  * A token this deployment no longer honours is a credential problem and answers `401`; an
  * account whose plan does not carry this is a payment one and answers `403` naming the
- * page to fix it on, since a server that merely listed nothing would read as broken; a
- * spent day answers `429`, which is what a client backs off on.
  *
  * @param ctx - The request being refused, read for its dictionary.
  * @param reason - What the object said.
@@ -151,15 +145,9 @@ function refusal(ctx: RequestContext, reason: string): Response {
 }
 
 /**
- * Authenticates one agent request and publishes what it may do.
- *
- * The token names itself, so the subject comes out of a signature verify rather than out
- * of a table: a value this deployment did not sign is refused before any object is woken.
- * What the token may do is then read from that reader's own rows, which is the only place
- * the scope, the expiry, the revocation and the tier are ever read from.
- *
- * It carries no pointer to protected-resource metadata, because publishing a flow nobody
- * can complete turns a clear refusal into a confusing one.
+ * Authenticates one agent request and publishes what it may do. The token names itself,
+ * so the subject comes out of a signature verify rather than out of a table: a value this
+ * deployment did not sign is refused before any object is woken.
  */
 export let requireAgent: Middleware = async (ctx, next) => {
 	let raw = presented(ctx);

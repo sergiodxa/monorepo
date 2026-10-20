@@ -1,10 +1,7 @@
 /**
  * Saved-search deletion for `DELETE /searches/:searchId`. It forgets a kept query, which
  * deletes no post and empties no list: the row held a narrowing, so what goes is the rail's
- * own row and the address behind it.
- *
- * It renders nothing. The reader is returned to the plain queue with the outcome in its
- * query, since the address they were standing on may be the search that has just gone.
+ * own row and the address behind it. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

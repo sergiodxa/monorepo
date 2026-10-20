@@ -125,10 +125,6 @@ export default createController(routes.auth, {
 			 * Idempotent, and run on every sign-in rather than once: there is no user table and
 			 * no sign-up step, so a first login is what creates a reader, and every login after
 			 * it finds the row already there.
-			 *
-			 * The address rides along because it is the only moment this app holds one: it is
-			 * read off the ID token per request, and the alarm that sends an email has neither
-			 * a request nor a token. Writing it every time picks up a changed one for free.
 			 */
 			let reader = await userStore(subject).ensureUser(subject, finished.data.idToken.email);
 
@@ -136,9 +132,6 @@ export default createController(routes.auth, {
 			 * A webhook that never arrived is repaired here, before anything is rendered: a
 			 * reader who paid and did not get what they paid for fixes it by reloading, which
 			 * is what they will try first anyway.
-			 *
-			 * A reader whose tier was confirmed inside the day, and every reader who has never
-			 * reached a checkout, costs one local comparison and no call at all.
 			 */
 			await reconcileSubject(subject, reader.tierCheckedAt);
 
@@ -146,7 +139,6 @@ export default createController(routes.auth, {
 			 * A preference living only in a cookie is a preference per browser, so the stored
 			 * answer is written onto this machine here: a reader signing in on a second one
 			 * finds their own scheme on the first page they are sent to rather than the default
-			 * until they visit the settings.
 			 */
 			return redirect(routes.reading.index.href(), {
 				status: redirect.Status.SeeOther,

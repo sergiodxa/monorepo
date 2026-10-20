@@ -44,17 +44,7 @@ export const LANGUAGE_COOKIE = createCookie("reader:language", {
 
 /**
  * Remembers how the reader's pages are painted, so the answer is an input to the first
- * render rather than a correction applied after it. A preference read in the browser
- * arrives once the document has already been painted in whatever the markup said, which is
- * a reader who chose dark watching a white page turn dark on every navigation.
- *
- * A cookie as well as the stored row, because the document shell renders for pages with no
- * other reason to touch a reader's storage — the 404 handler, the sign-in page — and waking
- * a Durable Object on the critical path of a page to decide a class is the wrong cost in
- * the wrong place.
- *
- * Left unsigned, for {@link RETURN_TO_COOKIE}'s reason: the worst a tampered value achieves
- * is rendering the reader's own page in a scheme they did not pick.
+ * render rather than a correction applied after it.
  */
 export const PRESENTATION_COOKIE = createCookie("reader:presentation", {
 	path: "/",
@@ -66,9 +56,7 @@ export const PRESENTATION_COOKIE = createCookie("reader:presentation", {
 
 /**
  * What {@link PRESENTATION_COOKIE} carries, narrowed so an unrecognized value falls back to
- * the defaults rather than reaching a template. Both fields are optional in the parse and
- * defaulted out of it, so a cookie written by an older version of this app is read as far
- * as it goes.
+ * the defaults rather than reaching a template.
  */
 export const PresentationCookie = s.object({
 	theme: s.defaulted(s.enum_(THEMES), DEFAULT_THEME),
@@ -78,8 +66,7 @@ export const PresentationCookie = s.object({
 /**
  * How a page is painted, as the cookie and the stored row both answer it.
  *
- * @param value - Whatever {@link PRESENTATION_COOKIE} parsed out of the request, which is
- * `undefined` for a browser carrying none and anything at all for a tampered one.
+ * @param value - Whatever {@link PRESENTATION_COOKIE} parsed out of the request, which is `undefined` for a browser carrying none and anything at all for a tampered one.
  * @example let { theme, face } = readPresentation(await PRESENTATION_COOKIE.parse(header));
  */
 export function readPresentation(value: unknown): Presentation {
@@ -107,8 +94,7 @@ function decoded(value: unknown): unknown {
  * responses that write it: the one that stores a submitted answer, and the sign-in that
  * puts the stored one onto a browser that has none.
  *
- * @param value - The answer to carry, which is what the object holds rather than what a
- * form submitted.
+ * @param value - The answer to carry, which is what the object holds rather than what a form submitted.
  */
 export function writePresentation(value: Presentation): Promise<string> {
 	return PRESENTATION_COOKIE.serialize(JSON.stringify(value));

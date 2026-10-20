@@ -1,10 +1,7 @@
 /**
  * What a label is allowed to be, and the folded form two spellings of one label meet in.
- *
  * Both the path that makes a label and the path that renames one read a name through here,
  * so a name accepted on one is accepted on the other and uniqueness is taken over the same
- * form whichever wrote the row. Nothing here reaches a database or a clock: a name is
- * decidable from its own characters.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,12 +24,9 @@ export interface TagName {
 }
 
 /**
- * Reads what somebody typed as a label, or answers `null` for text that is not one.
- *
- * The name is what is left after trimming, collapsing internal whitespace to one space and
+ * Reads what somebody typed as a label, or answers `null` for text that is not one. The
+ * name is what is left after trimming, collapsing internal whitespace to one space and
  * normalizing to NFKC, and it has to be between one and {@link TAG_NAME_LENGTH} UTF-16
- * units. The slug is that name case-folded, so `Rust` and `rust` resolve to one label while
- * the name shown is the one first typed.
  *
  * @param input - The text as it arrived from a form.
  * @example let folded = foldTagName(" Rust  Lang "); // { name: "Rust Lang", slug: "rust lang" }

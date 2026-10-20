@@ -1,16 +1,7 @@
 /**
  * The mark a link wears when following it leaves the app for a tab of its own. A feed's
- * name and a post's title both carry one, so the same glyph says the same thing wherever
- * a reader meets it.
- *
- * The icon set draws it, which is what keeps it on the same grid and stroke as every other
- * glyph on the page. It arrives decorative: the link it follows is already named, and a
- * second reading of the same thing is noise to a screen reader.
- *
- * What this wrapper adds is the layout. The component library lays every `svg` out as a
- * block, so the mark needs saying that it is a character on the line of text it follows,
- * riding far enough below the baseline to sit against that text rather than on top of it.
- * It takes its color from that text too, so it dims with whatever dims the link.
+ * name and a post's title both carry one, so the same glyph says the same thing wherever a
+ * reader meets it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

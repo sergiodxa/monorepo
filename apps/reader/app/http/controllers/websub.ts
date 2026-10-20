@@ -2,7 +2,6 @@
  * `/websub/:feedId/:token` — where a publisher's hub verifies a subscription and then
  * delivers. The `GET` echoes a challenge only for a subscription this app is waiting on,
  * and the `POST` proves a delivery came from the hub this app shares a secret with before
- * it lets that delivery decide anything.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,11 +31,9 @@ import routes from "~/routes/web";
 const Params = s.object({ feedId: s.string(), token: s.string() });
 
 /**
- * Notifications one feed's callback answers in a minute.
- *
- * The object already refuses to fetch a publisher more than once a minute, which bounds
- * what a flood costs the publisher; this bounds what it costs this app, since every
- * delivery past it is refused without waking anything.
+ * Notifications one feed's callback answers in a minute. The object already refuses to
+ * fetch a publisher more than once a minute, which bounds what a flood costs the
+ * publisher; this bounds what it costs this app, since every delivery past it is
  */
 const NOTIFICATIONS_PER_MINUTE = 60;
 

@@ -2,12 +2,6 @@
  * Label renaming for `POST /tags/:tagId`. It changes the name a set of kept posts reads
  * under and returns the reader to that label's own page.
  *
- * Renaming writes one row and rewrites no post, however many carry the label: everything
- * else holds it by its id, which a name never was.
- *
- * It renders nothing. The outcome travels in the `tag` query parameter of the redirect, so
- * the label's page is the single place that says what happened, in its own copy.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

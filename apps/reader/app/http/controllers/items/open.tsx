@@ -2,15 +2,6 @@
  * Open-post controller for `POST /items/:itemId/open`. Every post's title carries a `ping`
  * attribute naming this URL, so the browser posts here itself as it follows the title
  * through to the publisher: opening a post is what takes it out of the queue, while the
- * title stays an ordinary link — copyable, middle-clickable, and showing the publisher's
- * own address in the status bar.
- *
- * Nobody ever sees this response. The browser sends the request while navigating away and
- * discards whatever comes back, so this answers with a status and no body.
- *
- * `POST /items/:itemId/read` stays beside it, and stays the reliable path: it is what a
- * reader submits to mark a post read without opening it, to put one back as unread, and
- * to catch the posts this misses in a browser that sends no pings.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,11 +26,9 @@ const NOT_FOUND_STATUS = 404;
 const ItemParams = s.object({ itemId: s.string() });
 
 /**
- * POST /items/:itemId/open — marks one post read on the browser's report of a click.
- *
- * The browser composes this request, not a form: it arrives with the body `PING` under
- * `text/ping`, which the global form-data middleware hands on as empty form data. So the
- * post being marked is taken from the URL alone, and the body is left where it is.
+ * POST /items/:itemId/open — marks one post read on the browser's report of a click. The
+ * browser composes this request, not a form: it arrives with the body `PING` under
+ * `text/ping`, which the global form-data middleware hands on as empty form data.
  */
 export default createAction(routes.items.open, {
 	middleware: [requireUser],

@@ -132,11 +132,8 @@ export interface NotifyInput {
 
 /**
  * The posts this object wrote since the last notification, from feeds the reader opted in
- * and still follows.
- *
- * The count is of rows this object wrote rather than of what the heads implied: a head can
- * over-report, a velocity drops items on the way in, and back-pressure can pause a feed
- * entirely, so a count from anywhere else would name posts the reader does not have.
+ * and still follows. The count is of rows this object wrote rather than of what the heads
+ * implied: a head can over-report, a velocity drops items on the way in, and back-pressure
  *
  * @param db - The reader's own database.
  * @param since - Epoch milliseconds the last notification went out at.
@@ -169,9 +166,6 @@ export async function summarize(db: Database, since: number): Promise<Summary> {
 /**
  * The hour of the day it is where the reader is, from an IANA zone name so a daylight
  * saving change is the platform's arithmetic rather than this app's.
- *
- * A zone the platform does not recognize reads as UTC, which keeps a wrong zone to a
- * notification at an odd hour rather than one that never arrives.
  *
  * @param at - Epoch milliseconds to read the hour of.
  * @param timeZone - The IANA name the reader's browser reported.
@@ -239,11 +233,7 @@ export function pushOutcome(code: WebPushErrorCode | null): PushOutcome {
 
 /**
  * Notifies the reader about everything that has arrived since the last notification, and
- * says whether anything went out.
- *
- * It resolves whatever happens. It is the last step of a check, after every row is written
- * and every cursor has advanced, so a delivery that fails costs nothing but itself and the
- * alarm re-arms unaffected.
+ * says whether anything went out. It resolves whatever happens.
  *
  * @param input - The models, the settings row, the clock and the mailer.
  * @example let outcome = await notify({ models, row, now: Date.now(), mayEmail, mailer, record });
@@ -305,9 +295,6 @@ export async function notify(input: NotifyInput): Promise<NotifyOutcome> {
 /**
  * The channels that can actually carry a notification: push once a device is registered,
  * email once the plan allows it, a transport is bound and sign-in has written an address.
- *
- * Enforced here rather than in the form, so a reader whose plan lapsed stops being emailed
- * without anything having to go back and clear a switch.
  */
 async function enabledChannels(input: NotifyInput): Promise<Channel[]> {
 	let { models, row, mayEmail, mailer, appUrl } = input;
@@ -346,10 +333,6 @@ function suppressionFor(
 /**
  * Delivers one notification to every device the reader registered, concurrently, and
  * applies each answer to the row it was about.
- *
- * It answers accepted on the first device that took it: requiring all would let one broken
- * endpoint re-notify every working one on every check, and requiring none would drop the
- * notification whenever the first send failed.
  */
 async function deliverPush(
 	input: NotifyInput,
@@ -374,10 +357,8 @@ async function deliverPush(
 
 /**
  * Sends to one device and writes what came back onto its row, answering whether the push
- * service took it.
- *
- * A refusal is a value rather than a rejection, so one unreachable service cannot take the
- * notification away from the devices beside it.
+ * service took it. A refusal is a value rather than a rejection, so one unreachable
+ * service cannot take the notification away from the devices beside it.
  */
 async function deliverTo(
 	input: NotifyInput,

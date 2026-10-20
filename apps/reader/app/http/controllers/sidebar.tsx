@@ -1,11 +1,7 @@
 /**
  * The sidebar's feed band for `GET /sidebar/feeds`: every feed a reader follows and how
- * many posts of each are waiting, as the sidebar lists them.
- *
- * It answers a fragment of the chrome rather than a page. The band is the only part of the
- * sidebar that changes while a reader reads — opening a post moves a count — and by then
- * the page they are on may be several fetched pages long, so the band is redrawn on its own
- * instead of the document around it.
+ * many posts of each are waiting, as the sidebar lists them. It answers a fragment of the
+ * chrome rather than a page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

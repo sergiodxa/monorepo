@@ -1,12 +1,7 @@
 /**
- * The labels on one kept post, and the field that puts another on it.
- *
- * Both surfaces that draw labels print the same strip beneath a post's title — the list of
- * everything kept, and the list of what is kept under one label — so the markup lives here
- * and each controller supplies the chips and the copy.
- *
- * Every string arrives translated: interpolation and the dictionary belong to the
- * controller, which is where the request's language is.
+ * The labels on one kept post, and the field that puts another on it. Both surfaces that
+ * draw labels print the same strip beneath a post's title — the list of everything kept,
+ * and the list of what is kept under one label — so the markup lives here and each
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,9 +77,6 @@ function chipShell() {
 /**
  * The labels on one post, each a way into the list of everything kept under it, and the
  * field that adds another.
- *
- * A label is a reason to have kept something, so the field keeps the post as it labels it:
- * one gesture, with no ordering between two verbs for a reader to get wrong.
  */
 export default function TagChips(handle: Handle<TagChips.Props>) {
 	return () => {

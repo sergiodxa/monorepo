@@ -1,17 +1,7 @@
 /**
  * Where one page of posts sits among the others, and the addresses that walk away from it.
- *
  * Both reading surfaces show the same list of the same rows and differ only in which posts
  * they hold, so how a page is numbered, how the pages above and below it are addressed, and
- * which of them a frame fetches are all decided here rather than twice. What a surface
- * keeps to itself is its own address: the queue carries the words and the filter a reader
- * narrowed it by, and a feed's page carries the feed in its path, so each hands in a way of
- * building its own addresses and this adds the paging to it.
- *
- * A page is walked in both directions. The one below is fetched as the reader scrolls down
- * to it and the one above as they scroll back up, so both ends of a page carry the next one
- * — and a piece fetched for either end carries only the end it continues, since the page at
- * its other end is already in the document it is written into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí
@@ -23,8 +13,6 @@ import { FRAME_NEWER, FRAME_OLDER, FRAME_PARAM } from "~/app/http/frames";
  * The parameter carrying how far into the list a page begins. A cursor records where to
  * read from and not how far in that is, so the page that builds a link to the next one
  * counts its own rows and passes the total on; a list walked from the top therefore numbers
- * its rows honestly, and a cursor URL arrived at on its own numbers from one, which is what
- * any list with no other information does.
  */
 export const FROM_PARAM = "from";
 
@@ -80,7 +68,6 @@ export namespace ListPaging {
  * Where this page's first row falls in the list as a whole, or `null` for a page that
  * cannot say. The newest page starts at the first row; a page below it is told where it
  * begins by the page that linked to it; and a cursor followed on its own says nothing about
- * how far in it is, so such a page counts from one the way any other list does.
  *
  * @param params - The query the page was asked for with.
  * @param cursor - The cursor this page was asked for by, or `null` for the newest.
@@ -102,13 +89,10 @@ function startFrom(
 
 /**
  * Places one page of a list: how its rows are numbered, where the pages either side of it
- * live, and which of them this response carries the way onto.
+ * live, and which of them this response carries the way onto. A whole page carries both
+ * ends.
  *
- * A whole page carries both ends. A piece fetched to continue one carries the end it
- * continues and nothing at the other, where the page that asked for it already sits.
- *
- * @param options - The surface's own addressing, the query it was asked with, and the page
- * the store answered.
+ * @param options - The surface's own addressing, the query it was asked with, and the page the store answered.
  * @example placePage({ address: (c, extra) => queueUrl(view, c, extra), ...page });
  */
 export function placePage(options: ListPaging.Options): ListPaging.Placement {

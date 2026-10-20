@@ -2,21 +2,6 @@
  * The canonical copy of one feed, and the RPC surface it answers, which
  * `bootstrap/worker.ts` exports to the runtime as `FeedDO`.
  *
- * One object per feed, named by the id the catalog assigned it, so the traffic this
- * product sends a publisher is a function of how many feeds its readers follow rather than
- * of how many of them follow each one: ten thousand subscribers of a feed are one poll,
- * because one object does the polling and each reader takes a copy from it afterwards.
- *
- * It tells nobody when it finds something. Telling every subscriber is one write per
- * subscriber, for a fact each of them could work out — and most of them will not open the
- * reader today. Instead the feed publishes where it has got to, once, and readers compare
- * that against their own cursor when they next ask a question that needs the answer.
- *
- * Three things never cross this boundary, for the reason they never cross the reader's: a
- * `Result`, whose error subclass the platform drops; a `Date`, for the reason every stored
- * timestamp is an integer; and a thrown failure where a discriminated union would let the
- * caller tell one refusal from another.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -259,10 +244,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * answers with what that reader needs to start reading: the feed's own description of
 	 * itself, the head it has reached, and its newest page of items.
 	 *
-	 * Idempotent, because the second follower of a feed reaches an object that already
-	 * exists and has already done the fetching — which is the whole point of naming it
-	 * after the feed rather than after the reader.
-	 *
 	 * @param userId - The reader subscribing, as their OIDC subject.
 	 * @param feedUrl - The canonical URL, used only when this object has no document yet.
 	 * @example let joined = await feedStore(feedId).subscribe(viewer.id, feedUrl);
@@ -281,7 +262,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 * A membership is a row keyed by the reader, so following twice is one row either
 		 * way. Read before written rather than written over: the second follower of a feed is
 		 * the common case, and it costs a read rather than a write to the table every
-		 * unsubscribe then has to check.
 		 */
 		await this.#models.subscribers.follow(userId, now);
 
@@ -308,11 +288,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Drops a subscriber, and says whether anybody is left.
-	 *
-	 * When nobody is, the feed stops polling immediately and sets a purge a week out
-	 * instead: an unfollow and a re-follow a day later then costs one fetch rather than a
-	 * re-download of everything the feed has ever published.
+	 * Drops a subscriber, and says whether anybody is left. When nobody is, the feed
+	 * stops polling immediately and sets a purge a week out instead: an unfollow and a
+	 * re-follow a day later then costs one fetch rather than a re-download of everything
 	 *
 	 * @param userId - The reader leaving, as their OIDC subject.
 	 */
@@ -342,8 +320,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		/**
 		 * The grace period is about this app's storage — it exists so a re-follow does not
 		 * re-download a feed — and it is no reason to leave somebody else's hub delivering
-		 * for a feed nobody reads. The token goes with the subscription, so a hub that keeps
-		 * notifying is answered `410 Gone` without waking anything.
+		 * for a feed nobody reads.
 		 */
 		if (feed !== null) {
 			await this.#leaveHub(feed, "unfollowed");
@@ -358,11 +335,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Retrieves the feed and reports what came back.
-	 *
-	 * One entry point for every reason a feed is fetched — its own schedule, a reader
-	 * asking on the spot, and whatever a publisher's own ping becomes later — so the
-	 * trigger changes without anything downstream of it changing.
+	 * Retrieves the feed and reports what came back. One entry point for every reason
+	 * a feed is fetched — its own schedule, a reader asking on the spot, and whatever
+	 * a publisher's own ping becomes later — so the trigger changes without anything d
 	 *
 	 * @param reason - What asked for this, which decides whether a backoff holds it back.
 	 */
@@ -377,9 +352,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		/**
 		 * A backoff holds a schedule, and a publisher's hub, off an origin that has been
 		 * failing: a ping cannot fix a 502, and re-fetching a failing origin on somebody
-		 * else's schedule is the abuse the backoff exists to prevent. A reader asking on the
-		 * spot is the one case it was never meant to hold back: a feed that has been failing
-		 * is exactly the one they came here to ask about.
+		 * else's schedule is the abuse the backoff exists to prevent.
 		 */
 		if (held(reason) && feed.next_attempt_at !== null && feed.next_attempt_at > now) {
 			return { ok: true, status: "not_modified", head: feed.head };
@@ -504,13 +477,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * The scheduled poll, or the purge of a feed nobody follows any more.
-	 *
-	 * Which job a firing is doing is a question about the `subscribers` table rather than a
-	 * flag, so one alarm serves both and neither can be left set by a path that forgot.
-	 *
-	 * It never rejects. A rejected alarm is retried by the platform, which would re-fetch an
-	 * origin that already answered.
+	 * The scheduled poll, or the purge of a feed nobody follows any more. Which job a firing
+	 * is doing is a question about the `subscribers` table rather than a flag, so one alarm
+	 * serves both and neither can be left set by a path that forgot. It never rejects.
 	 */
 	override async alarm(): Promise<void> {
 		let purged = false;
@@ -623,18 +592,13 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 
 		/**
 		 * `deleteAll` takes the tables with the rows, and the schema is otherwise built in the
-		 * constructor — but this instance is still live and still answering. Rebuilding it
-		 * here is what leaves a purged feed looking like one nobody has subscribed to yet,
-		 * which every method already has an answer for, rather than failing on a missing
-		 * table until the runtime happens to evict it.
+		 * constructor — but this instance is still live and still answering.
 		 */
 		await runMigrations(this.#adapter, FEED_MIGRATIONS, FEED_JOURNAL);
 
 		/**
 		 * Last, because a row deleted while the object still held items would hand the next
-		 * follower a new id, a new object, and no way ever to reach the old one. The reverse
-		 * — a row outliving the storage — costs the next follower one re-initialization of an
-		 * object that is already empty.
+		 * follower a new id, a new object, and no way ever to reach the old one.
 		 */
 		await deleteFeed(feedId).catch(() => undefined);
 
@@ -667,12 +631,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * How long until this feed is next fetched.
-	 *
-	 * A feed that is failing is retried when its own backoff lifts, and the backoff is a
-	 * floor on that wait rather than a ceiling: the band is a claim about what a feed
-	 * publishes, and an origin that is not answering is publishing nothing this system can
-	 * see, so the backoff wins for as long as it is the longer of the two.
+	 * How long until this feed is next fetched. A feed that is failing is retried when its
+	 * own backoff lifts, and the backoff is a floor on that wait rather than a ceiling:
+	 * the band is a claim about what a feed publishes, and an origin that is not answering
 	 *
 	 * @param outcome - What the poll that just ran reported.
 	 * @param previousRate - The rate this feed measured before that poll overwrote it.
@@ -694,10 +655,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * How long this feed waits between polls, derived from what it has been publishing and
 	 * scaled by a rule that may slow the whole system without losing the shape of the table.
-	 *
-	 * The subject is the feed itself, because that is what the question is about: how often
-	 * a document is worth fetching is a fact about the document, and every subscriber of it
-	 * is served by the one answer.
 	 *
 	 * @param previousRate - The rate measured before this poll, which supplies the hysteresis.
 	 * @param feed - The feed's row as it now stands, or `null` for an object with no document.
@@ -734,9 +691,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * The secret one notification must be signed with, for the caller holding the token
 	 * half of the callback URL.
 	 *
-	 * The comparison is constant-time and a wrong token answers with nothing at all, so a
-	 * caller probing the endpoint learns the same thing whatever it sends.
-	 *
 	 * @param token - The second segment of the callback URL the request arrived on.
 	 */
 	async hubSecretFor(token: string): Promise<FeedStore.HubCredentials | null> {
@@ -751,9 +705,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * Judges a hub's verification. A subscription is confirmed only when the token, the topic
 	 * and a subscription this object is waiting on all agree, which is the defence against
 	 * being enrolled in somebody else's topic; an unsubscription only for the one last left.
-	 *
-	 * A denial for the subscription held clears it, so its token stops answering at once and
-	 * the next poll that still sees the hub asks again.
 	 *
 	 * @param token - The second segment of the callback URL the verification arrived on.
 	 * @param verification - What the hub's verification request carried.
@@ -806,12 +757,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Records one accepted notification and goes and looks.
-	 *
-	 * A valid signature buys a fetch rather than a write: nothing from the delivery is
-	 * parsed, diffed or stored, so a hub that has been compromised cannot put a headline in
-	 * anybody's timeline — it can only decide when this object retrieves the feed from the
-	 * publisher's own origin.
+	 * Records one accepted notification and goes and looks. A valid signature buys a fetch
+	 * rather than a write: nothing from the delivery is parsed, diffed or stored, so a hub
+	 * that has been compromised cannot put a headline in anybody's timeline — it can only d
 	 */
 	async notified(): Promise<FeedStore.HubNotice> {
 		let now = Date.now();
@@ -903,12 +851,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Registers this feed's callback with a hub and waits for the verification.
-	 *
-	 * The row moves to `pending` before the request goes out, because a hub may call the
-	 * verification callback before the subscription request returns. A request the hub
-	 * refuses leaves no subscription at all, and the next poll that still sees a hub tries
-	 * again.
+	 * Registers this feed's callback with a hub and waits for the verification. The row
+	 * moves to `pending` before the request goes out, because a hub may call the
+	 * verification callback before the subscription request returns.
 	 *
 	 * @param feed - The feed's row, for the address the events are recorded against.
 	 * @param advert - The hub to register with and the topic to register under.
@@ -960,11 +905,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Replaces the lease before it lapses, with a fresh secret and a fresh token.
-	 *
-	 * A lapse is not an incident — the feed is already polling and the next poll that still
-	 * sees a hub subscribes again — so a renewal that fails costs the subscription and
-	 * nothing else.
+	 * Replaces the lease before it lapses, with a fresh secret and a fresh token. A lapse
+	 * is not an incident — the feed is already polling and the next poll that still sees a
+	 * hub subscribes again — so a renewal that fails costs the subscription and nothing
 	 *
 	 * @param feed - The feed's row, which carries the hub and the topic to renew under.
 	 * @param now - Epoch milliseconds the renewal is sent at.
@@ -984,9 +927,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * Tells a hub to stop delivering. It reports nothing back: the subscription is being
 	 * abandoned either way, and a hub that keeps notifying is answered `410 Gone` by a
 	 * callback whose token has already gone.
-	 *
-	 * The token and topic being left are written first, because the hub may verify the
-	 * unsubscription before the request returns, and that verification is confirmed.
 	 *
 	 * @param feed - The feed's row as it stood while the subscription was held.
 	 * @param reason - What ended it, which is what the event is read by.
@@ -1043,10 +983,6 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * Counts a poll that found items no notification announced, and demotes the hub on the
 	 * third of them in a row.
-	 *
-	 * A hub that verifies happily and then delivers nothing is the commonest way this is
-	 * quietly not working, and there is no error, status or callback that says so: the
-	 * fallback poll is the only thing that can see it, which is why it is not optional.
 	 *
 	 * @param before - The feed's row as it stood before the poll overwrote it.
 	 * @param inserted - Items that poll stored.
@@ -1128,11 +1064,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Whether this firing is one a poll is owed to.
-	 *
-	 * An alarm with no renewal waiting on it was armed for the poll, so it polls; only a
-	 * firing brought forward by a renewal has to ask whether the poll is also due, which is
-	 * what keeps a six-hourly feed from being fetched every time its lease comes up.
+	 * Whether this firing is one a poll is owed to. An alarm with no renewal waiting on it
+	 * was armed for the poll, so it polls; only a firing brought forward by a renewal has
+	 * to ask whether the poll is also due, which is what keeps a six-hourly feed from being
 	 *
 	 * @param feed - The feed's row, or `null` for an object with no document.
 	 * @param renewing - Whether this firing is also renewing a lease.
@@ -1155,10 +1089,8 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Arms the object's single alarm at the earliest of the next poll and the next renewal.
-	 *
 	 * The two are armed one after the other because arming never lengthens a wait: whichever
 	 * comes first is what the alarm holds, and the firing works out for itself which of its
-	 * jobs are owed.
 	 *
 	 * @param pollDelay - How long until the next poll is owed.
 	 */
@@ -1170,12 +1102,9 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Writes one wide event about what this object just did.
-	 *
-	 * Opened here rather than read off the request, because a Durable Object answers in its
-	 * own context and the log the Worker opened for the request does not reach it. What goes
-	 * in is counts and identifiers: a feed's address and what a poll did with it, never the
-	 * contents of anything it fetched or the readers waiting for it.
+	 * Writes one wide event about what this object just did. Opened here rather than read
+	 * off the request, because a Durable Object answers in its own context and the log the
+	 * Worker opened for the request does not reach it.
 	 *
 	 * @param kind - What kind of invocation produced this, which the platform groups by.
 	 * @param fields - The event's name and its measurements.
@@ -1187,8 +1116,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	/**
 	 * The feed this object holds, which is the name it was reached by.
 	 *
-	 * @throws If the object was reached by id rather than by name, which would leave every
-	 * key it writes and every catalog row it stamps addressed to nothing.
+	 * @throws If the object was reached by id rather than by name, which would leave every key it writes and every catalog row it stamps addressed to nothing.
 	 */
 	#feedId(): string {
 		let name = this.ctx.id.name;

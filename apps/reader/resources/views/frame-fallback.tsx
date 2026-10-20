@@ -3,13 +3,6 @@
  * of the chrome, a page of posts — and none of them has anything different to tell the
  * reader about it, so there is one of these rather than one per caller.
  *
- * It reads as a gap rather than as a crash: the rest of the page arrived and is fine, so
- * this is a note the width of whatever was missing rather than a page-level failure. What
- * went wrong goes to the log, where somebody can act on it; a status line or a thrown
- * message is news about the server rather than about the reading.
- *
- * Every string arrives translated, so the dictionary stays with the request.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

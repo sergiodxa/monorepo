@@ -3,23 +3,6 @@
  * hands every feed address in it, with the folder its outline named, to the reader's
  * store, which follows the ones they do not follow already and files what it followed.
  *
- * It renders nothing. The outcome travels in the `imported` query parameter of the
- * redirect back to the settings page the form lives on, which is the single place that
- * says what happened, in its own copy. The parameter carries exactly one of four values:
- *
- * - `done` — the document was read and its feeds handed to the store. Three further
- *   parameters carry what became of them, each an integer that reads as zero when it is
- *   absent: `added`, `following` for the ones already followed, and `failed`.
- * - `empty` — the document was read and lists no feeds.
- * - `unreadable` — the upload is not an OPML document.
- * - `too-large` — the upload is past the size this reads, so it was never parsed.
- * - `missing` — the form arrived without a file.
- *
- * A feed that could not be retrieved is counted, and the rest of the document is followed
- * regardless, so three failures out of fifty is a `done` import reporting three failures.
- * The failures are counted rather than named: the reader acts on how many there were, and
- * fifty addresses would travel through the browser's history and every log along the way.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -55,7 +38,6 @@ interface Counts {
  * The largest upload read as OPML. A subscription list of several thousand feeds stays
  * inside a couple of hundred kilobytes, and this runs in a Worker holding the text, the
  * outlines parsed out of it and the addresses taken from those at the same time, so a
- * megabyte leaves room for a list far longer than anyone keeps.
  */
 const MAX_UPLOAD_BYTES = 1024 * 1024;
 

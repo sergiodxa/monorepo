@@ -1,12 +1,7 @@
 /**
  * Link-parameters controller for `POST /feeds/:feedId/link-parameters`. It decides whether
  * one subscription's outbound links carry the address exactly as the publisher wrote it,
- * and returns the reader to the feed's own page.
- *
- * It renders nothing. The outcome travels in the `parameters` query parameter of the
- * redirect, so the feed page is the single place that says what happened, in its own copy.
- * The answer is about one publisher's server rather than about the reader, so it is stored
- * on the subscription and holds wherever that feed's posts are drawn.
+ * and returns the reader to the feed's own page. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

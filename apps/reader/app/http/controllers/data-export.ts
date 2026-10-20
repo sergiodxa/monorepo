@@ -24,9 +24,7 @@ import routes from "~/routes/web";
 
 /**
  * GET /settings/export.zip — `subscriptions.opml`, `saved-posts.csv` and `reader-data.json`
- * in one archive, dated the moment it was taken. It is one person's library, assembled for
- * them alone, so it is stored nowhere on the way; a reader with nothing gets the same files
- * with nothing in them.
+ * in one archive, dated the moment it was taken.
  */
 export default createAction(routes.dataExport, {
 	middleware: [requireUser],

@@ -1,15 +1,7 @@
 /**
- * How the reading queue is narrowed, read off a URL and written back into one.
- *
- * Both narrowings ride in the query string, so a queue filtered to what is unread and
- * searched for a word is an address a reader can keep, share and reload rather than a
- * state the page forgets. They compose: every link and every form on that surface carries
- * whichever of the two is in play, so choosing one never drops the other.
- *
- * It sits beside the queue's own controller rather than inside it because the actions that
- * return a reader to the queue — following a feed, sweeping every feed, clearing the whole
- * of it — each build that address too, and a controller importing the page it redirects to
- * would close a circle.
+ * How the reading queue is narrowed, read off a URL and written back into one. Both
+ * narrowings ride in the query string, so a queue filtered to what is unread and searched
+ * for a word is an address a reader can keep, share and reload rather than a state the
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,8 +18,6 @@ import routes from "~/routes/web";
  * The parameter carrying how far into the list a page begins. A cursor records where to
  * read from and not how far in that is, so the page that builds a link to the next one
  * counts its own rows and passes the total on; the queue walked from the top therefore
- * numbers its rows honestly, and a cursor URL arrived at on its own numbers from one,
- * which is what any list with no other information does.
  */
 export const FROM_PARAM = "from";
 

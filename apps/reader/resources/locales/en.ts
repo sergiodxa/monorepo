@@ -1,8 +1,7 @@
 /**
  * English translation dictionary and the canonical source of truth for every translatable
  * string: the landing page, the sign-in and sign-out flows, each reading surface, and the
- * error copy. Every other locale file mirrors this shape, because a key missing from a
- * dictionary renders as the key itself.
+ * error copy.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -424,7 +423,6 @@ export default {
 		 * The one preference about privacy a reader is offered, and it exists because two
 		 * readers can correctly want different answers: almost every publisher's server is
 		 * indifferent to a campaign parameter, and the rare one that routes on it answers a
-		 * broken address without it.
 		 */
 		linkParameters: {
 			keep: "Keep link parameters",

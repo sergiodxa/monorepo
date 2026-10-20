@@ -1,15 +1,6 @@
 /**
  * Saved-posts controller for `GET /saved`: the posts a reader asked to keep, newest first.
- *
- * It is the one list in this app that nothing prunes. Every other rule here eventually
- * takes a post away — the sweep behind read posts, the object's own budget, a feed's
- * velocity — and a reader needs one answer that outlasts all of them, so a post they keep
- * is exempt from each of them and stays until they say otherwise.
- *
- * The same list as every other surface, narrowed to what was kept: the rows, the marks on
- * them and the way through the pages are the timeline's, because a saved post is a post.
- * What sets this surface apart is what its rows already know — everything here is kept, so
- * every row's own mark is the one that stops keeping it.
+ * It is the one list in this app that nothing prunes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -73,14 +73,9 @@ function journalTable(name: string) {
 }
 
 /**
- * Applies whatever has not run yet against one database.
- *
- * Safe to call on every boot: an id already in the journal is skipped, so the cost
- * for an up-to-date object is a single read.
- *
- * Each object type passes its own migrations and its own journal name, so the two
- * schemas are applied independently and neither can skip a migration because the
- * other had already recorded that id.
+ * Applies whatever has not run yet against one database. Safe to call on every
+ * boot: an id already in the journal is skipped, so the cost for an up-to-date
+ * object is a single read.
  *
  * @param adapter - The database to migrate
  * @param migrations - The migrations to apply, in order; defaults to the reader's

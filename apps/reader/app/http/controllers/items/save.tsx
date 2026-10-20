@@ -3,11 +3,6 @@
  * and returns the reader to the page they acted from, so working down a timeline stays a
  * run of submissions against the same list.
  *
- * A kept post is exempt from every rule that deletes one, which is why the shelf has a
- * limit — and why a full one is refused rather than made room on: dropping the oldest save
- * would delete the one thing a reader explicitly asked to keep. The reader is told they
- * are full and which way out they have, and nothing is taken from them here.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -49,10 +44,8 @@ const SaveForm = f.object({
 
 /**
  * Narrows a submitted destination to a path inside this app, falling back to the queue.
- *
  * The value arrives in a form field, so it carries whatever was posted: only a path
  * beginning with a single `/` stays within this origin, since `//host` and `/\host` are
- * both read by browsers as an address somewhere else.
  *
  * @param returnTo - The destination the form submitted.
  */
@@ -105,8 +98,7 @@ export default createAction(routes.items.save, {
 		/**
 		 * A full shelf is the reader's to clear, so the page says so and offers nothing that
 		 * would clear it for them. It is a warning rather than a failure: nothing was lost,
-		 * and everything already kept is still kept. A switched-off shelf says so in the same
-		 * tone, since it takes nothing either.
+		 * and everything already kept is still kept.
 		 */
 		let notes = {
 			full: ctx.intl.t("items.save.full"),

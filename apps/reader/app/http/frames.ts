@@ -13,11 +13,6 @@ const FRAME_HEADER = "x-remix-frame";
 /**
  * The parameter a frame's own address carries, saying the answer is a fragment of a page
  * rather than the page.
- *
- * It rides in the URL rather than in a header because the client runtime resolves an
- * ordinary link navigation through the same resolver a frame goes through: a header added
- * there would turn every soft navigation into a fragment. The address is the one thing
- * only a frame has.
  */
 export const FRAME_PARAM = "frame";
 

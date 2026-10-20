@@ -1,17 +1,6 @@
 /**
  * Label creation for `POST /tags`. It makes a label to put on the posts a reader keeps and
- * sends them to the list that label reads as.
- *
- * It renders nothing. The outcome travels in the `tag` query parameter of the redirect, so
- * a label's own page is the single place that says what happened, in its own copy. The
- * parameter carries one of two values:
- *
- * - `created` — the label is now the reader's, and they are standing in it.
- * - `duplicate` — they already had one reading under that name, and they are standing in
- *   that one, which is where somebody asking for a label by name meant to end up.
- *
- * A name of nothing but space is refused by the field itself before it is sent, so the
- * store's refusal of one is the guard behind that rather than a sentence anybody reads.
+ * sends them to the list that label reads as. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

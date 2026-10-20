@@ -2,10 +2,6 @@
  * Rule deletion for `DELETE /rules/:ruleId`. It takes the rule away and returns the reader
  * to the page listing them.
  *
- * Deleting a rule deletes no post: one that dropped posts never wrote them, and one that
- * marked or flagged them leaves those marks exactly where they are. What changes is what
- * happens to the next arrival.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

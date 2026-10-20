@@ -1,16 +1,7 @@
 /**
  * Check-now controller for `POST /feeds/:feedId/refresh`. It retrieves one feed on the
  * spot, for a reader who knows a site has just published and would rather not wait out
- * their refresh cadence, and returns them to the feed's own page.
- *
- * It renders nothing. The outcome travels in the `checked` query parameter of the
- * redirect, so the feed page is the single place that says what happened, in its own copy.
- * The parameter carries exactly one of four values:
- *
- * - `new` — the check brought in posts the reader had not seen.
- * - `none` — the origin answered and there was nothing new.
- * - `failed` — the origin refused, timed out, or sent something that is not a feed.
- * - `missing` — the reader does not follow that feed.
+ * their refresh cadence, and returns them to the feed's own page. It renders nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

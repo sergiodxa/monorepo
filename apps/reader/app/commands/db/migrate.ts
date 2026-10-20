@@ -1,8 +1,7 @@
 /**
  * `db migrate`: applies every feed catalog migration the database lacks. Locally it writes the
  * SQLite file `bun dev` serves from; with `--remote` it runs `wrangler d1 migrations apply`
- * against the production catalog. Safe to run twice: an applied migration is skipped. Each
- * reader's and each feed's Durable Object migrates its own SQLite when it boots.
+ * against the production catalog. Safe to run twice: an applied migration is skipped.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

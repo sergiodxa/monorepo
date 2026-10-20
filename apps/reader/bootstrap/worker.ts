@@ -1,8 +1,7 @@
 /**
  * Cloudflare Worker entry point. Its `fetch` handler reads the session secret and KV
- * binding off the environment, builds the web router and forwards the request to
- * it; its `scheduled` handler runs the daily billing reconciliation; and it re-exports both
- * Durable Objects so the runtime can find the classes its bindings name.
+ * binding off the environment, builds the web router and forwards the request to it; its
+ * `scheduled` handler runs the daily billing reconciliation; and it re-exports both Durable
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

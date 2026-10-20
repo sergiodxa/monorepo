@@ -1,8 +1,7 @@
 /**
  * Drives one controller through a real router, so a test exercises the middleware a
  * controller actually depends on — the async context its guard reads, the parsed form
- * data its action reads, the dictionary its copy comes from — while leaving out the
- * session and the provider, which have nothing to do with what a page renders.
+ * data its action reads, the dictionary its copy comes from — while leaving out the s
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -65,10 +64,6 @@ export function seedAuth(viewer: Viewer | null): Middleware {
  * A router carrying the middleware a controller reads from, with nothing mapped onto it
  * yet. Cross-origin protection is left out: it guards the app rather than shaping any
  * page, and including it would make every test request carry an origin to satisfy it.
- *
- * The sidebar's feed band is mapped here rather than by each test: every signed-in page
- * wears the chrome, and the band is a frame the chrome fetches, so a router without it
- * answers every page with a sidebar that failed to load.
  *
  * @param viewer - Who the request is signed in as, or `null` for an anonymous one.
  * @example let router = createTestRouter(VIEWER); router.map(routes.reading, reading);
