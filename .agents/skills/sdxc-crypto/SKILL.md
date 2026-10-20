@@ -1,11 +1,11 @@
 ---
 name: sdxc-crypto
-description: "@sdxc/crypto wraps WebCrypto in `Result`-returning helpers: `Hex`/`Base64`/`Base64Url`, `sha256`/`sha384`/`sha512`, `hmac.sign`/`verify`, `timingSafeEqual`, `randomBytes`/`randomToken`, scrypt `password.hash`/`verify`/`needsRehash`, RFC 6238 `totp`, and AES-GCM `importKey`/`seal`/`open`. Use when storing a password, verifying a webhook signature, enrolling a TOTP second factor, encrypting a token at rest, or generating an API key."
+description: "@sdxc/crypto wraps WebCrypto in `Result`-returning helpers: `Hex`/`Base64`/`Base64Url`, `sha256`/`sha384`/`sha512`, `hmac.sign`/`verify`, `timingSafeEqual`, `randomBytes`/`randomToken`/`randomString`, scrypt `password.hash`/`verify`/`needsRehash`, RFC 6238 `totp`, and AES-GCM `importKey`/`seal`/`open`. Use when storing a password, verifying a webhook signature, enrolling a TOTP second factor, encrypting a token at rest, or generating an API key."
 ---
 
 # @sdxc/crypto
 
-The cryptographic primitives an application actually reaches for, each with the encoding and key-import boilerplate WebCrypto makes you write by hand, and each returning a `Result` instead of throwing. Encoding (`Hex`, `Base64`, `Base64Url`), digests (`sha256`, `sha384`, `sha512`), `hmac.sign`/`hmac.verify`, `timingSafeEqual`, `randomBytes`/`randomToken`, `password.*`, `totp.*`, and `importKey`/`seal`/`open` for AES-GCM. Everything runs on `crypto.subtle` and `crypto.getRandomValues`, with one exception: scrypt has no Web Crypto equivalent, so password hashing reaches for `node:crypto`, which Node, Bun and Cloudflare Workers each implement natively.
+The cryptographic primitives an application actually reaches for, each with the encoding and key-import boilerplate WebCrypto makes you write by hand, and each returning a `Result` instead of throwing. Encoding (`Hex`, `Base64`, `Base64Url`), digests (`sha256`, `sha384`, `sha512`), `hmac.sign`/`hmac.verify`, `timingSafeEqual`, `randomBytes`/`randomToken`/`randomString`, `password.*`, `totp.*`, and `importKey`/`seal`/`open` for AES-GCM. Everything runs on `crypto.subtle` and `crypto.getRandomValues`, with one exception: scrypt has no Web Crypto equivalent, so password hashing reaches for `node:crypto`, which Node, Bun and Cloudflare Workers each implement natively.
 
 Full API, options and examples: [packages/crypto/README.md](packages/crypto/README.md)
 
@@ -47,7 +47,8 @@ let stored = unwrap(await password.hash(form.password));
 - Sealed values are neither comparable nor searchable, because the IV is random per call. A credential that must be both looked up and read back gets two columns: `sha256` for the lookup, `seal` for the storage.
 - Stored password hashes carry the parameters they were made with, so `password.needsRehash()` plus a re-hash after a successful verify migrates accounts without a schema change or a mass reset.
 - `sha256` is deterministic and unsalted: right for API key lookups and fingerprints, wrong for passwords.
-- `randomBytes(size)` throws a `RangeError` outside 0–65536, the most `crypto.getRandomValues` fills in one call — it is the one throwing export.
+- `randomBytes(size)` throws a `RangeError` outside 0–65536, the most `crypto.getRandomValues` fills in one call — it is one of the throwing exports, with `randomToken` and `randomString`.
+- Prefer `randomToken` for URL-safe secrets; use `randomString({ length, alphabet })` when an existing format needs a custom alphabet (CSRF cookies, honeypot field names).
 
 ## Related
 

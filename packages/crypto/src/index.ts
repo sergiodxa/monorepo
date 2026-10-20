@@ -1,9 +1,9 @@
 /**
  * WebCrypto primitives with `Result`-based errors, portable to any runtime.
  *
- * Encoding, digests, HMAC, random tokens, password hashing, TOTP, and authenticated
- * encryption live here once, so security-relevant details are decided in one place
- * instead of being re-derived at every call site.
+ * Encoding, digests, HMAC, random tokens and strings, password hashing, TOTP, and
+ * authenticated encryption live here once, so security-relevant details are decided
+ * in one place instead of being re-derived at every call site.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,7 +26,7 @@ export {
 export { sha256, sha384, sha512 } from "./hash.js";
 export { hmac } from "./hmac.js";
 export { password } from "./password.js";
-export { randomBytes, randomToken } from "./random.js";
+export { randomBytes, randomString, randomToken } from "./random.js";
 export { importKey, open, seal } from "./seal.js";
 export { timingSafeEqual } from "./timing-safe-equal.js";
 export { totp } from "./totp.js";
