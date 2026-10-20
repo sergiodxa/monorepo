@@ -1,8 +1,8 @@
 /**
- * `sdxc destroy <kind> <name>`: the reverse of `sdxc make`. It removes the file, its test and,
- * for a model, its factory, then the mapping that loads the file, the declaration that mapping
- * names and the Worker trigger of a schedule no other job runs on. Every other reference is
- * listed for the user to remove.
+ * `sdxc destroy <kind> <name>`: the reverse of `sdxc make`. It removes the file, its test, its
+ * pairing `.spec` and, for a model, its factory, then the mapping that loads the file, the
+ * declaration that mapping names and the Worker trigger of a schedule no other job runs on.
+ * Every other reference is listed for the user to remove.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,7 +21,7 @@ import type { FileEdit } from "./make/declare.js";
 import type { DestroyKind, KindName } from "./make/kinds.js";
 
 import { listFiles } from "./doctor/files.js";
-import { exists, folderOf } from "./make/generate.js";
+import { exists, folderOf, specPathOf } from "./make/generate.js";
 import { KINDS } from "./make/kinds.js";
 import { parseName } from "./make/names.js";
 import { planUntrigger } from "./make/trigger.js";
@@ -306,6 +306,14 @@ export async function planDestroy(
 		return failure(new Error(`${file} does not exist; sdxc destroy removes what sdxc make wrote`));
 	}
 	let candidates = [file, `${base}.test${kind.extension}`];
+	if (kind.specs === true) {
+		candidates.push(
+			specPathOf({
+				kind: input.kind,
+				name: name.data,
+			}),
+		);
+	}
 	if (input.kind === "model")
 		candidates.push(`database/factories/${name.data.segments.join("/")}.ts`);
 	let remove: string[] = [];

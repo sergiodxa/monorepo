@@ -25,7 +25,7 @@ sdxc make migration create-tags name       # then: sdxc run db migrate
 sdxc make job reports/daily --cron "0 8 * * *"
 sdxc make email welcome name               # then: ctx.email.later(emails.welcome, { to, props })
 sdxc make command users/grant              # then: sdxc run users grant
-sdxc scaffold post title body:text         # model, migration, CRUD pages and tests
+sdxc scaffold post title body:text         # model, migration, CRUD pages, tests and a .spec
 
 sdxc run db console                        # SQL prompt over the local database
 sdxc run console                           # Bun's REPL with db and models loaded
@@ -34,12 +34,15 @@ sdxc run db fresh --seed                   # drop every local table, migrate, se
 sdxc run emails preview welcome            # print an email from its preview(); /_emails in bun dev
 sdxc routes                                # every route and its controller (-g, -c, --unused)
 sdxc doctor                                # release drift, secrets, migrations and wiring
+bunx spec run spec --allow-config          # black-box .spec suite under spec/
 bun check                                  # format, lint and types
 bun run test
 ```
 
-`sdxc make` writes the file where it belongs with a test beside it, and maps it so it works
-right away. `sdxc` comes with the project; `npm add -g @sdxc/kit` puts it on your path.
+`sdxc make` writes the file where it belongs with a test beside it, and for a controller, command
+or MCP tool a pairing `.spec` under `spec/` so you can exercise it as a black box. It maps the
+file so it works right away. `sdxc` comes with the project; `npm add -g @sdxc/kit` puts it on
+your path.
 
 `AGENTS.md` teaches an AI coding agent these commands and conventions, and `CLAUDE.md` points
 Claude Code at it. `sdxc upgrade` keeps its sdxc section current; add your own rules below it.

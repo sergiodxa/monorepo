@@ -41,6 +41,7 @@ const DEFAULTS = {
 		routes: "web",
 		migrations: { default: "database/migrations" },
 		tests: true,
+		specs: true,
 		stubs: ".config/sdxc/stubs",
 	},
 	doctor: { checks: ".config/sdxc/checks", migrations: { accept: [] } },

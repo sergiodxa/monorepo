@@ -1,0 +1,16 @@
+{
+	// The URL `browser`, `http` and `mcp` resolve `/path` targets against. Set APP_BASE_URL
+	// to point the suite at another host; the default matches `bun run dev`.
+	"bases": {
+		"web": { "env": "APP_BASE_URL", "default": "http://localhost:5173" },
+	},
+	// Applied once a run adds `--allow-config`. Pairing specs from `sdxc make` and
+	// `sdxc scaffold` expect these grants for a local black-box run.
+	"permissions": {
+		"allow": [
+			["run", "bun"],
+			["host-fs", "."],
+			["net", "localhost:5173"],
+		],
+	},
+}

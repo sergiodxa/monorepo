@@ -108,6 +108,12 @@ describe("scaffold", () => {
 				"show.test.tsx",
 				"show.tsx",
 			]);
+			let featureSpec = await read("spec/posts.spec");
+			expect(featureSpec).toContain("use browser");
+			expect(featureSpec).toContain("use mcp");
+			expect(featureSpec).toContain("use cli");
+			expect(featureSpec).toContain('browser.open "/posts"');
+			expect(featureSpec).toContain('mcp.call "/mcp" "list_posts"');
 			let migration = await read("database/migrations/0001_CreatePosts.sql");
 			expect(migration).toMatch(
 				/^-- CreatePosts: creates the posts table\.\n\nCREATE TABLE "posts" \(/,
@@ -198,6 +204,8 @@ describe("scaffold", () => {
 			expect(written).not.toContain("app/http/validators/post.ts");
 			expect(written).not.toContain("resources/views/posts/form.tsx");
 			let read = (path: string) => readFile(join(root, path), "utf8");
+			expect(await read("spec/posts.spec")).toContain("use http");
+			expect(await read("spec/posts.spec")).toContain('http.get "/api/posts"');
 			let routes = await read("routes/api.ts");
 			expect(routes).toContain('export const POST_CREATE = defineOperation("postCreate"');
 			expect(routes).toContain('.meta({ id: "Post" });');

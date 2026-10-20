@@ -33,9 +33,17 @@ export interface CopiedStubs {
 /** A placeholder as stubs spell it: `{{name}}`, spaces inside the braces allowed. */
 const PLACEHOLDER = /\{\{\s*([A-Za-z]+)\s*\}\}/g;
 
-/** The stub file name for `kind`, its `variant` and whether it is the test stub. */
-export function stubName(kind: KindName, variant: string | null, test: boolean): string {
-	return [kind, variant, test ? "test" : null, "stub"].filter((part) => part !== null).join(".");
+/** Whether a stub is the main file, its Vitest sibling, or its pairing `.spec`. */
+export type StubRole = "main" | "test" | "spec";
+
+/**
+ * The stub file name for `kind`, its `variant` and `role`: `controller.api.spec.stub`,
+ * `command.test.stub`, `mcp.stub`.
+ */
+export function stubName(kind: KindName, variant: string | null, role: StubRole = "main"): string {
+	return [kind, variant, role === "main" ? null : role, "stub"]
+		.filter((part) => part !== null)
+		.join(".");
 }
 
 /** The folder of built-in stubs in the `@sdxc/kit` package at `packageRoot`. */

@@ -1,0 +1,15 @@
+# The {{title}} endpoint, called over HTTP the way a client calls it.
+#
+# @see https://sdxc.dev/docs/operations-and-testing/testing
+# @see https://sdxc.dev/docs/http-apis/json-apis
+
+use http
+
+test "{{title}} answers" {
+	when {
+		let result = http.get "{{url}}" on "web"
+	}
+	then {
+		expect result.status 200
+	}
+}

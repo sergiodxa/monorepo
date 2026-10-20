@@ -51,6 +51,8 @@ const EXPECTED = `{
 		"migrations": { "default": "database/migrations" },
 		// Write a test beside every generated file except migrations and factories
 		"tests": true,
+		// Write a pairing .spec under spec/ for controllers, commands, MCP tools and scaffolds
+		"specs": true,
 		// Stubs here replace the built-in ones; \`sdxc make stubs\` copies them out
 		"stubs": ".config/sdxc/stubs",
 	},

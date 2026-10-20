@@ -31,6 +31,11 @@ export interface Kind {
 	/** Whether `make.tests` writes a test beside the file. */
 	tests: boolean;
 	/**
+	 * Whether `make.specs` writes a pairing `.spec` under `spec/` for black-box coverage of the
+	 * generated surface (a page, an API route, a command or an MCP tool).
+	 */
+	specs?: boolean;
+	/**
 	 * Whether the kind writes its test alone: a policy's abilities and grants are edits to the
 	 * app's catalog and policy, so the only file it writes is the test that checks them.
 	 */
@@ -68,8 +73,18 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		folder: "app/http/controllers",
 		extension: ".tsx",
 		tests: true,
+		specs: true,
 		nested: true,
-		placeholders: ["path", "routes", "ability", "access", "pageAccess", "params", "sampleParams"],
+		placeholders: [
+			"path",
+			"routes",
+			"ability",
+			"access",
+			"pageAccess",
+			"params",
+			"sampleParams",
+			"url",
+		],
 	},
 	middleware: {
 		folder: "app/http/middleware",
@@ -149,6 +164,7 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		folder: "app/mcp/tools",
 		extension: ".ts",
 		tests: true,
+		specs: true,
 		nested: true,
 		placeholders: ["path", "tool", "uri"],
 	},
@@ -156,8 +172,9 @@ export const KINDS: Readonly<Record<KindName, Kind>> = {
 		folder: "app/commands",
 		extension: ".ts",
 		tests: true,
+		specs: true,
 		nested: true,
-		placeholders: ["command", "member", "words"],
+		placeholders: ["command", "member", "words", "args"],
 	},
 };
 

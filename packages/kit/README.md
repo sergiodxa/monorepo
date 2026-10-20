@@ -14,15 +14,15 @@ The package installs a command named `sdxc`. It works on projects that depend on
 
 ```sh
 sdxc create my-app                   # a Remix v3 app, or --template org/repo from GitHub
-sdxc make controller posts/show      # a file where the app layout puts it, with its test
-sdxc make controller api/keys --routes api  # a JSON endpoint in the API contract
+sdxc make controller posts/show      # a file where the app layout puts it, with its test and .spec
+sdxc make controller api/keys --routes api  # a JSON endpoint and an http .spec
 sdxc make middleware require-user --mount page  # called last in the page chain
 sdxc make model post title author_id  # the model, its migration and its factory
 sdxc make migration add-slug-to-posts 'slug?'  # ALTER TABLE, read from the name
 sdxc make migration add-slug --from-model post  # the SQL app/models/post.ts needs
 sdxc scaffold post title body published_at   # types follow the names: text, timestamp
-sdxc scaffold post title body --api          # JSON endpoints and their OpenAPI operations
-sdxc destroy controller posts/show           # remove it, its mapping and its declaration
+sdxc scaffold post title body --api          # JSON endpoints, OpenAPI ops and one feature .spec
+sdxc destroy controller posts/show           # remove it, its .spec, its mapping and its declaration
 sdxc models post                             # the table app/models/post.ts declares, vs the migrations
 sdxc ui add dialog                   # copy a component into the project to edit it
 sdxc ui update --all                 # move every unedited copy to the installed @sdxc/ui
@@ -94,7 +94,7 @@ Build, then run the app's db migrate --remote and deploy commands
 
 #### `sdxc destroy <kind> <name>`
 
-Remove a file sdxc make wrote, its test, its mapping and its declaration
+Remove a file sdxc make wrote, its test, its pairing .spec, its mapping and its declaration
 
 | Flag         | Does                                                        |
 | ------------ | ----------------------------------------------------------- |
@@ -132,11 +132,11 @@ List the initializers in app/initializers, their exports and what builds them
 
 Write a controller, job, model or other file where the app layout puts it
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make controller <name>`
 
@@ -150,52 +150,53 @@ A route handler in app/http/controllers, declared and mapped
 | `--resource <name>`   | Check the resource's ability the method implies (get reads, form and post create, put and patch update, delete deletes); a read, update or delete route takes /&lt;name&gt;/:id |
 | `--actions <action>`  | One controller per action under &lt;name&gt;: index, new, show, edit and destroy pages, or with --routes api index, show, create, update and destroy endpoints; all writes each |
 | `--test`              | Write a test beside the file, or skip it with --no-test (default: make.tests)                                                                                                   |
+| `--spec`              | Write a pairing .spec under spec/, or skip it with --no-spec (default: make.specs)                                                                                              |
 | `--dry-run`           | Print what would be written and change nothing                                                                                                                                  |
-| `--force`             | Replace the file and its test when they exist, keeping their declaration                                                                                                        |
+| `--force`             | Replace the file, its test and its pairing .spec when they exist, keeping their declaration                                                                                     |
 
 #### `sdxc make middleware <name>`
 
 A middleware in app/http/middleware
 
-| Flag               | Does                                                                                      |
-| ------------------ | ----------------------------------------------------------------------------------------- |
-| `--mount <target>` | Also call it last in a chain: a router initializer (router) or a chain module (page, api) |
-| `--test`           | Write a test beside the file, or skip it with --no-test (default: make.tests)             |
-| `--dry-run`        | Print what would be written and change nothing                                            |
-| `--force`          | Replace the file and its test when they exist, keeping their declaration                  |
+| Flag               | Does                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `--mount <target>` | Also call it last in a chain: a router initializer (router) or a chain module (page, api)   |
+| `--test`           | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run`        | Print what would be written and change nothing                                              |
+| `--force`          | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make validator <name>`
 
 An input validator in app/http/validators
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make job <name>`
 
 A background job in app/jobs, declared and mapped
 
-| Flag                  | Does                                                                             |
-| --------------------- | -------------------------------------------------------------------------------- |
-| `--cron <expression>` | A scheduled job instead of one with input, with the Worker trigger that fires it |
-| `--test`              | Write a test beside the file, or skip it with --no-test (default: make.tests)    |
-| `--dry-run`           | Print what would be written and change nothing                                   |
-| `--force`             | Replace the file and its test when they exist, keeping their declaration         |
+| Flag                  | Does                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `--cron <expression>` | A scheduled job instead of one with input, with the Worker trigger that fires it            |
+| `--test`              | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run`           | Print what would be written and change nothing                                              |
+| `--force`             | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make model <name> [field[:type][?]...]`
 
 A model in app/models, with the migration creating its table and its factory
 
-| Flag              | Does                                                                          |
-| ----------------- | ----------------------------------------------------------------------------- |
-| `--chain <chain>` | The chain in make.migrations the migration goes in (default: default)         |
-| `--skip <file>`   | Leave out the migration or the factory; repeat it or list them                |
-| `--test`          | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run`       | Print what would be written and change nothing                                |
-| `--force`         | Replace the file and its test when they exist, keeping their declaration      |
+| Flag              | Does                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| `--chain <chain>` | The chain in make.migrations the migration goes in (default: default)                       |
+| `--skip <file>`   | Leave out the migration or the factory; repeat it or list them                              |
+| `--test`          | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run`       | Print what would be written and change nothing                                              |
+| `--force`         | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make migration <name> [field[:type][?]...]`
 
@@ -211,71 +212,73 @@ A numbered SQL migration in a configured chain
 
 A test factory in database/factories
 
-| Flag        | Does                                                                     |
-| ----------- | ------------------------------------------------------------------------ |
-| `--dry-run` | Print what would be written and change nothing                           |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make service <name>`
 
 A service in app/services
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make policy <name>`
 
 A resource's create, read, update and delete abilities in app/policies, with their test
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make initializer <name>`
 
 An initializer in app/initializers
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make email <name> [field[:type][?]...]`
 
 An email template in app/emails, its props declared and the template mapped
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make mcp <name>`
 
 An MCP tool in app/mcp/tools, or a resource, declared and mapped
 
-| Flag         | Does                                                                          |
-| ------------ | ----------------------------------------------------------------------------- |
-| `--resource` | A resource in app/mcp/resources instead of a tool                             |
-| `--test`     | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run`  | Print what would be written and change nothing                                |
-| `--force`    | Replace the file and its test when they exist, keeping their declaration      |
+| Flag         | Does                                                                                        |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `--resource` | A resource in app/mcp/resources instead of a tool                                           |
+| `--test`     | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--spec`     | Write a pairing .spec under spec/, or skip it with --no-spec (default: make.specs)          |
+| `--dry-run`  | Print what would be written and change nothing                                              |
+| `--force`    | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make command <name>`
 
 A command-line command in app/commands, declared and mapped
 
-| Flag        | Does                                                                          |
-| ----------- | ----------------------------------------------------------------------------- |
-| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests) |
-| `--dry-run` | Print what would be written and change nothing                                |
-| `--force`   | Replace the file and its test when they exist, keeping their declaration      |
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--test`    | Write a test beside the file, or skip it with --no-test (default: make.tests)               |
+| `--spec`    | Write a pairing .spec under spec/, or skip it with --no-spec (default: make.specs)          |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
 
 #### `sdxc make test <file>`
 
@@ -347,6 +350,7 @@ Write a resource's model, migration, pages, tests and more, declared and mapped
 | `--api`           | JSON endpoints in routes/api.ts with their OpenAPI operations, instead of pages                                       |
 | `--skip <piece>`  | Leave out pieces the project already has: model, migration, factory, validator, policy, pages; repeat it or list them |
 | `--test`          | Write a test beside the file, or skip it with --no-test (default: make.tests)                                         |
+| `--spec`          | Write a pairing .spec under spec/, or skip it with --no-spec (default: make.specs)                                    |
 | `--dry-run`       | Print what would be written and change nothing                                                                        |
 
 #### `sdxc schedule`
@@ -426,6 +430,7 @@ The CLI reads `.config/sdxc.jsonc` (or `sdxc.jsonc` at the project root). Every 
 | `make.routes`              | `web`                                  | Route contract `sdxc make controller` adds to, a module in `routes/`         |
 | `make.migrations`          | `{ "default": "database/migrations" }` | Migration chains by name                                                     |
 | `make.tests`               | `true`                                 | Write a test beside every generated file except migrations and factories     |
+| `make.specs`               | `true`                                 | Write a pairing `.spec` for controllers, commands, MCP tools and scaffolds   |
 | `make.stubs`               | `.config/sdxc/stubs`                   | Stubs that replace the built-in ones                                         |
 | `doctor.checks`            | `.config/sdxc/checks`                  | The project's own `sdxc doctor` checks, one module each                      |
 | `doctor.migrations.accept` | `[]`                                   | Migration errors `sdxc doctor` steps past, each `{ "file", "column" }`       |

@@ -69,17 +69,27 @@ const TEST_FLAG = flag.boolean("test", {
 	description: "Write a test beside the file, or skip it with --no-test (default: make.tests)",
 });
 
+/**
+ * `--spec` / `--no-spec`, for kinds that write a pairing `.spec` under `spec/`; unset, it takes
+ * `make.specs`.
+ */
+const SPEC_FLAG = flag.boolean("spec", {
+	default: undefined,
+	description: "Write a pairing .spec under spec/, or skip it with --no-spec (default: make.specs)",
+});
+
 /** `--dry-run`, shared by every command that can print what it would write instead. */
 const DRY_RUN_FLAG = flag.boolean("dry-run", {
 	description: "Print what would be written and change nothing",
 });
 
 /**
- * `--force`, shared by every kind whose file takes its own name: an existing file and its test
- * are replaced, and the declaration and mapping they already have are kept.
+ * `--force`, shared by every kind whose file takes its own name: an existing file, its test and
+ * its pairing `.spec` are replaced, and the declaration and mapping they already have are kept.
  */
 const FORCE_FLAG = flag.boolean("force", {
-	description: "Replace the file and its test when they exist, keeping their declaration",
+	description:
+		"Replace the file, its test and its pairing .spec when they exist, keeping their declaration",
 });
 
 /** Every command `sdxc` takes. */
@@ -139,7 +149,8 @@ export const SDXC_COMMANDS = commands({
 		],
 	}),
 	destroy: command({
-		description: "Remove a file sdxc make wrote, its test, its mapping and its declaration",
+		description:
+			"Remove a file sdxc make wrote, its test, its pairing .spec, its mapping and its declaration",
 		arguments: {
 			kind: argument(s.enum_(DESTROY_KINDS), {
 				description: "What to remove; every make kind but migration and policy",
@@ -234,6 +245,7 @@ export const SDXC_COMMANDS = commands({
 					})
 					.list(),
 				test: TEST_FLAG,
+				spec: SPEC_FLAG,
 				dryRun: DRY_RUN_FLAG,
 				force: FORCE_FLAG,
 			},
@@ -385,6 +397,7 @@ export const SDXC_COMMANDS = commands({
 					description: "A resource in app/mcp/resources instead of a tool",
 				}),
 				test: TEST_FLAG,
+				spec: SPEC_FLAG,
 				dryRun: DRY_RUN_FLAG,
 				force: FORCE_FLAG,
 			},
@@ -393,7 +406,7 @@ export const SDXC_COMMANDS = commands({
 			description: "A command-line command in app/commands, declared and mapped",
 			tasks: true,
 			arguments: { name: nameArgument("command", "users/grant") },
-			flags: { test: TEST_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
+			flags: { test: TEST_FLAG, spec: SPEC_FLAG, dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
 			examples: ["make command users/grant"],
 		}),
 		test: command({
@@ -554,6 +567,7 @@ export const SDXC_COMMANDS = commands({
 				})
 				.list(),
 			test: TEST_FLAG,
+			spec: SPEC_FLAG,
 			dryRun: DRY_RUN_FLAG,
 		},
 		examples: [

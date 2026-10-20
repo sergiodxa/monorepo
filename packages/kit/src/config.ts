@@ -30,6 +30,7 @@ const MAKE_DEFAULTS = {
 	routes: "web",
 	migrations: { default: "database/migrations" },
 	tests: true,
+	specs: true,
 	stubs: ".config/sdxc/stubs",
 };
 
@@ -93,6 +94,10 @@ export const CONFIG_SCHEMA = s.object(
 						.meta({ description: "Migration chains by name; `--chain <name>` picks one" }),
 					tests: s.defaulted(s.boolean(), MAKE_DEFAULTS.tests).meta({
 						description: "Write a test beside every generated file except migrations and factories",
+					}),
+					specs: s.defaulted(s.boolean(), MAKE_DEFAULTS.specs).meta({
+						description:
+							"Write a pairing .spec under spec/ for controllers, commands, MCP tools and scaffolds",
 					}),
 					stubs: s.defaulted(s.string(), MAKE_DEFAULTS.stubs).meta({
 						description: "Stubs here replace the built-in ones; `sdxc make stubs` copies them out",

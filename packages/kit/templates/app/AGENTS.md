@@ -18,7 +18,7 @@ https://sdxc.dev/docs/getting-started/the-sdxc-command.
 sdxc make <kind> <name>            # write a file where the layout puts it, with its test
 sdxc make <kind> <name> --dry-run  # print what it would write, and write nothing
 sdxc make model <name> [field...]  # a model, the migration creating its table, and its factory
-sdxc scaffold <name> [field:type]  # model, migration, pages and tests for a resource
+sdxc scaffold <name> [field:type]  # model, migration, pages, tests and a feature .spec
 sdxc ui add <component>            # copy an @sdxc/ui component into the app to edit it
 sdxc routes --json                 # every route, its controller and the middleware it runs
 sdxc doctor --json                 # release drift, installs, secrets, migrations and wiring
@@ -28,6 +28,7 @@ sdxc run db fresh --seed           # drop every local table, apply every migrati
 sdxc run console                   # Bun's REPL with the local db and models on globalThis
 sdxc upgrade                       # move every @sdxc package to the latest release
 sdxc deploy --dry-run              # build and print the deploy plan, changing nothing
+bunx spec run spec --allow-config  # black-box .spec suite under spec/
 bun check                          # format, lint and type check
 bun run test                       # every test, under Vitest
 ```
@@ -36,10 +37,13 @@ bun run test                       # every test, under Vitest
   `controller`, `middleware`, `validator`, `job`, `model`, `migration`, `factory`, `service`,
   `policy`, `initializer`, `email`, `mcp` and `command`. `make` writes the test beside the file
   and declares and maps controllers, jobs, MCP tools, commands and emails, so the file works at
-  once. `sdxc make email <name> field ...` takes fields as `make model` does; they become the
-  email's props.
+  once. Controllers, commands and MCP tools also get a pairing `.spec` under `spec/` (pages use
+  `browser`, API routes use `http`, commands use `cli`, MCP tools use `mcp`); `--no-spec` or
+  `make.specs: false` skips it. `sdxc make email <name> field ...` takes fields as `make model`
+  does; they become the email's props.
 - For a resource people list, show, create, edit and delete, start from
-  `sdxc scaffold <name> title body:text` (`--mcp` and `--command` add its tools and commands).
+  `sdxc scaffold <name> title body:text` (`--mcp` and `--command` add its tools and commands, and
+  one feature `.spec` mixes the surfaces the scaffold wrote).
 - `sdxc make policy <resource>` adds the resource's `create`, `read`, `update` and `delete`
   abilities to `app/policies/abilities.ts` and grants them in `app/policies/policy.ts`, reads to
   `everyone` and writes to `member`. Check them in a handler with `ctx.access.can(…)`: a hidden

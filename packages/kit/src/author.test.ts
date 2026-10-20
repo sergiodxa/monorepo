@@ -181,6 +181,7 @@ describe("generated files", () => {
 			name: unwrap(parseName("charge")),
 			variant: null,
 			tests: true,
+			specs: false,
 			routes: "web",
 		};
 
@@ -202,6 +203,7 @@ describe("generated files", () => {
 			name: unwrap(parseName("charge")),
 			variant: null,
 			tests: false,
+			specs: false,
 			routes: "web",
 		};
 

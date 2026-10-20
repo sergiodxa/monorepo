@@ -45,6 +45,7 @@ export const controller = createCommand(SDXC_COMMANDS.make.controller, {
 			routes: flags.routes,
 			guardedBy: flags.resource,
 			test: flags.test,
+			spec: flags.spec,
 			dryRun: flags.dryRun,
 			force: flags.force,
 		};
@@ -101,6 +102,7 @@ export const mcp = createCommand(SDXC_COMMANDS.make.mcp, {
 			name: ctx.arguments.name,
 			resource: ctx.flags.resource,
 			test: ctx.flags.test,
+			spec: ctx.flags.spec,
 			dryRun: ctx.flags.dryRun,
 			force: ctx.flags.force,
 		}),
@@ -149,12 +151,16 @@ function plain<Kind extends "validator" | "service" | "policy" | "initializer" |
 ) {
 	return createCommand(SDXC_COMMANDS.make[kind], {
 		middleware: MAKE_MIDDLEWARE,
-		/** Writes the file and, unless `--no-test` or `make.tests` says otherwise, its test. */
+		/**
+		 * Writes the file and, unless `--no-test` or `make.tests` says otherwise, its test; a
+		 * command also takes `--spec` / `make.specs` for its pairing `.spec`.
+		 */
 		handler: (ctx) =>
 			run(ctx, {
 				kind,
 				name: ctx.arguments.name,
 				test: ctx.flags.test,
+				spec: "spec" in ctx.flags ? ctx.flags.spec : undefined,
 				dryRun: ctx.flags.dryRun,
 				force: ctx.flags.force,
 			}),

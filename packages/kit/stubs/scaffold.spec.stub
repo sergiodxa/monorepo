@@ -1,0 +1,7 @@
+# Black-box suite for {{pluralWords}}: one case per surface the scaffold wrote.
+#
+# @see https://sdxc.dev/docs/operations-and-testing/testing
+
+{{uses}}
+
+{{cases}}
