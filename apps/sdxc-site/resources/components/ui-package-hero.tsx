@@ -1,6 +1,6 @@
 /**
- * The opening of `/api/ui`: brand, install, and a strip of frosted component faces — the
- * package shown as itself, not as a fact sheet or a decorative collage card.
+ * The opening of `/api/ui`: brand, install, and a strip of component faces — the package
+ * shown as itself, not as a fact sheet or a decorative collage card.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,17 +17,16 @@ import { clip, overflow } from "sdxc/u/overflow";
 import { media } from "sdxc/u/responsive";
 import { bs, m, maxIs, minBs, p } from "sdxc/u/size";
 import { font, leading, text, textTransform, tracking, weight } from "sdxc/u/typography";
-import { Button, LinkButton } from "sdxc/ui";
+import { LinkButton } from "sdxc/ui";
 
 import { componentFaceHref } from "~/app/services/ui-component-face";
 import InstallCommand from "~/resources/components/install-command";
 import PageActions from "~/resources/components/page-actions";
-import { UI_EXPLORE_DIALOG_ID } from "~/resources/components/ui-explore-dialog";
 import routes from "~/routes/web";
 
 /**
  * Signature components whose faces open the landing. Each one already has a silhouette
- * in the face catalogue, so the strip matches the explorer tiles below.
+ * in the face catalogue, so the strip matches the gallery tiles below.
  */
 const FEATURED = [
 	{ slug: "button", title: "Button" },
@@ -42,7 +41,7 @@ namespace UiPackageHero {
 		name: string;
 		/** One-line pitch for the package, drawn under the title. */
 		description: string;
-		/** How many components the explorer lists. */
+		/** How many components the gallery lists. */
 		componentCount: number;
 		/** Where the Open menu and its markdown twin point. */
 		markdownHref: string;
@@ -51,7 +50,7 @@ namespace UiPackageHero {
 	}
 }
 
-/** Renders the landing pitch, install strip and featured frosted faces. */
+/** Renders the landing pitch, install strip and featured component faces. */
 export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 	return () => {
 		let { componentCount, description, markdownHref, markdownUrl, name, sourceUrl } = handle.props;
@@ -92,17 +91,10 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 					</div>
 
 					<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-						<Button
-							type="button"
-							size="lg"
-							color="brand"
-							variant="solid"
-							commandfor={UI_EXPLORE_DIALOG_ID}
-							command="show-modal"
-						>
+						<LinkButton href="#components" size="lg" color="brand" variant="solid">
 							<LayoutGridIcon size={16} aria-hidden="true" />
-							Explore components
-						</Button>
+							Browse {componentCount} components
+						</LinkButton>
 						<LinkButton
 							href={routes.api.component.href({ component: "theming" })}
 							size="lg"
@@ -110,9 +102,6 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 							variant="outline"
 						>
 							Theming
-						</LinkButton>
-						<LinkButton href="#components" size="lg" color="neutral" variant="ghost">
-							{componentCount} on this page
 						</LinkButton>
 					</div>
 

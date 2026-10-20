@@ -1,6 +1,6 @@
 /**
- * The body of the `@sdxc/ui` overview under the hero: the component explorer as a gallery
- * of tiles, then each subpath as a dense name index. The two shapes stay distinct so the
+ * The body of the `@sdxc/ui` overview under the hero: the component gallery as a grid of
+ * tiles, then each subpath as a dense name index. The two shapes stay distinct so the
  * landing does not read as one spreadsheet with longer cells.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -18,11 +18,10 @@ import type { NavEntry, NavGroup } from "~/app/services/navigation-tree";
 
 import CatalogueIndex from "~/resources/components/catalogue-index";
 import UiComponentGrid from "~/resources/components/ui-component-grid";
-import UiExploreDialog from "~/resources/components/ui-explore-dialog";
 
 namespace UiCatalogue {
 	export interface Props {
-		/** Components drawn as explorer tiles. */
+		/** Components drawn as gallery tiles. */
 		components: NavEntry[];
 		/** Mixins, behaviors, animations and styles as dense name grids. */
 		exports: NavGroup[];
@@ -51,8 +50,7 @@ export default function UiCatalogue(handle: Handle<UiCatalogue.Props>) {
 							Components
 						</h2>
 						<p mix={[m(0), text("sm"), fg("neutral")]}>
-							Every pattern in the catalogue. Open the explorer for a focused view, or jump straight
-							into a reference.
+							Every pattern in the catalogue — open one for its reference and live preview.
 						</p>
 					</div>
 
@@ -60,8 +58,6 @@ export default function UiCatalogue(handle: Handle<UiCatalogue.Props>) {
 				</section>
 
 				<CatalogueIndex groups={exportGroups} />
-
-				<UiExploreDialog entries={components} />
 			</div>
 		);
 	};
