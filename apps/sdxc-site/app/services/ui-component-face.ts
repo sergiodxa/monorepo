@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Raster } from "@sdxc/raster";
+
 import { Canvas, color, linearGradient, Path, withAlpha } from "@sdxc/raster";
 
 /** Design space every silhouette is authored in; the canvas is this times {@link SCALE}. */
@@ -26,7 +28,7 @@ export const COMPONENT_FACE_SIZE = {
  * Bumped when a silhouette or the wash changes, so cards can cache-bust without waiting
  * for a year-long `max-age` to expire.
  */
-export const COMPONENT_FACE_VERSION = "2";
+export const COMPONENT_FACE_VERSION = "3";
 
 /** Material role a silhouette piece paints with, matching HIG elevated / label / accent. */
 type Tone = "surface" | "label" | "ink" | "accent";
@@ -56,6 +58,8 @@ interface LineShape {
 	x2: number;
 	y2: number;
 	tone: Tone;
+	/** Half-width of the capsule in design space. */
+	weight?: number;
 }
 
 interface PathShape {
@@ -64,7 +68,19 @@ interface PathShape {
 	tone: Tone;
 }
 
-type Shape = RectShape | CircleShape | LineShape | PathShape;
+/**
+ * An open M/L polyline painted as a thick round-capped stroke. Use this for checks and
+ * chevrons — a filled open path reads as a wedge, not a mark.
+ */
+interface StrokeShape {
+	kind: "stroke";
+	d: string;
+	tone: Tone;
+	/** Full stroke width in design space. */
+	weight?: number;
+}
+
+type Shape = RectShape | CircleShape | LineShape | PathShape | StrokeShape;
 
 /** Soft sky wash behind the materials, the cool field Apple's component cards use. */
 const WASH = {
@@ -91,8 +107,7 @@ const FALLBACK: Shape[] = [{ kind: "rect", x: 40, y: 24, w: 80, h: 52, r: 14, to
 const FACES: Record<string, Shape[]> = {
 	accordion: [
 		{ kind: "rect", x: 26, y: 14, w: 108, h: 22, r: 8, tone: "surface" },
-		{ kind: "line", x1: 118, y1: 21, x2: 124, y2: 25, tone: "ink" },
-		{ kind: "line", x1: 124, y1: 25, x2: 118, y2: 29, tone: "ink" },
+		{ kind: "stroke", d: "M116 21 L122 25 L116 29", weight: 2.2, tone: "ink" },
 		{ kind: "rect", x: 26, y: 42, w: 108, h: 22, r: 8, tone: "label" },
 		{ kind: "rect", x: 26, y: 70, w: 108, h: 22, r: 8, tone: "label" },
 	],
@@ -130,11 +145,9 @@ const FACES: Record<string, Shape[]> = {
 	],
 	breadcrumbs: [
 		{ kind: "rect", x: 14, y: 40, w: 32, h: 20, r: 10, tone: "surface" },
-		{ kind: "line", x1: 52, y1: 46, x2: 58, y2: 50, tone: "label" },
-		{ kind: "line", x1: 58, y1: 50, x2: 52, y2: 54, tone: "label" },
+		{ kind: "stroke", d: "M50 44 L58 50 L50 56", weight: 2.2, tone: "label" },
 		{ kind: "rect", x: 64, y: 40, w: 32, h: 20, r: 10, tone: "surface" },
-		{ kind: "line", x1: 102, y1: 46, x2: 108, y2: 50, tone: "label" },
-		{ kind: "line", x1: 108, y1: 50, x2: 102, y2: 54, tone: "label" },
+		{ kind: "stroke", d: "M100 44 L108 50 L100 56", weight: 2.2, tone: "label" },
 		{ kind: "rect", x: 114, y: 40, w: 34, h: 20, r: 10, tone: "accent" },
 	],
 	bubble: [
@@ -201,18 +214,18 @@ const FACES: Record<string, Shape[]> = {
 		{ kind: "rect", x: 122, y: 28, w: 14, h: 58, r: 4, tone: "accent" },
 	],
 	checkbox: [
-		{ kind: "rect", x: 36, y: 38, w: 24, h: 24, r: 6, tone: "surface" },
-		{ kind: "path", d: "M43 50 L48 55 L57 43", tone: "accent" },
-		{ kind: "line", x1: 70, y1: 50, x2: 128, y2: 50, tone: "ink" },
+		{ kind: "rect", x: 34, y: 36, w: 28, h: 28, r: 7, tone: "accent" },
+		{ kind: "stroke", d: "M42 50 L48 56.5 L58 42", weight: 3.2, tone: "surface" },
+		{ kind: "line", x1: 74, y1: 50, x2: 130, y2: 50, tone: "ink" },
 	],
 	"checkbox-group": [
-		{ kind: "rect", x: 36, y: 22, w: 18, h: 18, r: 5, tone: "surface" },
-		{ kind: "path", d: "M41 31 L44 34 L50 27", tone: "accent" },
-		{ kind: "line", x1: 64, y1: 31, x2: 128, y2: 31, tone: "ink" },
-		{ kind: "rect", x: 36, y: 46, w: 18, h: 18, r: 5, tone: "surface" },
-		{ kind: "line", x1: 64, y1: 55, x2: 120, y2: 55, tone: "label" },
-		{ kind: "rect", x: 36, y: 70, w: 18, h: 18, r: 5, tone: "surface" },
-		{ kind: "line", x1: 64, y1: 79, x2: 112, y2: 79, tone: "label" },
+		{ kind: "rect", x: 34, y: 20, w: 20, h: 20, r: 5, tone: "accent" },
+		{ kind: "stroke", d: "M39.5 30 L43.5 34.5 L50.5 24.5", weight: 2.4, tone: "surface" },
+		{ kind: "line", x1: 64, y1: 30, x2: 128, y2: 30, tone: "ink" },
+		{ kind: "rect", x: 34, y: 44, w: 20, h: 20, r: 5, tone: "surface" },
+		{ kind: "line", x1: 64, y1: 54, x2: 120, y2: 54, tone: "label" },
+		{ kind: "rect", x: 34, y: 68, w: 20, h: 20, r: 5, tone: "surface" },
+		{ kind: "line", x1: 64, y1: 78, x2: 112, y2: 78, tone: "label" },
 	],
 	"color-area": [
 		{ kind: "rect", x: 44, y: 14, w: 72, h: 72, r: 14, tone: "accent" },
@@ -481,8 +494,11 @@ const FACES: Record<string, Shape[]> = {
 		{ kind: "rect", x: 110, y: 36, w: 24, h: 30, r: 8, tone: "surface" },
 	],
 	"overlay-arrow": [
-		{ kind: "rect", x: 50, y: 24, w: 60, h: 36, r: 10, tone: "surface" },
-		{ kind: "path", d: "M70 60 L80 76 L90 60", tone: "surface" },
+		{
+			kind: "path",
+			d: "M50 24 H110 Q120 24 120 34 V48 Q120 58 110 58 H90 L80 74 L70 58 H50 Q40 58 40 48 V34 Q40 24 50 24 Z",
+			tone: "surface",
+		},
 	],
 	pagination: [
 		{ kind: "rect", x: 28, y: 38, w: 24, h: 24, r: 8, tone: "label" },
@@ -565,9 +581,8 @@ const FACES: Record<string, Shape[]> = {
 	],
 	select: [
 		{ kind: "rect", x: 36, y: 36, w: 88, h: 28, r: 10, tone: "surface" },
-		{ kind: "line", x1: 48, y1: 50, x2: 96, y2: 50, tone: "ink" },
-		{ kind: "line", x1: 112, y1: 44, x2: 118, y2: 50, tone: "ink" },
-		{ kind: "line", x1: 118, y1: 50, x2: 112, y2: 56, tone: "ink" },
+		{ kind: "line", x1: 48, y1: 50, x2: 90, y2: 50, tone: "ink" },
+		{ kind: "stroke", d: "M108 44 L114 50 L108 56", weight: 2.4, tone: "ink" },
 	],
 	"selection-indicator": [
 		{ kind: "rect", x: 44, y: 34, w: 72, h: 32, r: 10, tone: "surface" },
@@ -803,7 +818,20 @@ function drawShape(canvas: Canvas, shape: Shape): void {
 	}
 
 	if (shape.kind === "line") {
-		drawLine(canvas, shape);
+		drawCapsule(
+			canvas,
+			shape.x1 * SCALE,
+			shape.y1 * SCALE,
+			shape.x2 * SCALE,
+			shape.y2 * SCALE,
+			(shape.weight ?? 2.5) * SCALE * 0.5,
+			paint,
+		);
+		return;
+	}
+
+	if (shape.kind === "stroke") {
+		drawStroke(canvas, shape);
 		return;
 	}
 
@@ -818,19 +846,67 @@ function drawShape(canvas: Canvas, shape: Shape): void {
 }
 
 /**
- * A 2.5 px capsule between two points. Thin enough to read as a rule, thick enough
- * that antialiasing keeps it visible at tile size.
+ * A round-capped polyline stroke so checks and chevrons stay legible at tile size.
  */
-function drawLine(canvas: Canvas, shape: LineShape): void {
-	let x1 = shape.x1 * SCALE;
-	let y1 = shape.y1 * SCALE;
-	let x2 = shape.x2 * SCALE;
-	let y2 = shape.y2 * SCALE;
+function drawStroke(canvas: Canvas, shape: StrokeShape): void {
+	let points = parsePolyline(shape.d);
+	if (points.length < 2) return;
+	let paint = paintFor(shape.tone);
+	let half = ((shape.weight ?? 3) * SCALE) / 2;
+	for (let index = 0; index < points.length - 1; index++) {
+		let from = points[index]!;
+		let to = points[index + 1]!;
+		drawCapsule(canvas, from.x * SCALE, from.y * SCALE, to.x * SCALE, to.y * SCALE, half, paint);
+	}
+	for (let point of points) {
+		let size = half * 2;
+		canvas.fillPath(
+			Path.roundedRect(point.x * SCALE - half, point.y * SCALE - half, size, size, size),
+			paint,
+		);
+	}
+}
+
+/**
+ * Absolute `M`/`L` vertices from a short SVG path. Relative commands and curves stay on
+ * filled {@link PathShape}s — strokes only need polylines.
+ */
+function parsePolyline(d: string): Array<{ x: number; y: number }> {
+	let tokens = d.match(/[ML]|-?\d*\.?\d+(?:e[-+]?\d+)?/gi) ?? [];
+	let points: Array<{ x: number; y: number }> = [];
+	let index = 0;
+	while (index < tokens.length) {
+		let token = tokens[index]!;
+		if (token === "M" || token === "L" || token === "m" || token === "l") {
+			index += 1;
+			continue;
+		}
+		let x = Number(token);
+		let y = Number(tokens[index + 1]);
+		if (!Number.isFinite(x) || !Number.isFinite(y)) break;
+		points.push({ x, y });
+		index += 2;
+	}
+	return points;
+}
+
+/**
+ * A capsule between two pixel points. Round caps come from the caller when a stroke needs
+ * joints; a lone line already reads as a rule without them.
+ */
+function drawCapsule(
+	canvas: Canvas,
+	x1: number,
+	y1: number,
+	x2: number,
+	y2: number,
+	half: number,
+	paint: Raster.Paint,
+): void {
 	let dx = x2 - x1;
 	let dy = y2 - y1;
 	let length = Math.hypot(dx, dy);
 	if (length === 0) return;
-	let half = 1.25;
 	let nx = (-dy / length) * half;
 	let ny = (dx / length) * half;
 	let path = new Path()
@@ -839,5 +915,5 @@ function drawLine(canvas: Canvas, shape: LineShape): void {
 		.lineTo(x2 - nx, y2 - ny)
 		.lineTo(x1 - nx, y1 - ny)
 		.close();
-	canvas.fillPath(path, paintFor(shape.tone));
+	canvas.fillPath(path, paint);
 }
