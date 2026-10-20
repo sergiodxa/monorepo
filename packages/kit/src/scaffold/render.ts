@@ -25,11 +25,26 @@ export interface Resource {
 	fields: Field[];
 }
 
+/** Which surfaces a scaffold feature `.spec` exercises. */
+export interface SpecSurfaces {
+	/** HTML pages under `routes/web`. */
+	pages: boolean;
+	/** JSON endpoints under `routes/api`. */
+	api: boolean;
+	mcp: boolean;
+	command: boolean;
+}
+
 /**
  * Every placeholder the scaffold's stubs may use. `header` is the module JSDoc's author tags;
  * the rest derive from `resource`, the copy keys from its plural key (`posts.index.title`).
+ * `surfaces` fills `uses` and `cases` for the feature `.spec`.
  */
-export function placeholders(resource: Resource, header: string): Record<string, string> {
+export function placeholders(
+	resource: Resource,
+	header: string,
+	surfaces: SpecSurfaces = { pages: true, api: false, mcp: false, command: false },
+): Record<string, string> {
 	let { singular, plural, fields } = resource;
 	let copy = plural.key;
 	let types = new Set(fields.map((field) => field.type));
@@ -38,6 +53,8 @@ export function placeholders(resource: Resource, header: string): Record<string,
 	let labelled = types.has("text") || types.has("timestamp");
 	return {
 		header,
+		uses: specUses(surfaces),
+		cases: specCases(resource, surfaces),
 		CONSTANT: singular.snake.toUpperCase(),
 		PLURAL_CONSTANT: plural.snake.toUpperCase(),
 		name: singular.base,
@@ -134,6 +151,96 @@ export function placeholders(resource: Resource, header: string): Record<string,
 			)
 			.join(", "),
 	};
+}
+
+/** The `use` lines a feature `.spec` needs for the surfaces it exercises. */
+function specUses(surfaces: SpecSurfaces): string {
+	let lines: string[] = [];
+	if (surfaces.pages) lines.push("use browser");
+	if (surfaces.api) lines.push("use http");
+	if (surfaces.command) lines.push("use cli");
+	if (surfaces.mcp) lines.push("use mcp");
+	return lines.join("\n");
+}
+
+/**
+ * One black-box case per surface the scaffold wrote: a page visit, an HTTP list, a CLI list,
+ * or an MCP list call — enough for the suite to compile and for an author to extend.
+ */
+function specCases(resource: Resource, surfaces: SpecSurfaces): string {
+	let { singular, plural } = resource;
+	let words = singular.title.toLowerCase();
+	let pluralWords = plural.title.toLowerCase();
+	let cases: string[] = [];
+	if (surfaces.pages) {
+		cases.push(
+			[
+				`test "the ${pluralWords} index page loads" {`,
+				"\twhen {",
+				`\t\tbrowser.open "/${plural.base}"`,
+				"\t}",
+				"\tthen {",
+				`\t\texpect browser.heading "${plural.title}"`,
+				"\t}",
+				"}",
+			].join("\n"),
+		);
+	}
+	if (surfaces.api) {
+		cases.push(
+			[
+				`test "GET /api/${plural.base} answers" {`,
+				"\twhen {",
+				`\t\tlet result = http.get "/api/${plural.base}" on "web"`,
+				"\t}",
+				"\tthen {",
+				"\t\texpect result.status 200",
+				"\t}",
+				"}",
+			].join("\n"),
+		);
+	}
+	if (surfaces.command) {
+		cases.push(
+			[
+				`test "${plural.base} list runs" {`,
+				"\twhen {",
+				`\t\tlet result = cli.run "bun" "run" "cli" "${plural.base}" "list" in "."`,
+				"\t}",
+				"\tthen {",
+				"\t\texpect result.exit_code 0",
+				"\t}",
+				"}",
+			].join("\n"),
+		);
+	}
+	if (surfaces.mcp) {
+		cases.push(
+			[
+				`test "list_${plural.snake} answers over /mcp" {`,
+				"\twhen {",
+				`\t\tlet result = mcp.call "/mcp" "list_${plural.snake}" {} on "web"`,
+				"\t}",
+				"\tthen {",
+				"\t\texpect result.ok true",
+				"\t\texpect result.is_error false",
+				"\t}",
+				"}",
+			].join("\n"),
+		);
+	}
+	if (cases.length === 0) {
+		cases.push(
+			[
+				`test "the ${words} feature is reachable" {`,
+				"\tthen {",
+				'\t\texpect "todo" "todo"',
+				"\t}",
+				"}",
+			].join("\n"),
+		);
+	}
+	return cases.join("\n\n");
 }
 
 /** The local names `routes/api.ts` imports what the operations are written with under. */

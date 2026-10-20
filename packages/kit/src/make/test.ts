@@ -147,6 +147,7 @@ export async function makeTest(
 		name: name.data,
 		variant: chosen,
 		tests: true,
+		specs: false,
 		routes,
 		replace: input.force,
 		testAlone: true,

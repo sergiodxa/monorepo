@@ -50,11 +50,13 @@ export interface DependencyEdit {
 
 /**
  * Every `@sdxc/*` package `files` import, statically or dynamically, with the optional peers
- * an imported subpath needs at runtime, sorted.
+ * an imported subpath needs at runtime, and `@sdxc/spec` when any file is a pairing `.spec`,
+ * sorted.
  */
 export function importedPackages(files: readonly SourceText[]): string[] {
 	let names = new Set<string>();
 	for (let file of files) {
+		if (file.path.endsWith(".spec")) names.add("@sdxc/spec");
 		let references = findModuleReferences(file.path, file.content);
 		if (isFailure(references)) continue;
 		for (let { specifier } of references.data) {

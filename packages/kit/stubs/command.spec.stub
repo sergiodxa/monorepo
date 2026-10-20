@@ -1,0 +1,15 @@
+# The `{{command}}` command, run through the app's command line as a black box.
+#
+# @see https://sdxc.dev/docs/operations-and-testing/testing
+# @see https://sdxc.dev/docs/operations-and-testing/your-apps-command-line
+
+use cli
+
+test "{{command}} runs" {
+	when {
+		let result = cli.run "bun" "run" "cli" {{args}} in "."
+	}
+	then {
+		expect result.exit_code 0
+	}
+}

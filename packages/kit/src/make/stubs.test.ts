@@ -21,7 +21,8 @@ const DOC_LINK = /^ \* @see \{@link https:\/\/sdxc\.dev\/(docs|api)\/[a-z0-9/-]+
 
 describe("built-in stubs", async () => {
 	let names = (await readdir(STUBS_DIR)).filter(
-		(name) => name.endsWith(".stub") && !name.endsWith("migration.stub"),
+		(name) =>
+			name.endsWith(".stub") && !name.endsWith("migration.stub") && !name.endsWith(".spec.stub"),
 	);
 
 	test.each(names)("%s links the sdxc.dev docs before {{header}}", async (name) => {
@@ -31,5 +32,12 @@ describe("built-in stubs", async () => {
 		expect(links.length).toBeGreaterThan(0);
 		for (let line of links) expect(line.replace("{{header}}", "")).toMatch(DOC_LINK);
 		expect(links.at(-1)).toMatch(/\{\{header\}\}$/);
+	});
+
+	let specs = (await readdir(STUBS_DIR)).filter((name) => name.endsWith(".spec.stub"));
+
+	test.each(specs)("%s points at the sdxc.dev testing docs", async (name) => {
+		let text = await readFile(join(STUBS_DIR, name), "utf8");
+		expect(text).toMatch(/# @see https:\/\/sdxc\.dev\/docs\/operations-and-testing\/testing/);
 	});
 });

@@ -57,6 +57,8 @@ export interface MakeInput {
 	name: string;
 	/** Whether to write a test beside the file; `undefined` takes `make.tests`. */
 	test: boolean | undefined;
+	/** Whether to write a pairing `.spec`; `undefined` takes `make.specs`. */
+	spec?: boolean | undefined;
 	dryRun: boolean;
 	/** `make job`: a scheduled job with this expression. */
 	cron?: string | undefined;
@@ -87,8 +89,8 @@ export interface MakeInput {
 	/** `make model`: the companions to leave out. */
 	skip?: readonly ModelCompanion[] | undefined;
 	/**
-	 * Replace the file and its test when they exist. A file that existed keeps its declaration,
-	 * mapping and mount, and an existing model keeps its migrations.
+	 * Replace the file, its test and its pairing `.spec` when they exist. A file that existed
+	 * keeps its declaration, mapping and mount, and an existing model keeps its migrations.
 	 */
 	force?: boolean | undefined;
 }
@@ -192,8 +194,10 @@ export async function makeUnformatted(
 			guarded: input.guardedBy !== undefined,
 		}),
 		tests: input.test ?? config.make.tests,
+		specs: input.spec ?? config.make.specs,
 		chain: input.chain,
 		routes: input.routes ?? config.make.routes,
+		url: pattern ?? `/${name.data.segments.join("/")}`,
 		replace: input.force === true,
 	};
 	let replacing = input.force === true && (await existsAlready(root, request));
@@ -446,6 +450,7 @@ async function modelCompanions(
 				name: name.data,
 				variant: null,
 				tests: false,
+				specs: false,
 				chain: companion.chain,
 			},
 			root,
@@ -462,7 +467,7 @@ async function modelCompanions(
 		});
 		let attributes = values.length === 0 ? "" : `\n${values.join("\n")}\n`;
 		let factory = await plan(
-			{ ...request, kind: "factory", variant: null, tests: false },
+			{ ...request, kind: "factory", variant: null, tests: false, specs: false },
 			root,
 			config,
 			packageRoot,

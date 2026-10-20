@@ -34,6 +34,15 @@ describe(importedPackages.name, () => {
 		expect(importedPackages(files)).toEqual(["@sdxc/result", "@sdxc/ui"]);
 	});
 
+	test("lists @sdxc/spec when any pairing .spec file is among the written files", () => {
+		expect(
+			importedPackages([
+				{ path: "spec/about.spec", content: "use browser\n" },
+				{ path: "app/http/controllers/about.tsx", content: "export default {};\n" },
+			]),
+		).toEqual(["@sdxc/spec"]);
+	});
+
 	test.each(["factory.stub", "scaffold.factory.stub", "scaffold.test-database.stub"])(
 		"adds @sdxc/sample for %s, whose @sdxc/data-model/testing import loads it",
 		async (stub) => {

@@ -58,6 +58,8 @@ export interface ScaffoldInput {
 	api?: boolean;
 	/** Whether to write tests; `undefined` takes `make.tests`. */
 	test: boolean | undefined;
+	/** Whether to write one feature `.spec`; `undefined` takes `make.specs`. */
+	spec?: boolean | undefined;
 	dryRun: boolean;
 	/** The pieces to leave out, each one the project already has or does without. */
 	skip?: readonly ScaffoldPiece[];
@@ -103,11 +105,12 @@ export async function scaffold(
 	let resource = parseResource(input);
 	if (isFailure(resource)) return resource;
 	let tests = input.test ?? config.make.tests;
+	let specs = input.spec ?? config.make.specs;
 	let skip = new Set(input.skip ?? []);
 	let missing = await skippedButNeeded(root, resource.data, input, skip, tests);
 	if (isFailure(missing)) return missing;
 
-	let pieces = piecesOf(resource.data, input, tests, skip);
+	let pieces = piecesOf(resource.data, input, tests, specs, skip);
 	let folder = chainFolder(config.make.migrations, undefined);
 	if (isFailure(folder)) return folder;
 	let migrationName = parseName(`create-${resource.data.plural.base}`);
@@ -120,7 +123,12 @@ export async function scaffold(
 
 	let planned: PlannedFile[] = [];
 	let header = headerTags(await resolveAuthor(root));
-	let values = placeholders(resource.data, header);
+	let values = placeholders(resource.data, header, {
+		pages: !skip.has("pages") && input.api !== true,
+		api: !skip.has("pages") && input.api === true,
+		mcp: input.mcp,
+		command: input.command,
+	});
 	for (let piece of pieces) {
 		let exists = isSuccess(await wrap(() => stat(join(root, piece.path))));
 		if (exists && piece.shared === true) continue;
@@ -280,12 +288,13 @@ async function skippedButNeeded(
 
 /**
  * Every file the scaffold writes but its migration, each test right after the file it covers,
- * leaving out the pieces in `skip`.
+ * and one feature `.spec` when specs are on, leaving out the pieces in `skip`.
  */
 function piecesOf(
 	resource: Resource,
 	input: ScaffoldInput,
 	tests: boolean,
+	specs: boolean,
 	skip: ReadonlySet<ScaffoldPiece>,
 ): Piece[] {
 	let { singular, plural } = resource;
@@ -335,6 +344,9 @@ function piecesOf(
 		if (input.mcp) {
 			pieces.push({ stub: "scaffold.test-mcp.stub", path: "app/test/mcp.ts", shared: true });
 		}
+	}
+	if (specs && (!skip.has("pages") || input.mcp || input.command)) {
+		pieces.push({ stub: "scaffold.spec.stub", path: `spec/${plural.base}.spec` });
 	}
 	return pieces;
 }

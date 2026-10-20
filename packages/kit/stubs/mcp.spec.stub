@@ -1,0 +1,16 @@
+# The {{title}} MCP tool, called over `/mcp` the way a client calls it.
+#
+# @see https://sdxc.dev/docs/operations-and-testing/testing
+# @see https://sdxc.dev/docs/operations-and-testing/mcp-server
+
+use mcp
+
+test "{{tool}} answers over /mcp" {
+	when {
+		let result = mcp.call "/mcp" "{{tool}}" {} on "web"
+	}
+	then {
+		expect result.ok true
+		expect result.is_error false
+	}
+}

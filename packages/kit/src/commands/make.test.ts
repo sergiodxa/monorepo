@@ -109,24 +109,50 @@ async function files(root: string): Promise<string[]> {
 
 describe("make", () => {
 	test.each([
-		["controller", "sponsors", "app/http/controllers/sponsors.tsx"],
-		["middleware", "require-user", "app/http/middleware/require-user.ts"],
-		["validator", "signup", "app/http/validators/signup.ts"],
-		["job", "trials/expire", "app/jobs/trials/expire.ts"],
-		["service", "billing/charge", "app/services/billing/charge.ts"],
-		["initializer", "cache", "app/initializers/cache.ts"],
-		["email", "welcome", "app/emails/welcome.tsx"],
-		["mcp", "get-post", "app/mcp/tools/get-post.ts"],
-		["command", "users/grant", "app/commands/users/grant.ts"],
-	])("%s writes %s and its test", async (kind, name, path) => {
+		["controller", "sponsors", "app/http/controllers/sponsors.tsx", "spec/sponsors.spec"],
+		["middleware", "require-user", "app/http/middleware/require-user.ts", null],
+		["validator", "signup", "app/http/validators/signup.ts", null],
+		["job", "trials/expire", "app/jobs/trials/expire.ts", null],
+		["service", "billing/charge", "app/services/billing/charge.ts", null],
+		["initializer", "cache", "app/initializers/cache.ts", null],
+		["email", "welcome", "app/emails/welcome.tsx", null],
+		["mcp", "get-post", "app/mcp/tools/get-post.ts", "spec/mcp/get-post.spec"],
+		["command", "users/grant", "app/commands/users/grant.ts", "spec/commands/users/grant.spec"],
+	])("%s writes %s and its test", async (kind, name, path, spec) => {
 		let root = await project();
 
 		let result = await invoke([kind, name], root);
 
 		let test = path.replace(/(\.tsx?)$/, ".test$1");
+		let written = [path, test, ...(spec === null ? [] : [spec])];
 		expect(result.code).toBe(0);
-		expect(result.stdout.startsWith(`Wrote ${path}\nWrote ${test}\n`)).toBe(true);
-		expect(await files(root)).toEqual([path, test].sort());
+		expect(result.stdout.startsWith(written.map((file) => `Wrote ${file}\n`).join(""))).toBe(true);
+		expect(await files(root)).toEqual(written.sort());
+	});
+
+	test("controller api stub pairs with an http .spec", async () => {
+		let root = await project();
+
+		let result = await invoke(["controller", "keys", "--routes", "api", "--no-test"], root);
+
+		expect(result.code).toBe(0);
+		expect(await files(root)).toEqual(["app/http/controllers/keys.tsx", "spec/keys.spec"]);
+		expect(await readFile(join(root, "spec/keys.spec"), "utf8")).toContain("use http");
+	});
+
+	test("make.specs off skips the pairing .spec unless --spec asks for one", async () => {
+		let root = await project('{ "make": { "specs": false } }');
+
+		await invoke(["controller", "about", "--no-test"], root);
+		expect(await files(root)).toEqual([".config/sdxc.jsonc", "app/http/controllers/about.tsx"]);
+
+		await invoke(["controller", "contact", "--no-test", "--spec"], root);
+		expect(await files(root)).toEqual([
+			".config/sdxc.jsonc",
+			"app/http/controllers/about.tsx",
+			"app/http/controllers/contact.tsx",
+			"spec/contact.spec",
+		]);
 	});
 
 	test("factory, migration and mcp --resource write no test", async () => {
@@ -575,6 +601,8 @@ describe("make", () => {
 			"app/http/controllers/ping.tsx",
 			"app/jobs/digest.test.ts",
 			"app/jobs/digest.ts",
+			"spec/admin/users.spec",
+			"spec/ping.spec",
 		]);
 	});
 });
@@ -961,7 +989,7 @@ describe("declaring and mapping", () => {
 			'import { createCLI, lazy } from "@sdxc/cli";\n\nimport commandset from "~/app/commands";\n\nexport const cli = createCLI({ name: "blog", commands: commandset });\n';
 		await writeFile(join(root, "app/initializers/cli.ts"), initializer);
 
-		let result = await invoke(["command", "about/more", "--no-test"], root);
+		let result = await invoke(["command", "about/more", "--no-test", "--no-spec"], root);
 
 		expect(result.stdout).toBe(
 			[
@@ -1183,7 +1211,7 @@ describe("declaring and mapping", () => {
 			'import { route } from "remix/routes";\n\nexport default route({});\n',
 		);
 
-		let result = await invoke(["controller", "sponsors", "--no-test"], root);
+		let result = await invoke(["controller", "sponsors", "--no-test", "--no-spec"], root);
 
 		expect(result.stdout).toBe(
 			[
@@ -1204,10 +1232,13 @@ describe("declaring and mapping", () => {
 	test("decides a new page in the sitemap: an empty list for params, and none in an excluded group", async () => {
 		let root = await sitemapProject();
 
-		await invoke(["controller", "posts/show", "--path", "/posts/:slug", "--no-test"], root);
-		await invoke(["controller", "about", "--no-test"], root);
-		await invoke(["controller", "admin/users", "--no-test"], root);
-		await invoke(["controller", "ping", "--method", "post", "--no-test"], root);
+		await invoke(
+			["controller", "posts/show", "--path", "/posts/:slug", "--no-test", "--no-spec"],
+			root,
+		);
+		await invoke(["controller", "about", "--no-test", "--no-spec"], root);
+		await invoke(["controller", "admin/users", "--no-test", "--no-spec"], root);
+		await invoke(["controller", "ping", "--method", "post", "--no-test", "--no-spec"], root);
 
 		expect(await readFile(join(root, "app/http/controllers/sitemap.ts"), "utf8")).toBe(
 			[

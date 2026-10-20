@@ -1,7 +1,7 @@
 /**
  * Plans the files one `sdxc make` run writes: the file of the requested kind at the folder the
- * layout gives it and, when tests are on, its test beside it, each rendered from its stub; a
- * policy writes its test alone.
+ * layout gives it, when tests are on its test beside it, and when specs are on a pairing `.spec`
+ * under `spec/`, each rendered from its stub; a policy writes its test alone.
  * Nothing is written while planning, and a file that already exists stops the plan unless the
  * request replaces it.
  *
@@ -23,6 +23,7 @@ import { pluralize } from "../scaffold/fields.js";
 
 import type { KindName } from "./kinds.js";
 import type { Name } from "./names.js";
+import type { StubRole } from "./stubs.js";
 
 import { COMMON_PLACEHOLDERS, KINDS, MCP_RESOURCES_FOLDER } from "./kinds.js";
 import { chainFolder, nextMigrationFile } from "./migrations.js";
@@ -40,10 +41,14 @@ export interface MakeRequest {
 	variant: string | null;
 	/** Whether to write a test beside the file. */
 	tests: boolean;
+	/** Whether to write a pairing `.spec` under `spec/` for kinds that support one. */
+	specs: boolean;
 	/** The migration chain, for `make migration`. */
 	chain?: string;
 	/** The route contract a controller is declared in, a module in `routes/`. */
 	routes: string;
+	/** The route pattern a controller answers, for the pairing `.spec`'s URL. */
+	url?: string;
 	/** Replace a file the plan would write that already exists, instead of stopping. */
 	replace?: boolean;
 	/** Plan the test alone, for a file that exists already. */
@@ -95,9 +100,19 @@ export async function plan(
 	}
 	let path = `${folder}/${file}${kind.extension}`;
 	let testPath = `${folder}/${file}.test${kind.extension}`;
+	let specPath = specPathOf(request);
 	let writesTest = kind.tests && (request.tests || request.testAlone === true);
+	let writesSpec =
+		kind.specs === true &&
+		request.specs &&
+		request.testAlone !== true &&
+		request.variant !== "resource";
 	let writesMain = kind.testOnly !== true && request.testAlone !== true;
-	let paths = [...(writesMain ? [path] : []), ...(writesTest ? [testPath] : [])];
+	let paths = [
+		...(writesMain ? [path] : []),
+		...(writesTest ? [testPath] : []),
+		...(writesSpec ? [specPath] : []),
+	];
 	for (let candidate of paths) {
 		if (request.replace !== true && (await exists(root, candidate))) {
 			return failure(
@@ -110,16 +125,32 @@ export async function plan(
 	Object.assign(values, overrides);
 	let files: PlannedFile[] = [];
 	if (writesMain) {
-		let main = await renderFile(request, values, false, root, config, packageRoot);
+		let main = await renderFile(request, values, "main", root, config, packageRoot);
 		if (isFailure(main)) return main;
 		files.push({ path, content: main.data });
 	}
 	if (writesTest) {
-		let test = await renderFile(request, values, true, root, config, packageRoot);
+		let test = await renderFile(request, values, "test", root, config, packageRoot);
 		if (isFailure(test)) return test;
 		files.push({ path: testPath, content: test.data });
 	}
+	if (writesSpec) {
+		let spec = await renderFile(request, values, "spec", root, config, packageRoot);
+		if (isFailure(spec)) return spec;
+		files.push({ path: specPath, content: spec.data });
+	}
 	return success({ files, values });
+}
+
+/**
+ * The pairing `.spec` path for `request`: controllers under `spec/`, commands under
+ * `spec/commands/`, MCP tools under `spec/mcp/`.
+ */
+export function specPathOf(request: Pick<MakeRequest, "kind" | "name">): string {
+	let file = request.name.segments.join("/");
+	if (request.kind === "command") return `spec/commands/${file}.spec`;
+	if (request.kind === "mcp") return `spec/mcp/${file}.spec`;
+	return `spec/${file}.spec`;
 }
 
 /** Whether `path`, relative to `root`, exists. */
@@ -133,29 +164,31 @@ export function folderOf(kind: KindName, variant: string | null): string {
 }
 
 /**
- * Renders the kind's stub, or its test stub, with `values`. A variant's own stub wins; a
- * variant without its own test stub uses the kind's. A controller with no variant takes its
- * contract's stub when one exists (`controller.api.stub` for `routes/api`), else the kind's, and
- * a guarded one its contract's `resource` stub (`controller.api.resource.stub`) the same way.
+ * Renders the kind's stub, its test stub or its pairing `.spec` stub with `values`. A variant's
+ * own stub wins; a variant without its own companion stub uses the kind's. A controller with no
+ * variant takes its contract's stub when one exists (`controller.api.stub` /
+ * `controller.api.spec.stub` for `routes/api`), else the kind's, and a guarded one its contract's
+ * `resource` stub the same way.
  */
 async function renderFile(
 	request: MakeRequest,
 	values: Record<string, string>,
-	test: boolean,
+	role: StubRole,
 	root: string,
 	config: Config,
 	packageRoot: string,
 ): Promise<Result<string, Error>> {
-	let names = [stubName(request.kind, request.variant, test)];
+	let companion = role !== "main";
+	let names = [stubName(request.kind, request.variant, role)];
 	let contractual = request.variant === null || request.variant === "resource";
 	if (request.kind === "controller" && contractual) {
 		let variant = [request.routes, request.variant].filter((part) => part !== null).join(".");
-		names.unshift(stubName(request.kind, variant, test));
+		names.unshift(stubName(request.kind, variant, role));
 	}
-	if (request.kind === "controller" && request.variant?.startsWith("resource") && test) {
-		names.push(stubName(request.kind, request.routes, true));
+	if (request.kind === "controller" && request.variant?.startsWith("resource") && companion) {
+		names.push(stubName(request.kind, request.routes, role));
 	}
-	if (request.variant !== null && test) names.push(stubName(request.kind, null, true));
+	if (request.variant !== null && companion) names.push(stubName(request.kind, null, role));
 	let stub = await loadStub(names, root, config.make.stubs, packageRoot);
 	if (isFailure(stub)) return stub;
 	return renderStub(stub.data, values);
@@ -190,6 +223,8 @@ async function placeholders(
 		command: name.segments.join(" "),
 		member: memberAccess(name.segments),
 		words: name.segments.map((segment) => literal(segment)).join(", "),
+		args: name.segments.map((segment) => literal(segment)).join(" "),
+		url: request.url ?? `/${name.segments.join("/")}`,
 		table: pluralize(name.snake),
 		attributes: "",
 		ability: "",

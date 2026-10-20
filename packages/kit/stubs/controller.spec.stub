@@ -1,0 +1,15 @@
+# The {{title}} page, opened through a real browser the way a visitor reaches it.
+#
+# @see https://sdxc.dev/docs/operations-and-testing/testing
+# @see https://sdxc.dev/docs/building-remix-apps/wire-the-router
+
+use browser
+
+test "{{title}} page loads" {
+	when {
+		browser.open "{{url}}"
+	}
+	then {
+		expect browser.heading "{{title}}"
+	}
+}

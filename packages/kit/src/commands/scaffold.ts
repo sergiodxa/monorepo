@@ -25,6 +25,7 @@ export default createCommand(SDXC_COMMANDS.scaffold, {
 			mcp: ctx.flags.mcp,
 			command: ctx.flags.command,
 			test: ctx.flags.test,
+			spec: ctx.flags.spec,
 			dryRun: ctx.flags.dryRun,
 			skip: ctx.flags.skip,
 			api: ctx.flags.api,
