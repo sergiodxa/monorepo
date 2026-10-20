@@ -98,11 +98,11 @@ R2 is platform cost, not a customer meter — there is no `flow_trace` usage eve
 and no change to `ping` / `flow_run`. The cost ledger (ADR-007) gains three
 append-only resources priced from `@sdxc/cloudflare-pricing/r2`:
 
-| Resource | When recorded |
-| -------- | ------------- |
-| `r2ClassAOperations` | Each successful `PutObject` in `storeFlowTrace` |
-| `r2ClassBOperations` | Each `GetObject` in `readFlowTrace` (including misses) |
-| `r2StorageGbDay` | Daily `reportCosts` listing of live `flow-traces/` objects, apportioned by team |
+| Resource             | When recorded                                                                   |
+| -------------------- | ------------------------------------------------------------------------------- |
+| `r2ClassAOperations` | Each successful `PutObject` in `storeFlowTrace`                                 |
+| `r2ClassBOperations` | Each `GetObject` in `readFlowTrace` (including misses)                          |
+| `r2StorageGbDay`     | Daily `reportCosts` listing of live `flow-traces/` objects, apportioned by team |
 
 Deletes are free on R2 Standard and are not recorded. The Analytics Engine point
 was already full (nineteen resources + priced total = twenty doubles), so R2
