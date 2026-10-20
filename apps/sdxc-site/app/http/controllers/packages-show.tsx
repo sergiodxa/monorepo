@@ -97,7 +97,6 @@ export default createAction(routes.api.show, async (ctx) => {
 						<UiPackageHero
 							name={entry.name}
 							description={entry.description}
-							componentCount={uiComponents.length}
 							markdownHref={markdownHref}
 							markdownUrl={absoluteUrl(markdownHref)}
 							sourceUrl={`${SOURCE_BASE}${name}`}

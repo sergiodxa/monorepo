@@ -8,7 +8,6 @@
 
 import type { Handle } from "remix/component";
 
-import { LayoutGridIcon } from "sdxc/icons";
 import { bg, border, fg } from "sdxc/u/color";
 import { rounded } from "sdxc/u/effects";
 import { raw } from "sdxc/u/general";
@@ -41,8 +40,6 @@ namespace UiPackageHero {
 		name: string;
 		/** One-line pitch for the package, drawn under the title. */
 		description: string;
-		/** How many components the gallery lists. */
-		componentCount: number;
 		/** Where the Open menu and its markdown twin point. */
 		markdownHref: string;
 		markdownUrl: string;
@@ -53,7 +50,7 @@ namespace UiPackageHero {
 /** Renders the landing pitch, install strip and featured component faces. */
 export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 	return () => {
-		let { componentCount, description, markdownHref, markdownUrl, name, sourceUrl } = handle.props;
+		let { description, markdownHref, markdownUrl, name, sourceUrl } = handle.props;
 
 		return (
 			<header mix={[vstack({ gap: 10, align: "stretch" })]}>
@@ -91,15 +88,11 @@ export default function UiPackageHero(handle: Handle<UiPackageHero.Props>) {
 					</div>
 
 					<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-						<LinkButton href="#components" size="lg" color="brand" variant="solid">
-							<LayoutGridIcon size={16} aria-hidden="true" />
-							Browse {componentCount} components
-						</LinkButton>
 						<LinkButton
 							href={routes.api.component.href({ component: "theming" })}
 							size="lg"
-							color="neutral"
-							variant="outline"
+							color="brand"
+							variant="solid"
 						>
 							Theming
 						</LinkButton>
