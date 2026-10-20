@@ -1,7 +1,7 @@
 /**
- * `GET /frames/faces/:component` — the frosted-glass PNG a `@sdxc/ui` explorer tile
- * shows. Drawing is cheap enough to do per miss; the response is immutable so the edge
- * and the browser keep it.
+ * `GET /frames/faces/:component` — the HIG-style PNG a `@sdxc/ui` explorer tile shows.
+ * Drawing is cheap enough to do per miss; the response is immutable so the edge and the
+ * browser keep it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
