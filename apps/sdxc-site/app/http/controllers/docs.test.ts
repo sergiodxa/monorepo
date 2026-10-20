@@ -199,6 +199,13 @@ describe("GET /api/:name", () => {
 		expect(body).toContain('href="/api/ui/behaviors/toaster"');
 		expect(body).toContain('href="/api/ui/animations/fade"');
 		expect(body).toContain('href="/api/ui/styles/panel-chrome"');
+		expect(body).toContain('href="#components"');
+		expect(body).toContain('id="components"');
+		expect(body).toContain("Explore components");
+		expect(body).toContain('id="ui-explore-components"');
+		expect(body).toContain("/frames/faces/button");
+		expect(body).not.toContain('href="/api/ui/theming">Theming</code>');
+		expect(body).toContain("A compact pill");
 	});
 });
 

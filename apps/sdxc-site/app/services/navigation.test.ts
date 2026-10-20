@@ -83,10 +83,12 @@ describe("buildComponentsNav", () => {
 			"Animations",
 			"Styles",
 		]);
-		expect(tree.sections.at(2)?.entries).toContainEqual({
-			title: "hotkey",
-			href: "/api/ui/mixins/hotkey",
-		});
+		expect(tree.sections.at(2)?.entries).toContainEqual(
+			expect.objectContaining({
+				title: "hotkey",
+				href: "/api/ui/mixins/hotkey",
+			}),
+		);
 	});
 });
 

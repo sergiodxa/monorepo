@@ -73,14 +73,20 @@ namespace DocsLayout {
 		children: RemixNode;
 		/** The page's own in-page navigation, drawn beside it where there is room. */
 		aside?: RemixNode;
+		/**
+		 * How wide the main column may run. Catalogue landings need room for a tile grid;
+		 * everything else stays on the prose measure.
+		 */
+		measure?: "prose" | "catalogue";
 	}
 }
 
 /** Renders the tree, the trail, and the page between them. */
 export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 	return () => {
-		let { activePath, aside, breadcrumbs, children, tree } = handle.props;
+		let { activePath, aside, breadcrumbs, children, measure = "prose", tree } = handle.props;
 		let { next, previous } = findNeighbours(tree, activePath);
+		let mainMax = measure === "catalogue" ? "72rem" : "48rem";
 
 		let heading = (
 			<a
@@ -191,7 +197,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							media(ASIDE_BREAKPOINT, [hstack({ gap: 12, align: "start", justify: "between" })]),
 						]}
 					>
-						<main mix={[is("100%"), maxIs("48rem")]}>
+						<main mix={[is("100%"), maxIs(mainMax)]}>
 							{children}
 							<DocsPager previous={previous} next={next} />
 							<AuthorNote />
