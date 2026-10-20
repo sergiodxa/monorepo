@@ -88,7 +88,7 @@ export default route({
 		/** One live example of a `@sdxc/u` utility, as its reference page lists it. */
 		utility: get("/frames/u/:utility/:example"),
 		/**
-		 * Frosted-glass PNG face for the `@sdxc/ui` explorer grid. Drawn with
+		 * Schematic PNG face for the `@sdxc/ui` explorer grid. Drawn with
 		 * `@sdxc/raster` so a tile stays legible without mounting a live frame.
 		 */
 		face: get("/frames/faces/:component"),

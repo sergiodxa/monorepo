@@ -1,7 +1,7 @@
 /**
  * Draws the explorer face each `@sdxc/ui` tile shows. Live frames clip inside a card;
- * these Apple HIG–style silhouettes stay legible at tile size — elevated surfaces,
- * label and accent fills on a soft wash — rendered through `@sdxc/raster` as PNG.
+ * these schematic silhouettes stay legible at tile size and use the site's brand and
+ * neutral scales from `colors.css`, rendered through `@sdxc/raster` as PNG.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import type { Raster } from "@sdxc/raster";
 
-import { Canvas, color, linearGradient, Path, withAlpha } from "@sdxc/raster";
+import { Canvas, color, Path } from "@sdxc/raster";
 
 /** Design space every silhouette is authored in; the canvas is this times {@link SCALE}. */
 const VIEW_WIDTH = 160;
@@ -28,9 +28,9 @@ export const COMPONENT_FACE_SIZE = {
  * Bumped when a silhouette or the wash changes, so cards can cache-bust without waiting
  * for a year-long `max-age` to expire.
  */
-export const COMPONENT_FACE_VERSION = "3";
+export const COMPONENT_FACE_VERSION = "4";
 
-/** Material role a silhouette piece paints with, matching HIG elevated / label / accent. */
+/** Material role a silhouette piece paints with — surface, resting fill, ink, or brand. */
 type Tone = "surface" | "label" | "ink" | "accent";
 
 interface RectShape {
@@ -82,23 +82,24 @@ interface StrokeShape {
 
 type Shape = RectShape | CircleShape | LineShape | PathShape | StrokeShape;
 
-/** Soft sky wash behind the materials, the cool field Apple's component cards use. */
-const WASH = {
-	from: color("oklch(0.94 0.03 230)"),
-	mid: color("oklch(0.88 0.05 225)"),
-	to: color("oklch(0.82 0.06 240)"),
-};
+/**
+ * Flat wash matching `--ui-color-neutral-100`. The tile chrome already sits on
+ * `neutral.tint`, so the face stays in the same family instead of a separate sky field.
+ */
+const WASH = color("oklch(0.965 0.005 275)");
 
-/** Elevated white panel — primary chrome on the wash. */
-const SURFACE = color("#ffffff");
-/** Soft secondary fill for resting or inactive chrome. */
-const LABEL = color("oklch(0.9 0.01 250)");
-/** Dark rule and label stroke that reads as ink at tile size. */
-const INK = withAlpha(color("oklch(0.28 0.02 260)"), 0.75);
-/** System-blue accent for primary actions and selected state. */
-const ACCENT = color("oklch(0.62 0.17 250)");
-/** Soft contact shadow under elevated surface pieces. */
-const SHADOW = withAlpha(color("oklch(0.35 0.04 250)"), 0.14);
+/** White panel — primary chrome on the wash. */
+const SURFACE = color("oklch(0.985 0.003 275)");
+/** Resting fill from `--ui-color-neutral-200`. */
+const LABEL = color("oklch(0.915 0.008 275)");
+/** Hairline around surface chrome from `--ui-color-neutral-300`. */
+const EDGE = color("oklch(0.84 0.011 275)");
+/** Rules and marks from `--ui-color-neutral-800`. */
+const INK = color("oklch(0.32 0.01 275)");
+/** Primary action / selected state from `--ui-color-brand-600`. */
+const ACCENT = color("oklch(0.52 0.17 275)");
+/** How far the edge ring extends past a surface piece, in design space. */
+const EDGE_PAD = 1;
 
 /** A soft fallback when a slug has no hand-tuned silhouette yet. */
 const FALLBACK: Shape[] = [{ kind: "rect", x: 40, y: 24, w: 80, h: 52, r: 14, tone: "surface" }];
@@ -752,21 +753,7 @@ export async function renderComponentFace(slug: string): Promise<Uint8Array> {
 	let { height, width } = COMPONENT_FACE_SIZE;
 	let canvas = new Canvas(width, height);
 
-	canvas.fillRect(
-		0,
-		0,
-		width,
-		height,
-		linearGradient({
-			from: [0, 0],
-			to: [width, height],
-			stops: [
-				[0, WASH.from],
-				[0.5, WASH.mid],
-				[1, WASH.to],
-			],
-		}),
-	);
+	canvas.fillRect(0, 0, width, height, WASH);
 
 	let shapes = FACES[slug] ?? FALLBACK;
 	for (let shape of shapes) drawShape(canvas, shape);
@@ -787,11 +774,12 @@ function paintFor(tone: Tone) {
 }
 
 /**
- * Paints one HIG material piece into the canvas, scaled from design space. Surface
- * pieces cast a soft contact shadow so elevated chrome lifts off the wash.
+ * Paints one schematic piece into the canvas, scaled from design space. Surface
+ * pieces get a hairline edge so chrome reads against the neutral wash without a shadow.
  */
 function drawShape(canvas: Canvas, shape: Shape): void {
 	let paint = paintFor(shape.tone);
+	let edge = EDGE_PAD * SCALE;
 
 	if (shape.kind === "rect") {
 		let x = shape.x * SCALE;
@@ -800,7 +788,10 @@ function drawShape(canvas: Canvas, shape: Shape): void {
 		let h = shape.h * SCALE;
 		let r = (shape.r ?? 8) * SCALE;
 		if (shape.tone === "surface") {
-			canvas.fillPath(Path.roundedRect(x, y + 2 * SCALE, w, h, r), SHADOW);
+			canvas.fillPath(
+				Path.roundedRect(x - edge, y - edge, w + edge * 2, h + edge * 2, r + edge),
+				EDGE,
+			);
 		}
 		canvas.fillPath(Path.roundedRect(x, y, w, h, r), paint);
 		return;
@@ -811,7 +802,10 @@ function drawShape(canvas: Canvas, shape: Shape): void {
 		let y = (shape.cy - shape.r) * SCALE;
 		let size = shape.r * 2 * SCALE;
 		if (shape.tone === "surface") {
-			canvas.fillPath(Path.roundedRect(x, y + 2 * SCALE, size, size, size), SHADOW);
+			canvas.fillPath(
+				Path.roundedRect(x - edge, y - edge, size + edge * 2, size + edge * 2, size + edge * 2),
+				EDGE,
+			);
 		}
 		canvas.fillPath(Path.roundedRect(x, y, size, size, size), paint);
 		return;
@@ -835,14 +829,7 @@ function drawShape(canvas: Canvas, shape: Shape): void {
 		return;
 	}
 
-	let path = Path.fromSVG(shape.d, { transform: [SCALE, 0, 0, SCALE, 0, 0] });
-	if (shape.tone === "surface") {
-		canvas.fillPath(
-			Path.fromSVG(shape.d, { transform: [SCALE, 0, 0, SCALE, 0, 2 * SCALE] }),
-			SHADOW,
-		);
-	}
-	canvas.fillPath(path, paint);
+	canvas.fillPath(Path.fromSVG(shape.d, { transform: [SCALE, 0, 0, SCALE, 0, 0] }), paint);
 }
 
 /**
