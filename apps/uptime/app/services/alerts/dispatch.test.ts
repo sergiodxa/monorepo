@@ -1887,6 +1887,7 @@ function makeFlowResult(overrides: Partial<SelectFlowMonitorResult> = {}): Selec
 		failure_detail: "expected status 200, got 500",
 		duration_ms: 1840,
 		error_message: null,
+		trace_key: null,
 		checked_at: Date.now(),
 		...overrides,
 	};

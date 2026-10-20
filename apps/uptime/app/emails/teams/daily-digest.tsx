@@ -15,6 +15,7 @@ import { DARK_STYLES } from "~/app/emails/shared/palette";
 import {
 	TeamDigestFooter,
 	TeamDigestMonitorList,
+	TeamDigestTraceList,
 	countHealthy,
 	sortTeamDigestMonitors,
 	teamDigestDay,
@@ -44,7 +45,7 @@ export default createEmail(emails.teams.dailyDigest, {
 	/** This digest's own list, so unsubscribing from it leaves the other digest on. */
 	list: () => TEAM_DIGEST_MAILING_LISTS.daily,
 	body: (handle) => () => {
-		let { t, locale, teamName, monitors, dashboardUrl, preferencesUrl } = handle.props;
+		let { t, locale, teamName, monitors, traces, dashboardUrl, preferencesUrl } = handle.props;
 		let heading = t("emails.teamDigest.daily.heading", { team: teamName });
 
 		return (
@@ -57,6 +58,7 @@ export default createEmail(emails.teams.dailyDigest, {
 				<Email.Heading>{heading}</Email.Heading>
 				<Email.Text>{summary(handle.props)}</Email.Text>
 				<TeamDigestMonitorList monitors={sortTeamDigestMonitors(monitors)} t={t} />
+				<TeamDigestTraceList traces={traces} t={t} />
 				<Email.Button href={dashboardUrl}>{t("emails.teamDigest.action")}</Email.Button>
 				<Email.Footer>
 					<TeamDigestFooter teamName={teamName} preferencesUrl={preferencesUrl} t={t} />
@@ -70,6 +72,12 @@ export default createEmail(emails.teams.dailyDigest, {
 		monitors: [
 			{ id: "website", name: "Website", type: "http", status: "up", uptime: "100" },
 			{ id: "api", name: "API", type: "http", status: "down", uptime: "42.5" },
+		],
+		traces: [
+			{
+				monitorName: "Checkout",
+				downloadUrl: "https://uptime.sergiodxa.com/acme/flows/flow-1/results/result-1/trace",
+			},
 		],
 		dashboardUrl: "https://uptime.sergiodxa.com/acme",
 		preferencesUrl: "https://uptime.sergiodxa.com/acme/account#emails",

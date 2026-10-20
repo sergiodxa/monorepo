@@ -47,6 +47,7 @@ import { env } from "cloudflare:workers";
 
 import type { FlowStatus } from "~/database/schema";
 
+import { createFlowTraceBuffer } from "~/app/services/flow-trace-artifacts";
 import {
 	FLOW_RUN_MAX_REQUESTS,
 	FLOW_RUN_MAX_RESPONSE_BYTES,
@@ -91,8 +92,12 @@ export interface FlowCheckResult {
 	durationMs: number | null;
 	/** Why the run could not be performed. Only set alongside an `error` status. */
 	errorMessage: string | null;
+	/**
+	 * chrome://tracing JSON from the last `browser.trace.stop` of the run, when the
+	 * flow recorded one (ADR-037). Uploaded to R2 after the result row is written.
+	 */
+	traceJson: string | null;
 }
-
 /** What a flow check needs to run. */
 export interface FlowCheckInput {
 	/** The spec source, as the customer wrote it. */
@@ -182,6 +187,11 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 		);
 	}
 
+	/**
+	 * Captures `browser.trace.stop` without a filesystem: the plugin writes through
+	 * this store, and the last JSON is uploaded after the result row exists (ADR-037).
+	 */
+	let traces = createFlowTraceBuffer();
 	let startedAt = Date.now();
 	let outcome = await runTests({
 		suite: loaded.data,
@@ -189,6 +199,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 		grants: grants.data.grants,
 		createWorkspace: createNoFilesystemWorkspace,
 		seed: input.seed ?? randomToken(),
+		artifacts: traces.store,
 	});
 	let durationMs = Date.now() - startedAt;
 
@@ -197,6 +208,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 			...errorResult(outcome.error.message, { usedBrowser: needsBrowser }),
 			requestsMade: budget.spent(),
 			durationMs,
+			traceJson: traces.lastTraceJson(),
 		};
 	}
 
@@ -215,6 +227,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 		failureDetail: failed === undefined ? null : detailOf(failed),
 		durationMs,
 		errorMessage: null,
+		traceJson: traces.lastTraceJson(),
 	};
 }
 
@@ -550,6 +563,7 @@ function errorResult(message: string, options: { usedBrowser?: boolean } = {}): 
 		failureDetail: null,
 		durationMs: null,
 		errorMessage: message,
+		traceJson: null,
 	};
 }
 

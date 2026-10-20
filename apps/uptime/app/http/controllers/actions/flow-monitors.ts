@@ -187,7 +187,9 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 
 	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let checkResult = await runFlowCheck({ source: monitor.source, verifiedDomains });
-	let resultId = await ctx.models.flowMonitors.recordCheckResult(monitor.id, checkResult);
+	let resultId = await ctx.models.flowMonitors.recordCheckResult(monitor.id, checkResult, {
+		teamId: ctx.team.id,
+	});
 
 	/**
 	 * Written here, between the history row and the meter, exactly where the sweep writes it, so a

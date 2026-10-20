@@ -210,6 +210,8 @@ export default route({
 				cards: {
 					results: get("/app/:team/flows/:monitorId/cards/results"),
 				},
+				/** Chrome Performance trace download for one run (ADR-037). */
+				trace: get("/app/:team/flows/:monitorId/results/:resultId/trace"),
 			},
 			cronJobs: resources("/app/:team/cron-jobs", {
 				param: "monitorId",

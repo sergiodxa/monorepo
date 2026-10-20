@@ -711,19 +711,24 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 				source: validSource(),
 			}),
 		);
-		await bindModels(db).flowMonitors.recordCheckResult(monitor.id, {
-			status: "up",
-			testsTotal: 1,
-			testsPassed: 1,
-			testsFailed: 0,
-			requestsMade: 1,
-			usedBrowser: false,
-			failedTest: null,
-			failedAtLine: null,
-			failureDetail: null,
-			durationMs: 120,
-			errorMessage: null,
-		});
+		await bindModels(db).flowMonitors.recordCheckResult(
+			monitor.id,
+			{
+				status: "up",
+				testsTotal: 1,
+				testsPassed: 1,
+				testsFailed: 0,
+				requestsMade: 1,
+				usedBrowser: false,
+				failedTest: null,
+				failedAtLine: null,
+				failureDetail: null,
+				durationMs: 120,
+				errorMessage: null,
+				traceJson: null,
+			},
+			{ teamId: team.id },
+		);
 
 		let response = await dispatch(db, {
 			method: "DELETE",

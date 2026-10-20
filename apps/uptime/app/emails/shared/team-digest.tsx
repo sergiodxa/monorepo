@@ -289,3 +289,99 @@ export function TeamDigestFooter(handle: Handle<TeamDigestFooter.Props>) {
 		);
 	};
 }
+
+export namespace TeamDigestTraceList {
+	/** Props accepted by {@link TeamDigestTraceList}. */
+	export interface Props {
+		/** Yesterday's flow runs that still have a downloadable Performance trace. */
+		traces: TeamDigestTrace[];
+		/** Translator already bound to the reader's language. */
+		t: Translate;
+	}
+}
+
+/** One flow run the daily digest can offer a Performance-trace download for. */
+export interface TeamDigestTrace {
+	/** Name the team gave the flow monitor. */
+	monitorName: string;
+	/** Absolute URL of the authenticated download for this run. */
+	downloadUrl: string;
+}
+
+/**
+ * Optional daily-digest section: yesterday's flow runs that recorded a Chrome
+ * Performance trace, each with a download link (ADR-037). Renders nothing when
+ * the day produced no traces, so teams without browser traces see no change.
+ *
+ * @example <TeamDigestTraceList traces={traces} t={t} />
+ */
+export function TeamDigestTraceList(handle: Handle<TeamDigestTraceList.Props>) {
+	return () => {
+		let { traces, t } = handle.props;
+		if (traces.length === 0) return null;
+
+		return (
+			<>
+				<h2
+					class="mail-text"
+					style={`margin:24px 0 8px;font-family:inherit;font-size:18px;line-height:1.3;font-weight:700;color:${TEXT_COLOR};`}
+				>
+					{t("emails.teamDigest.traces.heading")}
+				</h2>
+				<p
+					class="mail-text"
+					style={`margin:0 0 12px;font-family:inherit;font-size:14px;line-height:1.5;color:${TEXT_COLOR};`}
+				>
+					{t("emails.teamDigest.traces.summary", { count: traces.length })}
+				</p>
+				<table
+					width="100%"
+					cellPadding="0"
+					cellSpacing="0"
+					style="width:100%;margin:0 0 16px;border-collapse:collapse;"
+				>
+					<tbody>
+						{traces.map((trace) => (
+							<tr key={trace.downloadUrl}>
+								<td
+									class="mail-text mail-rule"
+									style={`padding:10px 0;border-top:1px solid ${BORDER_COLOR};${CELL_STYLE}color:${TEXT_COLOR};`}
+								>
+									<a
+										href={trace.downloadUrl}
+										style="color:inherit;text-decoration:underline;font-weight:600;"
+									>
+										{t("emails.teamDigest.traces.download", {
+											monitor: trace.monitorName,
+										})}
+									</a>
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</>
+		);
+	};
+}
+
+/**
+ * Absolute URL of one flow run's Performance-trace download.
+ *
+ * @param teamSlug - Slug of the team that owns the monitor.
+ * @param monitorId - Flow monitor id.
+ * @param resultId - Result row id.
+ */
+export function teamDigestTraceDownloadUrl(
+	teamSlug: string,
+	monitorId: string,
+	resultId: string,
+): string {
+	return absoluteUrl(
+		routes.app.team.flowMonitors.trace.href({
+			team: teamSlug,
+			monitorId,
+			resultId,
+		}),
+	);
+}

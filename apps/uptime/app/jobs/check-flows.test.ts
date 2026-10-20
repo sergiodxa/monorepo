@@ -41,6 +41,7 @@ function passing(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
 		failureDetail: null,
 		durationMs: 1200,
 		errorMessage: null,
+		traceJson: null,
 		...overrides,
 	};
 }

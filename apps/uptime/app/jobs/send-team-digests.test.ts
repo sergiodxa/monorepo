@@ -38,6 +38,7 @@ import { testMailer } from "~/app/test/mail";
 import { bindModels, publishModels } from "~/app/test/models";
 import { UNSUBSCRIBE_SECRET_VALUE } from "~/app/test/unsubscribe-secret";
 import {
+	flowMonitorResults,
 	flowMonitors,
 	memberships,
 	monitorDailyStats,
@@ -454,6 +455,49 @@ describe("sendTeamDigests monitors", () => {
 
 		expect(dailyDigests()).toHaveLength(1);
 		expect(transport.last?.text ?? "").toContain("Checkout");
+	});
+
+	/**
+	 * A deliberate `browser.trace.stop` yesterday should surface once in the daily
+	 * digest with a download link, and not in the weekly (ADR-037).
+	 */
+	test("lists yesterday's flow Performance traces on the daily digest only", async () => {
+		let { db } = createTestDatabase();
+		let team = await seedTeam(db, "Acme");
+		await seedMember(db, team.id, "subject-1", "ada@example.com");
+		let flow = await seedFlowMonitor(db, team.id, "Checkout");
+		await seedDay(db, flow.id, utcDay(1), { checks: 4, successful: 4, status: "up" }, "flow");
+		let resultId = generateUUID();
+		let yesterday = Date.parse(`${utcDay(1)}T12:00:00.000Z`);
+		await db.create(flowMonitorResults, {
+			id: resultId,
+			flow_monitor_id: flow.id,
+			status: "up",
+			tests_total: 1,
+			tests_passed: 1,
+			tests_failed: 0,
+			requests_made: 1,
+			failed_test: null,
+			failed_at_line: null,
+			failure_detail: null,
+			duration_ms: 100,
+			error_message: null,
+			trace_key: `flow-traces/${team.id}/${flow.id}/${resultId}.json`,
+			checked_at: yesterday,
+		});
+
+		await runJob(db, "daily");
+
+		let text = transport.last?.text ?? "";
+		expect(text).toContain("Performance traces ready");
+		expect(text).toContain("Download Checkout trace");
+		expect(text).toContain(`/flows/${flow.id}/results/${resultId}/trace`);
+
+		transport.clear();
+		await runJob(db, "weekly");
+
+		expect(weeklyDigests()).toHaveLength(1);
+		expect(transport.last?.text ?? "").not.toContain("Performance traces ready");
 	});
 });
 

@@ -1321,6 +1321,11 @@ export const flowMonitorResults = table({
 		duration_ms: c.integer().nullable(),
 		/** Why the run could not be performed at all. Only set alongside an `error` status. */
 		error_message: c.text().nullable(),
+		/**
+		 * R2 object key for a chrome://tracing JSON this run recorded (ADR-037), or null
+		 * when the flow did not call `browser.trace.stop`. Objects are kept seven days.
+		 */
+		trace_key: c.text().nullable(),
 		checked_at: c.integer(),
 	},
 });

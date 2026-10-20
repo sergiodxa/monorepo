@@ -1516,6 +1516,17 @@ export default {
 					".input {$count :number}\n.match $count\none {{The team's monitor was not up on {$date}.}}\n* {{{$up} of {$count} monitors were up on {$date}.}}",
 			},
 
+			/**
+			 * Optional daily-digest section for flow runs that recorded a Chrome
+			 * Performance trace yesterday (ADR-037). Omitted when the day produced none.
+			 */
+			traces: {
+				heading: "Performance traces ready",
+				summary:
+					".input {$count :number}\n.match $count\none {{One flow recorded a Performance trace yesterday. Download it within 7 days.}}\n* {{{$count} flows recorded a Performance trace yesterday. Download them within 7 days.}}",
+				download: "Download {$monitor} trace",
+			},
+
 			weekly: {
 				subject:
 					".input {$count :number}\n.match $count\none {{{$team}: the monitor had a bad day this week}}\n* {{{$team}: {$up} of {$count} monitors up all week}}",
@@ -5020,7 +5031,14 @@ export default {
 					tests: "Tests",
 					requests: "Requests",
 					duration: "Duration",
+					trace: "Trace",
 				},
+			},
+
+			trace: {
+				download: "Download Performance trace",
+				missing: "This run has no Performance trace.",
+				expired: "This Performance trace has expired. Traces are kept for 7 days.",
 			},
 		},
 

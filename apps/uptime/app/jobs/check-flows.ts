@@ -135,7 +135,9 @@ async function check(
 	/** The column is declared as a plain text enum, so its value set is asserted here. */
 	let previousStatus = monitor.last_status as FlowStatus | null;
 	let result = await runFlowCheck({ source: monitor.source, verifiedDomains });
-	let resultId = await models.flowMonitors.recordCheckResult(monitor.id, result);
+	let resultId = await models.flowMonitors.recordCheckResult(monitor.id, result, {
+		teamId: monitor.team_id,
+	});
 
 	/**
 	 * One data point per run, not per request — the series is "how long does the

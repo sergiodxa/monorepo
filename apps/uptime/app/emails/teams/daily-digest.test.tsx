@@ -64,6 +64,7 @@ async function makeEmail(
 				teamName: "Acme",
 				date: "2026-08-02",
 				monitors: mixedTeam(),
+				traces: [],
 				dashboardUrl: DASHBOARD_URL,
 				preferencesUrl: PREFERENCES_URL,
 				unsubscribeUrl: UNSUBSCRIBE_URL,
@@ -209,6 +210,27 @@ describe("teams.dailyDigest email", () => {
 			expect(text).toContain(
 				`You received this email because you are a member of Acme on Uptime. Choose which emails you get (${PREFERENCES_URL})`,
 			);
+		});
+
+		test("omits the Performance-traces section when yesterday recorded none", async () => {
+			let email = await makeEmail({ traces: [] });
+
+			let { text } = await render(email.body());
+
+			expect(text).not.toContain("Performance traces ready");
+		});
+
+		test("lists yesterday's Performance traces with a download link each", async () => {
+			let downloadUrl = "https://uptime.test/acme/flows/flow-1/results/result-1/trace";
+			let email = await makeEmail({
+				traces: [{ monitorName: "Checkout", downloadUrl }],
+			});
+
+			let { text } = await render(email.body());
+
+			expect(text).toContain("Performance traces ready");
+			expect(text).toContain("One flow recorded a Performance trace yesterday");
+			expect(text).toContain(`Download Checkout trace (${downloadUrl})`);
 		});
 	});
 });

@@ -8,11 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { Database } from "@sdxc/database-middleware";
 import { idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import jobs from "~/app/jobs";
 import clean from "~/app/jobs/clean";
@@ -21,6 +22,7 @@ import { bindModels, publishModels } from "~/app/test/models";
 import {
 	alertEvents,
 	dnsMonitorResults,
+	flowMonitorResults,
 	leads,
 	monitorResults,
 	tcpMonitorResults,
@@ -30,11 +32,28 @@ import {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+/** In-memory R2 so the flow-traces sweep can delete objects without a Worker binding. */
+let flowTracesBucket = createR2Bucket();
+
+vi.mock("cloudflare:workers", async (importOriginal) => {
+	let original = await importOriginal<typeof import("cloudflare:workers")>();
+	return {
+		...original,
+		env: new Proxy(original.env, {
+			get(target, property, receiver) {
+				if (property === "FLOW_TRACES") return flowTracesBucket;
+				return Reflect.get(target, property, receiver);
+			},
+		}),
+	};
+});
+
 describe("clean", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
+		flowTracesBucket = createR2Bucket();
 	});
 
 	function seedResult(id: string, completedAt: number | null) {
@@ -222,6 +241,7 @@ describe("clean", () => {
 			{ table: "flow_monitor_results", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "alert_events", rows_deleted: 1, batches: 1, reached_ceiling: false },
 			{ table: "idempotency_keys", rows_deleted: 0, batches: 1, reached_ceiling: false },
+			{ table: "flow_traces", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "trial_watch_results", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "trial_watches", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "leads", rows_deleted: 0, batches: 1, reached_ceiling: false },
@@ -232,7 +252,62 @@ describe("clean", () => {
 		let record = await run();
 
 		expect(record).toMatchObject({ "rows.deleted": 0 });
-		expect(sweptTables(record)).toHaveLength(9);
+		expect(sweptTables(record)).toHaveLength(10);
+	});
+
+	test("deletes expired flow Performance traces from R2 and nulls their keys", async () => {
+		let now = Date.now();
+		let expiredKey = "flow-traces/team-1/monitor-1/result-old.json";
+		let recentKey = "flow-traces/team-1/monitor-1/result-recent.json";
+		await flowTracesBucket.put(expiredKey, '{"traceEvents":[]}');
+		await flowTracesBucket.put(recentKey, '{"traceEvents":[]}');
+		await db.create(flowMonitorResults, {
+			id: "result-old",
+			flow_monitor_id: "monitor-1",
+			status: "up",
+			tests_total: 1,
+			tests_passed: 1,
+			tests_failed: 0,
+			requests_made: 1,
+			failed_test: null,
+			failed_at_line: null,
+			failure_detail: null,
+			duration_ms: 10,
+			error_message: null,
+			trace_key: expiredKey,
+			checked_at: now - 8 * MS_PER_DAY,
+		});
+		await db.create(flowMonitorResults, {
+			id: "result-recent",
+			flow_monitor_id: "monitor-1",
+			status: "up",
+			tests_total: 1,
+			tests_passed: 1,
+			tests_failed: 0,
+			requests_made: 1,
+			failed_test: null,
+			failed_at_line: null,
+			failure_detail: null,
+			duration_ms: 10,
+			error_message: null,
+			trace_key: recentKey,
+			checked_at: now - 1 * MS_PER_DAY,
+		});
+
+		let record = await run();
+
+		expect(await flowTracesBucket.head(expiredKey)).toBeNull();
+		expect(await flowTracesBucket.head(recentKey)).not.toBeNull();
+		expect((await db.find(flowMonitorResults, "result-old"))?.trace_key).toBeNull();
+		expect((await db.find(flowMonitorResults, "result-recent"))?.trace_key).toBe(recentKey);
+		expect(sweptTables(record)).toContainEqual(
+			expect.objectContaining({
+				table: "flow_traces",
+				rows_deleted: 1,
+				batches: 1,
+				reached_ceiling: false,
+			}),
+		);
 	});
 });
 

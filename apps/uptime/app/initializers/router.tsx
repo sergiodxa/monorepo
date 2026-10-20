@@ -546,6 +546,10 @@ export function createWebRouter(options: WebRouterOptions) {
 		lazy(() => import("~/app/http/controllers/app/team/flow-monitor-card-results")),
 	);
 	router.map(
+		routes.app.team.flowMonitors.trace,
+		lazy(() => import("~/app/http/controllers/app/team/flow-monitor-trace")),
+	);
+	router.map(
 		routes.app.team.tcpMonitors.index,
 		lazy(() => import("~/app/http/controllers/app/team/tcp-monitors")),
 	);

@@ -26,6 +26,7 @@ function httpResult(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
 		failureDetail: null,
 		durationMs: 800,
 		errorMessage: null,
+		traceJson: null,
 		...overrides,
 	};
 }
