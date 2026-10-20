@@ -311,11 +311,14 @@ A miss lists the near matches, and `browser` matches only rendered elements.
 
 Actions: `open`, `navigate`, `reload`, `click`, `fill … with`, `type … with`, `select … with`,
 `check`, `uncheck`, `press`, `click_selector`, `scroll to <y|element>`, `viewport`, `ua`,
-`set_cookie <name> <value> [for <url>]` and `fetch.<verb>` (the `http` grammar, inside the
-session's cookies). Observables: the addressing tools, `cookie`, `response_status [of document|data]`,
-`response_header <name> [of …]`, `url`, `path`, `query <name>`, `fragment <name>` and `title`;
-called bare, they return a value. Each test gets its own session. `viewport` takes a width and
-height or a name:
+`set_cookie <name> <value> [for <url>]`, `fetch.<verb>` (the `http` grammar, inside the
+session's cookies), and Chrome DevTools Protocol diagnostics — `trace.start [categories]`,
+`trace.stop [path]` (writes chrome://tracing JSON, returns `{ path, event_count }`), and
+`cdp "Domain.method" [params]` for one-shot CDP commands. Observables: the addressing tools,
+`cookie`, `response_status [of document|data]`, `response_header <name> [of …]`, `url`, `path`,
+`query <name>`, `fragment <name>`, `title`, and `metrics` (`Performance.getMetrics` as a
+name→number object); called bare, they return a value. Each test gets its own session.
+`viewport` takes a width and height or a name:
 
 | Name  | Size       |
 | ----- | ---------- |
@@ -676,6 +679,38 @@ npx spec run spec --allow-net=localhost:3000 --allow-env=SESSION_COOKIE --artifa
 
 A failed lookup lists the near matches and, under `--artifacts`, writes a screenshot and an
 accessibility-tree dump.
+
+## Pattern: Collect a Chrome Performance trace
+
+`browser.trace.start` / `browser.trace.stop` record a
+[Chrome DevTools Protocol](https://chromedevtools.github.io/devtools-protocol/) Performance
+timeline into the test workspace. `browser.metrics` reads `Performance.getMetrics`, and
+`browser.cdp` sends any one-shot CDP command the high-level tools do not wrap yet.
+
+```
+use browser
+use fs
+
+test "checkout leaves a Performance trace" {
+	given {
+		browser.trace.start
+		browser.open "/checkout" on "web"
+	}
+	when {
+		browser.click button "Pay"
+		let trace = browser.trace.stop "checkout.json"
+		let heap = browser.metrics
+	}
+	then {
+		expect trace.path "checkout.json"
+		expect file "checkout.json" exists
+	}
+}
+```
+
+```sh
+npx spec run spec --allow-net=localhost:3000
+```
 
 ## Pattern: Seed a database with unique, reproducible data
 

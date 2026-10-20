@@ -80,6 +80,7 @@ const SESSION_OBSERVABLES = new Set([
 	"cookie",
 	"response_status",
 	"response_header",
+	"metrics",
 ]);
 
 function value(data: Value): ToolArg {

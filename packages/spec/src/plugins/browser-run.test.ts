@@ -1,17 +1,23 @@
 /**
  * Tests the Browser Run–backed browser plugin against a fake CDP session: tool
- * routing, navigation grants, and element addressing over injected markup.
+ * routing, navigation grants, element addressing over injected markup, and
+ * CDP diagnostics (traces, metrics, one-shot commands).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { isFailure } from "@sdxc/result";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { isFailure, success } from "@sdxc/result";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { Grants } from "../permissions.js";
 import type { ToolContext } from "../plugin.js";
 import type { ToolArg } from "../values.js";
+import type { Workspace } from "../workspace.js";
 
 import { createPermissionSet, parseGrants } from "../permissions.js";
 import { createToolContext } from "../tool-context.js";
@@ -99,7 +105,29 @@ class FakeSocket implements BrowserRunSocket {
 				result = { result: { value: true } };
 			}
 		}
+		if (message.method === "Performance.getMetrics") {
+			result = {
+				metrics: [
+					{ name: "Timestamp", value: 1 },
+					{ name: "JSHeapUsedSize", value: 1024 },
+				],
+			};
+		}
 		let data = JSON.stringify({ id: message.id, result });
+		for (let listener of this.#messageListeners) listener({ data });
+		if (message.method === "Tracing.start") {
+			this.#emit("Tracing.dataCollected", {
+				value: [{ name: "test-event", ph: "I", ts: 1 }],
+			});
+		}
+		if (message.method === "Tracing.end") {
+			this.#emit("Tracing.tracingComplete", {});
+		}
+	}
+
+	/** Push one CDP event to every message listener. */
+	#emit(method: string, params: Record<string, unknown>): void {
+		let data = JSON.stringify({ method, params });
 		for (let listener of this.#messageListeners) listener({ data });
 	}
 }
@@ -132,10 +160,25 @@ function fakeBrowser(socket: FakeSocket): BrowserRunBinding {
 	};
 }
 
-/** Tool context with net granted for the named hosts. */
-function contextFor(...hosts: string[]): ToolContext {
+/** Tool context with net granted for the named hosts, and an optional workspace. */
+function contextFor(...hostsAndRoot: string[]): ToolContext {
+	let root = hostsAndRoot.find((entry) => entry.startsWith("/"));
+	let hosts = hostsAndRoot.filter((entry) => entry !== root);
+	let workspace: Workspace | undefined =
+		root === undefined
+			? undefined
+			: {
+					root,
+					resolve(path) {
+						return success(join(root, path));
+					},
+					async cleanup() {
+						return undefined;
+					},
+				};
 	return createToolContext({
 		permissions: createPermissionSet(allowNet(...hosts)),
+		workspace,
 	});
 }
 
@@ -230,5 +273,67 @@ describe(createBrowserRunPlugin.name, () => {
 		await plugin.call("open", [value("https://app.example.test/")], context);
 		await plugin.dispose?.();
 		expect(closed).toBe(true);
+	});
+
+	test("trace.start / trace.stop write chrome://tracing JSON into the workspace", async () => {
+		let socket = new FakeSocket();
+		plugin = createBrowserRunPlugin({ browser: fakeBrowser(socket) });
+		let root = await mkdtemp(join(tmpdir(), "spec-browser-run-trace-"));
+		let context = contextFor("app.example.test", root);
+		try {
+			await plugin.call("open", [value("https://app.example.test/")], context);
+			let started = await plugin.call("trace.start", [], context);
+			if (isFailure(started)) throw new Error(started.error.message);
+			let stopped = await plugin.call("trace.stop", [value("flow.json")], context);
+			if (isFailure(stopped)) throw new Error(stopped.error.message);
+			expect(stopped.data).toEqual({ path: "flow.json", event_count: 1 });
+			let written = JSON.parse(await readFile(join(root, "flow.json"), "utf8")) as unknown[];
+			expect(written).toEqual([{ name: "test-event", ph: "I", ts: 1 }]);
+			expect(socket.sent.some((line) => line.includes('"Tracing.start"'))).toBe(true);
+			expect(socket.sent.some((line) => line.includes('"Tracing.end"'))).toBe(true);
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	});
+
+	test("metrics returns Performance.getMetrics as a flat object", async () => {
+		let socket = new FakeSocket();
+		plugin = createBrowserRunPlugin({ browser: fakeBrowser(socket) });
+		let context = contextFor("app.example.test");
+		await plugin.call("open", [value("https://app.example.test/")], context);
+		let collected = await plugin.call("metrics", [], context);
+		if (isFailure(collected)) throw new Error(collected.error.message);
+		expect(collected.data).toEqual({ Timestamp: 1, JSHeapUsedSize: 1024 });
+	});
+
+	test("cdp sends a Domain.method and returns its result", async () => {
+		let socket = new FakeSocket();
+		plugin = createBrowserRunPlugin({ browser: fakeBrowser(socket) });
+		let context = contextFor("app.example.test");
+		await plugin.call("open", [value("https://app.example.test/")], context);
+		let result = await plugin.call("cdp", [value("Performance.getMetrics")], context);
+		if (isFailure(result)) throw new Error(result.error.message);
+		expect(result.data).toEqual({
+			metrics: [
+				{ name: "Timestamp", value: 1 },
+				{ name: "JSHeapUsedSize", value: 1024 },
+			],
+		});
+	});
+
+	test("trace.stop without start fails with a clear message", async () => {
+		plugin = createBrowserRunPlugin({ browser: fakeBrowser(new FakeSocket()) });
+		let root = await mkdtemp(join(tmpdir(), "spec-browser-run-trace-miss-"));
+		let context = contextFor("app.example.test", root);
+		try {
+			await plugin.call("open", [value("https://app.example.test/")], context);
+			let stopped = await plugin.call("trace.stop", [], context);
+			expect(isFailure(stopped)).toBe(true);
+			if (isFailure(stopped)) {
+				expect(stopped.error.message).toContain("trace.start");
+			}
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
 	});
 });

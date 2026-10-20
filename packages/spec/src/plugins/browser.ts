@@ -49,6 +49,16 @@ import {
 	parseQuery,
 	QUERY_PARAMS,
 } from "./addressing.js";
+import {
+	BROWSER_DIAGNOSTIC_TOOLS,
+	cdpResultToValue,
+	metricsToValue,
+	readCdpCall,
+	readTraceCategories,
+	readTraceStopPath,
+	traceStopValue,
+} from "./browser-diagnostics.js";
+import { sendCdpCommand, withCdpConnection } from "./cdp-websocket.js";
 import { nearMatches } from "./near-matches.js";
 import {
 	HTTP_VERBS,
@@ -129,6 +139,7 @@ const NAME_PARAM: ToolParam = {
 
 /** Descriptors of every tool the `browser` namespace exposes. */
 const BROWSER_TOOLS: ToolDescriptor[] = [
+	...BROWSER_DIAGNOSTIC_TOOLS,
 	{
 		name: "open",
 		summary: 'Navigate the browser session to a target: `open "/charities" on "web"`.',
@@ -136,6 +147,7 @@ const BROWSER_TOOLS: ToolDescriptor[] = [
 		requires: "net",
 		params: navigationParams("open"),
 	},
+
 	{
 		name: "navigate",
 		summary: "Navigate the current browser session to another target.",
@@ -645,12 +657,21 @@ export function createBrowserPlugin(): Plugin {
 				case "query":
 				case "fragment":
 					return await urlParameter(tool, args, session);
+				case "trace.start":
+					return await traceStart(args, session);
+				case "trace.stop":
+					return await traceStop(args, context, session);
+				case "metrics":
+					return await metrics(args, session);
+				case "cdp":
+					return await cdp(args, session);
 				default: {
 					let names = BROWSER_TOOLS.map((descriptor) => descriptor.name).join(", ");
 					return failure(new ToolError(`browser has no tool named "${tool}"; tools: ${names}`));
 				}
 			}
 		},
+
 		/**
 		 * Best-effort teardown: a failed close must never fail a run, and a
 		 * missing binary at dispose time means there is nothing left to close.
@@ -1844,6 +1865,120 @@ function missed(tool: string, doc: HTML, query: ElementQuery, error: HTMLQueryEr
 		return reported;
 	}
 	return noMatch(tool, query, nearMatches(doc, query, error.available));
+}
+
+/**
+ * `browser.trace.start [categories]` — start a Chrome Performance trace through
+ * `agent-browser`. Categories are accepted for parity with the CDP backend; the
+ * CLI uses its own defaults when the binary does not take a filter.
+ */
+async function traceStart(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let categories = readTraceCategories(args);
+	if (isFailure(categories)) return categories;
+	let response = await runBrowser(["trace", "start"], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/**
+ * `browser.trace.stop [path]` — stop the open trace, copy it into the workspace,
+ * and return `{ path, event_count }`.
+ */
+async function traceStop(
+	args: ToolArg[],
+	context: ToolContext,
+	session: string,
+): Promise<Result<Value, SpecError>> {
+	let relative = readTraceStopPath(args);
+	if (isFailure(relative)) return relative;
+	let resolved = context.workspace.resolve(relative.data);
+	if (isFailure(resolved)) return resolved;
+	let response = await runBrowser(["trace", "stop", resolved.data], session);
+	if (isFailure(response)) return response;
+	let eventCount = await countTraceEvents(resolved.data, response.data);
+	return success(traceStopValue(relative.data, eventCount));
+}
+
+/**
+ * `browser.metrics` — Performance.getMetrics over the session's CDP endpoint.
+ */
+async function metrics(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	if (args.length > 0) {
+		return failure(new ToolError("browser.metrics takes no arguments"));
+	}
+	let url = await cdpUrl(session);
+	if (isFailure(url)) return url;
+	let collected = await withCdpConnection(url.data, 30_000, async (send) => {
+		await send("Performance.enable");
+		return (await send("Performance.getMetrics")) as {
+			metrics?: { name?: unknown; value?: unknown }[];
+		};
+	});
+	if (isFailure(collected)) return collected;
+	return success(metricsToValue(collected.data.metrics ?? []));
+}
+
+/**
+ * `browser.cdp method [params]` — one CDP command on the session's endpoint.
+ */
+async function cdp(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
+	let call = readCdpCall(args);
+	if (isFailure(call)) return call;
+	let url = await cdpUrl(session);
+	if (isFailure(url)) return url;
+	let result = await sendCdpCommand(url.data, call.data.method, call.data.params);
+	if (isFailure(result)) return result;
+	return cdpResultToValue(result.data);
+}
+
+/**
+ * Resolve the page CDP WebSocket URL for the active `agent-browser` session.
+ */
+async function cdpUrl(session: string): Promise<Result<string, SpecError>> {
+	let response = await runBrowser(["get", "cdp-url"], session);
+	if (isFailure(response)) return response;
+	let fromData = readCdpUrl(response.data);
+	if (fromData !== null) return success(fromData);
+	return failure(
+		new ToolError(
+			'browser could not read a CDP WebSocket URL from agent-browser get cdp-url; expected a "url" or "cdpUrl" string in the response',
+		),
+	);
+}
+
+/** Pull a WebSocket URL out of the shapes `get cdp-url --json` has used. */
+function readCdpUrl(data: Record<string, unknown>): string | null {
+	for (let key of ["url", "cdpUrl", "cdp_url", "webSocketDebuggerUrl"]) {
+		let value = data[key];
+		if (typeof value === "string" && value.length > 0) return value;
+	}
+	return null;
+}
+
+/**
+ * Prefer counting events from the written file; fall back to a count the CLI
+ * reported, then to zero when neither is available.
+ */
+async function countTraceEvents(path: string, payload: Record<string, unknown>): Promise<number> {
+	try {
+		let text = await readFile(path, "utf8");
+		let parsed: unknown = JSON.parse(text);
+		if (Array.isArray(parsed)) return parsed.length;
+		if (
+			typeof parsed === "object" &&
+			parsed !== null &&
+			Array.isArray((parsed as { traceEvents?: unknown }).traceEvents)
+		) {
+			return (parsed as { traceEvents: unknown[] }).traceEvents.length;
+		}
+	} catch {
+		/** The CLI may have written elsewhere; use the envelope next. */
+	}
+	for (let key of ["event_count", "eventCount", "count"]) {
+		let value = payload[key];
+		if (typeof value === "number") return value;
+	}
+	return 0;
 }
 
 /**
