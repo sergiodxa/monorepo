@@ -234,6 +234,10 @@ export function createWebRouter() {
 		lazy(() => import("~/app/http/controllers/icon-show").then((it) => it.iconFrame)),
 	);
 	router.map(
+		routes.frames.face,
+		lazy(() => import("~/app/http/controllers/frame-face")),
+	);
+	router.map(
 		routes.examples.visit,
 		lazy(() => import("~/app/http/controllers/examples").then((it) => it.exampleVisit)),
 	);
