@@ -9,8 +9,9 @@
 import type { CatalogueEntry, ComponentModule } from "~/app/services/components";
 import type { NavEntry, NavGroup, NavSection, NavTree } from "~/app/services/navigation-tree";
 
-import { listComponents } from "~/app/services/components";
+import { listComponentListings, listComponents } from "~/app/services/components";
 import { listGuides } from "~/app/services/docs";
+import { toHeadline } from "~/app/services/headline";
 import { listPackageGroups } from "~/app/services/packages";
 import { listUiExports } from "~/app/services/ui-exports";
 import { UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
@@ -182,6 +183,21 @@ export function componentGroupTitle(module: ComponentModule): string {
 /** A component's link in the tree, titled with the name it is imported by. */
 function componentNavEntry(entry: CatalogueEntry): NavEntry {
 	return { title: entry.name, href: routes.api.component.href({ component: entry.slug }) };
+}
+
+
+/**
+ * Every component as one list for the explorer gallery. Each entry carries the opening
+ * clause of its summary; the sidebar keeps the grouped Foundations tree instead.
+ */
+export async function listComponentEntries(): Promise<NavEntry[]> {
+	let components = await listComponentListings();
+
+	return components.map((entry) => ({
+		title: entry.name,
+		href: routes.api.component.href({ component: entry.slug }),
+		description: entry.summary ? toHeadline(entry.summary) : undefined,
+	}));
 }
 
 /** Each `@sdxc/ui` subpath beside the components as one group, in the order they are taught. */

@@ -30,6 +30,7 @@ import { listGuidesAbout } from "~/app/services/docs";
 import {
 	buildPackageNav,
 	CATALOGUE_PACKAGES,
+	listComponentEntries,
 	listComponentGroups,
 	listUiExportGroups,
 	listUtilityGroups,
@@ -52,6 +53,8 @@ import { CODE_LABELS, TERMINAL_TITLE } from "~/resources/components/docs-labels"
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PackageFact from "~/resources/components/package-fact";
 import PageActions from "~/resources/components/page-actions";
+import UiCatalogue from "~/resources/components/ui-catalogue";
+import UiPackageHero from "~/resources/components/ui-package-hero";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -84,6 +87,9 @@ export default createAction(routes.api.show, async (ctx) => {
 	];
 	let markdownHref = routes.markdown.package.href({ name });
 	let activePath = routes.api.show.href({ name });
+	let isUiCatalogue = name === "ui";
+	let uiComponents = isUiCatalogue ? await listComponentEntries() : [];
+	let uiExports = isUiCatalogue ? await listUiExportGroups() : [];
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -98,81 +104,98 @@ export default createAction(routes.api.show, async (ctx) => {
 				tree={tree}
 				filterQuery={ctx.url.searchParams.get("filter")}
 				activePath={activePath}
-				anchors={anchors}
+				anchors={isUiCatalogue ? [] : anchors}
 				feedback={{ sent: isFeedbackSent(ctx.url) }}
 			>
 				<article>
-					<header mix={[vstack({ gap: 4 })]}>
-						<DocsPageHeader
-							crumbs={[
-								{ label: "API", href: routes.api.index.href() },
-								...(group ? [{ label: group }] : []),
-								{ label: entry.name },
-							]}
-							title={entry.name}
-							mono
+					{isUiCatalogue ? (
+						<UiPackageHero
+							name={entry.name}
 							description={entry.description}
-							actions={
-								<PageActions
-									markdownHref={markdownHref}
-									markdownUrl={absoluteUrl(markdownHref)}
-									sourceUrl={`${SOURCE_BASE}${name}`}
-								/>
-							}
-						/>
-
-						<InstallCommand
+							componentCount={uiComponents.length}
 							packages={[entry.name, ...entry.peers]}
-							persist="cookie"
-							selected={manager}
-							title={TERMINAL_TITLE}
-							labels={CODE_LABELS}
-							aria-label={REMEMBERED_TABS[PACKAGE_MANAGER_KEY].label}
+							manager={manager}
+							markdownHref={markdownHref}
+							markdownUrl={absoluteUrl(markdownHref)}
+							sourceUrl={`${SOURCE_BASE}${name}`}
 						/>
+					) : (
+						<header mix={[vstack({ gap: 4 })]}>
+							<DocsPageHeader
+								crumbs={[
+									{ label: "API", href: routes.api.index.href() },
+									...(group ? [{ label: group }] : []),
+									{ label: entry.name },
+								]}
+								title={entry.name}
+								mono
+								description={entry.description}
+								actions={
+									<PageActions
+										markdownHref={markdownHref}
+										markdownUrl={absoluteUrl(markdownHref)}
+										sourceUrl={`${SOURCE_BASE}${name}`}
+									/>
+								}
+							/>
 
-						<dl mix={[vstack({ gap: 2 }), m(0)]}>
-							{entry.internalDependencies.length > 0 ? (
-								<PackageFact label="Installs with">
-									{entry.internalDependencies.map((dependency) => (
-										<a
-											key={dependency}
-											href={routes.api.show.href({ name: dependency })}
-											mix={[font("mono"), text("sm"), fg("brand")]}
-										>
-											@sdxc/{dependency}
-										</a>
-									))}
+							<InstallCommand
+								packages={[entry.name, ...entry.peers]}
+								persist="cookie"
+								selected={manager}
+								title={TERMINAL_TITLE}
+								labels={CODE_LABELS}
+								aria-label={REMEMBERED_TABS[PACKAGE_MANAGER_KEY].label}
+							/>
+
+							<dl mix={[vstack({ gap: 2 }), m(0)]}>
+								{entry.internalDependencies.length > 0 ? (
+									<PackageFact label="Installs with">
+										{entry.internalDependencies.map((dependency) => (
+											<a
+												key={dependency}
+												href={routes.api.show.href({ name: dependency })}
+												mix={[font("mono"), text("sm"), fg("brand")]}
+											>
+												@sdxc/{dependency}
+											</a>
+										))}
+									</PackageFact>
+								) : null}
+
+								{entry.externalDependencies.length > 0 ? (
+									<PackageFact label="Depends on">
+										{entry.externalDependencies.map((dependency) => (
+											<code key={dependency} mix={[font("mono"), text("sm")]}>
+												{dependency}
+											</code>
+										))}
+									</PackageFact>
+								) : null}
+
+								{users.length > 0 ? (
+									<PackageFact label="Used by">
+										<span mix={[text("sm"), fg("neutral")]}>{users.join(", ")}</span>
+									</PackageFact>
+								) : null}
+
+								<PackageFact label="Source">
+									<a href={`${SOURCE_BASE}${name}`} mix={[text("sm"), fg("brand")]}>
+										packages/{name}
+									</a>
 								</PackageFact>
-							) : null}
-
-							{entry.externalDependencies.length > 0 ? (
-								<PackageFact label="Depends on">
-									{entry.externalDependencies.map((dependency) => (
-										<code key={dependency} mix={[font("mono"), text("sm")]}>
-											{dependency}
-										</code>
-									))}
-								</PackageFact>
-							) : null}
-
-							{users.length > 0 ? (
-								<PackageFact label="Used by">
-									<span mix={[text("sm"), fg("neutral")]}>{users.join(", ")}</span>
-								</PackageFact>
-							) : null}
-
-							<PackageFact label="Source">
-								<a href={`${SOURCE_BASE}${name}`} mix={[text("sm"), fg("brand")]}>
-									packages/{name}
-								</a>
-							</PackageFact>
-						</dl>
-					</header>
+							</dl>
+						</header>
+					)}
 
 					{body ? (
 						<Typeset preset="docs" mix={[m("2.5rem", 0, 0, 0)]}>
 							{body.content}
 						</Typeset>
+					) : isUiCatalogue ? (
+						<div mix={[m("2.5rem", 0, 0, 0)]}>
+							<UiCatalogue components={uiComponents} exports={uiExports} />
+						</div>
 					) : (
 						<div mix={[m("2.5rem", 0, 0, 0)]}>
 							<CatalogueIndex groups={await readCatalogue(name)} />
@@ -204,7 +227,7 @@ export default createAction(routes.api.show, async (ctx) => {
 /**
  * The index a catalogue package's page draws in place of its README: the utilities under
  * their families, or the theme contract ahead of the components that read it and the
- * subpaths the components are built from.
+ * subpaths the components are built from. `@sdxc/ui` uses {@link UiCatalogue} instead.
  */
 async function readCatalogue(name: string) {
 	if (name === "u") return await listUtilityGroups();
