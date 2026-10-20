@@ -181,7 +181,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 				<article>
 					<header mix={[vstack({ gap: "2px" }), mbe("2rem")]}>
 						<h1 mix={[m("0")]}>{frontmatter.title}</h1>
-						<p mix={[fontSize("1.0625rem"), fg("neutral"), m("6px", "0", "0", "0")]}>
+						<p mix={[fontSize("xl"), fg("neutral"), m("6px", "0", "0", "0")]}>
 							{frontmatter.description}
 						</p>
 						{frontmatter.lastUpdated && (
