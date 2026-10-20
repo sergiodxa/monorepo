@@ -6,6 +6,10 @@ section:
     order: 7
 order: 12
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to record a visitor's first and last touch with `@sdxc/attribution`"
+    - "How to store the campaign with the account, the checkout or the newsletter reader"
+    - "How to strip tracking parameters from links and test the whole flow"
 ---
 
 A visitor clicks a link in a newsletter, reads three pages, leaves, comes back a week later from

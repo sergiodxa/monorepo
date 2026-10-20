@@ -6,6 +6,10 @@ section:
     order: 10
 order: 1
 lastUpdated: 2026-10-19
+outcomes:
+    - "What a dated version like `2026.9.4` tells you"
+    - "Why a dependency is written as one exact date"
+    - "Where to read what changed in a release"
 ---
 
 Releases here are dated rather than semantic. A version is the UTC date it was published,

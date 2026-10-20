@@ -6,6 +6,10 @@ section:
     order: 6
 order: 6
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to sign short-lived JWTs with `@sdxc/jwt` keys kept in R2"
+    - "How to publish a JWKS and verify tokens by issuer and audience"
+    - "How to rotate the signing key without breaking tokens in flight"
 ---
 
 A JSON Web Token lets one service vouch for a caller to another without either calling back.

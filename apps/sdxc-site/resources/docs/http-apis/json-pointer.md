@@ -6,6 +6,10 @@ section:
     order: 5
 order: 6
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to parse and stringify RFC 6901 pointers with `@sdxc/json-pointer`"
+    - "How to read and write a value at a pointer"
+    - "How to name a validation issue so a member called `a/b` still points at itself"
 ---
 
 A JSON Pointer names a value inside a JSON document as a `/`-separated path. A member

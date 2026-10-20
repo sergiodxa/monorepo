@@ -6,6 +6,10 @@ section:
     order: 8
 order: 1
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to parse posts with typed frontmatter and custom tags using `@sdxc/markdown`"
+    - "How to transform the tree in one walk and read it without changing it"
+    - "How to render a post in a Remix route and as HTML or plain text elsewhere"
 ---
 
 This guide builds the path a post takes from a `.md` file in your repository to a rendered

@@ -6,6 +6,10 @@ section:
     order: 4
 order: 1
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to build the global middleware chain once as the composition root"
+    - "How to publish a service onto the request context and read it in a handler"
+    - "How to swap a service in a test"
 ---
 
 Every request your Worker serves passes through one router, and the router's global middleware

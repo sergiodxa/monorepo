@@ -6,6 +6,10 @@ section:
     order: 6
 order: 4
 lastUpdated: 2026-10-16
+outcomes:
+    - "How to stack a honeypot, a CAPTCHA and a per-address budget on a form"
+    - "How to score spam and check the address and password on sign-up"
+    - "When cheap checks should run in front of expensive ones"
 ---
 
 A form anyone can reach will be found by bots within days. No single check stops all of them,

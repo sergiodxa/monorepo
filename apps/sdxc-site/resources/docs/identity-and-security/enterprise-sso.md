@@ -6,6 +6,10 @@ section:
     order: 6
 order: 10
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to let a customer's directory sign people in over SAML 2.0"
+    - "How to verify an assertion and remember it for as long as it is valid"
+    - "How to provision users and groups over SCIM 2.0"
 ---
 
 The first large customer asks two questions: can our people sign in through our own identity

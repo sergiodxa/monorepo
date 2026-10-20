@@ -6,6 +6,10 @@ section:
     order: 8
 order: 8
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to give headings anchors and build a table of contents"
+    - "How to rewrite links, set typographic punctuation and turn pasted URLs into embeds"
+    - "How to lint content in CI with `@sdxc/markdown/plugin/lint`"
 ---
 
 A parsed document is a tree, and [`@sdxc/markdown`](/api/markdown) ships the passes most sites

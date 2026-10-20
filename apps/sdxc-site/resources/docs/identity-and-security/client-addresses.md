@@ -6,6 +6,10 @@ section:
     order: 6
 order: 12
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to read the caller's address once per request and decide what `null` means"
+    - "How to key a rate limit on the client's network and admit only your own networks"
+    - "How to refuse an internal address someone typed into a URL"
 ---
 
 An IP address shows up in more places than it looks: the key of a rate limit, a column on a

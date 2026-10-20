@@ -6,6 +6,10 @@ section:
     order: 4
 order: 5
 lastUpdated: 2026-10-16
+outcomes:
+    - "How to give every page one canonical URL and structured data"
+    - "How to serve `sitemap.xml` and `robots.txt` from routes"
+    - "How to serve `security.txt` with `@sdxc/well-known`"
 ---
 
 A crawler learns about your site from four places: the head of each page, the sitemap, the

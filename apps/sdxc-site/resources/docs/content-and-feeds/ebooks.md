@@ -6,6 +6,10 @@ section:
     order: 8
 order: 20
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to turn a markdown post into an EPUB with `@sdxc/epub`"
+    - "How to read a build failure when epubcheck would reject the book"
+    - "How to serve the book as a download and carry images and several chapters"
 ---
 
 A long tutorial is the kind of page people want to read away from the browser: on an e-reader,

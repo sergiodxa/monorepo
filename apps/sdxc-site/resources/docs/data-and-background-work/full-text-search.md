@@ -6,6 +6,10 @@ section:
     order: 7
 order: 18
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to keep an FTS5 index beside your tables with `@sdxc/search`"
+    - "How to parse what a reader typed, rank title matches first, highlight and page results"
+    - "How to rebuild the index in batches and search without FTS5"
 ---
 
 A help center needs a search box long before it needs a search service. SQLite ships FTS5, a

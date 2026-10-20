@@ -6,6 +6,10 @@ section:
     order: 6
 order: 11
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to refuse private hosts at the endpoint before a URL is stored"
+    - "How to fetch under one deadline and a byte cap on every redirect"
+    - "How to cap bodies that never came from `fetch`, including images"
 ---
 
 The moment your app fetches a URL someone typed, a calendar to subscribe to, an avatar to copy,

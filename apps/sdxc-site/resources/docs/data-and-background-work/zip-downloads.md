@@ -6,6 +6,10 @@ section:
     order: 7
 order: 17
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to bundle text, CSV streams and stored files into one ZIP with `@sdxc/zip`"
+    - "How to serve a download that starts at once and holds one entry in memory"
+    - "How to keep entry names safe to extract and handle a source failing mid-download"
 ---
 
 Some downloads are several files: an account's data export, a month of reports a client gets as

@@ -6,6 +6,10 @@ section:
     order: 4
 order: 11
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to bind page-wide keys with `keymap()` from one combo definition"
+    - "How to print each hint in the reader's own key caps and list it in a shortcuts panel"
+    - "When a key stands down and how to announce what it did"
 ---
 
 An inbox someone works through all day earns keys: `j` and `k` to move between messages,

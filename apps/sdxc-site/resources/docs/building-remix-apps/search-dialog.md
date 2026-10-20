@@ -6,6 +6,10 @@ section:
     order: 4
 order: 13
 lastUpdated: 2026-10-16
+outcomes:
+    - "How to open a search dialog from every page's header and show live results in a frame"
+    - "How to cache what the dialog asks for with `@sdxc/workers-cache`"
+    - "How to fall back to a plain results page and announce what each search found"
 ---
 
 [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) builds the

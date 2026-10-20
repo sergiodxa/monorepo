@@ -6,6 +6,10 @@ section:
     order: 9
 order: 5
 lastUpdated: 2026-09-29
+outcomes:
+    - "How to describe your running app's behavior in `.spec` files"
+    - "How to run specs against a dev server with named grants"
+    - "How to gate CI on your executable specs"
 ---
 
 A Vitest suite checks your code from the inside. An executable spec checks the running app from

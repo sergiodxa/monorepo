@@ -6,6 +6,10 @@ section:
     order: 7
 order: 13
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to write one message and deliver it to Slack, Discord, Telegram, PagerDuty or Opsgenie"
+    - "How to deliver from a job with retries and fan out by severity"
+    - "How to sign webhooks for your customers and test delivery without a network"
 ---
 
 This guide tells a team when their nightly sync fails. Each team connects the places it

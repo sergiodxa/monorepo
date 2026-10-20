@@ -6,6 +6,10 @@ section:
     order: 8
 order: 30
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to convert TeX formulas into MathML with `@sdxc/math`"
+    - "How to find the math in markdown and draw it in a route"
+    - "How to catch broken formulas at build time and render to HTML for feeds and email"
 ---
 
 Browsers draw MathML Core on their own: no stylesheet to link, no web font to load and no

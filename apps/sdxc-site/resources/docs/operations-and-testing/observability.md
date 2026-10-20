@@ -6,6 +6,10 @@ section:
     order: 9
 order: 1
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to write one wide log event per invocation with `@sdxc/logger`"
+    - "How to carry a W3C trace from a request into its jobs and outbound requests"
+    - "How to report timings to the browser with `Server-Timing`"
 ---
 
 When a request misbehaves in production you want to answer three questions quickly: what

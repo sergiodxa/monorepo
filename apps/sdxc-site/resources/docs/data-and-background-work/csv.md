@@ -6,6 +6,10 @@ section:
     order: 7
 order: 8
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to read an uploaded CSV into validated rows with errors that name the line"
+    - "How to stream an export with `@sdxc/csv` that spreadsheets open safely"
+    - "Why to neutralize formulas and how to write for other locales"
 ---
 
 CSV is how most people move data in and out of an app: a spreadsheet of contacts to import, a

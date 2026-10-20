@@ -6,6 +6,10 @@ section:
     order: 8
 order: 9
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to write one markdown document with holes for per-render values"
+    - "How to fill the values per tenant, plan or locale and decide what a missing one means"
+    - "How to serve the template itself so it round-trips through an editor"
 ---
 
 Onboarding pages, plan summaries and transactional copy say the same thing to every reader

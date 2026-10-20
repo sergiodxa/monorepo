@@ -6,6 +6,10 @@ section:
     order: 7
 order: 2
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to open a `remix/data-table` database over D1 and publish it as `ctx.db`"
+    - "How to write what D1 can commit and move models into a Durable Object"
+    - "How to test against real SQL with `@sdxc/cloudflare-mocks`"
 ---
 
 [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) gives

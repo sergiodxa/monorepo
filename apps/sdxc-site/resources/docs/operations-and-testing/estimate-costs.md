@@ -6,6 +6,10 @@ section:
     order: 9
 order: 6
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to turn requests, CPU time, KV reads and D1 rows into cents"
+    - "How to price one unit of work and see which binding dominates"
+    - "How to warn before a month runs over budget"
 ---
 
 Cloudflare's invoice arrives after the month is over, and by then a runaway cron job or a cache

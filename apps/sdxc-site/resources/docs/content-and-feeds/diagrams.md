@@ -6,6 +6,10 @@ section:
     order: 8
 order: 31
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to draw Mermaid diagrams as SVG on the server with `@sdxc/diagram`"
+    - "How to find the diagrams in markdown and draw them in a route"
+    - "How to match your theme and render to HTML for feeds and email"
 ---
 
 A diagram written as text lives beside the prose it explains: it diffs, it reviews, and it

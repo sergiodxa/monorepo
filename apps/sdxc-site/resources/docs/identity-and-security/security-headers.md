@@ -6,6 +6,10 @@ section:
     order: 6
 order: 5
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to write CSP, HSTS and Permissions-Policy as one typed policy"
+    - "How to use nonces or hashes for the scripts you render"
+    - "How to collect violation reports and publish a `security.txt`"
 ---
 
 A browser enforces what your response headers tell it: where scripts may load from, whether the

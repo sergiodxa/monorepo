@@ -6,6 +6,10 @@ section:
     order: 4
 order: 12
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to lay out a month grid and place events on it in the viewer's zone with `@sdxc/dates`"
+    - "How to read a report's day range from the query string"
+    - "How to let people pick their time zone from the runtime's own list"
 ---
 
 Three date screens come up in almost every app: a month calendar with events on it, a report

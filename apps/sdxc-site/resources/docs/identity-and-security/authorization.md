@@ -6,6 +6,10 @@ section:
     order: 6
 order: 13
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to name every ability once and grant them through additive roles"
+    - "How to check abilities in routes, handlers, background jobs and MCP tools"
+    - "How to test the policy as a table of people and abilities"
 ---
 
 Signing someone in answers who is asking. Every route after that asks a second question: may

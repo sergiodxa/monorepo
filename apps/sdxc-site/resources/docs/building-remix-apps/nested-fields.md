@@ -6,6 +6,10 @@ section:
     order: 4
 order: 8
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to read bracket keys like `filter[status][]` into typed objects and arrays"
+    - "How to filter a list from the query string and link between pages of the same view"
+    - "How to validate a nested form post and submit one from code"
 ---
 
 `URLSearchParams` and `FormData` are flat: a name maps to strings. A list page's filters and

@@ -6,6 +6,10 @@ section:
     order: 6
 order: 3
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to verify Standard Webhooks deliveries and reject replays"
+    - "How to answer fast by handing each delivery to a background job"
+    - "How to sign the webhooks your own app sends"
 ---
 
 A webhook endpoint is a public URL that accepts `POST`s from anyone, so its signature check is

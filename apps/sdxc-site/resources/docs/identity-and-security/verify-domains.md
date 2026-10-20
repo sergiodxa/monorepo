@@ -6,6 +6,10 @@ section:
     order: 6
 order: 9
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to prove a customer owns a domain with a DNS TXT check"
+    - "How to register the proven domain on Cloudflare for SaaS"
+    - "How to poll until the certificate is live and tell the customer what is missing"
 ---
 
 A customer who types `shop.example.com` into your settings page is making a claim. Before your

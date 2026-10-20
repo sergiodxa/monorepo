@@ -6,6 +6,10 @@ section:
     order: 9
 order: 7
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to accept a `Random` in your own functions and seed it in tests"
+    - "How to store the seed behind a draw so anyone can replay it"
+    - "How to save a stream and resume it from storage"
 ---
 
 `Math.random()` is easy to call and hard to live with. A function that calls it gives a

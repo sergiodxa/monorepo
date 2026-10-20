@@ -6,6 +6,10 @@ section:
     order: 7
 order: 16
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to look up a domain's expiry, status and registrar over RDAP with `@sdxc/rdap`"
+    - "How to decide what a lookup result means"
+    - "How to sweep tracked domains on a schedule and alert before registration lapses"
 ---
 
 A domain that lapses takes everything on it down at once: the site stops resolving, mail

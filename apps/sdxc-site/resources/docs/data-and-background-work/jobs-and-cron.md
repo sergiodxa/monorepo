@@ -6,6 +6,10 @@ section:
     order: 7
 order: 4
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to declare jobs once and write handlers with `@sdxc/jobs`"
+    - "How to enqueue from a request and run on Cloudflare Queues and cron triggers"
+    - "How to validate a schedule someone typed and run jobs in a test"
 ---
 
 Some work should not happen while a visitor waits: sending an email, calling a slow API, sweeping

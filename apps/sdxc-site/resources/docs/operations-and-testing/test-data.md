@@ -6,6 +6,10 @@ section:
     order: 9
 order: 4
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to write one generator per fixture with `@sdxc/sample`"
+    - "How to seed test databases and component previews with data identical on every run"
+    - "How to keep snapshots stable and shake out hidden assumptions"
 ---
 
 Tests written against `"Test User"` and `test@test.com` pass while the real thing breaks: the

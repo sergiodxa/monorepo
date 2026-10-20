@@ -6,6 +6,10 @@ section:
     order: 7
 order: 1
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to read through a Workers KV cache and keep a stale copy for outages"
+    - "How to store whole responses at the edge with `@sdxc/workers-cache` and purge them by tag"
+    - "How to test both cache layers without a platform"
 ---
 
 A Worker has two caches worth using, and they answer different questions. Workers KV holds

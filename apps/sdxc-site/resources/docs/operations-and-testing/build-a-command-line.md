@@ -6,6 +6,10 @@ section:
     order: 9
 order: 8
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to declare commands as a contract and answer them with typed handlers"
+    - "How to ask for what a flag left out, show progress and share services through middleware"
+    - "How to test every command without a terminal"
 ---
 
 A command line has the same parts as a router: a table of what it answers, a handler per

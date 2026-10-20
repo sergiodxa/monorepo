@@ -6,6 +6,10 @@ section:
     order: 7
 order: 3
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to wrap `remix/data-table` tables in models with `@sdxc/data-model` and publish them as `ctx.models`"
+    - "How to dispatch jobs only after a write commits"
+    - "How to build test data with factories and seed a new database"
 ---
 
 Once an app has more than a few tables, the code around them settles into a pattern: a module

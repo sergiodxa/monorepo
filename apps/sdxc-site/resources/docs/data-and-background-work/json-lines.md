@@ -6,6 +6,10 @@ section:
     order: 7
 order: 19
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to export records as a streaming JSON Lines download with `@sdxc/jsonl`"
+    - "How to import an upload row by row with errors that name the line"
+    - "How to bound what a line may cost and resume a long import"
 ---
 
 JSON Lines is one JSON value per line. It is the format to reach for when records carry

@@ -6,6 +6,10 @@ section:
     order: 4
 order: 4
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to detect each request's language and translate MessageFormat 2 messages in handlers and views"
+    - "How to reach the translator from any component, island or job"
+    - "How to catch broken messages in a test"
 ---
 
 This guide makes an app answer in the visitor's language. [`@sdxc/i18n`](/api/i18n) detects

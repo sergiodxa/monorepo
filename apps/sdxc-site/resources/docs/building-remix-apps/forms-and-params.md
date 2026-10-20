@@ -6,6 +6,10 @@ section:
     order: 4
 order: 2
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to turn form posts, query strings and route params into typed values with `@sdxc/validate`"
+    - "How to render a schema's issues back next to the fields that failed"
+    - "How to answer an API client's invalid JSON body with a `@sdxc/problem` response"
 ---
 
 Everything a request carries is a string until something says otherwise: form fields, the

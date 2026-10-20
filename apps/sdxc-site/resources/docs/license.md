@@ -6,6 +6,10 @@ section:
     order: 10
 order: 1
 lastUpdated: 2026-09-21
+outcomes:
+    - "What the MIT license lets you do with each package"
+    - "Why every `@sdxc` package carries the same terms"
+    - "Where each package ships its own `LICENSE.md`"
 ---
 
 Every package published under the `@sdxc` scope is MIT licensed. The terms are the same for all

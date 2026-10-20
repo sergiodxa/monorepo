@@ -6,6 +6,10 @@ section:
     order: 5
 order: 7
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to parse and write RFC 8288 `Link` headers with `@sdxc/link-header`"
+    - "How to merge headers without dropping foreign links"
+    - "How to follow `next` links as a client and drop malformed entries"
 ---
 
 A `Link` header is a list of URI-References with relation types and parameters. Splitting

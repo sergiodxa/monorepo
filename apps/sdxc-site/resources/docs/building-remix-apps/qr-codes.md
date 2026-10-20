@@ -6,6 +6,10 @@ section:
     order: 4
 order: 9
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to encode a link at the error correction level its surface needs with `@sdxc/qr`"
+    - "How to render a QR code inline with `remix/component` and keep it inside its layout"
+    - "How to serve a QR code as an SVG file from a route"
 ---
 
 This guide puts a QR code on a meetup ticket: the attendee shows it at the door, a volunteer's

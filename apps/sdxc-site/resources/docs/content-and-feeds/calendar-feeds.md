@@ -6,6 +6,10 @@ section:
     order: 8
 order: 4
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to serve your events as an iCalendar feed people subscribe to"
+    - "How to describe a weekly series in a time zone and offer a single event as a download"
+    - "How to read an uploaded `.ics` file and invite people by email"
 ---
 
 A calendar feed is the lowest-effort way to keep people coming to your events. They subscribe

@@ -6,6 +6,10 @@ section:
     order: 6
 order: 14
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to sign outgoing requests with RFC 9421 and draft-cavage"
+    - "How to verify signatures with a freshness window and replay checks"
+    - "How to attach and check `Content-Digest`, `Repr-Digest` and `Digest`"
 ---
 
 A bearer token proves the caller once had a secret. An HTTP message signature proves more: this

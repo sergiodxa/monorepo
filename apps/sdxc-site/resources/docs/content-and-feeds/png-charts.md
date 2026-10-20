@@ -6,6 +6,10 @@ section:
     order: 8
 order: 35
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to draw a response-time chart on a canvas inside a Worker with `@sdxc/raster`"
+    - "How to fill the area, stroke the line and mark each day's status"
+    - "How to serve the chart as a PNG for email and check its pixels in a test"
 ---
 
 A weekly report email wants a chart, and email is where charts are hardest: most clients strip

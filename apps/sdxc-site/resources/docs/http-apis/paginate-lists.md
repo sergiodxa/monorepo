@@ -6,6 +6,10 @@ section:
     order: 5
 order: 5
 lastUpdated: 2026-10-19
+outcomes:
+    - "When to page by offset and when by keyset with `@sdxc/pagination`"
+    - "How to validate page parameters and advertise pages in `Link` headers"
+    - "How to render a numbered pager and older and newer feed links"
 ---
 
 [Build a JSON API with problem details](/docs/http-apis/json-apis) pages its book list by

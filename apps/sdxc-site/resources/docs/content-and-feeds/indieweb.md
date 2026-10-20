@@ -6,6 +6,10 @@ section:
     order: 8
 order: 3
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to mark posts up with microformats using `@sdxc/microformats`"
+    - "How to receive, verify and send Webmentions from background jobs"
+    - "How to accept posts over Micropub"
 ---
 
 The IndieWeb is a set of small protocols that let independent sites talk to each other.

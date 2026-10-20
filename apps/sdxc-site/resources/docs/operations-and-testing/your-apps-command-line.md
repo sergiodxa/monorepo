@@ -6,6 +6,10 @@ section:
     order: 9
 order: 9
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to add commands for work that belongs to no request"
+    - "How to publish the log, database, models, jobs and mailer to commands through middleware"
+    - "How to run app code outside the server and test a command"
 ---
 
 <note>

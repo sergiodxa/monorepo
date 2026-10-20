@@ -6,6 +6,10 @@ section:
     order: 9
 order: 2
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to declare MCP tools and resources for your app"
+    - "How to answer them with your app's own context and cache the expensive ones"
+    - "How to mount the server as a route and scope tools to a credential"
 ---
 
 An agent that can call your app over the Model Context Protocol can search it, read from it

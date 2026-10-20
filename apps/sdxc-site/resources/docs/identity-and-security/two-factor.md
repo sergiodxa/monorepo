@@ -6,6 +6,10 @@ section:
     order: 6
 order: 8
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to enroll an authenticator app and confirm its first TOTP code"
+    - "How to ask for a code after the password and spend each code once"
+    - "How to issue recovery codes and turn two-factor off"
 ---
 
 A time-based one-time password, the six digits an authenticator app shows, is a second thing

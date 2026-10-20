@@ -6,6 +6,10 @@ section:
     order: 8
 order: 33
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to turn a pasted YouTube URL into a lazy-loaded player with `@sdxc/markdown`"
+    - "How to keep a video's start time and allow the player in your Content Security Policy"
+    - "How to leave a plain link in feeds and email instead of the player"
 ---
 
 An author sharing a video pastes its URL, the way they would in a chat. This guide turns that

@@ -6,6 +6,10 @@ section:
     order: 5
 order: 1
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to declare a problem catalog and answer failures as RFC 9457 problems"
+    - "How to validate a body, create a resource and page the list"
+    - "How to rate limit the API with `@sdxc/rate-limit`"
 ---
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one

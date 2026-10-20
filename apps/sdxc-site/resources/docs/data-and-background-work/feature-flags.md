@@ -6,6 +6,10 @@ section:
     order: 7
 order: 6
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to declare flags in a typed catalog and publish `ctx.flags`"
+    - "How to target a flag by rule or percentage and store definitions in KV"
+    - "How to switch an ability off and test with a pinned flag"
 ---
 
 A feature flag lets you ship code that is switched off, turn it on for one team, then for ten

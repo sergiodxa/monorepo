@@ -6,6 +6,10 @@ section:
     order: 7
 order: 7
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to link accounts to customers and open a hosted checkout with `@sdxc/billing`"
+    - "How to sync subscriptions and receive the platform's webhooks"
+    - "How to gate a feature on your own copy and repair what webhooks missed"
 ---
 
 Charging for an app is mostly bookkeeping around a payment platform: linking your accounts to its

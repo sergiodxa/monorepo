@@ -6,6 +6,10 @@ section:
     order: 4
 order: 14
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to render an Open Graph image inside a Worker with `@sdxc/raster` and `@sdxc/font`"
+    - "How to store each card in R2 under a hash of its text"
+    - "How to serve the card at the page's own address with `.png` added and advertise its size"
 ---
 
 A link to your site shared in a chat or a timeline shows the image its page names in

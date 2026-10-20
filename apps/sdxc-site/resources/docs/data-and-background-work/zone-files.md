@@ -6,6 +6,10 @@ section:
     order: 7
 order: 15
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"
+    - "How to compare the records with live DNS"
+    - "How to export the zone as a file and read one with includes"
 ---
 
 DNS will not list the names in a zone from outside it. A resolver answers questions about names

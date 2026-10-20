@@ -6,6 +6,10 @@ section:
     order: 6
 order: 1
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to run an authorization-code login with `@sdxc/auth` against any OpenID Connect provider"
+    - "How to keep the login in a KV session and verify the ID token in the callback"
+    - "How to sign out on both sides and keep the return URL on your origin"
 ---
 
 This guide adds "sign in with your provider" to a Remix v3 app on Workers: a login route that

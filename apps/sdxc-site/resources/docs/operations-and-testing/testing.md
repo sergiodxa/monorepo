@@ -6,6 +6,10 @@ section:
     order: 9
 order: 3
 lastUpdated: 2026-10-19
+outcomes:
+    - "How the template runs Vitest through Vite+"
+    - "When to use the real bindings in the Workers pool and when the in-memory mocks"
+    - "How to answer outbound HTTP with MSW and record mail and jobs in memory"
 ---
 
 For the tests `sdxc make` writes and how to run one file or one case, start with

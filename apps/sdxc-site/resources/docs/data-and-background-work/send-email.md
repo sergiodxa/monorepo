@@ -6,6 +6,10 @@ section:
     order: 7
 order: 5
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to declare emails in a `@sdxc/mail` registry and write their templates"
+    - "How to send, defer or queue an email by name from requests, jobs and commands"
+    - "How to preview an email and test what was sent with the memory transport"
 ---
 
 This guide sends the message a job board owes someone who just published a position: a short

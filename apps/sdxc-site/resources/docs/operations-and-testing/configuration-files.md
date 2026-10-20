@@ -6,6 +6,10 @@ section:
     order: 9
 order: 10
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to parse JSONC with comments and trailing commas"
+    - "How to point a mistake at its line and column and validate the shape"
+    - "How to hand the parsed config to every command of a command line"
 ---
 
 A configuration file is written by people, so it wants comments that say why a setting is set,

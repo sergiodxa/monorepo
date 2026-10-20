@@ -6,6 +6,10 @@ section:
     order: 6
 order: 7
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to pick the Web Crypto primitive by what happens to the value next"
+    - "How to build reset links from hashed tokens and store passwords with scrypt"
+    - "How to sign links with HMAC and seal secrets at rest with AES-GCM"
 ---
 
 Most security code in an app is a handful of primitives used in the right place: a random

@@ -6,6 +6,10 @@ section:
     order: 8
 order: 5
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to fetch a saved link under bounds in a job and pull out its article with `@sdxc/distill`"
+    - "How to keep a plain-text excerpt of the page"
+    - "How to build a preview card from the page's head"
 ---
 
 A "save for later" button looks like one line of work: fetch the URL, keep the article. The

@@ -6,6 +6,10 @@ section:
     order: 3
 order: 3
 lastUpdated: 2026-10-15
+outcomes:
+    - "Why a package splits its concerns into subpath entry points"
+    - "What recurring subpath shapes to expect, like `@sdxc/http/cache`"
+    - "When a package has no root export and why that beats more packages"
 ---
 
 Most packages here publish one entry point and nothing else — reach for the name and you have

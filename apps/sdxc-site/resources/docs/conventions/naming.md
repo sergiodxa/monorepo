@@ -6,6 +6,10 @@ section:
     order: 3
 order: 4
 lastUpdated: 2026-10-15
+outcomes:
+    - "What a package name tells you before you open its README"
+    - "How symmetric pairs and meaningful prefixes make exports guessable"
+    - "How types live in a namespace beside the value and options are named at the call site"
 ---
 
 Names here are meant to be guessable. A reader who has used two of these packages should be

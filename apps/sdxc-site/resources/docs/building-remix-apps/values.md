@@ -6,6 +6,10 @@ section:
     order: 4
 order: 6
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to mint prefixed record IDs and keep UUIDs typed below the edge"
+    - "How to derive a title, slug and summary and show dates in the viewer's zone"
+    - "How to compare client versions"
 ---
 
 Every app handles the same handful of values: the ids its records carry, the slugs and

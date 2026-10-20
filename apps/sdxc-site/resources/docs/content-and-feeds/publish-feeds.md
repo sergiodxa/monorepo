@@ -6,6 +6,10 @@ section:
     order: 8
 order: 2
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to serve one list of posts as RSS 2.0, Atom and JSON Feed"
+    - "How to let readers find the feeds and publish an OPML list"
+    - "How to ping a WebSub hub with `@sdxc/websub` when the feeds change"
 ---
 
 A feed reader asks for a document in whichever format it was built around, so a site that

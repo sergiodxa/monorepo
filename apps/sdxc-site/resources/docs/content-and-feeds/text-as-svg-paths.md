@@ -6,6 +6,10 @@ section:
     order: 8
 order: 34
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to measure text with a font's real metrics using `@sdxc/font`"
+    - "How to shorten text to fit a width and turn glyphs into SVG path data"
+    - "How to lay out a README badge and serve it from a route"
 ---
 
 A badge in a README, such as a project's latest version, is an SVG image the README links to.

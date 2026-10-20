@@ -6,6 +6,10 @@ section:
     order: 2
 order: 12
 lastUpdated: 2026-10-19
+outcomes:
+    - "What the words ability, grant and policy mean in sdxc"
+    - "What the template terms initializer, kind, stub and seed refer to"
+    - "Where each term is covered in the guides"
 ---
 
 The terms below have a meaning of their own in `sdxc` and the app template. Words Cloudflare or

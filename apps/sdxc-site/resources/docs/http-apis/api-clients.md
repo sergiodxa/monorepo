@@ -6,6 +6,10 @@ section:
     order: 5
 order: 4
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to write a client class that attaches credentials once"
+    - "How to validate every response and read it one way"
+    - "How to turn `@sdxc/problem` documents into typed failures and test with MSW"
 ---
 
 A client is where an API's contract meets code that trusts it. This guide writes one for the

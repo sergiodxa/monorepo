@@ -6,6 +6,10 @@ section:
     order: 6
 order: 2
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to enroll a passkey for a signed-in account"
+    - "How to sign in with a passkey by verifying both WebAuthn ceremonies"
+    - "How to keep the challenge between the two requests and store what the ceremony proves"
 ---
 
 A passkey is a key pair the person's device holds, bound to your domain, unlocked with a

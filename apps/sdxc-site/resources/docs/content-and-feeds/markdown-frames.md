@@ -6,6 +6,10 @@ section:
     order: 8
 order: 32
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to write a frame tag that holds a region a route renders per request"
+    - "How to register the tag and render it with `@sdxc/markdown`"
+    - "Where the region goes when the document renders outside the page"
 ---
 
 A guide reads best when its example runs on the page: a component you can press, a price

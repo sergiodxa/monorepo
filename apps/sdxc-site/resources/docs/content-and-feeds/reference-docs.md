@@ -6,6 +6,10 @@ section:
     order: 8
 order: 6
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to read the JSDoc in your TypeScript source at build time with `@sdxc/jsdoc`"
+    - "How to write the records as JSON and serve a page per public symbol"
+    - "How to keep every public symbol documented"
 ---
 
 The comments above your exported functions already say what each parameter means, what comes

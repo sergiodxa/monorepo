@@ -6,6 +6,10 @@ section:
     order: 9
 order: 11
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to find the modules a project imports"
+    - "How to rename a package or move names to another module across every file"
+    - "How to add and remove declarations and calls while changing only the text each edit touches"
 ---
 
 A tool that changes code for people, such as a migration script, a generator or an upgrade

@@ -6,6 +6,10 @@ section:
     order: 5
 order: 3
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to make a create safe to retry with an `Idempotency-Key`"
+    - "How to accept partial updates as JSON Merge Patch"
+    - "How to refuse writes based on a stale read with an ETag"
 ---
 
 Writes fail in two quiet ways. A `POST` times out and the client cannot tell whether the book

@@ -6,6 +6,10 @@ section:
     order: 7
 order: 11
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to subscribe readers to Buttondown or Kit through one `@sdxc/newsletter` contract"
+    - "How to credit the campaign and follow confirmations and unsubscribes from webhooks"
+    - "How to test against the in-memory list and hold your own provider to the contract"
 ---
 
 This guide builds the sign-up box at the bottom of a blog: a visitor types an address, the list

@@ -6,6 +6,10 @@ section:
     order: 7
 order: 10
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to define a condition dialect once with `@sdxc/expression`"
+    - "How to accept a rule as text or JSON and refuse a broken one with its path"
+    - "How to evaluate a stored rule in a request or a job and add your own operator"
 ---
 
 Sooner or later a customer asks for a rule your code does not have: notify me only when a

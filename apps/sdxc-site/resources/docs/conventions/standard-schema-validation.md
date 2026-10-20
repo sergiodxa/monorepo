@@ -6,6 +6,10 @@ section:
     order: 3
 order: 2
 lastUpdated: 2026-10-15
+outcomes:
+    - "Why packages accept any Standard Schema instead of shipping a validation library"
+    - "How to pass your own schema and get the result type inferred"
+    - "How to validate on your own with `@sdxc/validate`"
 ---
 
 No package in this collection ships a validation library, and none of them requires a

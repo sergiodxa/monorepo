@@ -6,6 +6,10 @@ section:
     order: 4
 order: 10
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to load a list's next page as the reader scrolls with `@sdxc/lazy-frame`"
+    - "How to load a dialog's content only when it opens"
+    - "How to keep plain links working for browsers running no script"
 ---
 
 This guide builds a job board. The list of postings continues as the reader scrolls, in both

@@ -6,6 +6,10 @@ section:
     order: 7
 order: 14
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to subscribe a browser from a click and store the subscription with `@sdxc/web-push`"
+    - "How to send an encrypted notification from a Worker, directly or through messaging"
+    - "How to rotate the sender's keys and test without a push service"
 ---
 
 This guide lets a team member turn on alerts in their browser: a button on the settings page

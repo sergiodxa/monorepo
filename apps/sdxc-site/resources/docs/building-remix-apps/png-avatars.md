@@ -6,6 +6,10 @@ section:
     order: 4
 order: 15
 lastUpdated: 2026-10-15
+outcomes:
+    - "How to check an uploaded PNG's size before decoding it with `@sdxc/png`"
+    - "How to crop an upload square and store a clean copy"
+    - "How to draw an identicon from pixels for people with no upload"
 ---
 
 An avatar upload is a file a stranger chose, and the browser's `accept="image/png"` is a

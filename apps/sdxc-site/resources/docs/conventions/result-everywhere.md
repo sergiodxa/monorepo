@@ -6,6 +6,10 @@ section:
     order: 3
 order: 1
 lastUpdated: 2026-10-15
+outcomes:
+    - "Why every fallible entry point returns a `Result` instead of throwing"
+    - "How to branch on a `Result` and carry it across a boundary"
+    - "What still throws and how errors carry their position"
 ---
 
 A function in this collection that can fail returns a

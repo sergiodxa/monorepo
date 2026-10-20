@@ -6,6 +6,10 @@ section:
     order: 4
 order: 3
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to compose a page from `@sdxc/ui` components and lay it out with `@sdxc/u` mixins"
+    - "How to build a dialog with no script using native platform features"
+    - "How to hydrate only the island that needs script"
 ---
 
 A page in a Remix v3 app is `remix/component` JSX rendered on the server. This guide builds a

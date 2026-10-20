@@ -6,6 +6,10 @@ section:
     order: 7
 order: 9
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to build one backoff schedule with `@sdxc/backoff` and honor `Retry-After`"
+    - "How to retry a queue job, a request or a polled row on a growing delay"
+    - "How to let the first failures through and test the exact delays"
 ---
 
 A fixed retry delay is wrong in both directions. Ten minutes is too slow for a blip that

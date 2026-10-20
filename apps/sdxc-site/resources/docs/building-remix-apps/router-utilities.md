@@ -6,6 +6,10 @@ section:
     order: 4
 order: 7
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to redirect to one canonical host and path with the trailing-slash and no-www middleware"
+    - "How to end a request from any depth by throwing a `Response`"
+    - "How to import each route on first use and read structured header fields"
 ---
 
 A few small decisions around the router pay off across every route: which spelling of a URL

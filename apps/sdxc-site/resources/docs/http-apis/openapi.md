@@ -6,6 +6,10 @@ section:
     order: 5
 order: 2
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to swap your schema import so `@sdxc/openapi` can read the same schemas"
+    - "How to declare operations and build and serve an OpenAPI 3.1 document"
+    - "How to test responses against the document"
 ---
 
 An API reference written by hand drifts from the code the day after it is published. This

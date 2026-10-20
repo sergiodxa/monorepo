@@ -6,6 +6,10 @@ section:
     order: 8
 order: 7
 lastUpdated: 2026-10-19
+outcomes:
+    - "How to publish an actor and answer WebFinger with `@sdxc/well-known`"
+    - "How to verify an inbox that handles follows and undos with `@sdxc/http-signatures`"
+    - "How to deliver signed posts to followers from jobs and test it all in memory"
 ---
 
 ActivityPub is the protocol Mastodon, Misskey, GoToSocial, Pixelfed and the rest of the
