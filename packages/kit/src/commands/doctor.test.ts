@@ -165,6 +165,7 @@ describe("sdxc doctor", () => {
 				"skip  routes      No routes/ folder in the project",
 				"skip  models      No app/models/index.ts in the project",
 				"skip  emails      No app/emails/index.ts in the project",
+				"skip  jsdoc       No app source to read for comments",
 				"skip  ui          No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
@@ -189,6 +190,7 @@ describe("sdxc doctor", () => {
 				"skip  routes      No routes/ folder in the project",
 				"skip  models      No app/models/index.ts in the project",
 				"skip  emails      No app/emails/index.ts in the project",
+				"skip  jsdoc       No app source to read for comments",
 				"skip  ui          No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
@@ -236,6 +238,7 @@ describe("sdxc doctor", () => {
 			["routes", "skip"],
 			["models", "skip"],
 			["emails", "skip"],
+			["jsdoc", "skip"],
 			["ui", "skip"],
 		]);
 		expect(report.checks[0]).toMatchObject({
@@ -270,6 +273,7 @@ describe("sdxc doctor", () => {
 			["routes", "skip"],
 			["models", "skip"],
 			["emails", "skip"],
+			["jsdoc", "skip"],
 			["ui", "skip"],
 		]);
 		expect(report.checks[0]?.message).toMatch(/^Could not reach the npm registry/);
@@ -334,6 +338,7 @@ describe("sdxc doctor with project checks", () => {
 				"skip  routes       No routes/ folder in the project",
 				"skip  models       No app/models/index.ts in the project",
 				"skip  emails       No app/emails/index.ts in the project",
+				"skip  jsdoc        No app source to read for comments",
 				"skip  ui           No @sdxc/ui component is copied",
 				"warn  has-license  LICENSE: LICENSE is missing",
 				"pass  config       checks live in .config/sdxc/checks; app",
@@ -399,7 +404,7 @@ describe("sdxc doctor with project checks", () => {
 
 		let result = await doctorWithChecks(root, [
 			"--skip",
-			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,ui",
+			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,jsdoc,ui",
 		]);
 
 		expect(result.code).toBe(1);
