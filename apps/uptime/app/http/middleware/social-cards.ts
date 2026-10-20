@@ -10,7 +10,7 @@
 import type { Middleware } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
-import { env, waitUntil } from "cloudflare:workers";
+import { waitUntil } from "cloudflare:workers";
 
 import type { UptimeModels } from "~/app/models";
 import type { SocialCard } from "~/app/services/social-card";
@@ -46,8 +46,12 @@ const STATUS_PATH = /^\/status\/([^/]+)$/;
  * Answers a `GET` for `<page>.png` with that page's card: from the edge cache, from storage when
  * a status card's `v` names a stored card, or drawn, stored after the response and returned. The drawing
  * code and fonts load on the first card drawn, so every other request runs without them.
+ *
+ * @param fetchPage Answers a request through the router installing this middleware.
  */
-export default function socialCards(): Middleware {
+export default function socialCards(
+	fetchPage: (request: Request) => Promise<Response>,
+): Middleware {
 	return async (ctx, next) => {
 		let { pathname } = ctx.url;
 		if (ctx.request.method !== "GET" || !pathname.endsWith(".png")) return next();
@@ -72,7 +76,7 @@ export default function socialCards(): Middleware {
 
 		let content = isStatus
 			? await statusPageCard(ctx.models, STATUS_PATH.exec(pagePath)?.[1] ?? "")
-			: await marketingContent(pagePath);
+			: await marketingContent(fetchPage, pagePath);
 		if (!content) return next();
 
 		let hash = socialCardHash(content);
@@ -110,20 +114,13 @@ async function statusPageCard(
 
 /**
  * A marketing or docs page's card, read from the page as the site's own router renders it to
- * an anonymous visitor, or `null` when the path is not a page that answers 200. The router is
- * imported on demand because it installs this middleware too.
+ * an anonymous visitor, or `null` when the path is not a page that answers 200.
  */
-async function marketingContent(pagePath: string): Promise<SocialCard.MarketingContent | null> {
-	let [{ createWebRouter }, { countedKv }] = await Promise.all([
-		import("~/app/initializers/router"),
-		import("~/app/services/cost"),
-	]);
-	let router = createWebRouter({
-		kv: countedKv(env.KV),
-		cookieSecret: env.COOKIE_SESSION_SECRET,
-		secure: true,
-	});
-	let response = await router.fetch(
+async function marketingContent(
+	fetchPage: (request: Request) => Promise<Response>,
+	pagePath: string,
+): Promise<SocialCard.MarketingContent | null> {
+	let response = await fetchPage(
 		new Request(absoluteUrl(pagePath), { headers: { accept: "text/html" } }),
 	);
 	if (response.status !== 200) return null;

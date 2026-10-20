@@ -182,7 +182,12 @@ async function seedPage(db: Database, isPublic = true) {
 /** Requests a path through a router running the card middleware ahead of a 404 handler. */
 async function get(db: Database, path: string): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(db), models(), socialCards()],
+		middleware: [
+			asyncContext(),
+			database(db),
+			models(),
+			socialCards((request): Promise<Response> => router.fetch(request)),
+		],
 		defaultHandler: () => new Response("Not found", { status: 404 }),
 	});
 	return router.fetch(new Request(new URL(path, "https://uptime.test")));

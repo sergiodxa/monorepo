@@ -189,7 +189,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * Answers `<page>.png` with the page's social card before routing, since page
 			 * patterns would claim the path; it reads `ctx.models` for a status page's card.
 			 */
-			socialCards(),
+			socialCards((request): Promise<Response> => router.fetch(request)),
 			/**
 			 * While developing, answers `/_emails` with every mapped email in every supported
 			 * language, ahead of the session and the security headers a preview needs neither of.
