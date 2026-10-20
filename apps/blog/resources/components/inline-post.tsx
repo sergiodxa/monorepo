@@ -37,7 +37,7 @@ export function InlinePost(handle: Handle<InlinePost.Props>) {
 		return (
 			<div mix={[grid(), gap(1), minIs(0), overflowWrap("break-word")]}>
 				{title ? (
-					<p mix={[mf("p-name"), m(0), text("lg"), weight("bold"), fg("neutral.emphasis")]}>
+					<p mix={[mf("p-name"), m(0), text("xl"), weight("bold"), fg("neutral.emphasis")]}>
 						{title}
 					</p>
 				) : null}
