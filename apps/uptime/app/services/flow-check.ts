@@ -94,7 +94,7 @@ export interface FlowCheckResult {
 	errorMessage: string | null;
 	/**
 	 * chrome://tracing JSON from the last `browser.trace.stop` of the run, when the
-	 * flow recorded one (ADR-037). Uploaded to R2 after the result row is written.
+	 * flow recorded one. Uploaded to R2 after the result row is written.
 	 */
 	traceJson: string | null;
 }
@@ -189,7 +189,7 @@ export async function runFlowCheck(input: FlowCheckInput): Promise<FlowCheckResu
 
 	/**
 	 * Captures `browser.trace.stop` without a filesystem: the plugin writes through
-	 * this store, and the last JSON is uploaded after the result row exists (ADR-037).
+	 * this store, and the last JSON is uploaded after the result row exists.
 	 */
 	let traces = createFlowTraceBuffer();
 	let startedAt = Date.now();

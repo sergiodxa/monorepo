@@ -1518,7 +1518,7 @@ export default {
 
 			/**
 			 * Optional daily-digest section for flow runs that recorded a Chrome
-			 * Performance trace yesterday (ADR-037). Omitted when the day produced none.
+			 * Performance trace yesterday. Omitted when the day produced none.
 			 */
 			traces: {
 				heading: "Performance traces ready",

@@ -52,7 +52,7 @@ export const FlowMonitors = createModel(flowMonitors, {
 
 		/**
 		 * Records a run's outcome: inserts a history row, uploads a Performance
-		 * trace when the flow recorded one (ADR-037), and updates the monitor's
+		 * trace when the flow recorded one, and updates the monitor's
 		 * cached fields.
 		 *
 		 * @returns The history row's id, the idempotency key the ping meter bills against: it is the only thing about a completed run that is unique and already persisted.

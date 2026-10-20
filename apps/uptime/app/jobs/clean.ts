@@ -1,6 +1,6 @@
 /**
  * Scheduled maintenance job that applies a per-table retention window to everything that
- * grows with monitor activity (ADR-020), batched in one job so the schedule and log line
+ * grows with monitor activity, batched in one job so the schedule and log line
  * stay shared. A row whose date column is still `NULL` is never matched by a cutoff.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -108,7 +108,7 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 	/**
 	 * Trace objects outlive neither the seven-day window nor a result that is about to
 	 * be deleted: drop R2 first, then null `trace_key`, so a download never points at a
-	 * missing object (ADR-037).
+	 * missing object.
 	 */
 	tables.push(record("flow_traces", await deleteExpiredFlowTraces(ctx.db, flowTraces(), now)));
 

@@ -1,4 +1,4 @@
--- Flow monitor Performance traces in R2 (ADR-037)
+-- Flow monitor Performance traces in R2
 --
 -- A nullable key on the result row points at the chrome://tracing JSON in the
 -- FLOW_TRACES bucket. The object lives at most seven days; the result row keeps

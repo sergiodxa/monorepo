@@ -1,6 +1,6 @@
 /**
  * Tests the in-run artifact buffer that captures `browser.trace.stop` JSON when
- * the flow workspace has no filesystem (ADR-037).
+ * the flow workspace has no filesystem.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

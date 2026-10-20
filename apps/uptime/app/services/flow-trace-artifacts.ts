@@ -1,7 +1,7 @@
 /**
  * An {@link ArtifactStore} that keeps Performance-trace JSON in memory for the
  * life of one flow check, so `browser.trace.stop` can land without a filesystem
- * and the host can upload the last trace after the result row exists (ADR-037).
+ * and the host can upload the last trace after the result row exists.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
