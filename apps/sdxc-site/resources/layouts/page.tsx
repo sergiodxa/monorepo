@@ -65,7 +65,7 @@ export default function PageLayout(handle: Handle<PageLayout.Props>) {
 									[ {eyebrow} ]
 								</p>
 								<ProseHeading level={1}>{title}</ProseHeading>
-								<p mix={[m(0), text("lg"), leading("relaxed"), fg("neutral")]}>{description}</p>
+								<p mix={[m(0), text("xl"), leading("relaxed"), fg("neutral")]}>{description}</p>
 								{lastUpdated ? (
 									<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
 										Last updated {lastUpdated}
