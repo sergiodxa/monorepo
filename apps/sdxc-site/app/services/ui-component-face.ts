@@ -231,9 +231,9 @@ const FACES: Record<string, Shape[]> = {
 	],
 	"color-picker": [
 		{ kind: "rect", x: 50, y: 30, w: 40, h: 40, r: 10, tone: "accent" },
-		{ kind: "rect", x: 98, y: 30, w: 8, h: 12, r: 3, tone: "surface" },
-		{ kind: "rect", x: 98, y: 44, w: 8, h: 12, r: 3, tone: "label" },
-		{ kind: "rect", x: 98, y: 58, w: 8, h: 12, r: 3, tone: "accent" },
+		{ kind: "rect", x: 98, y: 30, w: 8, h: 13, r: 3, tone: "surface" },
+		{ kind: "rect", x: 98, y: 43, w: 8, h: 14, r: 3, tone: "label" },
+		{ kind: "rect", x: 98, y: 57, w: 8, h: 13, r: 3, tone: "accent" },
 	],
 	"color-slider": [
 		{ kind: "rect", x: 44, y: 46, w: 72, h: 8, r: 4, tone: "accent" },
@@ -367,8 +367,8 @@ const FACES: Record<string, Shape[]> = {
 		{ kind: "line", x1: 70, y1: 50, x2: 90, y2: 50, tone: "ink", weight: 2.0 },
 	],
 	empty: [
-		{ kind: "rect", x: 52, y: 26, w: 56, h: 40, r: 10, tone: "surface" },
-		{ kind: "line", x1: 66, y1: 74, x2: 94, y2: 74, tone: "label", weight: 1.5 },
+		{ kind: "rect", x: 52, y: 28, w: 56, h: 44, r: 10, tone: "surface" },
+		{ kind: "circle", cx: 80, cy: 50, r: 8, tone: "label" },
 	],
 	"field-error": [
 		{ kind: "rect", x: 44, y: 30, w: 72, h: 18, r: 8, tone: "surface" },
