@@ -54,6 +54,11 @@
 					"default": true,
 					"description": "Write a test beside every generated file except migrations and factories"
 				},
+				"specs": {
+					"type": "boolean",
+					"default": true,
+					"description": "Write a pairing .spec under spec/ for controllers, commands, MCP tools and scaffolds"
+				},
 				"stubs": {
 					"type": "string",
 					"default": ".config/sdxc/stubs",
@@ -67,6 +72,7 @@
 					"default": "database/migrations"
 				},
 				"tests": true,
+				"specs": true,
 				"stubs": ".config/sdxc/stubs"
 			}
 		},
