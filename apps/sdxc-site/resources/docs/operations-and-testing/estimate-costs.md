@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 6
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to turn requests, CPU time, KV reads and D1 rows into cents"
     - "How to price one unit of work and see which binding dominates"
@@ -105,9 +105,11 @@ database held over the month; the five included come off it like any other allow
 per-line breakdown is what a usage dashboard renders: which meter crossed its allowance, and
 by how much.
 
+<note>
 The result is a floor rather than the invoice. Cloudflare rounds billable usage up to its next
 billing unit, such as R2 to the next million operations and Durable Objects to the next million
 GB-seconds, so a small overage costs more than the exact rate predicts.
+</note>
 
 ## Price one unit of work
 
@@ -245,7 +247,12 @@ you derive, so a reader knows what the estimate rests on. `AnalyticsEngine.BILLI
 before you count those meters.
 
 Releases are dated, and any release may change a price. Pin one exact version, and keep a test
-that states what a known month costs, so an upgrade that moves a price fails there first:
+that states what a known month costs, so an upgrade that moves a price fails there first.
+
+## Test what a known month costs
+
+`estimateMonth` is plain arithmetic, so its test feeds it a month of usage and states the bill:
+one month inside every allowance, and one past a single allowance by a known amount.
 
 ```typescript {% title="app/services/estimate.test.ts" %}
 import { expect, test } from "vitest";
@@ -281,8 +288,6 @@ Fifteen million reads past the ten million included, at $0.50 a million, is $7.5
 
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — the log records
   the counters and the warning land on.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the database
-  the observer is attached to.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — cut the
   reads the estimate says dominate.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — schedule the

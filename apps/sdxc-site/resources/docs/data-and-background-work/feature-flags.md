@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 6
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to declare flags in a typed catalog and publish `ctx.flags`"
     - "How to target a flag by rule or percentage and store definitions in KV"
@@ -102,8 +102,12 @@ duration, and evaluating a flag adds no log lines of its own.
 ## Publish `ctx.flags`
 
 The router middleware from `@sdxc/flags/middleware/router` reads the request's subject once and
-publishes a client as `ctx.flags`. List it after your auth middleware, so the subject is known,
-and after `log()`, so the hook has a record to write to:
+publishes a client as `ctx.flags`:
+
+<note>
+List `featureFlags()` after your auth middleware, so the subject is known, and after `log()`,
+so the hook has a record to write to.
+</note>
 
 ```typescript {% title="app/initializers/router.ts" %}
 import featureFlags from "@sdxc/flags/middleware/router";
@@ -217,8 +221,10 @@ Segments are conditions declared once under the set's `segments` and referenced 
 
 A split hashes the subject with the flag key, so a subject lands in the same arm on every request
 in every isolate, and widening `on: 10` to `on: 25` keeps the first ten percent where they were.
+<warning>
 When the context has no `targetingKey`, the split cannot place anyone: the evaluation reports
 `TARGETING_KEY_MISSING` and serves the default, so a rollout that reached nobody reads as one.
+</warning>
 
 ## Move definitions into KV
 
@@ -246,8 +252,12 @@ export function flagProvider(): EngineProvider {
 ```
 
 In `app/initializers/flags.ts`, pass `provider: flagProvider` to `createFlags` in place of the in-memory
-provider. Reloading is yours to schedule, because a Worker only has time while an invocation is
-running.
+provider.
+
+<note>
+Reloading is yours to schedule, because a Worker only has time while an invocation is running.
+</note>
+
 `flagProvider().refresh()` reads the store again and answers with a `Result`, so hand it to
 `waitUntil` behind a response and log a failure rather than failing the request. An admin page
 writes a new set with `store.write(set)`, and validates an edit first against
@@ -284,8 +294,12 @@ export function readCondition(set: FlagSet, text: string) {
 }
 ```
 
+<warning>
 Store the JSON that `parse` answered, never the text: the text form is for people, and the
-stored set stays the one the engine reads. Compiling against the set's segments catches what
+stored set stays the one the engine reads.
+</warning>
+
+Compiling against the set's segments catches what
 parsing cannot — a segment nobody declared, two segments that reference each other, a `matches`
 pattern that does not compile — and the error's `path` names the node, so the page can point at
 it. [Rules your users write](/docs/data-and-background-work/conditions) covers the condition language

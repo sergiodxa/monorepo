@@ -63,8 +63,12 @@ run({
 ```
 
 The package map is checked first, because a bare specifier resolved as a URL turns into a
-path the glob has no key for. Miss this step and nothing fails loudly: the page renders, the
-island never mounts, and every reader gets the plain links.
+path the glob has no key for.
+
+<warning>
+Miss this step and nothing fails loudly: the page renders, the island never mounts, and every
+reader gets the plain links. The last test in [Test it](#test-it) is the one that catches it.
+</warning>
 
 ## Start from a link
 
@@ -83,8 +87,11 @@ import { LazyFrame } from "@sdxc/lazy-frame/ui";
 The component renders a `<div>` around its content, holding the children until the reader
 arrives and then a `Frame` for `src`. While the request is in the air, `fallback` stands in,
 and it defaults to the children, so the link stays put until the postings replace it.
+
+<note>
 `children` and `fallback` each take one element, text, a number, a boolean or `null`, the
 values a client entry's props can carry to the browser.
+</note>
 
 The swap latches. A frame that has loaded keeps its content when it scrolls out of view or
 its dialog closes, and asks for `src` once.

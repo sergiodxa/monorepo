@@ -193,11 +193,14 @@ answer, a `TransportError` or `ServerFailureError`, is retried as an unknown rat
 as "not published". A match marks the row and hands over to the next job, and the handler
 holds the dispatcher here because it is already running inside it.
 
-Retrying over minutes rather than checking once matters for another reason: a resolver that
-answered "no such name" before the record existed can keep that answer for the zone's
-negative-caching TTL. The queue consumer's `max_retries` bounds how long the job keeps trying,
-so set it to cover the window you promise customers, and give the settings page a "Check
-again" button that enqueues the job afresh once it gives up.
+Retrying over minutes matters for another reason: a resolver that answered "no such name"
+before the record existed can keep that answer for the zone's negative-caching TTL.
+
+<note>
+The queue consumer's `max_retries` bounds how long the job keeps trying, so set it to cover the
+window you promise customers, and give the settings page a "Check again" button that enqueues
+the job afresh once it gives up.
+</note>
 
 ## Register the proven domain
 
@@ -345,16 +348,93 @@ export default createAction(routes.domains.destroy, async (ctx) => {
 });
 ```
 
-`findForAccount` scopes the lookup to the signed-in account, so one customer can never remove
-another's domain by guessing its id. A verify or activate job still queued for the domain finds
-no row and exits for good.
+<warning>
+Look the domain up with `findForAccount`, scoped to the signed-in account. A lookup by id alone
+lets one customer remove another's domain by guessing its id.
+</warning>
+
+A verify or activate job still queued for the domain finds no row and exits for good.
+
+## Test the verify job
+
+Run the job through a dispatcher over a memory queue and the in-memory D1 from
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), and answer the DNS
+query with MSW at the resolver `@sdxc/doh` asks by default:
+
+```typescript {% title="app/jobs/domains/verify.test.ts" %}
+import { CLOUDFLARE } from "@sdxc/doh";
+import * as memory from "@sdxc/jobs/memory";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
+
+import { createDispatcher } from "~/app/initializers/dispatcher";
+import jobs from "~/app/jobs";
+import { Domains } from "~/app/models/domains";
+import { createTestDatabase } from "~/app/test/database";
+
+let server = setupServer();
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+function publish(records: string[]) {
+	server.use(
+		http.get(CLOUDFLARE.url, ({ request }) => {
+			let name = new URL(request.url).searchParams.get("name");
+			let Answer = records.map((data) => ({
+				name: `${name}.`,
+				type: 16,
+				TTL: 60,
+				data,
+			}));
+			return HttpResponse.json(
+				records.length ? { Status: 0, Answer } : { Status: 3 },
+			);
+		}),
+	);
+}
+
+async function runVerify(token: string) {
+	let db = await createTestDatabase();
+	let domain = await Domains.create(db, {
+		accountId: "account-1",
+		hostname: "shop.example.com",
+		token: "token-1",
+	});
+	let queue = memory.queue();
+	let dispatcher = createDispatcher({ queue, openDb: () => db });
+
+	publish(token ? [`"yourapp-verification=${token}"`] : []);
+	await dispatcher.enqueue(jobs.domains.verify, { domainId: domain.id });
+	let settlements = await queue.drain((delivery) => dispatcher.deliver(delivery));
+	return { settlements, domain: await Domains.find(db, domain.id) };
+}
+
+test("retries while the record is missing", async () => {
+	let { settlements, domain } = await runVerify("");
+
+	expect(settlements).toMatchObject([{ type: "retry" }]);
+	expect(domain?.verifiedAt).toBeNull();
+});
+
+test("marks the domain verified once the record matches", async () => {
+	let { settlements, domain } = await runVerify("token-1");
+
+	expect(settlements).toEqual([{ type: "ack" }]);
+	expect(domain?.verifiedAt).not.toBeNull();
+});
+```
+
+A name that does not exist yet is `Status: 3`, NXDOMAIN, which `verifyTxtRecord` reads as
+`success(false)`. The verified run hands over to the activate job through the app's dispatcher,
+so `QUEUE` in `app/test/cloudflare-workers.ts` receives that message.
 
 ## Where to go next
 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   retries, and the queue configuration `max_retries` lives in.
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — rendering the
-  issues the add-domain form returns.
 - [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — the token
   generator and the rest of `@sdxc/crypto`.
 - [`@sdxc/doh`](/api/doh) — `resolve` for any record type, and the error classes that tell a

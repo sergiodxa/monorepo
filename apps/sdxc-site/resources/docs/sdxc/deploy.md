@@ -12,13 +12,16 @@ outcomes:
     - "How to change the migrate and deploy commands it runs, and how to run it in CI"
 ---
 
+Shipping an app is three steps, and their order matters: code deployed ahead of its migration
+runs against a schema it does not expect. `sdxc deploy` runs them in the only safe order, build,
+apply the production migrations, deploy, behind one confirmation:
+
 ```bash
 sdxc deploy
 ```
 
-`sdxc deploy` ships an app in the only safe order: build, apply the production migrations,
-deploy. New code never reaches production ahead of the schema it expects, and a failed build or
-migration stops the run before anything is deployed.
+A failed build or migration stops the run before anything is deployed, so new code never
+reaches production ahead of the schema it expects.
 
 ## How it asks the app
 

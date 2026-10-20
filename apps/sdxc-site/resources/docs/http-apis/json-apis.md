@@ -91,10 +91,14 @@ export default defineProblems("https://books.example.com/docs/errors/", {
 });
 ```
 
-The base URL must end in `/`, and each `type` should resolve to a page describing the error:
-`problems.entries()` lists every entry with its resolved `type`, which is what an error
-reference page renders from. The `extensions` schema types the builder's argument, so
+Each `type` should resolve to a page describing the error: `problems.entries()` lists every
+entry with its resolved `type`, which is what an error reference page renders from. The `extensions` schema types the builder's argument, so
 `validationFailed` will not compile without its `errors`.
+
+<note>
+End the base URL with `/`. Each `type` is the base followed by the slug, so a base without the
+trailing slash runs into it, and every `type` names a page such as `…/errorsnot-found`.
+</note>
 
 ## Validate the body and create
 
@@ -285,12 +289,18 @@ export function apiRateLimit() {
 }
 ```
 
-`API_RATE_LIMITER` is a Workers rate limiting binding, and the adapter's `limit` and `window`
-must mirror the binding's own: the binding does the counting, and the adapter uses the
-numbers to compute the reset. `getClientIP` parses the `CF-Connecting-IP` header into an
-address, and the key is the network it sits in: the address itself for IPv4, its `/64` for
-IPv6, since an IPv6 client holds the whole block and could rotate through it. A request
-without a parseable header shares the `"unknown"` budget. Once your API authenticates
+`API_RATE_LIMITER` is a Workers rate limiting binding.
+
+<warning>
+Give the adapter the same `limit` and `window` as the binding's own configuration. The binding
+does the counting and the adapter only uses the numbers to compute the reset, so a mismatch
+writes `RateLimit` and `Retry-After` headers that tell callers the wrong budget.
+</warning>
+
+`getClientIP` parses the `CF-Connecting-IP` header into an address, and the key is the
+network it sits in: the address itself for IPv4, its `/64` for IPv6, since an IPv6 client holds
+the whole block and could rotate through it. A request without a parseable header shares the
+`"unknown"` budget. Once your API authenticates
 callers, key on the caller's identity instead of the address, so one client cannot spend
 another's budget.
 
@@ -326,15 +336,63 @@ export function createWebRouter() {
 }
 ```
 
+## Test the endpoints
+
+A route test sends a `Request` through the router the Worker builds, so the limiter, the
+validation and the problem catalog all run. Add the limiter's binding to the
+`cloudflare:workers` stand-in in `app/test/cloudflare-workers.ts`, beside the bindings it
+already holds, with the same numbers as the adapter:
+
+```typescript {% title="app/test/cloudflare-workers.ts" %}
+import { createD1Database, createRateLimit } from "@sdxc/cloudflare-mocks";
+
+export const env = {
+	DB: createD1Database(),
+	API_RATE_LIMITER: createRateLimit({ limit: 100, period: 60 }),
+} as Partial<Cloudflare.Env> as Cloudflare.Env;
+```
+
+Both cases below are refused before any query runs, so they need no rows:
+
+```typescript {% title="app/http/controllers/api/books/create.test.ts" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+
+test("a refused body answers 422 with a pointer to the field", async () => {
+	let response = await createWebRouter().fetch(
+		new Request("https://books.example.com/api/books", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ title: "Kindred", author: "Octavia E. Butler" }),
+		}),
+	);
+
+	expect(response.status).toBe(422);
+	expect(response.headers.get("Content-Type")).toContain(
+		"application/problem+json",
+	);
+	expect(await response.json()).toMatchObject({
+		type: "https://books.example.com/docs/errors/validation-failed",
+		errors: [{ pointer: "/year" }],
+	});
+});
+
+test("a malformed id answers 404 and states the remaining budget", async () => {
+	let response = await createWebRouter().fetch(
+		"https://books.example.com/api/books/not-an-id",
+	);
+
+	expect(response.status).toBe(404);
+	expect(response.headers.get("RateLimit")).not.toBeNull();
+});
+```
+
 ## Where to go next
 
 - [Describe your API with OpenAPI](/docs/http-apis/openapi) — publish these schemas and
   problems as an OpenAPI 3.1 document.
-- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — parse, get and set the
-  pointers `issuesFrom` writes.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — make `create` safe
   to retry and add a partial update.
 - [Write a typed API client](/docs/http-apis/api-clients) — consume this API with the same
   catalog.
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the same
-  schemas behind HTML forms.

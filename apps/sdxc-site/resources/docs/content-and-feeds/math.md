@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 30
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to convert TeX formulas into MathML with `@sdxc/math`"
     - "How to find the math in markdown and draw it in a route"
@@ -138,8 +138,12 @@ export function preparePost(document: Markdown.Document) {
 }
 ```
 
-Both visitors handle fenced code, and a spread keeps only the last `code` handler, so the
-walk gets one that runs them in turn: a `math` fence becomes a tag, and every other block
+<warning>
+Both visitors handle fenced code, and a spread keeps only the last `code` handler. Spreading
+`highlight` beside `math` drops one of them, so the walk gets a `code` handler that runs both.
+</warning>
+
+The handler above runs them in turn: a `math` fence becomes a tag, and every other block
 comes back from `math.code` as the same node for the highlighter to paint. The rest of the
 math visitor spreads in as it is, covering inline math in paragraphs, headings, table cells,
 emphasis and links.
@@ -168,9 +172,12 @@ export function checkMath(path: string, source: string): string | null {
 }
 ```
 
-For content you do not control, such as comments or imported notes, build the visitor with
-`createMathVisitor({ invalid: "keep" })`. A formula that does not convert then stays the code
+<warning>
+A walk with `math` fails on the first formula that does not convert. For content you do not
+control, such as comments or imported notes, build the visitor with
+`createMathVisitor({ invalid: "keep" })`: a formula that does not convert then stays the code
 block or inline code its author wrote, and the walk succeeds.
+</warning>
 
 ## Draw the tags in a route
 
@@ -231,6 +238,46 @@ export function renderHTML(document: Markdown.Document): string {
 
 Feed readers that understand MathML draw the formula, and the `annotation` keeps the TeX in
 the item for the ones that show source.
+
+## Test it
+
+The combined `code` handler is the part of the preparation you wrote, and the check is what
+fails a broken post, so test both:
+
+```typescript {% title="app/services/content/prepare.test.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { preparePost } from "~/app/services/content/prepare";
+
+test("turns math fences into tags and highlights the rest", () => {
+	let { document } = unwrap(
+		Markdown.parse("~~~math\nx^2\n~~~\n\n~~~ts\nlet a = 1;\n~~~\n"),
+	);
+
+	let [formula, code] = unwrap(preparePost(document)).children;
+
+	expect(formula).toMatchObject({
+		type: "tag",
+		name: "math",
+		attributes: { tex: "x^2" },
+	});
+	expect(code).toMatchObject({ type: "code", tokens: expect.any(Array) });
+});
+```
+
+```typescript {% title="scripts/check-posts.test.ts" %}
+import { expect, test } from "vitest";
+
+import { checkMath } from "./check-posts";
+
+test("names the line of a formula that does not convert", () => {
+	expect(checkMath("sums.md", "# Sums\n\nThe sum is $`\\frac{1}`$.\n")).toBe(
+		"sums.md:3: Expected an argument",
+	);
+});
+```
 
 ## Where to go next
 

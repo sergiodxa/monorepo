@@ -12,8 +12,11 @@ outcomes:
     - "How to change the command line's defaults with `.config/sdxc.jsonc`"
 ---
 
-`sdxc create` writes a new project in the folder layout every other `sdxc` command expects, and
-`sdxc init` writes the one file that changes the command line's defaults.
+Every other `sdxc` command expects a project laid out one way, with its entry points,
+initializers and routes where it can find them. `sdxc create` writes a new project in that
+layout, ready for `bun dev`, and `sdxc init` writes the one file that changes the command
+line's defaults. By the end of this page you have a running app and know what each folder in it
+is for.
 
 ## Create a project
 

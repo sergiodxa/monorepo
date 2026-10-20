@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to parse posts with typed frontmatter and custom tags using `@sdxc/markdown`"
     - "How to transform the tree in one walk and read it without changing it"
@@ -158,8 +158,13 @@ how a check you add later (a code block with no language, say) reports the line 
 
 ## Load and parse inside the request
 
-Keep the files as raw strings and parse per request. A Worker rejects an upload whose global
-scope does real work, and a lazy glob means a page pays for the one post it renders.
+Keep the files as raw strings and parse per request, and a lazy glob means a page pays for the
+one post it renders.
+
+<warning>
+Parse inside the request, never at module scope. A Worker rejects an upload whose global scope
+does real work, and a local build or a dry run passes without showing it.
+</warning>
 
 ```typescript {% title="app/services/content/posts.ts" %}
 import { Markdown } from "@sdxc/markdown";
@@ -369,8 +374,12 @@ export function summarize(document: Markdown.Document): string {
 }
 ```
 
-Interpolating `attributes.type` is safe only because its schema allows three fixed words; an
-attribute that takes free text has to be escaped before it goes into markup. Raw HTML an author
+<warning>
+Interpolating `attributes.type` is safe only because its schema allows three fixed words. Escape
+an attribute that takes free text before it goes into markup.
+</warning>
+
+Raw HTML an author
 typed renders as escaped text in both renderers, and an element the `html` allowlist let
 through renders as itself, so neither one writes markup you did not vet. Comments render in
 neither.
@@ -391,16 +400,53 @@ export function renderChapter(document: Markdown.Document): string {
 }
 ```
 
+## Test it
+
+The walk is where a post gains its anchors and absolute links, and the route is where a missing
+or broken post becomes a 404, so test one of each:
+
+```typescript {% title="app/services/content/prepare.test.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { toHTML } from "@sdxc/markdown/html";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { preparePost } from "~/app/services/content/prepare";
+
+test("anchors headings and resolves relative links", () => {
+	let { document } = unwrap(
+		Markdown.parse("## Install it\n\nRead [the setup](/docs/setup).\n"),
+	);
+
+	let html = toHTML(unwrap(preparePost(document)));
+
+	expect(html).toContain('<h2 id="install-it">');
+	expect(html).toContain('href="https://example.com/docs/setup"');
+});
+```
+
+```typescript {% title="app/http/controllers/posts/show.test.tsx" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+test("answers 404 for a post that does not exist", async () => {
+	let response = await createWebRouter().fetch(
+		new URL(
+			routes.posts.show.href({ slug: "no-such-post" }),
+			"https://example.com",
+		),
+	);
+
+	expect(response.status).toBe(404);
+});
+```
+
 ## Where to go next
 
 - [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) — typographic
   punctuation, embeds from pasted URLs, link rewriting and a content check in CI.
-- [Fill markdown templates with variables](/docs/content-and-feeds/markdown-variables) — one
-  parsed document rendered per tenant, plan or locale.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — serve these
   posts to feed readers, with `toHTML` supplying each item's body.
-- [Join the IndieWeb](/docs/content-and-feeds/indieweb) — send a Webmention to every page a
-  post links to.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) — the
-  components and mixins the page around the article is built from.
 - [`@sdxc/markdown`](/api/markdown) — variables, annotations, GitHub alerts and the full AST.

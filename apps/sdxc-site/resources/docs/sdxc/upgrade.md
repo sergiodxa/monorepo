@@ -12,11 +12,15 @@ outcomes:
     - "How to hand the upgrade prompt to your AI agent"
 ---
 
+Every `@sdxc` package ships on one dated release, so upgrading is moving them all together and
+then changing your code for what changed between the two releases. One command does the first
+and writes the instructions for the second:
+
 ```bash
 sdxc upgrade
 ```
 
-`sdxc upgrade` moves every `@sdxc/*` package your `package.json` lists to its version at the
+It moves every `@sdxc/*` package your `package.json` lists to its version at the
 target release, and `remix` to the version that release declares. It installs, then prints a
 prompt for an AI agent with the release notes of the packages your code imports, so the agent
 edits the code for exactly the changes you crossed.

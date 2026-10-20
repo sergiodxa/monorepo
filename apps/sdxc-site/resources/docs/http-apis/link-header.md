@@ -5,16 +5,17 @@ section:
     title: HTTP APIs
     order: 5
 order: 7
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to parse and write RFC 8288 `Link` headers with `@sdxc/link-header`"
     - "How to merge headers without dropping foreign links"
     - "How to follow `next` links as a client and drop malformed entries"
 ---
 
-A `Link` header is a list of URI-References with relation types and parameters. Splitting
-on commas is wrong: a target can contain a comma and a parameter value can be quoted.
-[`@sdxc/link-header`](/api/link-header) scans angle brackets and quoted strings instead.
+A `Link` header is a list of URI-References with relation types and parameters. A target
+can contain a comma and a parameter value can be quoted, so
+[`@sdxc/link-header`](/api/link-header) splits entries only on the commas outside angle
+brackets and quoted strings.
 
 Malformed entries are dropped, so a merge into a response already under construction cannot
 fail on one bad link. [`@sdxc/pagination`](/api/pagination) writes paging relations with
@@ -53,8 +54,11 @@ links.find((link) => link.rels.includes("next"))?.target; // "/items?page=2"
 the first of every other name, unquoted. An entry with no URI-Reference is skipped, so a
 malformed fragment ends that one link rather than the walk.
 
-Relative targets stay relative. Resolve them with `new URL(target, response.url)` when the
-resource was fetched.
+<note>
+Relative targets stay relative, and `fetch` in a Worker needs an absolute URL. Resolve each
+target against the response it came from, `new URL(target, response.url)`, before you follow
+it.
+</note>
 
 ## Write a header
 
@@ -114,7 +118,8 @@ export async function fetchAll<T>(start: string): Promise<T[]> {
 		items.push(...((await response.json()) as T[]));
 
 		let links = parse(response.headers.get("Link"));
-		next = links.find((link) => link.rels.includes("next"))?.target ?? null;
+		let target = links.find((link) => link.rels.includes("next"))?.target;
+		next = target === undefined ? null : new URL(target, response.url).href;
 	}
 
 	return items;
@@ -125,12 +130,35 @@ export async function fetchAll<T>(start: string): Promise<T[]> {
 [Write a typed API client](/docs/http-apis/api-clients) does the same walk behind a schema
 on each page.
 
+## Test the merge
+
+`setNextLink` works on a `Headers` instance, so its test needs no request. The case to prove
+is the foreign link surviving while `next` is replaced:
+
+```typescript {% title="app/services/set-next-link.test.ts" %}
+import { parse } from "@sdxc/link-header";
+import { expect, test } from "vitest";
+
+import { setNextLink } from "~/app/services/set-next-link";
+
+test("replaces next and keeps the preload", () => {
+	let headers = new Headers({
+		Link: '</app.css>; rel="preload"; as="style", </items?page=2>; rel="next"',
+	});
+
+	setNextLink(headers, "/items?page=3");
+
+	let links = parse(headers.get("Link"));
+	expect(links.map((link) => link.rels[0])).toEqual(["preload", "next"]);
+	expect(links[0]?.params).toEqual({ as: "style" });
+	expect(links[1]?.target).toBe("/items?page=3");
+});
+```
+
 ## Where to go next
 
 - [Paginate lists](/docs/http-apis/paginate-lists) — offset and keyset pages, and the
   `Link` values `paginate` writes.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — `rel="hub"`
   and `rel="self"` for WebSub.
-- [Join the IndieWeb](/docs/content-and-feeds/indieweb) — discover a Webmention endpoint
-  from the header first.
 - [`@sdxc/link-header`](/api/link-header) — the `Link` type and the empty-header cases.

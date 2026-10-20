@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 10
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to let a customer's directory sign people in over SAML 2.0"
     - "How to verify an assertion and remember it for as long as it is valid"
@@ -28,7 +28,7 @@ npm add @sdxc/crypto @sdxc/duration @sdxc/http @sdxc/lazy-route @sdxc/result @sd
 	@sdxc/scim @sdxc/uuid remix
 ```
 
-## The routes
+## Declare the routes
 
 Every customer gets its own connection, named by a slug. Each connection is a separate
 service provider to the customer's directory, with its own entity id, so its URLs carry the
@@ -245,7 +245,7 @@ import * as SAML from "@sdxc/saml";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import { startSession } from "~/app/http/session";
+import { startSession } from "~/app/services/auth/session";
 import { Users } from "~/app/models/users";
 import { findPending } from "~/app/services/sso/pending";
 import { replayStore } from "~/app/models/replay-store";
@@ -291,22 +291,35 @@ export default createAction(routes.sso.acs, async (ctx) => {
 
 `findPending` is yours: it validates the posted `SAMLResponse` and `RelayState` fields,
 reads the stored request under the `RelayState` from the `SSO` namespace, and loads the
-connection with its certificates parsed by `SAML.Certificate.parse`. The handler deletes that
-entry before verifying anything, so each request answers at most one response. A response with
-no `RelayState` is a sign-in the provider started; refusing it, as here, is the safe default,
-and `inResponseTo: null` is how you accept one once you have decided to.
+connection with its certificates parsed by `SAML.Certificate.parse`. `startSession` is your
+own sign-in, the one every other way in shares.
+
+<warning>
+Delete the pending entry before verifying anything, as the handler does, so each request
+answers at most one response. A response with no `RelayState` is a sign-in the provider
+started; refusing it is the safe default, and `inResponseTo: null` is how you accept one once
+you have decided to.
+</warning>
 
 The failure's `name` is safe to log: no `SAMLError` carries key material or anything the
 document supplied beyond a fixed identifier. `UnsupportedFeatureError` names the setting the
-customer has to change, such as SHA-1 signatures. Key the account on the `NameID` for this
-connection rather than on the email, which the directory may change. For encrypted
+customer has to change, such as SHA-1 signatures.
+
+<warning>
+Key the account on the `NameID` for this connection, and keep the email as a field: the
+directory may change an email, and an account keyed on it changes hands with the address.
+</warning>
+
+For encrypted
 assertions, pass your private key imported for `RSA-OAEP` as `decryptionKey`, once with
 SHA-1 and once with SHA-256 in an array, since providers use both.
 
+<note>
 Two more things belong in front of this route. It receives a cross-site `POST`, so exempt it
 from Remix's [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware)
 protection the way you would a webhook. And canonicalizing the document is CPU work over the
 whole assertion, so cap the size of the body before it gets here.
+</note>
 
 ## Remember assertions for as long as they are valid
 
@@ -348,14 +361,23 @@ export function replayStore(db: Database, connectionId: string): ReplayStore {
 ```
 
 The connection id is part of the key because the provider chooses assertion ids, and two
-providers must not collide. A D1 table is consistent where KV is eventually consistent, which
-matters for a check whose whole job is to catch the second use. A store that throws surfaces as
+providers must not collide. A store that throws surfaces as
 `ReplayStoreError`: no verdict was reached, so let the person retry.
+
+<warning>
+Keep the replay store in D1. KV is eventually consistent, so a second use of a captured
+assertion can reach a location that has yet to see the first, and pass.
+</warning>
 
 ## Authenticate the directory
 
 SCIM clients authenticate with a bearer token you issue per directory. Store only its SHA-256
 hash, and look the directory up by it:
+
+<warning>
+Store the hash and show the token once, when you issue it. A stored token is a working
+credential for anyone who reads the table, and a hash is worth nothing to them.
+</warning>
 
 ```typescript {% title="app/http/middleware/scim-auth.ts" %}
 import type { Middleware } from "remix/router";
@@ -645,7 +667,7 @@ export default createAction(routes.scim.users.patch, {
 `"False"` string as `false`. When `Users.replace` sees `active` turn false, end that person's
 sessions there: that is the reason the customer asked for SCIM.
 
-## Groups
+## Provision groups
 
 Groups follow the same shape with `parseGroup` and `groupResource`. A member's `value` is the
 `id` your user resource answered with, and membership changes arrive as PATCH operations on
@@ -735,16 +757,60 @@ export function createWebRouter() {
 ```
 
 Reading, replacing and deleting a user or a group are the same calls in a different order:
-`parseUser` or `parseGroup` for a `PUT`, and a `204` for a `DELETE`. Directories retry
-eagerly, so give the SCIM routes a rate limit of their own, keyed on the token's hash.
+`parseUser` or `parseGroup` for a `PUT`, and a `204` for a `DELETE`.
+
+<note>
+Directories retry eagerly, so give the SCIM routes a rate limit of their own, keyed on the
+token's hash.
+</note>
+
+## Test the SCIM endpoint
+
+Fetch the router a worker builds. Discovery answers a client that has no token yet, and every
+other SCIM route answers a missing token with the RFC's error document:
+
+```typescript {% title="app/http/controllers/scim/users.test.ts" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
+
+beforeAll(migrate);
+
+function scim(href: string, headers?: HeadersInit) {
+	return createWebRouter().fetch(
+		new Request(new URL(href, "https://example.com"), { headers }),
+	);
+}
+
+test("discovery answers before a token is presented", async () => {
+	let response = await scim(routes.scim.discovery.config.href());
+
+	expect(response.status).toBe(200);
+	expect(response.headers.get("Content-Type")).toBe("application/scim+json");
+	expect(await response.json()).toMatchObject({ patch: { supported: true } });
+});
+
+test("a token that matches no directory is refused", async () => {
+	let response = await scim(routes.scim.users.list.href(), {
+		Authorization: "Bearer not-a-token",
+	});
+
+	expect(response.status).toBe(401);
+	expect(await response.json()).toMatchObject({ status: "401" });
+});
+```
+
+`migrate` is the helper from [Test Workers apps](/docs/operations-and-testing/testing) that applies
+your migrations to the in-memory database the test environment binds, so `scimAuth` reads a
+real, empty directories table.
 
 ## Where to go next
 
 - [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — the other
   protocol enterprise directories speak, and the session a sign-in lands in.
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — reading
-  the posted `SAMLResponse` and `RelayState` fields in `findPending`.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the
   database behind the replay store and the `Users` model.
-- [`@sdxc/saml`](/api/saml) and [`@sdxc/scim`](/api/scim) — every error class, and the
-  filter, PATCH and discovery reference.
+- [`@sdxc/scim`](/api/scim) — every error class, and the filter, PATCH and discovery
+  reference.

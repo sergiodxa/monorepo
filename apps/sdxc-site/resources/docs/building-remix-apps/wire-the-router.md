@@ -26,10 +26,13 @@ npm add @sdxc/data-table-d1 @sdxc/database-middleware @sdxc/http @sdxc/lazy-rout
 	@sdxc/logger @sdxc/trace-context @sdxc/user-agent remix
 ```
 
-The logger, the trace and `asyncContext()` all keep per-request state in `AsyncLocalStorage`,
-so enable the `nodejs_compat` compatibility flag on the Worker.
+<warning>
+The logger, the trace and `asyncContext()` all keep per-request state in
+`AsyncLocalStorage`, so enable the `nodejs_compat` compatibility flag on the Worker before you
+deploy this chain.
+</warning>
 
-## One logger per worker
+## Create one logger per Worker
 
 A logger is configuration, not a per-request object. Create it once in its own module, so the
 router and anything else that opens a log (a job dispatcher, a cron handler) write records
@@ -45,7 +48,7 @@ The `log(logger)` middleware opens one wide record per request, publishes it as 
 and writes it once the response settles. Handlers never construct a logger; they add fields
 to the one already open.
 
-## The composition root
+## Build the composition root
 
 Build the router in a function rather than at module scope. The Worker calls it per request,
 and a test calls the same function, so what the test drives is the chain production runs.
@@ -111,7 +114,7 @@ Write the list inline in `createRouter()`, so the router's context type records 
 middleware adds. Each package also augments `RequestContext` in `remix/router`, so installing
 `log()` is what makes `ctx.log` exist in your editor.
 
-## Publishing a service
+## Publish a service
 
 A service a handler needs, such as the database, belongs on the context rather than in an
 import. The database opens from the D1 binding:
@@ -130,8 +133,10 @@ export function openDatabase(): Database {
 request context. A service of your own follows the same pattern: a context key, a `db`-style
 property declared on `RequestContext`, and middleware that sets the value per request:
 
-```typescript
+```typescript {% title="app/http/middleware/billing.ts" %}
 import type { Middleware } from "remix/router";
+
+import type { BillingClient } from "~/app/services/billing";
 
 import { createContextKey } from "remix/router";
 
@@ -198,7 +203,7 @@ export function createWebRouter(db: DataTable = openDatabase()) {
 }
 ```
 
-## Reading it from a handler
+## Read it from a handler
 
 A handler reads everything from `ctx`, and adds what it learned to the log instead of
 writing a line of its own. `Project` is your model and `ProjectPage` your view.
@@ -227,7 +232,7 @@ export default createAction(routes.project, async (ctx) => {
 and `project.id` becomes a field you can filter on. Code with no `ctx` in reach calls
 `currentLog()` from `@sdxc/logger`, which returns the same log.
 
-## Swapping it in a test
+## Swap it in a test
 
 Because the service arrives through the composition root, a test builds the real router with
 a different source and sends it a request. `createTestDatabase` is a helper of your own that
@@ -268,8 +273,6 @@ export default {
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — what to do
   with `ctx.formData` and `ctx.params` once they arrive.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
-  what goes inside `ctx.render`.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — getting more out
   of `ctx.log` and `ctx.trace`.
 - [Test Workers apps](/docs/operations-and-testing/testing) — building `createTestDatabase`

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 6
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to read the JSDoc in your TypeScript source at build time with `@sdxc/jsdoc`"
     - "How to write the records as JSON and serve a page per public symbol"
@@ -18,9 +18,13 @@ comments do, and a test can keep those comments from going missing. This guide b
 build script reads your package's source into a JSON documentation model, trims it to the
 records a page needs, and a route renders one page per public symbol.
 
-[`@sdxc/jsdoc`](/api/jsdoc) reads JSDoc out of JavaScript and TypeScript source text. It parses
-with the TypeScript compiler, which is larger than a whole Worker and expects globals a Worker
-does not have, so it runs in the build and the Worker only ever reads the JSON it produced.
+[`@sdxc/jsdoc`](/api/jsdoc) reads JSDoc out of JavaScript and TypeScript source text.
+
+<warning>
+`@sdxc/jsdoc` parses with the TypeScript compiler, which is larger than a whole Worker and
+expects globals a Worker lacks. Run it in the build, and let the Worker read only the JSON it
+produced.
+</warning>
 
 ```bash
 npm add @sdxc/http @sdxc/result remix
@@ -260,8 +264,12 @@ export async function findReference(name: string): Promise<ReferencePage | null>
 }
 ```
 
+<note>
 The name comes from the URL, and `Object.hasOwn` is what keeps `/reference/constructor` from
-answering with something inherited. The route is a `get("/reference/:name")`:
+answering with something inherited.
+</note>
+
+The route is a `get("/reference/:name")`:
 
 ```tsx {% title="app/http/controllers/reference.tsx" %}
 import { notFound } from "@sdxc/http/response/html";
@@ -342,5 +350,3 @@ function documents its parameters, by comparing `signatures[0].parameters` again
   every reference page in the sitemap.
 - [Test Workers apps](/docs/operations-and-testing/testing) — where the documentation test
   runs.
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — more on
-  parsing `ctx.params`.

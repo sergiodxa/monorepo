@@ -154,9 +154,13 @@ export function TicketPage(handle: Handle<TicketPageProps>) {
 the page shows the ticket code beside it as the text a volunteer can type. `size` is any CSS
 length for the width and height. `dark` and `light` set the module and background colors,
 `#000` on `#fff` by default; they stay as given under a dark theme, and the SVG opts out of
-forced colors, because a scanner needs a dark code on a light margin. A brand pair passed
-through them needs the same strong contrast. `mix` adds your own mixins after the
-component's.
+forced colors, because a scanner needs a dark code on a light margin. `mix` adds your own
+mixins after the component's.
+
+<note>
+A brand pair passed through `dark` and `light` needs the same strong contrast as black on
+white, with the darker color on the modules, or phones fail to scan the code.
+</note>
 
 An inline SVG needs no `img-src data:` in your Content Security Policy.
 
@@ -207,8 +211,38 @@ export default createAction(routes.tickets.qr, async (ctx) => {
 the quiet zone in modules; 2 suits a badge whose own light border supplies the rest, and the
 default of 4 is what the standard asks for on a busy background. The `viewBox` is in modules,
 one unit each, so the file scales to any print size, and `crispEdges` keeps adjacent rows from
-showing seams at fractional scales. The response is `private` because a ticket's code admits
-its holder.
+showing seams at fractional scales.
+
+<warning>
+A ticket's code admits its holder, so answer it `private`, as above. A `public` response lets
+a shared cache hand one attendee's code to another.
+</warning>
+
+## Test the encoding
+
+The services are plain functions, so a test reads the symbol `QR.encode` chose and the failure
+a capped version answers, with no request involved:
+
+```typescript {% title="app/services/tickets/qr.test.ts" %}
+import { isFailure, unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { badgeCode } from "~/app/services/tickets/badge-code";
+import { checkInCode } from "~/app/services/tickets/qr";
+
+test("encodes a check-in link at level Q or better", () => {
+	let symbol = unwrap(checkInCode("abc123"));
+
+	expect(["Q", "H"]).toContain(symbol.level);
+	expect(symbol.toSVGPath().d).not.toBe("");
+});
+
+test("refuses a badge link longer than version 6 holds", () => {
+	let encoded = badgeCode(`https://example.com/${"x".repeat(300)}`);
+
+	expect(isFailure(encoded) && encoded.error.code).toBe("too-long");
+});
+```
 
 ## Where to go next
 
@@ -216,6 +250,4 @@ its holder.
   authenticator app scans to enroll.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui)
   — the component model `QrCode` renders in.
-- [Security headers and CSP](/docs/identity-and-security/security-headers) — the Content Security
-  Policy an inline SVG fits.
 - [`@sdxc/qr`](/api/qr) — every option, and `isDark` for drawing modules yourself.

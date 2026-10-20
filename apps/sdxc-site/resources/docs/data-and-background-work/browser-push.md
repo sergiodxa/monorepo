@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 14
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to subscribe a browser from a click and store the subscription with `@sdxc/web-push`"
     - "How to send an encrypted notification from a Worker, directly or through messaging"
@@ -72,9 +72,11 @@ private key is a Worker secret:
 cf workers secrets update VAPID_PRIVATE_KEY
 ```
 
+<warning>
 Every browser subscription is bound to the public key it was made with, and a push service
 refuses a message signed by any other. Keep the pair stable, and when it must change, rotate
 it as [Rotate the keys](#rotate-the-keys) shows.
+</warning>
 
 ## Draw the notification in a service worker
 
@@ -146,14 +148,21 @@ export const EnablePush = clientEntry(
 );
 ```
 
-A failed `subscribe` answers `unsupported`, `denied` or `failed` and never throws. On iOS and
-iPadOS, push exists only in a web app added to the Home Screen, which is when `isSupported`
-answers `true`.
+A failed `subscribe` answers `unsupported`, `denied` or `failed` and never throws.
+
+<note>
+On iOS and iPadOS, push exists only in a web app added to the Home Screen, which is when
+`isSupported` answers `true`.
+</note>
 
 ## Store the subscription
 
+<warning>
 The endpoint in a subscription is a URL your Worker will later `POST` to, so it is untrusted
-input. `SUBSCRIPTION_SCHEMA` applies the checks a send applies: a public `https:` host, a
+input. Validate it before you store it.
+</warning>
+
+`SUBSCRIPTION_SCHEMA` applies the checks a send applies: a public `https:` host, a
 P-256 key on the curve and a 16-byte auth secret. A row it accepts is one a send will not
 refuse:
 
@@ -261,10 +270,18 @@ async function applyFailure(
 - `invalid-subscription`, `invalid-options` and `payload-too-large` are answered before any
   request, so a bad row costs no network call.
 
+<note>
 A payload holds at most 3,993 bytes once encrypted into the 4,096-byte body every push service
-accepts. `topic` replaces an undelivered message with the same topic, so a laptop that was
-asleep all night wakes to one notification, not twenty. Errors name the push service's host
-only: an endpoint plus its keys can notify that browser, so treat it like a credential.
+accepts.
+</note>
+
+`topic` replaces an undelivered message with the same topic, so a laptop that was asleep all
+night wakes to one notification, not twenty.
+
+<warning>
+An endpoint plus its keys can notify that browser, so treat a stored subscription like a
+credential. Errors name the push service's host only, so logging one is safe.
+</warning>
 
 ## Send through messaging
 

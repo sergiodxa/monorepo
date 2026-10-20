@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 13
-lastUpdated: 2026-10-16
+lastUpdated: 2026-10-19
 outcomes:
     - "How to open a search dialog from every page's header and show live results in a frame"
     - "How to cache what the dialog asks for with `@sdxc/workers-cache`"
@@ -29,7 +29,7 @@ answers at the edge.
 npm add @sdxc/pagination @sdxc/result @sdxc/u @sdxc/ui remix
 ```
 
-## Two routes
+## Declare two routes
 
 The results page and the dialog's body are two addresses. `/search` is a page a reader can
 bookmark or share. `/frames/search` answers a fragment, the box and a handful of matches, which
@@ -117,8 +117,8 @@ import { Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { matchingArticles, parseArticleQuery } from "~/app/search/articles";
-import { toHit } from "~/app/search/hits";
+import { matchingArticles, parseArticleQuery } from "~/app/models/search/articles";
+import { toHit } from "~/app/services/search/hits";
 import { PUBLIC_PAGE, TAGS } from "~/app/services/edge-cache";
 import { SearchSuggestions } from "~/resources/views/search-suggestions";
 import routes from "~/routes/web";
@@ -176,10 +176,14 @@ engines: each one is a view of articles the sitemap already lists.
 Every page's dialog asks for the same blank `/frames/search`, and readers type the same few
 queries, so `ctx.cache` stores each answer at the edge under the tag every article listing
 carries. The action that saves an article purges that tag, and the next request for any query
-is answered fresh. A failed search replaces the policy with `no-store`, since a later call to
-`ctx.cache` replaces the earlier policy, so a passing database error is never served from the
-cache. `PUBLIC_PAGE` and `TAGS` are the policy and tags
+is answered fresh. `PUBLIC_PAGE` and `TAGS` are the policy and tags
 [Cache data and pages on Workers](/docs/data-and-background-work/cache-on-workers) declares.
+
+<note>
+A later call to `ctx.cache` replaces the earlier policy, which is how a failed search answers
+with `no-store`. Keep that call on every failure path, so a passing database error is never
+served from the cache to every reader who types the same query.
+</note>
 
 ## Render the box and the matches
 
@@ -197,7 +201,7 @@ import { m, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Link, SearchField } from "@sdxc/ui";
 
-import type { SearchHit } from "~/app/search/hits";
+import type { SearchHit } from "~/app/services/search/hits";
 
 import { SEARCH_RESULTS_ID, SearchBox } from "~/resources/components/search-box";
 import { SearchResult } from "~/resources/components/search-result";
@@ -282,7 +286,7 @@ import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Highlight, Link } from "@sdxc/ui";
 
-import type { SearchHit } from "~/app/search/hits";
+import type { SearchHit } from "~/app/services/search/hits";
 
 export function SearchResult(handle: Handle<{ hit: SearchHit }>) {
 	return () => {
@@ -415,12 +419,16 @@ dialog reopens where every reader starts. `autofocus` puts the caret in the box 
 The shortcuts are `bindKeymap` from `@sdxc/ui/mixins`: `⌘K` or `Ctrl+K` opens the dialog from
 anywhere on the page, and `/` does too. Both stand down for a keystroke typed into a field, so
 a `/` typed into a comment box stays a `/`. Escape needs no binding, since the dialog closes on
-it natively. The browser entry has to know this module, which the
-`import.meta.glob` over `resources/` in
-[Load content as readers reach it](/docs/building-remix-apps/load-content-as-readers-reach-it)
-already covers.
+it natively.
 
-## The full results page
+<note>
+The browser entry has to know this module, or the box never hydrates and the dialog stays a
+plain form. The `import.meta.glob` over `resources/` in
+[Load content as readers reach it](/docs/building-remix-apps/load-content-as-readers-reach-it#register-the-client-entry)
+already covers it.
+</note>
+
+## Render the full results page
 
 `/search` is the page the form submits to and "See all" links to. It renders the field with its
 error, the count, the matches and a numbered pager, all as server HTML, from the props the
@@ -437,7 +445,7 @@ import { m, p } from "@sdxc/u/size";
 import { tabularNums, text } from "@sdxc/u/typography";
 import { FieldError, Heading, Label, SearchField } from "@sdxc/ui";
 
-import type { SearchHit } from "~/app/search/hits";
+import type { SearchHit } from "~/app/services/search/hits";
 
 import { SearchResult } from "~/resources/components/search-result";
 import { Layout } from "~/resources/layouts/site";
@@ -525,6 +533,44 @@ right after the field's label. The box submits `q` alone, so a new query starts 
 page. `autofocus` only on a blank page puts the caret in the box for a reader who came to search,
 and leaves it alone on a results page, where the reader came to read.
 
+## Test the fragment
+
+The fragment is an ordinary response, so a route test asks for the frame's address and checks
+that a piece comes back, kept out of search engines, with its status line in place. `migrate()`
+prepares the in-memory database, as
+[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
+
+```typescript {% title="app/http/controllers/search-frame.test.ts" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
+
+beforeAll(migrate);
+
+function frame(query: string) {
+	let url = new URL(routes.searchFrame.href(), "https://example.com");
+	if (query) url.searchParams.set("q", query);
+	return createWebRouter().fetch(new Request(url));
+}
+
+test("answers the blank box as a fragment kept out of search engines", async () => {
+	let response = await frame("");
+
+	expect(response.status).toBe(200);
+	expect(response.headers.get("X-Robots-Tag")).toBe("noindex");
+	expect(await response.text()).not.toContain("<html");
+});
+
+test("says so when nothing matches", async () => {
+	let body = await (await frame("nothing-matches-this")).text();
+
+	expect(body).toContain('role="status"');
+	expect(body).toContain("No articles match");
+});
+```
+
 ## Accessibility at a glance
 
 - The trigger is a `<button>` named "Search", with its keys in `aria-keyshortcuts`. It opens a
@@ -541,11 +587,9 @@ and leaves it alone on a results page, where the reader came to read.
 
 ## Where to go next
 
-- [Full-text search over SQLite](/docs/data-and-background-work/full-text-search): the index,
+- [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) — the index,
   the query syntax, ranking and highlighting behind both routes.
-- [Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts): printing the hint in the
+- [Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts) — printing the hint in the
   reader's key caps, and the rules a keymap stands down by.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui):
-  dialogs, invoker commands and islands.
-- [`@sdxc/ui`](/api/ui): `Modal`, `SearchField`, `liveFrame`, `Highlight`, `FieldError` and
+- [`@sdxc/ui`](/api/ui) — `Modal`, `SearchField`, `liveFrame`, `Highlight`, `FieldError` and
   `Pagination`.

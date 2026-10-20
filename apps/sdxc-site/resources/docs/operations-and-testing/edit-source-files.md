@@ -235,14 +235,65 @@ look at. `value` and `statement` are inserted as source text, indented to match 
 around them and otherwise as written; run the project's formatter over the files you wrote for
 anything beyond indentation.
 
+## Test an edit against a fixture
+
+Each edit takes a file name and its text and answers the new text, so a test needs no files:
+write the source as a string, run the edit, and compare the whole output. Comparing the whole
+string is what proves the edit touched nothing else.
+
+```typescript {% title="scripts/rename-package.test.ts" %}
+import { addProperty, rewriteSpecifiers } from "@sdxc/codemod";
+import { expect, test } from "vitest";
+
+test("renames the package and leaves the rest of the file as it was", () => {
+	let source = [
+		"import { Button } from '@acme/ui';",
+		'import { Chart } from "@acme/ui-charts";',
+		'let icons = import("@acme/ui/icons"); // loaded on demand',
+	].join("\n");
+
+	let edit = rewriteSpecifiers("page.tsx", source, ({ specifier }) =>
+		specifier === "@acme/ui" || specifier.startsWith("@acme/ui/")
+			? `@acme/design${specifier.slice("@acme/ui".length)}`
+			: null,
+	);
+
+	expect(edit).toMatchObject({
+		status: "success",
+		data: {
+			changed: true,
+			source: [
+				"import { Button } from '@acme/design';",
+				'import { Chart } from "@acme/ui-charts";',
+				'let icons = import("@acme/design/icons"); // loaded on demand',
+			].join("\n"),
+		},
+	});
+});
+
+test("refuses to declare a job twice", () => {
+	let source = [
+		"export default jobs({",
+		'\treports: { daily: job({ cron: "0 8 * * *" }) },',
+		"});",
+	].join("\n");
+	let edit = addProperty("app/jobs/index.ts", source, {
+		call: "jobs",
+		path: ["reports"],
+		key: "daily",
+		value: 'job({ cron: "0 8 * * *" })',
+	});
+	expect(edit).toMatchObject({
+		status: "failure",
+		error: { code: "duplicate-key" },
+	});
+});
+```
+
 ## Where to go next
 
-- [Generate files](/docs/sdxc/generate-files),
-  [Undo a make](/docs/sdxc/undo-generated-files) and
-  [Copy UI components](/docs/sdxc/copy-ui-components) — `sdxc make`, `sdxc destroy`
-  and `sdxc ui add`, which make these edits for you.
+- [Generate files](/docs/sdxc/generate-files) — `sdxc make`, which makes these edits for you
+  and undoes them with `sdxc destroy`.
 - [Build a command line](/docs/operations-and-testing/build-a-command-line) — turn a script like
   these into a command with flags and a `--dry-run`.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the declarations and
-  dispatcher the last example edits.
 - [`@sdxc/codemod`](/api/codemod) — every option, reference field and error code.

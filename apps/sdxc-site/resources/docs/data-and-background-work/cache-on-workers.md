@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to read through a Workers KV cache and keep a stale copy for outages"
     - "How to store whole responses at the edge with `@sdxc/workers-cache` and purge them by tag"
@@ -88,8 +88,10 @@ the string it serialized to, and the type says so, on a hit and on a miss alike.
 [`@sdxc/duration`](/api/duration), or a number of whole seconds. Leave it out and the entry never
 expires.
 
+<warning>
 KV refuses a TTL under 60 seconds. A shorter one leaves the entry unwritten and reports
-`unavailable`, so a lifetime you compute at runtime needs a floor:
+`unavailable`, so a lifetime you compute at runtime needs a floor.
+</warning>
 
 ```typescript {% title="app/services/daily-report.ts" %}
 import type { Cache } from "@sdxc/cache";
@@ -173,8 +175,12 @@ export const PUBLIC_PAGE = policy({
 Each builder validates the tag it produces and throws on one the platform would drop, so a bad tag
 fails where you wrote it rather than silently at the edge.
 
-Register the middleware once, handing it the platform cache. List it ahead of your session and
-auth middleware, so the check it runs on the finished response sees everything they added:
+Register the middleware once, handing it the platform cache:
+
+<note>
+List the middleware ahead of your session and auth middleware, so the check it runs on the
+finished response sees everything they added.
+</note>
 
 ```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
@@ -214,9 +220,13 @@ export default createAction(routes.releases, async (ctx) => {
 carrying `Set-Cookie`, or a `public` policy on a request that carried a session, is downgraded to
 `private, no-store` and logged as a warning (and throws in development), so a signed-in page
 cannot end up in a shared cache. A route that never calls `ctx.cache()` gets `private, no-store`,
-unless it set its own `Cache-Control` or `Expires`. Workers Cache stores a `200` with no
-freshness headers for two hours under a key that ignores cookies, so leaving it bare would hand
-one visitor's page to the next.
+unless it set its own `Cache-Control` or `Expires`.
+
+<warning>
+Workers Cache stores a `200` with no freshness headers for two hours under a key that ignores
+cookies. That default is why every route answers `private, no-store` until it declares a
+policy: a bare response would hand one visitor's page to the next.
+</warning>
 
 ## Purge when the content changes
 

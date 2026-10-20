@@ -12,13 +12,16 @@ outcomes:
     - "How to find the routes and controllers nothing wires yet"
 ---
 
+A route's controller and the middleware that runs before it are spread across contracts,
+initializers and chains. Print them together in one table to answer "what serves this URL"
+without opening a file:
+
 ```bash
 sdxc routes
 ```
 
-`sdxc routes` prints every route your contracts in `routes/` declare: its method, full pattern
-and name, the controller the router maps it to, and the middleware that runs for it. It answers
-"what serves this URL, and what runs before it" without opening the router.
+It prints every route your contracts in `routes/` declare: its method, full pattern
+and name, the controller the router maps it to, and the middleware that runs for it.
 
 ## Read the table
 

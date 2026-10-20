@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to enroll a passkey for a signed-in account"
     - "How to sign in with a passkey by verifying both WebAuthn ceremonies"
@@ -20,7 +20,9 @@ enrollment for an account that is already signed in, and a sign-in that needs no
 [`@sdxc/passkey`](/api/passkey) covers both halves. `@sdxc/passkey/server` issues ceremony
 options and verifies what the browser signs; `@sdxc/passkey/client` runs the ceremony in the
 browser, from a `remix/component` client entry. Every failure on either side is a
-[`@sdxc/result`](/api/result) value.
+[`@sdxc/result`](/api/result) value. [`@sdxc/auth`](/api/auth) holds the session the challenge
+waits in, [`@sdxc/http`](/api/http) answers the JSON, and [`@sdxc/ui`](/api/ui) draws the
+button.
 
 ```bash
 npm add @sdxc/auth @sdxc/http @sdxc/passkey @sdxc/result @sdxc/ui remix
@@ -72,7 +74,7 @@ export default route({
 Nest it under `passkeys` in your route table in `routes/web.ts`, beside the `dashboard` a
 sign-in lands on, so the controllers below read `routes.passkeys.signIn.verify` and so on.
 
-## One relying party
+## Create one relying party
 
 The relying party holds your policy and nothing else, so one instance at module scope serves
 every request.
@@ -121,8 +123,12 @@ export function spendChallenge(ctx: RequestContext): string | null {
 
 `sessionOf` from [`@sdxc/auth`](/api/auth) reads the session Remix's session middleware put on
 the context, and throws when that middleware has not run. `spendChallenge` drops the value in
-the same call that reads it. A challenge that survives its ceremony is one an attacker can
+the same call that reads it.
+
+<warning>
+Spend the challenge on read. A challenge that survives its ceremony is one an attacker can
 replay an assertion against; spent on read, it buys exactly one.
+</warning>
 
 ## Store what the ceremony proves
 
@@ -160,8 +166,12 @@ export default createAction(routes.passkeys.register.challenge, async (ctx) => {
 });
 ```
 
+<warning>
 `user.id` is stored on the authenticator and comes back on every assertion, and it is readable
-on the device, so use your opaque primary key rather than an email. `exclude` lists the
+on the device, so use your opaque primary key rather than an email.
+</warning>
+
+`exclude` lists the
 credentials the account already has, so the browser refuses to enroll the same device twice.
 `currentAccount` is your own helper that answers the signed-in account's `id` and `email`, and
 `Passkeys.listIds` answers the credential ids the account holds.
@@ -265,12 +275,20 @@ export default createAction(routes.passkeys.signIn.verify, async (ctx) => {
 The cast only names that shape: `verifyAuthentication` validates the whole response and answers
 a `MalformedResponseError` for anything else, and `wrap` catches a body that is not JSON.
 `Passkeys.find` answers the stored `id`, `publicKey` and `counter` the relying party checks
-against, with the `accountId` and `suspended` flag beside them. Every refusal answers the same body and is logged by error name, so a caller never learns which
-check failed while your logs do. Record the new `counter`: the next assertion has to exceed it,
-and a `CounterError` means two devices are presenting the same credential — a cloned
-authenticator — so the credential is suspended rather than merely refused. Regenerating the
-session id on sign-in keeps the id held while anonymous from becoming the signed-in one, and
-`userId` stands for whichever key your app's session marks a signed-in account with.
+against, with the `accountId` and `suspended` flag beside them. Every refusal answers the same
+body and is logged by error name, so a caller never learns which check failed while your logs
+do. `userId` stands for whichever key your app's session marks a signed-in account with.
+
+<warning>
+Record the new `counter`: the next assertion has to exceed it. A `CounterError` means two
+devices are presenting the same credential, a cloned authenticator, so the credential is
+suspended along with the refusal.
+</warning>
+
+<warning>
+Regenerate the session id on sign-in. The id held while anonymous then never becomes the
+signed-in one, so a session id planted before sign-in is worth nothing after it.
+</warning>
 
 ## Run the ceremony in the browser
 
@@ -350,16 +368,66 @@ an `AlreadyRegisteredError` means this device is already enrolled, so point the 
 signing in instead.
 
 To offer passkeys inside the browser's autocomplete menu, mark the identifier field
-`autocomplete="username webauthn"` and start `Passkey.autofill(options, { signal: handle.signal })`
-when the island mounts. It stays pending until someone picks a credential, and `handle.signal`
-aborts it when the island disconnects, which releases the one ceremony a browser keeps open.
+`autocomplete="username webauthn"` and start
+`Passkey.autofill(options, { signal: handle.signal })` when the island mounts. It stays pending
+until someone picks a credential.
+
+<note>
+A browser keeps one ceremony open at a time. `handle.signal` aborts the autofill when the
+island disconnects, which releases it for the next one.
+</note>
+
+## Test the endpoints
+
+A real assertion needs an authenticator, so the router test covers what the server decides
+alone: the options it issues, and a verify that arrives with no challenge in the session:
+
+```typescript {% title="app/http/controllers/passkeys/sign-in.test.ts" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+function post(href: string, body?: unknown) {
+	return createWebRouter().fetch(
+		new Request(new URL(href, "https://example.com"), {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: body === undefined ? undefined : JSON.stringify(body),
+		}),
+	);
+}
+
+test("a sign-in starts with a challenge that requires verification", async () => {
+	let response = await post(routes.passkeys.signIn.challenge.href());
+
+	expect(response.status).toBe(200);
+	expect(await response.json()).toMatchObject({
+		challenge: expect.any(String),
+		userVerification: "required",
+	});
+});
+
+test("an assertion with no challenge in the session is rejected", async () => {
+	let response = await post(routes.passkeys.signIn.verify.href(), {
+		id: "credential",
+		rawId: "credential",
+		type: "public-key",
+		response: {},
+	});
+
+	expect(response.status).toBe(400);
+	expect(await response.json()).toEqual({ error: "rejected" });
+});
+```
+
+The second request carries no session cookie, so `spendChallenge` finds nothing and the
+endpoint refuses before it reads a credential.
 
 ## Where to go next
 
 - [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — the session
   and account these endpoints build on.
-- [Security headers and CSP](/docs/identity-and-security/security-headers) — the nonce the
-  client-entry import map needs under a strict policy.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
-  client entries and hydration.
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui)
+  — client entries and hydration.
 - [`@sdxc/passkey`](/api/passkey) — second-factor use, attestation, and every error class.

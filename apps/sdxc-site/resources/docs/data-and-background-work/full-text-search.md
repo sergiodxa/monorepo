@@ -83,8 +83,11 @@ FROM "articles";
 
 `content=''` makes the index contentless: it holds the inverted index and nothing else, since
 the text is already in `article_search`. `contentless_delete=1` lets a contentless index delete
-a row, and needs SQLite 3.43, which D1 and Durable Objects run. `remove_diacritics 2` makes
-`resume` find `résumé`.
+a row. `remove_diacritics 2` makes `resume` find `résumé`.
+
+<note>
+`contentless_delete=1` needs SQLite 3.43 or later, which D1 and Durable Objects run.
+</note>
 
 Each trigger deletes the `rowid` before inserting it. A trigger runs under the conflict policy
 of the statement that fired it, so under the upsert in the next section a plain insert would
@@ -144,8 +147,12 @@ export function parseArticleQuery(text: string) {
 }
 ```
 
+<warning>
 List `columns` in the order the FTS5 table declares them, because the weights are handed to
-`bm25()` by position. With these weights a word in the title counts ten times a word in the
+`bm25()` by position: a different order weighs each column by another column's weight.
+</warning>
+
+With these weights a word in the title counts ten times a word in the
 body, so an article titled "Reset your password" outranks one that mentions passwords in passing,
 while a body that is about nothing else can still beat a passing title. `field: "title"` lets a
 reader write `title:invoice` to search the title alone.
@@ -200,9 +207,12 @@ when the search runs, so publishing an article later needs no second write.
 ## Rebuild the index in batches
 
 The triggers keep the index correct from the migration on. Rebuild it when what it holds
-changes shape: a new tokenizer, a column added to the index, or after a D1 export, which D1
-refuses while a virtual table exists. For an export, drop the three triggers and the index,
-export, recreate both, and rebuild.
+changes shape: a new tokenizer, a column added to the index, or after a D1 export.
+
+<warning>
+D1 refuses to export a database while a virtual table exists. For an export, drop the three
+triggers and the index, export, recreate both, and rebuild.
+</warning>
 
 `reindex` writes the next `limit` rows with a key above `after`, and answers how many it wrote
 and where the next batch starts. Each batch is a short statement, which is what a D1 request
@@ -449,10 +459,76 @@ virtual table with `tokenize='trigram'` and the definition with
 `fts: { table: "faqs_fts", tokenizer: "trigram" }`. A trigram index needs three characters to
 look anything up, so a query holding a shorter term runs as `LIKE` on its own.
 
+<note>
 `LIKE` binds two values per term per column, and SQLite on D1 and Durable Objects binds at most
 100 per statement. A query over that limit is refused before it runs with a
 `ParameterBudgetError`, a `SearchError`. With the default 8 terms, a `LIKE` search stays under it
 up to 6 columns.
+</note>
+
+## Test the ranking
+
+The search runs on the in-memory SQLite your tests already migrate, which carries FTS5, so a
+test writes two articles through `indexArticle` and checks the order a reader sees. `ArticleFactory`
+is the factory for your `articles` table:
+
+```typescript {% title="app/models/search/articles.test.ts" %}
+import { unwrap } from "@sdxc/result";
+import { beforeAll, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import {
+	indexArticle,
+	matchingArticles,
+	parseArticleQuery,
+} from "~/app/models/search/articles";
+import { factories, migrate } from "~/app/test/database";
+import { ArticleFactory } from "~/database/factories/article";
+
+beforeAll(migrate);
+
+test("ranks a title match above a passing mention", async () => {
+	let db = openDatabase();
+	let entries = [
+		{
+			slug: "settings",
+			title: "Account settings",
+			body: "Change your password here.",
+		},
+		{
+			slug: "reset",
+			title: "Reset your password",
+			body: "Follow the link we send.",
+		},
+	];
+	for (let { slug, title, body } of entries) {
+		let article = await factories().create(ArticleFactory, { slug, title });
+		await indexArticle(db, {
+			id: article.id,
+			slug,
+			section: "account",
+			publishedAt: Date.now() - 60_000,
+			title,
+			tags: [],
+			body,
+		});
+	}
+
+	let query = unwrap(parseArticleQuery("passw"));
+	let rows = query === null ? [] : await matchingArticles(db, query).all();
+
+	expect(rows.map((row) => row.slug)).toEqual(["reset", "settings"]);
+});
+
+test("reads a stray quote as part of a word", () => {
+	expect(unwrap(parseArticleQuery('"refund'))).not.toBeNull();
+});
+```
+
+`passw` matches as a prefix, so the test also proves the reader's half-typed word finds
+"password". To check the page itself, request `routes.search` with `?q=` through
+`createWebRouter().fetch(...)`, as [Test Workers apps](/docs/operations-and-testing/testing)
+shows.
 
 ## Where to go next
 

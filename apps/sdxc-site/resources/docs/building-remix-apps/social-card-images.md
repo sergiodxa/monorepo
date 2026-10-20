@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 14
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to render an Open Graph image inside a Worker with `@sdxc/raster` and `@sdxc/font`"
     - "How to store each card in R2 under a hash of its text"
@@ -29,7 +29,7 @@ npm add @sdxc/crypto @sdxc/file-storage-r2 @sdxc/font @sdxc/http @sdxc/png \
     @sdxc/raster @sdxc/result @sdxc/seo remix
 ```
 
-## How a card is served
+## Follow a card through three stores
 
 A post at `/blog/hello` has its card at `/blog/hello.png`, and the page advertises
 `/blog/hello.png?v=<hash>`, where the hash covers the card's text and the design's version. A
@@ -49,8 +49,13 @@ image.
 ## Bundle the fonts
 
 `@sdxc/font` reads TrueType outlines, the `.ttf` files of a static font with `glyf` outlines.
-Pick faces whose license allows embedding, such as the SIL Open Font License that Inter and most
-Google Fonts carry. Rename each file with a `.bin` extension, for example
+
+<note>
+Pick faces whose license allows embedding, such as the SIL Open Font License that Inter and
+most Google Fonts carry. The Worker ships the font file to every colo.
+</note>
+
+Rename each file with a `.bin` extension, for example
 `resources/fonts/inter-bold.ttf.bin`: Wrangler and the Cloudflare Vite plugin bundle a `.bin`
 import as a data module, which the Worker receives as an `ArrayBuffer`. Declare that shape once
 for TypeScript:
@@ -63,8 +68,12 @@ declare module "*.bin" {
 ```
 
 Parse the fonts on the first card an isolate draws and keep them for the isolate's life.
-Parsing at module scope would run while Cloudflare validates the upload and again on every cold
-start, including the ones that only serve a page:
+
+<warning>
+Parsing at module scope runs while Cloudflare validates the upload, which can fail the
+deploy, and again on every cold start, including the ones that only serve a page. Keep the
+parse inside a function, as `cardFonts` does.
+</warning>
 
 ```typescript {% title="app/initializers/card-fonts.ts" %}
 import type { FontError } from "@sdxc/font";
@@ -270,8 +279,10 @@ stylesheet; a malformed one throws a `RangeError` where it is written. `toPNG()`
 alpha channel when every pixel is opaque, which makes the file a quarter smaller before
 compression.
 
-Drawing a card takes tens of milliseconds of CPU, which is why each one is drawn once and
-stored.
+<note>
+Drawing a card takes tens of milliseconds of CPU, which counts against the Worker's CPU limit
+on every request that draws. That is why each card is drawn once and stored.
+</note>
 
 ## Store cards in R2
 
@@ -451,14 +462,61 @@ In the post's action, `og: await postCardMeta(post)` goes into the `Seo.Props` i
 share, before it has fetched the image. Since the URL changes with the text, a platform that
 caches images by URL fetches the new card after an edit with no purge on your side.
 
+## Test the card
+
+The drawing is a function of the text and the fonts, so a test reads the font files from
+disk, draws a card with a title too long for three lines, and decodes the PNG to check its
+size. The version test proves the hash follows the text and only the text:
+
+```typescript {% title="app/services/social-cards/draw.test.ts" %}
+import { parseFont } from "@sdxc/font";
+import { decode } from "@sdxc/png";
+import { unwrap } from "@sdxc/result";
+import { readFile } from "node:fs/promises";
+import { expect, test } from "vitest";
+
+import { cardVersion } from "~/app/services/social-cards/content";
+import { drawCard } from "~/app/services/social-cards/draw";
+
+const CONTENT = {
+	title: "A title long enough to wrap, shrink and still end with an ellipsis ".repeat(
+		3,
+	),
+	description: "The post's excerpt.",
+	site: "example.com",
+};
+
+async function font(name: string) {
+	let path = new URL(`../../../resources/fonts/${name}.ttf.bin`, import.meta.url);
+	return unwrap(parseFont(await readFile(path)));
+}
+
+test("draws a 1200 by 630 card", async () => {
+	let fonts = {
+		regular: await font("inter-regular"),
+		bold: await font("inter-bold"),
+	};
+
+	let image = unwrap(await decode(await drawCard(CONTENT, fonts)));
+
+	expect([image.width, image.height]).toEqual([1200, 630]);
+});
+
+test("names a card by its text", async () => {
+	let version = unwrap(await cardVersion(CONTENT));
+
+	expect(version).toMatch(/^[0-9a-f]{16}$/);
+	expect(unwrap(await cardVersion(CONTENT))).toBe(version);
+	expect(unwrap(await cardVersion({ ...CONTENT, title: "Edited" }))).not.toBe(
+		version,
+	);
+});
+```
+
 ## Where to go next
 
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — the rest
   of the head tags and the `seo` instance used here.
 - [Draw charts as PNG images](/docs/content-and-feeds/png-charts) — the same canvas for
   data, where SVG cannot go.
-- [Set text as SVG paths](/docs/content-and-feeds/text-as-svg-paths) — font metrics and glyph
-  outlines without a canvas.
-- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — tagging and
-  purging the edge cache.
 - [`@sdxc/raster`](/api/raster) — every drawing call and text option.

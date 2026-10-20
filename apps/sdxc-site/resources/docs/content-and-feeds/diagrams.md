@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 31
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to draw Mermaid diagrams as SVG on the server with `@sdxc/diagram`"
     - "How to find the diagrams in markdown and draw them in a route"
@@ -179,9 +179,12 @@ export function checkDiagrams(path: string, source: string): string | null {
 The fence's opening line comes first, so adding the line inside the diagram lands on the
 statement itself.
 
-For content you do not control, or for posts stored in a database and rendered on request,
-build the visitor with `createDiagramVisitor({ invalid: "keep" })`. A diagram that does not
-parse then stays the code block its author wrote, and the walk succeeds.
+<warning>
+A walk with `diagram` fails on the first diagram that does not parse. For content you do not
+control, or for posts stored in a database and rendered on request, build the visitor with
+`createDiagramVisitor({ invalid: "keep" })`: a diagram that does not parse then stays the code
+block its author wrote, and the walk succeeds.
+</warning>
 
 ## Draw the tags in a route
 
@@ -256,6 +259,29 @@ export function renderHTML(document: Markdown.Document): string {
 
 Feed readers that show inline SVG draw the diagram, and its `title` names it for the ones
 that read the text.
+
+## Test it
+
+A broken diagram should fail the check at the statement that broke it, and a valid one should
+pass, so test `checkDiagrams` with one of each:
+
+```typescript {% title="scripts/check-posts.test.ts" %}
+import { expect, test } from "vitest";
+
+import { checkDiagrams } from "./check-posts";
+
+test("passes a post whose diagrams parse", () => {
+	let post = "# Flow\n\n~~~mermaid\nflowchart LR\n  A --> B\n~~~\n";
+
+	expect(checkDiagrams("flow.md", post)).toBeNull();
+});
+
+test("points at the statement that does not parse", () => {
+	let post = "# Flow\n\n~~~mermaid\nflowchart LR\n  A --> B\n  A B C\n~~~\n";
+
+	expect(checkDiagrams("flow.md", post)).toMatch(/^flow\.md:6: /);
+});
+```
 
 ## Where to go next
 

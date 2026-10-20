@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 19
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to export records as a streaming JSON Lines download with `@sdxc/jsonl`"
     - "How to import an upload row by row with errors that name the line"
@@ -112,14 +112,24 @@ blank lines too, which the reader otherwise skips, so it is the number an editor
 the row. A `\r\n` ending and a leading byte order mark read the same as their absence.
 
 The action reads `request.body` straight into `readActivity`, so the file is never buffered
-whole, then saves `events` or renders `problems`. Save nothing while `problems` holds anything,
-so fixing the file and uploading it again cannot duplicate the rows that were fine.
+whole, then saves `events` or renders `problems`.
+
+<note>
+Save nothing while `problems` holds anything, so fixing the file and uploading it again cannot
+duplicate the rows that were fine.
+</note>
 
 ## Bound what a line may cost
 
 `maxLineBytes` caps one line, in encoded bytes. The buffer only ever holds the line being read,
-so this cap is what keeps an upload of one enormous line from growing memory without end. A
-longer line yields one `"line-too-long"` failure and reading stops there, which makes it always
+so this cap is what keeps an upload of one enormous line from growing memory without end.
+
+<warning>
+Pass `maxLineBytes` on every read of an upload. A line is unbounded until you set it, so one
+enormous line grows the Worker's memory until the isolate runs out.
+</warning>
+
+A longer line yields one `"line-too-long"` failure and reading stops there, which makes it always
 the last entry `read` yields: the loop above records it and ends on its own.
 
 Set it from the largest record you expect, with room to spare. Cap the body as a whole where it
@@ -202,6 +212,35 @@ import { parse, stringify } from "@sdxc/jsonl";
 let events = parse('{"type":"invited"}\n\n{"type":"signed_in"}\n');
 let text = stringify([{ type: "exported" }]);
 ```
+
+## Test the import
+
+`readActivity` takes any byte stream, so a test hands it a `Blob`'s stream with one good line,
+one line that is not JSON and one the schema refuses, and checks that every problem names its
+line:
+
+```typescript {% title="app/services/imports/read-activity.test.ts" %}
+import { expect, test } from "vitest";
+
+import { readActivity } from "~/app/services/imports/read-activity";
+
+test("keeps the valid events and names the line of each problem", async () => {
+	let file = new Blob([
+		'{"type":"invited","actor":"ada","at":"2026-10-01T09:00:00Z"}\n',
+		"{not json}\n",
+		'{"type":"deleted","actor":"ada","at":"2026-10-02T09:00:00Z"}\n',
+	]);
+
+	let { events, problems } = await readActivity(file.stream());
+
+	expect(events).toHaveLength(1);
+	expect(problems.map((problem) => problem.line)).toEqual([2, 3]);
+});
+```
+
+To check the download, request `routes.activity.export` through `createWebRouter().fetch(...)`,
+as [Test Workers apps](/docs/operations-and-testing/testing) shows, and read the body back with
+`parse`.
 
 ## Where to go next
 

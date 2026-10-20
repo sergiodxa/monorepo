@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 7
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to pick the Web Crypto primitive by what happens to the value next"
     - "How to build reset links from hashed tokens and store passwords with scrypt"
@@ -39,7 +39,7 @@ What you will do with a value later decides how you store it:
 | Read a secret back later                | `seal` / `open`                     | AES-GCM encrypts and detects tampering                        |
 | Accept a code from an authenticator app | `totp`                              | RFC 6238, the algorithm those apps implement                  |
 
-## An opaque token for a reset link
+## Mint an opaque token for a reset link
 
 A reset link carries a bearer credential: whoever holds the link can set the password. Make
 it unguessable with 32 random bytes, and store only its SHA-256 digest, so anyone who reads
@@ -83,10 +83,13 @@ password needs scrypt, because the token carries 256 bits of entropy: nobody gue
 the digest only has to keep a reader of the store from using what they read. It also has to be
 deterministic, since the presented token is hashed again to find the record.
 
-`consumeReset` deletes the record as it reads it, so a link works once. KV is eventually
-consistent, so two clicks landing in different locations within seconds can both find it; keep
-the record in D1 or a Durable Object when single use has to be strict. Mail the link as in
+`consumeReset` deletes the record as it reads it, so a link works once. Mail the link as in
 [Send email](/docs/data-and-background-work/send-email).
+
+<warning>
+KV is eventually consistent, so two clicks landing in different locations within seconds can
+both find the record. Keep it in D1 or a Durable Object when single use has to be strict.
+</warning>
 
 The same shape serves API keys. Give them a prefix, `randomToken({ prefix: "sk" })` for
 `sk_…`, so a key pasted into a log or a public repository is recognizable, and a secret
@@ -134,9 +137,12 @@ export default createAction(routes.password.reset.update, async (ctx) => {
 `NewPasswordSchema` is your `remix/data-schema` object for the two fields, with the length
 rules from [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms).
 `password.hash` salts every hash freshly and encodes it as
-`$scrypt$ln=15,r=8,p=3$<salt>$<key>`, parameters included. Scrypt has no Web Crypto
-equivalent, so this one call runs on `node:crypto`, which needs the `nodejs_compat`
-compatibility flag on Workers.
+`$scrypt$ln=15,r=8,p=3$<salt>$<key>`, parameters included.
+
+<note>
+Scrypt has no Web Crypto equivalent, so `password.hash` and `password.verify` run on
+`node:crypto`, which needs the `nodejs_compat` compatibility flag on Workers.
+</note>
 
 Signing in checks the password against the stored hash, using the parameters that hash
 records:
@@ -169,9 +175,13 @@ A wrong password is `success(false)`; a failure means the stored value is not a 
 package wrote, `MalformedHashError`, or names another algorithm, `UnsupportedAlgorithmError`.
 Both end in `null` here. `needsRehash` is true when the stored hash is behind the current
 parameters, so when those rise, every account moves to them on its next sign-in, with no
-migration and no forced reset. An unknown address returns faster than a wrong password, since
-nothing is hashed; if that difference matters to you, verify against a fixed hash you
-generated once.
+migration and no forced reset.
+
+<note>
+An unknown address returns faster than a wrong password, since nothing is hashed, which tells a
+caller timing the response which addresses have accounts. When that matters, verify against a
+fixed hash you generated once before returning `null`.
+</note>
 
 ## Sign a link with HMAC
 
@@ -225,11 +235,16 @@ rotation.
 
 Some secrets must be read back: a TOTP secret, a provider's refresh token, a customer's API
 key for a service you call. `seal` encrypts a string with AES-GCM under a key only your Worker
-holds. Generate 32 bytes of key material as base64url and store it as a Worker secret:
+holds. Declare `SEAL_KEY: bindings.secret()` in `cloudflare.config.ts`, generate 32 bytes of key
+material as base64url, and set it for production, pasting the key when asked:
 
 ```bash
-openssl rand -base64 32 | tr '+/' '-_' | tr -d '=' | npx wrangler secret put SEAL_KEY
+openssl rand -base64 32 | tr '+/' '-_' | tr -d '='
+bunx cf workers secrets update SEAL_KEY
 ```
+
+[Deploy your app](/docs/getting-started/first-deploy) covers declaring a secret and its
+development value.
 
 Import it once per isolate and seal through one module:
 
@@ -261,11 +276,18 @@ hold of the `CryptoKey` still cannot read the bytes out. `seal` returns
 ciphertext. `open` fails with `DecryptionError` when the value was altered or sealed under
 another key, and gives the same message for both, so the error tells an attacker nothing.
 
+<note>
 A fresh IV means sealing the same value twice gives two different strings, so a sealed column
-cannot be searched. When a value must be both found and read back, store two columns: its
+matches no lookup. When a value must be both found and read back, store two columns: its
 `sha256` for the lookup, and its sealed form for the read.
+</note>
 
-## Codes from an authenticator app
+<warning>
+A sealed value opens only under the key that sealed it. Replacing `SEAL_KEY` without first
+resealing every stored value under the new key leaves each of them unreadable.
+</warning>
+
+## Check codes from an authenticator app
 
 The `totp` functions generate a shared secret, build the `otpauth://` URI an authenticator app
 scans, and check the six-digit codes it shows. The secret belongs sealed, as in the section
@@ -273,14 +295,38 @@ above. [Add two-factor sign-in with TOTP](/docs/identity-and-security/two-factor
 whole flow: enrollment, the code step after the password, replay protection, recovery codes
 and turning it off.
 
+## Test the signed link and the seal
+
+Set `LINK_SECRET`, `APP_ORIGIN` and `SEAL_KEY` in `app/test/cloudflare-workers.ts`, then check
+that an edited link is refused and that a sealed value opens back to itself:
+
+```typescript {% title="app/services/unsubscribe-links.test.ts" %}
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { openSecret, sealSecret } from "~/app/services/sealing";
+import { unsubscribeUrl, verifyUnsubscribe } from "~/app/services/unsubscribe-links";
+
+test("refuses a link whose user was edited", async () => {
+	let url = unwrap(await unsubscribeUrl("user-1", "news"));
+	expect(await verifyUnsubscribe(url)).toEqual({ user: "user-1", list: "news" });
+
+	url.searchParams.set("user", "user-2");
+	expect(await verifyUnsubscribe(url)).toBeNull();
+});
+
+test("opens what it sealed", async () => {
+	let sealed = unwrap(await sealSecret("refresh-token"));
+
+	expect(sealed).not.toContain("refresh-token");
+	expect(unwrap(await openSecret(sealed))).toBe("refresh-token");
+});
+```
+
 ## Where to go next
 
-- [Receive and send webhooks](/docs/identity-and-security/webhooks): signed deliveries in
+- [Receive and send webhooks](/docs/identity-and-security/webhooks) — signed deliveries in
   both directions, with secrets minted by `randomToken` and stored sealed.
-- [Add two-factor sign-in with TOTP](/docs/identity-and-security/two-factor): the
+- [Add two-factor sign-in with TOTP](/docs/identity-and-security/two-factor) — the
   authenticator-app factor, with its secret sealed as above and hashed recovery codes.
-- [Add passkeys](/docs/identity-and-security/passkeys): a phishing-resistant sign-in beside
-  or instead of passwords.
-- [Issue and verify JWTs](/docs/identity-and-security/json-web-tokens): signed tokens a
-  different service verifies with your public key.
-- [`@sdxc/crypto`](/api/crypto): encodings, digests, `timingSafeEqual` and every error class.
+- [`@sdxc/crypto`](/api/crypto) — encodings, digests, `timingSafeEqual` and every error class.

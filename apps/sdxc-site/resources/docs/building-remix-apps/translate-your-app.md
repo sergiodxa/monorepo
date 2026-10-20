@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 4
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to detect each request's language and translate MessageFormat 2 messages in handlers and views"
     - "How to reach the translator from any component, island or job"
@@ -67,8 +67,12 @@ object, language and key, so every request shares the work of compiling a messag
 
 The `i18n` middleware detects the request's language and publishes `ctx.locale` and
 `ctx.intl`. The `logger` is the one from
-[Wire the router](/docs/building-remix-apps/wire-the-router). Put `i18n` after `log()`, because a message that fails to format is recorded as an
-`i18n.error` warning on the request's log rather than thrown.
+[Wire the router](/docs/building-remix-apps/wire-the-router).
+
+<note>
+Put `i18n` after `log()`. A message that fails to format is recorded as an `i18n.error`
+warning on the request's log, so the log has to exist before the translator runs.
+</note>
 
 ```typescript {% title="app/initializers/router.tsx" %}
 import i18n from "@sdxc/i18n/middleware";
@@ -133,7 +137,7 @@ export default createAction(routes.projects.index, async (ctx) => {
 });
 ```
 
-## Messages with markup
+## Render messages with markup
 
 A message containing markup renders through `Trans`. Each `{#name}…{/name}` pair becomes the
 element you pass under that name, with the text between them as its children, so a
@@ -246,23 +250,23 @@ request.
 ## Translate outside a request
 
 A background job that sends an email has no `ctx.intl`. `createTranslator` builds one over the
-same bundles, and binding it to a language is synchronous, so the job calls a plain function
-like this one with the language stored in its input.
+same bundles. Build it once, beside the languages, so every job, command and email shares it:
 
-```typescript {% title="app/jobs/welcome-email.ts" %}
+```typescript {% title="app/initializers/i18n.ts" %}
 import { createTranslator } from "@sdxc/i18n";
 
-import {
-	FALLBACK_LANGUAGE,
-	RESOURCES,
-	SUPPORTED_LANGUAGES,
-} from "~/app/initializers/i18n";
-
-const translate = createTranslator({
+export const translate = createTranslator({
 	resources: RESOURCES,
 	supportedLanguages: SUPPORTED_LANGUAGES,
 	fallbackLanguage: FALLBACK_LANGUAGE,
 });
+```
+
+Binding it to a language is synchronous, so a job calls a plain function like this one with
+the language stored in its input:
+
+```typescript {% title="app/services/welcome-email.ts" %}
+import { translate } from "~/app/initializers/i18n";
 
 export function welcomeEmail(input: { locale: string; name: string }) {
 	let { locale, t } = translate(input.locale);
@@ -270,8 +274,12 @@ export function welcomeEmail(input: { locale: string; name: string }) {
 }
 ```
 
-A language you do not ship resolves to the fallback, so record the `locale` it returns, not
-the one you asked for. Store the request's `ctx.locale` in the job's input when you enqueue
+<note>
+A language you do not ship resolves to the fallback, so record the `locale` the translator
+returns, not the one you asked for.
+</note>
+
+Store the request's `ctx.locale` in the job's input when you enqueue
 it, and the email arrives in the language the visitor was reading.
 
 A hydrated island is the same case in the browser. Call `setIntl(intl)` from
@@ -313,6 +321,31 @@ test.each(Object.entries(RESOURCES))(
 );
 ```
 
+The detection is one request through the router. A visitor whose browser asks for Argentine
+Spanish gets the supported `es`, written into `<html lang>`; `migrate()` prepares the
+in-memory database the projects page reads, as
+[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
+
+```typescript {% title="app/http/controllers/projects.test.tsx" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
+
+beforeAll(migrate);
+
+test("answers in the closest language the app ships", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.projects.index.href(), "https://example.com"), {
+			headers: { "Accept-Language": "es-AR,es;q=0.9" },
+		}),
+	);
+
+	expect(await response.text()).toMatch(/<html[^>]* lang="es"/);
+});
+```
+
 For formatting a single message outside a bundle, `new MessageFormat(locale, source)` from
 the same package compiles it once and formats it with `format(values)` as often as you need.
 
@@ -320,7 +353,6 @@ the same package compiles it once and formats it with `format(values)` as often 
 
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   the components the translated copy renders into.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — enqueuing the
-  job that carries `ctx.locale`.
-- [Send email](/docs/data-and-background-work/send-email) — translated email from that job.
+- [Send email](/docs/data-and-background-work/send-email) — translated email, sent from a
+  request or a job.
 - [`@sdxc/messageformat`](/api/messageformat) — custom functions and `formatToParts`.

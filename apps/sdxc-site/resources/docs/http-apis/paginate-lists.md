@@ -138,10 +138,14 @@ paging, and the parameter belonging to the other strategy is dropped, so an offs
 carries a stale cursor. A keyset page gets only `prev` and `next`, and no total, because it ran
 no count.
 
-The call merges rather than replaces: a `Link` header that already holds a `preload` or
-`canonical` entry keeps it, and only the four paging relations are rewritten. The links are
-built from the `url` you pass, so behind a proxy pass the public URL, or the header advertises
-your internal hostname.
+The call merges into the existing header: a `Link` header that already holds a `preload` or
+`canonical` entry keeps it, and only the four paging relations are rewritten.
+
+<warning>
+The links are built from the `url` you pass. Behind a proxy, pass the public URL the client
+called, so the header advertises your public hostname and every link a client follows reaches
+you through the proxy.
+</warning>
 
 ## Walk the pages from a client
 
@@ -161,13 +165,15 @@ export async function* walkPages(start: URL, init?: RequestInit) {
 		if (!response.ok) return;
 
 		let links = parse(response.headers.get("Link"));
-		next = links.find((link) => link.rels.includes("next"))?.target ?? null;
+		let target = links.find((link) => link.rels.includes("next"))?.target;
+		next = target === undefined ? null : new URL(target, response.url).href;
 	}
 }
 ```
 
 Each response is yielded for the caller to check and parse, and the walk ends at a failed
-response or at a page that carries no `next`. A missing header parses to `[]` and a malformed
+response or at a page that carries no `next`. A relative target is resolved against the
+response it came from, so the walk follows any API's links, absolute or not. A missing header parses to `[]` and a malformed
 entry is dropped rather than throwing, so one bad link ends the walk instead of failing it.
 For a typed client with schemas on each response, see
 [Write a typed API client](/docs/http-apis/api-clients).
@@ -359,11 +365,49 @@ you need `id` after it as the tiebreaker, as the JSON API guide does. The orderi
 must be in the query's projection, since the cursor is read off the last row.
 
 Cursors are base64url, so they are safe in a URL as they are, and opaque but not secret: they
-carry the ordering values of the boundary row, which the reader can already see. A cursor also
-records the ordering it was minted for. Change `orderBy` and every cursor already issued fails
-with `InvalidCursorError`, which this page turns into a redirect to the newest page and an API
-turns into a `400`. `byKeyset` reads one row past `limit` to learn whether another page exists,
+carry the ordering values of the boundary row, which the reader can already see.
+
+<warning>
+A cursor records the ordering it was minted for. Change `orderBy` and every cursor already
+issued fails with `InvalidCursorError`, which this page turns into a redirect to the newest
+page and an API turns into a `400`, so a client mid-walk starts over.
+</warning>
+
+`byKeyset` reads one row past `limit` to learn whether another page exists,
 which is how `cursors.next` comes back `null` on the last page without a count.
+
+## Test the parameters and the headers
+
+The binding is where a client's input meets your limits, and `paginate` is what a client
+follows, so a test of each covers the contract without a database. A `Pagination` built by
+hand stands in for a query's page:
+
+```typescript {% title="app/http/validators/paging.test.ts" %}
+import { Pagination } from "@sdxc/pagination";
+import { isSuccess } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { paging } from "~/app/http/validators/paging";
+
+test("refuses a page size above the maximum", () => {
+	let params = paging.parse(new URLSearchParams("per_page=500"));
+	expect(isSuccess(params)).toBe(false);
+});
+
+test("links the next page and keeps the filter", () => {
+	let pagination = new Pagination({ page: 3, perPage: 25, total: 892 });
+	let headers = paging.paginate(
+		new Headers(),
+		{ items: [], pagination },
+		{ url: "https://app.example.com/api/invoices?status=open&page=3" },
+	);
+
+	expect(headers.get("Link")).toContain(
+		'<https://app.example.com/api/invoices?status=open&page=4>; rel="next"',
+	);
+	expect(headers.get("X-Total-Count")).toBe("892");
+});
+```
 
 ## Where to go next
 
@@ -371,9 +415,5 @@ which is how `cursors.next` comes back `null` on the last page without a count.
   these handlers answer with, and a keyset API list.
 - [Describe your API with OpenAPI](/docs/http-apis/openapi): document the `page`,
   `per_page` and `cursor` parameters and the `Link` header.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui):
-  the layout and components the HTML lists render into.
-- [Parse and write Link headers](/docs/http-apis/link-header): merge, `raw`, and a header
-  that is not a pager.
 - [`@sdxc/pagination`](/api/pagination): every option, `toJSON()` for an envelope, and the
   cursor functions.

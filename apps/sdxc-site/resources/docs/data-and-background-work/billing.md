@@ -83,9 +83,12 @@ export function createWebRouter() {
 }
 ```
 
-Put it after the middleware that publishes `ctx.db` and `ctx.account`, the signed-in account
-your auth middleware resolves. `Entitlements` is your own table holding one snapshot per
-account, written by the sync below.
+`Entitlements` is your own table holding one snapshot per account, written by the sync below.
+
+<note>
+Put the billing middleware after the middleware that publishes `ctx.db` and `ctx.account`, the
+signed-in account your auth middleware resolves, since the `entitlements` reader reads both.
+</note>
 
 ## Link each account to a customer
 
@@ -271,9 +274,14 @@ unproven delivery is the only `401`. An event type with no handler, or one the p
 after your release, is logged and acknowledged. A handler that throws answers `503` when the
 error is retryable, so the platform delivers again, and `200` when a retry would fail the same
 way; `options.retry` changes that decision. Mount the endpoint with
-`router.map(routes.webhooks.billing, billingWebhook)`, and exempt its path from `cop()` the way
-[Receive and send webhooks](/docs/identity-and-security/webhooks) explains, since the signature
-is its authentication.
+`router.map(routes.webhooks.billing, billingWebhook)`.
+
+<warning>
+A platform sends its webhooks with no session and no `Origin` header. If your app runs
+`cop()`, exempt the webhook path from it the way
+[Receive and send webhooks](/docs/identity-and-security/webhooks) explains: the signature is
+the endpoint's authentication.
+</warning>
 
 ## Keep a delivery store
 
@@ -311,11 +319,14 @@ export class WebhookDeliveries implements WebhookStore {
 id as its primary key. The endpoint is built at module scope, before any request has a
 database, so the store takes a function and opens one per call.
 
+<note>
 The order matters. The endpoint records every delivery with its signature verdict before any
 handler trusts it, so a forged one is kept as evidence. It marks a delivery processed only after
 its handler finishes, so a redelivery of a processed id answers `200` without running the
-handler twice, and one whose handler failed runs again. `MemoryWebhookStore` implements the same
-interface in memory for tests.
+handler twice, and one whose handler failed runs again.
+</note>
+
+`MemoryWebhookStore` implements the same interface in memory for tests.
 
 ## Gate a feature
 
@@ -443,6 +454,62 @@ Walking live subscriptions finds the customers the platform says are paying. The
 direction, an account your table still marks as subscribed after a cancellation nobody
 announced, is one more loop over those rows calling the same `syncEntitlements` with
 `{ externalId: account.id }`.
+
+## Test the sync against an in-memory platform
+
+`MemoryBilling` from `@sdxc/billing/providers/memory` is a whole platform in memory, with real
+state: a test seeds a catalog, buys a product through a checkout, and asserts on what the sync
+wrote to your table:
+
+```typescript {% title="app/services/entitlements.test.ts" %}
+import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { isFailure, unwrap } from "@sdxc/result";
+import { beforeAll, expect, test } from "vitest";
+
+import { openDatabase } from "~/app/initializers/database";
+import { Entitlements } from "~/app/models/entitlements";
+import { syncEntitlements } from "~/app/services/entitlements";
+import { migrate } from "~/app/test/database";
+
+beforeAll(migrate);
+
+test("a finished checkout grants the account its features", async () => {
+	let db = openDatabase();
+	let billing = new MemoryBilling({
+		catalog: {
+			pro: { amount: 4900, interval: "month", features: { reports: true } },
+		},
+	});
+	let customer = await unwrap(
+		billing.customers.create({ email: "ada@example.com", externalId: "acct_1" }),
+	);
+	let opened = await unwrap(
+		billing.checkouts.create({ product: "pro", customer: { id: customer.id } }),
+	);
+	await unwrap(billing.checkouts.finish(opened.id));
+
+	expect(await unwrap(syncEntitlements(db, billing, { id: customer.id }))).toBe(
+		true,
+	);
+
+	let snapshot = await Entitlements.snapshot(db, "acct_1");
+	expect(snapshot?.features.reports).toBe(true);
+});
+
+test("a platform outage answers a failure the caller can retry", async () => {
+	let db = openDatabase();
+	let billing = new MemoryBilling();
+	billing.fail("entitlements.of", "unknown");
+
+	let synced = await syncEntitlements(db, billing, { id: "cus_1" });
+
+	expect(isFailure(synced)).toBe(true);
+});
+```
+
+`billing.webhooks.emit(event)` signs a delivery the way the platform would, so a test can post
+it to a `BillingWebhook` with a `MemoryWebhookStore` and check that a redelivery runs its
+handler once; [`@sdxc/billing`](/api/billing) shows that flow.
 
 ## Where to go next
 

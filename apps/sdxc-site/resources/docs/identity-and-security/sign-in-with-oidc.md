@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 1
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to run an authorization-code login with `@sdxc/auth` against any OpenID Connect provider"
     - "How to keep the login in a KV session and verify the ID token in the callback"
@@ -76,9 +76,13 @@ export function createWebRouter() {
 `sessionCookie` is your app's signed session cookie, made with `createCookie` from
 `remix/cookie`; see Remix's
 [session middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware)
-for its options. Give it `sameSite: "Lax"`: the callback is a top-level navigation from the
-provider's origin, and a `Strict` cookie would not ride along with it, so every callback would
-find no transaction. `authenticate` is defined at the end of this guide.
+for its options. `authenticate` is defined at the end of this guide.
+
+<note>
+Give the session cookie `sameSite: "Lax"`. The callback is a top-level navigation from the
+provider's origin, which a `Strict` cookie stays off, so every callback would find no
+transaction.
+</note>
 
 ## Describe the provider
 
@@ -127,9 +131,9 @@ export function relyingParty(url: URL): RelyingParty {
 }
 ```
 
-`algorithms` pins what an ID token may be signed with. Left out, it accepts whatever the key
-set supports; naming the one algorithm your provider uses means a token signed any other way
-is refused even if a matching key turns up. `fallbackReturnTo` is where a login lands when it
+`algorithms` pins what an ID token may be signed with: naming the one algorithm your provider
+uses means a token signed any other way is refused even if a matching key turns up.
+`fallbackReturnTo` is where a login lands when it
 names no destination, or names one on another origin. The default mapped profile carries
 `name`, `email`, `emailVerified`, `username` and `picture`; pass `mapProfile` to shape it into
 your own account fields.
@@ -228,8 +232,13 @@ export default createAction(routes.auth.callback, async (ctx) => {
 });
 ```
 
-Key the account on `grant.subject`. Email and username are mutable at the provider; the subject
-is the one claim OpenID Connect promises stays with the person. The session needs nothing more
+<warning>
+Key the account on `grant.subject`, never on email or username. Those are mutable at the
+provider, so someone who takes over an address there would sign in to the account it used to
+name; the subject is the one claim OpenID Connect promises stays with the person.
+</warning>
+
+The session needs nothing more
 from you: `callback` already wrote the token set, and `sessionScheme` resolves the account from
 it at the end of this guide. `grant.returnTo` was already
 held to your origin when the login stored it, and passing it through `Location.safe` again at
@@ -311,11 +320,68 @@ It is built per request because the relying party is. Protecting routes with the
 resolves is Remix's
 [auth middleware](https://github.com/remix-run/remix/tree/main/packages/auth-middleware).
 
+## Test the login
+
+Starting a login needs the provider's discovery document, so answer it with MSW. A callback
+nobody started needs nothing from the provider, because the missing transaction refuses it
+first:
+
+```typescript {% title="app/http/controllers/auth/login.test.ts" %}
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+let server = setupServer(
+	http.get("https://auth.example.com/.well-known/openid-configuration", () =>
+		HttpResponse.json({
+			issuer: "https://auth.example.com",
+			authorization_endpoint: "https://auth.example.com/authorize",
+			token_endpoint: "https://auth.example.com/token",
+			jwks_uri: "https://auth.example.com/jwks",
+		}),
+	),
+);
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+test("sends the browser to the provider with PKCE", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.auth.login.action.href(), "https://example.com"), {
+			method: "POST",
+		}),
+	);
+
+	expect(response.status).toBe(303);
+	let location = new URL(response.headers.get("Location") ?? "");
+	expect(location.origin + location.pathname).toBe(
+		"https://auth.example.com/authorize",
+	);
+	expect(location.searchParams.get("code_challenge_method")).toBe("S256");
+});
+
+test("refuses a callback this browser never started", async () => {
+	let response = await createWebRouter().fetch(
+		new URL(
+			`${routes.auth.callback.href()}?code=abc&state=xyz`,
+			"https://example.com",
+		),
+	);
+
+	expect(await response.text()).toContain("Sign-in failed");
+});
+```
+
+The router reads `SESSIONS` and `CACHE`, so declare both as `createKVNamespace()` in
+`app/test/cloudflare-workers.ts`, beside `CLIENT_ID` and `CLIENT_SECRET`.
+
 ## Where to go next
 
 - [Add passkeys](/docs/identity-and-security/passkeys) — a second way in that needs no provider.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — allow the
   provider in `form-action` before you enforce a policy.
-- [Wire the router](/docs/building-remix-apps/wire-the-router) — publishing `ctx.db` and
-  `ctx.log`, which these handlers read.
 - [`@sdxc/auth`](/api/auth) — step-up authentication, service clients and bearer tokens.

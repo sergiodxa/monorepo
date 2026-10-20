@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 15
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to check an uploaded PNG's size before decoding it with `@sdxc/png`"
     - "How to crop an upload square and store a clean copy"
@@ -32,8 +32,13 @@ npm add @sdxc/crypto @sdxc/file-storage-r2 @sdxc/http @sdxc/png @sdxc/result rem
 A PNG states its width and height in its first chunk, at a fixed place in the file: eight
 signature bytes, then the `IHDR` chunk's length and type, then two big-endian 32-bit numbers.
 Reading those costs nothing, and it answers whether decoding is safe before any pixel is
-inflated. `decode` refuses an image over 2²⁸ pixels on its own, but that is a gigabyte of RGBA,
-far more than a Worker's memory, so an upload deserves its own, smaller limit:
+inflated.
+
+<warning>
+`decode` refuses an image over 2²⁸ pixels on its own, but that is a gigabyte of RGBA, far more
+than a Worker's memory. Check the header against a limit of your own before decoding an
+upload, as `readAvatar` does.
+</warning>
 
 ```typescript {% title="app/services/avatars/read-avatar.ts" %}
 import type { PNG } from "@sdxc/png";
@@ -315,12 +320,31 @@ test("an identicon is mirrored left to right", async () => {
 });
 ```
 
+The size check runs on the header alone, so a test proves it by rewriting the width a small,
+valid PNG declares. The checksum no longer matches, and the refusal still names the size,
+which shows `decode` never ran:
+
+```typescript {% title="app/services/avatars/read-avatar.test.ts" %}
+import { encode } from "@sdxc/png";
+import { isFailure } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { readAvatar } from "~/app/services/avatars/read-avatar";
+
+test("refuses an oversized image before decoding it", async () => {
+	let bytes = await encode({ width: 1, height: 1, data: new Uint8ClampedArray(4) });
+	new DataView(bytes.buffer, bytes.byteOffset).setUint32(16, 4096);
+
+	let result = await readAvatar(new File([bytes.slice()], "huge.png"));
+
+	expect(isFailure(result) && result.error.code).toBe("too-many-pixels");
+});
+```
+
 ## Where to go next
 
 - [Draw social card images](/docs/building-remix-apps/social-card-images) — drawing shapes and
   text onto a canvas that encodes to PNG.
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the form an upload
   posts from.
-- [Stream several files as a ZIP](/docs/data-and-background-work/zip-downloads) — exporting the
-  stored files together.
 - [`@sdxc/png`](/api/png) — every encode option and decode error code.

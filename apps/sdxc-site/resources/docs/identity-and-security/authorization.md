@@ -172,7 +172,7 @@ function is read the first time a check needs it, and only once.
 import { access } from "@sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
-import { renderDenied } from "~/app/http/denied";
+import { renderDenied } from "~/app/http/middleware/denied";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -183,8 +183,12 @@ export const teamAccess = access(policy, {
 });
 ```
 
-Install it after your authentication middleware: `ctx.user`, `ctx.team` and
-`ctx.membership` stand for what yours publishes. A later `access()` replaces an earlier one,
+<note>
+Install `access()` after your authentication middleware: its role and fact readers read
+`ctx.user`, `ctx.team` and `ctx.membership`, which stand for what yours publishes.
+</note>
+
+A later `access()` replaces an earlier one,
 so the pages, an API and an MCP endpoint can each bind their own principal. `load` lists
 abilities or whole groups to load before the handler runs, for a page that checks many of
 them, and `ctx.access.as({ roles })` answers synchronously for another role over the facts
@@ -293,9 +297,11 @@ of claims, and both take the whole catalog too, answering every group in one cal
 `Decision`, and `authorize` a `Result<void, Forbidden>` whose failure carries the refusal, for
 code that already returns Results.
 
+<note>
 A check never waits. One that reads a fact that has not been loaded, or whose source failed,
 refuses with cause `error`, so an outage refuses the abilities that depend on it and nothing
-else. That is why the handler awaits `load` first.
+else. Await `ctx.access.load(...)` before checking synchronously, as the handler above does.
+</note>
 
 ## Answer refusals
 
@@ -305,7 +311,7 @@ type that left it undecided), and its `as` is `notFound` or `forbidden`. Being p
 refusal crosses a Durable Object RPC intact. The `onDenied` responder turns it into your app's
 own page:
 
-```tsx {% title="app/http/denied.tsx" %}
+```tsx {% title="app/http/middleware/denied.tsx" %}
 import type { Refusal } from "@sdxc/authz";
 import type { RequestContext } from "remix/router";
 
@@ -323,8 +329,12 @@ export function renderDenied(ctx: RequestContext, decision: Refusal) {
 }
 ```
 
+<warning>
 Render the same not-found page an unknown URL gets: a 404 that looks different from the real
-one tells a stranger the record exists. Without a responder, a refusal answers a bare `403`
+one tells a stranger the record exists.
+</warning>
+
+Without a responder, a refusal answers a bare `403`
 or `404`, and `requireAbility(ability, { onDenied })` overrides the responder for one route.
 
 ## Gate on the plan
@@ -370,7 +380,7 @@ import { fromEntitlements } from "@sdxc/authz/facts/billing";
 import { access } from "@sdxc/authz/middleware/router";
 
 import policy from "~/app/policies/policy";
-import { renderDenied } from "~/app/http/denied";
+import { renderDenied } from "~/app/http/middleware/denied";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -501,8 +511,12 @@ export default createJobHandler(jobs.reports.export, async (ctx) => {
 });
 ```
 
-The job checks again at run time, so an export queued before a downgrade or a removal is
-refused when it runs. `Entitlements.facts` is your own read answering `{ products, features }`;
+<warning>
+Check again inside the job, at run time: a check made when the job was queued says nothing
+about a downgrade or a removal since, and the job's own check is what refuses that export.
+</warning>
+
+`Entitlements.facts` is your own read answering `{ products, features }`;
 `fromEntitlements()` reads a request, so a job hands the fact in directly. Decisions are
 counted on the run's log record, as they are on a request's.
 
@@ -687,10 +701,6 @@ JSON, so the previous version can be derived from it, or kept beside it.
 
 - [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — the
   authentication that tells `access()` who is asking.
-- [Charge for your app](/docs/data-and-background-work/billing) — the entitlement snapshot
-  the billing fact reads.
-- [Feature flags](/docs/data-and-background-work/feature-flags) — the catalog and client the
-  flag fact evaluates through.
 - [Expose your app over MCP](/docs/operations-and-testing/mcp-server) — the tools an agent's
   scope hides and refuses.
 - [`@sdxc/authz`](/api/authz) — every option, the decision shapes, and `factLoader`.

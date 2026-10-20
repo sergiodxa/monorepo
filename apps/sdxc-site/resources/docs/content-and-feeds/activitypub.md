@@ -56,9 +56,12 @@ else process.stdout.write(pair.data.privateKeyPem);
 bun scripts/actor-keys.ts | npx wrangler secret put ACTIVITYPUB_PRIVATE_KEY
 ```
 
-The private key is the only secret: `ActorKeys.import` derives the public half from it. Keep the
-key stable, because followers verify against the one they cached, and a new pair means
+The private key is the only secret: `ActorKeys.import` derives the public half from it.
+
+<warning>
+Keep the key stable. Followers verify against the one they cached, and a new pair means
 announcing it to every one of them.
+</warning>
 
 Import it lazily through a `KeyProvider`, so the work happens inside the first request or job
 that signs, and once per isolate after that:
@@ -327,10 +330,12 @@ Verifying inside the request is what lets a sender learn from a `401` and retry 
 the other signature scheme. A `Delete` from an account whose key now answers `410` gets an empty
 `202`, since a deleted account's last messages can no longer be verified.
 
+<warning>
 Verify before anything else reads the request: the body is a stream. A server delivering an
 activity has no session and no `Origin` header, so if your app runs Remix's
 [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the inbox
 path from it: the signature is the stronger claim.
+</warning>
 
 ## Answer WebFinger
 
@@ -530,9 +535,13 @@ follow. Its handler gets `inbound.deleted`,
 `{ kind: "object" | "actor", id }`, and `inbound.actor` is `null` when the account is already
 gone.
 
-A handler answers nothing or a `Result`. A failure, or an exception, retries the whole message,
-so write every handler to tolerate seeing the same activity twice; the upserts in
-`saveResponse` and the deletes in `withdrawResponse` already do.
+A handler answers nothing or a `Result`.
+
+<warning>
+A failure, or an exception, retries the whole message, so write every handler to tolerate
+seeing the same activity twice; the upserts in `saveResponse` and the deletes in
+`withdrawResponse` already do.
+</warning>
 
 ## Publish posts as articles
 
@@ -649,9 +658,14 @@ export default createJobHandler(jobs.federation.publish, async (ctx) => {
 ```
 
 `publish` serializes the activity and queues one `fanOut` message carrying it whole, so every
-inbox receives the same bytes even if the post changes again before delivery ends. An activity
-over 120 KB fails `too-large`, since no queue message could carry it; trim `content` to a
-summary and a link for a post that long. Marking the post federated only after the fan-out is
+inbox receives the same bytes even if the post changes again before delivery ends.
+
+<note>
+An activity over 120 KB fails `too-large`, since no queue message could carry it. Trim
+`content` to a summary and a link for a post that long.
+</note>
+
+Marking the post federated only after the fan-out is
 queued means a failed publish retries as a `Create`.
 
 The fan-out runs as its own message. It reads your followers' inboxes from the store a page at a
@@ -667,8 +681,13 @@ through it is removed.
 
 A server that is down or rate-limiting fails the delivery as retryable, with a `delay` from
 `DELIVERY_BACKOFF`: five minutes, thirty minutes, two hours, six hours, then twelve, each with
-±20% jitter, or longer when the inbox sent a `Retry-After`. That is about 21 hours over five
-retries, so give the queue at least six attempts. A queue that retries more takes its own
+±20% jitter, or longer when the inbox sent a `Retry-After`.
+
+<note>
+The schedule spans about 21 hours over five retries, so give the queue at least six attempts.
+</note>
+
+A queue that retries more takes its own
 schedule as `backoff: createBackoff(…)` from [`@sdxc/backoff`](/api/backoff);
 [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers the
 options.
@@ -680,7 +699,7 @@ links to it, asks that URL for `application/activity+json`. `federation.respond`
 and answers `null` for a browser, so the page renders as usual. Call it first in the post
 page's handler:
 
-```typescript {% title="app/http/activity-response.ts" %}
+```typescript {% title="app/services/activity-response.ts" %}
 import type { JobEnqueuer } from "@sdxc/jobs";
 import type { Database } from "remix/data-table";
 
@@ -827,8 +846,6 @@ claim expires.
 
 - [Sign and verify HTTP requests](/docs/identity-and-security/http-message-signatures) — the
   signatures and digests every delivery carries, on their own.
-- [Join the IndieWeb](/docs/content-and-feeds/indieweb) — Webmention and Micropub, the other
-  way independent sites talk to each other.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   the queue and the verbs every handler here uses.
 - [`@sdxc/activitypub`](/api/activitypub) — every error code, the delivery table and the quirks

@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 15
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to read a pasted BIND zone file into typed records with `@sdxc/zone-file`"
     - "How to compare the records with live DNS"
@@ -111,9 +111,11 @@ key. `2001:DB8::1` and `2001:db8:0:0:0:0:0:1` print the same, and so do a CAA re
 `0 ISSUE "ca.example"` and the RFC 3597 form `\# 15 00 05 …` a resolver may answer with. A
 record a file lists twice is kept once, since DNS serves it once.
 
-One rule surprises people: an unquoted TXT value is several character-strings, as DNS reads it,
-so `v=spf1 -all` imports as `v=spf1-all`. Provider exports always quote TXT values. Mention it
-next to the paste box for hand-written files.
+<note>
+An unquoted TXT value is several character-strings, as DNS reads it, so `v=spf1 -all` imports
+as `v=spf1-all`. Provider exports always quote TXT values; mention it next to the paste box for
+hand-written files.
+</note>
 
 ## Accept the paste
 
@@ -212,9 +214,12 @@ export async function missingFromDns(records: TrackedRecord[]) {
 
 A failed lookup counts every record in the group as missing. Use the error classes to tell
 NXDOMAIN, where the name is gone, apart from a resolver having a bad minute, as
-[Custom domains for your customers](/docs/identity-and-security/verify-domains) does. One query
-per name and type adds up on a large zone, so run the comparison in a background job rather than
-inside the request.
+[Custom domains for your customers](/docs/identity-and-security/verify-domains) does.
+
+<note>
+The comparison sends one query per name and type, which adds up on a large zone, so run it in a
+background job and keep the request to the import.
+</note>
 
 ## Export the zone
 
@@ -284,8 +289,52 @@ process.exitCode = parsed.data.rejected.length > 0 ? 1 : 0;
 ```
 
 Each record and rejection names the `file` it came from, `null` for the text passed to `parse`.
-The included text counts toward `maxBytes`, and includes nest up to eight files deep. Run it in
-CI and a typo in a zone fails the build with its file and line, before a provider rejects it.
+
+<note>
+The included text counts toward `maxBytes`, and includes nest up to eight files deep.
+</note>
+
+Run it in CI and a typo in a zone fails the build with its file and line, before a provider rejects it.
+
+## Test the import
+
+`readZone` and `trackedRecords` take text and records and answer data, so their test needs no
+request. One paste with a provider's missing trailing dot, a repeat, an unusable line and a
+record outside the domain covers the import's decisions:
+
+```typescript {% title="app/services/zones/tracked-records.test.ts" %}
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { readZone } from "~/app/services/zones/read-zone";
+import { trackedRecords } from "~/app/services/zones/tracked-records";
+
+const PASTE = [
+	"$TTL 3600",
+	"@ IN A 192.0.2.1",
+	"www.example.com IN CNAME example.com.",
+	"@ IN A 192.0.2.1",
+	"mail IN A not-an-address",
+	"other.org. IN A 192.0.2.9",
+].join("\n");
+
+test("keeps each tracked record once and reports the rest by line", () => {
+	let zone = unwrap(readZone(PASTE, "example.com"));
+	let { records, skipped } = trackedRecords(zone.records, "example.com");
+
+	expect(records.map((record) => `${record.name} ${record.type}`)).toEqual([
+		"example.com A",
+		"www.example.com CNAME",
+	]);
+	expect(zone.rejected.map((rejection) => rejection.line)).toEqual([5]);
+	expect(skipped).toEqual([{ line: 6, reason: "outside-domain" }]);
+});
+```
+
+`www.example.com` without its trailing dot reads as the absolute name because of
+`relativeNames: "origin-suffix"`. A test for `missingFromDns` answers its DNS over HTTPS
+requests with MSW, as [Test Workers apps](/docs/operations-and-testing/testing) shows for
+outbound HTTP.
 
 ## Where to go next
 

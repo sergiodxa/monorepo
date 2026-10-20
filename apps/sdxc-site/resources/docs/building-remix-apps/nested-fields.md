@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 8
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to read bracket keys like `filter[status][]` into typed objects and arrays"
     - "How to filter a list from the query string and link between pages of the same view"
@@ -27,7 +27,7 @@ The examples assume the router from
 already parsed the body into `ctx.formData`, and its database middleware publishes `ctx.db`.
 `Task` and `Invoice` stand for your own models.
 
-## How keys read
+## Learn how the keys read
 
 Every value is read as a string, and the schema decides its type. A group whose keys are all
 indices, or `[]` pushes, becomes an array.
@@ -41,9 +41,12 @@ indices, or `[]` pushes, becomes an array.
 | `items[0][name]=A&items[1][name]=B` | `{ items: [{ name: "A" }, { name: "B" }] }` |
 | `items[1][name]=B&items[0][name]=A` | the same array, ordered by index            |
 
-A key used both as a value and as a group (`a=1&a[b]=2`) fails the parse. So do a key nested
-more than five brackets deep and a source with more than 1,000 entries, since a URL is input
-anyone can write. Both limits are options of `parse`.
+A key used both as a value and as a group (`a=1&a[b]=2`) fails the parse.
+
+<note>
+A key nested more than five brackets deep and a source with more than 1,000 entries fail the
+parse too, since a URL is input anyone can write. Both limits are options of `parse`.
+</note>
 
 ## Filter a list from the query string
 
@@ -315,8 +318,10 @@ export function NewInvoicePage(handle: Handle<Props>) {
 }
 ```
 
-The form needs `encType="multipart/form-data"` for the files to be sent at all; without files,
-the default URL-encoded body reads the same way.
+<note>
+The form needs `encType="multipart/form-data"` for the files to be sent at all. A form without
+files reads the same way from the default URL-encoded body.
+</note>
 
 ### Validate in the action
 
@@ -374,36 +379,65 @@ explains why each outcome answers the way it does.
 ## Submit a nested form from code
 
 `toFormData(value)` writes an object as `FormData` with the same keys the view names, appending
-each `File` as its own field. It is how a test posts to the action without spelling every key:
+each `File` as its own field. It is how a test posts to the action without spelling every key,
+beside a request whose query the schema refuses:
 
 ```typescript {% title="app/http/controllers/invoices-new.test.ts" %}
 import { toFormData } from "@sdxc/bracket-params";
+import { beforeAll, expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
 
-let body = toFormData({
-	customer: { name: "Ada Lovelace", email: "ada@example.com" },
-	items: [
-		{ description: "Design review", quantity: 2 },
-		{ description: "Implementation", quantity: 5 },
-	],
-	attachments: [new File(["%PDF-1.7"], "brief.pdf", { type: "application/pdf" })],
+beforeAll(migrate);
+
+test("creates an invoice from a nested form", async () => {
+	let body = toFormData({
+		customer: { name: "Ada Lovelace", email: "ada@example.com" },
+		items: [
+			{ description: "Design review", quantity: 2 },
+			{ description: "Implementation", quantity: 5 },
+		],
+		attachments: [
+			new File(["%PDF-1.7"], "brief.pdf", { type: "application/pdf" }),
+		],
+	});
+
+	let response = await createWebRouter().fetch(
+		new Request(
+			new URL(routes.invoices.new.action.href(), "https://example.com"),
+			{
+				method: "POST",
+				body,
+			},
+		),
+	);
+
+	expect(response.status).toBe(303);
 });
 
-let response = await createWebRouter().fetch(
-	new Request("https://example.com/invoices/new", { method: "POST", body }),
-);
+test("answers a filter it cannot read with a 404", async () => {
+	let url = new URL(routes.tasks.href(), "https://example.com");
+	url.search = "filter[status][]=archived";
+
+	let response = await createWebRouter().fetch(new Request(url));
+
+	expect(response.status).toBe(404);
+});
 ```
 
-The same call builds the body of a `fetch` from a client script. Numbers and booleans are
-written as text and a `Date` as its ISO string. `null` and `undefined` are skipped, so an
+`migrate()` prepares the in-memory database, as
+[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up. The
+same `toFormData` call builds the body of a `fetch` from a client script. Numbers and booleans
+are written as text and a `Date` as its ISO string. `null` and `undefined` are skipped, so an
 optional field can be passed as-is.
 
 ## Where to go next
 
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params): flat forms,
+- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — flat forms,
   route params and JSON bodies, with `@sdxc/validate`.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui): the
-  components the forms above are built from.
-- [Paginate lists](/docs/http-apis/paginate-lists): cursors and page links for the list the
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
+  the components the forms above are built from.
+- [Paginate lists](/docs/http-apis/paginate-lists) — cursors and page links for the list the
   filters narrow.

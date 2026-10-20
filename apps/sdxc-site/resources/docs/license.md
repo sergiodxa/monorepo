@@ -5,7 +5,7 @@ section:
     title: License
     order: 10
 order: 1
-lastUpdated: 2026-09-21
+lastUpdated: 2026-10-19
 outcomes:
     - "What the MIT license lets you do with each package"
     - "Why every `@sdxc` package carries the same terms"
@@ -15,6 +15,7 @@ outcomes:
 Every package published under the `@sdxc` scope is MIT licensed. The terms are the same for all
 of them, so the answer is the same whether you take one package or the set, and each package
 ships its own `LICENSE.md` beside its source — what you install carries its license with it.
+This page states what the license lets you do and where to read its full text.
 
 ## What the license grants
 
@@ -26,3 +27,12 @@ The full text is the standard MIT license, unmodified. Read it in
 [any package's `LICENSE.md`](https://github.com/sergiodxa/monorepo/blob/main/packages/result/LICENSE.md),
 or read what covers the rest of the repository in its
 [root `LICENSE.md`](https://github.com/sergiodxa/monorepo/blob/main/LICENSE.md).
+
+## Where to go next
+
+- [What these are](/docs/getting-started/what-these-are) — what the packages you are licensing
+  have in common.
+- [Install and pin](/docs/getting-started/install-and-pin) — add a package to your app and keep
+  it on one release date.
+- [`@sdxc/result`](/api/result) — the `Result` type the fallible packages answer with, and a
+  first package to read.

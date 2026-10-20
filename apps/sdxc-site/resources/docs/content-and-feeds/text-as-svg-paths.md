@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 34
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to measure text with a font's real metrics using `@sdxc/font`"
     - "How to shorten text to fit a width and turn glyphs into SVG path data"
@@ -51,10 +51,13 @@ export function badgeFont(): Result<Font, FontError> {
 ```
 
 Opening a font reads only its table headers, and each glyph is decoded the first time it is
-used and cached on the `Font`, so the cost of a font grows with the characters you draw. A
-failure is a `FontError` whose `code` is `unsupported` for a CFF-based `.otf`, a font
-collection, or a font with no Unicode character map, and `missing-table` or `malformed` for a
-damaged file.
+used and cached on the `Font`, so the cost of a font grows with the characters you draw.
+
+<warning>
+Bundle a `.ttf` with TrueType outlines. A failure is a `FontError` whose `code` is
+`unsupported` for a CFF-based `.otf`, a font collection, or a font with no Unicode character
+map, and `missing-table` or `malformed` for a damaged file.
+</warning>
 
 ## Measure in pixels
 
@@ -87,9 +90,13 @@ export function fitWidth(
 ```
 
 Spreading the string iterates by code point, the unit layout works in, so an astral character
-is never split in half. Layout maps one code point to one glyph, with kerning and no
-ligatures, which suits Latin, Greek and Cyrillic labels; a script that needs shaping, such as
-Arabic or Devanagari, calls for a shaping engine.
+is never split in half.
+
+<note>
+Layout maps one code point to one glyph, with kerning and no ligatures, which suits Latin,
+Greek and Cyrillic labels. A script that needs shaping, such as Arabic or Devanagari, calls for
+a shaping engine.
+</note>
 
 `glyphIndex(codePoint)` answers `0`, the font's `.notdef` box, for a character the font does not
 have. Checking it before drawing tells you whether a second font is needed:
@@ -261,12 +268,55 @@ are only shapes. The `width` and `height` attributes give the image its size in 
 sizes images from their intrinsic dimensions. Image proxies such as GitHub's cache the badge per
 URL, so five minutes is roughly how long a new release takes to show.
 
+## Test the layout
+
+The layout is where a long value gets shortened, so test it with the font the Worker bundles,
+read from disk: a long version comes back shortened with an ellipsis, and a short one comes
+back whole:
+
+```typescript {% title="app/services/badges/badge-layout.test.ts" %}
+import { readFileSync } from "node:fs";
+
+import { parseFont } from "@sdxc/font";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { badgeLayout } from "~/app/services/badges/badge-layout";
+
+const FONT = unwrap(
+	parseFont(
+		readFileSync(
+			new URL(
+				"../../../resources/fonts/inter-regular.ttf.bin",
+				import.meta.url,
+			),
+		),
+	),
+);
+
+test("shortens a long value to fit the badge", () => {
+	let badge = badgeLayout(
+		FONT,
+		"version",
+		"1.0.0-canary.20261019.abcdef0123456789abcdef",
+	);
+
+	expect(badge.value).toMatch(/…$/);
+	expect(FONT.measure(badge.value, 11)).toBeLessThanOrEqual(160);
+});
+
+test("keeps a short value whole", () => {
+	let badge = badgeLayout(FONT, "version", "2026.10.19");
+
+	expect(badge.value).toBe("2026.10.19");
+	expect(badge.valuePath).toMatch(/^M/);
+});
+```
+
 ## Where to go next
 
 - [Draw social card images](/docs/building-remix-apps/social-card-images) — the same font
   drawn onto a canvas, with wrapping and shrinking done for you.
 - [Draw charts as PNG images](/docs/content-and-feeds/png-charts) — labels set in a font on
   a raster image.
-- [Draw QR codes](/docs/building-remix-apps/qr-codes) — another image served as SVG from a
-  route.
 - [`@sdxc/font`](/api/font) — kerning, advances and every metric a font exposes.

@@ -66,10 +66,14 @@ export const alertConditions = createLanguage({
 export type AlertCondition = typeof alertConditions.Expression;
 ```
 
-Every built-in is there except `matches`. A regular expression written by a customer can take
-time exponential in its input, and leaving it out keeps evaluation linear in the size of the
-context, whatever anyone writes. A rule naming `matches` is refused with
+Every built-in is there except `matches`.
+
+<warning>
+A regular expression written by a customer can take time exponential in its input. Leaving
+`matches` out of a dialect that customers write keeps evaluation linear in the size of the
+context, whatever anyone writes; a rule naming it is refused with
 `"matches" is not an operator of this language`.
+</warning>
 
 `reference: "filter"` lets a rule name a condition the team saved once, as
 `{ op: "filter", name: "production" }`. `createLanguage` builds a few maps and a schema that
@@ -125,8 +129,10 @@ an operator whose own compile step refuses its arguments. Its failure is an `Exp
 whose `path` names the node at fault inside the condition, such as `of.1` for the second
 member of an `all`, empty for the condition itself, so a client can point at it.
 
-Store the JSON you validated, not what `compile` returned. The compiled tree carries resolved
+<warning>
+Store the JSON you validated, never what `compile` returned. The compiled tree carries resolved
 filters, so storing it would freeze a copy of each filter into the rule.
+</warning>
 
 ## Let people type the rule as text
 
@@ -238,8 +244,12 @@ a filter is the same check in reverse: compile the team's rules against the set 
 
 Each reference resolves once per references object. The language keys its compiled filters on
 that object, so passing the same one to every rule's `compile` compiles a filter shared by
-twenty rules exactly once, and the cache goes with the object. Treat it as fixed once you have
-compiled against it, and build a new one for an edit, as `checkFilter` does.
+twenty rules exactly once, and the cache goes with the object.
+
+<note>
+Treat a references object as fixed once you have compiled against it, and build a new one for
+an edit, as `checkFilter` does: a compiled filter stays cached on the object you mutated.
+</note>
 
 ## Evaluate in a job
 

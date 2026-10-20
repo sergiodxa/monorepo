@@ -54,8 +54,12 @@ export function newPostId(): PostId {
 The prefix is a literal type, so a function asking for a `TypeID<"post">` refuses an author
 id at compile time. A UUID from `@sdxc/uuid/v7` puts a millisecond timestamp in front of the
 random bits, and a TypeID sorts the way its UUID does, so new ids arrive in creation order and
-a listing can page on the id alone. Import `generateUUID` from `@sdxc/uuid/v4` instead for an
-id you hand to someone outside the system, since a v7 value reveals when it was minted.
+a listing can page on the id alone.
+
+<note>
+A v7 value reveals when it was minted. Import `generateUUID` from `@sdxc/uuid/v4` instead for
+an id you hand to someone outside the system.
+</note>
 
 ## Keep UUIDs typed below the edge
 
@@ -131,8 +135,10 @@ grapheme clusters, so an emoji is never split in half; it makes a good meta desc
 `wordCount` segments words with `Intl.Segmenter`, which also counts a script written without
 spaces.
 
+<note>
 Slugs are not unique on their own. Check for a collision when you insert, and append a short
 suffix when there is one.
+</note>
 
 ## Create and address the record
 
@@ -211,7 +217,7 @@ Formatting on the server with the server's zone gets that wrong for everyone who
 live in UTC. `@sdxc/dates` never assumes a zone: every function that answers a calendar
 question takes one, so resolve the viewer's once per request and pass it down.
 
-```typescript {% title="app/http/viewer.ts" %}
+```typescript {% title="app/services/viewer.ts" %}
 import type { TimeZone } from "@sdxc/dates";
 
 export interface Viewer {
@@ -244,7 +250,7 @@ import type { Handle } from "remix/component";
 import { diffInDays, formatDate, formatRelative } from "@sdxc/dates";
 import { pluralize } from "@sdxc/strings";
 
-import type { Viewer } from "~/app/http/viewer";
+import type { Viewer } from "~/app/services/viewer";
 
 interface Props {
 	publishedAt: Date;
@@ -321,9 +327,15 @@ export const requireSupportedClient: Middleware = (ctx, next) => {
 ```
 
 Versions compare element by element as numbers, so `2.10.0` is newer than `2.9.0`, and a
-prerelease such as `2.4.0-rc.1` precedes `2.4.0`. `satisfies` answers `false` whenever either
-side is not a version, which is why the handler parses first: without that check, a header
-reading `nightly` would pass as "not below the minimum". `parse` accepts a leading `v`, as a
+prerelease such as `2.4.0-rc.1` precedes `2.4.0`.
+
+<warning>
+`satisfies` answers `false` whenever either side is not a version, which is why the
+middleware parses first: without that check, a header reading `nightly` passes as "not below
+the minimum".
+</warning>
+
+`parse` accepts a leading `v`, as a
 git tag writes it, and drops build metadata, which carries no precedence.
 
 For a list, `compare` is a sort comparator: `versions.sort(compare)` orders a registry's
@@ -331,14 +343,40 @@ answer by precedence, with anything that is not a version collected at the front
 `.at(-1)` is the newest release. `satisfies(version, "^", "2.0.0")` expresses a compatible
 range when a rule lives in data an operator edits.
 
+## Test the derivation and the ids
+
+Both services are plain functions, so a test checks the agreements this guide depends on: the
+title and slug a form and a job derive alike, and a TypeID that refuses another table's
+prefix:
+
+```typescript {% title="app/services/posts/derive.test.ts" %}
+import { TypeID } from "@sdxc/typeid";
+import { generateUUID } from "@sdxc/uuid/v7";
+import { expect, test } from "vitest";
+
+import { authorId, newPostId } from "~/app/services/ids";
+import { derivePost } from "~/app/services/posts/derive";
+
+test("derives the title and slug from what was typed", () => {
+	let post = derivePost({
+		title: " how to deploy remix on cloudflare ",
+		body: "Hello",
+	});
+
+	expect(post.title).toBe("How to Deploy Remix on Cloudflare");
+	expect(post.slug).toBe("how-to-deploy-remix-on-cloudflare");
+});
+
+test("tells a post id from an author id", () => {
+	expect(TypeID.isValid(newPostId().toString(), "post")).toBe(true);
+	expect(TypeID.isValid(authorId(generateUUID()).toString(), "post")).toBe(false);
+});
+```
+
 ## Where to go next
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — schemas
   for the create form and for route params.
-- [Translate your app](/docs/building-remix-apps/translate-your-app) — negotiating the locale
-  the formatters take.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the tables
-  behind `Posts`.
 - [Calendars, date ranges and time zones](/docs/building-remix-apps/calendars-and-date-ranges)
   — a month grid, a report's day range, and a time-zone picker.
 - [`@sdxc/dates`](/api/dates) — day grids, week boundaries and the zone math underneath.

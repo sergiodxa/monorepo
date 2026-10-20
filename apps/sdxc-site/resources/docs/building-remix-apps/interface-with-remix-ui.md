@@ -29,9 +29,13 @@ make where it earns its place.
 ## The stylesheets
 
 Components read semantic `--ui-*` variables, and those derive from five palette scales you
-define: `brand`, `neutral`, `danger`, `warning` and `success`, each from 50 to 950. Import the
-reset, your palette, then the theme, in that order, from the document layout: the build keeps
-the import order as the cascade order.
+define: `brand`, `neutral`, `danger`, `warning` and `success`, each from 50 to 950.
+
+<note>
+Import the reset, your palette, then the theme, in that order, from the document layout. The
+build keeps the import order as the cascade order, so a palette imported after the theme
+leaves the components on the theme's fallbacks.
+</note>
 
 ```css {% title="resources/css/colors.css" %}
 :root {
@@ -103,9 +107,14 @@ export default createMiddleware(
 );
 ```
 
-A page passes them on as `<DocumentLayout assets={ctx.assets} title="Projects">`. A Worker runs
-no async work at module scope, so the lookup belongs to the request, and the middleware is
-where it happens. Put the class `system` on `<html>` and the theme follows the visitor's
+A page passes them on as `<DocumentLayout assets={ctx.assets} title="Projects">`.
+
+<warning>
+A Worker runs no async work at module scope, and a deploy fails validation when the module
+tries. Resolve the assets in the middleware, per request, as above.
+</warning>
+
+Put the class `system` on `<html>` and the theme follows the visitor's
 `prefers-color-scheme`, with no script deciding the scheme and nothing flashing on first paint.
 
 ## Compose a card
@@ -163,7 +172,7 @@ paints the rest, so this renders as static HTML. `color` takes one of the five s
 roles, never a raw color, which is what lets two apps with different palettes share the
 components.
 
-## Layout with mixins
+## Lay out the page with mixins
 
 `@sdxc/u` covers what a component does not: the space between components, page width, and
 responsive behavior. Every export is a mixin, and a `mix` array composes them.
@@ -209,7 +218,7 @@ Reach for a component before a pile of mixins. When `@sdxc/ui` has the element, 
 component already carries its spacing, focus ring and states. When it is close but not
 exact, pass a small `css({...})` from `remix/component` in its `mix` rather than rebuilding it.
 
-## A dialog with no script
+## Open a dialog with no script
 
 The native `<dialog>` element and Invoker Commands open and close a modal declaratively. A
 button names its target with `commandfor` and the verb with `command`, and there is no
@@ -270,14 +279,18 @@ The icon renders with `aria-hidden="true"` beside the visible label, and its str
 such as `Dialog.Close`, needs an `aria-label` instead.
 
 When the action refuses the submission and re-renders the page with `issues`, the `open`
-attribute shows the dialog again with each field's error beside it. A dialog opened by the
-attribute is non-modal and sits in the page's flow with no `::backdrop`, so give that state a
-fixed position through `mix` if it should look like the modal the visitor submitted from.
-That is the whole loop:
-see [Validate forms and route params](/docs/building-remix-apps/forms-and-params) for the
+attribute shows the dialog again with each field's error beside it.
+
+<note>
+A dialog opened by the `open` attribute is non-modal and sits in the page's flow with no
+`::backdrop`. Give that state a fixed position through `mix` if it should look like the modal
+the visitor submitted from.
+</note>
+
+That is the whole loop: see [Validate forms and route params](/docs/building-remix-apps/forms-and-params) for the
 action side.
 
-## An island, only where it's needed
+## Hydrate an island only where it's needed
 
 Copying a URL to the clipboard is behavior the platform has no declarative form for, so that
 one button becomes a `remix/component` client entry. The `@sdxc/ui` side of it is small: a `Button`
@@ -326,13 +339,33 @@ cross to the browser, is `remix/component`'s own; see Remix's
 Link the client script only from pages that render an island, and every other page ships no
 script at all.
 
+## Test what the server renders
+
+A component renders to HTML on the server, so a test renders it with `renderToString` from
+`remix/component/server` and reads the markup a browser would receive. The dialog's one
+decision, opening itself when the action refused a submission, is a string check:
+
+```tsx {% title="resources/components/new-project-dialog.test.tsx" %}
+import { renderToString } from "remix/component/server";
+import { expect, test } from "vitest";
+
+import { NewProjectDialog } from "~/resources/components/new-project-dialog";
+
+test("opens itself when the action returned issues", async () => {
+	let refused = await renderToString(
+		<NewProjectDialog issues={[{ path: ["name"], message: "Pick a name" }]} />,
+	);
+	let fresh = await renderToString(<NewProjectDialog />);
+
+	expect(refused).toContain("<dialog open");
+	expect(fresh).not.toContain("<dialog open");
+});
+```
+
 ## Where to go next
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the action
   that fills `issues`.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — replacing the literal
   copy above with messages.
-- [Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts) — page-wide keys, a
-  shortcuts panel, and announcing what a key did.
 - [`@sdxc/ui`](/api/ui) — the full component catalog and its mixins.
-- [`@sdxc/u`](/api/u) — every utility, with the CSS each one emits.

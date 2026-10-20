@@ -12,11 +12,15 @@ outcomes:
     - "How to add a check of your own and run `doctor` in CI"
 ---
 
+A project drifts in ways no test catches: a package left behind a release, a secret declared
+but never set, a migration a new database cannot replay, a route no router maps. Run one
+command to find them all before a deploy or a review does:
+
 ```bash
 sdxc doctor
 ```
 
-`sdxc doctor` runs every check against the project and prints one line per check, each marked
+It runs every check against the project and prints one line per check, each marked
 `pass`, `warn`, `fail` or `skip`, with the exact command or edit that fixes what it found:
 
 ```text

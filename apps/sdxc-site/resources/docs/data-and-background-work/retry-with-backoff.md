@@ -55,8 +55,10 @@ parked at 6 hours still spread out instead of arriving in one wave. Construction
 step that can fail: a `max` below `base` or a `jitter` above 1 throws a `RangeError` when the
 module loads, because those are fixed by the code rather than by any input.
 
+<warning>
 Keep the ceiling plus its jitter under 12 hours when the delay goes to `ctx.retry`. That is the
 longest Cloudflare Queues holds a message, and 6 hours at +20% leaves plenty of room.
+</warning>
 
 ## Honor Retry-After
 
@@ -90,8 +92,12 @@ export function waitAfter(response: Response, attempt: number): number {
 ```
 
 `Retry-After` is either a number of seconds or an HTTP date, and both forms show up in the
-wild. The header is the remote server's to write, so `waitAfter` clamps it to the queue's
-hold limit: an answer of a year would otherwise make the retry itself fail.
+wild.
+
+<warning>
+The header is the remote server's to write, so `waitAfter` clamps it to the queue's hold limit:
+an answer of a year would otherwise make the retry itself fail.
+</warning>
 
 Some packages read the header for you. A failed send from [`@sdxc/messaging`](/api/messaging)
 carries `retryAfter` in milliseconds, taken from `Retry-After` or the `retry_after` Discord and
@@ -180,9 +186,15 @@ export function fetchProfile(url: string) {
 ```
 
 A function `delay` replaces `retry`'s own `backoff` option, so the ceiling and the jitter are
-the schedule's. Keep the whole budget short, since a visitor is waiting through every attempt:
-four tries here spend at most three seconds waiting. `jitter: "full"` draws anywhere from zero to the delay, the widest spread, which suits many requests retrying
-the same API after the same blip. When the attempts run out, or `when` declines an error, the
+the schedule's.
+
+<note>
+Keep the whole budget short, since a visitor is waiting through every attempt: four tries here
+spend at most three seconds waiting.
+</note>
+
+`jitter: "full"` draws anywhere from zero to the delay, the widest spread, which suits many
+requests retrying the same API after the same blip. When the attempts run out, or `when` declines an error, the
 failure holds a `RetryError`; [Result everywhere](/docs/conventions/result-everywhere) covers
 narrowing it.
 

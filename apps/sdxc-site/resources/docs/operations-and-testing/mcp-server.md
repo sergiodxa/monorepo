@@ -26,6 +26,7 @@ as every page. [`@sdxc/cache`](/api/cache) keeps repeated searches off the datab
 ```bash
 npm add @sdxc/authz @sdxc/cache @sdxc/get-client-ip @sdxc/json-schema @sdxc/lazy-route \
 	@sdxc/logger @sdxc/mcp @sdxc/rate-limit @sdxc/result remix
+npm add -D @sdxc/cloudflare-mocks
 ```
 
 ## Declare the tools
@@ -206,9 +207,14 @@ export async function cachedSearch<T>(key: string, search: () => Promise<T>) {
 
 Open the cache per call: an instance holds its own deferred writes until KV has them, which
 is what lets a request read what it just wrote, and handing it `waitUntil` means a miss never
-waits on the KV put. KV refuses a TTL under 60 seconds. A `fetch` failure means the search
-itself failed, so rethrowing its cause makes the tool fail the same way with or without the
-cache. Because the tool lives in its own file, caching it changes only that file:
+waits on the KV put. A `fetch` failure means the search itself failed, so rethrowing its cause
+makes the tool fail the same way with or without the cache.
+
+<note>
+KV refuses a TTL under 60 seconds.
+</note>
+
+Because the tool lives in its own file, caching it changes only that file:
 
 ```typescript {% title="app/mcp/tools/search-jobs.ts" %}
 import { createTool, ToolError } from "@sdxc/mcp";
@@ -237,8 +243,12 @@ The key stays bounded because the schema caps `query` at 100 characters. What co
 what reads back out of KV, so a `Date` field arrives as its string; the type says so. The TTL
 is also how long a new posting can be missing from a repeated search, so pick it for your
 content. Every caller shares these entries, which is correct only because the endpoint is
-anonymous and every caller sees the same data. Once a tool answers per credential, the
-credential belongs in the key.
+anonymous and every caller sees the same data.
+
+<warning>
+Once a tool answers per credential, the credential belongs in the cache key; a shared key would
+hand one caller's answer to another.
+</warning>
 
 To cache every tool at once, write tool middleware instead and pass it to `createHandler` as
 `toolMiddleware`. A `ToolMiddleware` reads `ctx.tool.name` and `ctx.input`, awaits `next()`
@@ -350,23 +360,111 @@ export default createTool(toolset.closePosting, {
 });
 ```
 
-Map it in `app/initializers/mcp.ts` like the others, and remove `cacheScope: "public"` there:
-the tool's `available` predicate makes the lists vary by credential, so they must stay
-`"private"`. A read-scoped token never sees `close_posting`, and a write-scoped one still
+Map it in `app/initializers/mcp.ts` like the others.
+
+<warning>
+Remove `cacheScope: "public"` from `app/initializers/mcp.ts` once a tool declares `available`:
+the lists then vary by credential, and a shared cache would show one caller the tools of
+another.
+</warning>
+
+A read-scoped token never sees `close_posting`, and a write-scoped one still
 closes only the postings its holder may. A posting the holder may not see answers with the `notFound` message,
 as a missing one does, and any other refusal answers as `ForbiddenError`. Cache keys for a
 scoped tool carry the credential, as the cache section above explains. [Decide who can do
 what](/docs/identity-and-security/authorization) writes the policy and the scope roles.
 
+## Test a tool call
+
+A tool call is a `POST` to the route, so a test sends one through the same router the Worker
+builds and reads the result out of the JSON-RPC answer. The cache and the rate limiter read
+their bindings through `cloudflare:workers`, so give the test environment a mock of each, and
+the `waitUntil` the cache hands its writes to:
+
+```typescript {% title="app/test/cloudflare-workers.ts" %}
+import { createKVNamespace, createRateLimit } from "@sdxc/cloudflare-mocks";
+
+export const env = {
+	CACHE: createKVNamespace(),
+	MCP_RATE_LIMITER: createRateLimit(),
+	// …the bindings the template already mocks
+} as Partial<Cloudflare.Env> as Cloudflare.Env;
+
+export function waitUntil(promise: Promise<unknown>) {
+	return promise;
+}
+```
+
+Then call the tool once with a query that matches and once with one that matches nothing:
+
+```typescript {% title="app/mcp/tools/search-jobs.test.ts" %}
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { factories, migrate } from "~/app/test/database";
+import { PostingFactory } from "~/database/factories/posting";
+
+beforeAll(migrate);
+
+async function searchJobs(query: string) {
+	let response = await createWebRouter().fetch(
+		new Request("https://example.com/mcp", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+				"Mcp-Method": "tools/call",
+				"Mcp-Name": "search_jobs",
+			},
+			body: JSON.stringify({
+				jsonrpc: "2.0",
+				id: 1,
+				method: "tools/call",
+				params: {
+					name: "search_jobs",
+					arguments: { query },
+					_meta: {
+						[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
+						[MetaKey.ClientCapabilities]: {},
+					},
+				},
+			}),
+		}),
+	);
+	let body = (await response.json()) as {
+		result: { content: { text: string }[]; isError?: boolean };
+	};
+	return body.result;
+}
+
+test("search_jobs answers the matching postings", async () => {
+	await factories().create(PostingFactory, { title: "Senior Remix Engineer" });
+
+	let result = await searchJobs("Remix");
+
+	expect(result.isError).toBeUndefined();
+	expect(result.content[0]?.text).toContain("Senior Remix Engineer");
+});
+
+test("search_jobs tells the model to broaden an empty search", async () => {
+	let result = await searchJobs("Cobol");
+
+	expect(result).toEqual({
+		content: [{ type: "text", text: "Nothing matched. Try a broader query." }],
+		isError: true,
+	});
+});
+```
+
+A `ToolError` answers as a result with `isError` set, which the model reads and acts on, so the
+second test asserts on that result rather than on a failed request.
+
 ## Where to go next
 
-- [Test Workers apps](/docs/operations-and-testing/testing) drives this endpoint through the
-  router with a `tools/call` request and asserts on the answer.
-- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) covers the
-  cache adapters and their failure codes.
-- [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) explains
-  rate limiting in more depth.
-- [Decide who can do what](/docs/identity-and-security/authorization) writes the policy a
-  token's scope is checked against.
-- [`@sdxc/mcp`](/api/mcp) lists where each kind of failure is reported, and the schema subset
-  tools accept.
+- [Test Workers apps](/docs/operations-and-testing/testing) — the mocks, factories and MSW the
+  test above builds on.
+- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — the cache
+  adapters and their failure codes.
+- [Decide who can do what](/docs/identity-and-security/authorization) — the policy a token's
+  scope is checked against.

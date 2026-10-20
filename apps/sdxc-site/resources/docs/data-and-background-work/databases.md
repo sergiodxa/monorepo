@@ -83,9 +83,13 @@ unchanged on either driver. The `@sdxc/database-middleware/jobs` and
 
 ## Write what D1 can commit
 
-D1 commits every statement on its own, the moment it runs. `db.transaction(...)` on D1 gives you
-a scope, not atomicity: if the third statement throws, the first two are already in the database.
-So write every change that must land completely as a single statement.
+D1 commits every statement on its own, the moment it runs.
+
+<warning>
+`db.transaction(...)` on D1 gives you a scope and no atomicity: if the third statement throws,
+the first two are already in the database. Write every change that must land completely as a
+single statement.
+</warning>
 
 The D1 driver compiles `createMany()` to one multi-row `INSERT`, `updateMany()` and
 `deleteMany()` to one `UPDATE` or `DELETE`, and a query-builder upsert to one
@@ -134,9 +138,12 @@ export class Tenant extends DurableObject {
 runtime can find it. Your tables and queries do not change, because they only ever saw a
 `Database`. What changes is how atomicity works. SQL storage rejects `BEGIN` and
 `COMMIT`, so `db.transaction()` rejects here. Instead, every write an object makes within one
-turn of its event loop commits together. Two `create`
-calls in a row are atomic; the same two calls with a `fetch` between them are not, because
-awaiting I/O ends the turn. Gather what a write needs before the first write.
+turn of its event loop commits together.
+
+<warning>
+Two `create` calls in a row are atomic; the same two calls with a `fetch` between them are not,
+because awaiting I/O ends the turn. Gather what a write needs before the first write.
+</warning>
 
 Apply the schema from the object itself, since its database exists only once the object runs.
 The adapter's `executeScript` takes a whole migration file and runs it one statement at a time.
@@ -168,8 +175,33 @@ export async function createTestDatabase(): Promise<Database> {
 }
 ```
 
+<note>
 D1's own `exec` reads each line as a statement, so flattening the file keeps one migration valid
-for both. A Durable Object's database is tested the same way with `createSqlStorage()`, which also
+for both.
+</note>
+
+The test then runs the model function against that database. Calling it twice proves the
+claim is exclusive, since the second call finds nothing due:
+
+```typescript {% title="app/models/reminders.test.ts" %}
+import { expect, test } from "vitest";
+
+import { claimDueReminders } from "~/app/models/reminders";
+import { createTestDatabase } from "~/app/test/database";
+
+test("claims each due reminder once", async () => {
+	let db = await createTestDatabase();
+	await db.exec("INSERT INTO reminders (id, run_at) VALUES (?, ?)", [
+		"reminder-1",
+		Date.now() - 1_000,
+	]);
+
+	expect(await claimDueReminders(db, 60_000)).toEqual([{ id: "reminder-1" }]);
+	expect(await claimDueReminders(db, 60_000)).toEqual([]);
+});
+```
+
+A Durable Object's database is tested the same way with `createSqlStorage()`, which also
 throws on `BEGIN` exactly as the platform does. Both run on Bun and Node: the package picks
 whichever built-in SQLite module the runtime has.
 

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to serve one list of posts as RSS 2.0, Atom and JSON Feed"
     - "How to let readers find the feeds and publish an OPML list"
@@ -24,8 +24,8 @@ It combines [`@sdxc/rss`](/api/rss), [`@sdxc/atom`](/api/atom),
 pipeline in [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline).
 
 ```bash
-npm add @sdxc/atom @sdxc/http @sdxc/jobs @sdxc/json-feed @sdxc/markdown @sdxc/opml \
-	@sdxc/result @sdxc/rss @sdxc/websub remix
+npm add @sdxc/atom @sdxc/feed @sdxc/http @sdxc/jobs @sdxc/json-feed @sdxc/markdown \
+	@sdxc/opml @sdxc/result @sdxc/rss @sdxc/websub remix
 ```
 
 ## One list of entries
@@ -67,8 +67,11 @@ export async function feedEntries(origin: string, limit = 20): Promise<FeedEntry
 }
 ```
 
-Every URL is absolute. Readers fetch a feed from one place and display it in another, so a
-relative link in an item resolves against whatever the reader happens to use as its base.
+<warning>
+Write every URL in a feed as an absolute one. Readers fetch a feed from one place and display
+it in another, so a relative link in an item resolves against whatever the reader happens to
+use as its base.
+</warning>
 
 Give each feed a route of its own:
 
@@ -182,9 +185,13 @@ export default createAction(routes.feeds.atom, async (ctx) => {
 });
 ```
 
-The imports match the RSS action, with `Atom` from `@sdxc/atom` in place of `RSS`. An entry's
-`id` must never change, so use the permalink only if permalinks never change on your site; a
-`tag:` URI minted from the post's creation date is the alternative when they might.
+The imports match the RSS action, with `Atom` from `@sdxc/atom` in place of `RSS`.
+
+<warning>
+Keep an entry's `id` fixed for its whole life. Use the permalink only if permalinks never
+change on your site; a `tag:` URI minted from the post's creation date is the alternative when
+they might.
+</warning>
 
 ## JSON Feed 1.1
 
@@ -392,8 +399,10 @@ published by `jobEnqueuer(queue)` from `@sdxc/jobs/router`, given the same queue
 dispatcher delivers from, so the action writes the message without loading the job's code
 (see [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)).
 
+<warning>
 The hub fetches each topic the moment it is pinged. If you cache the feeds at the edge, purge
-them before enqueuing, or the hub reads the copy without the new post.
+them before enqueuing the ping, or the hub reads the copy without the new post.
+</warning>
 
 ## Publish an OPML list
 
@@ -433,13 +442,40 @@ An outline with a `folder` is written inside one `<outline>` per folder, so a re
 way you grouped it. Every value is escaped by the XML layer, so an `&` in a title or a query
 string is safe.
 
+## Test the feeds
+
+A feed reader is the client that matters, so read each feed back through
+[`@sdxc/feed`](/api/feed), the parser readers build on, and check that it parses in its format
+and that every item links back with an absolute URL:
+
+```typescript {% title="app/http/controllers/feeds/feeds.test.ts" %}
+import { Feed } from "@sdxc/feed";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+test.each([
+	["rss", routes.feeds.rss],
+	["atom", routes.feeds.atom],
+	["json", routes.feeds.json],
+] as const)("serves the %s feed with absolute links", async (format, route) => {
+	let response = await createWebRouter().fetch(
+		new URL(route.href(), "https://example.com"),
+	);
+	let feed = unwrap(Feed.parse(await response.text()));
+
+	expect(feed.format).toBe(format);
+	for (let item of feed.items)
+		expect(item.url).toMatch(/^https:\/\/example\.com\//);
+});
+```
+
 ## Where to go next
 
 - [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — where the posts
   and their HTML come from.
-- [Join the IndieWeb](/docs/content-and-feeds/indieweb) — notify the pages your posts link to.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — keep feeds
   cheap to serve without delaying a hub's fetch.
-- [Parse and write Link headers](/docs/http-apis/link-header) — `rel="hub"` and `rel="self"`
-  on their own.
 - [`@sdxc/feed`](/api/feed) — read RSS, Atom and JSON Feed through one normalized shape.

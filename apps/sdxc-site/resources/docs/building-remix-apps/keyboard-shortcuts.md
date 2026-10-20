@@ -216,7 +216,7 @@ browser's own address bar search. The latest map passed is the one a keystroke r
 binding can read state set up in the component, and the mixin attaches its listener once
 the host is in a document: on the server it renders nothing extra.
 
-## Where the keys stand down
+## Know when the keys stand down
 
 A page-wide `j` must never swallow the letter `j` typed into a field. The keymap stands
 down for a keystroke that something else owns:
@@ -228,10 +228,13 @@ down for a keystroke that something else owns:
   keys
 - one pressed inside a `<dialog>` that sits outside the keymap's host
 
-The last rule is the reason to put the shortcuts panel inside the island. A modal opened
-elsewhere on the page keeps its keys to itself, while the panel, rendered inside the host,
-still answers them. `Escape` closes it through the native `<dialog>`, and the Keyboard
-shortcuts button opens the same panel by pointer.
+<note>
+Render the shortcuts panel inside the keymap's host. A modal opened elsewhere on the page
+keeps its keys to itself, while the panel, rendered inside the host, still answers them.
+</note>
+
+`Escape` closes the panel through the native `<dialog>`, and the Keyboard shortcuts button
+opens the same panel by pointer.
 
 For a single combo that only opens or closes one dialog or popover, `hotkey(combo)` on that
 element is enough: `<dialog mix={[hotkey("mod+k")]}>` toggles it from anywhere on the
@@ -288,6 +291,39 @@ answers the bindings, and every other dialog keeps its keys.
 To match a combo in a handler of your own, `matchesKeyCombo(event, "mod+enter")` answers
 whether a keystroke is exactly that combo, and `isTypingTarget(event.target)` whether it
 was aimed at a field.
+
+## Test the hints per keyboard
+
+The controller decides the key caps from the request, and the island renders on the server
+with the panel inside it, so one request per platform proves each reader sees their own
+glyphs. `migrate()` prepares the in-memory database, as
+[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
+
+```typescript {% title="app/http/controllers/inbox.test.tsx" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
+
+const MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15";
+const WINDOWS = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
+
+beforeAll(migrate);
+
+async function inboxFor(userAgent: string) {
+	let url = new URL(routes.inbox.href(), "https://example.com");
+	let response = await createWebRouter().fetch(
+		new Request(url, { headers: { "User-Agent": userAgent } }),
+	);
+	return response.text();
+}
+
+test("prints the search hint in the reader's key caps", async () => {
+	expect(await inboxFor(MAC)).toContain("⌘");
+	expect(await inboxFor(WINDOWS)).toContain("Ctrl");
+});
+```
 
 ## Where to go next
 

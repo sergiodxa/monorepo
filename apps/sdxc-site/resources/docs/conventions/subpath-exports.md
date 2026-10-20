@@ -5,16 +5,22 @@ section:
     title: Conventions
     order: 3
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "Why a package splits its concerns into subpath entry points"
     - "What recurring subpath shapes to expect, like `@sdxc/http/cache`"
     - "When a package has no root export and why that beats more packages"
 ---
 
-Most packages here publish one entry point and nothing else — reach for the name and you have
-the whole thing. Where a package covers several concerns, each concern is its own subpath, and
-importing one leaves the rest out of your bundle entirely.
+Most packages here publish one entry point — reach for the name and you have the whole thing.
+Where a package covers several concerns, each concern is its own subpath, and importing one
+leaves the rest out of your bundle entirely. This page shows the subpath shapes that recur
+across the collection, so you can guess where an adapter, a middleware or a test suite lives
+before you open a README.
+
+```bash
+npm add @sdxc/cache @sdxc/http @sdxc/markdown @sdxc/rate-limit @sdxc/result @sdxc/u
+```
 
 ```typescript
 import { Policies } from "@sdxc/http/cache";
@@ -24,24 +30,48 @@ import { p } from "@sdxc/u/size";
 
 Every package page lists the subpaths it publishes, under **Imports**.
 
-## The recurring shapes
+## Import the contract from the root and the adapter by name
 
-**`/middleware`** is where a package's Remix middleware lives. The core of the package knows
-nothing about a router; the middleware is the binding, and it is a separate import so a
-consumer using the core alone never pulls the router in.
+A package built around one contract with swappable implementations keeps the contract at its
+root and each implementation under the name of what it binds to. [`@sdxc/cache`](/api/cache)
+publishes `Cache` at the root, `MemoryCache` at `@sdxc/cache/memory` and `WorkerKVCache` at
+`@sdxc/cache/worker-kv`. Write your own code against the contract:
 
-**`/conformance`** is a shared test suite a driver has to pass. A package built around one
-contract with swappable implementations publishes the suite that proves an implementation
-satisfies it, so a driver you write yourself is held to the same standard as the ones that ship.
+```typescript {% title="app/services/posts/cached-post.ts" %}
+import type { Cache } from "@sdxc/cache";
 
-**A vendor name** is an adapter for that vendor. `@sdxc/cache/worker-kv` and
-`@sdxc/cache/memory` are two implementations of the same contract; the vendor-neutral core sits
-at the root, and the one you import decides what you deploy against.
+import { loadPost } from "~/app/services/posts/load-post";
 
-**`/remix`** is a framework binding, on the packages that are framework-free at the root.
+export function cachedPost(cache: Cache, id: string) {
+	return cache.fetch(`post:${id}`, () => loadPost(id), { ttl: "5 minutes" });
+}
+```
 
-Three of those shapes sit side by side in [`@sdxc/cache`](/api/cache), and its source
-tree reads as the entry points it publishes:
+Production hands it `new WorkerKVCache(env.CACHE)`, and a test hands it the in-memory adapter,
+so the test runs without a KV namespace:
+
+```typescript {% title="app/services/posts/cached-post.test.ts" %}
+import { MemoryCache } from "@sdxc/cache/memory";
+import { isSuccess } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { cachedPost } from "~/app/services/posts/cached-post";
+
+test("stores the post under its key", async () => {
+	let cache = new MemoryCache();
+	await cachedPost(cache, "1");
+
+	let hit = await cache.read("post:1");
+	expect(isSuccess(hit) && hit.data !== null).toBe(true);
+});
+```
+
+The import you write decides what you deploy against: a Worker that imports only
+`@sdxc/cache/worker-kv` carries no in-memory adapter. The same shape holds for `/memory` in
+[`@sdxc/jobs`](/api/jobs), [`@sdxc/mail`](/api/mail) and [`@sdxc/messaging`](/api/messaging),
+and for vendor names such as `@sdxc/messaging/slack` and `@sdxc/billing/providers/stripe`.
+
+The package's source tree reads as the entry points it publishes:
 
 <files title="packages/cache/src">
 <folder name="adapters">
@@ -60,29 +90,81 @@ tree reads as the entry points it publishes:
 <file name="index.ts" />
 </files>
 
-`index.ts` is the contract at the root, `adapters/` are the two implementations of it, and
-`testing/conformance.ts` is the suite either of them has to pass. `lib/` is published under no
-subpath at all: it is the package's own workings, and the only files a consumer can import are
-the four the manifest names.
+`index.ts` is the contract at the root, `adapters/` hold the two implementations of it, and
+`testing/conformance.ts` is the suite each of them passes. `lib/` is the package's own
+workings, published under no subpath, so the four entries the manifest names are the files you
+can import.
 
-## A package with no root
+## Hold your own adapter to the conformance suite
 
-Some packages publish no root entry point at all — [`@sdxc/http`](/api/http) is the
-clearest case:
+**`/conformance`** is the test suite every implementation of a contract has to pass. The
+adapters that ship run it, and a driver you write yourself runs the same one:
+
+```typescript {% title="app/models/d1-cache.test.ts" %}
+import { conformance } from "@sdxc/cache/conformance";
+
+import { D1Cache } from "~/app/models/d1-cache";
+import { openDatabase } from "~/app/initializers/database";
+
+conformance({ name: "D1Cache", create: () => new D1Cache(openDatabase()) });
+```
+
+`conformance` registers Vitest tests, so it runs inside your own test file. Leave out its
+`expire` option when your adapter can only expire in real time, and the suite skips the expiry
+cases. [`@sdxc/jobs`](/api/jobs), [`@sdxc/messaging`](/api/messaging),
+[`@sdxc/newsletter`](/api/newsletter) and [`@sdxc/flags`](/api/flags) publish the same subpath
+for their contracts.
+
+## Add the middleware from its own subpath
+
+**`/middleware`** is a package's Remix middleware. The core of the package works without a
+router; the middleware is the binding, so code using the core alone never pulls the router in:
+
+```typescript
+import { addressKey, KVAdapter } from "@sdxc/rate-limit";
+import { rateLimit } from "@sdxc/rate-limit/middleware";
+```
+
+Where a package also runs inside jobs or the command line, the binding for each is one level
+down: `@sdxc/mail/middleware/jobs` and `@sdxc/logger/middleware/cli`.
+
+**`/testing`** carries helpers for asserting against the package in your own tests, such as
+`@sdxc/authz/testing` and `@sdxc/openapi/testing`. **`/remix`** is a framework binding on a
+package that is framework-free at the root, such as `@sdxc/markdown/remix`, and **`/ui`** is a
+package's `remix/component` components, such as `@sdxc/honeypot/ui`.
+
+## Import from a package with no root
+
+Some packages publish no root entry point at all, and [`@sdxc/http`](/api/http) is the clearest
+case:
 
 ```typescript
 import { Policies } from "@sdxc/http/cache";
 import { ok } from "@sdxc/http/response/json";
 ```
 
-There is no `@sdxc/http` to import, on purpose. The package is four unrelated concerns that
-happen to be about HTTP, and a root that re-exported all of them would make importing the
-status codes drag in the caching layer. The subpath is the unit, so the import names what you
-actually wanted.
+The package is several independent concerns that happen to be about HTTP — caching, content
+negotiation, status codes, responses — and a root that re-exported all of them would make
+importing the status codes drag in the caching layer. The subpath is the unit, so the import
+names what you actually wanted.
+
+<note>
+Only the subpaths a package's manifest names are importable. A path into a package's internals,
+such as `@sdxc/cache/lib/ttl`, fails to resolve, so import from a listed subpath even when the
+file you want sits deeper in the source.
+</note>
 
 ## Why this rather than more packages
 
 The alternative is publishing `@sdxc/http-cache` and `@sdxc/http-status` as separate releases.
 Subpaths keep concerns that version together in one release, so a change that touches two of
-them lands as one version rather than two that have to be upgraded in step — while still
-costing a consumer only what they import.
+them lands as one version that you take at once, while you still pay only for what you import.
+
+## Where to go next
+
+- [Install and pin](/docs/getting-started/install-and-pin) — why every package, and so every
+  subpath, moves on one release date.
+- [Cache on Workers](/docs/data-and-background-work/cache-on-workers) — the contract and its
+  adapters at work in an app.
+- [Naming](/docs/conventions/naming) — the conventions that make the exports behind each subpath
+  guessable.

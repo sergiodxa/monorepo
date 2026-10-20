@@ -117,8 +117,10 @@ let page = await Pagination.byOffset(users.inTeam(teamId).orderBy("name", "asc")
 });
 ```
 
+<note>
 `Pagination.byKeyset` owns the ordering, so give it a scope that only filters; it refuses a
 query that already orders.
+</note>
 
 ## Publish the models on `ctx.models`
 
@@ -289,20 +291,32 @@ let result = await ctx.models.transaction(async (models) => {
 });
 ```
 
-If the team fails, the returned `Failure` drops the queued welcome job. What it cannot do on D1
-is take the user back: D1 commits every statement as it runs, so the user row stays and the
-caller decides on the compensating delete. Bind with `{ transactions: "database" }` on an
-adapter with real transactions, such as SQLite in tests, and the user rolls back too.
+If the team fails, the returned `Failure` drops the queued welcome job.
+
+<warning>
+On D1 the transaction keeps the user row: D1 commits every statement as it runs, so the caller
+decides on the compensating delete. Bind with `{ transactions: "database" }` on an adapter with
+real transactions, such as SQLite in tests, and the user rolls back too.
+</warning>
 
 `afterCreate`, `afterUpdate` and `afterDelete` run before the write is reported, and can fail it.
-On D1 their database work has already committed, so keep them to work the model can repeat, and
-put anything with consequences outside the database in `afterCommit`.
+
+<warning>
+On D1 the database work of `afterCreate`, `afterUpdate` and `afterDelete` has already committed
+when one fails, so keep them to work the model can repeat, and put anything with consequences
+outside the database in `afterCommit`.
+</warning>
 
 An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
-statement over every matching row and runs no model callbacks. It is the escape hatch for
-set-based writes; iterate and call `update(key, values)` per row when each row needs its
-callbacks. It takes `{ touch: false }` to leave `updated_at` as it is, and `returning` to answer
-the rows it changed. `update(key, {})` with no values marks one row as changed.
+statement over every matching row.
+
+<note>
+A query-built update or delete runs no model callbacks. It is the escape hatch for set-based
+writes; iterate and call `update(key, values)` per row when each row needs its callbacks.
+</note>
+
+A query-built update takes `{ touch: false }` to leave `updated_at` as it is, and `returning`
+to answer the rows it changed. `update(key, {})` with no values marks one row as changed.
 
 `upsert` writes a row or the one it conflicts with in a single statement, with no read first:
 
@@ -571,6 +585,6 @@ the names that ran, or a failure naming the step that threw. Factory values come
   database the models bind to.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — define the jobs an
   `afterCommit` callback enqueues.
-- [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) — wrap a search
-  query with `from()` so a model's scopes apply to it.
+- [Full-text search over SQLite](/docs/data-and-background-work/full-text-search) — a search
+  index kept beside the tables your models own.
 - [`@sdxc/data-model`](/api/data-model) — every option, member and type.

@@ -150,3 +150,11 @@ The project `sdxc create` writes: the built-in `app`, or any GitHub repository y
 
 The text `sdxc upgrade` prints for an AI agent: what changed between two releases for the code
 your project has, with each breaking change's migration steps. [Upgrade](/docs/sdxc/upgrade)
+
+## Where to go next
+
+- [Start a project](/docs/sdxc/start-a-project) — the template and the layout these terms
+  describe.
+- [Generate files](/docs/sdxc/generate-files) — kinds, stubs and declared-and-mapped edits in
+  practice.
+- [Errors and FAQ](/docs/sdxc/errors-and-faq) — the fix when a term shows up in a message.

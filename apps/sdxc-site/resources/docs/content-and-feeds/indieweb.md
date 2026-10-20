@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 3
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to mark posts up with microformats using `@sdxc/microformats`"
     - "How to receive, verify and send Webmentions from background jobs"
@@ -104,10 +104,12 @@ Advertise the endpoint first, in both places a sender looks. `advertise` from
 `@sdxc/webmention/discover` writes the RFC 8288 `Link` header value for a post's response,
 through [`@sdxc/link-header`](/api/link-header):
 
-```typescript {% title="app/http/webmention-headers.ts" %}
+```typescript {% title="app/services/webmention.ts" %}
 import { advertise } from "@sdxc/webmention/discover";
 
 import routes from "~/routes/web";
+
+export const USER_AGENT = "Example Webmention (+https://example.com)";
 
 export function webmentionHeaders(base: URL) {
 	return { link: advertise(new URL(routes.webmention.href(), base)).header };
@@ -271,8 +273,12 @@ author and its content. `content.html` is already sanitized with the source as i
 approved reply renders as it stands (in `remix/component`, through `unsafeHTML`); mark each one up as
 an `mf("h-cite")` so the replies under your post are themselves readable microformats.
 
-Store mentions as pending and show them once you approve them; the endpoint is anonymous, and
-moderation is the one policy the protocol leaves entirely to you. Responses that arrive over
+<warning>
+Store mentions as pending and show them once you approve them. The endpoint is anonymous, and
+moderation is the one policy the protocol leaves entirely to you.
+</warning>
+
+Responses that arrive over
 ActivityPub can go through `saveMention` too, since their summary carries the same fields.
 
 ## Send Webmentions
@@ -317,9 +323,14 @@ export default createJobHandler(jobs.webmentions.send, async (ctx) => {
 });
 ```
 
-A deleted post links nowhere, so every past target is notified. Serve `410 Gone` from its URL
-before the job runs, and each receiver's own verification sees the deletion and removes the
-mention. One delivery per target means a slow endpoint delays nobody else:
+A deleted post links nowhere, so every past target is notified.
+
+<note>
+Serve `410 Gone` from a deleted post's URL before the send job runs, so each receiver's own
+verification sees the deletion and removes the mention.
+</note>
+
+One delivery per target means a slow endpoint delays nobody else:
 
 ```typescript {% title="app/jobs/webmentions/deliver.ts" %}
 import { createBackoff } from "@sdxc/backoff";
@@ -380,8 +391,12 @@ renders, and signs in through IndieAuth, which ends with an access token you ver
 `micropub` pair in the route table gives the endpoint both methods.
 
 `parseOperation` decodes a POST in any of the three encodings clients use (form, multipart and
-JSON) into one of four typed operations, and returns the token from wherever it was sent. Check
-the token before you act on anything in the body:
+JSON) into one of four typed operations, and returns the token from wherever it was sent.
+
+<warning>
+Verify the access token and its scopes before you act on anything in the body. A Micropub
+request writes to your site, and the token is the only thing that says who sent it.
+</warning>
 
 ```typescript {% title="app/http/controllers/micropub/write.ts" %}
 import {
@@ -497,18 +512,74 @@ export default createAction(routes.micropub.query, async (ctx) => {
 });
 ```
 
+<note>
 List only the queries you answer in `config({ q })`, since clients treat a missing one as
-unsupported. `source` writes the post back in the shape a JSON create sends, so a client's
+unsupported.
+</note>
+
+`source` writes the post back in the shape a JSON create sends, so a client's
 editor round-trips it.
+
+## Test it
+
+The endpoint refuses a malformed mention before it reads your database or queues anything, so
+a request through the router proves it is mapped and answering. The Micropub side's one rule of
+your own is how a create becomes a draft, which `parseOperation` lets you test from a plain
+form post:
+
+```typescript {% title="app/http/controllers/webmention.test.ts" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+test("refuses a mention whose source is its target", async () => {
+	let url = new URL(routes.webmention.href(), "https://example.com");
+	let page = "https://example.com/posts/hello";
+
+	let response = await createWebRouter().fetch(
+		new Request(url, {
+			method: "POST",
+			body: new URLSearchParams({ source: page, target: page }),
+		}),
+	);
+
+	expect(response.status).toBe(400);
+});
+```
+
+```typescript {% title="app/services/micropub.test.ts" %}
+import { parseOperation } from "@sdxc/micropub";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { draftFrom } from "~/app/services/micropub";
+
+test("reads a form post with in-reply-to as a reply", async () => {
+	let request = new Request("https://example.com/micropub", {
+		method: "POST",
+		body: new URLSearchParams({
+			h: "entry",
+			content: "Agreed!",
+			"in-reply-to": "https://other.com/posts/1",
+			"mp-slug": "agreed",
+		}),
+	});
+
+	let { body } = unwrap(await parseOperation(request));
+	if (body.action !== "create") throw new Error("Expected a create");
+
+	expect(draftFrom(body)).toMatchObject({
+		kind: "reply",
+		inReplyTo: "https://other.com/posts/1",
+		slug: "agreed",
+		draft: false,
+	});
+});
+```
 
 ## Where to go next
 
-- [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — the HTML
-  `outboundLinks` reads comes from `toHTML`.
-- [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the other half
-  of being followed from someone else's site.
-- [Parse and write Link headers](/docs/http-apis/link-header) — read a `rel="webmention"`
-  header yourself.
 - [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) — followers,
   replies and likes from Mastodon and the rest of the fediverse.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,

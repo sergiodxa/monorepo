@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 8
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to read an uploaded CSV into validated rows with errors that name the line"
     - "How to stream an export with `@sdxc/csv` that spreadsheets open safely"
@@ -185,13 +185,19 @@ export default createAction(routes.contacts.import, async (ctx) => {
 
 `Contacts` is your own table, and `ctx.account` the signed-in account your auth middleware
 publishes. The import is all or nothing: a file with one bad row saves nothing, so fixing it and
-uploading it again cannot duplicate the rows that were fine. On D1 that also means
-`Contacts.createMany` writes every contact in one statement, such as the multi-row `INSERT`
-that `remix/data-table`'s own `createMany` compiles to, as
-[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) explains.
+uploading it again cannot duplicate the rows that were fine.
 
+<note>
+D1 commits each statement as it runs, so `Contacts.createMany` keeps the import all or nothing
+only by writing every contact in one statement, such as the multi-row `INSERT` that
+`remix/data-table`'s own `createMany` compiles to, as
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) explains.
+</note>
+
+<warning>
 The whole file is read into memory, so cap its size where the body is parsed, with the
 `maxFileSize` option of Remix's `formData()` middleware.
+</warning>
 
 ## Stream an export
 
@@ -288,8 +294,11 @@ type already says it is data, so `-12` written as the number `-12` stays a numbe
 columns numeric in the rows you export, since a balance pre-formatted as the string `"-12.50"`
 would come out as `'-12.50`.
 
+<warning>
 Turn it off with `escapeFormulas: false` only for a file no spreadsheet opens, such as a feed a
-script reads, where the added `'` would be part of the text the program sees.
+script reads, where the added `'` would be part of the text the program sees. Any export a
+person downloads keeps the default.
+</warning>
 
 ## Write for spreadsheets in other locales
 
@@ -309,6 +318,47 @@ export function spreadsheetOptions(locale: string): WriteOptions {
 
 Spread the result into the `streamify` options for a download a person opens. Leave both off for
 files programs read: some parsers take the byte order mark as part of the first header.
+
+## Test the import
+
+`readContacts` takes text and answers a `Result`, so its test needs no request and no
+database. One case proves a clean file types its rows, the other that every bad row is reported
+by the number a spreadsheet shows:
+
+```typescript {% title="app/services/imports/read-contacts.test.ts" %}
+import { isFailure, unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { readContacts } from "~/app/services/imports/read-contacts";
+
+test("types each row from the schema", async () => {
+	let contacts = await unwrap(
+		readContacts("name,email,plan,seats\nAda,ADA@example.com,pro,3\n"),
+	);
+
+	expect(contacts).toEqual([
+		{ name: "Ada", email: "ada@example.com", plan: "pro", seats: 3 },
+	]);
+});
+
+test("reports every bad row by its spreadsheet row number", async () => {
+	let result = await readContacts(
+		[
+			"name,email,plan,seats",
+			"Ada,ada@example.com,pro,3",
+			"Grace,not-an-email,gold,0",
+		].join("\n"),
+	);
+
+	expect(isFailure(result) && result.error.problems).toEqual([
+		{ kind: "row", row: 3, messages: expect.any(Array) },
+	]);
+});
+```
+
+To check the export end to end, request `routes.contacts.export` through
+`createWebRouter().fetch(...)`, as [Test Workers apps](/docs/operations-and-testing/testing)
+shows, and pass the response text back to `parse`.
 
 ## Where to go next
 

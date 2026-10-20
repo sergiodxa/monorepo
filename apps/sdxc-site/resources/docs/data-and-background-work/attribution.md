@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 12
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to record a visitor's first and last touch with `@sdxc/attribution`"
     - "How to store the campaign with the account, the checkout or the newsletter reader"
@@ -60,8 +60,13 @@ that identify an email subscriber, such as `mc_eid`, are never stored; they cred
 ## Keep the first and last touch
 
 The middleware reads the touch on every page view and keeps two: the first within a window, and
-the latest one that was not `direct`. It stores them in a cookie. Sign the cookie, so a visitor
-cannot credit themselves to a campaign, and give it the same lifetime as the window:
+the latest one that was not `direct`. It stores them in a cookie with the same lifetime as the
+window:
+
+<warning>
+Sign the cookie with `secrets`. A visitor can edit an unsigned cookie and credit themselves to
+any campaign, and every report built on it would count them there.
+</warning>
 
 ```typescript {% title="app/initializers/cookies.ts" %}
 import type { Cookie } from "remix/cookie";
@@ -84,7 +89,12 @@ export function attributionCookie(): Cookie {
 ```
 
 `COOKIE_SECRET` is a secret declared in your Worker's configuration. Add the middleware to the
-global chain, ahead of anything that ends a request early:
+global chain:
+
+<note>
+Put `attribution()` ahead of any middleware that ends a request early, so every page view
+reaches it and records its touch.
+</note>
 
 ```tsx {% title="app/initializers/router.tsx" %}
 import { attribution } from "@sdxc/attribution/middleware";
@@ -110,12 +120,18 @@ export function createWebRouter() {
 ```
 
 Every request gets `ctx.attribution` with three fields: `current`, this request's own touch,
-and the stored `first` and `last`. Writes happen only on a page navigation: a `GET` the browser
-marks as loading a document. A form post, a `fetch`, a bot and a direct revisit write nothing, so
-a form action reads the touches the visitor's page views recorded. The first touch is replaced
-when the stored one is older than `window` (90 days by default), so a visitor returning a year
-later from a new campaign is credited to it. A response that sets the cookie is marked
-`Cache-Control: private`, and a cookie that fails to verify or validate reads as no record.
+and the stored `first` and `last`.
+
+<note>
+Writes happen only on a page navigation: a `GET` the browser marks as loading a document. A form
+post, a `fetch`, a bot and a direct revisit write nothing, so a form action reads the touches
+the visitor's page views recorded.
+</note>
+
+The first touch is replaced when the stored one is older than `window` (90 days by default), so
+a visitor returning a year later from a new campaign is credited to it. A response that sets the
+cookie is marked `Cache-Control: private`, and a cookie that fails to verify or validate reads
+as no record.
 
 An app that already runs `remix/session`'s middleware passes `store: "session"` and installs
 `attribution()` after it; the record then lives under the session's `attribution` key and the
@@ -135,7 +151,7 @@ The remaining options:
 
 An app serving visitors under the ePrivacy Directive reads its own consent cookie:
 
-```typescript
+```typescript {% title="app/initializers/router.tsx" %}
 attribution({
 	store: attributionCookie(),
 	consent: (ctx) => {

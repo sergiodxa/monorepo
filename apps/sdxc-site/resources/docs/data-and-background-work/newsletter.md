@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 11
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to subscribe readers to Buttondown or Kit through one `@sdxc/newsletter` contract"
     - "How to credit the campaign and follow confirmations and unsubscribes from webhooks"
@@ -71,10 +71,17 @@ export const kit: Newsletter = new KitNewsletter({
 });
 ```
 
+<warning>
 `form.confirmation` has to match the form's own setting in Kit, which is what decides whether
-the confirmation email goes out. The form is also where Kit records attribution. Metadata keys
-must already exist as Kit custom fields, and creating a reader costs up to four requests against
-Kit's rate limit.
+the confirmation email goes out.
+</warning>
+
+The form is also where Kit records attribution.
+
+<note>
+Metadata keys must already exist as Kit custom fields, and creating a reader costs up to four
+requests against Kit's rate limit.
+</note>
 
 Every call on either provider answers a `Result<T, NewsletterError>`. The error's `code` is the
 normalized reason, `providerCode` the platform's own, and only `rate_limited` is `retryable`,
@@ -220,9 +227,13 @@ subscribed. Tags, metadata and attribution apply only to a reader the call creat
 `outcome.data.subscriber.status` is `pending` until the reader clicks the confirmation link.
 
 `ip` takes the `IP` the middleware published, or the `Result` of `IP.parse` as it is; `null` or a
-failed parse records no address. Bots find a public sign-up form quickly, so put the layers from
+failed parse records no address.
+
+<warning>
+Bots find a public sign-up form quickly, so put the layers from
 [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) in front of this
 action.
+</warning>
 
 ## Credit the campaign
 
@@ -338,9 +349,12 @@ deliveries without a timestamp, which makes the store what bounds a replay there
 
 Each event carries `subscriberId` and, when the platform sent it, `subscriber` with the record;
 when it is `null`, `ctx.newsletter.subscribers.find({ id })` reads it. A platform event type with
-no mapping arrives as `unrecognized` and is acknowledged. The webhook is a cross-origin `POST`,
-so exempt its path from `cop()` as
+no mapping arrives as `unrecognized` and is acknowledged.
+
+<warning>
+The webhook is a cross-origin `POST`, so exempt its path from `cop()` as
 [Receive and send webhooks](/docs/identity-and-security/webhooks) explains.
+</warning>
 
 ## Test against the memory list
 

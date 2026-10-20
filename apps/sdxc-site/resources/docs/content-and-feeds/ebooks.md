@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 20
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to turn a markdown post into an EPUB with `@sdxc/epub`"
     - "How to read a build failure when epubcheck would reject the book"
@@ -166,10 +166,12 @@ function escapeXml(text: string): string {
 }
 ```
 
+<note>
 The `identifier` is how a reading app recognises the book in its library. The permalink is
 stable per post, so downloading the post again after an edit replaces the copy a reader already
 has instead of adding a second book. `modified`, written to the second, is what tells a reading
 app the file changed, so pass the time of the post's last edit.
+</note>
 
 The required metadata is `identifier`, `title`, a BCP 47 `language` and `modified`. Everything
 else is optional, and `creators` takes a MARC relator `role` (`aut` for an author, `edt` for an
@@ -180,9 +182,13 @@ The values above describe text with headings and a table of contents, which is w
 post is. Add `conformsTo` once the book has been evaluated against a standard such as
 `EPUB Accessibility 1.1 - WCAG 2.1 Level AA`.
 
-The stylesheet is your own CSS, linked from every chapter. Keep it self-contained: a font or
-background image loaded from the web fails with `remote-resource`, and one the book carries goes
-in `resources`, as the next section shows.
+The stylesheet is your own CSS, linked from every chapter.
+
+<warning>
+Keep the stylesheet self-contained: a font or background image loaded from the web fails the
+build with `remote-resource`, and one the book carries goes in `resources`, as a later section
+shows.
+</warning>
 
 ## Serve the download
 
@@ -337,12 +343,59 @@ Write a link between posts of the series to the other chapter (`part-setup.xhtml
 it opens inside the book. For a book in another language, `labels` sets the `contents`,
 `landmarks`, `cover` and `start` text the navigation document shows.
 
+## Test the book
+
+The chapter walk is what keeps a post's images and links working inside the book, and the build
+is what decides the file opens, so test both with a short post:
+
+```typescript {% title="app/services/books/post-epub.test.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { chapterBody } from "~/app/services/books/chapter";
+import { postEpub } from "~/app/services/books/post-epub";
+
+const SOURCE = "## Install\n\nSee [about](/about).\n\n![A chart](/chart.png)\n";
+const PERMALINK = "https://example.com/posts/hello";
+
+test("links images and relative links back to the site", () => {
+	let { document } = unwrap(Markdown.parse(SOURCE));
+	let { body } = unwrap(chapterBody(document, PERMALINK));
+
+	expect(body).toContain('href="https://example.com/about"');
+	expect(body).toContain(
+		'<a href="https://example.com/chart.png">Image: A chart</a>',
+	);
+	expect(body).not.toContain("<img");
+});
+
+test("builds a book that opens", async () => {
+	let { document } = unwrap(Markdown.parse(SOURCE));
+	let built = unwrap(
+		postEpub({
+			title: "Hello",
+			description: "A first post",
+			permalink: PERMALINK,
+			author: "Jane Doe",
+			publishedAt: new Date("2026-10-01T00:00:00Z"),
+			updatedAt: new Date("2026-10-01T00:00:00Z"),
+			document,
+		}),
+	);
+
+	let bytes = unwrap(await built.bytes());
+	expect(new TextDecoder().decode(bytes.subarray(30, 38))).toBe("mimetype");
+});
+```
+
+The ZIP's first entry name starts at byte 30, so reading `mimetype` there proves the container
+begins the way every reading system expects.
+
 ## Where to go next
 
 - [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — the `readPost`
   the download reads, with highlighted code and custom tags.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the same posts for
   feed readers.
-- [Stream several files as a ZIP](/docs/data-and-background-work/zip-downloads) — the
-  container format an EPUB is written in, for downloads of your own.
 - [`@sdxc/epub`](/api/epub) — every field of the input and every error subclass.

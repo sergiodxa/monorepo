@@ -154,8 +154,10 @@ export async function readFlags() {
 }
 ```
 
-Never construct a logger or open a log per request yourself. One `createLogger()` per Worker
-and the invocation's own log is the whole model.
+<note>
+One `createLogger()` per Worker and the invocation's own log is the whole model: a logger or
+log opened per request writes a second record that no trace or query joins to the first.
+</note>
 
 ## Hand the same logger to the job dispatcher
 
@@ -258,9 +260,15 @@ service does (see
 keeps this working for responses whose headers are immutable, such as a redirect or an
 upstream `fetch`. In a handler, wrap the work you want to see:
 `await ctx.get(Timing).measure("db", "listPostings", () => Posting.listOpen(ctx.db))`. The name is
-the group you scan for and the description says which call it was. Workers advance the clock
-only across I/O, so time I/O calls; pure computation reads as zero. Every client sees the
-header, so name entries as deliberately as a public API.
+the group you scan for and the description says which call it was.
+
+<note>
+Workers advance the clock only across I/O, so time I/O calls; pure computation reads as zero.
+</note>
+
+<warning>
+Every client sees the `Server-Timing` header, so name entries as deliberately as a public API.
+</warning>
 
 ## Sample only when you have to
 
@@ -307,15 +315,54 @@ recorded. The condition compiles once, when the logger is created, and one that 
 compile keeps every event: a typo in the exemption costs volume, never the record you were
 looking for.
 
+## Test what a record says
+
+A record is what you query in production, so a test checks it the same way: run the code
+inside a `Log` whose `sink` collects records instead of writing them, and assert on what was
+emitted. `currentLog()` finds that log, so `readFlags` needs no change to be tested. The
+provider module is replaced before `readFlags` loads, to make it fail:
+
+```typescript {% title="app/initializers/flags.test.ts" %}
+import { Log } from "@sdxc/logger";
+import { failure } from "@sdxc/result";
+import { expect, test, vi } from "vitest";
+
+test("a provider failure falls back to the defaults, degraded", async () => {
+	vi.doMock("~/app/services/flag-provider", async (importOriginal) => ({
+		...(await importOriginal<typeof import("~/app/services/flag-provider")>()),
+		loadFlags: async () => failure(new Error("provider timed out")),
+	}));
+	let { readFlags } = await import("~/app/initializers/flags");
+	let { DEFAULT_FLAGS } = await import("~/app/services/flag-provider");
+
+	let records: Record<string, unknown>[] = [];
+	let log = new Log({ kind: "request", sink: (record) => records.push(record) });
+
+	expect(await log.run(() => readFlags())).toBe(DEFAULT_FLAGS);
+	expect(records).toEqual([
+		expect.objectContaining({
+			outcome: "degraded",
+			notes: [
+				expect.objectContaining({
+					level: "warn",
+					name: "flags.provider_error",
+					message: "provider timed out",
+				}),
+			],
+		}),
+	]);
+});
+```
+
+`run` emits the record when the body settles, so it is in `records` by the time `run`
+resolves. A handler's log works the same way: build the context, pass this `log`, and call the
+handler inside `log.run(...)`.
+
 ## Where to go next
 
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers the
-  dispatcher these job logs come from.
-- [Wire the router](/docs/building-remix-apps/wire-the-router) explains the middleware order
-  and how services reach `ctx`.
-- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) tells
-  Slack, Discord or PagerDuty when something fails, and notes every send on the run's log.
-- [Test Workers apps](/docs/operations-and-testing/testing) shows how to hand a handler a log
-  and assert on the record it wrote.
-- [`@sdxc/logger`](/api/logger) and [`@sdxc/trace-context`](/api/trace-context) list every
-  field and option.
+- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher
+  these job logs come from.
+- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — tell
+  Slack, Discord or PagerDuty when something fails, with every send noted on the run's log.
+- [`@sdxc/logger`](/api/logger) and [`@sdxc/trace-context`](/api/trace-context) — every field
+  and option.

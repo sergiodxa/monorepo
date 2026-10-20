@@ -31,7 +31,7 @@ npm add @sdxc/catch-response-middleware @sdxc/http @sdxc/lazy-route @sdxc/logger
 	@sdxc/trailing-slash-middleware remix
 ```
 
-## One canonical path
+## Pick one canonical path
 
 `/pricing` and `/pricing/` are two URLs to a search engine, a cache and an analytics query,
 even when your router answers both with the same page. Choose one and redirect the other.
@@ -65,12 +65,15 @@ everything else its canonical retry is about to do anyway, while the log still r
 redirect. `{ mode: "always" }` makes the slashed form canonical instead and leaves a path whose
 last segment has a dot, such as `/robots.txt` or `/feed.xml`, as it is.
 
+<warning>
 Browsers cache a `308`, so switching a live site from one mode to the other sends returning
-visitors into a loop until those entries expire. Pick once, and generate links in the
-canonical form so a click never pays for the redirect; the middleware is for the links other
-people write by hand.
+visitors into a loop until those entries expire. Pick once.
+</warning>
 
-## One canonical host
+Generate links in the canonical form so a click never pays for the redirect; the middleware
+is for the links other people write by hand.
+
+## Keep one canonical host
 
 `www.example.com` and `example.com` are two sites to a search engine, and a cookie set on the
 apex domain without a `Domain` attribute never reaches the `www.` host. `noWWW()` makes the
@@ -113,8 +116,12 @@ Both sit right after `log(logger)`, ahead of the session and body parsing, so ne
 for work the final request repeats, and the log records each redirect. Links you generate in
 the canonical form never pay either hop.
 
+<note>
 The `www.` host must still reach the Worker for the redirect to run, so route it to the same
-Worker as the apex domain. A test sends the router a request for that host and reads the
+Worker as the apex domain.
+</note>
+
+A test sends the router a request for that host and reads the
 redirect, with both middleware running as they do in production:
 
 ```typescript {% title="app/initializers/router.test.ts" %}
@@ -180,10 +187,14 @@ export default createAction(routes.billing, async (ctx) => {
 response untouched, and anything that is not a `Response` is thrown again as it was, so a real
 bug still reaches the runtime with its stack: this is not an error boundary.
 
-Order matters. A throw unwinds the chain, so a middleware between the throw and the catch
-never resumes after its own `next()`, and whatever it meant to add to the response is lost.
-Put `catchResponse()` below every middleware that reads or decorates the response, such as
-the session middleware that commits the `Set-Cookie`. The next section shows it in place.
+<warning>
+A throw unwinds the chain, so a middleware between the throw and the catch never resumes
+after its own `next()`, and whatever it meant to add to the response is lost. Put
+`catchResponse()` below every middleware that reads or decorates the response, such as the
+session middleware that commits the `Set-Cookie`.
+</warning>
+
+The next section shows it in place.
 
 A redirect thrown from the action unwinds only as far as the catch:
 
@@ -202,6 +213,25 @@ sequenceDiagram
     C-->>S: The redirect as the response
     Note over S: Resumes after next(),<br>commits the Set-Cookie
     S-->>L: Redirect with Set-Cookie
+```
+
+A test asks for the billing page with no session and reads the redirect `requireUser` threw,
+which proves `catchResponse()` sits in the chain:
+
+```typescript {% title="app/http/controllers/billing.test.ts" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+test("sends a visitor with no session to the login page", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.billing.href(), "https://example.com")),
+	);
+
+	expect(response.status).toBe(303);
+	expect(response.headers.get("Location")).toBe(routes.login.href());
+});
 ```
 
 ## Import each route on first use
@@ -268,8 +298,10 @@ is loaded at all, so a section most visitors cannot enter is never evaluated for
 be middleware that publishes nothing onto the context, because the loaded handler's type
 cannot learn about a value declared at the map call; publish those from the router's chain.
 
+<note>
 Write each loader as a bare `import()` of a fixed path, so the bundler splits it into its own
-chunk. A computed specifier cannot be split, and the deferral saves nothing.
+chunk. A computed specifier lands in the main bundle, and the deferral saves nothing.
+</note>
 
 ## Read and write structured header fields
 
@@ -353,15 +385,32 @@ representation, such as a string outside printable ASCII, fails with a
 `Quotas.consume` is your own counter, returning the limit, what remains, and the seconds until
 the window resets.
 
+`servedFromCache` is a plain function of a response, so its test builds one with the header a
+CDN writes:
+
+```typescript {% title="app/services/cache-status.test.ts" %}
+import { expect, test } from "vitest";
+
+import { servedFromCache } from "~/app/services/cache-status";
+
+function withCacheStatus(value: string) {
+	return new Response(null, { headers: { "Cache-Status": value } });
+}
+
+test("reads a hit from any cache along the way", () => {
+	expect(
+		servedFromCache(withCacheStatus("ExampleCDN; hit, Origin; fwd=uri-miss")),
+	).toBe(true);
+	expect(servedFromCache(withCacheStatus("ExampleCDN; fwd=uri-miss"))).toBe(false);
+	expect(servedFromCache(withCacheStatus('"unterminated'))).toBe(false);
+});
+```
+
 ## Where to go next
 
 - [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
   — the composition root these middleware join.
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — the
   canonical host and paths a sitemap should list.
-- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — caching
-  the responses your own Worker serves.
 - [Parse and write Link headers](/docs/http-apis/link-header) — RFC 8288 `Link`, which is
   not a structured field.
-- [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — another header,
-  `Idempotency-Key`, that is a structured field.

@@ -56,8 +56,14 @@ export default emails({
 });
 ```
 
-Each declaration is named by its path, `postings.published`, and that name travels with every
-queued delivery, so rename it only when no delivery under the old name is waiting. Importing
+Each declaration is named by its path, `postings.published`.
+
+<warning>
+The declaration's name travels with every queued delivery, so rename it only when no delivery
+under the old name is waiting: the job exits on a name nothing maps.
+</warning>
+
+Importing
 the map costs the schemas alone, so a controller sends an email without loading the module that
 renders it, and the props are parsed by the schema on every send.
 
@@ -182,8 +188,12 @@ export async function queue(delivery: QueuedEmail): Promise<void> {
 }
 ```
 
+<note>
 `CloudflareTransport` delivers through the Workers email sending binding, so the Worker needs a
-`send_email` binding named `EMAIL` and a verified sending domain. Each transport ships from its
+`send_email` binding named `EMAIL` and a verified sending domain.
+</note>
+
+Each transport ships from its
 own subpath, so importing this one never pulls another provider into your bundle. The
 dispatcher loads when the first email is queued, since its own middleware imports this module.
 

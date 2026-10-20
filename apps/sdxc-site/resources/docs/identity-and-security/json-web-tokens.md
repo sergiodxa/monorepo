@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 6
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to sign short-lived JWTs with `@sdxc/jwt` keys kept in R2"
     - "How to publish a JWKS and verify tokens by issuer and audience"
@@ -21,6 +21,7 @@ ends with rotating the signing key without breaking a single token in flight.
 that sign them. [`@sdxc/well-known`](/api/well-known) serves the key set at
 `/.well-known/jwks.json`, [`@sdxc/http`](/api/http) answers the refusals, and
 [`@sdxc/result`](/api/result) turns a failed verification into a value.
+[`@sdxc/uuid`](/api/uuid) gives each token its `jti`.
 
 ```bash
 npm add @sdxc/http @sdxc/jwt @sdxc/result @sdxc/uuid @sdxc/well-known remix
@@ -145,8 +146,10 @@ set holds no key for that algorithm. `scope` has no accessor on the base class, 
 constructor carries any claim you pass into the signature, and `ServiceToken.scopes` reads it
 back on the other side.
 
+<warning>
 Keep the lifetime short. A bearer token works for whoever holds it until it expires, and one
 you mint per call never needs to outlive the call. Signing a fresh one each time is cheap.
+</warning>
 
 ## Publish the key set
 
@@ -207,12 +210,17 @@ export async function authenticate(request: Request) {
 ```
 
 `verify` checks the signature, then `exp` and `nbf`, then the `issuer` and `audience` you
-name, and throws at the first failure; `wrap` makes that a `Result`. Each option closes a door.
-`audience` stops a token minted for another service from being replayed here. `algorithms`
-refuses a token that names any algorithm other than the one you expect. `requiredClaims` refuses
-a token with no `exp` at all, which would otherwise never expire, and one with no `sub`, which
-the narrowed `subject` accessor would throw on. `clockTolerance` allows 30 seconds of clock
-drift between the two services.
+name, and throws at the first failure; `wrap` makes that a `Result`.
+
+<warning>
+Pass every option shown here, because each one closes a door. `audience` stops a token minted
+for another service from being replayed here. `algorithms` refuses a token that names any
+algorithm other than the one you expect. `requiredClaims` refuses a token with no `exp` at all,
+which would otherwise never expire.
+</warning>
+
+`requiredClaims` also refuses a token with no `sub`, which the narrowed `subject` accessor
+would throw on. `clockTolerance` allows 30 seconds of clock drift between the two services.
 
 The handler then decides what the verified token may do:
 
@@ -249,15 +257,19 @@ When the same app signs and verifies, pass the key pairs instead of a resolver:
 `ServiceToken.verify(raw, await signingKeys(), options)`. A `KeyPair` carries its public JWK,
 and the key is still chosen by the token's `kid`.
 
-## Expiry on the client side
+## Refresh a token before it expires
 
 `verify` is what enforces expiry. The accessors report what the claim says, which is what a
 caller needs to decide when to fetch a new token it was handed. `JWT.decode(raw)` reads the
 claims without verifying them, and on the result `expiresIn` is the seconds left, going
 negative once `exp` has passed, `expired` follows from it and `expiresAt` is the moment as a
 `Date`. Refreshing when `expiresIn` drops under a minute keeps a token from expiring
-mid-request. Never let `decode` decide anything about a request you received: it trusts
-whatever the token says.
+mid-request.
+
+<warning>
+Use `decode` only on a token you were handed to send on. It trusts whatever the token says, so
+a request you received is decided by `verify` alone.
+</warning>
 
 ## Rotate the key
 
@@ -286,12 +298,17 @@ updated set. Run it from a cron job, as in
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), or by hand when a key
 may have leaked.
 
+<warning>
 Keep a retired key published for at least as long as the tokens it signed can live. With
-five-minute tokens that is short, but deleting it early fails every token still in flight. The
-first time you publish more than one key, make sure every verifier resolves keys by `kid`, as
-`importRemote` does, before the issuer starts signing with the new one.
+five-minute tokens that is short, but deleting it early fails every token still in flight.
+</warning>
 
-## ID tokens are a different job
+<note>
+The first time you publish more than one key, make sure every verifier resolves keys by `kid`,
+as `importRemote` does, before the issuer starts signing with the new one.
+</note>
+
+## Verify ID tokens through OpenID Connect
 
 An OpenID Connect ID token is a JWT too, but trusting one takes more than a signature and an
 audience: the nonce from your login request, the authorized party and, for some flows, the
@@ -300,13 +317,81 @@ does those checks through [`@sdxc/auth`](/api/auth), with `JWK.Algorithm` pinnin
 provider may sign with, so reach for it instead of `JWT.verify` whenever the token comes from a
 login.
 
+## Test the token end to end
+
+Sign with a key pair made in the test and answer the key set with
+[MSW](https://mswjs.io/), so the reports API's resolver fetches it exactly as it would in
+production. The second case proves `audience` refuses a token minted for another service:
+
+```typescript {% title="app/http/controllers/api/reports/create.test.ts" %}
+import { JWK } from "@sdxc/jwt";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+import { afterAll, beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { ServiceToken } from "~/app/services/auth/service-token";
+import routes from "~/routes/web";
+
+const ISSUER = "https://app.example.com";
+const KEYS: JWK.KeyPair[] = [];
+
+const server = setupServer(
+	http.get(`${ISSUER}/.well-known/jwks.json`, () =>
+		HttpResponse.json(JWK.toJSON(KEYS)),
+	),
+);
+
+beforeAll(async () => {
+	let pair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
+	KEYS.push(await JWK.importKeyPair(pair));
+	server.listen({ onUnhandledRequest: "error" });
+});
+afterAll(() => server.close());
+
+async function requestReport(audience: string) {
+	let token = new ServiceToken({
+		iss: ISSUER,
+		sub: "user-1",
+		aud: audience,
+		scope: "reports:write",
+		exp: "5 minutes",
+	});
+	let signed = await token.sign(JWK.Algorithm.ES256, KEYS);
+	let url = new URL(
+		routes.api.reports.create.href(),
+		"https://reports.example.com",
+	);
+	return createWebRouter().fetch(
+		new Request(url, {
+			method: "POST",
+			headers: { Authorization: `Bearer ${signed}` },
+		}),
+	);
+}
+
+test("a token for this API is accepted", async () => {
+	let response = await requestReport("https://reports.example.com");
+
+	expect(response.status).toBe(202);
+	expect(await response.json()).toEqual({ requestedBy: "user-1" });
+});
+
+test("a token minted for another service is refused", async () => {
+	let response = await requestReport("https://billing.example.com");
+
+	expect(response.status).toBe(401);
+});
+```
+
+`generateKeyPair` and `importKeyPair` make the same `KeyPair` that `signingKeys` reads from
+the bucket, so the test signs exactly the way your app does.
+
 ## Where to go next
 
-- [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc): verified
+- [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — verified
   ID tokens and sessions from an identity provider.
-- [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto): opaque
+- [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — opaque
   tokens and HMAC signatures, for when the receiver shares a secret with you.
-- [Build a JSON API with problem details](/docs/http-apis/json-apis): answer the refusals as
-  problem documents.
-- [`@sdxc/jwt`](/api/jwt): every accessor, the `KeyStorage` contract and keys kept in a
+- [`@sdxc/jwt`](/api/jwt) — every accessor, the `KeyStorage` contract and keys kept in a
   database.

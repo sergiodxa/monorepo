@@ -313,13 +313,9 @@ useful for a draw you want to replay and what keeps it to draws that guard nothi
 
 ## Where to go next
 
-- [Generate believable test data](/docs/operations-and-testing/test-data): seeded fake people,
-  companies and dates, and a fuzz run that prints its seed.
-- [Test Workers apps](/docs/operations-and-testing/testing): the Vitest projects these tests
-  run in.
-- [Write executable specs](/docs/operations-and-testing/executable-specs): seeded runs that
+- [Generate believable test data](/docs/operations-and-testing/test-data) — seeded fake
+  people, companies and dates, and a fuzz run that prints its seed.
+- [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) — the schedules
+  that draw jitter from a stream.
+- [Write executable specs](/docs/operations-and-testing/executable-specs) — seeded runs that
   replay with `--seed`.
-- [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff): the schedules that
-  draw jitter from a stream.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases): where a stored
-  seed or stream state lives.

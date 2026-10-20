@@ -101,9 +101,15 @@ export const idempotent = idempotency({
 ```
 
 `scope` says whose keys these are, and records never cross scopes, so one caller can never be
-answered with another caller's response. It needs an identity your authentication middleware
-established, shown here as `ctx.apiKey`: an unauthenticated API has nothing trustworthy to
-scope on. Publish the `ttl` in your API reference, since the draft asks servers to state when
+answered with another caller's response.
+
+<warning>
+Scope on an identity your authentication middleware established, shown here as `ctx.apiKey`.
+A scope built from anything the caller sends, or one shared by every caller, lets a caller who
+guesses or reuses another's key receive that caller's stored response.
+</warning>
+
+Publish the `ttl` in your API reference, since the draft asks servers to state when
 keys expire.
 
 Create the `idempotency_keys` table by pasting `IDEMPOTENCY_KEYS_SCHEMA_SQL` into a migration,
@@ -170,30 +176,47 @@ flowchart TD
 
 ## Send a key
 
-A client mints the key once per operation and reuses it on every attempt:
+A client mints the key once per operation and reuses it on every attempt. Here the client is
+a service in another app, retrying a create up to three times while no answer arrives or the
+server fails:
 
-```typescript
+```typescript {% title="app/services/books/create-book.ts" %}
 import { generateIdempotencyKey, withIdempotencyKey } from "@sdxc/idempotency/client";
 import { unwrap } from "@sdxc/result";
 
-let body = JSON.stringify({
-	title: "Kindred",
-	author: "Octavia E. Butler",
-	year: 1979,
-});
-let headers = { "Content-Type": "application/json" };
+export async function createBook(book: {
+	title: string;
+	author: string;
+	year: number;
+}) {
+	let body = JSON.stringify(book);
+	let headers = { "Content-Type": "application/json" };
 
-let key = generateIdempotencyKey();
-let init = unwrap(withIdempotencyKey({ method: "POST", headers, body }, key));
+	let key = generateIdempotencyKey();
+	let init = unwrap(withIdempotencyKey({ method: "POST", headers, body }, key));
 
-// Send `init` as many times as it takes: the book is created once.
-await fetch("https://books.example.com/api/books", init);
+	let response: Response | null = null;
+	for (let attempt = 0; attempt < 3; attempt++) {
+		response = await fetch("https://books.example.com/api/books", init).catch(
+			() => null,
+		);
+		if (response !== null && response.status < 500) break;
+	}
+	return response;
+}
 ```
 
-The retries must send the same bytes, since the middleware fingerprints the method, path,
-content type and body. Serialize the body once and keep it. For work retried by a queue,
-`deriveIdempotencyKey(message.id, "create-book")` gives the same key on every delivery with
-nothing stored.
+Every attempt sends the same `init`, key and body included, so the book is created once
+however many attempts it takes.
+
+<note>
+Every retry sends the same bytes: the middleware fingerprints the method, path, content type
+and body, and answers `422` when a reused key arrives with a different one. Serialize the body
+once and keep it.
+</note>
+
+For work retried by a queue, `await deriveIdempotencyKey(message.id, "create-book")` gives
+the same key on every delivery with nothing stored.
 
 ## Hand out an ETag
 
@@ -300,12 +323,18 @@ export default createAction(routes.api.books.update, async (ctx) => {
 
 The order is deliberate. The `404` comes before the body is read. `precondition` compares
 `If-Match` with the tag the book has now: an absent header passes, and a stale tag answers
-`412`, so a client that sends the tag it read cannot overwrite a change it never saw. The
-check and the write are two statements, so on D1 a write can still land between them; when
-that matters, make the update itself conditional in SQL.
+`412`, so a client that sends the tag it read cannot overwrite a change it never saw.
+
+<warning>
+The check and the write are two statements, so on D1 another write can land between them.
+When two writers racing matters, make the update itself conditional in SQL, matching the
+columns the tag was computed from.
+</warning>
 
 `applyValidated` applies the patch and validates the **result** with `BOOK_INPUT`, the create
-schema, so create and update share one set of limits. A patch removing `title` fails on
+schema, so create and update share one set of limits. It validates synchronously, so the
+schema it takes holds only synchronous checks; one that validates asynchronously fails every
+patch. A patch removing `title` fails on
 `/title`, and the issues point into the patched book. `alsoAccept` keeps callers that send
 `application/json` working.
 
@@ -321,7 +350,7 @@ JSON Pointer on `UnrepresentableChangeError`, encoded by
 where the member itself is optional, so a patch that would remove a required field fails to
 compile.
 
-```typescript
+```typescript {% title="app/services/books/patch-book.ts" %}
 import type { MergePatchOf } from "@sdxc/merge-patch";
 
 import { MEDIA_TYPE, stringify } from "@sdxc/merge-patch";
@@ -333,16 +362,20 @@ interface Book {
 	summary?: string;
 }
 
-let url = "https://books.example.com/api/books/01j9z4k2m8q7r6t5v4w3x2y1z0";
-let read = await fetch(url);
+export async function patchBook(id: string, patch: MergePatchOf<Book>) {
+	let url = `https://books.example.com/api/books/${id}`;
+	let read = await fetch(url);
 
-let headers = new Headers({ "Content-Type": MEDIA_TYPE });
-let tag = read.headers.get("ETag");
-if (tag !== null) headers.set("If-Match", tag);
+	let headers = new Headers({ "Content-Type": MEDIA_TYPE });
+	let tag = read.headers.get("ETag");
+	if (tag !== null) headers.set("If-Match", tag);
 
-let patch: MergePatchOf<Book> = { year: 1979, summary: null };
-await fetch(url, { method: "PATCH", headers, body: stringify(patch) });
+	return await fetch(url, { method: "PATCH", headers, body: stringify(patch) });
+}
 ```
+
+A caller passes only what changes, `patchBook(id, { year: 1979, summary: null })`, and a
+`412` answer means the book changed since the read: read it again and reapply the edit.
 
 `If-Match` carries the `ETag` from the `GET` the edit started from. A client holding the edited copy
 instead of a patch computes one with `diff(original, edited)`, which fails before sending when
@@ -353,13 +386,53 @@ To publish the update in your [OpenAPI document](/docs/http-apis/openapi), give 
 "application/json": BOOK_PATCH }`, and list `preconditionFailed` and `unsupportedMediaType`
 in its `problems`.
 
+## Test the update
+
+The update's rules live in two pure pieces, `writableBook` and the create schema, so a test
+applies patches to a book without a request. A book built by hand stands in for a row:
+
+```typescript {% title="app/http/controllers/api/books/writable-book.test.ts" %}
+import type { BookRow } from "~/app/models/book";
+
+import { applyValidated } from "@sdxc/merge-patch";
+import { issuesFrom } from "@sdxc/problem";
+import { isFailure, unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { writableBook } from "~/app/http/controllers/api/books/writable-book";
+import { BOOK_INPUT } from "~/app/http/validators/books";
+
+let book = {
+	id: "01j9z4k2m8q7r6t5v4w3x2y1z0",
+	title: "Kindred",
+	author: "Octavia E. Butler",
+	year: 1979,
+	summary: "A writer is pulled back in time.",
+} as BookRow;
+
+test("a patch removing a required member fails on its pointer", () => {
+	let next = applyValidated(writableBook(book), { title: null }, BOOK_INPUT);
+	if (!isFailure(next)) expect.unreachable("the title is required");
+	expect(issuesFrom(next.error)[0]?.pointer).toBe("/title");
+});
+
+test("a patch removing an optional member clears it", () => {
+	let next = unwrap(
+		applyValidated(writableBook(book), { summary: null }, BOOK_INPUT),
+	);
+	expect(next).toEqual({
+		title: "Kindred",
+		author: "Octavia E. Butler",
+		year: 1979,
+	});
+});
+```
+
 ## Where to go next
 
 - [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — get, set, and the pointer
   a refused `diff` carries.
 - [Write a typed API client](/docs/http-apis/api-clients) — attach idempotency keys in one
   hook for every create.
-- [Describe your API with OpenAPI](/docs/http-apis/openapi) — document the idempotency
-  problems on each create.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the
-  database the store and the books table live in.
+- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — purge expired
+  idempotency records on a schedule.

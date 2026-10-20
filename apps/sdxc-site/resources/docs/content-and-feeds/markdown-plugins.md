@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 8
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to give headings anchors and build a table of contents"
     - "How to rewrite links, set typographic punctuation and turn pasted URLs into embeds"
@@ -39,9 +39,14 @@ Every plugin lives at its own subpath, so a page imports only the passes it runs
 | `typography()` | `@sdxc/markdown/plugin/typography` | `paragraph`, `heading`, `tableCell`, `tag`, `element` |
 | `lint()`       | `@sdxc/markdown/plugin/lint`       | reads a document and returns its problems             |
 
-Visitors whose node types are disjoint spread into one object and run as a single pass. Two
-visitors that handle the same type take a walk each, because a spread keeps only the last
-handler for a key. That gives a post three walks, in this order:
+Visitors whose node types are disjoint spread into one object and run as a single pass.
+
+<warning>
+Two visitors that handle the same node type take a walk each. A spread keeps only the last
+handler for a key, so spreading them together silently drops the first one's work.
+</warning>
+
+That gives a post three walks, in this order:
 
 ```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
@@ -160,9 +165,13 @@ export function docsLinks(path: string) {
 ```
 
 `docsLinks("guides/setup.md")` resolves `../reference/cli.md#flags` in that file to
-`https://example.com/docs/reference/cli#flags`. A `base` that is no absolute URL fails the walk
-at the first relative URL it meets, with that node's position, and a URL held by a variable
-stays as written until [the variable is filled](/docs/content-and-feeds/markdown-variables).
+`https://example.com/docs/reference/cli#flags`. A URL held by a variable stays as written until
+[the variable is filled](/docs/content-and-feeds/markdown-variables).
+
+<note>
+Pass an absolute URL as `base`. Any other value fails the walk at the first relative URL it
+meets, with that node's position.
+</note>
 
 ## Set prose in typographic punctuation
 
@@ -259,6 +268,38 @@ export const CODEPEN: EmbedProvider = {
 		return { user, id };
 	},
 };
+```
+
+## Test the order
+
+The order of the walks is the part of `preparePost` a later edit can break without any one
+plugin failing, so pin it with a test: a pasted URL becomes an embed, and a heading keeps the
+id of what its author typed while its quotes curl:
+
+```typescript {% title="app/services/content/prepare.test.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { preparePost } from "~/app/services/content/prepare";
+
+test("embeds pasted URLs and anchors headings before setting them", () => {
+	let { document } = unwrap(
+		Markdown.parse('## "Ship it"\n\nhttps://youtu.be/dQw4w9WgXcQ\n'),
+	);
+
+	let [heading, video] = unwrap(preparePost(document)).children;
+
+	expect(heading).toMatchObject({
+		attributes: { id: "ship-it" },
+		children: [{ type: "text", value: "“Ship it”" }],
+	});
+	expect(video).toMatchObject({
+		type: "tag",
+		name: "youtube",
+		attributes: { id: "dQw4w9WgXcQ" },
+	});
+});
 ```
 
 ## Lint content in CI

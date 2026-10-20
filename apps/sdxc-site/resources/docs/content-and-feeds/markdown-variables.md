@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 9
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to write one markdown document with holes for per-render values"
     - "How to fill the values per tenant, plan or locale and decide what a missing one means"
@@ -126,10 +126,12 @@ number indexes an array, so `$plan.seats` reads `10` from the plan above. A text
 string, a number or a boolean; a list, an object or `null` there fails the walk, since none of
 them has a text form.
 
+<note>
 Fill variables before the other [markdown plugins](/docs/content-and-feeds/markdown-plugins)
 run. `variables` handles nearly every block type, so it takes a walk of its own, and the passes
 after it then read the final text and URLs: `links()` resolves the billing link once it is a
 URL, and `typography()` sets the quotes in a product name that holds one.
+</note>
 
 ## Let the schemas wait for their values
 
@@ -139,10 +141,12 @@ schema once the names are filled in, and the tag keeps the schema's output, coer
 A value that fails it fails the walk at the tag's position, with a `MarkdownParseError` carrying
 the schema's issues as the failure's `cause`.
 
+<note>
 Allowlisted elements are held to the same rules at fill time. An `href` or `src` filled from a
 variable takes only relative, `http`, `https`, `mailto` and `tel` URLs, so a value of
 `javascript:alert(1)` fails the walk at the `<a>` the way it would fail the parse had the author
 written it.
+</note>
 
 ```typescript {% title="app/services/content/onboarding-page.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -215,6 +219,45 @@ export function touch(source: string) {
 
 The output still reads `{% $plan.name %}` and `plans={$plans}`, so the markdown a client fetches
 is the template every workspace is filled from.
+
+## Test it
+
+The fill is where a reader's values meet the template, so test that a workspace's values land
+in the text and that a hole with no value fails instead of rendering:
+
+```typescript {% title="app/services/content/onboarding.test.ts" %}
+import { Markdown } from "@sdxc/markdown";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { isFailure, unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { fillOnboarding } from "~/app/services/content/onboarding";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
+
+const WORKSPACE = { slug: "acme", plan: { id: "team", name: "Team", seats: 10 } };
+
+function parse(source: string) {
+	return unwrap(Markdown.parse(source, MARKDOWN_OPTIONS)).document;
+}
+
+test("fills the workspace's plan into the text", () => {
+	let document = parse(
+		"Your {% $plan.name %} plan includes {% $plan.seats %} seats.",
+	);
+
+	let filled = unwrap(fillOnboarding(document, WORKSPACE));
+
+	expect(toPlainText(filled)).toContain("Your Team plan includes 10 seats.");
+});
+
+test("fails on a hole with no value", () => {
+	let filled = fillOnboarding(parse("Your plan is {% $plan.color %}."), WORKSPACE);
+
+	expect(isFailure(filled) && filled.error.message).toContain(
+		"No value for $plan.color",
+	);
+});
+```
 
 ## Where to go next
 

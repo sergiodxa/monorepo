@@ -14,13 +14,14 @@ outcomes:
 
 Here is a handler that accepts a markdown document, validates its frontmatter, and answers with
 either the frontmatter or the line the document went wrong on. It uses three packages and has
-no `try` in it.
+no `try` in it. You end with a Worker you can deploy as is, a test that proves both branches,
+and a look at the conventions every other package shares.
 
 ```bash
 npm add @sdxc/markdown @sdxc/response @sdxc/result remix
 ```
 
-```typescript
+```typescript {% title="src/worker.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { badRequest, methodNotAllowed, ok } from "@sdxc/response";
 import { isFailure } from "@sdxc/result";
@@ -54,8 +55,8 @@ export default {
 
 ## What each part is doing
 
-**`Markdown.parse` returns a `Result`.** It does not throw on malformed input and it does not
-return `null`. `isFailure` narrows the union, so the compiler will not let you reach
+**`Markdown.parse` returns a `Result`.** Malformed input comes back as a failure value you
+branch on. `isFailure` narrows the union, so the compiler will not let you reach
 `parsed.data` on the branch where there is none. This is the shape every fallible entry point
 in the collection has — see [`Result` everywhere](/docs/conventions/result-everywhere).
 
@@ -73,11 +74,42 @@ somewhere, was wrong.
 merges an `ok` field into the body so a client has one field to branch
 on.
 
-## Running it
+## Run it
 
-The handler is a plain object with a `fetch` method, which is what a Cloudflare Worker, Deno,
-Bun and Node's own server all accept. Nothing in it is framework-specific, and nothing in it is
-platform-specific either.
+The handler is a plain object with a `fetch` method, which is the module shape a Cloudflare
+Worker, Deno and Bun all serve. Every line in it is web platform code, so it runs the same on
+each of them.
+
+## Test it
+
+The handler is a plain function from a `Request` to a `Response`, so a Vitest test calls its
+`fetch` directly, with no server and no platform:
+
+```typescript {% title="src/worker.test.ts" %}
+import { expect, test } from "vitest";
+
+import worker from "./worker";
+
+function post(body: string) {
+	return worker.fetch(
+		new Request("https://example.com/", { method: "POST", body }),
+	);
+}
+
+test("answers with the validated frontmatter", async () => {
+	let response = await post("---\ntitle: Hello\n---\n\n# Hi\n");
+
+	expect(response.status).toBe(200);
+	expect(await response.json()).toMatchObject({ frontmatter: { title: "Hello" } });
+});
+
+test("names the line a broken document fails on", async () => {
+	let response = await post("---\ntitle: [oops\n---\n\n# Hi\n");
+
+	expect(response.status).toBe(400);
+	expect(await response.json()).toMatchObject({ line: 2 });
+});
+```
 
 ## Where to go next
 
@@ -85,3 +117,5 @@ platform-specific either.
   it without writing `isFailure` on every line.
 - [Subpath exports](/docs/conventions/subpath-exports) — why some of these imports have a
   second segment.
+- [Build an app](/docs/getting-started/build-an-app) — the same packages inside a project the
+  `sdxc` command starts.

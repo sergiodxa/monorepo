@@ -122,18 +122,25 @@ if your app runs Remix's
 [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
 webhook paths from it: the signature is the stronger claim.
 
-Verify before anything else reads the request: the body is a stream, and one consumed upstream
-fails with `UnreadableBodyError`. The payload comes back typed from the schema, and the exact
-text the signature covered is on `result.data.body` if you want to store the raw delivery.
+The payload comes back typed from the schema, and the exact text the signature covered is on
+`result.data.body` if you want to store the raw delivery.
 
-The replay store remembers each accepted delivery id for twice the tolerance. KV reads are
-eventually consistent, so a duplicate arriving within seconds in another location can slip
-through; the store narrows the replay window, and an idempotent job is what makes a repeat
-harmless.
+<note>
+Verify before anything else reads the request: the body is a stream, and one consumed upstream
+fails with `UnreadableBodyError`.
+</note>
+
+The replay store remembers each accepted delivery id for twice the tolerance.
+
+<warning>
+KV reads are eventually consistent, so a duplicate arriving within seconds in another location
+can slip past the replay store. The store narrows the replay window; an idempotent job is what
+makes a repeat harmless.
+</warning>
 
 ## Fail closed, and answer each failure honestly
 
-A secret that is not configured must never mean "accept everything". Here it cannot:
+A secret that is not configured must mean "refuse everything", and here it does:
 `env.ORDERS_WEBHOOK_SECRET` being unset, empty or not base64 fails the call with
 `InvalidSecretError`, so every delivery is refused until the secret exists. What remains is
 choosing the status for each failure, because the status is what tells the sender whether to
@@ -262,10 +269,14 @@ The endpoint URL is one a subscriber typed, so it is checked before anything is 
 `checkUrl` refuses anything but HTTP(S), credentials in the URL, private and reserved
 addresses such as `169.254.169.254`, and names that cannot be public, such as `localhost` or
 `.internal`. Run the same check when a subscriber saves the URL, so they see the refusal on the
-form rather than in a failed delivery. `redirect: "manual"` keeps a redirect from carrying the
-signed body somewhere the check never saw; the delivery reads it as a failure, since a
+form rather than in a failed delivery. The delivery reads a redirect as a failure, since a
 receiver answers a webhook directly. Nothing reads the receiver's reply, so `release` lets go
 of it at once.
+
+<warning>
+Keep `redirect: "manual"`. A followed redirect carries the signed body to whatever host the
+subscriber's server names, including the private addresses `checkUrl` refused.
+</warning>
 
 A receiver that is down gets a minute before the second attempt, then twice as long each time
 up to six hours, with ±20% jitter so the deliveries that failed together do not all return at
@@ -323,14 +334,59 @@ an unreadable secret fails verification, so this receiver fails closed too.
 `markProcessed` — which keeps forged deliveries as evidence and unprocessed ones ready to retry.
 `MemoryWebhookStore` stands in for it in tests.
 
+## Test the receiver
+
+Sign a delivery with `Webhooks.sign`, exactly as a sender would, and post it through the router.
+Set `ORDERS_WEBHOOK_SECRET` to a `whsec_` value and `WEBHOOKS` to `createKVNamespace()` in
+`app/test/cloudflare-workers.ts`:
+
+```typescript {% title="app/http/controllers/webhooks/orders.test.ts" %}
+import { unwrap } from "@sdxc/result";
+import * as Webhooks from "@sdxc/webhooks";
+import { env } from "cloudflare:workers";
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+async function deliver(id: string, edit = (body: string) => body) {
+	let payload = { type: "order.paid", data: { orderId: "order-1" } };
+	let { headers, body } = unwrap(
+		await Webhooks.sign(payload, {
+			secret: env.ORDERS_WEBHOOK_SECRET,
+			id,
+			timestamp: new Date(),
+		}),
+	);
+	headers.set("Content-Type", "application/json");
+	return createWebRouter().fetch(
+		new Request(new URL(routes.webhooks.orders.href(), "https://example.com"), {
+			method: "POST",
+			headers,
+			body: edit(body),
+		}),
+	);
+}
+
+test("accepts a delivery once and answers its replay as a duplicate", async () => {
+	expect((await deliver("msg_1")).status).toBe(202);
+	expect((await deliver("msg_1")).status).toBe(200);
+});
+
+test("refuses a body changed after signing", async () => {
+	let response = await deliver("msg_2", (body) =>
+		body.replace("order-1", "order-2"),
+	);
+
+	expect(response.status).toBe(401);
+});
+```
+
 ## Where to go next
 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   the queue binding, and retries.
-- [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) — the other
-  public surface an app exposes.
 - [Test Workers apps](/docs/operations-and-testing/testing) — run the receiver and its replay
   store against real KV bindings, with deliveries signed by `Webhooks.sign`.
 - [Sign and verify HTTP requests](/docs/identity-and-security/http-message-signatures) — for a
   sender that signs with an HTTP message signature and a key pair, rather than a shared secret.
-- [`@sdxc/webhooks`](/api/webhooks) — every error class and the replay store contract.

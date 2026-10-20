@@ -43,8 +43,12 @@ export default jobs({
 });
 ```
 
+<warning>
 The key is the job's name on the wire. A message enqueued by one deploy is consumed by the next,
-so renaming a key is a breaking change for whatever is still on the queue. `input` is parsed
+so renaming a key is a breaking change for whatever is still on the queue.
+</warning>
+
+`input` is parsed
 before the handler runs, so a message that does not match never reaches your code.
 
 A `cron` makes the job schedulable as well as enqueuable. The expression is parsed at
@@ -78,9 +82,13 @@ request's trace id.
 Returning normally acks the message. When you need another ending, the context has a verb for
 each: `ctx.retry({ delay: "5 minutes" })` asks for a redelivery later, `ctx.exit(reason)` gives up
 for good because a retry would reach the same result, and anything else thrown is retried by the
-platform. Write every verb as `return ctx.retry(…)`: each one throws, so nothing after it runs,
-and the `return` is what tells TypeScript the lines below are unreachable, since it narrows on a
+platform.
+
+<note>
+Write every verb as `return ctx.retry(…)`: each one throws, so nothing after it runs, and the
+`return` is what tells TypeScript the lines below are unreachable, since it narrows on a
 never-returning call only through a `const` name and `ctx` is a parameter.
+</note>
 
 ## Publish services onto the job context
 
@@ -284,7 +292,7 @@ flowchart LR
 The Worker's configuration declares the trigger with the same spelling, and the queue it
 both produces to and consumes:
 
-```json
+```json {% title="wrangler.jsonc" %}
 {
 	"triggers": { "crons": ["0 3 * * *"] },
 	"queues": {
@@ -303,8 +311,11 @@ sdxc make job expire-postings --cron "0 3 * * *"
 sdxc schedule
 ```
 
-`dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test comparing it
-against your configuration catches a job whose trigger was never added.
+<warning>
+A scheduled job whose trigger is missing from the Worker's configuration never runs in
+production. `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test
+comparing it against your configuration catches a job whose trigger was never added.
+</warning>
 [Make a job](/docs/sdxc/make-job) covers the generated files, and
 [Inspect a project](/docs/sdxc/inspect-a-project) reads the schedule.
 
@@ -315,7 +326,7 @@ looks. The dispatcher's `onEnd` hook runs once a delivery's ending is decided an
 settled, so it can tell a channel before the message is acked. [`@sdxc/messaging`](/api/messaging)
 sends one portable message to Slack, Discord, PagerDuty and the rest:
 
-```typescript {% title="app/jobs/alert-ops.ts" %}
+```typescript {% title="app/services/alert-ops.ts" %}
 import type { AnyJobContext, JobStatus } from "@sdxc/jobs";
 
 import { SlackWebhook } from "@sdxc/messaging/slack";
@@ -348,10 +359,14 @@ export async function alertOps(ctx: AnyJobContext, status: JobStatus) {
 
 Pass it as `onEnd: alertOps` beside `timeout` in `createJobDispatcher`. `refuse` is a
 `ctx.exit`, and `LAST_ATTEMPT` is the first delivery plus the consumer's `max_retries` of 3.
-The hook's failure is never the job's: anything it throws is recorded as `job.hook_failed`,
-and the dispatcher waits five seconds for it at most, which is why the send's own timeout is
-shorter. An alert that has to survive a Slack outage belongs in a delivery job of its own,
-with retries, as [Send alerts to chat and paging services](/docs/data-and-background-work/messaging)
+The hook's failure is never the job's: anything it throws is recorded as `job.hook_failed`.
+
+<note>
+The dispatcher waits five seconds for the hook at most, which is why the send's own timeout is
+shorter.
+</note>
+
+An alert that has to survive a Slack outage belongs in a delivery job of its own, with retries, as [Send alerts to chat and paging services](/docs/data-and-background-work/messaging)
 builds.
 
 ## Run jobs in a test

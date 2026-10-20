@@ -172,10 +172,13 @@ The other providers follow the same shape:
 | `@sdxc/messaging/pushover`    | `Pushover`          | `token`, `user`, `emergency?`                    |
 | `@sdxc/messaging/web-push`    | `BrowserPush`       | `push`, `subscription`, `ttl?`                   |
 
+<note>
 `WhatsAppCloud` sends approved templates only, since WhatsApp accepts free-form text only in
 the 24 hours after the recipient last wrote; `template.parameters(message)` maps the message
-onto the template's body parameters. Google Chat threads every message with the same `key`.
-`BrowserPush` notifies one browser through `@sdxc/web-push`; [Send
+onto the template's body parameters.
+</note>
+
+Google Chat threads every message with the same `key`. `BrowserPush` notifies one browser through `@sdxc/web-push`; [Send
 browser push notifications](/docs/data-and-background-work/browser-push) covers subscribing
 and storing the browser.
 
@@ -199,8 +202,13 @@ export function checkChannelUrl(kind: "slack" | "discord" | "webhook", url: stri
 ```
 
 Each answers a `Result` holding the parsed `URL`, or an `invalid-destination` failure the
-form shows beside the field. `resolve: true` on the `Webhook` above adds a DNS check at send
-time, so a public name later pointed at a private address is refused too.
+form shows beside the field.
+
+<warning>
+A URL that passes `check` can later resolve somewhere else. `resolve: true` on the `Webhook`
+above adds a DNS check at send time, so a public name later pointed at a private address is
+refused too.
+</warning>
 
 ## Deliver from a job
 
@@ -221,9 +229,12 @@ export default jobs({
 });
 ```
 
-The payload carries the channel's id and never its URL or token, which stay in your
-database rather than in every queued message. The handler builds the destination through
-`ctx.destinations`, published by job middleware so a test can hand in its own:
+<note>
+The payload carries the channel's id and never its URL or token, which stay in your database
+rather than in every queued message.
+</note>
+
+The handler builds the destination through `ctx.destinations`, published by job middleware so a test can hand in its own:
 
 ```typescript {% title="app/jobs/middleware/destinations.ts" %}
 import type { JobMiddleware } from "@sdxc/jobs";
@@ -356,8 +367,12 @@ leaves a `messaging.send` note on the run's log, with the provider, the outcome 
 it took.
 
 `id` is the delivery's identity, the same on every retry of one message: the signed webhook
-below sends it as `webhook-id`, so its receiver can drop a repeat. Chat platforms have no idempotency key, so a retry after a `timeout` whose request did land posts
-the message a second time.
+below sends it as `webhook-id`, so its receiver can drop a repeat.
+
+<warning>
+Chat platforms have no idempotency key, so a retry after a `timeout` whose request did land
+posts the message a second time.
+</warning>
 
 ## Fan out by severity
 
@@ -401,8 +416,12 @@ PagerDuty and Opsgenie read the two fields chat platforms only display. `key` be
 PagerDuty's `dedup_key` and Opsgenie's `alias`, so a second failure of the same sync updates
 the open incident rather than opening another. `state: "resolved"` with the same key
 resolves the PagerDuty incident and closes the Opsgenie alert, which is all
-`syncRecoveredMessage` has to say. A message without a `key` fails `invalid-message` before
-any request, since neither service could ever resolve the incident it opened.
+`syncRecoveredMessage` has to say.
+
+<note>
+A message without a `key` fails `invalid-message` on PagerDuty and Opsgenie before any request,
+since neither service could ever resolve the incident it opened.
+</note>
 
 `critical` maps to PagerDuty's `critical` and Opsgenie's `P1`, `warning` to `warning` and
 `P3`, and `info` and `success` to `info` and `P5`. `fields` and `data` land in the incident's

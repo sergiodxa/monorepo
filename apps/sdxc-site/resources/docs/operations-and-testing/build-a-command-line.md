@@ -377,10 +377,6 @@ prompt would ask for counts as given, and no handler loads.
 
 - [Your app's command line](/docs/operations-and-testing/your-apps-command-line) — commands
   inside your Remix app, with its database, models, jobs and mailer.
-- [The sdxc command](/docs/getting-started/the-sdxc-command) — a command line built on this
-  package.
 - [Read configuration files](/docs/operations-and-testing/configuration-files) — a config file
   with comments and errors that point at the line.
-- [`Result` everywhere](/docs/conventions/result-everywhere) — the shape every handler and task
-  answers.
 - [`@sdxc/cli`](/api/cli) — every flag option, prompt kind and context member.

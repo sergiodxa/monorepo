@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 8
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to enroll an authenticator app and confirm its first TOTP code"
     - "How to ask for a code after the password and spend each code once"
@@ -29,7 +29,7 @@ npm add @sdxc/auth @sdxc/crypto @sdxc/http @sdxc/qr @sdxc/result @sdxc/ui @sdxc/
 	remix
 ```
 
-## Three tables
+## Declare three tables
 
 A user has at most one factor. Its secret is stored sealed, and `confirmed_at` stays `null`
 until the user proves their app holds it. Codes already accepted and recovery codes each get
@@ -196,14 +196,21 @@ export function EnrollTwoFactorPage(handle: Handle<EnrollTwoFactorProps>) {
 }
 ```
 
+<warning>
 The setup key is the secret itself. Render it on this one response, and never again.
+</warning>
 
 ## Accept each code once
 
 Checking a code opens the secret and verifies with a window of one step either side, which
-tolerates a phone clock that is a little off. That window keeps a code valid for up to 90
-seconds, so a code read over someone's shoulder or lifted from a shared screen works a
-second time unless you remember it:
+tolerates a phone clock that is a little off.
+
+<warning>
+That window keeps a code valid for up to 90 seconds, so a code read over someone's shoulder or
+lifted from a shared screen works a second time unless you record every code you accept.
+</warning>
+
+`acceptCode` records each one as it accepts it:
 
 ```typescript {% title="app/services/two-factor/accept-code.ts" %}
 import type { Database } from "remix/data-table";
@@ -242,7 +249,7 @@ database failure fails closed. Delete rows older than a few minutes from a cron 
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron); nothing older than
 the window can verify anyway.
 
-## Recovery codes
+## Mint recovery codes
 
 A user who loses their phone needs another way past the second step. Ten single-use recovery
 codes, shown once when the factor is turned on, are that way. Store only their digests, like
@@ -448,11 +455,14 @@ export default createAction(routes.signIn.twoFactor, async (ctx) => {
 ```
 
 A wrong code, a used code and an unknown recovery code all answer the same page, so the
-response never says which one it was. Six digits are a million possibilities, and the window
-accepts three at a time, so put a rate limit on this route keyed on the pending user, as in
-[Protect forms from bots and abuse](/docs/identity-and-security/protect-forms). Regenerating
-the session id on the way in keeps the id the browser held during the password step from
-becoming the signed-in one.
+response never says which one it was. Regenerating the session id on the way in keeps the id
+the browser held during the password step from becoming the signed-in one.
+
+<warning>
+Six digits are a million possibilities, and the window accepts three at a time, so an
+unlimited code page falls to guessing. Put a rate limit on this route keyed on the pending
+user, as in [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms).
+</warning>
 
 ## Turn two-factor off
 
@@ -480,14 +490,49 @@ in for it. Tell the user by email when it happens, as in
 [Send email](/docs/data-and-background-work/send-email): if it was not them, they learn while
 they can still act.
 
+## Test the replay guard
+
+The guarantees that matter are the single-use ones, and both are checks against the database.
+Run them against the in-memory D1 from
+[Query D1 and Durable Object SQL](/docs/data-and-background-work/databases), with `SEAL_KEY` set
+in `app/test/cloudflare-workers.ts`:
+
+```typescript {% title="app/services/two-factor/accept-code.test.ts" %}
+import { totp } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { sealSecret } from "~/app/services/sealing";
+import { acceptCode } from "~/app/services/two-factor/accept-code";
+import {
+	mintRecoveryCodes,
+	spendRecoveryCode,
+} from "~/app/services/two-factor/recovery-codes";
+import { createTestDatabase } from "~/app/test/database";
+
+test("accepts a code once", async () => {
+	let db = await createTestDatabase();
+	let secret = totp.generateSecret();
+	let sealed = unwrap(await sealSecret(secret));
+	let code = unwrap(await totp.code(secret));
+
+	expect(await acceptCode(db, "user-1", sealed, code)).toBe(true);
+	expect(await acceptCode(db, "user-1", sealed, code)).toBe(false);
+});
+
+test("spends a recovery code once, however it is typed", async () => {
+	let db = await createTestDatabase();
+	let [code = ""] = unwrap(await mintRecoveryCodes(db, "user-1"));
+
+	expect(await spendRecoveryCode(db, "user-1", code.toLowerCase())).toBe(true);
+	expect(await spendRecoveryCode(db, "user-1", code)).toBe(false);
+});
+```
+
 ## Where to go next
 
-- [Add passkeys](/docs/identity-and-security/passkeys): a credential bound to your origin, so
-  unlike a TOTP code it cannot be relayed by a phishing page.
-- [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto): the
+- [Add passkeys](/docs/identity-and-security/passkeys) — a credential bound to your origin, so
+  a phishing page has no code to relay.
+- [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — the
   sealing module, password hashing and reset tokens this flow builds on.
-- [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms): rate limit
-  the code page.
-- [Draw QR codes](/docs/building-remix-apps/qr-codes): error correction levels, size caps
-  and serving a code as an SVG file.
-- [`@sdxc/crypto`](/api/crypto): every `totp` option, `Base32` and the error classes.
+- [`@sdxc/crypto`](/api/crypto) — every `totp` option, `Base32` and the error classes.

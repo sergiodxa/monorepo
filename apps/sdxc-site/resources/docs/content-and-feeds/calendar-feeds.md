@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 4
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to serve your events as an iCalendar feed people subscribe to"
     - "How to describe a weekly series in a time zone and offer a single event as a download"
@@ -51,9 +51,13 @@ response carries, which the next sections set.
 
 ## Turn a meetup into an event
 
-A client decides what to do with an event by two fields. `UID` identifies it, so it must
-never change for the same meetup, and `SEQUENCE` says which revision is newer, so it must only
-grow. Derive both from the row:
+A client decides what to do with an event by two fields. `UID` identifies it, and `SEQUENCE`
+says which revision is newer. Derive both from the row:
+
+<warning>
+Keep `UID` fixed for the same meetup and let `SEQUENCE` only grow. A client that sees a new
+`UID` adds a second event, and one that sees a lower `SEQUENCE` ignores the change.
+</warning>
 
 ```typescript {% title="app/services/calendar/events.ts" %}
 import type { ICalendar } from "@sdxc/icalendar";
@@ -125,9 +129,13 @@ export default createAction(routes.events.feed, async (ctx) => {
 });
 ```
 
-`listRecent` is your own query. Include meetups that ended in the last few weeks as well as the
-upcoming ones: a client that stops seeing an event removes it, so a feed of only future events
-empties people's history as it goes.
+`listRecent` is your own query.
+
+<warning>
+Include meetups that ended in the last few weeks as well as the upcoming ones. A client that
+stops seeing an event removes it, so a feed of only future events empties people's history as
+it goes.
+</warning>
 
 `name` is the title the client gives the subscription, and `refreshInterval` asks it to poll
 hourly. Both are written twice, once under the RFC 7986 name and once under the older `X-WR-`
@@ -190,9 +198,14 @@ Add `zone` to the feed's `timeZones` and `event` to its `events`. The writer put
 zone sees 19:00 Madrid time in January and in June alike.
 
 `vtimezone` builds that block from the runtime's `Intl` data, as one observance per offset
-change inside the span. Past the span the last offset holds, so make it cover every date the
-series will be read for, and rebuild it as time moves: here it runs from a year back to two
-years ahead of each request. An unknown zone name fails with a `TimeZoneError`, which makes the
+change inside the span.
+
+<warning>
+Past the span the last offset holds, so make it cover every date the series will be read for,
+and rebuild it as time moves: here it runs from a year back to two years ahead of each request.
+</warning>
+
+An unknown zone name fails with a `TimeZoneError`, which makes the
 same call a good check on a zone a person picked in a form.
 
 The rest reads as the format does. `byDay` lists the weekdays, and `exceptionDates` removes
@@ -322,6 +335,38 @@ messages for one event: `request` to invite or send a revision, `cancel` to call
 [`@sdxc/mail`](/api/mail) accepts as its `calendar` option, and `nextSequence` decides whether
 a change is significant enough to bump `SEQUENCE`.
 
+## Test the series
+
+The series is where a calendar goes wrong quietly, an hour off after a daylight saving change,
+so test it through `nextSessions`: a January session and a June session both start at 19:00 in
+Madrid, which is 18:00 and 17:00 UTC, and the excluded Thursday is skipped:
+
+```typescript {% title="app/services/calendar/series.test.ts" %}
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { nextSessions } from "~/app/services/calendar/next-sessions";
+import { weeklyMeetup } from "~/app/services/calendar/series";
+
+test("keeps 19:00 Madrid time across the daylight saving change", () => {
+	let { event } = unwrap(weeklyMeetup(Date.UTC(2026, 0, 1)));
+
+	let [january] = unwrap(nextSessions(event, Date.UTC(2026, 0, 1)));
+	let [june] = unwrap(nextSessions(event, Date.UTC(2026, 5, 1)));
+
+	expect(january?.start).toBe(Date.UTC(2026, 0, 8, 18));
+	expect(june?.start).toBe(Date.UTC(2026, 5, 4, 17));
+});
+
+test("skips the Thursday before Easter", () => {
+	let { event } = unwrap(weeklyMeetup(Date.UTC(2026, 2, 1)));
+
+	let [next] = unwrap(nextSessions(event, Date.UTC(2026, 2, 30)));
+
+	expect(next?.start).toBe(Date.UTC(2026, 3, 9, 17));
+});
+```
+
 ## Where to go next
 
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds): the other feeds
@@ -330,5 +375,3 @@ a change is significant enough to bump `SEQUENCE`.
   out through.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers): keep a busy
   feed cheap without delaying a change.
-- [Write executable specs](/docs/operations-and-testing/executable-specs): check from outside
-  the app that the feed answers with a calendar.

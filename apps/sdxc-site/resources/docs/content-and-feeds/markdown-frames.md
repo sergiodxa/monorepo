@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 32
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to write a frame tag that holds a region a route renders per request"
     - "How to register the tag and render it with `@sdxc/markdown`"
@@ -63,9 +63,11 @@ export function readGuide(source: string) {
 }
 ```
 
+<warning>
 The region's HTML becomes part of the page, so `src` must be a path on the site's own
 origin. A frame pointing anywhere else fails the parse at the tag's line, and a frame with
 no `src` fails the same way.
+</warning>
 
 ## Render it
 
@@ -93,9 +95,11 @@ export default createAction(routes.guide, (ctx) => {
 });
 ```
 
+<note>
 The page's renderer resolves each frame by requesting its `src`. Install `render()` from
 `remix/middleware/render` in the router's middleware, and that request goes through the same
 router, carrying the reader's cookies.
+</note>
 
 ## Serve the region
 
@@ -122,3 +126,40 @@ Answer a missing region with a `404` fragment. The frame draws it in place, so a
 the fallback where the page shows the region. Write a fallback that reads well on its own, a
 sentence and a link to the live version, and every surface built from the document stays
 whole.
+
+## Test it
+
+The parse is where a frame's `src` is checked, and the plain-text render is what a feed or
+search index reads, so one test covers both through `readGuide`:
+
+```typescript {% title="app/services/content/guide.test.ts" %}
+import { toPlainText } from "@sdxc/markdown/plain";
+import { isFailure, unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { readGuide } from "~/app/services/content/guide";
+
+test("reads the fallback where the page shows the region", () => {
+	let result = unwrap(
+		readGuide(
+			'<frame src="/frames/latest-release">\nSee the latest release.\n</frame>',
+		),
+	);
+
+	expect(toPlainText(result.document)).toContain("See the latest release.");
+});
+
+test("refuses a frame on another origin", () => {
+	expect(isFailure(readGuide('<frame src="https://example.com/frame" />'))).toBe(
+		true,
+	);
+});
+```
+
+## Where to go next
+
+- [A markdown content pipeline](/docs/content-and-feeds/markdown-pipeline) — the parse,
+  transform and render steps a frame tag joins.
+- [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) — the other
+  plugins `@sdxc/markdown` ships beside frames.
+- [`@sdxc/markdown`](/api/markdown) — every tag, renderer and option the package exports.

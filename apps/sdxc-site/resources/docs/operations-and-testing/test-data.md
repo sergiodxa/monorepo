@@ -326,12 +326,8 @@ Because the seed is in the suite's name, a failure prints it, and
 
 ## Where to go next
 
-- [Test Workers apps](/docs/operations-and-testing/testing): the test database, the router
+- [Test Workers apps](/docs/operations-and-testing/testing) — the test database, the router
   and the Vitest projects these tests run in.
-- [Make a factory](/docs/sdxc/make-factory): what `sdxc make factory` writes.
-- [Write executable specs](/docs/operations-and-testing/executable-specs): the same seeded
+- [Make a factory](/docs/sdxc/make-factory) — what `sdxc make factory` writes.
+- [Write executable specs](/docs/operations-and-testing/executable-specs) — the same seeded
   generation, drawn inside a `.spec` suite.
-- [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases): the models the
-  seeding function writes through.
-- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui): the
-  components the previews render.

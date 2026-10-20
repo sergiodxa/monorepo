@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 12
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to read the caller's address once per request and decide what `null` means"
     - "How to key a rate limit on the client's network and admit only your own networks"
@@ -144,10 +144,12 @@ canonical form, so equal addresses store equal strings and an index on the colum
 Reading it back goes through `IP.parse`, which turns a row written by older code, or edited by
 hand, into a failure you handle instead of a value you trust.
 
+<note>
 Compare two addresses or two networks with `equals`. Two `IP`s parsed from the same text are
 two objects, and `===` compares objects by identity. The same goes for anything that crosses a
 structured clone, such as Durable Object storage or `postMessage`: the copy arrives without its
 methods, so store `toString()` and parse it on the other side.
+</note>
 
 A handler hands over what the middleware published:
 
@@ -168,15 +170,23 @@ ctx.log.set({ client: { ip: ctx.ip?.toString() ?? null } });
 ```
 
 One field on the record that is already open covers the whole request, so a query groups by
-client without each handler writing its own line. An IP address is personal data in many
-jurisdictions; decide how long your logs keep it before you add the field.
+client without each handler writing its own line.
+
+<warning>
+An IP address is personal data in many jurisdictions. Decide how long your logs keep it before
+you add the field.
+</warning>
 
 ## Admit only your own networks
 
 An admin area that only staff on the office network or the VPN should reach is a list of
 ranges and a membership test. Keep the list as plain strings at module level, and parse inside
-the function: a Worker that does work in its global scope fails upload validation, and parsing a
-handful of ranges per request costs microseconds.
+the function; parsing a handful of ranges per request costs microseconds.
+
+<note>
+A Worker that does work in its global scope fails upload validation, so a range parsed at
+module level stops the deploy.
+</note>
 
 ```typescript {% title="app/http/middleware/office-only.ts" %}
 import type { Middleware } from "remix/router";
@@ -203,13 +213,18 @@ export default function officeOnly(): Middleware {
 ```
 
 Pass `[officeOnly()]` as the second argument of the admin routes' `lazy()` in the router, so it
-runs after the global chain has published `ctx.ip` and before the admin module loads. A request with no usable address is refused with the rest.
+runs after the global chain has published `ctx.ip` and before the admin module loads. A
+request with no usable address is refused with the rest.
 
 `IP.Range.parse` refuses `203.0.113.1/24` with `host-bits-set`, because an address with bits
 past its prefix names a host where a network was meant. A typo in the list therefore fails to
 parse rather than silently matching a different network, and the test at the end of this guide
-asserts every entry parses. `contains` never matches across versions, so an IPv4 range admits
-no IPv6 client: list the office's IPv6 prefix too when it has one.
+asserts every entry parses.
+
+<note>
+`contains` matches within one IP version, so an IPv4 range admits no IPv6 client: list the
+office's IPv6 prefix too when it has one.
+</note>
 
 ## Refuse an internal address someone typed
 
@@ -261,10 +276,12 @@ IPv6 can carry an IPv4 address inside it: IPv4-mapped (`::ffff:10.0.0.1`), NAT64
 inside, so all three spellings of `10.0.0.1` are `private`, and `embeddedIPv4` answers the inner
 address when you want to log or show it.
 
-A name is the other half. `hooks.example.com` passes this check and can still resolve to
-`127.0.0.1`, and a redirect can lead anywhere. Checking every address a name resolves to, on
-every hop, belongs in the fetch itself:
+<warning>
+This check covers address literals only. `hooks.example.com` passes it and can still resolve to
+`127.0.0.1`, and a redirect can lead anywhere. Check every address a name resolves to, on every
+hop, in the fetch itself:
 [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) covers that.
+</warning>
 
 ## Test with the header Cloudflare sends
 
@@ -324,7 +341,3 @@ test addresses; they are reserved for examples and never belong to a real client
   every address a name resolves to before connecting.
 - [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
   — where `getClientIP()` sits in the global chain.
-- [Build a JSON API with problem details](/docs/http-apis/json-apis) — rate
-  limiting an API with the same key.
-- [Logs, traces and timings](/docs/operations-and-testing/observability) — querying the record
-  the address is written into.

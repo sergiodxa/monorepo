@@ -221,18 +221,24 @@ passed and answer `422` for `refused-host` (a name that does not exist) or `refu
 A resolver that could not answer fails `network`, which is retryable: accept the URL then, and
 let the job's own check decide.
 
-Know the limit. A Worker cannot pin its connection to the addresses that were checked, so a
-name that answers with a public address to the check and a private one to the connection still
-gets through. DNS checks narrow rebinding and leave it open. What holds regardless is
-architecture: a Worker that reaches its storage and its other services through bindings rather
-than URLs has nothing private for an escaped request to reach.
+<warning>
+A Worker connects to a name, and the addresses that were checked stay with the check. A name
+that answers with a public address to the check and a private one to the connection still gets
+through: DNS checks narrow rebinding and leave it open. What holds regardless is architecture:
+a Worker that reaches its storage and its other services through bindings rather than URLs has
+nothing private for an escaped request to reach.
+</warning>
 
 ## Reach your own network on purpose
 
 Some URLs are yours: a health endpoint behind a tunnel, a feed served by another service on
 your network. `hosts: "any"` keeps only the scheme and credential rules and drops the host and
-address checks, and `resolve` is skipped with them. Give it a URL you configured, never one a
-visitor sent:
+address checks, and `resolve` is skipped with them:
+
+<warning>
+Give `hosts: "any"` a URL you configured, never one a visitor sent. It is the one setting that
+lets a request reach a private address.
+</warning>
 
 ```typescript {% title="app/services/inventory-health.ts" %}
 import { follow, release } from "@sdxc/outbound";
@@ -362,8 +368,12 @@ The new `Response` forwards the body and only the headers you chose, so a cookie
 set never reaches your readers, and the policy keeps an SVG's scripts from running. A declared
 length over the cap errors before a byte is forwarded; a body that crosses it mid-stream breaks
 off, and the browser shows a broken image. The ten-second deadline still covers the body, so a
-slow origin cannot hold the connection either. Sign the URLs your pages write with
-`hmac.sign`, and check the signature here, or the proxy relays anything for anyone.
+slow origin cannot hold the connection either.
+
+<warning>
+Sign the URLs your pages write with `hmac.sign`, and check the signature here. An unsigned
+proxy relays anything for anyone, under your domain.
+</warning>
 
 ## Use the packages that already fetch through it
 
@@ -432,9 +442,5 @@ its `A` and `AAAA` records, so answer that URL too, with the addresses each case
   cards from a URL someone saved.
 - [Client addresses and networks](/docs/identity-and-security/client-addresses) — the address
   ranges `checkUrl` judges a literal by.
-- [Receive and send webhooks](/docs/identity-and-security/webhooks) — Standard Webhooks
-  verification, replay protection and signing.
-- [Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) — space out
-  the attempts a `timeout` or `network` failure earns.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher
   and the verbs the refresh job uses.

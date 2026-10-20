@@ -68,13 +68,18 @@ limit is written once.
 
 Make the same change in the problem catalog, `config/problems.ts`: import `s` from
 `@sdxc/json-schema` instead of `remix/data-schema`, so the `validationFailed` extensions can
-be described. The document describes every problem type, and a schema without a JSON Schema
-form fails the build.
+be described.
+
+<note>
+The document describes every problem type in the catalog, so a catalog still built with
+`remix/data-schema` fails the build: its extension schemas have no JSON Schema form.
+</note>
 
 ## Declare the operations
 
 An operation binds one route to what it reads and what it answers. The first argument
-becomes the `operationId`, which must be unique across the document. Declare the operations in
+becomes the `operationId`, which a generated client turns into a method name, so `build()`
+fails when two operations share one. Declare the operations in
 `routes/api.ts`, after the contract they describe, where
 [`sdxc scaffold --api`](/docs/sdxc/scaffold-a-resource) writes its own:
 
@@ -231,8 +236,15 @@ export default createAction(
 );
 ```
 
-The handler builds on the first request and reuses the outcome, which keeps the assembly out of
-the Worker's global scope. It answers JSON by default and YAML for `?format=yaml` or an `Accept`
+The handler builds on the first request and reuses the outcome.
+
+<warning>
+Keep `build()` inside the function you hand to `openapiHandler`. Called at module scope, the
+assembly runs during the Worker's startup, whose time Cloudflare limits, so a slow build can
+fail the deploy.
+</warning>
+
+It answers JSON by default and YAML for `?format=yaml` or an `Accept`
 preferring `application/yaml`, each with a strong `ETag` and `Cache-Control: public,
 max-age=300`, so a client revalidates with a `304`. A build failure answers `500` with a
 problem document. An app from `sdxc create` serves `/api/openapi.json` this way already, from a
@@ -295,13 +307,7 @@ the suite produced, and `uncovered()` lists the declared status codes no test re
 
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — the API this document
   describes.
-- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — the pointers conversion
-  errors and problem issues share.
-- [Parse and write Link headers](/docs/http-apis/link-header) — the `Link` header `LIST_BOOKS`
-  documents.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — document a
   `PATCH` with both `application/merge-patch+json` and `application/json` bodies.
 - [Write a typed API client](/docs/http-apis/api-clients) — validate responses with the same
   schemas on the other side.
-- [Test Workers apps](/docs/operations-and-testing/testing) — building the router a test
-  like the one above sends requests through.

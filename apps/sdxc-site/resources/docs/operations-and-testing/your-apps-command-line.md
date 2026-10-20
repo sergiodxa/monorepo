@@ -12,11 +12,6 @@ outcomes:
     - "How to run app code outside the server and test a command"
 ---
 
-<note>
-This guide builds the command line and its commands. To run the commands an app already has,
-such as `db migrate`, see [Run your app's commands](/docs/sdxc/run-app-commands).
-</note>
-
 Some work belongs to your app but to no request: seeding a database, backfilling a column,
 granting someone a role, resending an email that bounced. A command line inside the app does
 that work with the app's own models, jobs and templates, so a backfill runs the same code a
@@ -33,6 +28,11 @@ under the same name and key their router entry uses.
 npm add @sdxc/cli @sdxc/data-model @sdxc/database-middleware @sdxc/i18n @sdxc/jobs \
 	@sdxc/logger @sdxc/mail @sdxc/trace-context remix
 ```
+
+<note>
+This guide builds the command line and its commands. To run the commands an app already has,
+such as `db migrate`, see [Run your app's commands](/docs/sdxc/run-app-commands).
+</note>
 
 ## Where it lives
 
@@ -428,9 +428,5 @@ message it sent is in the run's `stderr`.
   prompts, tasks and middleware in full.
 - [Make a command](/docs/sdxc/make-command) — `sdxc make command` declares and maps a
   command.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher
-  the command line runs jobs through.
-- [Send email](/docs/data-and-background-work/send-email) — the email registry and the
-  mailer a command resends through.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — reading the record
   each command run writes.

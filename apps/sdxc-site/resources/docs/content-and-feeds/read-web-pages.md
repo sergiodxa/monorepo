@@ -162,9 +162,12 @@ the other two would give the same answer. `ctx.db` is published by job middlewar
 as it is on a request.
 
 On success, `url` is the article's canonical address, so two links to one article can be
-recognized as one. `mayCache` is `false` when the response's `X-Robots-Tag` says `noarchive`:
-that publisher is asking you not to keep a copy, so the row keeps the title and the excerpt
-and drops the body.
+recognized as one.
+
+<note>
+`mayCache` is `false` when the response's `X-Robots-Tag` says `noarchive`. That publisher is
+asking you not to keep a copy, so the row keeps the title and the excerpt and drops the body.
+</note>
 
 ## Keep a plain-text excerpt
 
@@ -196,8 +199,12 @@ tables, figures, links and images, drops scripts, iframes, forms, every `on*` ha
 and `class`, restricts URLs to `http:`, `https:` and `mailto:`, and resolves relative ones
 against the article's address. A
 [Content-Security-Policy](/docs/identity-and-security/security-headers) on the page that
-renders it is the second line behind that. An image still loads from the publisher, who sees
-the reader's address when it does; closing that takes an image proxy of your own.
+renders it is the second line behind that.
+
+<note>
+An image in a saved article still loads from the publisher, who sees the reader's address when
+it does. Closing that takes an image proxy of your own.
+</note>
 
 ## Build a preview card from the head
 
@@ -284,13 +291,48 @@ rather than yours. When you already hold a whole page, from a test fixture or a 
 something else retrieved, `distillFrom(source, url)` from `@sdxc/distill` runs the scoring and
 sanitizing without a fetch, which is how to test the job's extraction without the network.
 
+## Test the extraction
+
+`distillFrom` runs the job's scoring and sanitizing on a page in hand, so a fixture tests what
+your app stores without the network: the publisher's script and handlers are gone, relative
+URLs point at the publisher, and the excerpt fits its length:
+
+```typescript {% title="app/services/excerpt.test.ts" %}
+import { distillFrom } from "@sdxc/distill";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { excerptOf } from "~/app/services/excerpt";
+
+const PARAGRAPH =
+	"Workers run close to the reader, so a page answers before a round trip "
+		.concat("to one region would finish. ")
+		.repeat(3);
+
+const PAGE = `<html><head><title>Edge reads</title></head><body>
+<nav><a href="/">Home</a></nav>
+<article><h1>Edge reads</h1><p>${PARAGRAPH}</p><p>${PARAGRAPH}</p>
+<img src="/chart.png" alt="A chart" onerror="steal()"><script>steal()</script></article>
+</body></html>`;
+
+test("stores a sanitized article and a short excerpt", () => {
+	let article = unwrap(distillFrom(PAGE, "https://blog.com/posts/edge"));
+
+	expect(article.html).not.toContain("<script");
+	expect(article.html).not.toContain("onerror");
+	expect(article.html).toContain('src="https://blog.com/chart.png"');
+
+	let excerpt = excerptOf(article.html);
+	expect(excerpt?.length).toBeLessThanOrEqual(280);
+	expect(excerpt).toMatch(/^Edge reads Workers run close to the reader.*…$/);
+});
+```
+
 ## Where to go next
 
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   the queue and the middleware behind `ctx.db`.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — the policy for
   the page that renders someone else's article.
-- [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — publish the
-  saved links as a feed of their own.
 - [Join the IndieWeb: Webmention and Micropub](/docs/content-and-feeds/indieweb) — another
   place your app fetches a URL a stranger chose.

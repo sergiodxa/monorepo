@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 5
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-19
 outcomes:
     - "How to describe your running app's behavior in `.spec` files"
     - "How to run specs against a dev server with named grants"
@@ -318,6 +318,39 @@ declaration is inert until a run adds `--allow-config`, and the denials point at
 until then, so cloning a repository never grants its suite anything. Flags passed beside
 `--allow-config` only add to what the file declares.
 
+## Check the suite with your unit tests
+
+A typo in a `.spec` file, or two files declaring the same command, fails the run before any
+test starts, but only once a server is up. `loadSources` parses every file and registers every
+command without running anything, so a Vitest test catches both in the same pass as your other
+tests:
+
+```typescript {% title="app/test/spec-suite.test.ts" %}
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+import { loadSources } from "@sdxc/spec/workers";
+import { expect, test } from "vitest";
+
+test("every .spec file parses and every command name is unique", async () => {
+	let paths = await readdir("spec", { recursive: true });
+	let sources = await Promise.all(
+		paths
+			.filter((path) => path.endsWith(".spec"))
+			.map(async (path) => ({
+				path: join("spec", path),
+				text: await readFile(join("spec", path), "utf8"),
+			})),
+	);
+
+	let suite = loadSources(sources);
+	expect(suite.status === "failure" ? suite.error.message : null).toBeNull();
+});
+```
+
+`@sdxc/spec/workers` is the entry without Bun's SQL client, so it loads under Vitest. A failure
+reads as the parse error itself, with the file and line, rather than as a failed match.
+
 ## Run it in CI
 
 The exit code is the contract: `0` when everything passed, `1` when a test failed, and `2` for
@@ -370,11 +403,8 @@ for one particular person; the header prints the seed, and `--seed=<seed>` repla
 
 ## Where to go next
 
-- [Test Workers apps](/docs/operations-and-testing/testing): the Vitest side of the suite,
+- [Test Workers apps](/docs/operations-and-testing/testing) — the Vitest side of the suite,
   from a request through the real router to in-memory bindings.
-- [Generate believable test data](/docs/operations-and-testing/test-data): the seeded
+- [Generate believable test data](/docs/operations-and-testing/test-data) — the seeded
   generation `sample` draws from, used in TypeScript tests.
-- [Build a JSON API with problem details](/docs/http-apis/json-apis): the error bodies the
-  API test asserts on.
-- [Publish calendar feeds](/docs/content-and-feeds/calendar-feeds): the `.ics` feed the first
-  spec checks.
+- [`@sdxc/spec`](/api/spec) — every capability and permission flag.

@@ -75,15 +75,20 @@ export async function describeDomain(name: string) {
 }
 ```
 
+<warning>
 Pass the registration, `example.co.uk` and never `www.example.co.uk`. A registry holds records
 for the names registered with it, so a name below one answers `not-found`. An app that already
 knows a zone's apex, from a custom-domain setup or an imported zone file, has the right name.
+</warning>
 
 Dates arrive as epoch milliseconds: `expiresAt`, `registeredAt` and `updatedAt`, each `null` when
-the registry publishes no such event. Some ccTLD registries publish no expiry at all, so plan for
-a domain whose date stays unknown. `status` holds EPP status codes in their usual spelling, such
-as `clientTransferProhibited` or `pendingDelete`. `document` keeps the registry's response as sent
-for any field the model leaves out.
+the registry publishes no such event. `status` holds EPP status codes in their usual spelling,
+such as `clientTransferProhibited` or `pendingDelete`. `document` keeps the registry's response
+as sent for any field the model leaves out.
+
+<note>
+Some ccTLD registries publish no expiry at all, so plan for a domain whose date stays unknown.
+</note>
 
 `related: true` is for `.com` and `.net`, whose registries hold the dates and link to the
 registrar's own RDAP server for the rest. The client follows that link and fills in the
@@ -221,13 +226,21 @@ export function needsAlert(patch: ExpiryPatch, now: number) {
 
 `EPP_STATUSES` lists every status the package names, for a settings page that lets people pick
 their own. A status outside it is kept as the registry wrote it, so a registry's own extension
-still reaches your code. A retry inside the same day can reach the same reminder twice, so store
-the day you last alerted beside the domain and skip a second alert on it.
+still reaches your code.
+
+<note>
+A retry inside the same day can reach the same reminder twice, so store the day you last
+alerted beside the domain and skip a second alert on it.
+</note>
 
 ## Sweep on a schedule
 
+<warning>
 Registries rate-limit without documenting the limits, and a sweep that sends a hundred `.com`
-lookups at once finds Verisign's. The sweep groups its domains by registry with `rdap.server`,
+lookups at once finds Verisign's.
+</warning>
+
+The sweep groups its domains by registry with `rdap.server`,
 runs each group two at a time, and lets different registries run side by side. The bootstrap
 file is read once per client, so the grouping costs no extra requests.
 

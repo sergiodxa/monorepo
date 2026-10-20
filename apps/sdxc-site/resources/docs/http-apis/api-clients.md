@@ -45,7 +45,7 @@ on the server then fails to compile in the client instead of failing silently in
 
 The client reads the catalog's parsed problem type straight off it:
 
-```typescript {% title="clients/books-error.ts" %}
+```typescript {% title="app/services/books/books-error.ts" %}
 import { problems } from "~/contract/problems";
 
 export type BooksProblem = Parameters<typeof problems.is>[0];
@@ -74,7 +74,7 @@ lower-level error explains the rest.
 Each call asks the same four questions of a response: did it arrive, is it a problem, did it
 succeed, and does the body match. Answer them once, in a function every method goes through.
 
-```typescript {% title="clients/read.ts" %}
+```typescript {% title="app/services/books/read.ts" %}
 import type { JSONValue } from "@sdxc/types";
 import type { Schema } from "remix/data-schema";
 
@@ -82,7 +82,7 @@ import { isProblem } from "@sdxc/problem";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
-import { BooksError } from "~/clients/books-error";
+import { BooksError } from "~/app/services/books/books-error";
 import { problems } from "~/contract/problems";
 
 export async function read<Output>(
@@ -131,7 +131,7 @@ surfacing as `undefined` three calls later.
 The subclass names the origin once, and each method is its path, its schema, and the part of
 the body a caller wants.
 
-```typescript {% title="clients/books.ts" %}
+```typescript {% title="app/services/books/client.ts" %}
 import type { Result } from "@sdxc/result";
 
 import { APIClient } from "@sdxc/api-client";
@@ -140,8 +140,8 @@ import * as s from "@sdxc/json-schema";
 import { parse } from "@sdxc/link-header";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { BooksError } from "~/clients/books-error";
-import { read } from "~/clients/read";
+import { BooksError } from "~/app/services/books/books-error";
+import { read } from "~/app/services/books/read";
 import { BOOK, BOOK_INPUT } from "~/contract/books";
 
 const BOOK_BODY = s.object({ book: BOOK });
@@ -192,7 +192,13 @@ export class BooksClient extends APIClient {
 `before` runs on every request, whichever verb sent it, so the credential is attached in
 exactly one place. The base class also writes the running invocation's W3C `traceparent`
 into each request before `before` runs, so a call from a traced Worker shows up in the API's
-trace as a child span. Set `propagateTrace` to `"traceparent"` or `"none"` to send less.
+trace as a child span.
+
+<note>
+By default every request carries the whole trace context, `tracestate` included. For an API
+run by someone else, override the protected `propagateTrace` field with `"traceparent"`, so it
+receives only your trace id, or `"none"`, so it receives no trace headers.
+</note>
 
 `books()` follows the server's `Link` header rather than building cursors itself. The `next`
 target is an absolute URL, and resolving an absolute URL against the base URL leaves it as it
@@ -200,36 +206,49 @@ is, so a caller walks the whole list by handing each `next` back until it is `nu
 
 `createBook` takes the idempotency key from its caller, who mints it once with
 `generateIdempotencyKey()` and passes the same one on every retry, as
-[Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) describes. For a client
+[Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) describes.
+
+<warning>
+The key protects a create only while every retry reuses it. Mint it once per operation, before
+the first attempt: a key minted per attempt makes each retry a new request, and a retried
+timeout creates the book twice.
+</warning>
+
+For a client
 that should protect every write without asking, `applyIdempotencyKey(request)` in `before`
 sets a fresh key on each `POST` or `PATCH` that has none.
 
 ## Branch on the problem
 
 A caller narrows the failure to one catalog entry with `problems.is`, which also types that
-entry's extensions. Here the caller is a Worker holding the API key as its `BOOKS_API_KEY`
-secret:
+entry's extensions. Here the caller is a service in a Worker holding the API key as its
+`BOOKS_API_KEY` secret, answering the message to show beside each field the API refused:
 
-```typescript
+```typescript {% title="app/services/books/submit-book.ts" %}
+import type { InferInput } from "@sdxc/json-schema";
+
 import { env } from "cloudflare:workers";
 import { generateIdempotencyKey } from "@sdxc/idempotency/client";
 import { isFailure } from "@sdxc/result";
 
-import { BooksClient } from "~/clients/books";
+import { BooksClient } from "~/app/services/books/client";
+import { BOOK_INPUT } from "~/contract/books";
 import { problems } from "~/contract/problems";
 
-let client = new BooksClient(env.BOOKS_API_KEY);
-let input = { title: "", author: "Octavia E. Butler", year: 1979 };
-let result = await client.createBook(input, generateIdempotencyKey());
+export async function submitBook(input: InferInput<typeof BOOK_INPUT>) {
+	let client = new BooksClient(env.BOOKS_API_KEY);
+	let result = await client.createBook(input, generateIdempotencyKey());
 
-let messages = new Map<string, string>();
-if (isFailure(result)) {
-	let problem = result.error.problem;
-	if (problem !== null && problems.is(problem, "validationFailed")) {
-		for (let issue of problem.extensions.errors) {
-			messages.set(issue.pointer, issue.message);
+	let messages = new Map<string, string>();
+	if (isFailure(result)) {
+		let problem = result.error.problem;
+		if (problem !== null && problems.is(problem, "validationFailed")) {
+			for (let issue of problem.extensions.errors) {
+				messages.set(issue.pointer, issue.message);
+			}
 		}
 	}
+	return messages;
 }
 ```
 
@@ -244,13 +263,13 @@ Requests go through the global `fetch`, so MSW intercepts them and the client un
 the real one. The handler can return the catalog's own builder, so the test answers with
 exactly the document the server would.
 
-```typescript {% title="clients/books.test.ts" %}
+```typescript {% title="app/services/books/client.test.ts" %}
 import { isSuccess } from "@sdxc/result";
 import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest";
 
-import { BooksClient } from "~/clients/books";
+import { BooksClient } from "~/app/services/books/client";
 import { problems } from "~/contract/problems";
 
 let server = setupServer();
@@ -281,10 +300,7 @@ book fails validation with the `ValidationError` as `cause`, and `onUnhandledReq
 
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — the server side of
   this contract.
-- [Parse and write Link headers](/docs/http-apis/link-header) — `parse`, `raw`, and a merge
-  that keeps foreign relations.
 - [Describe your API with OpenAPI](/docs/http-apis/openapi) — publish the same schemas for
   clients you do not write.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — follow a call from
   the client's Worker into the API's trace.
-- [Test Workers apps](/docs/operations-and-testing/testing) — more on MSW and the Workers pool.

@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 6
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to parse and stringify RFC 6901 pointers with `@sdxc/json-pointer`"
     - "How to read and write a value at a pointer"
@@ -71,9 +71,14 @@ issue is about the whole body.
 
 ## Write a value
 
-`set` returns a new tree. Intermediate tokens must already resolve: creating missing
-parents is JSON Patch `add`, not this assignment. The empty pointer replaces the document.
-`undefined` is not a JSON value and fails.
+`set` returns a new tree, and the empty pointer replaces the document. `undefined` has no
+JSON form, so setting it fails.
+
+<note>
+`set` assigns at an existing parent: every token before the last must already resolve, so
+`set({}, "/a/b", 1)` fails. Write the missing parents first, one `set` per level, when a path
+may not exist yet.
+</note>
 
 ```typescript {% title="app/services/write-field.ts" %}
 import { set } from "@sdxc/json-pointer";
@@ -118,12 +123,30 @@ A merge-patch `diff` that would set a member to a literal `null` fails with that
 pointer on `UnrepresentableChangeError`. `@sdxc/json-schema` conversion errors and
 `@sdxc/well-known` JSON document issues name the same locations.
 
+## Test the pointer
+
+`toPointer` is a pure function, so its test calls it directly. The case worth pinning is the
+member whose name holds the separator:
+
+```typescript {% title="app/services/to-pointer.test.ts" %}
+import { get } from "@sdxc/json-pointer";
+import { unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { toPointer } from "~/app/services/to-pointer";
+
+test("a member named a/b still points at itself", () => {
+	let pointer = toPointer([{ key: "users" }, { key: 0 }, "a/b"]);
+
+	expect(pointer).toBe("/users/0/a~1b");
+	expect(unwrap(get({ users: [{ "a/b": "found" }] }, pointer))).toBe("found");
+});
+```
+
 ## Where to go next
 
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — `issuesFrom` writes
   these pointers onto a `422`.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — a patch that cannot
   express a `null` names the member with a pointer.
-- [Describe your API with OpenAPI](/docs/http-apis/openapi) — schema conversion failures
-  point at the combinator that has no JSON Schema form.
 - [`@sdxc/json-pointer`](/api/json-pointer) — every error type and the empty-pointer cases.

@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 33
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to turn a pasted YouTube URL into a lazy-loaded player with `@sdxc/markdown`"
     - "How to keep a video's start time and allow the player in your Content Security Policy"
@@ -157,13 +157,17 @@ its own `referrerpolicy` whatever the page's policy is. `YouTubeEmbed` works out
 `<YouTubeEmbed videoId="dQw4w9WgXcQ" title="Never Gonna Give You Up" />` in any view draws the
 same player. A video at the top of a page can pass `loading="eager"` to start loading with it.
 
+<note>
 A `youtube` tag with no component registered renders nothing, so register `YouTubeTag` wherever
 the walked document renders, or skip the walk there and the URL stays a link.
+</note>
 
 ## Allow the player in your Content Security Policy
 
-A page with a `frame-src` directive, or a `default-src` without one, blocks frames from any origin
-it does not list. Add the player's host:
+<warning>
+A page with a `frame-src` directive, or a `default-src` without one, blocks frames from any
+origin it does not list, and the player shows as an empty box. Add the player's host.
+</warning>
 
 ```typescript {% title="config/security-policy.ts" %}
 import type { SecurityHeaders } from "@sdxc/security-headers";
@@ -210,6 +214,35 @@ export function renderFeedItem(document: Markdown.Document): string {
 The link is rebuilt from `id` and `start`, which the provider has already checked, so it never
 carries anything else the author pasted. The `&amp;` keeps the markup valid in an Atom feed,
 which an XML parser reads.
+
+## Test it
+
+The walk decides which links become players, and the feed renderer decides what a feed reader
+sees instead, so one test covers both: a pasted URL comes out as a plain link that keeps its
+start time, and a labelled link stays the link its author wrote:
+
+```typescript {% title="app/services/content/render-feed.test.ts" %}
+import { expect, test } from "vitest";
+
+import { preparePost } from "~/app/services/content/prepare";
+import { renderFeedItem } from "~/app/services/content/render-feed";
+
+test("writes a pasted video back as a link with its start time", () => {
+	let html = renderFeedItem(preparePost("https://youtu.be/dQw4w9WgXcQ?t=43\n"));
+
+	expect(html).toContain(
+		'href="https://www.youtube.com/watch?v=dQw4w9WgXcQ&amp;t=43s"',
+	);
+});
+
+test("keeps a labelled link as a link", () => {
+	let html = renderFeedItem(
+		preparePost("Listen to [the song](https://youtu.be/dQw4w9WgXcQ).\n"),
+	);
+
+	expect(html).toContain('<a href="https://youtu.be/dQw4w9WgXcQ">the song</a>');
+});
+```
 
 ## Where to go next
 

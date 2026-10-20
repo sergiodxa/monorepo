@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 5
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to write CSP, HSTS and Permissions-Policy as one typed policy"
     - "How to use nonces or hashes for the scripts you render"
@@ -61,19 +61,30 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 };
 ```
 
-A few choices here are load-bearing. `styleSrc` keeps `"unsafe-inline"` and never takes
-`"nonce"`: `remix/component` writes one `<style>` per `css()` mixin without a nonce, and a nonce in
-`style-src` makes browsers ignore `'unsafe-inline'` and block every one of them. `formAction`
+A few choices here are load-bearing. `styleSrc` keeps `"unsafe-inline"`, for the reason in the
+warning below. `formAction`
 names your identity provider, because a login form that posts to it — the one in
 [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — is a form action
 too. The Turnstile origin appears in `scriptSrc` and `frameSrc` because the challenge from
 [Protect forms](/docs/identity-and-security/protect-forms) loads a script that renders a frame.
-`frameAncestors: ["none"]` also derives `X-Frame-Options: DENY`, so the two can never disagree,
-and `X-Content-Type-Options: nosniff` is written unless you turn it off. The `sha256-…` source
-allows `BOOT_SCRIPT` inline, as the section on hashing a fixed script below explains.
+Once the policy is enforced, `frameAncestors: ["none"]` also derives `X-Frame-Options: DENY`, so
+the two can never disagree, and `X-Content-Type-Options: nosniff` is written unless you turn it
+off. The `sha256-…` source allows `BOOT_SCRIPT` inline, as the section on hashing a fixed script
+below explains.
+
+<warning>
+Keep `"nonce"` out of `styleSrc`. `remix/component` writes one `<style>` per `css()` mixin
+without a nonce, and a nonce in `style-src` makes browsers ignore `'unsafe-inline'` and block
+every one of them.
+</warning>
 
 The CSP starts as `contentSecurityPolicyReportOnly`: the browser reports what it would have
 blocked without blocking it. You move it to `contentSecurityPolicy` once the reports go quiet.
+
+<warning>
+A report-only policy protects nothing. Scripts it would block still run, framing is still
+allowed and no `X-Frame-Options` is derived, until you rename it to `contentSecurityPolicy`.
+</warning>
 
 ## Install it before the renderer
 
@@ -112,7 +123,7 @@ The comment stands for whatever your app already runs ahead of it, from
 `@sdxc/assets-middleware` publishes the stylesheets and entry script each page passes to its
 document as `ctx.assets`. The order among the rest does not matter to the headers.
 
-## Nonces for the scripts you render
+## Put nonces on the scripts you render
 
 A handler that renders an inline script reads `ctx.securityHeaders.nonce` and puts it on the
 tag. The nonce is generated on first read, and a response that never reads it gets every
@@ -150,13 +161,19 @@ and copies its nonce onto every import map it appends later; without it, a nonce
 `script-src` blocks the client entries. `TurnstileWidget` and the other CAPTCHA widgets take a
 `nonce` prop for their loader script the same way.
 
+<note>
 Read the nonce in the handler, while the chain is still running: the headers are written when
 it resolves, ahead of a streamed body.
+</note>
 
 ## Hash a fixed inline script instead
 
+<warning>
 A nonce is per response, so an HTML response stored in a shared cache replays one nonce to every
-visitor. For a script whose text never changes, list its hash instead. The policy module above
+visitor, and anyone who reads it can run a script under it.
+</warning>
+
+For a script whose text never changes, list its hash instead. The policy module above
 exports the script's text as `BOOT_SCRIPT` and lists its `sha256-…` source as a literal, and a
 test fails when the two drift apart:
 
@@ -262,12 +279,54 @@ document is the same for every visitor. Keep `expires` a literal date, and add a
 30 days before it with `isExpired(SECURITY_TXT, thirtyDaysFromNow)`: a date computed from the
 clock keeps the file looking fresh while the inbox behind it goes stale.
 
+## Test the headers
+
+Request a page your app maps, `/` here, through the router and read the headers back, then post
+a report the way an older browser does:
+
+```typescript {% title="app/http/controllers/csp-reports.test.ts" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+test("every page carries the policy", async () => {
+	let response = await createWebRouter().fetch(new URL("/", "https://example.com"));
+
+	expect(response.headers.get("Content-Security-Policy-Report-Only")).toContain(
+		"frame-ancestors 'none'",
+	);
+	expect(response.headers.get("Strict-Transport-Security")).toContain(
+		"max-age=31536000",
+	);
+});
+
+test("accepts a legacy violation report", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.cspReports.href(), "https://example.com"), {
+			method: "POST",
+			headers: { "Content-Type": "application/csp-report" },
+			body: JSON.stringify({
+				"csp-report": {
+					"document-uri": "https://example.com/",
+					"blocked-uri": "https://evil.example.com/x.js",
+					"violated-directive": "script-src",
+				},
+			}),
+		}),
+	);
+
+	expect(response.status).toBe(204);
+});
+```
+
+The request URL is `https:`, because `Strict-Transport-Security` is written only on a response to
+a secure request.
+
 ## Where to go next
 
 - [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) — the
   challenge whose origin this policy allows.
-- [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — the other
-  documents crawlers look for at fixed paths.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — querying the
   `csp.violation` events.
 - [`@sdxc/security-headers`](/api/security-headers) — every directive, `override`, and reading a

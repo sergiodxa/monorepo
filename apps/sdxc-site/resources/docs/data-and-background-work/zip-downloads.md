@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 7
 order: 17
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to bundle text, CSV streams and stored files into one ZIP with `@sdxc/zip`"
     - "How to serve a download that starts at once and holds one entry in memory"
@@ -103,7 +103,9 @@ account's contacts, such as the keyset-paged one in
 `modified` is the date an unarchiver shows beside each file. Without it, every entry is dated
 1 January 1980, which makes the same entries produce byte-for-byte the same archive: the
 choice for a file you hash or cache, and the reason a real export passes the time it was made.
+<note>
 The date is recorded in UTC with two-second precision and has to fall between 1980 and 2107.
+</note>
 
 ## Open stored files when the archive reaches them
 
@@ -144,9 +146,12 @@ export function storedFile(key: string): ReadableStream<Uint8Array> {
 
 `highWaterMark: 0` is what keeps the stream from pulling as soon as it is built: it pulls only
 when read. One object is open at a time, which also keeps the export inside the number of
-connections a Worker may hold open at once. Every entry is read whole into memory before it is
-written, so list a file larger than a Worker holds comfortably as a link in a text entry, and
-keep the archive for the files that fit.
+connections a Worker may hold open at once.
+
+<warning>
+Every entry is read whole into memory before it is written, so list a file larger than a Worker
+holds comfortably as a link in a text entry, and keep the archive for the files that fit.
+</warning>
 
 ## Serve the download
 
@@ -187,13 +192,18 @@ with `invalid-entry` for an empty name, a leading `/`, a backslash, an empty, `.
 segment, a control character, or a name already in the archive. Those are the names an
 unarchiver would write outside the folder it extracts into, or would write over another file.
 
-So a name built from something a person typed, such as an uploaded file's original name, is a
-name `add` may refuse. Build it from values you control, like the invoice number above, or
-replace the characters it refuses and number repeats before adding. The error's `entry` names
-the path it refused, which is what the action logs.
+<warning>
+A name built from something a person typed, such as an uploaded file's original name, is a name
+`add` may refuse. Build it from values you control, like the invoice number above, or replace
+the characters it refuses and number repeats before adding.
+</warning>
 
-`add` also fails with `too-large` for the 65,536th entry and for bytes past 4 GiB, the limits
-of a ZIP written without ZIP64. A comment per entry goes in `options.comment`, up to 64 KiB.
+The error's `entry` names the path it refused, which is what the action logs.
+
+<note>
+`add` fails with `too-large` for the 65,536th entry and for bytes past 4 GiB, the limits of a
+ZIP written without ZIP64. A comment per entry goes in `options.comment`, up to 64 KiB.
+</note>
 
 ## When a source fails mid-download
 
@@ -213,7 +223,7 @@ opened.
 or the `ZipError` the stream failed with. Use it where the length has to be known, such as
 storing the export in R2 for a link that stays valid for a week, from a background job:
 
-```typescript {% title="app/jobs/store-export.ts" %}
+```typescript {% title="app/services/exports/store-export.ts" %}
 import type { Database } from "remix/data-table";
 
 import { isFailure, success } from "@sdxc/result";
@@ -244,6 +254,44 @@ call to `stream()` or `bytes()`.
 
 `crc32` is exported too, for checking a file against the checksum a ZIP, PNG or gzip header
 records. Pass the previous value as the second argument to continue across chunks.
+
+## Test the archive
+
+`bytes()` answers the finished archive or the error its stream failed with, so a test reads the
+outcome without serving a response. Entries are stored uncompressed, so a stored file's text is
+readable in the bytes. Give the `cloudflare:workers` stand-in a `FILES: createR2Bucket()`
+binding from `@sdxc/cloudflare-mocks`, as
+[Test Workers apps](/docs/operations-and-testing/testing) sets up, and the test writes the
+object it reads:
+
+```typescript {% title="app/services/exports/stored-file.test.ts" %}
+import { isFailure, unwrap } from "@sdxc/result";
+import { Zip } from "@sdxc/zip";
+import { env } from "cloudflare:workers";
+import { expect, test } from "vitest";
+
+import { storedFile } from "~/app/services/exports/stored-file";
+
+test("writes a stored invoice into the archive", async () => {
+	await env.FILES.put("invoices/1042.pdf", "%PDF-1.7 invoice 1042");
+	let zip = new Zip();
+	unwrap(zip.add("invoices/1042.pdf", storedFile("invoices/1042.pdf")));
+
+	let bytes = unwrap(await zip.bytes());
+
+	expect(new TextDecoder().decode(bytes)).toContain("invoice 1042");
+});
+
+test("names the entry whose stored file is missing", async () => {
+	let zip = new Zip();
+	unwrap(zip.add("invoices/404.pdf", storedFile("invoices/404.pdf")));
+
+	let bytes = await zip.bytes();
+
+	expect(isFailure(bytes) && bytes.error.code).toBe("source-failed");
+	expect(isFailure(bytes) && bytes.error.entry).toBe("invoices/404.pdf");
+});
+```
 
 ## Where to go next
 

@@ -97,7 +97,7 @@ import { createAction } from "remix/router";
 
 import { calendarMonth } from "~/app/services/calendar/month";
 import { Events } from "~/app/models/events";
-import { viewerOf } from "~/app/http/viewer";
+import { viewerOf } from "~/app/services/viewer";
 import { CalendarPage } from "~/resources/views/calendar";
 import routes from "~/routes/web";
 
@@ -120,7 +120,7 @@ import { LinkButton } from "@sdxc/ui";
 
 import type { CalendarMonth } from "~/app/services/calendar/month";
 import type { Event } from "~/app/models/events";
-import type { Viewer } from "~/app/http/viewer";
+import type { Viewer } from "~/app/services/viewer";
 
 import routes from "~/routes/web";
 
@@ -336,15 +336,56 @@ export const SETTINGS = s.object({
 ```
 
 `isSupportedTimeZone` accepts one spelling per zone, so a stored zone always matches the
-option the form selects: an alias such as `"Etc/UTC"`, which `Intl` also accepts, fails it.
-To accept every name `Intl` takes, such as a zone read from a calendar file, use
-`isValidTimeZone` instead. The list is read from `Intl.supportedValuesOf("timeZone")` on
-first use and cached for the isolate, with `"UTC"` added by name, since some runtimes,
-Cloudflare Workers among them, leave it out.
+option the form selects.
+
+<note>
+An alias such as `"Etc/UTC"`, which `Intl` also accepts, fails `isSupportedTimeZone`. To
+accept every name `Intl` takes, such as a zone read from a calendar file, use
+`isValidTimeZone` instead.
+</note>
+
+The list is read from `Intl.supportedValuesOf("timeZone")` on first use and cached for the
+isolate, with `"UTC"` added by name, since some runtimes, Cloudflare Workers among them,
+leave it out.
 
 `systemTimeZone()` reads the zone the runtime's clock runs in. In the browser that is the
 person's own setting, which makes it the value an island can preselect on a first visit; on
 a server it is usually `"UTC"`.
+
+## Test the month and the range
+
+Both services are plain functions of a zone and a clock, so a test passes a fixed `now` and
+asserts on the keys a page would link to, with no request involved:
+
+```typescript {% title="app/services/reports/range.test.ts" %}
+import { isFailure, unwrap } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { calendarMonth } from "~/app/services/calendar/month";
+import { readRange } from "~/app/services/reports/range";
+
+let NOW = new Date("2026-06-15T12:00:00Z");
+
+test("pages a month in the viewer's zone", () => {
+	let month = calendarMonth("2026-06", "America/New_York");
+
+	expect(month.weeks.flat()).toHaveLength(42);
+	expect(month.previous).toBe("2026-05");
+	expect(month.next).toBe("2026-07");
+});
+
+test("defaults to last month and refuses a range reaching today", () => {
+	let fallback = readRange(new URL("https://example.com/reports"), "UTC", NOW);
+	expect(unwrap(fallback)).toEqual({ from: "2026-05-01", to: "2026-05-31" });
+
+	let picked = readRange(
+		new URL("https://example.com/reports?from=2026-06-01&to=2026-06-15"),
+		"UTC",
+		NOW,
+	);
+	expect(isFailure(picked) && picked.error.problem).toBe("tooLate");
+});
+```
 
 ## Where to go next
 

@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 5
-lastUpdated: 2026-10-16
+lastUpdated: 2026-10-19
 outcomes:
     - "How to give every page one canonical URL and structured data"
     - "How to serve `sitemap.xml` and `robots.txt` from routes"
@@ -23,7 +23,7 @@ ordinary route answered through `@sdxc/http/response`.
 npm add @sdxc/http @sdxc/robots @sdxc/seo @sdxc/sitemap @sdxc/well-known remix
 ```
 
-## One instance for the site
+## Create one instance for the site
 
 The same Worker answers on your custom domain, its `workers.dev` name and every preview
 deployment. A page served from any of them must still name one address, or a crawler indexes
@@ -45,7 +45,7 @@ export const seo = createSeo({
 and keeps the query string. `seo.absolute("/og/cover.png")` does the same for an asset,
 leaving a URL that is already absolute, such as a CDN's, alone.
 
-## Head metadata from the layout
+## Render head metadata from the layout
 
 Let the document layout take the page's metadata as a prop and render it with the `Seo`
 component, so each page decides its own copy and the tag set stays identical everywhere.
@@ -80,7 +80,7 @@ Open Graph and Twitter tags. Both social namespaces repeat the title and descrip
 each consumer reads only its own. A tag whose input is missing is skipped rather than written
 empty.
 
-## Structured data from a page
+## Add structured data from a page
 
 A page passes its own metadata, including any schema.org nodes. The builders on `seo.schema`
 fill `@context` and `@type`, run page URLs through the same canonical rules as the link tag,
@@ -228,10 +228,15 @@ export default createAction(routes.robots, (ctx) => {
 });
 ```
 
+<warning>
 Comparing the request's origin with `seo.baseUrl` is what keeps previews out of search
 results: every host except the canonical one asks crawlers to stay away entirely, while
-production only fences off the signed-in area. `contentSignals` writes a `Content-Signal`
-line, which states what the content may be used for beyond crawling.
+production only fences off the signed-in area. A `baseUrl` that differs from the production
+origin, such as `http://` where the site serves `https://`, blocks crawlers from production
+too.
+</warning>
+
+`contentSignals` writes a `Content-Signal` line, which states what the content may be used for beyond crawling.
 
 ## Serve security.txt
 
@@ -277,21 +282,51 @@ export function createWebRouter() {
 }
 ```
 
-Write `expires` as a literal date, not one computed from the clock. A computed date keeps the
-file looking fresh while the contact behind it goes stale, whereas a literal one, plus a test
-that fails 30 days before it passes, makes a person review the contact once a year.
+<note>
+Write `expires` as a literal date. A computed date keeps the file looking fresh while the
+contact behind it goes stale, whereas a literal one, plus a test that fails 30 days before it
+passes, makes a person review the contact once a year.
+</note>
+
+## Test the crawl files
+
+The robots file decides by host, so a test asks the router for it on a preview host and on
+production. The `security.txt` test is the one the note above calls for, failing a month
+before the date passes:
+
+```typescript {% title="app/http/controllers/robots.test.ts" %}
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { SECURITY_TXT } from "~/config/security-txt";
+import routes from "~/routes/web";
+
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+async function robotsOn(origin: string) {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.robots.href(), origin)),
+	);
+	return response.text();
+}
+
+test("robots.txt keeps every host but production out of the index", async () => {
+	expect(await robotsOn("https://preview.example.workers.dev")).toMatch(
+		/^Disallow: \/$/m,
+	);
+	expect(await robotsOn("https://example.com")).toMatch(/^Disallow: \/account$/m);
+});
+
+test("security.txt is at least 30 days from expiring", () => {
+	expect(SECURITY_TXT.expires.getTime() - Date.now()).toBeGreaterThan(THIRTY_DAYS);
+});
+```
 
 ## Where to go next
 
 - [Draw social card images](/docs/building-remix-apps/social-card-images) — the `og:image`
   each page advertises, drawn per page in the Worker.
-- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — the pointers JSON
-  well-known documents report on a refused member.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the other file
   a reader's software looks for.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — the rest of what
   a response should say about itself.
-- [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — keeping a
-  sitemap built from the database cheap to serve.
-- [Translate your app](/docs/building-remix-apps/translate-your-app) — the `locale` the
-  layout writes into `<html lang>`.

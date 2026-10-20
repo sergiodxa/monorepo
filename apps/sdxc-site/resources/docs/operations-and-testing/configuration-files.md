@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 9
 order: 10
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to parse JSONC with comments and trailing commas"
     - "How to point a mistake at its line and column and validate the shape"
@@ -172,12 +172,53 @@ let json = strip('{ "bucket": "assets", /* staging */ }');
 `parse` strips before it parses, so reach for `strip` only when something other than `parse`
 reads the text.
 
+## Test it
+
+`loadConfig` reads a path, so a test writes the file it needs into a temporary folder and
+checks both answers: the parsed value with its default filled in, and a mistake reported at its
+line and column.
+
+```typescript {% title="src/config.test.ts" %}
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { failure, success } from "@sdxc/result";
+import { expect, test } from "vitest";
+
+import { loadConfig } from "./config.js";
+
+async function write(...lines: string[]) {
+	let path = join(await mkdtemp(join(tmpdir(), "deploy-")), "deploy.jsonc");
+	await writeFile(path, lines.join("\n"));
+	return path;
+}
+
+test("reads comments and trailing commas, and fills maxAge", async () => {
+	let path = await write(
+		"{",
+		"// production",
+		'"bucket": "assets",',
+		'"regions": ["eu-west",],',
+		"}",
+	);
+	expect(await loadConfig(path)).toEqual(
+		success({ bucket: "assets", regions: ["eu-west"], maxAge: 300 }),
+	);
+});
+
+test("points a mistake at its line and column", async () => {
+	let path = await write("{", '"bucket": assets', "}");
+	expect(await loadConfig(path)).toEqual(
+		failure(new Error(`${path}:2:11: Unexpected character 'a'`)),
+	);
+});
+```
+
 ## Where to go next
 
 - [Build a command line](/docs/operations-and-testing/build-a-command-line) — the commands this
   configuration is handed to.
-- [`Result` everywhere](/docs/conventions/result-everywhere) — the shape `parse` and
-  `loadConfig` answer.
 - [Standard Schema validation](/docs/conventions/standard-schema-validation) — the schemas
   that check the parsed value.
 - [`@sdxc/jsonc`](/api/jsonc) — every field of the parse error.

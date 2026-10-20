@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 14
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to sign outgoing requests with RFC 9421 and draft-cavage"
     - "How to verify signatures with a freshness window and replay checks"
@@ -194,7 +194,7 @@ import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { refuseSignature } from "~/app/http/refuse-signature";
+import { refuseSignature } from "~/app/http/controllers/refuse-signature";
 import { saveOrder } from "~/app/models/orders";
 import { partnerKey } from "~/app/services/partner-keys";
 import routes from "~/routes/web";
@@ -222,10 +222,16 @@ parameters appended, as in `@query-param;name="page"`. The key id is the caller'
 the order is stored against it. When you already hold the body as bytes, pass it as `body` and
 `verify` hashes those.
 
-Verify before anything else reads the request. A partner's server has no session and no
-`Origin` header, so if your app runs Remix's
+<warning>
+Verify before anything else reads the request: a handler that acts on the body first acts on
+a request nobody has proven.
+</warning>
+
+<note>
+A partner's server has no session and no `Origin` header, so when your app runs Remix's
 [`cop()`](https://github.com/remix-run/remix/tree/main/packages/cop-middleware), exempt the
 signed paths from it.
+</note>
 
 ### Refuse in a way the caller can act on
 
@@ -234,7 +240,7 @@ request is not proven, so all answer `401`; what differs is what you log and wha
 caller. `Accept-Signature` (RFC 9421 §5.1) says which signature you would accept, so a caller
 that signed too little learns what to cover:
 
-```typescript {% title="app/http/refuse-signature.ts" %}
+```typescript {% title="app/http/controllers/refuse-signature.ts" %}
 import type { HttpSignatureError } from "@sdxc/http-signatures";
 import type { Log } from "@sdxc/logger";
 
@@ -266,8 +272,7 @@ export function refuseSignature(log: Log, error: HttpSignatureError): Response {
 ```
 
 `created: true` asks the signer to include a creation time, and `tag` names the protocol the
-signature is for. Each code names the
-check that failed:
+signature is for. Each code names the check that failed:
 
 | `code`                                       | What it means                                               |
 | -------------------------------------------- | ----------------------------------------------------------- |
@@ -317,10 +322,13 @@ export async function claimNonce(request: Request, verified: Verified) {
 
 Call it right after `verify` succeeds, and answer `401` when it returns `false`. A draft-cavage
 signature has no label, nonce or tag, so this endpoint accepts RFC 9421 alone. Fifteen minutes
-covers the five-minute `maxAge` plus the clock skew on either side. KV is eventually consistent,
-so two copies arriving within a second at different locations can both pass: the nonce narrows
-the window, and an idempotent `saveOrder`, keyed on the order's own id, is what makes a repeat
-harmless.
+covers the five-minute `maxAge` plus the clock skew on either side.
+
+<warning>
+KV is eventually consistent, so two copies arriving within a second at different locations can
+both pass. The nonce narrows the window, and an idempotent `saveOrder`, keyed on the order's own
+id, is what makes a repeat harmless.
+</warning>
 
 ## Fall back to draft-cavage
 
@@ -355,7 +363,11 @@ export async function deliver(url: string, body: Uint8Array, key: SigningKey) {
 }
 ```
 
-Build a fresh `Request` for each attempt, since the first one's body was sent. The cavage
+<note>
+Build a fresh `Request` for each attempt: the first one's body was consumed when it was sent.
+</note>
+
+The cavage
 default covers `(request-target) host date digest content-type`, and `components` takes those
 names plus `(created)` and `(expires)`. Remember which scheme each server accepted, and start
 with it next time. [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) does
@@ -389,8 +401,8 @@ parts, or a cached response, where corruption is the risk rather than forgery.
 The fields name two different things. `Content-Digest` is the hash of the content of this
 message, the exact bytes sent. `Repr-Digest` is the hash of the whole representation the URL
 names, so a range response carrying part of a file still carries the digest of the complete
-file, which the client checks once it holds every part. `Want-Content-Digest` and `Want-Repr-Digest` are how a client says
-which algorithms it prefers, as weights from 0 to 10.
+file, which the client checks once it holds every part. `Want-Content-Digest` and
+`Want-Repr-Digest` are how a client says which algorithms it prefers, as weights from 0 to 10.
 
 A download that answers in the algorithm the client weighs highest:
 
@@ -433,10 +445,13 @@ export default createAction(routes.exports.download, async (ctx) => {
 
 `digest` hashes with `sha-256` or `sha-512`; text is read as UTF-8, so pass the exact bytes sent
 when they are not UTF-8 text. `stringify` writes `sha-256=:…:` for the RFC 9530 fields, and an
-empty value answers `""`, which means "send no field". Both fields describe the bytes as
-encoded, so compute them where the body is final: a layer that compresses or rewrites the
-response afterwards changes what the digest describes. `"repr-digest"` writes `Repr-Digest` with
-the same call.
+empty value answers `""`, which means "send no field". `"repr-digest"` writes `Repr-Digest`
+with the same call.
+
+<note>
+Both fields describe the bytes as encoded, so compute them where the body is final: a layer
+that compresses or rewrites the response afterwards changes what the digest describes.
+</note>
 
 Checking a body someone sent is one call. `verify` takes the headers, the bytes and the field:
 
@@ -474,12 +489,74 @@ functions with `"digest"`: `stringify` writes `SHA-256=…` with the uppercase n
 verifier expects, and `parse` accepts any case and skips entries such as `UNIXsum=30637` whose
 value is not base64.
 
+## Test both ends
+
+A signature is checked end to end by signing a request with a key made in the test and
+verifying it with the public half. The router test proves the endpoint refuses an unsigned
+call before it looks up a key or reads the body:
+
+```typescript {% title="app/http/controllers/orders.test.ts" %}
+import { sign, verify } from "@sdxc/http-signatures";
+import { isFailure, isSuccess, success, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
+import { expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+const KEY_ID = "https://api.example.com/keys/1";
+
+test("a signed order verifies, and a changed body fails", async () => {
+	let keys = (await crypto.subtle.generateKey({ name: "Ed25519" }, false, [
+		"sign",
+		"verify",
+	])) as CryptoKeyPair;
+	let body = new TextEncoder().encode(JSON.stringify({ id: "o1", total: 10 }));
+	let request = new Request("https://partner.example.com/orders", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body,
+	});
+	let signed = unwrap(
+		await sign(request, {
+			scheme: "rfc9421",
+			key: { id: KEY_ID, privateKey: keys.privateKey },
+			body,
+			nonce: generateUUID(),
+			tag: "orders",
+		}),
+	);
+	let key = async (keyId: string) =>
+		success(keyId === KEY_ID ? keys.publicKey : null);
+
+	let verified = await verify(signed, { key, maxAge: "5 minutes" });
+	expect(isSuccess(verified) && verified.data.keyId).toBe(KEY_ID);
+
+	let tampered = new Request(signed, {
+		body: JSON.stringify({ id: "o1", total: 0 }),
+	});
+	let refused = await verify(tampered, { key, maxAge: "5 minutes" });
+	expect(isFailure(refused) && refused.error.code).toBe("digest-mismatch");
+});
+
+test("an unsigned order is told what to sign", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.orders.create.href(), "https://example.com"), {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ id: "o1", total: 10 }),
+		}),
+	);
+
+	expect(response.status).toBe(401);
+	expect(response.headers.get("accept-signature")).toContain('tag="orders"');
+});
+```
+
 ## Where to go next
 
 - [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) — signed delivery
   and a verified inbox, built on both packages.
 - [Receive and send webhooks](/docs/identity-and-security/webhooks) — Standard Webhooks, the
   shared-secret signature most webhook senders use.
-- [Hash, sign and encrypt with Web Crypto](/docs/identity-and-security/web-crypto) — the
-  primitives under `Pem` and the digests.
 - [`@sdxc/http-signatures`](/api/http-signatures) — every type, option and error code.

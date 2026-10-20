@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 35
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to draw a response-time chart on a canvas inside a Worker with `@sdxc/raster`"
     - "How to fill the area, stroke the line and mark each day's status"
@@ -273,8 +273,12 @@ export default createAction(routes.reportChart, async (ctx) => {
 ```
 
 A sent report's numbers never change, so the image is cacheable for a year, and mail clients
-that proxy images, such as Gmail, fetch it once. The report id in the URL should be one a
-stranger cannot guess, since anyone holding the link can load the image.
+that proxy images, such as Gmail, fetch it once.
+
+<warning>
+Anyone holding the link can load the image, so put a report id in the URL that a stranger
+cannot guess.
+</warning>
 
 In the email, give the image its display size and an `alt` that states the numbers, which is
 what a reader sees while images are blocked:
@@ -329,7 +333,5 @@ test("a day under 99% uptime is drawn red in the strip", async () => {
 
 - [Draw social card images](/docs/building-remix-apps/social-card-images) — gradients, wrapped
   text and R2 storage for an image drawn once per page.
-- [Accept PNG avatars and draw placeholders](/docs/building-remix-apps/png-avatars) — reading
-  and writing PNG pixels directly.
 - [Send email](/docs/data-and-background-work/send-email) — the message the chart goes into.
 - [`@sdxc/raster`](/api/raster) — `mask`, `layer` and every text option.

@@ -15,7 +15,9 @@ outcomes:
 Releases here are dated rather than semantic. A version is the UTC date it was published,
 written `YYYY.M.D` with the month and day as plain integers, so a release published on 4
 September 2026 is `2026.9.4`. At most one release goes out per day, and every package published
-that day carries the same number, so versions across the scope line up by day.
+that day carries the same number, so versions across the scope line up by day. This page covers
+what that number tells you, how to write it into a manifest, and where to read what changed
+before you move to a newer date.
 
 ## The number says when
 
@@ -60,3 +62,12 @@ with the code before and after. Breaking changes lead each package's section, ma
 The same notes are what [`sdxc upgrade`](/docs/sdxc/upgrade) reads when it moves your pins to a
 newer date, so the prompt it hands an AI agent carries every change between the release you
 have and the one you take.
+
+## Where to go next
+
+- [Install and pin](/docs/getting-started/install-and-pin) — keep every `@sdxc` package in a
+  project on one date.
+- [Upgrade](/docs/sdxc/upgrade) — move your pins to a newer date with a prompt that lists what
+  changed.
+- [Check a project](/docs/sdxc/check-a-project) — catch packages that drifted onto different
+  dates.

@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 4
-lastUpdated: 2026-10-16
+lastUpdated: 2026-10-19
 outcomes:
     - "How to stack a honeypot, a CAPTCHA and a per-address budget on a form"
     - "How to score spam and check the address and password on sign-up"
@@ -100,14 +100,18 @@ export function createWebRouter(guard: Captcha = productionCaptcha()) {
 The order is the cost order. The honeypot is an HMAC check over two form fields. The budget is
 one KV read and write. The challenge is a call to the provider. The spam score runs local rules
 over the free-text field. Only a submission that passes all four is parsed, has its domain
-looked up in DNS and has its password checked against a breach corpus. The guards are `lazy()`'s second argument, so a refused submission never loads
-the controller. `guard` is the CAPTCHA provider, passed in so a test can hand in its own.
-Remix's `formData()` runs in the router's global middleware: the honeypot, the challenge, the
-spam score and the handler all read the submission it parsed. Beside it, `getClientIP()` and
-`userAgent()` publish `ctx.ip` and `ctx.userAgent`, which the spam score sends to its checks. Each module this file imports is built in the
-sections below.
+looked up in DNS and has its password checked against a breach corpus. The guards are
+`lazy()`'s second argument, so a refused submission never loads the controller. `guard` is the
+CAPTCHA provider, passed in so a test can hand in its own. Beside `formData()`, `getClientIP()`
+and `userAgent()` publish `ctx.ip` and `ctx.userAgent`, which the spam score sends to its
+checks. Each module this file imports is built in the sections below.
 
-## A trap no person fills
+<note>
+Keep `formData()` in the router's global middleware, ahead of every guard: the honeypot, the
+challenge, the spam score and the handler all read the submission it parsed.
+</note>
+
+## Set a trap no person fills
 
 `HoneypotFields` renders a signed token as a hidden input and a trap field that sits off-screen,
 `inert` and hidden from assistive technology. A person never sees the trap; a bot filling every
@@ -148,7 +152,13 @@ export const index = createAction(routes.signUp.index, (ctx) => renderSignUp(ctx
 ```
 
 Issuing fails only when the honeypot has no secret, a misconfiguration worth crashing on, which
-is where `unwrap` belongs. Issue once per render, so a re-rendered form carries a fresh token.
+is where `unwrap` belongs.
+
+<note>
+Issue once per render, so a re-rendered form carries a fresh token, and mount the honeypot on
+the page route as well as the action: the page issues the fields the submission is checked
+against.
+</note>
 
 A refusal teaches a bot to adapt, so a filled trap is answered like a success. Anything else —
 a missing or expired token, from a person whose page predates a secret rotation — continues to
@@ -172,7 +182,7 @@ export function answerTrappedBots(error: HoneypotError): Response | null {
 }
 ```
 
-## A budget per address
+## Budget each address
 
 An anonymous form has one thing to key a budget on: the connecting address. `getClientIP` parses
 the `CF-Connecting-IP` header Cloudflare attaches, and answers `null` when something else served
@@ -200,10 +210,15 @@ export function callerBudget(prefix: string, limit: number): Middleware {
 
 A denied request is answered with a `429` carrying `RateLimit`, `RateLimit-Policy` and
 `Retry-After` before the handler runs; pass `onLimit` to render your own page instead. `prefix`
-keeps the sign-up budget apart from any other limiter over the same namespace. Callers behind
-one egress address share a budget, which is the cost of keying on an address at all.
+keeps the sign-up budget apart from any other limiter over the same namespace.
 
-## A challenge, with a test provider
+<note>
+Callers behind one egress address, such as an office or a carrier-grade NAT, share a budget,
+which is the cost of keying on an address at all. Set the limit for the busiest shared address
+you expect to serve.
+</note>
+
+## Ask for a challenge, with a test provider
 
 `captcha(provider)` verifies the field the provider's widget writes and refuses a failed token
 with a `403`. `Captcha` is an interface, so the router takes whichever provider it is given:
@@ -231,6 +246,12 @@ branches without reaching Cloudflare. Its field is `captcha-response`, so a test
 instead of Turnstile's. Every failure carries a `code` that separates what the visitor can fix
 (`rejected`, `expired`) from what the provider broke (`unavailable`); an `onFailure` that answers
 `null` for `unavailable` keeps sign-ups open through a provider outage.
+
+<warning>
+An `onFailure` that lets `unavailable` through opens the form to every bot for as long as the
+provider is down. Choose it only while the honeypot, the budget and the spam score stay in
+front of the handler.
+</warning>
 
 ## Score what was written
 
@@ -332,10 +353,13 @@ an otherwise acceptable password — here it fails open. `issue` carries the val
 needs (`minLength`, the matched `fragment`), so `passwordMessage` is your own function turning an
 issue into copy. `createAccount` is your own service: hash the password exactly as submitted with
 `password.hash` from [`@sdxc/crypto`](/api/crypto) there, and hold the account for review when it
-is told to. The root import of `@sdxc/password-policy` bundles the common-password list,
-about 220 KB gzipped; import from `/length`, `/context` and `/breached` if that matters more.
+is told to. An unsure spam verdict creates the account held for review.
 
-An unsure spam verdict creates the account held for review.
+<note>
+The root import of `@sdxc/password-policy` bundles the common-password list, about 220 KB
+gzipped. Import from `/length`, `/context` and `/breached` when the Worker's size matters more
+than that check.
+</note>
 
 ## Guard a newsletter sign-up
 
@@ -367,13 +391,61 @@ itself is in [Run a newsletter list](/docs/data-and-background-work/newsletter).
 address already on the list like a new one, so the trapped bot, the returning reader and the new
 reader all land on the same page.
 
+## Test the guards
+
+Build the router with `testCaptcha()` and post to it as a browser would. The honeypot issues
+the fields from the same secret the router reads, so the test signs a real token, and the
+budget runs on the `RATE_LIMITS` mock, which you add to `app/test/cloudflare-workers.ts` as
+`createKVNamespace()`:
+
+```typescript {% title="app/http/controllers/sign-up/action.test.ts" %}
+import { Honeypot } from "@sdxc/honeypot";
+import { unwrap } from "@sdxc/result";
+import { env } from "cloudflare:workers";
+import { expect, test } from "vitest";
+
+import { testCaptcha } from "~/app/initializers/captcha";
+import { createWebRouter } from "~/app/initializers/router";
+import routes from "~/routes/web";
+
+async function signUp(trap = "") {
+	let { token, tokenField, trapField } = unwrap(
+		await new Honeypot({ secret: env.HONEYPOT_SECRET }).issue(),
+	);
+	return createWebRouter(testCaptcha()).fetch(
+		new Request(new URL(routes.signUp.action.href(), "https://example.com"), {
+			method: "POST",
+			body: new URLSearchParams({
+				email: "ada@example.com",
+				"captcha-response": "token",
+				[tokenField]: token,
+				[trapField]: trap,
+			}),
+		}),
+	);
+}
+
+test("answers a filled trap like a success", async () => {
+	let response = await signUp("https://spam.example.com");
+
+	expect(response.status).toBe(303);
+	expect(response.headers.get("Location")).toBe(routes.checkYourEmail.href());
+});
+
+test("refuses a submission whose challenge fails", async () => {
+	let response = await signUp();
+
+	expect(response.status).toBe(403);
+});
+```
+
+`testCaptcha()` queues one `rejected` answer, so the second test reaches the challenge and is
+refused there, and the controller never loads.
+
 ## Where to go next
 
-- [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the schema
-  behind `SIGN_UP`.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — allow the
   challenge's script and frame before enforcing a policy.
-- [Add passkeys](/docs/identity-and-security/passkeys) — an account with no password to check.
 - [Run a newsletter list](/docs/data-and-background-work/newsletter) — the subscribe action
   behind the guards above.
 - [`@sdxc/spam`](/api/spam) — reputation providers, a trainable classifier and a Workers AI

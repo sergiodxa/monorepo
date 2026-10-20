@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 2
-lastUpdated: 2026-10-15
+lastUpdated: 2026-10-19
 outcomes:
     - "How to turn form posts, query strings and route params into typed values with `@sdxc/validate`"
     - "How to render a schema's issues back next to the fields that failed"
@@ -166,7 +166,13 @@ export function NewTeamPage(handle: Handle<Props>) {
 ```
 
 The native `required` and `type="email"` attributes stop most mistakes before the request is
-sent. The schema is still the rule that counts, because anything can post to your action.
+sent.
+
+<warning>
+Anything can post to your action, with or without the form's attributes, so the schema in
+the action is the rule that counts. Treat `required`, `type` and `pattern` as hints for the
+visitor and keep every rule in the schema too.
+</warning>
 
 ## Validate route params
 
@@ -269,15 +275,59 @@ export default createAction(routes.api.teams.create, async (ctx) => {
 API prefers plain JSON, `badRequest({ errors: body.error.issues })` from
 `@sdxc/http/response/json` is the one-line alternative.
 
+## Test both refusals
+
+Each refusal is one request through the app's router, so a test proves the status a browser
+and an API client receive. `migrate()` prepares the in-memory database, as
+[Test Workers apps](/docs/operations-and-testing/testing#drive-the-real-router) sets up:
+
+```typescript {% title="app/http/controllers/teams-new.test.tsx" %}
+import { beforeAll, expect, test } from "vitest";
+
+import { createWebRouter } from "~/app/initializers/router";
+import { migrate } from "~/app/test/database";
+import routes from "~/routes/web";
+
+beforeAll(migrate);
+
+test("re-renders a refused form with a 400", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.teams.new.action.href(), "https://example.com"), {
+			method: "POST",
+			body: new URLSearchParams({
+				name: "A",
+				billingEmail: "ada@example.com",
+				seats: "3",
+				plan: "team",
+			}),
+		}),
+	);
+
+	expect(response.status).toBe(400);
+});
+
+test("answers an API client with a problem document", async () => {
+	let response = await createWebRouter().fetch(
+		new Request(new URL(routes.api.teams.create.href(), "https://example.com"), {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name: "Acme", billingEmail: "not-an-email" }),
+		}),
+	);
+
+	expect(response.status).toBe(422);
+	expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+	expect(await response.json()).toMatchObject({
+		errors: [expect.objectContaining({ pointer: "/billingEmail" })],
+	});
+});
+```
+
 ## Where to go next
 
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   the components the form above is built from.
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — a catalog of problem
   types instead of one-off documents.
-- [Address JSON with JSON Pointer](/docs/http-apis/json-pointer) — parse, get and set the
-  pointers `issuesFrom` writes.
 - [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) — what to
   add in front of an action that anyone can reach.
-- [Standard Schema validation](/docs/conventions/standard-schema-validation) — why any
-  Standard Schema library works in `validate`.

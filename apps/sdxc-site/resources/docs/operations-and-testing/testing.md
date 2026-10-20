@@ -408,12 +408,8 @@ when behavior depends on script; `db`, `sample` and shared `command` definitions
 
 ## Where to go next
 
-- [Test your app](/docs/operations-and-testing/test-your-app) lists the tests `sdxc make`
-  writes and the helpers in `app/test/`.
-- [Wire the router](/docs/building-remix-apps/wire-the-router) shows the middleware that
-  publishes `ctx.db`, `ctx.models` and `ctx.email`.
-- [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers the
-  dispatcher and running jobs from a memory queue.
-- [Logs, traces and timings](/docs/operations-and-testing/observability) explains the
-  records a `Log` sink collects.
-- [`@sdxc/spec`](/api/spec) documents every capability and permission flag.
+- [Test your app](/docs/operations-and-testing/test-your-app) — the tests `sdxc make` writes
+  and the helpers in `app/test/`.
+- [Wire the router](/docs/building-remix-apps/wire-the-router) — the middleware that publishes
+  `ctx.db`, `ctx.models` and `ctx.email`.
+- [`@sdxc/spec`](/api/spec) — every capability and permission flag.

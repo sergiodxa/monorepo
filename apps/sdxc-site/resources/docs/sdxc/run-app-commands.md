@@ -9,8 +9,7 @@ lastUpdated: 2026-10-19
 outcomes:
     - "How `sdxc run` finds and runs your app's command line"
     - "Which commands a new app ships with"
-    - "How to migrate, seed, reset and query the local database from the terminal"
-    - "How to preview a declared email without sending it"
+    - "How to migrate, seed and query the local database, and preview an email, from the terminal"
 ---
 
 An app created from the template has a command line of its own, in `bootstrap/cli.ts`, for
