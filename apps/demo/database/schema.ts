@@ -14,8 +14,7 @@ import { column as c, table } from "remix/data-table";
 /**
  * One open position. `expired_at` is the board's only lifecycle: the nightly sweep stamps it
  * and the listing hides anything stamped, so a posting is never deleted and a link to one
- * keeps resolving. Timestamps are written by the caller, since an integer column holds epoch
- * milliseconds and the table's own hook would hand it a `Date` the driver refuses to bind.
+ * keeps resolving.
  */
 export const postings = table({
 	name: "postings",

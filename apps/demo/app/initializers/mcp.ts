@@ -2,7 +2,6 @@
  * The board's MCP server: tools that list, search, read and publish positions, and a resource
  * that reads one in full. `app/mcp/` declares what exists and answers it, and the wiring lives
  * here, built once at module scope, so the router mounts the server as an ordinary route.
- * Each handler is mapped through `lazy()`, so a request imports only the handlers it reaches.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -43,7 +43,6 @@ namespace PostForm {
  * Renders the submit dialog, open when the last submission was refused. A dialog carrying
  * the `open` attribute is laid out in the page's flow and gets no `::backdrop`, so the
  * reopened panel centers itself in the viewport and spreads one very large shadow over the
- * page behind it: the visitor gets back the panel they submitted from, with no script.
  */
 export default function PostForm(handle: Handle<PostForm.Props>) {
 	return () => {

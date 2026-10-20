@@ -3,9 +3,6 @@
  * the dialog's frame is filled from, and it is the only handler that parses a posting's
  * Markdown, so the work is done once for the one posting somebody asked to read.
  *
- * A frame asks for the detail alone and is answered with the detail alone; everybody else
- * gets a whole document that stands on its own with no script.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

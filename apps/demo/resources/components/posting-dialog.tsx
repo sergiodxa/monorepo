@@ -3,9 +3,6 @@
  * what the listing already holds — title, company, the two chips — and the modal's body is
  * left empty, so rendering the board costs nothing per posting beyond the row itself.
  *
- * The control is a link to the position's own page. The dialog is native, and the island
- * inside it turns that link into the button that opens it once there is script to do so.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */

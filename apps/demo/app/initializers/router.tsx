@@ -59,8 +59,7 @@ declare module "remix/router" {
  * carries what each link publishes and {@link AppContext} reads it from there. Every route is
  * mapped through `lazy()`, so a request imports only the controller it reaches.
  *
- * @param openDb Opens the database every request and job reads through; a test hands in its
- * own, so what it drives is the router the worker builds.
+ * @param openDb Opens the database every request and job reads through; a test hands in its own, so what it drives is the router the worker builds.
  * @param guard The provider the submit form is verified against.
  * @returns The configured router the worker forwards requests to.
  */

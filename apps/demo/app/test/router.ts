@@ -37,8 +37,7 @@ export async function createTestDatabase(): Promise<Database> {
  *
  * @param db The database this request reads and writes through.
  * @param path A path or absolute URL to request.
- * @param init Request init. A non-GET request gets `origin` set to {@link ORIGIN} by
- * default, since cross-origin protection is part of the chain under test.
+ * @param init Request init. A non-GET request gets `origin` set to {@link ORIGIN} by default, since cross-origin protection is part of the chain under test.
  * @returns The router's response.
  */
 export async function fetchApp(
