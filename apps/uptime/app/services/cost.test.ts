@@ -27,7 +27,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ COSTS: costs }),
 }));
 
-let { COST_RESOURCES, priceCostQuantities, MODELLED_CPU_MS, RATES } =
+let { COST_AE_CORE_COUNT, COST_RESOURCES, priceCostQuantities, MODELLED_CPU_MS, RATES } =
 	await import("~/app/services/cost-rates");
 let {
 	apportionCost,
@@ -36,6 +36,7 @@ let {
 	countedKv,
 	createD1Usage,
 	currentCostLedger,
+	dailyCostOverflowQuery,
 	dailyCostQuery,
 	OVERFLOW_TEAM_ID,
 	PLATFORM_TEAM_ID,
@@ -68,12 +69,15 @@ function observation(overrides: Partial<D1StatementObservation> = {}): D1Stateme
 
 /** The quantity a written point recorded for one resource. */
 function quantity(point: AnalyticsEngineDataPoint, resource: string): number {
-	return point.doubles?.[COST_RESOURCES.indexOf(resource as never)] ?? 0;
+	let index = COST_RESOURCES.indexOf(resource as never);
+	/** Overflow resources live on the second point; a core point's trailing double is priced. */
+	if (index < 0 || index >= COST_AE_CORE_COUNT) return 0;
+	return point.doubles?.[index] ?? 0;
 }
 
-/** The priced total a written point recorded, which is its last double. */
+/** The priced total a written **core** point recorded, which is its last double. */
 function total(point: AnalyticsEngineDataPoint): number {
-	return point.doubles?.[COST_RESOURCES.length] ?? 0;
+	return point.doubles?.[COST_AE_CORE_COUNT] ?? 0;
 }
 
 /** Runs `body` inside a ledger and returns the points its flush wrote. */
@@ -300,7 +304,10 @@ describe("CostLedger self-accounting", () => {
 		});
 
 		let quantities = Object.fromEntries(
-			COST_RESOURCES.map((resource) => [resource, quantity(point!, resource)]),
+			COST_RESOURCES.slice(0, COST_AE_CORE_COUNT).map((resource) => [
+				resource,
+				quantity(point!, resource),
+			]),
 		);
 		expect(total(point!)).toBeCloseTo(priceCostQuantities(quantities as never), 12);
 		expect(total(point!)).toBeGreaterThan(RATES.emailSent);
@@ -416,7 +423,10 @@ describe("dailyCostQuery", () => {
 
 		expect(parsed.quantities.aeQuery).toBe(7);
 		expect(parsed.quantities.doDurationMs).toBe(250);
-		expect(aliases.map((entry) => entry.alias)).toEqual([...COST_RESOURCES, "reportedCents"]);
+		expect(aliases.map((entry) => entry.alias)).toEqual([
+			...COST_RESOURCES.slice(0, COST_AE_CORE_COUNT),
+			"reportedCents",
+		]);
 	});
 
 	/**
@@ -430,12 +440,49 @@ describe("dailyCostQuery", () => {
 		expect(sql.match(/SUM\(_sample_interval \*/g)).toHaveLength(sums.length);
 	});
 
-	test("bounds the query to the requested UTC day", () => {
+	test("bounds the query to the requested UTC day and skips overflow points", () => {
 		let sql = dailyCostQuery("2026-07-30");
 
 		expect(sql).toContain("timestamp >= toDateTime('2026-07-30 00:00:00')");
 		expect(sql).toContain("INTERVAL '1' DAY");
 		expect(sql).toContain("GROUP BY index1, blob3");
+		expect(sql).toContain("blob4 IS NULL OR blob4 = ''");
+	});
+});
+
+describe("R2 overflow cost points", () => {
+	test("writes a second data point when an R2 resource was recorded", async () => {
+		let points = await flushing(async () => {
+			apportionCostByTeam(["team-1"]);
+			recordCost("r2ClassAOperations", 2);
+			recordCost("r2StorageGbDay", 0.01);
+		});
+
+		expect(points).toHaveLength(2);
+		expect(points[0]?.blobs).toEqual([expect.any(String), "direct", expect.any(String)]);
+		expect(points[1]?.blobs?.[3]).toBe("r2");
+		expect(points[1]?.doubles?.[0]).toBe(2);
+		expect(points[1]?.doubles?.[2]).toBe(0.01);
+		expect(quantity(points[0]!, "aeDataPoint")).toBe(2);
+	});
+
+	test("keeps a single point when no R2 resource was recorded", async () => {
+		let points = await flushing(async () => {
+			apportionCostByTeam(["team-1"]);
+			recordCost("emailSent", 1);
+		});
+
+		expect(points).toHaveLength(1);
+		expect(points[0]?.blobs).toHaveLength(3);
+	});
+
+	test("overflow query names the R2 resources and filters on blob4", () => {
+		let sql = dailyCostOverflowQuery("2026-07-30");
+		expect(sql).not.toBeNull();
+		expect(sql).toContain("AS r2ClassAOperations");
+		expect(sql).toContain("AS r2ClassBOperations");
+		expect(sql).toContain("AS r2StorageGbDay");
+		expect(sql).toContain("blob4 = 'r2'");
 	});
 });
 

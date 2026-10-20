@@ -18,6 +18,7 @@ import { env } from "cloudflare:workers";
 import type { CostQuantities, CostResource, WorkerHandler } from "~/app/services/cost-rates";
 
 import {
+	COST_AE_CORE_COUNT,
 	COST_RESOURCES,
 	createCostQuantities,
 	MODELLED_CPU_MS,
@@ -27,6 +28,15 @@ import {
 
 /** The dataset recorded points land in, and the one the reporting job reads back. */
 const COSTS_DATASET = "uptime_costs";
+
+/** `blob4` on the second data point that carries resources past {@link COST_AE_CORE_COUNT}. */
+const COST_OVERFLOW_BLOB = "r2";
+
+/** Resources that fit in the first Analytics Engine point with the priced total. */
+const CORE_RESOURCES = COST_RESOURCES.slice(0, COST_AE_CORE_COUNT);
+
+/** Resources that ride the overflow point tagged {@link COST_OVERFLOW_BLOB}. */
+const OVERFLOW_RESOURCES = COST_RESOURCES.slice(COST_AE_CORE_COUNT);
 
 /**
  * Most data points one Analytics Engine `writeDataPoint` caller may emit per Worker
@@ -60,6 +70,9 @@ const COST_FIELDS: Record<CostResource, string> = {
 	doRowWritten: "do_rows_written",
 	workerLogEvent: "log_events",
 	browserSecond: "browser_seconds",
+	r2ClassAOperations: "r2_class_a_operations",
+	r2ClassBOperations: "r2_class_b_operations",
+	r2StorageGbDay: "r2_storage_gb_day",
 };
 
 /**
@@ -197,16 +210,39 @@ export class CostLedger {
 		let cents = 0;
 
 		for (let [teamId, quantities] of buckets) {
-			quantities.aeDataPoint += 1;
-			let priced = priceCostQuantities(quantities);
-			cents += priced;
+			let overflow = OVERFLOW_RESOURCES.some((resource) => quantities[resource] > 0);
+			/**
+			 * Each `writeDataPoint` is itself an Analytics Engine write this flush causes, so
+			 * the overflow point — when present — counts as a second data point on the ledger.
+			 */
+			quantities.aeDataPoint += overflow ? 2 : 1;
+
+			let core = createCostQuantities();
+			for (let resource of CORE_RESOURCES) core[resource] = quantities[resource];
+			let corePriced = priceCostQuantities(core);
+
+			let overflowQuantities = createCostQuantities();
+			for (let resource of OVERFLOW_RESOURCES) {
+				overflowQuantities[resource] = quantities[resource];
+			}
+			let overflowPriced = overflow ? priceCostQuantities(overflowQuantities) : 0;
+
+			cents += corePriced + overflowPriced;
 			for (let resource of COST_RESOURCES) written[resource] += quantities[resource];
 
 			env.COSTS.writeDataPoint({
 				indexes: [teamId],
 				blobs: [this.#source, attribution, RATE_CARD_VERSION],
-				doubles: [...COST_RESOURCES.map((resource) => quantities[resource]), priced],
+				doubles: [...CORE_RESOURCES.map((resource) => quantities[resource]), corePriced],
 			});
+
+			if (overflow) {
+				env.COSTS.writeDataPoint({
+					indexes: [teamId],
+					blobs: [this.#source, attribution, RATE_CARD_VERSION, COST_OVERFLOW_BLOB],
+					doubles: [...OVERFLOW_RESOURCES.map((resource) => quantities[resource]), overflowPriced],
+				});
+			}
 		}
 
 		this.#report(attribution, buckets.size, cents, written);
@@ -425,15 +461,18 @@ export interface DailyTeamCost {
 }
 
 /**
- * SQL summing one UTC day of recorded cost per team, for the daily reporting job.
- * Every sum is weighted by `_sample_interval`, since Analytics Engine samples
- * under load and an unweighted sum would quietly under-report the biggest spenders first.
+ * SQL summing one UTC day of recorded **core** cost per team — the nineteen resources
+ * that share a data point with the priced total. Overflow resources (R2) live on a
+ * second point and are read by {@link dailyCostOverflowQuery}.
+ *
+ * Every sum is weighted by `_sample_interval`, since Analytics Engine samples under load
+ * and an unweighted sum would quietly under-report the biggest spenders first.
  *
  * @param day - The UTC day to sum, `YYYY-MM-DD`.
  * @returns Query text for the Analytics Engine SQL API.
  */
 export function dailyCostQuery(day: string): string {
-	let sums = COST_RESOURCES.map(
+	let sums = CORE_RESOURCES.map(
 		(resource, index) => `SUM(_sample_interval * double${index + 1}) AS ${resource}`,
 	);
 
@@ -442,10 +481,40 @@ export function dailyCostQuery(day: string): string {
 			index1 AS teamId,
 			blob3 AS rateCard,
 			${sums.join(",\n\t\t\t")},
-			SUM(_sample_interval * double${COST_RESOURCES.length + 1}) AS reportedCents
+			SUM(_sample_interval * double${CORE_RESOURCES.length + 1}) AS reportedCents
 		FROM ${COSTS_DATASET}
 		WHERE timestamp >= toDateTime('${day} 00:00:00')
 			AND timestamp < toDateTime('${day} 00:00:00') + INTERVAL '1' DAY
+			AND (blob4 IS NULL OR blob4 = '')
+		GROUP BY index1, blob3
+	`;
+}
+
+/**
+ * SQL summing one UTC day of overflow cost resources (R2 Class A/B and storage) per team.
+ * Those quantities ride a second data point tagged `blob4 = "r2"` because the core point
+ * already fills Analytics Engine's twenty doubles (ADR-037).
+ *
+ * @param day - The UTC day to sum, `YYYY-MM-DD`.
+ * @returns Query text for the Analytics Engine SQL API, or `null` when the card has no overflow.
+ */
+export function dailyCostOverflowQuery(day: string): string | null {
+	if (OVERFLOW_RESOURCES.length === 0) return null;
+
+	let sums = OVERFLOW_RESOURCES.map(
+		(resource, index) => `SUM(_sample_interval * double${index + 1}) AS ${resource}`,
+	);
+
+	return `
+		SELECT
+			index1 AS teamId,
+			blob3 AS rateCard,
+			${sums.join(",\n\t\t\t")},
+			SUM(_sample_interval * double${OVERFLOW_RESOURCES.length + 1}) AS reportedCents
+		FROM ${COSTS_DATASET}
+		WHERE timestamp >= toDateTime('${day} 00:00:00')
+			AND timestamp < toDateTime('${day} 00:00:00') + INTERVAL '1' DAY
+			AND blob4 = '${COST_OVERFLOW_BLOB}'
 		GROUP BY index1, blob3
 	`;
 }

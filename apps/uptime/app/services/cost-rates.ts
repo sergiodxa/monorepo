@@ -16,10 +16,11 @@ import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
 import * as EmailService from "@sdxc/cloudflare-pricing/email-service";
 import * as KV from "@sdxc/cloudflare-pricing/kv";
 import * as Queues from "@sdxc/cloudflare-pricing/queues";
+import * as R2 from "@sdxc/cloudflare-pricing/r2";
 import * as Workers from "@sdxc/cloudflare-pricing/workers";
 
 /** The rate card this module currently states. Carried on every measurement it prices. */
-export const RATE_CARD_VERSION = "2026-10-14";
+export const RATE_CARD_VERSION = "2026-10-20";
 
 /**
  * Cents per Browser Run wall-clock second at Workers Paid overage ($0.09/hour ÷ 3600).
@@ -58,6 +59,16 @@ export const COST_RATE_CARD = defineRateCard({
 	workerLogEvent: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
 	/** Browser Run session time a browser flow opened (ADR-027 §7). */
 	browserSecond: BROWSER_SECOND_CENTS,
+	/**
+	 * R2 Standard Class A — Put/List for flow Performance traces (ADR-037). Appended past
+	 * the nineteen resources that fill one Analytics Engine point; the ledger writes them
+	 * on a second point tagged `blob4 = "r2"` (see {@link COST_AE_CORE_COUNT}).
+	 */
+	r2ClassAOperations: centsPerUnit(R2.CLASS_A_OPERATIONS),
+	/** R2 Standard Class B — Get/Head for flow Performance-trace downloads (ADR-037). */
+	r2ClassBOperations: centsPerUnit(R2.CLASS_B_OPERATIONS),
+	/** R2 Standard storage for live flow Performance traces, as GB-days (ADR-037). */
+	r2StorageGbDay: centsPerGbDay(R2.STORAGE),
 });
 
 /** Cents per unit of every resource the ledger counts. */
@@ -68,6 +79,12 @@ export type CostResource = RateCardResource<typeof COST_RATE_CARD>;
 
 /** Every resource, in the order recorded data points position their `double` fields by. */
 export const COST_RESOURCES = COST_RATE_CARD.resources;
+
+/**
+ * How many leading {@link COST_RESOURCES} fit in one Analytics Engine data point together
+ * with the priced total (20 doubles). Resources past this index ride a second point.
+ */
+export const COST_AE_CORE_COUNT = 19;
 
 /** How many units of each resource one unit of work consumed. */
 export type CostQuantities = RateCardQuantities<CostResource>;

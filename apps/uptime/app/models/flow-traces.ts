@@ -16,6 +16,7 @@ import { getTableName } from "remix/data-table";
 
 import type { BatchedSweepResult } from "~/app/services/retention";
 
+import { recordCost } from "~/app/services/cost";
 import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/services/retention";
 import { flowMonitorResults, flowMonitors } from "~/database/schema";
 
@@ -57,6 +58,8 @@ export async function storeFlowTrace(
 		lastModified: Date.now(),
 	});
 	await storage.set(key, file);
+	/** PutObject is an R2 Class A operation; deletes are free and are not recorded. */
+	recordCost("r2ClassAOperations");
 	return key;
 }
 
@@ -65,11 +68,13 @@ export async function storeFlowTrace(
  */
 export async function readFlowTrace(storage: FileStorage, key: string): Promise<Uint8Array | null> {
 	let file = await storage.get(key);
+	/** GetObject is an R2 Class B operation whether or not the key still holds an object. */
+	recordCost("r2ClassBOperations");
 	if (file === null) return null;
 	return new Uint8Array(await file.arrayBuffer());
 }
 
-/** Remove one trace object; missing keys succeed. */
+/** Remove one trace object; missing keys succeed. R2 deletes are free. */
 export async function deleteFlowTrace(storage: FileStorage, key: string): Promise<void> {
 	await storage.remove(key);
 }

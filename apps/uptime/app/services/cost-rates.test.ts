@@ -11,6 +11,7 @@ import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
 import { describe, expect, test } from "vitest";
 
 import {
+	COST_AE_CORE_COUNT,
 	COST_RESOURCES,
 	createCostQuantities,
 	MODELLED_CPU_MS,
@@ -51,10 +52,21 @@ describe("COST_RESOURCES", () => {
 			"workerLogEvent",
 		]);
 		expect(COST_RESOURCES[18]).toBe("browserSecond");
+		expect(COST_RESOURCES.slice(19)).toEqual([
+			"r2ClassAOperations",
+			"r2ClassBOperations",
+			"r2StorageGbDay",
+		]);
 	});
 
-	test("fits inside the twenty doubles a data point carries, with the total alongside", () => {
-		expect(COST_RESOURCES.length + 1).toBeLessThanOrEqual(20);
+	/**
+	 * Analytics Engine accepts twenty doubles. The first nineteen resources share a point
+	 * with the priced total; R2 resources past that index ride a second point (ADR-037).
+	 */
+	test("keeps the core point inside twenty doubles and parks R2 on the overflow", () => {
+		expect(COST_AE_CORE_COUNT + 1).toBeLessThanOrEqual(20);
+		expect(COST_RESOURCES.slice(0, COST_AE_CORE_COUNT)).toHaveLength(COST_AE_CORE_COUNT);
+		expect(COST_RESOURCES.length).toBeGreaterThan(COST_AE_CORE_COUNT);
 	});
 });
 
@@ -137,6 +149,12 @@ describe("RATES", () => {
 		expect(RATES.doSqliteStorageGbDay).toBeCloseTo(0.667, 3);
 		expect(RATES.doRowRead).toBeCloseTo(1.0e-7, 15);
 		expect(RATES.doRowWritten).toBeCloseTo(1.0e-4, 15);
+	});
+
+	test("prices R2 Standard Class A, Class B and storage at Cloudflare's list rates", () => {
+		expect(RATES.r2ClassAOperations).toBeCloseTo(4.5e-4, 15);
+		expect(RATES.r2ClassBOperations).toBeCloseTo(3.6e-5, 15);
+		expect(RATES.r2StorageGbDay).toBeCloseTo(0.05, 12);
 	});
 });
 
