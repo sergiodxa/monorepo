@@ -114,7 +114,8 @@ bun install
 The scaffold wrote the migration that creates the `bookmarks` table:
 
 ```sql {% title="database/migrations/0001_CreateBookmarks.sql" %}
--- Creates the bookmarks table the Bookmark model reads and writes.
+-- CreateBookmarks: creates the bookmarks table.
+
 CREATE TABLE "bookmarks" (
   "id" TEXT PRIMARY KEY NOT NULL,
   "title" TEXT NOT NULL,
@@ -339,7 +340,7 @@ bun run test
 
 ```text
  Test Files  33 passed (33)
-      Tests  75 passed (75)
+      Tests  77 passed (77)
 ```
 
 The page tests drive the app's real router, so the honeypot, the policy and the validator all

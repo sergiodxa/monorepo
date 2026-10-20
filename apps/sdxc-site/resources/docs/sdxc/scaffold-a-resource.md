@@ -47,7 +47,8 @@ For `sdxc scaffold post`:
 Every table also gets `id`, `created_at` and `updated_at`, so a field may not use those names:
 
 ```text
--- Creates the posts table the Post model reads and writes.
+-- CreatePosts: creates the posts table.
+
 CREATE TABLE "posts" (
   "id" TEXT PRIMARY KEY NOT NULL,
   "title" TEXT NOT NULL,

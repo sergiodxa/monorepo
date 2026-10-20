@@ -184,9 +184,10 @@ declare module "@sdxc/cli" {
 }
 ```
 
-The `CLITypes` augmentation is what types a handler's `ctx` in its own file with what this
-chain publishes, so `ctx.models` type checks in `users/grant.ts`. `sdxc make command` adds each mapping after the last `cli.map`, and a test runs the same `cli`
-against a temporary project, as [Test a command](#test-a-command) shows. Each entry is explained
+The `CLITypes` augmentation at the end types every handler's `ctx` with what this chain
+publishes, so `ctx.models` type checks in `users/grant.ts` with nothing to add. `sdxc make
+command` adds each mapping after the last `cli.map`, and a test runs the same `cli` against a
+temporary project, as [Test a command](#test-a-command) shows. Each entry is explained
 in the sections that follow.
 
 ### The log

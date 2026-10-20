@@ -50,6 +50,7 @@ The alias is what lets a module that imports `env` from `cloudflare:workers` loa
 import {
 	createD1Database,
 	createKVNamespace,
+	createQueue,
 	createRateLimit,
 	createSendEmail,
 } from "@sdxc/cloudflare-mocks";
@@ -57,6 +58,7 @@ import {
 export const env = {
 	DB: createD1Database(),
 	EMAIL: createSendEmail(),
+	QUEUE: createQueue(),
 	RATE_LIMITER: createRateLimit(),
 	SESSIONS: createKVNamespace(),
 	SESSION_SECRET: "development-session-secret",
@@ -66,8 +68,7 @@ export const env = {
 } as Partial<Cloudflare.Env> as Cloudflare.Env;
 ```
 
-When you declare a binding, add its mock here too. A test that enqueues a job, or queues an
-email, needs `QUEUE: createQueue()`. Each test file starts from a fresh module graph, so each
+When you declare a binding, add its mock here too. Each test file starts from a fresh module graph, so each
 file starts with empty bindings. `vp test run app/mcp` scopes a run to a path, and
 `vp test watch` reruns on change.
 
@@ -261,8 +262,8 @@ real call. `server.use(...)` inside one test overrides a handler for that test o
 
 The template's mailer sends through the `EMAIL` binding, so in a test the mock records every
 message on its `messages`, which a test reads through `toMatchObject`, since the binding's own
-type leaves the mock's extras out. A queued email and a job a
-handler enqueues land on the `QUEUE` mock's `messages`, once the stub declares it:
+type leaves the mock's extras out. A queued email and a job a handler enqueues land on the
+`QUEUE` mock's `messages`:
 
 ```typescript {% title="app/http/controllers/teams/invite.test.tsx" %}
 import { unwrap } from "@sdxc/result";
