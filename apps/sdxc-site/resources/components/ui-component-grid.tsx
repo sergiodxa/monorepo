@@ -1,5 +1,5 @@
 /**
- * The explorer grid of `@sdxc/ui` components: spaced tiles with a frosted face, rather
+ * The explorer grid of `@sdxc/ui` components: spaced tiles with a schematic face, rather
  * than the hairline name sheet the other catalogues use.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
