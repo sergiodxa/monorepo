@@ -1,5 +1,5 @@
 /**
- * `GET /frames/faces/:component` — the HIG-style PNG a `@sdxc/ui` explorer tile shows.
+ * `GET /frames/faces/:component` — the schematic PNG a `@sdxc/ui` explorer tile shows.
  * Drawing is cheap enough to do per miss; the response is immutable so the edge and the
  * browser keep it.
  *

@@ -1,7 +1,7 @@
 /**
- * One tile in the `@sdxc/ui` component explorer: a frosted-glass face of the pattern above
- * its name and a short line of what it is, so a reader scans faces the way they would scan
- * a gallery rather than a dense sheet of links.
+ * One tile in the `@sdxc/ui` component explorer: a schematic face of the pattern above its
+ * name and a short line of what it is, so a reader scans faces the way they would scan a
+ * gallery rather than a dense sheet of links.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,7 +32,7 @@ namespace UiComponentCard {
 	}
 }
 
-/** Renders one linked explorer tile with a frosted PNG face of the pattern. */
+/** Renders one linked explorer tile with a schematic PNG face of the pattern. */
 export default function UiComponentCard(handle: Handle<UiComponentCard.Props>) {
 	return () => {
 		let { description, href, name, slug } = handle.props;
