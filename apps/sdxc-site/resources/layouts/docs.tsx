@@ -24,11 +24,11 @@ import {
 	sticky,
 	vstack,
 } from "sdxc/u/layout";
-import { overflow, overflowX, overflowY } from "sdxc/u/overflow";
+import { overflow, overflowY } from "sdxc/u/overflow";
 import { media } from "sdxc/u/responsive";
 import { bs, is, maxBs, maxIs, mis, p } from "sdxc/u/size";
 import { z } from "sdxc/u/stacking";
-import { before, when } from "sdxc/u/state";
+import { before } from "sdxc/u/state";
 import { text, tracking, weight } from "sdxc/u/typography";
 import { Breadcrumbs, Button, Sidebar } from "sdxc/ui";
 
@@ -93,17 +93,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 
 		return (
 			<Sidebar.Provider>
-				<Sidebar
-					collapsible="offcanvas"
-					mix={[
-						bs("auto"),
-
-						when('[data-slot="provider"]:has([data-slot="toggle"]:checked) &', [
-							mis("calc(-1 * var(--sidebar-width, 16rem))"),
-							overflowX("hidden"),
-						]),
-					]}
-				>
+				<Sidebar collapsible="offcanvas" mix={[bs("auto")]}>
 					<Sidebar.Header mix={[sticky(), insBs(0), z(1)]}>{heading}</Sidebar.Header>
 					<Sidebar.Content
 						mix={[sticky(), insBs(HEADER_HEIGHT), maxBs(`calc(100dvh - ${HEADER_HEIGHT})`)]}
