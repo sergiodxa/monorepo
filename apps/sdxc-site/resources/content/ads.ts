@@ -20,9 +20,9 @@ export type SidebarAdSurface =
 	| "handbook-code"
 	| "handbook-forest";
 
-/** One square ad the docs rail may place above or below the table of contents. */
+/** One square ad the docs rail may show under the table of contents. */
 export interface SidebarAdDefinition {
-	/** Stable id for tests and for naming a tile in the catalogue. */
+	/** Stable id for tests, campaign attribution, and naming a tile in the catalogue. */
 	id: string;
 	/** Destination the tile opens; always an absolute URL on a product the author ships. */
 	href: string;
@@ -30,7 +30,7 @@ export interface SidebarAdDefinition {
 	kicker: string;
 	title: string;
 	tagline: string;
-	/** Short call-to-action fragment shown in the footer beside the product name. */
+	/** Short call-to-action kept on one line at the foot of the tile. */
 	cta: string;
 	surface: SidebarAdSurface;
 	/**
@@ -38,7 +38,7 @@ export interface SidebarAdDefinition {
 	 * sans is the default for product pitches.
 	 */
 	titleFace?: "sans" | "serif" | "mono";
-	/** Word the footer brands the tile with. */
+	/** Product family the tile belongs to; used when grouping the catalogue. */
 	brand: "uptime" | "handbook";
 }
 

@@ -1,6 +1,6 @@
 /**
- * One square product ad for the documentation right rail: a single link painted as
- * a 1:1 tile so the pitch stays the same size above or below the table of contents.
+ * One square product ad for the documentation right rail: a single outbound link
+ * painted as a 1:1 tile so the pitch stays a fixed size under the table of contents.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,12 +10,14 @@ import type { Handle } from "remix/component";
 
 import { rounded } from "sdxc/u/effects";
 import { raw } from "sdxc/u/general";
-import { hstack, vstack } from "sdxc/u/layout";
+import { vstack } from "sdxc/u/layout";
 import { aspect, is, m, p } from "sdxc/u/size";
 import { when } from "sdxc/u/state";
-import { font, leading, text, tracking, weight } from "sdxc/u/typography";
+import { font, leading, nowrap, text, tracking, weight } from "sdxc/u/typography";
 
 import type { SidebarAdDefinition, SidebarAdSurface } from "~/resources/content/ads";
+
+import { sidebarAdHref } from "~/app/services/ads";
 
 namespace SidebarAd {
 	export interface Props {
@@ -97,12 +99,12 @@ export default function SidebarAd(handle: Handle<SidebarAd.Props>) {
 		let surface = SURFACES[ad.surface];
 		let titleFace =
 			ad.titleFace === "serif" ? font("serif") : ad.titleFace === "mono" ? font("mono") : null;
-		let brandLabel = ad.brand === "handbook" ? "handbook" : "uptime";
 
 		return (
 			<a
-				href={ad.href}
-				rel="noreferrer"
+				href={sidebarAdHref(ad)}
+				target="_blank"
+				rel="noopener noreferrer"
 				aria-label={`${ad.title}. ${ad.tagline}`}
 				mix={[
 					aspect("square"),
@@ -161,9 +163,10 @@ export default function SidebarAd(handle: Handle<SidebarAd.Props>) {
 					</span>
 				</span>
 
-				<span mix={[hstack({ gap: 3, justify: "between", align: "baseline" }), text("sm")]}>
-					<span mix={[weight("bold"), tracking("tight")]}>{brandLabel}</span>
-					<span mix={[weight("semibold"), raw({ color: surface.accent })]}>{ad.cta}</span>
+				<span
+					mix={[m(0), text("sm"), weight("semibold"), nowrap(), raw({ color: surface.accent })]}
+				>
+					{ad.cta}
 				</span>
 			</a>
 		);
