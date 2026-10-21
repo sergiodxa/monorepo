@@ -22,19 +22,20 @@ import type { UiSymbol } from "~/app/services/ui-exports";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { adsDayTag } from "~/app/services/ads";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { readUiExport } from "~/app/services/ui-exports";
 import { isUiSubpath } from "~/app/services/ui-subpaths";
 import { absoluteUrl } from "~/config/constants";
+import DocsAside from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
 import Snippet from "~/resources/components/snippet";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -79,6 +80,8 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 		})),
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
+	let activePath = routes.api.uiExport.href({ subpath: reference.subpath, slug });
+
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -88,13 +91,13 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.api.uiExport.href({ subpath: reference.subpath, slug })}
+				activePath={activePath}
 				breadcrumbs={[
 					{ label: "API", href: routes.api.index.href() },
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: reference.name },
 				]}
-				aside={<TableOfContents anchors={anchors} />}
+				aside={<DocsAside anchors={anchors} path={activePath} />}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
@@ -184,7 +187,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response);
+	return await withBundleCache(ctx.request, response, adsDayTag());
 });
 
 /** The fragment a companion is linked by. */

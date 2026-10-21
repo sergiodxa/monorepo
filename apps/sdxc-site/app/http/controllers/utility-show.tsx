@@ -19,6 +19,7 @@ import type { Anchor } from "~/app/services/article";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { adsDayTag } from "~/app/services/ads";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { buildUtilitiesNav } from "~/app/services/navigation";
 import { findUtility, readUtility } from "~/app/services/utilities";
@@ -32,13 +33,13 @@ import {
 import { listUtilityExamples } from "~/app/services/utility-examples";
 import { themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/constants";
+import DocsAside from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
 import Snippet from "~/resources/components/snippet";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -74,6 +75,8 @@ export default createAction(routes.api.utility, async (ctx) => {
 		...scales.map((scale) => ({ id: scale.id, text: scale.title, level: 3 })),
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
+	let activePath = routes.api.utility.href({ utility });
+
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -83,13 +86,13 @@ export default createAction(routes.api.utility, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.api.utility.href({ utility })}
+				activePath={activePath}
 				breadcrumbs={[
 					{ label: "API", href: routes.api.index.href() },
 					{ label: "@sdxc/u", href: routes.api.show.href({ name: "u" }) },
 					{ label: reference.property },
 				]}
-				aside={<TableOfContents anchors={anchors} />}
+				aside={<DocsAside anchors={anchors} path={activePath} />}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
@@ -221,5 +224,5 @@ export default createAction(routes.api.utility, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response);
+	return await withBundleCache(ctx.request, response, adsDayTag());
 });

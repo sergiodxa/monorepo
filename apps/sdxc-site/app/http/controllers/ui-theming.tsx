@@ -17,16 +17,17 @@ import type { NavTree } from "~/app/services/navigation";
 import type { ThemeDeclaration } from "~/app/services/theming";
 
 import { withBundleCache } from "~/app/http/caching";
+import { adsDayTag } from "~/app/services/ads";
 import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdown";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readTheme } from "~/app/services/theming";
 import { absoluteUrl } from "~/config/constants";
+import DocsAside from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
 import Snippet from "~/resources/components/snippet";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -49,6 +50,8 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 		{ id: "dark", text: "Dark", level: 2 },
 	];
 
+	let activePath = routes.api.component.href({ component: THEMING_SLUG });
+
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -58,13 +61,13 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.api.component.href({ component: THEMING_SLUG })}
+				activePath={activePath}
 				breadcrumbs={[
 					{ label: "API", href: routes.api.index.href() },
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: THEMING_TITLE },
 				]}
-				aside={<TableOfContents anchors={anchors} />}
+				aside={<DocsAside anchors={anchors} path={activePath} />}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
@@ -133,7 +136,7 @@ export default async function themingPage(ctx: AppContext, tree: NavTree) {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response);
+	return await withBundleCache(ctx.request, response, adsDayTag());
 }
 
 /** The fragment one band of the contract is linked by. */

@@ -20,15 +20,16 @@ import { Typeset } from "sdxc/ui";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
+import { adsDayTag } from "~/app/services/ads";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
+import DocsAside from "~/resources/components/docs-aside";
 import GuideOutcomes from "~/resources/components/guide-outcomes";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -59,6 +60,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let { frontmatter } = parsed.data;
 	let document = prepared.data;
 	let markdownHref = routes.markdown.docs.href({ slug });
+	let activePath = routes.docs.show.href({ slug });
 
 	/** `docs / <section> / <title>`: only the root is somewhere a reader can go. */
 	let breadcrumbs = [
@@ -77,9 +79,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.docs.show.href({ slug })}
+				activePath={activePath}
 				breadcrumbs={breadcrumbs}
-				aside={<TableOfContents anchors={tableOfContents(document)} />}
+				aside={<DocsAside anchors={tableOfContents(document)} path={activePath} />}
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
@@ -107,5 +109,5 @@ export default createAction(routes.docs.show, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response);
+	return await withBundleCache(ctx.request, response, adsDayTag());
 });
