@@ -27,7 +27,7 @@ import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
 import CompositionTree from "~/resources/components/composition-tree";
-import DocsAside from "~/resources/components/docs-aside";
+import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import { findPreview, listExamples } from "~/resources/components/preview-registry.server";
@@ -85,7 +85,9 @@ export default createAction(routes.api.component, async (ctx) => {
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: reference.name },
 				]}
-				aside={<DocsAside anchors={anchors} path={activePath} />}
+				aside={
+					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
+				}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>

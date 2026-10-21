@@ -20,7 +20,7 @@ import type { Anchor } from "~/app/services/article";
 import { siteCache } from "~/app/initializers/cache";
 import { parseNotes, readChangelog } from "~/app/services/changelog";
 import { buildGuidesNav } from "~/app/services/navigation";
-import DocsAside from "~/resources/components/docs-aside";
+import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import Note from "~/resources/components/note";
 import PageTitle from "~/resources/components/page-title";
@@ -67,7 +67,9 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 					{ label: "Releases" },
 					{ label: TITLE },
 				]}
-				aside={<DocsAside anchors={anchors} path={activePath} />}
+				aside={
+					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
+				}
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
