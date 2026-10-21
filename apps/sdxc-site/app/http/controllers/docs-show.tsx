@@ -25,7 +25,7 @@ import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
-import DocsAside from "~/resources/components/docs-aside";
+import DocsAside, { hasDocsAside } from "~/resources/components/docs-aside";
 import GuideOutcomes from "~/resources/components/guide-outcomes";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
@@ -59,6 +59,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 	let { frontmatter } = parsed.data;
 	let document = prepared.data;
+	let anchors = tableOfContents(document);
 	let markdownHref = routes.markdown.docs.href({ slug });
 	let activePath = routes.docs.show.href({ slug });
 
@@ -81,7 +82,9 @@ export default createAction(routes.docs.show, async (ctx) => {
 				tree={tree}
 				activePath={activePath}
 				breadcrumbs={breadcrumbs}
-				aside={<DocsAside anchors={tableOfContents(document)} path={activePath} />}
+				aside={
+					hasDocsAside(anchors) ? <DocsAside anchors={anchors} path={activePath} /> : undefined
+				}
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>

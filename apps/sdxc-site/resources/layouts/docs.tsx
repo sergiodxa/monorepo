@@ -14,7 +14,6 @@ import { borderEdge, fg } from "sdxc/u/color";
 import { raw } from "sdxc/u/general";
 import {
 	basis,
-	block,
 	hidden,
 	hstack,
 	inlineFlex,
@@ -26,7 +25,7 @@ import {
 } from "sdxc/u/layout";
 import { overflow } from "sdxc/u/overflow";
 import { media } from "sdxc/u/responsive";
-import { bs, is, maxBs, maxIs, mis, p } from "sdxc/u/size";
+import { bs, is, maxBs, maxIs, mis, p, pbe } from "sdxc/u/size";
 import { z } from "sdxc/u/stacking";
 import { before } from "sdxc/u/state";
 import { text, tracking, weight } from "sdxc/u/typography";
@@ -209,14 +208,14 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								mix={[
 									hidden(),
 									media(ASIDE_BREAKPOINT, [
-										block(),
+										vstack({ gap: 0, align: "stretch" }),
 										basis("16rem"),
 										shrink(0),
 										sticky(),
 										insBs(HEADER_HEIGHT),
-										bs(`calc(100dvh - ${ASIDE_VIEWPORT_CLEARANCE})`),
 										maxBs(`calc(100dvh - ${ASIDE_VIEWPORT_CLEARANCE})`),
 										overflow("hidden"),
+										pbe(8),
 									]),
 								]}
 							>

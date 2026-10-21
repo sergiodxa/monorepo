@@ -26,6 +26,9 @@ import { text, truncate, weight } from "sdxc/u/typography";
  */
 const READING_BAND = "0px 0px -70% 0px";
 
+/** Fewest headings that earn an in-page list; fewer leave the rail empty. */
+export const TOC_MIN_ANCHORS = 2;
+
 /** The shallowest depth the list offers, which every indent is measured from. */
 const BASE_LEVEL = 2;
 
@@ -96,7 +99,7 @@ export const TableOfContents = clientEntry(
 
 		return () => {
 			let { anchors } = handle.props;
-			if (anchors.length < 2) return null;
+			if (anchors.length < TOC_MIN_ANCHORS) return null;
 
 			return (
 				<nav aria-label="On this page" mix={[vstack({ gap: 3 })]}>
