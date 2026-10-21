@@ -1,7 +1,8 @@
 /**
- * The documentation right rail: the page's own headings and one square product ad
- * above or below them. The ad is chosen for the path and the UTC day so a stored
- * copy of the page keeps the same tile until the day rolls over.
+ * The documentation right rail: the page's own headings, then one square product ad
+ * pinned under them. The ad is chosen for the path and the UTC day so a stored copy
+ * of the page keeps the same tile until the day rolls over. The rail fills the
+ * sticky column's height so a long table of contents scrolls while the ad stays visible.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +10,9 @@
 
 import type { Handle } from "remix/component";
 
-import { vstack } from "sdxc/u/layout";
+import { grow, shrink, vstack } from "sdxc/u/layout";
+import { overflowY } from "sdxc/u/overflow";
+import { bs, minBs } from "sdxc/u/size";
 
 import type { Anchor } from "~/app/services/article";
 
@@ -26,17 +29,20 @@ namespace DocsAside {
 	}
 }
 
-/** Renders the ad and the table of contents for the documentation right rail. */
+/** Renders the table of contents and the ad for the documentation right rail. */
 export default function DocsAside(handle: Handle<DocsAside.Props>) {
 	return () => {
 		let { anchors, path } = handle.props;
-		let { ad, placement } = pickSidebarAd(path);
+		let { ad } = pickSidebarAd(path);
 
 		return (
-			<div mix={[vstack({ gap: 8, align: "stretch" })]}>
-				{placement === "above" ? <SidebarAd ad={ad} /> : null}
-				<TableOfContents anchors={anchors} />
-				{placement === "below" ? <SidebarAd ad={ad} /> : null}
+			<div mix={[vstack({ gap: 8, align: "stretch" }), bs("full"), minBs(0)]}>
+				<div mix={[grow(), shrink(1), minBs(0), overflowY("auto")]}>
+					<TableOfContents anchors={anchors} />
+				</div>
+				<div mix={[shrink()]}>
+					<SidebarAd ad={ad} />
+				</div>
 			</div>
 		);
 	};
