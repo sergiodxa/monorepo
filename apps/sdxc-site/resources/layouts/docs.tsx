@@ -24,7 +24,7 @@ import {
 	sticky,
 	vstack,
 } from "sdxc/u/layout";
-import { overflow, overflowY } from "sdxc/u/overflow";
+import { overflow } from "sdxc/u/overflow";
 import { media } from "sdxc/u/responsive";
 import { bs, is, maxBs, maxIs, mis, p } from "sdxc/u/size";
 import { z } from "sdxc/u/stacking";
@@ -207,8 +207,9 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 										shrink(0),
 										sticky(),
 										insBs("2rem"),
+										bs("calc(100dvh - 4rem)"),
 										maxBs("calc(100dvh - 4rem)"),
-										overflowY("auto"),
+										overflow("hidden"),
 									]),
 								]}
 							>
