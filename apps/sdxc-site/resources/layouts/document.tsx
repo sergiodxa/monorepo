@@ -1,7 +1,8 @@
 /**
  * Root HTML document layout. Renders the html/head/body shell: the fixed head tags, the
  * page title and description, the stylesheets imported below in cascade order (reset,
- * palette, the tokens reading it, code highlighting), and the client runtime entry.
+ * palette, the tokens reading it, code highlighting), the client runtime entry, and the
+ * analytics beacon.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,6 +32,13 @@ import "sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
 import "sdxc/ui/theme.css";
 import "sdxc/highlight/styles.css";
+
+/**
+ * The Cloudflare Web Analytics site token — public by construction, since
+ * browsers read it straight off the rendered attribute. Change it and
+ * Cloudflare treats it as a new property, losing the analytics history.
+ */
+const CF_BEACON_TOKEN = "b4283f4956eb4c7cb755a263acdf26fe";
 
 namespace DocumentLayout {
 	export interface Props {
@@ -117,6 +125,11 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<SiteFooter />
 					</OptionGroupScope>
 					<script type="module" async src={script.href}></script>
+					<script
+						type="module"
+						src="https://static.cloudflareinsights.com/beacon.min.js"
+						data-cf-beacon={`{"token": "${CF_BEACON_TOKEN}"}`}
+					></script>
 				</body>
 			</html>
 		);
