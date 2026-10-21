@@ -46,6 +46,9 @@ Configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
 - **Cron** (`0 5 * * 1`, Mondays) refreshes the roster too, catching a missed delivery.
 - **Custom domain** `sdxc.dev`; `sdxc.sergiodxa.com` stays attached and permanently redirects
   page reads to the same path on `sdxc.dev`.
+- **Web Analytics** loads the Cloudflare Insights beacon from the document layout, using the
+  `sdxc.dev` site token already registered in the account. In the dashboard, set that site to
+  "Enable with JS Snippet installation" so the edge does not also inject a second beacon.
 
 Observability is enabled, with traces head-sampled at 10%.
 
