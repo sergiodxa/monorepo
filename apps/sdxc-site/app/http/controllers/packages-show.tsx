@@ -24,6 +24,7 @@ import type { PackageEntry } from "~/app/services/packages";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { readOptionSelections } from "~/app/initializers/cookies";
+import { adsDayTag } from "~/app/services/ads";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
 import {
 	buildPackageNav,
@@ -40,12 +41,12 @@ import {
 } from "~/app/services/packages";
 import { absoluteUrl } from "~/config/constants";
 import CatalogueIndex from "~/resources/components/catalogue-index";
+import DocsAside from "~/resources/components/docs-aside";
 import InstallCommand from "~/resources/components/install-command";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PackageFact from "~/resources/components/package-fact";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -70,6 +71,7 @@ export default createAction(routes.api.show, async (ctx) => {
 	let body = CATALOGUE_PACKAGES.has(name) ? null : await readReference(ctx, entry);
 	let anchors: Anchor[] = body?.anchors ?? [];
 	let markdownHref = routes.markdown.package.href({ name });
+	let activePath = routes.api.show.href({ name });
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -82,9 +84,9 @@ export default createAction(routes.api.show, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.api.show.href({ name })}
+				activePath={activePath}
 				breadcrumbs={[{ label: "API", href: routes.api.index.href() }, { label: entry.name }]}
-				aside={<TableOfContents anchors={anchors} />}
+				aside={<DocsAside anchors={anchors} path={activePath} />}
 			>
 				<article>
 					<header mix={[vstack({ gap: 4 })]}>
@@ -155,7 +157,7 @@ export default createAction(routes.api.show, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response);
+	return await withBundleCache(ctx.request, response, adsDayTag());
 });
 
 /**

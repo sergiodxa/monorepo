@@ -20,12 +20,14 @@ import type { PropsTable } from "~/app/services/components";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import themingPage from "~/app/http/controllers/ui-theming";
+import { adsDayTag } from "~/app/services/ads";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/config/constants";
 import CompositionTree from "~/resources/components/composition-tree";
+import DocsAside from "~/resources/components/docs-aside";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import { findPreview, listExamples } from "~/resources/components/preview-registry.server";
@@ -33,7 +35,6 @@ import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
 import Snippet from "~/resources/components/snippet";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -67,6 +68,7 @@ export default createAction(routes.api.component, async (ctx) => {
 		{ id: "props", text: "Props", level: 2 },
 		...reference.parts.map((part) => ({ id: anchorFor(part.name), text: part.name, level: 3 })),
 	].filter((anchor): anchor is Anchor => anchor !== null);
+	let activePath = routes.api.component.href({ component });
 
 	let response = ctx.render(
 		<DocumentLayout
@@ -77,13 +79,13 @@ export default createAction(routes.api.component, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.api.component.href({ component })}
+				activePath={activePath}
 				breadcrumbs={[
 					{ label: "API", href: routes.api.index.href() },
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: reference.name },
 				]}
-				aside={<TableOfContents anchors={anchors} />}
+				aside={<DocsAside anchors={anchors} path={activePath} />}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
@@ -208,7 +210,7 @@ export default createAction(routes.api.component, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response);
+	return await withBundleCache(ctx.request, response, adsDayTag());
 });
 
 /** The fragment a part's own props are linked by. */

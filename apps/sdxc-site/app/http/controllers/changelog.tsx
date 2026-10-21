@@ -20,10 +20,10 @@ import type { Anchor } from "~/app/services/article";
 import { siteCache } from "~/app/initializers/cache";
 import { parseNotes, readChangelog } from "~/app/services/changelog";
 import { buildGuidesNav } from "~/app/services/navigation";
+import DocsAside from "~/resources/components/docs-aside";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import Note from "~/resources/components/note";
 import PageTitle from "~/resources/components/page-title";
-import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -50,6 +50,8 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 		level: 2,
 	}));
 
+	let activePath = routes.docs.changelog.href();
+
 	let response = ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -59,13 +61,13 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.docs.changelog.href()}
+				activePath={activePath}
 				breadcrumbs={[
 					{ label: "Documentation", href: routes.docs.index.href() },
 					{ label: "Releases" },
 					{ label: TITLE },
 				]}
-				aside={<TableOfContents anchors={anchors} />}
+				aside={<DocsAside anchors={anchors} path={activePath} />}
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
