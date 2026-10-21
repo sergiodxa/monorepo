@@ -58,6 +58,13 @@ const ASIDE_BREAKPOINT = "(min-width: 75rem)";
 /** Height the rail's header sets, which the trail across the page matches. */
 const HEADER_HEIGHT = "4rem";
 
+/**
+ * How much of the viewport the sticky docs aside leaves clear of the site header and
+ * the content's block-start padding (`2.5rem` from `p(10, …)` at the aside breakpoint),
+ * so the rail fits on screen before it sticks and still clears the header once it does.
+ */
+const ASIDE_VIEWPORT_CLEARANCE = "6.5rem";
+
 namespace DocsLayout {
 	/** One step of the trail; the step the reader is on carries no destination. */
 	export interface Crumb {
@@ -206,9 +213,9 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 										basis("16rem"),
 										shrink(0),
 										sticky(),
-										insBs("2rem"),
-										bs("calc(100dvh - 4rem)"),
-										maxBs("calc(100dvh - 4rem)"),
+										insBs(HEADER_HEIGHT),
+										bs(`calc(100dvh - ${ASIDE_VIEWPORT_CLEARANCE})`),
+										maxBs(`calc(100dvh - ${ASIDE_VIEWPORT_CLEARANCE})`),
 										overflow("hidden"),
 									]),
 								]}
