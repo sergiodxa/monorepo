@@ -129,8 +129,8 @@ sdxc deploy --skip migrate
 ```
 
 It builds, then uploads the build with `sdxc run deploy` (`cf deploy --prebuilt`). The site
-has no database, so there is no migration step. A published release redeploys it from CI
-through the same `deploy` command.
+has no database, so there is no migration step. From CI, run the Deploy app workflow and
+choose `sdxc-site`.
 
 ## Environment Variables
 
