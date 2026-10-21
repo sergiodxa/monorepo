@@ -4,8 +4,7 @@ name: Deploy app
 # and `deploy`. This workflow is the production path for that command when a human picks an
 # app — run it from Actions → Deploy app → Run workflow, choose the app, and optionally a dry
 # run. Apps without a D1 database pass `--skip migrate` so the plan never looks for a migrate
-# command that is not there. The sdxc docs site still redeploys from `deploy-sdxc.yml` on each
-# package release; it is listed here too for a manual redeploy of the same build path.
+# command that is not there.
 
 permissions:
   contents: read
