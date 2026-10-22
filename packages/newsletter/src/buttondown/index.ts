@@ -130,7 +130,10 @@ export interface ButtondownNewsletterOptions {
 
 /** The path addressing one subscriber, which Buttondown resolves by id or by address. */
 function subscriberPath(ref: SubscriberRef | string): string {
-	let key = typeof ref === "string" ? ref : "id" in ref ? ref.id : ref.email.address;
+	let key;
+	if (typeof ref === "string") key = ref;
+	else if ("id" in ref) key = ref.id;
+	else key = ref.email.address;
 	return `subscribers/${encodeURIComponent(key)}`;
 }
 

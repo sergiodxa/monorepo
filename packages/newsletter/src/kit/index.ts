@@ -502,10 +502,14 @@ export class KitNewsletter extends APIClient implements Newsletter {
 				: toFormReferrer(input.attribution);
 
 		if (dropped.length > 0) {
+			let reason;
+			if (form === null) reason = "no_form";
+			else if (referrer === null) reason = "no_landing_page";
+			else reason = "no_field";
 			currentLog()?.note("newsletter.attribution_dropped", {
 				connection: this.connection,
 				fields: dropped.join(","),
-				reason: form === null ? "no_form" : referrer === null ? "no_landing_page" : "no_field",
+				reason: reason,
 			});
 		}
 
