@@ -133,7 +133,10 @@ export function keyFromName(name: string): Key {
 	let bare = ctrl ? name.slice(5) : name;
 	let named = NAMED_KEYS[bare];
 	if (named !== undefined) {
-		let sequence = named === "space" ? " " : named === "return" ? "\r" : "";
+		let sequence;
+		if (named === "space") sequence = " ";
+		else if (named === "return") sequence = "\r";
+		else sequence = "";
 		return { name: named, sequence, ctrl, meta: false, shift: false };
 	}
 	let shift = bare !== bare.toLowerCase();
