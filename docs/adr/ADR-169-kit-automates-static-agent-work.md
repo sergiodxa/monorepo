@@ -37,8 +37,8 @@ fixed belongs in one of those three surfaces — not in another paragraph of `AG
   hand burns tokens and can invert the order.
 - The daily release (`scripts/release/`, `release.yml`) already decides which packages publish
   from commits (ADR-007). CI runs `bun run doctor` via the root CLI and checks Conventional
-  Commit bodies with `scripts/release/check-commits.ts`. Those are the same pattern as kit:
-  encode the rule once, run it everywhere.
+  Commit bodies with `scripts/release/check-commits.ts`, later a monorepo `doctor.checks`
+  module (ADR-170). Those are the same pattern as kit: encode the rule once, run it everywhere.
 - `sdxc doctor` (ADR-160) is deliberately read-only. Each finding already names a `fix`, often
   another `sdxc` command or a one-line file edit. Agents copy those strings and apply them by
   hand — the gap this ADR's kit backlog closes.
@@ -90,16 +90,17 @@ deploy order inside YAML.
 
 ### Prefer generate over repair; prefer repair over narration; prefer a workflow over a playbook
 
-| Situation                                                 | Mechanism                                                                       |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Creating a new kind of file or wiring                     | `sdxc make` / `sdxc scaffold` (extend kinds and stubs)                          |
-| Installing a cross-cutting feature into an existing app   | `sdxc setup <feature>` (edits app code _and_ config as one plan)                |
-| Removing what `make` wrote                                | `sdxc destroy`                                                                  |
-| Project drifted from a rule the kit can prove             | `sdxc doctor` reports; `sdxc fix` applies only named safe repairs               |
-| Release moved and the code must follow                    | `sdxc upgrade` + its prompt (agent applies _code_ changes)                      |
-| Ship an app in this monorepo                              | `Deploy app` workflow (or `sdxc deploy` locally); never hand-ordered `cf` calls |
-| Publish packages / check every app / enforce commit shape | Root CLI (`bun run cli` / `sdxc run`) + CI calling those commands               |
-| New app in this monorepo                                  | `sdxc create` for the app tree, then root CLI `app register` for monorepo wires |
+| Situation                                               | Mechanism                                                                       |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Creating a new kind of file or wiring                   | `sdxc make` / `sdxc scaffold` (extend kinds and stubs)                          |
+| Installing a cross-cutting feature into an existing app | `sdxc setup <feature>` (edits app code _and_ config as one plan)                |
+| Removing what `make` wrote                              | `sdxc destroy`                                                                  |
+| Project drifted from a rule the kit can prove           | `sdxc doctor` reports; `sdxc fix` applies only named safe repairs               |
+| Release moved and the code must follow                  | `sdxc upgrade` + its prompt (agent applies _code_ changes)                      |
+| Ship an app in this monorepo                            | `Deploy app` workflow (or `sdxc deploy` locally); never hand-ordered `cf` calls |
+| Publish packages / check every app                      | Root CLI (`bun run cli` / `sdxc run`) + CI calling those commands               |
+| Enforce monorepo lint (commit shape, …)                 | Root `doctor.checks` via `sdxc doctor` (ADR-170); not a one-off CLI verb        |
+| New app in this monorepo                                | `sdxc create` for the app tree, then root CLI `app register` for monorepo wires |
 
 `doctor` stays read-only (ADR-160). A separate `sdxc fix [check…]` (or `sdxc doctor --fix`
 that only enables that path) applies repairs the report already knows how to express. A check
@@ -407,7 +408,8 @@ overrides / deploy-list wiring; reinventing create drifts from `@sdxc/kit` on ev
 - [x] Kit `run.entry` in `.config/sdxc.jsonc` (default `bootstrap/cli.ts`); schema via `sdxc:generate`
 - [x] Monorepo `cli/index.ts` + `cli/commands/doctor`, `"cli"` / `"doctor"` scripts, root
       `.config/sdxc.jsonc` with `run.entry: "cli/index.ts"`
-- [x] Migrate `release` / `release bootstrap` / `release check-commits` into `cli/commands/`
+- [x] Migrate `release` / `release bootstrap` into `cli/commands/` (commit lint → doctor,
+      ADR-170)
 - [x] Implement `sdxc fix` for command-shaped repairs (kit item 1)
 - [x] Implement `sdxc fix env` (kit item 2)
 - [x] Implement model/email registration repairs (kit item 3)
