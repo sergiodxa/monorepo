@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { JSONFeed } from "@sdxc/json-feed";
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -113,10 +114,11 @@ function toItem(item: JSONFeed.Item, feedAuthors: Feed.Author[], url?: string): 
  * single author a 1.0 document wrote, which 1.1 tells a reader to prefer against.
  */
 function toAuthors(authors?: JSONFeed.Author[], author?: JSONFeed.Author): Feed.Author[] {
-	let source: JSONFeed.Author[];
-	if (authors && authors.length > 0) source = authors;
-	else if (author) source = [author];
-	else source = [];
+	let source = iife((): JSONFeed.Author[] => {
+		if (authors && authors.length > 0) return authors;
+		if (author) return [author];
+		return [];
+	});
 	let normalized: Feed.Author[] = [];
 
 	for (let entry of source) {

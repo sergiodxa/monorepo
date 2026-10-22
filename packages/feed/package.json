@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@sdxc/atom": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/json-feed": "workspace:*",
 		"@sdxc/link-header": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
