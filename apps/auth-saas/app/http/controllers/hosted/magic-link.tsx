@@ -300,12 +300,12 @@ export const magicLinkCompleteSubmit = createAction(
 		let token = ctx.formData.get("token");
 		let code = ctx.formData.get("code");
 
-		let credential =
-			typeof token === "string" && token.length > 0
-				? ({ kind: "link", token } as const)
-				: typeof code === "string" && code.length > 0
-					? ({ kind: "code", code } as const)
-					: null;
+		let credential;
+		if (typeof token === "string" && token.length > 0)
+			credential = { kind: "link", token } as const;
+		else if (typeof code === "string" && code.length > 0)
+			credential = { kind: "code", code } as const;
+		else credential = null;
 
 		if (!credential) return renderInvalid(ctx);
 

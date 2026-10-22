@@ -598,15 +598,20 @@ export async function revokeSubjectSessions(
 ): Promise<RevokeSubjectSessionsResult> {
 	let parsed = s.parse(RevokeSubjectSessionsSchema, input);
 
-	let where = parsed.onlyIds
-		? and(eq("subject_id", parsed.subjectId), isNull("revoked_at"), inList("id", parsed.onlyIds))
-		: parsed.exceptSessionId
-			? and(
-					eq("subject_id", parsed.subjectId),
-					isNull("revoked_at"),
-					ne("id", parsed.exceptSessionId),
-				)
-			: and(eq("subject_id", parsed.subjectId), isNull("revoked_at"));
+	let where;
+	if (parsed.onlyIds)
+		where = and(
+			eq("subject_id", parsed.subjectId),
+			isNull("revoked_at"),
+			inList("id", parsed.onlyIds),
+		);
+	else if (parsed.exceptSessionId)
+		where = and(
+			eq("subject_id", parsed.subjectId),
+			isNull("revoked_at"),
+			ne("id", parsed.exceptSessionId),
+		);
+	else where = and(eq("subject_id", parsed.subjectId), isNull("revoked_at"));
 
 	let result = await db.updateMany(
 		sessions,

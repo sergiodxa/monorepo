@@ -55,8 +55,12 @@ export function parseBody<Output>(
  * if (isFailure(input)) return operationInputProblem(input.error);
  */
 export function operationInputProblem(error: OperationInputError): Response {
+	let locationLabel;
+	if (error.location === "body") locationLabel = "body";
+	else if (error.location === "query") locationLabel = "query string";
+	else locationLabel = "path";
 	return managementProblem("validationFailed", {
-		detail: `The request ${error.location === "body" ? "body" : error.location === "query" ? "query string" : "path"} did not pass validation.`,
+		detail: `The request ${locationLabel} did not pass validation.`,
 		extensions: { errors: issuesFrom(error) },
 	});
 }

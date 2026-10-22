@@ -533,12 +533,10 @@ export async function signInWithPassword(
 		outcome: "failed" | "denied" | "succeeded",
 		subjectId: string,
 	): Promise<void> {
-		let action: AuditAction =
-			outcome === "succeeded"
-				? "authentication.succeeded"
-				: outcome === "denied"
-					? "authentication.denied"
-					: "authentication.failed";
+		let action: AuditAction;
+		if (outcome === "succeeded") action = "authentication.succeeded";
+		else if (outcome === "denied") action = "authentication.denied";
+		else action = "authentication.failed";
 
 		return writeAuditEvent(db, {
 			action,

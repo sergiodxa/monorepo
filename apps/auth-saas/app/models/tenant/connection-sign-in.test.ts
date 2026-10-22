@@ -294,6 +294,10 @@ function insertConnectionIdentity(
 	providerEmailVerified: boolean | null,
 ) {
 	let now = Date.now();
+	let verifiedFlag;
+	if (providerEmailVerified === null) verifiedFlag = null;
+	else if (providerEmailVerified) verifiedFlag = 1;
+	else verifiedFlag = 0;
 	state.storage.sql.exec(
 		`INSERT INTO connection_identities
 			(connection_id, provider_subject, subject_id, access_token_sealed, refresh_token_sealed, token_expires_at, provider_email, provider_email_verified, linked_by, linked_at, last_sign_in_at, granted_scopes, claims_json, created_at, updated_at)
@@ -302,7 +306,7 @@ function insertConnectionIdentity(
 		providerSubject,
 		subjectId,
 		providerEmail,
-		providerEmailVerified === null ? null : providerEmailVerified ? 1 : 0,
+		verifiedFlag,
 		now,
 		now,
 		now,
