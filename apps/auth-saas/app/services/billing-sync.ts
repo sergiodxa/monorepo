@@ -121,14 +121,15 @@ export async function reprojectTenant(
 	let tenant = await models.tenants.find(tenantId);
 	if (!tenant) return;
 
-	if (snapshot === undefined) {
+	let entitlements = snapshot;
+	if (entitlements === undefined) {
 		let customer = await models.customers.find(tenant.customer_id);
 		if (!customer || customer.provider_customer_id === null) return;
 
 		let read = await billing.entitlements.of({ id: customer.provider_customer_id });
 		if (isFailure(read)) return;
 
-		snapshot = read.data;
+		entitlements = read.data;
 	}
 
 	let addons = await models.tenantAddons.ofTenant(tenant.id).all();
@@ -139,7 +140,7 @@ export async function reprojectTenant(
 	let products: string[] = [];
 	let features: Record<string, boolean> = {};
 
-	for (let subscription of snapshot.subscriptions) {
+	for (let subscription of entitlements.subscriptions) {
 		if (!heldSubscriptionIds.has(subscription.subscriptionId)) continue;
 		if (subscription.productSlug === null) continue;
 		if (subscription.status !== "active" && subscription.status !== "trialing") continue;
@@ -155,11 +156,11 @@ export async function reprojectTenant(
 			tenant_id: tenant.id,
 			products,
 			features,
-			read_at: snapshot.readAt.getTime(),
+			read_at: entitlements.readAt.getTime(),
 		}),
 	);
 
-	let planSlug = basePlanSlug(tenant, snapshot);
+	let planSlug = basePlanSlug(tenant, entitlements);
 	if (planSlug !== null && planSlug !== tenant.plan_slug) {
 		tenant = unwrap(await models.tenants.update(tenant.id, { plan_slug: planSlug }));
 	}

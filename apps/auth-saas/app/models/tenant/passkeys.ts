@@ -359,12 +359,9 @@ export async function signInWithPasskey(
 		outcome: "failed" | "denied" | "succeeded",
 		subjectId: string,
 	): Promise<void> {
-		let action: AuditAction =
-			outcome === "succeeded"
-				? "authentication.succeeded"
-				: outcome === "denied"
-					? "authentication.denied"
-					: "authentication.failed";
+		let action: AuditAction = "authentication.failed";
+		if (outcome === "succeeded") action = "authentication.succeeded";
+		else if (outcome === "denied") action = "authentication.denied";
 
 		return writeAuditEvent(db, {
 			action,
@@ -566,7 +563,8 @@ export async function revokePasskey(
 	let row = await db.find(passkeys, { credential_id: input.credentialId });
 	if (!row || row.subject_id !== input.subjectId) return { ok: false, reason: "not-found" };
 
-	if (hasOtherCredential === undefined) {
+	let retainsOtherCredential = hasOtherCredential;
+	if (retainsOtherCredential === undefined) {
 		let otherPasskeys = await db.count(passkeys, {
 			where: and(eq("subject_id", input.subjectId), ne("credential_id", input.credentialId)),
 		});
@@ -577,14 +575,14 @@ export async function revokePasskey(
 				audience: { kind: "admin" },
 			});
 
-			hasOtherCredential =
+			retainsOtherCredential =
 				described.ok && described.identifiers.some((identifier) => identifier.verified);
 		} else {
-			hasOtherCredential = true;
+			retainsOtherCredential = true;
 		}
 	}
 
-	if (!hasOtherCredential) return { ok: false, reason: "last-credential" };
+	if (!retainsOtherCredential) return { ok: false, reason: "last-credential" };
 
 	await db.delete(passkeys, { credential_id: input.credentialId });
 
