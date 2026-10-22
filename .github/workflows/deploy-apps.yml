@@ -1,22 +1,27 @@
 name: Deploy app
 
 # Every Worker app ships through `sdxc deploy`: build, then the app's own `db migrate --remote`
-# and `deploy`. This workflow is the production path for that command when a human picks an
-# app — run it from Actions → Deploy app → Run workflow, choose the app, and optionally a dry
-# run. Apps without a D1 database pass `--skip migrate` so the plan never looks for a migrate
-# command that is not there.
+# and `deploy`. On demand, pick an app from Actions → Deploy app → Run workflow. On each
+# published package release, the same workflow redeploys only sdxc-site — the docs are built
+# from the packages themselves, so they stay current with what just shipped. Apps without a
+# D1 database pass `--skip migrate` so the plan never looks for a migrate command that is
+# not there.
 
 permissions:
   contents: read
 
 env:
   BUN_VERSION: 1.4.2
+  # A manual run uses the chosen app; a release event has no inputs, so the docs site deploys.
+  APP: ${{ inputs.app || 'sdxc-site' }}
 
 defaults:
   run:
     shell: bash
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       app:
@@ -37,7 +42,7 @@ on:
 # A deploy is never cancelled part-way: the previous one for the same app finishes and this
 # waits, so the worker is never replaced by a run that was interrupted mid-upload.
 concurrency:
-  group: deploy-app-${{ inputs.app }}
+  group: deploy-app-${{ inputs.app || 'sdxc-site' }}
   cancel-in-progress: false
 
 jobs:
@@ -64,19 +69,19 @@ jobs:
           if [ ${#missing[@]} -eq 0 ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::Skipping the ${{ inputs.app }} deploy: missing secret(s) ${missing[*]}"
+            echo "::notice::Skipping the ${{ env.APP }} deploy: missing secret(s) ${missing[*]}"
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
   deploy:
-    name: Deploy ${{ inputs.app }}
+    name: Deploy ${{ env.APP }}
     needs: secrets
     if: needs.secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
       run:
-        working-directory: apps/${{ inputs.app }}
+        working-directory: apps/${{ env.APP }}
 
     steps:
       - name: Checkout
@@ -121,7 +126,6 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          APP: ${{ inputs.app }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: |
           flags=(--yes)
