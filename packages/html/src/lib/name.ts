@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { DOMElement, DOMNode } from "./dom.js";
 
 import { roleOf } from "./roles.js";
@@ -175,10 +177,11 @@ function embeddedValue(element: DOMElement, role: string | undefined): string | 
 			(option) =>
 				option.hasAttribute("selected") || option.getAttribute("aria-selected") === "true",
 		);
-		let chosen: typeof options;
-		if (selected.length > 0) chosen = selected;
-		else if (tag === "select") chosen = options.slice(0, 1);
-		else chosen = [];
+		let chosen = iife((): typeof options => {
+			if (selected.length > 0) return selected;
+			if (tag === "select") return options.slice(0, 1);
+			return [];
+		});
 		return chosen.map((option) => option.textContent ?? "").join(" ");
 	}
 

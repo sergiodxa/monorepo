@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, success } from "@sdxc/result";
 
 import type { HTML, HTMLQueryError } from "../index.js";
@@ -56,10 +57,11 @@ export function pick(resolution: Resolution, build: Build): Result<Match, HTMLQu
 		return failure(new HTMLAmbiguousMatchError(message, available, candidates));
 	}
 
-	let index;
-	if (at === "first") index = 0;
-	else if (at === "last") index = matched.length - 1;
-	else index = at - 1;
+	let index = iife(() => {
+		if (at === "first") return 0;
+		if (at === "last") return matched.length - 1;
+		return at - 1;
+	});
 	if (!Number.isInteger(index) || index < 0 || index >= matched.length) {
 		let message = `No ${subject} at position ${String(at)}; ${matched.length} matched.`;
 		return failure(new HTMLNotFoundError(message, available));
