@@ -1,3 +1,6 @@
+import type { Result } from "@sdxc/result";
+import type { RequestContext, RequestHandler } from "remix/router";
+
 /**
  * A fetch-router handler that serves a document as JSON or YAML. The document is built on
  * the first request and reused, which keeps assembly out of a Worker's global scope, and
@@ -6,9 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-import type { RequestContext, RequestHandler } from "remix/router";
-
+import { iife } from "@sdxc/iife";
 import { problem } from "@sdxc/problem";
 import { Accept, IfNoneMatch } from "remix/headers";
 
@@ -100,10 +101,11 @@ async function serve(build: () => Result<OpenAPI.Document, OpenAPIBuildError>): 
 	let json = stringify(built.data);
 	let yaml = stringify(built.data, { format: "yaml" });
 	if (json.status === "failure" || yaml.status === "failure") {
-		let error;
-		if (json.status === "failure") error = json.error;
-		else if (yaml.status === "failure") error = yaml.error;
-		else error = null;
+		let error = iife(() => {
+			if (json.status === "failure") return json.error;
+			if (yaml.status === "failure") return yaml.error;
+			return null;
+		});
 		return {
 			ok: false,
 			title: "The OpenAPI document failed to serialize",
