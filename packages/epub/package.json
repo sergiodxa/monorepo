@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/xml": "workspace:*",
 		"@sdxc/zip": "workspace:*"

@@ -10,6 +10,7 @@ import type { Result } from "@sdxc/result";
 import type { XML } from "@sdxc/xml";
 import type { ZipError } from "@sdxc/zip";
 
+import { iife } from "@sdxc/iife";
 import { failure, success } from "@sdxc/result";
 import { Zip } from "@sdxc/zip";
 
@@ -657,10 +658,11 @@ function writeFiles(
 	}
 	let coverImageId: string | undefined;
 	for (let [index, asset] of [...assets.values()].entries()) {
-		let itemId;
-		if (asset.kind === "cover") itemId = "cover-image";
-		else if (asset.kind === "style") itemId = `style-${index + 1}`;
-		else itemId = `resource-${index + 1}`;
+		let itemId = iife(() => {
+			if (asset.kind === "cover") return "cover-image";
+			if (asset.kind === "style") return `style-${index + 1}`;
+			return `resource-${index + 1}`;
+		});
 		let id = uniqueId(itemId, taken);
 		if (asset.kind === "cover") coverImageId = id;
 		manifest.push({
