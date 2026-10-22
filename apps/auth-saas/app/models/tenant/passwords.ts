@@ -10,6 +10,7 @@ import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Database, TableRow } from "remix/data-table";
 
 import { Hex, password, randomToken, sha256 } from "@sdxc/crypto";
+import { iife } from "@sdxc/iife";
 import { currentLog } from "@sdxc/logger";
 import { checkPassword } from "@sdxc/password-policy";
 import { checkPasswordHistory } from "@sdxc/password-policy/history";
@@ -533,10 +534,11 @@ export async function signInWithPassword(
 		outcome: "failed" | "denied" | "succeeded",
 		subjectId: string,
 	): Promise<void> {
-		let action: AuditAction;
-		if (outcome === "succeeded") action = "authentication.succeeded";
-		else if (outcome === "denied") action = "authentication.denied";
-		else action = "authentication.failed";
+		let action = iife((): AuditAction => {
+			if (outcome === "succeeded") return "authentication.succeeded";
+			if (outcome === "denied") return "authentication.denied";
+			return "authentication.failed";
+		});
 
 		return writeAuditEvent(db, {
 			action,

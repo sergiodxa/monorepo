@@ -10,6 +10,7 @@ import type { KeysetCursors } from "@sdxc/pagination";
 import type { Database, TableRow } from "remix/data-table";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { iife } from "@sdxc/iife";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
@@ -598,20 +599,21 @@ export async function revokeSubjectSessions(
 ): Promise<RevokeSubjectSessionsResult> {
 	let parsed = s.parse(RevokeSubjectSessionsSchema, input);
 
-	let where;
-	if (parsed.onlyIds)
-		where = and(
-			eq("subject_id", parsed.subjectId),
-			isNull("revoked_at"),
-			inList("id", parsed.onlyIds),
-		);
-	else if (parsed.exceptSessionId)
-		where = and(
-			eq("subject_id", parsed.subjectId),
-			isNull("revoked_at"),
-			ne("id", parsed.exceptSessionId),
-		);
-	else where = and(eq("subject_id", parsed.subjectId), isNull("revoked_at"));
+	let where = iife(() => {
+		if (parsed.onlyIds)
+			return and(
+				eq("subject_id", parsed.subjectId),
+				isNull("revoked_at"),
+				inList("id", parsed.onlyIds),
+			);
+		if (parsed.exceptSessionId)
+			return and(
+				eq("subject_id", parsed.subjectId),
+				isNull("revoked_at"),
+				ne("id", parsed.exceptSessionId),
+			);
+		return and(eq("subject_id", parsed.subjectId), isNull("revoked_at"));
+	});
 
 	let result = await db.updateMany(
 		sessions,

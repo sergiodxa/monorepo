@@ -8,6 +8,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { iife } from "@sdxc/iife";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -176,12 +177,13 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, {
 				});
 			}
 
-			let error;
-			if (signedIn.reason === "password_expired")
-				error = ctx.intl.t("hostedSignIn.errors.passwordExpired");
-			else if (signedIn.reason === "dau_cap_reached")
-				error = ctx.intl.t("hostedSignIn.errors.dauCapReached");
-			else error = ctx.intl.t("hostedSignIn.errors.invalidCredentials");
+			let error = iife(() => {
+				if (signedIn.reason === "password_expired")
+					return ctx.intl.t("hostedSignIn.errors.passwordExpired");
+				if (signedIn.reason === "dau_cap_reached")
+					return ctx.intl.t("hostedSignIn.errors.dauCapReached");
+				return ctx.intl.t("hostedSignIn.errors.invalidCredentials");
+			});
 			return renderSignInPage(ctx, { loginHint, forced, challenge, error });
 		}
 

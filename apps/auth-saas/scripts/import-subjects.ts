@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-export {};
+import { iife } from "@sdxc/iife";
 
 interface SourceSubject {
 	id: string;
@@ -46,17 +46,17 @@ async function main() {
 	let raw = JSON.parse(await Bun.file(inputPath).text()) as
 		| SourceSubject[]
 		| Array<{ results: SourceSubject[] }>;
-	let rows: SourceSubject[];
-	if (Array.isArray(raw))
-		rows =
-			"results" in (raw[0] ?? {})
+	let rows = iife((): SourceSubject[] => {
+		if (Array.isArray(raw))
+			return "results" in (raw[0] ?? {})
 				? (
 						raw as Array<{
 							results: SourceSubject[];
 						}>
 					).flatMap((page) => page.results)
 				: (raw as SourceSubject[]);
-	else rows = [];
+		return [];
+	});
 
 	let tokenResponse = await fetch(`${issuer}/oauth/token`, {
 		method: "POST",
