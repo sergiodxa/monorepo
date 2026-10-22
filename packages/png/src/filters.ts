@@ -101,8 +101,10 @@ export function filterRow(
 			let toLeft = estimate > left ? estimate - left : left - estimate;
 			let toUp = estimate > above ? estimate - above : above - estimate;
 			let toUpLeft = estimate > upLeft ? estimate - upLeft : upLeft - estimate;
-			let predicted =
-				toLeft <= toUp && toLeft <= toUpLeft ? left : toUp <= toUpLeft ? above : upLeft;
+			let predicted;
+			if (toLeft <= toUp && toLeft <= toUpLeft) predicted = left;
+			else if (toUp <= toUpLeft) predicted = above;
+			else predicted = upLeft;
 			value = ((row[index] as number) - predicted) & 0xff;
 			out[index] = value;
 			cost += value < 128 ? value : 256 - value;
@@ -138,7 +140,10 @@ export function chooseFilter(
 		let toLeft = estimate > left ? estimate - left : left - estimate;
 		let toUp = estimate > above ? estimate - above : above - estimate;
 		let toUpLeft = estimate > upLeft ? estimate - upLeft : upLeft - estimate;
-		let predicted = toLeft <= toUp && toLeft <= toUpLeft ? left : toUp <= toUpLeft ? above : upLeft;
+		let predicted;
+		if (toLeft <= toUp && toLeft <= toUpLeft) predicted = left;
+		else if (toUp <= toUpLeft) predicted = above;
+		else predicted = upLeft;
 		let value = current;
 		none += value < 128 ? value : 256 - value;
 		value = (current - left) & 0xff;
