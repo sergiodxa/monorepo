@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * Selector boundary for the game engine read side. This module defines the selector descriptors and view model shapes that presentation code can request from the current world state.
  *
@@ -417,18 +419,19 @@ export function selectBattleView(gameData: GameData, world: World, battleId: Bat
 	let participants = world.battleParticipants[battleId];
 	if (!phase || !participants) throw new ReferenceError(`Missing battle ${battleId}.`);
 
-	let pendingRequest;
-	if (world.battlePendingTurn[battleId])
-		pendingRequest = {
-			type: "turn" as const,
-			count: world.battlePendingTurn[battleId]!.requests.length,
-		};
-	else if (world.battlePendingReplacement[battleId])
-		pendingRequest = {
-			type: "replacement" as const,
-			count: world.battlePendingReplacement[battleId]!.requests.length,
-		};
-	else pendingRequest = null;
+	let pendingRequest = iife(() => {
+		if (world.battlePendingTurn[battleId])
+			return {
+				type: "turn" as const,
+				count: world.battlePendingTurn[battleId]!.requests.length,
+			};
+		if (world.battlePendingReplacement[battleId])
+			return {
+				type: "replacement" as const,
+				count: world.battlePendingReplacement[battleId]!.requests.length,
+			};
+		return null;
+	});
 
 	return {
 		id: battleId,

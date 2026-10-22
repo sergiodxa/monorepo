@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * The bestiary screen: seen and caught progress.
  *
@@ -58,10 +60,11 @@ export class BestiaryScene implements Scene {
 			return;
 		}
 		let items = bestiary.entries.map((entry) => {
-			let mark;
-			if (entry.caught) mark = "◆ caught";
-			else if (entry.seen) mark = "○ seen";
-			else mark = "-";
+			let mark = iife(() => {
+				if (entry.caught) return "◆ caught";
+				if (entry.seen) return "○ seen";
+				return "-";
+			});
 			return `${entry.name}  ${mark}`;
 		});
 		this.list.render(ctx, items, 8, 20, 224);

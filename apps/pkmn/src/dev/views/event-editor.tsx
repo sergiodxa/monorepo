@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { css, on } from "remix/component";
 
 import type {
@@ -519,14 +520,16 @@ interface GraphicPanelProps {
 function GraphicPanel(handle: Handle<GraphicPanelProps>) {
 	return () => {
 		let { graphic, onChange } = handle.props;
-		let mode;
-		if (graphic === null) mode = "none";
-		else if ("atlas" in graphic) mode = "atlas";
-		else mode = "image";
-		let graphicLabel;
-		if (mode === "none") graphicLabel = "none";
-		else if (mode === "atlas") graphicLabel = "atlas";
-		else graphicLabel = "img";
+		let mode = iife(() => {
+			if (graphic === null) return "none";
+			if ("atlas" in graphic) return "atlas";
+			return "image";
+		});
+		let graphicLabel = iife(() => {
+			if (mode === "none") return "none";
+			if (mode === "atlas") return "atlas";
+			return "img";
+		});
 		return (
 			<section mix={css(PANEL)}>
 				<h4 mix={PANEL_TITLE}>Graphic</h4>
