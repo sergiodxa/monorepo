@@ -48,6 +48,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       configured: ${{ steps.check.outputs.configured }}
+      d1: ${{ steps.check.outputs.d1 }}
 
     steps:
       - name: Check Cloudflare secrets
@@ -62,16 +63,20 @@ jobs:
           if [ ${#missing[@]} -ne 0 ]; then
             echo "::notice::Skipping deploy: missing secret(s) ${missing[*]}"
             echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "d1=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Apps that migrate (blog, uptime, r3-auth) call D1 before upload. Workers-only
-          # apps still deploy when this probe fails, but the warning names the usual cause of
-          # "db migrate --remote --pending exited with 1" with an empty log.
+          # blog, uptime and r3-auth call D1 before upload. A token that can deploy Workers
+          # but not list D1 fails those apps at `db migrate --remote --pending` with only
+          # "exited with 1"; this probe names the missing Account → D1 → Edit grant.
           d1=$(curl -sS -o /tmp/d1.json -w "%{http_code}" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")
-          if [ "$d1" != "200" ] || ! jq -e '.success == true' /tmp/d1.json >/dev/null; then
-            echo "::warning::CLOUDFLARE_API_TOKEN cannot list D1 databases (HTTP $d1). Grant Account → D1 → Edit on the token named for this workflow, or apps that migrate will fail at db migrate --remote --pending."
+          if [ "$d1" = "200" ] && jq -e '.success == true' /tmp/d1.json >/dev/null; then
+            echo "d1=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "d1=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::CLOUDFLARE_API_TOKEN cannot list D1 databases (HTTP $d1). Grant Account → D1 → Edit on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens"
             jq -c '{success,errors}' /tmp/d1.json || true
           fi
           echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -170,8 +175,28 @@ jobs:
 
       # Typegen reads secrets from `.dev.vars` to type them. Production values stay in
       # Cloudflare; the example file only supplies names so the generated `Env` matches.
+      # When `.env.example` declares `CLOUDFLARE_ACCOUNT_ID=` (a Worker analytics secret),
+      # fill it from the job secret so the empty placeholder cannot blank wrangler auth.
       - name: Use example secrets
-        run: cp .env.example .dev.vars
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          cp .env.example .dev.vars
+          if [ -n "$CLOUDFLARE_ACCOUNT_ID" ] && grep -q '^CLOUDFLARE_ACCOUNT_ID=' .dev.vars; then
+            sed -i "s|^CLOUDFLARE_ACCOUNT_ID=.*|CLOUDFLARE_ACCOUNT_ID=$CLOUDFLARE_ACCOUNT_ID|" .dev.vars
+          fi
+
+      # blog / uptime / r3-auth need D1 before migrate; fail here with the dashboard fix
+      # instead of building for a minute and dying on "exited with 1".
+      - name: Require D1 for apps that migrate
+        if: ${{ matrix.app != 'books' && matrix.app != 'sdxc-site' }}
+        env:
+          D1_OK: ${{ needs.secrets.outputs.d1 }}
+        run: |
+          if [ "$D1_OK" != "true" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN cannot list D1 databases, so ${{ matrix.app }} cannot run db migrate --remote. Grant Account → D1 → Edit on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
+            exit 1
+          fi
 
       # The generated Worker `Env` is read by the app's own source, so it is written before
       # the build rather than taken from the repository. The monorepo's `@sdxc/kit` binary is
