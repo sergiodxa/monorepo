@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
 import { isSuccess, unwrap } from "@sdxc/result";
 import { expect } from "vitest";
 
@@ -248,9 +249,10 @@ export function expectDescriptorShape(expression: string): void {
 	}
 
 	if (fields.dayOfMonthRestricted) {
-		let kind: ScheduleDescriptor["kind"];
-		if (spelled) kind = everyMonth ? "monthly" : "yearly";
-		else kind = "expression";
+		let kind = iife((): ScheduleDescriptor["kind"] => {
+			if (spelled) return everyMonth ? "monthly" : "yearly";
+			return "expression";
+		});
 		expect(where).toEqual({ expression, kind });
 		return;
 	}
