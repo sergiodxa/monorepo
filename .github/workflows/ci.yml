@@ -117,7 +117,7 @@ jobs:
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             BASE=origin/main
           fi
-          bun scripts/release/check-commits.ts "$BASE..$HEAD"
+          bun run cli release check-commits "$BASE..$HEAD"
 
   workspaces:
     name: List test workspaces
