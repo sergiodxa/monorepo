@@ -163,9 +163,11 @@ catalog the same way they discover `make` kinds.
    `cloudflare.config.ts`, append `.env.example` when the binding is a secret, and print
    `sdxc run typegen` (or run it). Agents today hand-edit three places. `setup` reuses these
    for the secrets a feature needs.
-5. **`sdxc make durable-object <Name>`.** Write the class under `app/models/` or
+5. **`sdxc make do <Name>`.** Write a Durable Object class under `app/models/` or
    `app/services/` (`--role`), re-export it from `bootstrap/worker.ts`, and declare the binding
    in `cloudflare.config.ts`. The class body stays a stub; placement is a flag, not a guess.
+   The kind is `do`, not `durable-object`: short like the other `make` kinds, and what agents
+   type.
 6. **`sdxc setup` command + `setup auth`.** Introduce the `setup` verb (list known features,
    `--dry-run` / `-y`, shared plan printer) and ship `auth` first against `r3-auth`, with
    `--provider` ready for auth-saas later. Graph from blog's relying-party wiring, reduced to
@@ -181,16 +183,40 @@ catalog the same way they discover `make` kinds.
 Each kit item lands with tests, `--dry-run`, a line in the managed `AGENTS.md` section, and a
 guide update so agents learn the verb from the release that ships it.
 
-### Monorepo backlog (scripts / workflows, not the published kit)
+### Monorepo backlog (new scripts and workflows)
 
-These already illustrate the criterion; extend them the same way when a skill still describes a
-hand recipe:
+Existing `scripts/release/`, `scripts/doctor-apps.ts`, `deploy-apps.yml` and `release.yml`
+already prove the criterion. The gaps below are **new** work on those surfaces — same bar as
+the kit backlog, just not published to npm.
 
-- Keep deploy and release as workflow_dispatch (or release-triggered) paths that call
-  `sdxc deploy` / `bun run release` — agents dispatch or dry-run, they do not re-encode the
-  plan in chat.
-- When `create-app` / `create-package` stay multi-file hand edits, add a `bun run` script that
-  writes the workspace files the skills list today, and point the skills at that script.
+#### Scripts (`scripts/` + root `package.json`)
+
+1. **`bun run make:package <name>`.** Write the six minimum package files the create-package
+   skill lists (`package.json`, `tsconfig.json`, `README.md`, `LICENSE.md`, `src/index.ts`,
+   `src/index.test.ts`), add the root README table row and the sdxc-site docs group entry, and
+   print the remaining operator steps (`release:bootstrap`, trusted publisher). Agents stop
+   inventing the skeleton from the skill.
+2. **`bun run make:app <name>`.** Scaffold an app the create-app skill describes, then wire the
+   monorepo pieces the skill leaves as hand edits: Vitest project in root `vite.config.ts`,
+   `fmt.overrides` / `lint.overrides` when needed, and any layout-test allowlist. Prints the
+   deploy-workflow follow-up until item 3 below lands.
+3. **Keep `release:bootstrap`, `doctor` and `release` as the only ways** to bootstrap a package
+   on npm, lint every app, and publish — agents call the script, they do not re-encode ADR-007
+   in chat.
+
+#### GitHub Actions (`.github/workflows/`)
+
+1. **Generate or sync the `Deploy app` choice list** from the apps that actually ship (or from
+   a single source `make:app` updates), so adding an app is not a second hand edit of
+   `deploy-apps.yml` options.
+2. **PR / agent-friendly dry-run deploy** when useful: a workflow_dispatch (or pull_request
+   path) that runs `sdxc deploy --dry-run` for a named app without requiring a person to
+   reconstruct flags — same concurrency group rules as production deploy.
+3. **Do not reimplement kit or script logic in YAML.** New workflows call `bun run …` or the
+   kit binary; if the algorithm is missing, add the script first, then the workflow.
+
+Each monorepo item lands with a test or a dry-run assertion, a root script name (or workflow
+name) the skills/`AGENTS.md` can point at, and removal of the hand recipe it replaces.
 
 ### What agents still own
 
@@ -238,8 +264,8 @@ hand recipe:
 ### Neutral
 
 - Remix's `doctor --fix` is a precedent, not a dependency.
-- Existing workflows and scripts already satisfy this ADR; the kit backlog is what is still
-  missing for consumer apps and for agents working inside a generated project.
+- Existing workflows and scripts are the pattern; the monorepo backlog above is the unfinished
+  work on that pattern, parallel to the kit backlog for consumer apps.
 
 ## Alternatives Considered
 
@@ -308,13 +334,16 @@ each plan small, testable and reversible.
 - [ ] Implement `sdxc fix env` (kit item 2)
 - [ ] Implement model/email registration repairs (kit item 3)
 - [ ] Implement `make secret` / `make binding` (kit item 4)
-- [ ] Implement `make durable-object` (kit item 5)
+- [ ] Implement `make do` (kit item 5)
 - [ ] Implement `sdxc setup` (list features, shared plan) + `setup auth` against r3-auth;
       defer `--provider auth-saas` until that issuer is ready for relying parties (kit item 6)
 - [ ] After `setup auth`, add the next catalog row that still costs agent turns (`billing` /
       `flags` are the likely pair) (kit item 7)
-- [ ] When create-app / create-package skills still describe hand recipes, add matching `scripts/`
-- [ ] Measure agent turns before adding further kit kinds or `setup` features
+- [ ] Implement `bun run make:package` (monorepo script item 1)
+- [ ] Implement `bun run make:app` (monorepo script item 2)
+- [ ] Sync Deploy-app workflow options from the app list (GHA item 1)
+- [ ] Add dry-run deploy workflow path if agents still reconstruct flags (GHA item 2)
+- [ ] Measure agent turns before adding further kit kinds, `setup` features, scripts or workflows
 
 ## Notes
 
@@ -323,4 +352,6 @@ hand-edit recipe and name the command, script or workflow instead. If the docs s
 paragraph of "then open these three files" or "then run these four shell commands in order",
 the feature is not done. For any `setup <feature>`, success is: a fresh `sdxc create` app runs
 `sdxc setup <feature> -y`, fills the secrets the plan names, and exercises the happy path
-without an agent copying the living reference by hand.
+without an agent copying the living reference by hand. For a monorepo script or workflow,
+success is: the create-package / create-app skill (or deploy playbook) shrinks to the verb and
+flags, with no second file list to invent.
