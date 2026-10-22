@@ -63,7 +63,11 @@ function createBody(outlines: OPML.Outline[]): XML.Element[] {
 	}
 
 	let groups = [...filed.entries()]
-		.sort(([one], [other]) => (one < other ? -1 : one > other ? 1 : 0))
+		.sort(([one], [other]) => {
+			if (one < other) return -1;
+			if (one > other) return 1;
+			return 0;
+		})
 		.map<XML.Element>(([folder, members]) => ({
 			name: "outline",
 			attributes: { text: folder, title: folder },
