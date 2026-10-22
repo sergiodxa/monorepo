@@ -60,6 +60,9 @@ const DOCTOR_MODULE_SIZE_DEFAULTS = { maxLines: 200 };
 /** The `doctor.crap` group as a project with no such key gets it. */
 const DOCTOR_CRAP_DEFAULTS = { max: 12, coverage: "coverage/coverage-final.json" };
 
+/** Integer at least 1; shared so doctor leaf schemas stay under the nested-call ceiling. */
+const POSITIVE_INTEGER = s.integer().pipe(checks.min(1));
+
 /** The `doctor` group as a project with no `doctor` key gets it. */
 const DOCTOR_DEFAULTS = {
 	checks: ".config/sdxc/checks",
@@ -148,12 +151,10 @@ export const CONFIG_SCHEMA = s.object(
 					complexity: s.defaulted(
 						s.object(
 							{
-								max: s
-									.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_COMPLEXITY_DEFAULTS.max)
-									.meta({
-										description:
-											"Maximum cyclomatic complexity per function; the complexity check warns above it",
-									}),
+								max: s.defaulted(POSITIVE_INTEGER, DOCTOR_COMPLEXITY_DEFAULTS.max).meta({
+									description:
+										"Maximum cyclomatic complexity per function; the complexity check warns above it",
+								}),
 							},
 							{ unknownKeys: "error" },
 						),
@@ -162,12 +163,10 @@ export const CONFIG_SCHEMA = s.object(
 					moduleSize: s.defaulted(
 						s.object(
 							{
-								maxLines: s
-									.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_MODULE_SIZE_DEFAULTS.maxLines)
-									.meta({
-										description:
-											"Maximum code lines per module; the module-size check warns above it",
-									}),
+								maxLines: s.defaulted(POSITIVE_INTEGER, DOCTOR_MODULE_SIZE_DEFAULTS.maxLines).meta({
+									description:
+										"Maximum code lines per module; the module-size check warns above it",
+								}),
 							},
 							{ unknownKeys: "error" },
 						),
@@ -176,7 +175,7 @@ export const CONFIG_SCHEMA = s.object(
 					crap: s.defaulted(
 						s.object(
 							{
-								max: s.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_CRAP_DEFAULTS.max).meta({
+								max: s.defaulted(POSITIVE_INTEGER, DOCTOR_CRAP_DEFAULTS.max).meta({
 									description: "Maximum CRAP score per function; the crap check warns above it",
 								}),
 								coverage: s.defaulted(s.string(), DOCTOR_CRAP_DEFAULTS.coverage).meta({
