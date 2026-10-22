@@ -9,7 +9,14 @@
 import { ExecError } from "@sdxc/cli";
 import { describe, expect, test } from "vitest";
 
-import { deployFailure, formatPlan, isUnknown, migrates, parsePending } from "./plan.js";
+import {
+	deployFailure,
+	execDetail,
+	formatPlan,
+	isUnknown,
+	migrates,
+	parsePending,
+} from "./plan.js";
 
 describe("parsePending", () => {
 	test("reads one name per line and ignores blank lines", () => {
@@ -88,5 +95,19 @@ describe("deployFailure", () => {
 		expect(deployFailure({ status: "skipped", reason: "--skip migrate" })).toContain(
 			"production still runs the previous version",
 		);
+	});
+});
+
+describe("execDetail", () => {
+	test("keeps a failed child's stderr under the exit summary", () => {
+		let error = new ExecError("bunx wrangler d1 migrations list db --remote exited with 1", {
+			command: ["bunx", "wrangler"],
+			code: 1,
+			stderr: "Authentication error [code: 10000]\n",
+		});
+		expect(execDetail(error)).toBe(
+			"bunx wrangler d1 migrations list db --remote exited with 1\nAuthentication error [code: 10000]",
+		);
+		expect(execDetail(new Error("plain"))).toBe("plain");
 	});
 });

@@ -61,6 +61,16 @@ export function migrates(step: MigrationStep): boolean {
 	return step.status === "unlisted" || (step.status === "pending" && step.names.length > 0);
 }
 
+/**
+ * The child output a failed `db migrate --remote --pending` left behind, so the deploy
+ * failure names wrangler/cf's reason instead of only the exit code.
+ */
+export function execDetail(error: Error): string {
+	if (!(error instanceof ExecError)) return error.message;
+	let detail = error.stderr.trim() || error.stdout.trim();
+	return detail === "" ? error.message : `${error.message}\n${detail}`;
+}
+
 /** The plan as the terminal shows it, one fact per line and one line per pending migration. */
 export function formatPlan(plan: Plan): string {
 	let lines = [
