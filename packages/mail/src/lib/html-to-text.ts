@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 /** Elements whose content belongs to the document structure. */
 const DROPPED_ELEMENTS = new Set(["head", "script", "style", "title"]);
 
@@ -174,10 +176,11 @@ function dropInvisible(html: string): string {
 function decodeEntities(text: string): string {
 	return text.replace(ENTITY, (match: string, reference: string) => {
 		let name = reference.toLowerCase();
-		let code;
-		if (name.startsWith("#x")) code = Number.parseInt(name.slice(2), 16);
-		else if (name.startsWith("#")) code = Number.parseInt(name.slice(1), 10);
-		else code = Number.NaN;
+		let code = iife(() => {
+			if (name.startsWith("#x")) return Number.parseInt(name.slice(2), 16);
+			if (name.startsWith("#")) return Number.parseInt(name.slice(1), 10);
+			return Number.NaN;
+		});
 		if (Number.isNaN(code)) return NAMED_ENTITIES[name] ?? match;
 		if (code < 1 || code > 0x10ffff) return match;
 		return String.fromCodePoint(code);

@@ -10,6 +10,7 @@
 import type { Handle } from "remix/component";
 import type { Middleware } from "remix/router";
 
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 import { bg, border, borderEdge, colorScheme, fg } from "@sdxc/u/color";
 import { block, flexWrap, grid, gridTemplate, grow, hstack, vstack } from "@sdxc/u/layout";
@@ -255,12 +256,14 @@ function PreviewInbox(handle: Handle<InboxProps>) {
 		let { base, locales, locale, entries, selected, requested, view, text, stylesheets } =
 			handle.props;
 		let readable = selected?.previewable === true && selected.failed !== true;
-		let emptyTitle: string;
-		if (selected === undefined && requested !== undefined) {
-			emptyTitle = `No template is mapped for the "${requested}" email.`;
-		} else if (selected === undefined) emptyTitle = "Select an email to read it.";
-		else if (selected.failed === true) emptyTitle = selected.subject ?? "";
-		else emptyTitle = `The "${selected.name}" email has no preview(); add one to its template.`;
+		let emptyTitle = iife((): string => {
+			if (selected === undefined && requested !== undefined) {
+				return `No template is mapped for the "${requested}" email.`;
+			}
+			if (selected === undefined) return "Select an email to read it.";
+			if (selected.failed === true) return selected.subject ?? "";
+			return `The "${selected.name}" email has no preview(); add one to its template.`;
+		});
 		return (
 			<html lang="en" class="system" mix={colorScheme("light dark")}>
 				<head>
