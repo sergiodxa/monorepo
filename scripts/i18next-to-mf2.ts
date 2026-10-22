@@ -146,7 +146,9 @@ export function convertPlural(
 		let result = convertPattern(form, tags);
 		addCounts(counts, result.counts);
 		issues.push(...result.issues);
-		let key = suffix === "zero" ? "0" : suffix === "other" ? "*" : suffix;
+		let key = suffix;
+		if (suffix === "zero") key = "0";
+		else if (suffix === "other") key = "*";
 		lines.push(`${key} {{${result.pattern}}}`);
 	}
 	counts.pluralGroups = 1;
@@ -282,14 +284,15 @@ export function convertLocaleSource(source: string, transKeys: ReadonlySet<strin
 
 /** Strips `satisfies`, `as`, and parentheses to reach the value expression. */
 function unwrap(node: ts.Expression): ts.Expression {
+	let current = node;
 	while (
-		ts.isSatisfiesExpression(node) ||
-		ts.isAsExpression(node) ||
-		ts.isParenthesizedExpression(node)
+		ts.isSatisfiesExpression(current) ||
+		ts.isAsExpression(current) ||
+		ts.isParenthesizedExpression(current)
 	) {
-		node = node.expression;
+		current = current.expression;
 	}
-	return node;
+	return current;
 }
 
 /** Template literals without substitutions count, since they hold plain text too. */
