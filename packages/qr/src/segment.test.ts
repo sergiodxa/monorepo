@@ -44,11 +44,10 @@ function mixedText(random: Random): string {
  */
 function singleModeBits(text: string, version: number): number {
 	let length = text.length;
-	let mode: QrMode = /^[0-9]*$/.test(text)
-		? "numeric"
-		: /^[0-9A-Z $%*+\-./:]*$/.test(text)
-			? "alphanumeric"
-			: "byte";
+	let mode: QrMode;
+	if (/^[0-9]*$/.test(text)) mode = "numeric";
+	else if (/^[0-9A-Z $%*+\-./:]*$/.test(text)) mode = "alphanumeric";
+	else mode = "byte";
 	let bytes = new TextEncoder().encode(text).length;
 	let count = mode === "byte" ? bytes : length;
 	if (count >= 2 ** charCountBits(mode, version)) return Infinity;
