@@ -9,11 +9,10 @@ lastUpdated: 2026-10-22
 outcomes:
     - "How to see each model's table and whether its migrations match it"
     - "How to check that every scheduled job has a trigger that fires it"
-    - "How to read the middleware a request runs, and where each instance comes from"
-    - "How to draw the layer architecture as Mermaid or SVG"
+    - "How to draw the layer architecture and read the middleware a request runs"
 ---
 
-Seven read-only commands answer the questions you would otherwise open files for. Each runs from
+Eight read-only commands answer the questions you would otherwise open files for. Each runs from
 any folder in the project, changes nothing, and takes `--json` for a script or an agent.
 
 | Command             | Answers                                                       |
@@ -26,7 +25,7 @@ any folder in the project, changes nothing, and takes `--json` for a script or a
 | `sdxc stats`        | how much code each kind holds, and the code to test ratio     |
 | `sdxc diagram`      | how the app-layout layers import each other                   |
 
-[`sdxc routes`](/docs/sdxc/list-routes) answers the seventh: which route reaches which controller.
+[`sdxc routes`](/docs/sdxc/list-routes) answers the eighth: which route reaches which controller.
 
 ## Models and their migrations
 
