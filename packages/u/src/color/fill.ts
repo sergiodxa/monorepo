@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +25,11 @@ import { color } from "../internal/tokens.js";
  * @example css({ fill: "none" })
  */
 export function fill<Node extends Element = Element>(value?: ColorValue | (string & {})) {
-	let fillValue;
-	if (value === "none") fillValue = "none";
-	else if (value) fillValue = color(value, "fg");
-	else fillValue = varUtility("ui-fg", "CanvasText");
+	let fillValue = iife(() => {
+		if (value === "none") return "none";
+		if (value) return color(value, "fg");
+		return varUtility("ui-fg", "CanvasText");
+	});
 	return utility<Node>(() => ({
 		fill: fillValue,
 	}));
