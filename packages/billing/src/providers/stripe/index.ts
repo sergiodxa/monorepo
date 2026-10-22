@@ -12,6 +12,7 @@ import type { Result } from "@sdxc/result";
 import type { Schema } from "remix/data-schema";
 
 import { APIClient } from "@sdxc/api-client";
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
@@ -891,10 +892,11 @@ export class StripeBilling extends APIClient implements Billing {
 
 				let narrowLocally = statuses !== null && statuses.length > 1;
 
-				let status;
-				if (statuses === null) status = undefined;
-				else if (narrowLocally) status = "all";
-				else status = statuses.at(0);
+				let status = iife(() => {
+					if (statuses === null) return undefined;
+					if (narrowLocally) return "all";
+					return statuses.at(0);
+				});
 				let found = await this.#send({
 					method: "GET",
 					path: "subscriptions",

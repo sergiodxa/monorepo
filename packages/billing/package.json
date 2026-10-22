@@ -21,6 +21,7 @@
 		"@sdxc/api-client": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/dates": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
