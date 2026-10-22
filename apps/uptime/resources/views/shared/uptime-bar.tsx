@@ -102,6 +102,10 @@ export default function UptimeBar(handle: Handle<UptimeBar.Props>) {
 				<div mix={[hstack({ align: "stretch", gap: "2px" }), bs("32px")]}>
 					{dates.map((date) => {
 						let day = byDate.get(date);
+						let fill = bg("neutral.border");
+						if (day?.status === "up") fill = bg("success.solid");
+						else if (day?.status === "degraded") fill = bg("warning.solid");
+						else if (day?.status === "down") fill = bg("danger.solid");
 						return (
 							<div
 								key={date}
@@ -110,18 +114,7 @@ export default function UptimeBar(handle: Handle<UptimeBar.Props>) {
 										? `${date}: ${day.status} (${day.successful_checks}/${day.total_checks})`
 										: date
 								}
-								mix={[
-									raw({ flex: "1" }),
-									minIs("2px"),
-									rounded("1px"),
-									day?.status === "up"
-										? bg("success.solid")
-										: day?.status === "degraded"
-											? bg("warning.solid")
-											: day?.status === "down"
-												? bg("danger.solid")
-												: bg("neutral.border"),
-								]}
+								mix={[raw({ flex: "1" }), minIs("2px"), rounded("1px"), fill]}
 							/>
 						);
 					})}

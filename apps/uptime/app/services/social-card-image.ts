@@ -331,14 +331,10 @@ function drawService(
 	let barWidth = (right - MARGIN - gap * (count - 1)) / count;
 	service.days.forEach((day, index) => {
 		let x = MARGIN + index * (barWidth + gap);
-		let paint =
-			day === "up"
-				? PALETTE.up
-				: day === "degraded"
-					? PALETTE.degraded
-					: day === "down"
-						? PALETTE.down
-						: PALETTE.noData;
+		let paint = PALETTE.noData;
+		if (day === "up") paint = PALETTE.up;
+		else if (day === "degraded") paint = PALETTE.degraded;
+		else if (day === "down") paint = PALETTE.down;
 		canvas.fillPath(Path.roundedRect(x, top + 40, barWidth, 36, Math.min(2, barWidth / 2)), paint);
 	});
 }

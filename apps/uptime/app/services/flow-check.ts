@@ -435,7 +435,6 @@ function* fromStatement(statement: StatementNode): Generator<string> {
 			return;
 		case "eventually":
 			yield* fromBlock(statement.block);
-			return;
 	}
 }
 

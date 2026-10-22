@@ -120,7 +120,6 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 
 	if (isFailure(sent)) {
 		ctx.log.warn("funnel.email_failed", { error: sent.error.message });
-		return;
 	}
 });
 
