@@ -48,7 +48,9 @@ export default createAction(routes.feeds.linkParameters, {
 			submitted[PARAMETERS_FIELD],
 		);
 
-		let outcome = result.ok ? (result.keepLinkParameters ? "kept" : "stripped") : "missing";
+		let outcome;
+		if (result.ok) outcome = result.keepLinkParameters ? "kept" : "stripped";
+		else outcome = "missing";
 		let query = new URLSearchParams({ [PARAMETERS_PARAM]: outcome });
 
 		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {

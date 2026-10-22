@@ -47,13 +47,10 @@ export default createAction(routes.feeds.pin, {
 		/** The rail draws a pinned feed apart from the rest, so where this one is drawn moved. */
 		if (result.ok) await forgetRailFeeds(viewer.id);
 
-		let outcome = result.ok
-			? result.pinned
-				? "pinned"
-				: "unpinned"
-			: result.reason === "pin-limit"
-				? "full"
-				: "missing";
+		let outcome;
+		if (result.ok) outcome = result.pinned ? "pinned" : "unpinned";
+		else if (result.reason === "pin-limit") outcome = "full";
+		else outcome = "missing";
 
 		let query = new URLSearchParams({ [PIN_PARAM]: outcome });
 

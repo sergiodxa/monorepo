@@ -251,11 +251,10 @@ export const ReadToggle = clientEntry(
 		});
 
 		return () => {
-			let label = hasFailed
-				? handle.props.failed
-				: isRead
-					? handle.props.markUnread
-					: handle.props.markRead;
+			let label;
+			if (hasFailed) label = handle.props.failed;
+			else if (isRead) label = handle.props.markUnread;
+			else label = handle.props.markRead;
 
 			return (
 				<form

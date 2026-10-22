@@ -49,7 +49,10 @@ export default createAction(routes.feeds.velocity, {
 		/** A shorter span takes posts out of the feed, which is a count the rail draws. */
 		if (result.ok) await forgetRailFeeds(viewer.id);
 
-		let outcome = result.ok ? "saved" : result.reason === "not-following" ? "missing" : "invalid";
+		let outcome;
+		if (result.ok) outcome = "saved";
+		else if (result.reason === "not-following") outcome = "missing";
+		else outcome = "invalid";
 		let query = new URLSearchParams({ [VELOCITY_PARAM]: outcome });
 
 		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {
