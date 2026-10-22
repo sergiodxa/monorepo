@@ -891,6 +891,10 @@ export class StripeBilling extends APIClient implements Billing {
 
 				let narrowLocally = statuses !== null && statuses.length > 1;
 
+				let status;
+				if (statuses === null) status = undefined;
+				else if (narrowLocally) status = "all";
+				else status = statuses.at(0);
 				let found = await this.#send({
 					method: "GET",
 					path: "subscriptions",
@@ -898,7 +902,7 @@ export class StripeBilling extends APIClient implements Billing {
 					query: {
 						customer: customerId,
 						price: priceId,
-						status: statuses === null ? undefined : narrowLocally ? "all" : statuses.at(0),
+						status: status,
 						limit: size.data,
 						starting_after: query?.cursor,
 					},
