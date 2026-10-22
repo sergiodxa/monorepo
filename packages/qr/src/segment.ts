@@ -46,7 +46,9 @@ export function appendBits(bits: number[], value: number, length: number): void 
 /** The width of a segment's count field at `version`. */
 export function charCountBits(mode: QrMode, version: number): number {
 	let [small, medium, large] = CHAR_COUNT_BITS[mode];
-	return version < 10 ? small : version < 27 ? medium : large;
+	if (version < 10) return small;
+	if (version < 27) return medium;
+	return large;
 }
 
 /** Bits the segments take at `version`, headers included. */
