@@ -1,3 +1,6 @@
+import type { Result } from "@sdxc/result";
+import type { InferInput, InferOutput } from "remix/data-schema";
+
 /**
  * The combinators: each has the name and signature of its `remix/data-schema`
  * counterpart, validates by delegating to it, and adds the JSON Schema 2020-12
@@ -6,9 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-import type { InferInput, InferOutput } from "remix/data-schema";
-
+import { iife } from "@sdxc/iife";
 import { success } from "@sdxc/result";
 import * as ds from "remix/data-schema";
 import { lazy as dataLazy } from "remix/data-schema/lazy";
@@ -219,10 +220,11 @@ export function nullable<S extends AnySchema>(
 
 /** Widens a described schema to accept `null`, keeping `enum` and `const` in agreement with `type`. */
 function withNull(json: JSONSchema): JSONSchema {
-	let types: JSONSchema.TypeName[];
-	if (json.type === undefined) types = [];
-	else if (Array.isArray(json.type)) types = json.type;
-	else types = [json.type];
+	let types = iife((): JSONSchema.TypeName[] => {
+		if (json.type === undefined) return [];
+		if (Array.isArray(json.type)) return json.type;
+		return [json.type];
+	});
 	let scalar = types.length > 0 && types.every((type) => SCALAR_TYPES.has(type));
 	if (!scalar || json.$ref !== undefined) return { anyOf: [json, { type: "null" }] };
 	if (types.includes("null")) return json;
