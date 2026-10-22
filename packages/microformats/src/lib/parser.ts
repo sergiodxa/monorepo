@@ -144,7 +144,10 @@ function nestedValue(
 	if (property.kind === "e" && typeof parsed === "object" && "html" in parsed) {
 		return { ...nested.item, ...parsed };
 	}
-	let own = property.kind === "p" ? nested.name : property.kind === "u" ? nested.url : undefined;
+	let own;
+	if (property.kind === "p") own = nested.name;
+	else if (property.kind === "u") own = nested.url;
+	else own = undefined;
 	let value = asValue(own) ?? asValue(parsed) ?? "";
 	return { ...nested.item, value };
 }
