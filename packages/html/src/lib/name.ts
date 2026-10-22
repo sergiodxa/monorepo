@@ -175,7 +175,7 @@ function embeddedValue(element: DOMElement, role: string | undefined): string | 
 			(option) =>
 				option.hasAttribute("selected") || option.getAttribute("aria-selected") === "true",
 		);
-		let chosen;
+		let chosen: typeof options;
 		if (selected.length > 0) chosen = selected;
 		else if (tag === "select") chosen = options.slice(0, 1);
 		else chosen = [];
