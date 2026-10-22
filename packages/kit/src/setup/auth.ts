@@ -42,12 +42,9 @@ export async function planAuth(root: string, provider: string): Promise<Result<S
 			configAfter = inserted.data;
 		}
 		if (!listed.has(key)) {
-			exampleAfter =
-				exampleAfter === ""
-					? `${key}=\n`
-					: exampleAfter.endsWith("\n")
-						? `${exampleAfter}${key}=\n`
-						: `${exampleAfter}\n${key}=\n`;
+			if (exampleAfter === "") exampleAfter = `${key}=\n`;
+			else if (exampleAfter.endsWith("\n")) exampleAfter = `${exampleAfter}${key}=\n`;
+			else exampleAfter = `${exampleAfter}\n${key}=\n`;
 		}
 	}
 	if (configAfter !== config.data) {

@@ -403,12 +403,11 @@ async function middlewareEntry(
 	node: Node,
 ): Promise<MiddlewareEntry> {
 	let text = module.reader.text(node);
-	let name =
-		node.kind === "function"
-			? "(inline)"
-			: text.length > NAME_LIMIT && node.kind === "call"
-				? `${module.reader.text(node.callee)}(…)`
-				: text;
+	let name;
+	if (node.kind === "function") name = "(inline)";
+	else if (text.length > NAME_LIMIT && node.kind === "call")
+		name = `${module.reader.text(node.callee)}(…)`;
+	else name = text;
 	let root: Node = node;
 	while (root.kind === "call" || root.kind === "member") {
 		root = root.kind === "call" ? root.callee : root.object;

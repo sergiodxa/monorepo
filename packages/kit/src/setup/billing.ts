@@ -47,12 +47,9 @@ export async function planBilling(
 			configAfter = `${configAfter.slice(0, start)}\n\t\t\t${key}: bindings.secret(),${configAfter.slice(start)}`;
 		}
 		if (!listed.has(key)) {
-			exampleAfter =
-				exampleAfter === ""
-					? `${key}=\n`
-					: exampleAfter.endsWith("\n")
-						? `${exampleAfter}${key}=\n`
-						: `${exampleAfter}\n${key}=\n`;
+			if (exampleAfter === "") exampleAfter = `${key}=\n`;
+			else if (exampleAfter.endsWith("\n")) exampleAfter = `${exampleAfter}${key}=\n`;
+			else exampleAfter = `${exampleAfter}\n${key}=\n`;
 		}
 	}
 	if (configAfter !== config.data) {

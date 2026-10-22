@@ -66,12 +66,10 @@ export async function makeBinding(
 		let example = await wrap(() => readFile(join(root, ENV_EXAMPLE_FILE), "utf8"));
 		let before = isFailure(example) ? "" : example.data;
 		if (!exampleKeys(before).has(key.data)) {
-			let after =
-				before === ""
-					? `${key.data}=\n`
-					: before.endsWith("\n")
-						? `${before}${key.data}=\n`
-						: `${before}\n${key.data}=\n`;
+			let after;
+			if (before === "") after = `${key.data}=\n`;
+			else if (before.endsWith("\n")) after = `${before}${key.data}=\n`;
+			else after = `${before}\n${key.data}=\n`;
 			exampleEdit = { before, after };
 		}
 	}

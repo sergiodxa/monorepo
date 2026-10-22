@@ -341,7 +341,10 @@ function columnDifference(
 	definition: ColumnDefinition,
 	existing: CurrentColumn,
 ): string | null {
-	let generated = definition.computed === undefined ? 0 : definition.computed.stored ? 3 : 2;
+	let generated;
+	if (definition.computed === undefined) generated = 0;
+	else if (definition.computed.stored) generated = 3;
+	else generated = 2;
 	let hidden = existing.hidden === 2 || existing.hidden === 3 ? existing.hidden : 0;
 	if (generated !== hidden) return "changes how it is generated";
 	let accepted = ACCEPTED_AFFINITIES[definition.type] ?? ["TEXT"];

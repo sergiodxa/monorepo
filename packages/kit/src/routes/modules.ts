@@ -265,11 +265,10 @@ export class Project {
 		let tokens = tokenize(path, source.data);
 		let references = findModuleReferences(path, source.data);
 		if (isFailure(tokens) || isFailure(references)) {
-			let error = isFailure(tokens)
-				? tokens.error
-				: isFailure(references)
-					? references.error
-					: null;
+			let error;
+			if (isFailure(tokens)) error = tokens.error;
+			else if (isFailure(references)) error = references.error;
+			else error = null;
 			this.diagnostics.push(`${path}: could not be read (${error?.message ?? "unknown error"})`);
 			return null;
 		}

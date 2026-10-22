@@ -72,11 +72,11 @@ async function resolveModule(
 	from: string,
 	specifier: string,
 ): Promise<string | null> {
-	let base = specifier.startsWith("~/")
-		? specifier.slice(2)
-		: specifier.startsWith(".")
-			? posix.normalize(posix.join(posix.dirname(from), specifier))
-			: null;
+	let base;
+	if (specifier.startsWith("~/")) base = specifier.slice(2);
+	else if (specifier.startsWith("."))
+		base = posix.normalize(posix.join(posix.dirname(from), specifier));
+	else base = null;
 	if (base === null) return null;
 	let bare = base.replace(/\.[cm]?js$/, "");
 	for (let candidate of [base, `${bare}.ts`, `${bare}.tsx`, `${bare}/index.ts`]) {
@@ -142,7 +142,9 @@ async function unmap(
 				let imported = new RegExp(`import\\s+${local}\\s+from\\s+"([^"]+)"`).exec(source)?.[1];
 				let module =
 					imported === undefined ? null : await resolveModule(root, initializer, imported);
-				let call = kind === "mcp" ? (resource ? "resources" : "tools") : DECLARATION_CALLS[kind];
+				let call;
+				if (kind === "mcp") call = resource ? "resources" : "tools";
+				else call = DECLARATION_CALLS[kind];
 				if (module === null || call === undefined || path.length === 0) continue;
 				let declarations = await current(root, edits, module);
 				if (declarations === null) continue;

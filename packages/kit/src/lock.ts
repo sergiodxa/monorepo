@@ -201,7 +201,11 @@ export function renderLock(lock: Lock): Result<string, Error> {
 		}
 		let { kind, name, release, files } = line.entry;
 		let ordered = Object.fromEntries(
-			Object.entries(files).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+			Object.entries(files).sort(([a], [b]) => {
+				if (a < b) return -1;
+				if (a > b) return 1;
+				return 0;
+			}),
 		);
 		let rendered = JSONL.stringify([{ kind, name, release, files: ordered }]);
 		if (isFailure(rendered)) return rendered;
@@ -232,7 +236,9 @@ export async function writeLock(root: string, lock: Lock): Promise<Result<void, 
 function compareLines(a: LockLine, b: LockLine): number {
 	let left = `${a.kind}\0${a.name}`;
 	let right = `${b.kind}\0${b.name}`;
-	return left < right ? -1 : left > right ? 1 : 0;
+	if (left < right) return -1;
+	if (left > right) return 1;
+	return 0;
 }
 
 /**
