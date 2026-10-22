@@ -59,8 +59,8 @@ folders, score CRAP from coverage, or ship agent-tuned defaults through `.config
 
 ### Neutral
 
-- Oxlint `complexity` / `max-lines-per-function` remain available for editors; doctor is the
-  project-level, configurable, agent-facing gate with fix strings.
+- Further oxlint-supported style rules (params, nesting, function length) are configured in
+  oxlint, not as kit doctor checks — see [ADR-172](./ADR-172-oxlint-vs-kit-vs-repo-doctor-checks.md).
 
 ## References
 
@@ -68,3 +68,4 @@ folders, score CRAP from coverage, or ship agent-tuned defaults through `.config
 - [ADR-160: `sdxc doctor`](./ADR-160-sdxc-doctor.md)
 - [ADR-169: Encode static agent work in code](./ADR-169-kit-automates-static-agent-work.md)
 - [ADR-137: Codemod package](./ADR-137-codemod-package.md)
+- [ADR-172: Oxlint vs kit doctor vs repo doctor checks](./ADR-172-oxlint-vs-kit-vs-repo-doctor-checks.md)
