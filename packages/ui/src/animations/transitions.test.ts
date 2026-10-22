@@ -9,7 +9,7 @@
  */
 import type { CSSMixinDescriptor } from "remix/component";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { durations, easings } from "./tokens.js";
 import { enterExit, fade, slide, zoom } from "./transitions.js";

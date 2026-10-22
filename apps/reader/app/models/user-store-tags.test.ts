@@ -25,7 +25,7 @@ import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { FeedDO } from "~/app/models/feed-store";
 import type { UserStore } from "~/app/models/user-store";

@@ -112,9 +112,9 @@ What stays out:
 #### `"."`
 
 ```ts
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Result } from "@sdxc/result";
 import type { JSONValue } from "@sdxc/types";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 export const MEDIA_TYPE = "application/merge-patch+json";
 

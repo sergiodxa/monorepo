@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CSPReportParseError, parseReports } from "./reports.js";
 

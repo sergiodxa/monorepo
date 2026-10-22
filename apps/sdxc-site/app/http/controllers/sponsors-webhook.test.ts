@@ -11,7 +11,16 @@ import { setupServer } from "msw/node";
 import { MemoryCache } from "sdxc/cache/memory";
 import { hmac, Hex } from "sdxc/crypto";
 import { unwrap } from "sdxc/result";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 /** The secret the test environment supplies for every binding named like this one. */
 const SECRET = "test-GITHUB_SPONSORS_WEBHOOK_SECRET";

@@ -95,8 +95,8 @@ viewer's zone. An event at 23:30 in New York is on the 14th there and the 15th i
 ```tsx {% title="app/http/controllers/calendar.tsx" %}
 import { createAction } from "remix/router";
 
-import { calendarMonth } from "~/app/services/calendar/month";
 import { Events } from "~/app/models/events";
+import { calendarMonth } from "~/app/services/calendar/month";
 import { viewerOf } from "~/app/services/viewer";
 import { CalendarPage } from "~/resources/views/calendar";
 import routes from "~/routes/web";
@@ -118,8 +118,8 @@ import { fg } from "@sdxc/u/color";
 import { grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { LinkButton } from "@sdxc/ui";
 
-import type { CalendarMonth } from "~/app/services/calendar/month";
 import type { Event } from "~/app/models/events";
+import type { CalendarMonth } from "~/app/services/calendar/month";
 import type { Viewer } from "~/app/services/viewer";
 
 import routes from "~/routes/web";

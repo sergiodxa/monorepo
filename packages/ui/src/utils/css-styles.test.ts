@@ -11,7 +11,7 @@
 import type { CSSMixinDescriptor } from "remix/component";
 
 import { css } from "remix/component";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { CSSStyles } from "./css-styles.js";
 

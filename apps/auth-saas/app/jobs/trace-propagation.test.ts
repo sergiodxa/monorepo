@@ -14,7 +14,7 @@ import * as memory from "@sdxc/jobs/memory";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";

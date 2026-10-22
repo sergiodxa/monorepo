@@ -12,7 +12,7 @@
 import { Base64Url, password, sha256 } from "@sdxc/crypto";
 import { isFailure, unwrap } from "@sdxc/result";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { TestApp } from "~/app/test/http";
 import type { Fixtures } from "~/app/test/seed";

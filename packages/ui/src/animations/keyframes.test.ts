@@ -9,7 +9,7 @@
 
 import type { CSSMixinDescriptor } from "remix/component";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { pulse, shimmer, spin, textShimmer } from "./keyframes.js";
 

@@ -70,7 +70,7 @@
 		"@sdxc/kit": "workspace:*",
 		"@sdxc/messageformat": "workspace:*",
 		"fflate": "0.8.3",
-		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
+		"vite": "catalog:",
 		"wrangler": "^4.149.0"
 	}
 }

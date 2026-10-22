@@ -25,6 +25,11 @@ export default defineConfig({
 	],
 
 	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
 		include: ["app/**/*.test.ts?(x)", "resources/**/*.test.ts?(x)"],
 		/** Vitest runs modules in Node, so the Worker runtime's module resolves to a stand-in. */
 		alias: {

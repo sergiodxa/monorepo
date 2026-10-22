@@ -13,7 +13,7 @@ import { Database } from "@sdxc/database-middleware";
 import { idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import jobs from "~/app/jobs";
 import clean from "~/app/jobs/clean";

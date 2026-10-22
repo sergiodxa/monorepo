@@ -92,9 +92,9 @@ The mailer owns normalization (defaults, address coercion, text derivation, vali
 Each transport is a separate subpath export, so importing one never pulls another's dependency or runtime-specific import into a bundle:
 
 ```ts
+import { CloudflareTransport } from "@pkg/mail/cloudflare";
 import { MemoryTransport } from "@pkg/mail/memory";
 import { ResendTransport } from "@pkg/mail/resend";
-import { CloudflareTransport } from "@pkg/mail/cloudflare";
 ```
 
 #### MemoryTransport

@@ -24,7 +24,16 @@ import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import type { DnsRecordType } from "~/app/models/dns-monitor-records";
 import type { SelectMembership, SelectTeam } from "~/database/schema";

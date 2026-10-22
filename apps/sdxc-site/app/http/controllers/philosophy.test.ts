@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { readPackageFacts } from "~/app/services/packages";
 import { listShowcase } from "~/app/services/showcase";

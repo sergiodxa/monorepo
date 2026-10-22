@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import type { AnyJobDefinition } from "@sdxc/jobs";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";

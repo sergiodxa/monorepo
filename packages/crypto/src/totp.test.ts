@@ -10,7 +10,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { encode as encodeBase32 } from "./lib/base32.js";
 import { totp } from "./totp.js";

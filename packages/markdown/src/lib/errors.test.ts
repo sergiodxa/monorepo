@@ -8,7 +8,7 @@
  */
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Markdown } from "../index.js";
 

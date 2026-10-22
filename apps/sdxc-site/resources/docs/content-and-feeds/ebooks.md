@@ -111,8 +111,8 @@ import type { Markdown } from "@sdxc/markdown";
 import { EPUB } from "@sdxc/epub";
 import { isFailure } from "@sdxc/result";
 
-import bookCss from "~/resources/styles/book.css?raw";
 import { chapterBody } from "~/app/services/books/chapter";
+import bookCss from "~/resources/styles/book.css?raw";
 
 export interface PostBook {
 	title: string;

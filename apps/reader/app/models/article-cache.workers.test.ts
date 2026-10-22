@@ -15,7 +15,7 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { articleKey, robotsKey } from "~/app/models/article-cache";
 import { readArticle } from "~/app/services/article";

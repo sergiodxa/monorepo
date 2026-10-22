@@ -7,7 +7,7 @@ import { createRandom } from "@sdxc/random";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { en } from "../data/en.js";
 

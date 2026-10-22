@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { agentTokenHash, mintAgentToken, readAgentToken, TOKEN_PREFIX } from "~/app/mcp/token";
 

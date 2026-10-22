@@ -13,7 +13,16 @@ import { createEnv, createSecretsStoreSecret } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 /** The Polar endpoint the billing call under test reaches. */
 const CUSTOMERS_URL = "https://api.polar.sh/v1/customers/";

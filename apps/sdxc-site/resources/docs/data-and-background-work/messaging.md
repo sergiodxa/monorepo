@@ -239,9 +239,10 @@ The handler builds the destination through `ctx.destinations`, published by job 
 ```typescript {% title="app/jobs/middleware/destinations.ts" %}
 import type { JobMiddleware } from "@sdxc/jobs";
 import type { Destination } from "@sdxc/messaging";
-import type { ChannelConfig } from "~/app/services/notifications/destinations";
 
 import { createContextKey } from "remix/router";
+
+import type { ChannelConfig } from "~/app/services/notifications/destinations";
 
 export interface DestinationFactory {
 	(config: ChannelConfig): Destination;
@@ -272,10 +273,11 @@ Add it to the dispatcher factory from
 ```typescript {% title="app/initializers/dispatcher.ts" %}
 import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
-import type { DestinationFactory } from "~/app/jobs/middleware/destinations";
 
 import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
+
+import type { DestinationFactory } from "~/app/jobs/middleware/destinations";
 
 import { openDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";

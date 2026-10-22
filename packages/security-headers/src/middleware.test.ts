@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { securityHeaders, securityHeadersOverride } from "./middleware.js";
 

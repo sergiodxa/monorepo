@@ -25,7 +25,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import * as s from "remix/data-schema";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { AppContext } from "~/app/initializers/router";
 

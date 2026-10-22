@@ -8,7 +8,7 @@
  */
 
 import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	COST_AE_CORE_COUNT,

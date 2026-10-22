@@ -20,7 +20,7 @@ import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/initializers/billing";

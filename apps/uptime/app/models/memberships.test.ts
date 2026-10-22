@@ -11,7 +11,7 @@ import { IdToken } from "@sdxc/auth/id-token";
 import { NotFound } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { UptimeModels } from "~/app/models";
 

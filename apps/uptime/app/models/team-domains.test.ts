@@ -9,7 +9,7 @@
 
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels, recordJobs } from "~/app/test/models";

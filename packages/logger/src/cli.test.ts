@@ -9,7 +9,7 @@
 
 import { command, commands, createCLI, ExitError, success, usage } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CurrentLog, log } from "./cli.js";
 import { createLogger } from "./create-logger.js";

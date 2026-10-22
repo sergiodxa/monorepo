@@ -8,7 +8,7 @@
  */
 
 import { parseSafe } from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { SupportRequestSchema } from "~/app/http/validators/encore-support";
 

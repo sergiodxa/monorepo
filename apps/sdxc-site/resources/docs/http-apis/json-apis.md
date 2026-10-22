@@ -135,8 +135,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/models/book";
 import { BOOK_INPUT } from "~/app/http/validators/books";
+import Book, { serializeBook } from "~/app/models/book";
 import problems from "~/config/problems";
 import routes from "~/routes/api";
 
@@ -183,8 +183,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/models/book";
 import { BOOK_PARAMS } from "~/app/http/validators/books";
+import Book, { serializeBook } from "~/app/models/book";
 import problems from "~/config/problems";
 import routes from "~/routes/api";
 
@@ -268,10 +268,10 @@ with an entry from your catalog, and the quota headers, `Retry-After` included, 
 it either way.
 
 ```typescript {% title="app/http/middleware/api-rate-limit.ts" %}
-import { env } from "cloudflare:workers";
 import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
+import { env } from "cloudflare:workers";
 
 import problems from "~/config/problems";
 

@@ -11,7 +11,7 @@ import { DatabaseSync as SqliteDatabase } from "node:sqlite";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { DataTableAdapter, RATE_LIMIT_HITS_SCHEMA_SQL, rateLimitHits } from "./data-table.js";
 import { RateLimitError } from "./rate-limit-error.js";

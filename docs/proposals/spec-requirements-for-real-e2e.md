@@ -386,7 +386,7 @@ sites and the wrong default is expensive to change later.
   suite passes `{ exact: true }` at 30+ sites and its absence is usually an
   oversight. Add a `containing` tag for the deliberate substring case:
   `browser.click link "Profile"` is exact, `browser.click link containing
-"Profile"` is not.
+  "Profile"` is not.
 - **`browser.text` is a substring assertion** over the page's visible text —
   "this text appears" — because that is what its 62 call sites mean. Add an
   `exactly` tag for the handful that need equality.

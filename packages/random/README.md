@@ -180,10 +180,9 @@ generateWorld("world-7"); // identical output for "world-7" on every machine
 Store the stream's state next to the data it shaped, and validate it on load, since a save file is untrusted input.
 
 ```typescript
-import * as s from "remix/data-schema";
-
 import { createRandom, restoreRandom } from "@sdxc/random";
 import { RANDOM_STATE_SCHEMA } from "@sdxc/random/schema";
+import * as s from "remix/data-schema";
 
 let saveSchema = s.object({ turn: s.number(), random: RANDOM_STATE_SCHEMA });
 

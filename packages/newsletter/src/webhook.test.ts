@@ -14,7 +14,7 @@ import type { ReplayStore } from "@sdxc/webhooks";
 import { unwrap } from "@sdxc/result";
 import { sign } from "@sdxc/webhooks";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { MemoryNewsletter } from "./memory.js";
 import newsletterMiddleware from "./middleware.js";

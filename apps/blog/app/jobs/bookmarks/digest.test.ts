@@ -17,7 +17,7 @@ import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { mail } from "~/app/initializers/mail";
 import jobs from "~/app/jobs";

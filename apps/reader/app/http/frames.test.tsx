@@ -14,7 +14,7 @@ import { Frame } from "remix/component";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { get, route } from "remix/routes";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { isFrameRequest } from "~/app/http/frames";
 import frameFallback from "~/app/http/middleware/frame-fallback";

@@ -27,7 +27,7 @@ import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { QuickPingOutcome, QuickPingResult } from "~/app/http/controllers/actions/ping";
 import type { Viewer } from "~/app/http/middleware/auth";

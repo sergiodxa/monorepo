@@ -11,7 +11,7 @@ import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { unwrap } from "@sdxc/result";
 import { env, reset } from "cloudflare:test";
 import { Database } from "remix/data-table";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import { intercept } from "./fixtures/intercept.js";
 import {

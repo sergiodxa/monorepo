@@ -12,7 +12,7 @@ import type { Database } from "remix/data-table";
 
 import { createDurableObjectNamespace } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 import type Tenant from "~/app/models/tenant/object";

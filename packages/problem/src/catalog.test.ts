@@ -8,7 +8,7 @@
 
 import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { defineProblems } from "./catalog.js";
 import { problem } from "./problem.js";

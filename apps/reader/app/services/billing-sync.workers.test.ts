@@ -16,7 +16,7 @@ import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { SyncSource } from "~/app/services/billing-sync";
 

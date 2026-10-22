@@ -18,7 +18,7 @@ import type { Result } from "@sdxc/result";
 
 import { createRandom } from "@sdxc/random";
 import { failure, isFailure, success } from "@sdxc/result";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { Base } from "../bases.js";
 import type { SpecError } from "../errors.js";

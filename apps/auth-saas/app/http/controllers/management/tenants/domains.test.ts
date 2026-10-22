@@ -18,7 +18,16 @@ import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import type { TenantsHarness } from "~/app/test/harness/management/tenants";
 

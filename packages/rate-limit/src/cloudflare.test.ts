@@ -8,7 +8,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { RateLimiterBinding } from "./cloudflare.js";
 

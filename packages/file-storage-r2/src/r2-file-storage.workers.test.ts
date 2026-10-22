@@ -8,7 +8,7 @@
  */
 
 import { env } from "cloudflare:test";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { R2FileStorage } from "./r2-file-storage.js";
 

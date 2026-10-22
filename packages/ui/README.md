@@ -86,11 +86,10 @@ Components never hydrate. Interactivity comes from a mixin applied through `mix`
 ```tsx
 import type { Handle } from "remix/component";
 
-import { clientEntry } from "remix/component";
-
 import { Command } from "@sdxc/ui";
 import { FilterModel } from "@sdxc/ui/behaviors";
 import { commandFilter, commandKeys } from "@sdxc/ui/mixins";
+import { clientEntry } from "remix/component";
 
 export default clientEntry(
 	"/components/search-palette.tsx#default",
@@ -393,11 +392,10 @@ input before any JavaScript runs.
 ```tsx
 import type { Handle } from "remix/component";
 
+import { Button, Form, TextField } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
-
-import { Button, Form, TextField } from "@sdxc/ui";
 
 export let ContactSchema = f.object({
 	email: f.field(s.string().pipe(checks.minLength(1), checks.email())),
@@ -457,11 +455,10 @@ publishes the queue through context so any descendant can add to it:
 ```tsx
 import type { Handle } from "remix/component";
 
-import { clientEntry } from "remix/component";
-
 import { Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
 import { whileLive } from "@sdxc/ui/mixins";
+import { clientEntry } from "remix/component";
 
 export let Toasts = clientEntry("/components/toasts.tsx#Toasts", function Toasts(handle: Handle) {
 	let toaster = new Toaster<{ title: string; color?: Toast.Color }>({ defaultDuration: 5000 });
@@ -538,12 +535,11 @@ needs `type="button"` before its `command` attributes, or the platform runs noth
 ```tsx
 import type { Handle } from "remix/component";
 
-import { clientEntry } from "remix/component";
-
 import { Button, Modal, ShortcutList } from "@sdxc/ui";
 import { Announcer } from "@sdxc/ui/behaviors";
 import { keymap, whileLive } from "@sdxc/ui/mixins";
 import { keyComboGlyphs } from "@sdxc/ui/utils";
+import { clientEntry } from "remix/component";
 
 export default clientEntry(
 	"/components/shortcuts.tsx#default",
@@ -622,9 +618,8 @@ native tooltip. A `Chart.Legend` placed after the chart pairs its items with the
 ```tsx
 import type { Handle } from "remix/component";
 
-import { css } from "remix/component";
-
 import { Chart } from "@sdxc/ui";
+import { css } from "remix/component";
 
 interface Point {
 	x: number;
@@ -669,11 +664,10 @@ the jump-to-latest button:
 ```tsx
 import type { Handle } from "remix/component";
 
-import { clientEntry, css } from "remix/component";
-
 import { Bubble, Message, MessageScroller } from "@sdxc/ui";
 import { ScrollFollowModel } from "@sdxc/ui/behaviors";
 import { messageFollow } from "@sdxc/ui/mixins";
+import { clientEntry, css } from "remix/component";
 
 interface Turn {
 	id: string;

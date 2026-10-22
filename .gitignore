@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 
 # sdxc ui's component registry, written by bun run kit:registry
 packages/kit/registry/
+.vitest/

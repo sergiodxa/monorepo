@@ -9,7 +9,7 @@
  */
 
 import { createTranslator } from "@sdxc/i18n";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { transitionToast } from "./run-monitor-button";
 

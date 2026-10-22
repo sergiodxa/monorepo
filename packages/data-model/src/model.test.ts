@@ -15,7 +15,7 @@ import { InvalidOrderingError, Pagination } from "@sdxc/pagination";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import { column as c, Database as DataTable, fail, lte, Query, sql, table } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { intercept } from "./fixtures/intercept.js";
 import {

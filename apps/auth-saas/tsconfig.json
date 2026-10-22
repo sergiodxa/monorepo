@@ -20,7 +20,7 @@
 			"vite/client",
 			"bun",
 			"node",
-			"@cloudflare/vitest-pool-workers/types"
+			"@cloudflare/vitest-plugin/types"
 		],
 		// The render middleware pulls in `remix/middleware/render` (beta), whose `dist`
 		// is TypeScript source importing siblings with `.ts` extensions; allow it (safe

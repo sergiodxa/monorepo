@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { form, get, post, route } from "remix/routes";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { Decisions } from "./index.js";
 

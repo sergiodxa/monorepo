@@ -345,6 +345,7 @@ callbacks and `this.context` read that context instead of the global `ModelConte
 
 ```typescript {% title="app/models/feed/context.ts" %}
 import type { BoundModels, ModelContext } from "@sdxc/data-model";
+
 import { withContext } from "@sdxc/data-model";
 
 import type { Feeds } from "./feeds";
@@ -557,8 +558,8 @@ every write runs the models' callbacks and constraints:
 ```typescript {% title="database/seed.ts" %}
 import { defineSeed } from "@sdxc/data-model/seed";
 
-import { ArticleFactory } from "~/database/factories";
 import { models } from "~/app/models";
+import { ArticleFactory } from "~/database/factories";
 
 export default defineSeed(models, {
 	admin: ({ models }) =>

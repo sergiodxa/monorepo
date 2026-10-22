@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { FeedStore } from "~/app/models/feed-store";

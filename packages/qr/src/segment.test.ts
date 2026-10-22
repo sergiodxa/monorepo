@@ -9,7 +9,7 @@
 import type { Random } from "@sdxc/random";
 
 import { createRandom, systemSeed } from "@sdxc/random";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { QrMode } from "./segment.js";
 

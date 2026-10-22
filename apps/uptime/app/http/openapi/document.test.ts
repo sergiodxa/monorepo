@@ -9,7 +9,7 @@
 
 import { stringify } from "@sdxc/openapi";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
 import routes from "~/routes/web";

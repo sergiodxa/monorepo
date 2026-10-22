@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { Command } from "./command.js";
 import type { HandlerContext } from "./handler.js";

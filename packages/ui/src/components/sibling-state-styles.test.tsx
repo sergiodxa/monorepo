@@ -10,7 +10,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { ColorSwatchPicker } from "./color-swatch-picker.js";
 import { RadioGroup } from "./radio-group.js";

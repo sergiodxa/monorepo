@@ -9,7 +9,7 @@
 
 import { createSqlStorage } from "@sdxc/cloudflare-mocks";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { runMigrations } from "./migrations";
 

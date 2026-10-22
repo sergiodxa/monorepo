@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { bg } from "../color/bg.js";
 import { border } from "../color/border.js";

@@ -26,7 +26,7 @@ import { unwrap } from "@sdxc/result";
 import { parseListQuery, PATCH_OP_SCHEMA } from "@sdxc/scim";
 import { parsePatch } from "@sdxc/scim/patch";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { ScimUserResource } from "~/app/services/tenant/scim-resources";
 

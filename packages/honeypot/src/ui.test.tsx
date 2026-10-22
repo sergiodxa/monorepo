@@ -7,7 +7,7 @@
  */
 import { isSuccess, unwrap } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import { HoneypotFields } from "./ui.js";
 

@@ -19,7 +19,7 @@ import { failure } from "@sdxc/result";
 import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
 import { MemoryCheck } from "@sdxc/spam/memory";
 import { env } from "cloudflare:test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { SUPPORT_RATE_LIMIT, SUPPORT_SENDER } from "~/app/services/support-desk";

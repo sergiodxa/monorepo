@@ -9,7 +9,7 @@
 
 import * as s from "remix/data-schema";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { previews } from "./previews.js";
 

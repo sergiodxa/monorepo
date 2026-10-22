@@ -12,7 +12,7 @@ import type { Checkout } from "@sdxc/billing";
 import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { landFrom } from "~/app/test/attribution";
 import { COMPLETE_CENTS, ESSENTIALS_CENTS, memoryBilling } from "~/app/test/billing";

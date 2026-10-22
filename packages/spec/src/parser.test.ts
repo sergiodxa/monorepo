@@ -9,7 +9,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { BlockNode, SpecFileNode, StatementNode } from "./ast.js";
 import type { ParseError } from "./errors.js";

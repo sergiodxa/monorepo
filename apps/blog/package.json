@@ -83,7 +83,7 @@
 		"@sdxc/http-signatures": "workspace:*",
 		"@sdxc/kit": "workspace:*",
 		"@sdxc/png": "workspace:*",
-		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
+		"vite": "catalog:",
 		"wrangler": "^4.149.0"
 	}
 }

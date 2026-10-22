@@ -11,7 +11,7 @@ import { CacheError } from "@sdxc/cache";
 import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 /** Prose long enough to score as an article and to beat the excerpt below. */
 const BODY =

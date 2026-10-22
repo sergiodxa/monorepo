@@ -10,7 +10,7 @@
  */
 
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { landFrom } from "~/app/test/attribution";
 import { subscribed } from "~/app/test/newsletter";

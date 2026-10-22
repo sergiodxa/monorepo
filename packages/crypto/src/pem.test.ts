@@ -7,7 +7,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Base64 } from "./encoding.js";
 import { InvalidEncodingError } from "./errors.js";

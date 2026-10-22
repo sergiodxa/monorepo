@@ -356,6 +356,7 @@ export default {
 
 ```typescript
 import { getRequestLogger, type RequestLogger } from "@pkg/logger";
+
 import { getContext } from "./context-storage";
 
 export function logger(): RequestLogger {

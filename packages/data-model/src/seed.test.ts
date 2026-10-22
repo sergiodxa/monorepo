@@ -8,7 +8,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createIds, users } from "./fixtures/schema.js";
 import { openDatabase } from "./fixtures/sqlite.js";

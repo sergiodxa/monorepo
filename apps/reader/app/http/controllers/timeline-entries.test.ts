@@ -10,7 +10,7 @@
 import type { I18n } from "@sdxc/i18n";
 
 import { createTranslator } from "@sdxc/i18n";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { UserStore } from "~/app/models/user-store";
 

@@ -17,7 +17,7 @@ import { Base64, randomToken } from "@sdxc/crypto";
 import { database } from "@sdxc/database-middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/initializers/platform-tenant";

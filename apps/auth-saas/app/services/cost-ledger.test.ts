@@ -9,7 +9,7 @@
 
 import { createAnalyticsEngine } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { FlushEnv } from "~/app/services/cost-ledger";
 

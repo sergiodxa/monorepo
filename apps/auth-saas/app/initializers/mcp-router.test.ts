@@ -18,7 +18,7 @@ import { database } from "@sdxc/database-middleware";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 

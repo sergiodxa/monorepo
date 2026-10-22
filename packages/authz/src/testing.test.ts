@@ -7,7 +7,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { abilities, ability, context } from "./catalog.js";
 import { AuthzError } from "./decision.js";

@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { parseSync } from "oxc-parser";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Edit, MoveOptions } from "./index.js";
 

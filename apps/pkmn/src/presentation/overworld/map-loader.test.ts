@@ -13,7 +13,7 @@ import { isFailure, isSuccess } from "@sdxc/result";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import route1 from "~/content/maps/route-1.json";
 

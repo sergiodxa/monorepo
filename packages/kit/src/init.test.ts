@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import * as JSONC from "@sdxc/jsonc";
 import { isFailure, unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { parseConfig } from "./config.js";
 import { SCHEMA_REFERENCE, init, renderConfig } from "./init.js";

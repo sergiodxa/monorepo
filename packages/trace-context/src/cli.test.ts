@@ -14,7 +14,7 @@ import { invoke } from "@sdxc/cli/test";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware/cli";
 import { isFailure, success as ok } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { TraceContext } from "./context.js";
 

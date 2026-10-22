@@ -16,7 +16,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import { object, string } from "remix/data-schema";
 import { Database as DataTable } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { intercept } from "./fixtures/intercept.js";
 import {

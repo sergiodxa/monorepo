@@ -20,7 +20,7 @@ import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { wrap } from "@sdxc/result";
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 
 import type { AuthModels } from "~/app/models";
 

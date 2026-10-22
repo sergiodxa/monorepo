@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { isFailure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { renderConfig } from "../init.js";
 import { REGISTRY } from "../releases.js";

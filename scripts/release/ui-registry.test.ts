@@ -16,7 +16,7 @@ import { promisify } from "node:util";
 
 import { findModuleReferences } from "@sdxc/codemod";
 import { unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { readRegistry } from "../../packages/kit/src/ui/registry.js";
 

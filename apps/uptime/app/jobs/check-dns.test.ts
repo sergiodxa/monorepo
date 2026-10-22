@@ -21,7 +21,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { DnsRecordImport } from "~/app/models/dns-monitor-records";
 import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns/check";

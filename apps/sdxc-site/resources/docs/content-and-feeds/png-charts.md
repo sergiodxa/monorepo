@@ -246,8 +246,8 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Reports from "~/app/models/report";
 import { chartFont } from "~/app/initializers/chart-font";
+import Reports from "~/app/models/report";
 import { latencyChart } from "~/app/services/reports/latency-chart";
 import routes from "~/routes/web";
 

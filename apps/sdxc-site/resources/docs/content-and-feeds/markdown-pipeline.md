@@ -294,17 +294,16 @@ in `Typeset`, which supplies the sizes, spacing and colours for markup it did no
 
 ```tsx {% title="app/http/controllers/posts/show.tsx" %}
 import { notFound } from "@sdxc/http/response/html";
+import { tableOfContents } from "@sdxc/markdown/plugin/headings";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { tableOfContents } from "@sdxc/markdown/plugin/headings";
-
+import { readPost } from "~/app/services/content/posts";
 import { Callout } from "~/resources/components/callout";
 import { TocList } from "~/resources/components/toc";
-import { readPost } from "~/app/services/content/posts";
 import routes from "~/routes/web";
 
 export default createAction(routes.posts.show, async (ctx) => {

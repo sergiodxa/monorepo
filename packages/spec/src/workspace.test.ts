@@ -14,7 +14,7 @@ import { isAbsolute, join } from "node:path";
 import type { Result } from "@sdxc/result";
 
 import { failure, isSuccess, unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import type { Grants, PermissionSet } from "./permissions.js";
 import type { Workspace } from "./workspace.js";

@@ -22,7 +22,7 @@ import {
 	expect,
 	expectTypeOf,
 	test,
-} from "vitest";
+} from "vite-plus/test";
 
 import { AccessToken } from "./access-token.js";
 import { AuthError } from "./auth-error.js";

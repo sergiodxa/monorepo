@@ -236,10 +236,10 @@ The boundary follows the WordPress split: environment and secret material is inj
 | optional `SessionStorage` override                   | custom CSS                         |
 
 ```typescript
+import type { Logger } from "@pkg/logger";
 // packages/blog-engine/src/index.ts
 import type { DatabaseAdapter } from "remix/data-table";
 import type { SessionStorage } from "remix/session";
-import type { Logger } from "@pkg/logger";
 
 /** OIDC provider endpoints, mirroring remix/auth's createOIDCAuthProvider metadata. */
 export interface OIDCMetadata {
@@ -595,8 +595,8 @@ The generic `Post` repository ports from `apps/r3-blog/app/repositories/post.ts`
 ```typescript
 // packages/blog-engine/src/domain/post-form-schema.ts
 import * as s from "remix/data-schema";
-import * as f from "remix/data-schema/form-data";
 import { maxLength, url } from "remix/data-schema/checks";
+import * as f from "remix/data-schema/form-data";
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -880,6 +880,7 @@ The key routing principle: **the worker resolves identity only; the DO enforces 
 ```typescript
 // apps/blog-saas/src/entry.worker.ts (sketch)
 import { env } from "cloudflare:workers";
+
 import { router } from "./app/router";
 import Blog from "./tenant";
 
@@ -982,10 +983,10 @@ Notes:
 The DO is a thin host, not an application (target: ~150 lines):
 
 ```typescript
-// apps/blog-saas/src/tenant/index.ts (sketch)
-import { DurableObject } from "cloudflare:workers";
 import { createBlogEngine, type BlogEngine } from "@pkg/blog-engine";
 import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+// apps/blog-saas/src/tenant/index.ts (sketch)
+import { DurableObject } from "cloudflare:workers";
 
 /** Control-plane-pushed tenant configuration, stored in the DO's own SQLite. */
 interface PlatformMeta {

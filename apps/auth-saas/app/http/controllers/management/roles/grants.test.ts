@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { grants } from "~/app/models/tenant/consent";
 import { buildRolesHarness } from "~/app/test/harness/management/roles";

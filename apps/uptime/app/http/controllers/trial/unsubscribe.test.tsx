@@ -24,7 +24,7 @@ import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";

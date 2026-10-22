@@ -10,7 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /** This package's root, where `exports` names the entry under test. */
 const PACKAGE_ROOT = resolve(import.meta.dirname, "..");

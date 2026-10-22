@@ -10,7 +10,7 @@ import { isFailure } from "@sdxc/result";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { parse } from "@sdxc/well-known/security-txt";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { SECURITY_TXT, securityTxtEntry } from "~/config/security-txt";
 

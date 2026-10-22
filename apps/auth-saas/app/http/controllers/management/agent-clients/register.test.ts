@@ -12,7 +12,7 @@ import type { RequestContext } from "remix/router";
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ManagementTestCore } from "~/app/test/harness/management";
 

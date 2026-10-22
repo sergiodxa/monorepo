@@ -8,7 +8,7 @@ import { unwrap } from "@sdxc/result";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import type { LearnsetEntry } from "../data/species";
 import type { LegacyCreatureComponent } from "../world/components";

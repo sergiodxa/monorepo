@@ -10,7 +10,7 @@
 import { ActorKeys } from "@sdxc/activitypub";
 import { keyProviderConformance } from "@sdxc/activitypub/testing";
 import { isFailure, unwrap } from "@sdxc/result";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { BlogKeyProvider } from "~/app/initializers/activitypub-keys";
 import { ACTOR_ID } from "~/config/activitypub";

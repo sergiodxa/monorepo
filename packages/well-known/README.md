@@ -76,8 +76,8 @@ differs from it.
 ### Serve it
 
 ```typescript
-import { securityTxt } from "@sdxc/well-known/security-txt";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { securityTxt } from "@sdxc/well-known/security-txt";
 import { createRouter } from "remix/router";
 
 let router = createRouter({
@@ -240,13 +240,14 @@ the rest).
 ## Pattern: security.txt, WebFinger And Change-Password On One Router
 
 ```typescript
+import type { SecurityTxt } from "@sdxc/well-known/security-txt";
+import type { Jrd } from "@sdxc/well-known/webfinger";
+
 import { isFailure } from "@sdxc/result";
 import { redirect } from "@sdxc/well-known/change-password";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { isExpired, securityTxt } from "@sdxc/well-known/security-txt";
-import type { SecurityTxt } from "@sdxc/well-known/security-txt";
 import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
-import type { Jrd } from "@sdxc/well-known/webfinger";
 import { createRouter } from "remix/router";
 
 export const SECURITY_TXT: SecurityTxt = {
@@ -291,9 +292,10 @@ through to your 404.
 ## Pattern: OpenID Connect Discovery With Its Key Set
 
 ```typescript
-import { serve, wellKnown } from "@sdxc/well-known/middleware";
-import { jwks } from "@sdxc/well-known/jwks";
 import type { Jwk } from "@sdxc/well-known/jwks";
+
+import { jwks } from "@sdxc/well-known/jwks";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { define, openIdConfiguration } from "@sdxc/well-known/openid-configuration";
 import { respond } from "@sdxc/well-known/response";
 import { createRouter } from "remix/router";

@@ -8,7 +8,7 @@
 
 import { isFailure, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { ENTERPRISE_USER, FULL_USER, GROUP } from "./fixtures/rfc7643-users.js";
 

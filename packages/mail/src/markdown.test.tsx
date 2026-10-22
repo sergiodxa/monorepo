@@ -9,7 +9,7 @@
 
 import type { Markdown as Ast } from "@sdxc/markdown";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CodeBlock, Markdown } from "./markdown.js";
 

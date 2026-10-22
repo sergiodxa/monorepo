@@ -12,7 +12,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import routes from "~/routes/web";
 

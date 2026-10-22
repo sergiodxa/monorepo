@@ -188,9 +188,9 @@ Each answer carries the TTL to cache it for, and an NXDOMAIN carries the negativ
 the zone's SOA.
 
 ```typescript
-import { env } from "cloudflare:workers";
 import { NameNotFoundError, resolve } from "@sdxc/doh";
 import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 
 async function cachedAddresses(hostname: string): Promise<string[] | null> {
 	let key = `doh:A:${hostname}`;
@@ -275,9 +275,10 @@ if (isSuccess(published) && isSuccess(answer)) {
 it reaches DNS, and `parseCaaProperty` shows what each record asks.
 
 ```typescript
-import { isSuccess } from "@sdxc/result";
-import { evaluateCaa, parseCaaProperty } from "@sdxc/doh/caa";
 import type { CAA } from "@sdxc/doh/caa";
+
+import { evaluateCaa, parseCaaProperty } from "@sdxc/doh/caa";
+import { isSuccess } from "@sdxc/result";
 import { parseRecordData } from "@sdxc/zone-file";
 
 let lines = ['0 issue "letsencrypt.org; validationmethods=dns-01"', '0 issuewild ";"'];

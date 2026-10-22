@@ -350,8 +350,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import { currentUser } from "~/app/services/auth/current-user";
 import { CODE_FORM } from "~/app/http/validators/two-factor";
+import { currentUser } from "~/app/services/auth/current-user";
 import { confirmEnrollment } from "~/app/services/two-factor/confirm";
 import { RecoveryCodesPage } from "~/resources/views/recovery-codes";
 import routes from "~/routes/web";
@@ -429,8 +429,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import { completeSignIn, pendingUserId } from "~/app/services/auth/pending-sign-in";
 import { CODE_FORM } from "~/app/http/validators/two-factor";
+import { completeSignIn, pendingUserId } from "~/app/services/auth/pending-sign-in";
 import { checkSecondFactor } from "~/app/services/two-factor/check";
 import { TwoFactorPage } from "~/resources/views/two-factor";
 import routes from "~/routes/web";

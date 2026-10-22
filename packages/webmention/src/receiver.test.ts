@@ -12,7 +12,7 @@ import { parse } from "@sdxc/microformats";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { accepted, linksTo, parseRequest, rejected, summarize, verify } from "./receiver.js";
 

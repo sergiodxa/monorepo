@@ -8,7 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { isResolvableScope, listScopeMonitors } from "~/app/services/scope-monitors";
 import { createTestDatabase } from "~/app/test/db";

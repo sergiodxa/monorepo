@@ -12,7 +12,7 @@ import type { Middleware } from "remix/router";
 
 import { env } from "cloudflare:test";
 import { createRouter } from "remix/router";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { shouldChallengeWithTurnstile, turnstileChallenge } from "./turnstile-challenge";
 

@@ -8,7 +8,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Menu } from "./menu.js";
 

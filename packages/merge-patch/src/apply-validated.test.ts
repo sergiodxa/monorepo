@@ -10,7 +10,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { isFailure, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { maxLength, minLength } from "remix/data-schema/checks";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { applyValidated, MergePatchValidationError } from "./apply-validated.js";
 

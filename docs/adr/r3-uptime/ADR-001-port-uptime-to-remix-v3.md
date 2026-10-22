@@ -392,8 +392,8 @@ One file per action (or one file per small group), under `app/http/controllers/<
 
 ```tsx
 import { inject } from "@pkg/service-container";
-import { getContext } from "remix/middleware/async-context";
 import { Database } from "remix/data-table";
+import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
 import Monitor from "~/app/data/monitor";
@@ -538,6 +538,7 @@ Use `clientEntry` from `remix/ui`. The first argument is the module's source pat
 
 ```tsx
 import type { Handle } from "remix/ui";
+
 import { clientEntry, css, on } from "remix/ui";
 
 // Props MUST be declared as a `type` (not interface) to satisfy SerializableProps.

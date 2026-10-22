@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { addMonths, endOfMonth, endOfQuarter, startOfMonth, startOfQuarter } from "./month.js";
 import { zonedParts } from "./zone.js";

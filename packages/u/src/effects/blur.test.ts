@@ -2,7 +2,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { compose } from "../internal/descriptor.js";
 import { COMPOSITE_FILTER } from "../internal/filter.js";

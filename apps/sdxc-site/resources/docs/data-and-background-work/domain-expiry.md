@@ -117,7 +117,11 @@ const RETRY = createBackoff({ base: "1 hour", max: "1 day", jitter: 0.1 });
 const ABOUT_THE_NAME = new Set<RDAPError["code"]>(["not-found", "unsupported-tld"]);
 
 export type ExpiryStatus =
-	"valid" | "expiring" | "expired" | "unknown" | "unavailable";
+	| "valid"
+	| "expiring"
+	| "expired"
+	| "unknown"
+	| "unavailable";
 
 export interface ExpiryState {
 	expiresAt: number | null;

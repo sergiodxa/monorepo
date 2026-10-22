@@ -10,7 +10,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { projectRelease, REGISTRY, resolveRelease, scopedPackageOf } from "./releases.js";
 import { registryDocument } from "./testing.js";

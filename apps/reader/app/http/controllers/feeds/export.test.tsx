@@ -9,7 +9,7 @@
 
 import { parse } from "@sdxc/opml";
 import { isSuccess } from "@sdxc/result";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { UserStore } from "~/app/models/user-store";
 

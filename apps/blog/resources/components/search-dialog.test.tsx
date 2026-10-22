@@ -11,7 +11,7 @@
 
 import { run } from "remix/component";
 import { createRouter } from "remix/router";
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 

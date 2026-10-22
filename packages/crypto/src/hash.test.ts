@@ -10,7 +10,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Hex } from "./encoding.js";
 import { sha256, sha384, sha512 } from "./hash.js";

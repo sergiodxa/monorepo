@@ -21,7 +21,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { UserDO } from "~/app/models/user-store";
 import catalogSql from "~/database/catalog-migrations/0001-feeds.sql?raw";

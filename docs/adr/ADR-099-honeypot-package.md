@@ -154,7 +154,7 @@ router.map(routes.comments, {
 It renders the token as `<input type="hidden">` and the trap inside a wrapper that is:
 
 - positioned off-screen through a `css()` mixin (`position: absolute; inset-inline-start:
--10000px; block-size: 1px; overflow: hidden`), which keeps it in the layout bots inspect;
+  -10000px; block-size: 1px; overflow: hidden`), which keeps it in the layout bots inspect;
 - `aria-hidden="true"`, with the trap at `tabindex="-1"`, so assistive technology and keyboard
   users never reach it;
 - labelled with the `label` prop, so a person who does reach it through some other path reads
@@ -217,7 +217,7 @@ let assessment = await filter.check({ content, author, renderedAt });
 3. `honeypot()` middleware, published context key with a written type
 4. `<HoneypotFields>` with the off-screen `css()` mixin
 5. README for npm readers, `LICENSE.md`, the root README row with ✅, `bun run
-release:bootstrap @sdxc/honeypot`
+   release:bootstrap @sdxc/honeypot`
 
 ### Phase 2: Spam filter alignment
 

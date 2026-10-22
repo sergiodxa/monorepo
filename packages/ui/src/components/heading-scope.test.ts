@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { HeadingLevel } from "./heading-scope.js";
 

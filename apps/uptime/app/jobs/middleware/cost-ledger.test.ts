@@ -11,7 +11,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /** The dataset the ledger flushes to, captured by the cost module on import. */
 let costs: AnalyticsEngineMock = createAnalyticsEngine();

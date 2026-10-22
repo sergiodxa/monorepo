@@ -15,7 +15,7 @@ import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { InMemoryProvider } from "@sdxc/flags/provider/memory";
 import { createJobContext, job, jobs } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { abilities, ability } from "../catalog.js";
 import { fromFlags } from "../facts/flags.js";

@@ -11,7 +11,7 @@
 import { globSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import config from "../vite.config";
 

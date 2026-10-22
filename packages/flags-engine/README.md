@@ -124,11 +124,11 @@ engine.evaluate("new-checkout", false, { targetingKey: "user-1" });
 In a Cloudflare Worker, `WorkerKVFlagStore` reads the set from a KV namespace.
 
 ```typescript
-import { env } from "cloudflare:workers";
-import { createFlags } from "@sdxc/flags/client";
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
+import { createFlags } from "@sdxc/flags/client";
+import { env } from "cloudflare:workers";
 
 export let flags = createFlags({
 	provider: () =>
@@ -320,9 +320,9 @@ The engine reports `stale`; reloading behind the response keeps every request on
 hand.
 
 ```typescript
-import { env } from "cloudflare:workers";
 import { createEngine } from "@sdxc/flags-engine";
 import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
+import { env } from "cloudflare:workers";
 
 let engine = createEngine({ store: new WorkerKVFlagStore(env.FLAGS), maxAge: "5 minutes" });
 
@@ -420,7 +420,6 @@ the whole set and refresh the provider so the new definitions apply at once.
 import type { EvaluationContext } from "@sdxc/flags";
 import type { StoredFlagSet } from "@sdxc/flags-engine/store";
 
-import { env } from "cloudflare:workers";
 import {
 	createEngine,
 	evaluateAll,
@@ -430,6 +429,7 @@ import {
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
 import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
 let store = new WorkerKVFlagStore(env.FLAGS);

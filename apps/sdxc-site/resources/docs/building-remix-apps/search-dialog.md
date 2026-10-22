@@ -118,8 +118,8 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { matchingArticles, parseArticleQuery } from "~/app/models/search/articles";
-import { toHit } from "~/app/services/search/hits";
 import { PUBLIC_PAGE, TAGS } from "~/app/services/edge-cache";
+import { toHit } from "~/app/services/search/hits";
 import { SearchSuggestions } from "~/resources/views/search-suggestions";
 import routes from "~/routes/web";
 

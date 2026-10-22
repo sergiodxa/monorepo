@@ -11,7 +11,7 @@ import { isFailure } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
-import { beforeAll, expect, test } from "vitest";
+import { beforeAll, expect, test } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";

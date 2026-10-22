@@ -15,7 +15,7 @@ import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type Tenant from "~/app/models/tenant/object";
 

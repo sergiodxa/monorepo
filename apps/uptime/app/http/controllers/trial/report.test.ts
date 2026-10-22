@@ -18,7 +18,7 @@ import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { InsertTrialWatch, MonitorStatus } from "~/database/schema";
 

@@ -14,7 +14,7 @@ import type { D1StatementObservation } from "@sdxc/data-table-d1";
 
 import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /**
  * The dataset the ledger flushes to. It lives at module scope because the module under test

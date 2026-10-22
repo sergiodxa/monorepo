@@ -454,8 +454,8 @@ system while everything else keeps the default.
 
 ```typescript
 import { createFlags } from "@sdxc/flags/client";
-import { InMemoryProvider } from "@sdxc/flags/provider/memory";
 import featureFlags from "@sdxc/flags/middleware/router";
+import { InMemoryProvider } from "@sdxc/flags/provider/memory";
 import { isFailure } from "@sdxc/result";
 
 import { ServiceProvider } from "./service-provider.ts";

@@ -11,7 +11,7 @@
 
 import { Base64Url } from "@sdxc/crypto";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { decodeCursor, encodeCursor } from "./cursor.js";
 import { InvalidCursorError, UnencodableCursorValueError } from "./errors.js";

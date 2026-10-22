@@ -8,7 +8,7 @@
 
 import { Base64Url } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { encrypt, MAX_PAYLOAD_BYTES } from "./encrypt.js";
 

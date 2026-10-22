@@ -15,7 +15,7 @@ import type { RenderResult } from "remix/component/test";
 import { clientEntry, run } from "remix/component";
 import { renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { hotkey } from "./hotkey.js";
 

@@ -20,7 +20,7 @@ import { createCookie } from "remix/cookie";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { catchResponse } from "./index.js";
 

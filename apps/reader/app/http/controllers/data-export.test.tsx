@@ -11,7 +11,7 @@ import { parse as parseCsv } from "@sdxc/csv";
 import { parse as parseOpml } from "@sdxc/opml";
 import { unwrap } from "@sdxc/result";
 import { unzipSync } from "fflate";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { UserStore } from "~/app/models/user-store";
 

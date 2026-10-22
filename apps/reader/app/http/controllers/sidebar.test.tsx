@@ -9,7 +9,7 @@
 
 import { Frame } from "remix/component";
 import { get } from "remix/routes";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { CachedFeed, CachedSearch } from "~/app/http/controllers/chrome";
 

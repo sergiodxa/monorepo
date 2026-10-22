@@ -89,8 +89,8 @@ default weight (`u.fg("brand")`), a palette shade (`"color.neutral.950"`), or an
 
 ```tsx
 import { bg, p } from "@sdxc/u";
-import { hover } from "@sdxc/u/state";
 import { ring } from "@sdxc/u/color/ring";
+import { hover } from "@sdxc/u/state";
 import { blur, spacing } from "@sdxc/u/tokens";
 
 <a mix={[p(2), bg("neutral.tint"), hover(bg("brand.tint")), ring()]} />;

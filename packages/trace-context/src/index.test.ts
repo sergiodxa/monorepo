@@ -8,7 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { parse as parseTraceParent } from "./traceparent.js";
 import { parse as parseTraceState, stringify as stringifyTraceState } from "./tracestate.js";

@@ -11,7 +11,7 @@ import type { Database } from "remix/data-table";
 
 import { NotFound } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { UptimeModels } from "~/app/models";
 

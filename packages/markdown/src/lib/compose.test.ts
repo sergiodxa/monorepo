@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { Markdown } from "../index.js";
 import { headings } from "../plugin/headings.js";

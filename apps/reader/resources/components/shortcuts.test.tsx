@@ -18,14 +18,23 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import type { Handle } from "remix/component";
-import type { Mock } from "vitest";
+import type { Mock } from "vite-plus/test";
 
 import { Sidebar } from "@sdxc/ui";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { run } from "remix/component";
 import { renderToStream } from "remix/component/server";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import type { Timeline } from "~/resources/views/timeline";
 

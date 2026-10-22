@@ -7,7 +7,7 @@
  */
 
 import { DAY_MS } from "@sdxc/dates/zone";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { classifyExpiry, shouldRemindOfExpiry } from "./expiry";
 

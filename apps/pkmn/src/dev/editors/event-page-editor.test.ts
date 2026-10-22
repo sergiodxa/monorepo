@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { EventCommand } from "~/presentation/render/map-schema";
 

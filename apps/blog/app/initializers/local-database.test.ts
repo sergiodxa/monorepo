@@ -11,7 +11,7 @@ import { basename } from "node:path";
 import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	DATABASE_NAME,

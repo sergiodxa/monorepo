@@ -609,10 +609,10 @@ already keeps binding tests there — and it is what a store written in an appli
 ### 18. The provider is a wrapper, and it is small
 
 ```typescript
-import { createFlags } from "@sdxc/flags/client";
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
+import { createFlags } from "@sdxc/flags/client";
 
 export const flags = createFlags({
 	provider: () => new EngineProvider(createEngine({ store: new WorkerKVFlagStore(env.FLAGS) })),

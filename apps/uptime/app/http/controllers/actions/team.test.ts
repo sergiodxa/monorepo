@@ -29,7 +29,7 @@ import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 

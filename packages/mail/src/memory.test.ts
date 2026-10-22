@@ -10,7 +10,7 @@
 import type { RemixElement } from "remix/component";
 
 import { isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { MemoryTransport } from "./memory.js";
 

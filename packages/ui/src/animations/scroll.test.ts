@@ -9,7 +9,7 @@
 
 import type { CSSMixinDescriptor } from "remix/component";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { scrollProgress, scrollShadow, viewReveal } from "./scroll.js";
 

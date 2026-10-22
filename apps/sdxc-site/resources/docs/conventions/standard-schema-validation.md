@@ -93,8 +93,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Team from "~/app/models/team";
 import { NEW_TEAM_SCHEMA } from "~/app/http/validators/team";
+import Team from "~/app/models/team";
 import routes from "~/routes/api";
 
 export default createAction(routes.teams.create, async (ctx) => {

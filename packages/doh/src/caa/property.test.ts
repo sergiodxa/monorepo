@@ -7,7 +7,7 @@
  */
 import { unwrap } from "@sdxc/result";
 import { parseRecordData } from "@sdxc/zone-file";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { CAA } from "./types.js";
 

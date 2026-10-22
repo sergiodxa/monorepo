@@ -12,7 +12,7 @@ import type { ValidationError } from "@sdxc/validate";
 import type { Database, WriteResult, WriteRowsResult } from "remix/data-table";
 
 import { column as c, fail, table } from "remix/data-table";
-import { describe, expectTypeOf, test } from "vitest";
+import { describe, expectTypeOf, test } from "vite-plus/test";
 
 import { comments, postMeta, posts, users } from "./fixtures/schema.js";
 import { openDatabase } from "./fixtures/sqlite.js";

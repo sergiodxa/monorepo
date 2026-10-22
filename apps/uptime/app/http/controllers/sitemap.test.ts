@@ -10,7 +10,7 @@
  */
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { audiences, comparisons, features } from "~/resources/content/marketing";
 import routes from "~/routes/web";

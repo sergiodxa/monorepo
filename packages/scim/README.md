@@ -61,8 +61,9 @@ client is told and what the server does agree. Put the core schema first: unqual
 resolve in insertion order.
 
 ```typescript
-import { ENTERPRISE_USER_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
 import type { Discovery } from "@sdxc/scim/discovery";
+
+import { ENTERPRISE_USER_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
 import { ENTERPRISE_USER_DEFINITION, pickAttributes, USER_DEFINITION } from "@sdxc/scim/discovery";
 
 export const DEFINITIONS: Discovery.Definitions = {
@@ -414,9 +415,10 @@ filters, PATCH and `/Schemas` know its attributes. The map replaces the default,
 `enterprise` in it too when you also accept the Enterprise User extension.
 
 ```typescript
+import type { Discovery } from "@sdxc/scim/discovery";
+
 import { isFailure } from "@sdxc/result";
 import { errorResponse, parseUser, scimResponse, USER_SCHEMA, userResource } from "@sdxc/scim";
-import type { Discovery } from "@sdxc/scim/discovery";
 import { USER_DEFINITION } from "@sdxc/scim/discovery";
 import * as s from "remix/data-schema";
 

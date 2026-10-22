@@ -13,7 +13,7 @@ import type { RemixNode } from "remix/component";
 import { assets } from "@sdxc/assets-middleware";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { assetResolver } from "~/app/initializers/assets";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";

@@ -129,9 +129,9 @@ packages/oidc-provider/
 ### Public API
 
 ```typescript
+import type { Logger } from "@pkg/logger/request";
 // packages/oidc-provider/src/index.ts
 import type { DatabaseAdapter } from "remix/data-table";
-import type { Logger } from "@pkg/logger/request";
 
 /** Sink for authentication/registration analytics events (host-provided). */
 export interface AnalyticsSink {
@@ -213,9 +213,9 @@ migrationRegistry.register({ id: "0001", name: "init", up: /* sql */ `...` });
 ### Self-Hosted Worker Example
 
 ```typescript
+import { createD1DataTableAdapter } from "@pkg/data-table-d1";
 // bootstrap/worker.ts of a self-hosted OIDC provider (template candidate)
 import { createOidcProvider, type OidcProvider } from "@pkg/oidc-provider";
-import { createD1DataTableAdapter } from "@pkg/data-table-d1";
 
 let provider: OidcProvider | null = null;
 
@@ -238,11 +238,12 @@ The issuer, clients, subjects, and signing keys live in this worker's own D1, so
 The tenant DO wrapper shrinks to construction + config:
 
 ```typescript
+import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+import { createOidcProvider, type OidcProvider } from "@pkg/oidc-provider";
 // apps/auth-saas/src/tenant/index.ts (rewritten)
 import { DurableObject } from "cloudflare:workers";
 import { env } from "cloudflare:workers";
-import { createOidcProvider, type OidcProvider } from "@pkg/oidc-provider";
-import { createSQLStorageDatabaseAdapter } from "@pkg/data-table-sqlstorage";
+
 import { AnalyticsService } from "~/app/services/analytics";
 
 export default class Tenant extends DurableObject<Cloudflare.Env> {

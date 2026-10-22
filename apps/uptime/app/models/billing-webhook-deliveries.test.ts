@@ -9,7 +9,7 @@
 
 import type { WebhookDelivery } from "@sdxc/billing";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { webhookStore } from "~/app/models/billing-webhook-deliveries";
 import { createTestDatabase } from "~/app/test/db";

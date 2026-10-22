@@ -174,12 +174,12 @@ Adopt `@pkg/ui` for shared components while keeping blog's custom styling.
 **File:** `apps/blog/app/db/schema.ts` (or wherever schema is defined)
 
 ```typescript
+// After
+import { pk, timestamp } from "@pkg/db-helpers";
+
 // Before
 import id from "~/db/helpers/id";
 import { createdAt, updatedAt } from "~/db/helpers/timestamps";
-
-// After
-import { pk, timestamp } from "@pkg/db-helpers";
 
 // Usage
 export const posts = sqliteTable("posts", {

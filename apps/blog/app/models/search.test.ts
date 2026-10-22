@@ -12,7 +12,7 @@ import type { Database } from "remix/data-table";
 import { createD1Database } from "@sdxc/cloudflare-mocks";
 import { succeeded, unwrap } from "@sdxc/result";
 import { sql } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { openDatabase } from "~/app/initializers/database";
 import { serializeTags } from "~/app/models/post-values";

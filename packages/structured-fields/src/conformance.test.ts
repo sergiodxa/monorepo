@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /**
  * Runs the HTTP working group's structured-field-tests suite, vendored under

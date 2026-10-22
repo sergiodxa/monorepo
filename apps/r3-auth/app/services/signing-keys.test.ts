@@ -14,7 +14,7 @@ import type { R2BucketMock } from "@sdxc/cloudflare-mocks";
 
 import { createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { JWK } from "@sdxc/jwt";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 let bucket: R2BucketMock;
 let listCalls = 0;

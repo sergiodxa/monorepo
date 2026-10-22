@@ -324,12 +324,12 @@ import { Button, Input, TextField } from "@pkg/ui";
 **Update:** `apps/books/app/routes/upgrade/route.tsx`
 
 ```typescript
-// Before
-import { upgradeSchema } from "./schemas.server";
-
 // After
 import { subscribeSchema } from "~/schemas/subscribe";
 // Or rename to a more generic name like "emailCaptureSchema"
+
+// Before
+import { upgradeSchema } from "./schemas.server";
 ```
 
 #### Step 5.2: Extract Form Status Hook (Future)

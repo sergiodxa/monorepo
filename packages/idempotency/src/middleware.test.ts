@@ -11,7 +11,7 @@ import { Log } from "@sdxc/logger";
 import { defineProblems } from "@sdxc/problem";
 import { failure } from "@sdxc/result";
 import { RequestContext } from "remix/router";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { IdempotencyOptions } from "./middleware.js";
 import type { IdempotencyStore } from "./types.js";

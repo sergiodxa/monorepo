@@ -169,7 +169,11 @@ import type { Result } from "@sdxc/result";
 
 export namespace TraceState {
 	export type ErrorCode =
-		"malformed" | "invalid-key" | "invalid-value" | "duplicate-key" | "too-many";
+		| "malformed"
+		| "invalid-key"
+		| "invalid-value"
+		| "duplicate-key"
+		| "too-many";
 
 	export interface StringifyOptions {
 		/** @default 512 */

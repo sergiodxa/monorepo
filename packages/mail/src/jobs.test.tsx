@@ -13,7 +13,7 @@ import { createJobDispatcher, createJobHandler, job, jobs } from "@sdxc/jobs";
 import * as memory from "@sdxc/jobs/memory";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import mailer, { CurrentMailer } from "./jobs.js";
 import { Mailer } from "./mailer.js";

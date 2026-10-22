@@ -11,7 +11,7 @@
 import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 import { RequestContext } from "remix/router";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { Adapter, RateLimitDecision } from "./types.js";
 

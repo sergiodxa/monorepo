@@ -25,8 +25,8 @@ Clock skew and replay TTLs are duration strings from
 ### Verify a response
 
 ```typescript
-import * as SAML from "@sdxc/saml";
 import { isFailure } from "@sdxc/result";
+import * as SAML from "@sdxc/saml";
 
 let result = await SAML.verifyResponse(samlResponseXml, {
 	certificates, // the provider's signing certificates
@@ -53,8 +53,8 @@ typecheck. One call checks the signature, the wrapping, `Destination`, `Audience
 ### Start a sign-in
 
 ```typescript
-import * as SAML from "@sdxc/saml";
 import { isSuccess } from "@sdxc/result";
+import * as SAML from "@sdxc/saml";
 
 let request = await SAML.createAuthnRequest({
 	binding: "redirect",
@@ -79,8 +79,8 @@ Keep `id`: passing it back as `inResponseTo` binds the response to the browser t
 ### Read and write metadata
 
 ```typescript
-import * as SAML from "@sdxc/saml";
 import { isSuccess } from "@sdxc/result";
+import * as SAML from "@sdxc/saml";
 
 let idp = await SAML.parseIdPMetadata(idpMetadataXml);
 if (isSuccess(idp)) {
@@ -220,8 +220,8 @@ Decode the posted form, verify against the request you started, and tell a confi
 from an infrastructure one.
 
 ```typescript
-import * as SAML from "@sdxc/saml";
 import { isFailure } from "@sdxc/result";
+import * as SAML from "@sdxc/saml";
 
 async function handleAcs(request: Request) {
 	let form = await request.formData();
@@ -260,6 +260,7 @@ async function handleAcs(request: Request) {
 
 ```typescript
 import type { ReplayStore } from "@sdxc/saml";
+
 import { toMs } from "@sdxc/duration";
 
 let replay: ReplayStore = {
@@ -282,8 +283,8 @@ verifying under any one of them is accepted, so a rotation needs no coordination
 tells you when to warn an administrator.
 
 ```typescript
-import * as SAML from "@sdxc/saml";
 import { isFailure } from "@sdxc/result";
+import * as SAML from "@sdxc/saml";
 
 let response = await fetch("https://idp.example.com/metadata");
 let idp = await SAML.parseIdPMetadata(await response.text());
@@ -312,8 +313,8 @@ encrypted assertions with the same private key imported for RSA-OAEP. Providers 
 digest, so pass the key imported under both.
 
 ```typescript
-import * as SAML from "@sdxc/saml";
 import { isFailure } from "@sdxc/result";
+import * as SAML from "@sdxc/saml";
 
 let keys = await crypto.subtle.generateKey(
 	{

@@ -10,7 +10,7 @@
  */
 
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { UptimeModels } from "~/app/models";
 

@@ -10,7 +10,7 @@
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { readSocialCard } from "~/app/services/social-card";

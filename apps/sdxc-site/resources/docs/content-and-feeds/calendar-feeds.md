@@ -101,8 +101,8 @@ import { policy } from "@sdxc/http/cache";
 import { calendarResponse } from "@sdxc/icalendar";
 import { createAction } from "remix/router";
 
-import { calendarEvent } from "~/app/services/calendar/events";
 import Meetups from "~/app/models/meetup";
+import { calendarEvent } from "~/app/services/calendar/events";
 import routes from "~/routes/web";
 
 export default createAction(routes.events.feed, async (ctx) => {
@@ -248,8 +248,8 @@ import { calendarResponse } from "@sdxc/icalendar";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { calendarEvent } from "~/app/services/calendar/events";
 import Meetups from "~/app/models/meetup";
+import { calendarEvent } from "~/app/services/calendar/events";
 import routes from "~/routes/web";
 
 export default createAction(routes.events.download, async (ctx) => {

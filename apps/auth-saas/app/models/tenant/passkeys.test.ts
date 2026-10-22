@@ -29,7 +29,7 @@ import {
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { readAuditPage } from "~/app/models/tenant/audit-events";
 import { createDauCache } from "~/app/models/tenant/metering";

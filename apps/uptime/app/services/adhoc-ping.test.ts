@@ -14,7 +14,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { failure } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { createTestBilling } from "~/app/test/billing";
 

@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { isSuccess, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { Cache, CacheError } from "../index.js";
 

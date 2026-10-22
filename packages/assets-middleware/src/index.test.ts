@@ -10,7 +10,7 @@
 import type { ScriptEntry } from "@pitlane/assets";
 
 import { createRouter } from "remix/router";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { DocumentAssets, DocumentAssetsResolver } from "./index.js";
 

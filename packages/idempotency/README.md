@@ -306,9 +306,9 @@ SQLite and exposes the three methods over RPC; the Worker hands the middleware a
 ```typescript
 import type { ClaimRequest, IdempotencyStore, StoredResponse } from "@sdxc/idempotency";
 
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DataTableStore } from "@sdxc/idempotency/data-table";
 import { idempotency } from "@sdxc/idempotency/middleware";
-import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 

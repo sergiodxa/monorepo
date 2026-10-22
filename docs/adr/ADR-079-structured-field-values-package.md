@@ -120,8 +120,8 @@ What stays out, and where it lives instead:
 
 ```ts
 import type { Result } from "@sdxc/result";
-import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { ValidationError } from "@sdxc/validate";
+import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 /** An sf-token: a bare word such as `HIT` or `text/html`, distinct from the sf-string `"HIT"`. */
 export class Token {
@@ -151,7 +151,14 @@ export namespace SF {
 	 * Display String as `DisplayString`.
 	 */
 	export type BareItem =
-		number | Decimal | string | Token | Uint8Array | boolean | Date | DisplayString;
+		| number
+		| Decimal
+		| string
+		| Token
+		| Uint8Array
+		| boolean
+		| Date
+		| DisplayString;
 
 	/** Keys in insertion order, on a null-prototype object. */
 	export type Parameters = Record<string, BareItem>;

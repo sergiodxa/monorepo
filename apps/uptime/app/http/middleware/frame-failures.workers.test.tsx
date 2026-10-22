@@ -10,7 +10,7 @@
 import { css, Frame } from "remix/component";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { assetResolver } from "~/app/initializers/assets";
 

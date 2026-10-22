@@ -14,7 +14,7 @@
 import { DatabaseSync } from "node:sqlite";
 
 import { column as c, Database, table } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { splitSqlStatements } from "./sql-script.js";
 

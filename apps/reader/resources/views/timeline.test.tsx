@@ -12,7 +12,7 @@
  */
 
 import { renderToStream } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Timeline } from "~/resources/views/timeline";
 

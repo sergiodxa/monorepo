@@ -258,8 +258,8 @@ export async function verifyIdToken(token: string) {
 
 ```typescript
 import { env } from "cloudflare:workers";
-import { OAuth2Strategy } from "remix-auth-oauth2";
 import { Authenticator } from "remix-auth";
+import { OAuth2Strategy } from "remix-auth-oauth2";
 
 type OAuth2Tokens = OAuth2Strategy.VerifyOptions["tokens"];
 

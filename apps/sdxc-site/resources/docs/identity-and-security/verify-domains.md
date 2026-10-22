@@ -97,8 +97,8 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { Domains } from "~/app/models/domains";
 import jobs from "~/app/jobs";
+import { Domains } from "~/app/models/domains";
 import { DomainsPage } from "~/resources/views/domains";
 import routes from "~/routes/web";
 
@@ -156,10 +156,10 @@ import { verifyTxtRecord } from "@sdxc/doh";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
+import jobs from "~/app/jobs";
 import { Domains } from "~/app/models/domains";
 import { challengeFor } from "~/app/services/domains/challenge";
-import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/initializers/dispatcher";
 
 const recheck = createBackoff({ base: "1 minute", max: "15 minutes" });
 
@@ -237,10 +237,10 @@ retrying until Cloudflare reports both the hostname and its certificate as activ
 import { HostnameClient } from "@sdxc/hostname";
 import { createJobHandler } from "@sdxc/jobs";
 
+import { hostnameClient } from "~/app/initializers/hostnames";
+import jobs from "~/app/jobs";
 import { Domains } from "~/app/models/domains";
 import { setupMessage } from "~/app/services/domains/status";
-import jobs from "~/app/jobs";
-import { hostnameClient } from "~/app/initializers/hostnames";
 
 export default createJobHandler(jobs.domains.activate, async (ctx) => {
 	let domain = await Domains.find(ctx.db, ctx.input.domainId);
@@ -323,8 +323,8 @@ import { notFound } from "@sdxc/http/response/html";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Domains } from "~/app/models/domains";
 import { hostnameClient } from "~/app/initializers/hostnames";
+import { Domains } from "~/app/models/domains";
 import routes from "~/routes/web";
 
 export default createAction(routes.domains.destroy, async (ctx) => {

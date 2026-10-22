@@ -9,7 +9,7 @@
 
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import i18n from "./middleware.js";
 

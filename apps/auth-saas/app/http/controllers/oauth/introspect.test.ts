@@ -12,7 +12,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64 } from "@sdxc/crypto";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import {
 	TENANT_ID_HEADER,

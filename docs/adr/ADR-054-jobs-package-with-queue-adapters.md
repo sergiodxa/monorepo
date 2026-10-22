@@ -518,8 +518,8 @@ handler comes from, and the report a completed run sends.
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
-import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
+import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";

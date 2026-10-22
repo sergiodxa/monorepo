@@ -13,7 +13,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { assetResolver } from "~/app/initializers/assets";
 

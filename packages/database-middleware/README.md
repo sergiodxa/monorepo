@@ -198,8 +198,8 @@ export default {
 A middleware later in the chain reads `ctx.db` when it runs, so [`@sdxc/data-model`](https://www.npmjs.com/package/@sdxc/data-model) binds its models to the published database.
 
 ```typescript
-import { database } from "@sdxc/database-middleware";
 import { models } from "@sdxc/data-model/router";
+import { database } from "@sdxc/database-middleware";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
 

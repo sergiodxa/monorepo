@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { redirect } from "./change-password.js";
 import { parse, passkeyEndpoints, stringify } from "./passkey-endpoints.js";

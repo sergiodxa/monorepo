@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /**
  * The namespace the helpers read and evict from. One instance serves the whole file, and

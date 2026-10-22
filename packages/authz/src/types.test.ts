@@ -8,7 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { AbilityName, Claims, Decisions } from "./catalog.js";
 

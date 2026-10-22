@@ -18,7 +18,7 @@ import { evaluate, parseFlagSet } from "@sdxc/flags-engine";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import { Log } from "@sdxc/logger";
 import { success } from "@sdxc/result";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 let flagsKv = createKVNamespace();
 

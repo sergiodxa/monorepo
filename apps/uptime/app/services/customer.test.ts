@@ -24,7 +24,7 @@ import type {
 import { IdToken } from "@sdxc/auth/id-token";
 import { BillingError } from "@sdxc/billing";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import {

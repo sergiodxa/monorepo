@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { fetchApp } from "~/app/test/router";
 import { SEARCH_QUICK_LINKS_ID } from "~/resources/components/search-box";

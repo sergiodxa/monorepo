@@ -187,8 +187,8 @@ endpoint verifies first and only then reads the body. Left without a `body` opti
 reads a clone, so the original stream is still there for the schema:
 
 ```typescript {% title="app/http/controllers/orders.ts" %}
-import { accepted, unprocessableEntity } from "@sdxc/http/response/json";
 import { verify } from "@sdxc/http-signatures";
+import { accepted, unprocessableEntity } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -244,8 +244,8 @@ that signed too little learns what to cover:
 import type { HttpSignatureError } from "@sdxc/http-signatures";
 import type { Log } from "@sdxc/logger";
 
-import { unauthorized } from "@sdxc/http/response/json";
 import { stringifyAcceptSignature } from "@sdxc/http-signatures";
+import { unauthorized } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 
 export function refuseSignature(log: Log, error: HttpSignatureError): Response {

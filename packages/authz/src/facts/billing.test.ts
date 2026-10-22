@@ -12,7 +12,7 @@ import type { EntitlementSnapshot } from "@sdxc/billing/middleware";
 import billing, { requireEntitlement } from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { abilities, ability } from "../catalog.js";
 import { allow, deny, fact } from "../grants.js";

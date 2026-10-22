@@ -32,7 +32,16 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 import type Tenant from "~/app/models/tenant/object";

@@ -418,8 +418,8 @@ import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { fail } from "remix/data-table";
 
-import { documents } from "./schema.js";
 import { publishDocument } from "./jobs.js";
+import { documents } from "./schema.js";
 import { slugify } from "./slugify.js";
 
 export const Documents = createModel(documents, {

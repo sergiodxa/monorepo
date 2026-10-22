@@ -9,7 +9,7 @@
 
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { readSampleEpub } from "~/app/services/sample-chapter";
 import { SAMPLE_LINK_TTL_SECONDS, signSampleLink } from "~/app/services/sample-link";

@@ -9,7 +9,7 @@
 
 import { Log } from "@sdxc/logger";
 import { sql } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { testDatabase } from "~/app/test/database";
 

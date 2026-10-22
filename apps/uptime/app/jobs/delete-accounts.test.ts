@@ -26,7 +26,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { SelectTeam } from "~/database/schema";
 

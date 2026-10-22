@@ -11,7 +11,7 @@ import type { Messages } from "@sdxc/i18n";
 
 import { parse } from "@sdxc/messageformat";
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import en from "~/resources/locales/en";
 

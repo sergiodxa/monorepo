@@ -11,7 +11,7 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type {
 	ArgumentNode,

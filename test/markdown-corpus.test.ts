@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 import { Markdown } from "@sdxc/markdown";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { contentFiles, format } from "./markdown-corpus";
 

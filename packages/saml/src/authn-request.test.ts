@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 import { Base64 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { CreateAuthnRequestOptions } from "./authn-request.js";
 import type { Element } from "./lib/tree.js";

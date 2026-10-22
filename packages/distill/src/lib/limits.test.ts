@@ -11,7 +11,7 @@ import { OutboundError } from "@sdxc/outbound";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { DistillLimitError, DistillRefusedError } from "../index.js";
 

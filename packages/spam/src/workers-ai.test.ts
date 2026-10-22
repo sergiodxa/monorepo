@@ -9,7 +9,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isFailure, isSuccess, success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Signal, SpamCheck, SpamCheckError, Submission } from "./check.js";
 

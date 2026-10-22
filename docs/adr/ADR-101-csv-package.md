@@ -71,7 +71,7 @@ Decisions inside that scope:
   `@sdxc/validate`, the same way it types a form post. A guessed `"007"` turned into `7` could
   never be recovered.
 - **Typed cells on write.** A cell is `string | number | bigint | boolean | Date | null |
-undefined`. `null` and `undefined` write an empty field, `Date` writes ISO 8601 in UTC,
+  undefined`. `null` and `undefined` write an empty field, `Date` writes ISO 8601 in UTC,
   `boolean` writes `true`/`false`, and numbers write `String(value)`. A caller that wants a
   locale's decimal comma or a formatted date passes a string.
 - **Formula neutralization applies to string cells only.** A string that starts with `=`, `+`,

@@ -9,7 +9,7 @@
 import type { ParsedQuery } from "sdxc/search/query";
 
 import { isSuccess } from "sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { SearchDocument } from "~/app/services/search-query";
 

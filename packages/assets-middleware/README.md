@@ -17,9 +17,9 @@ It runs on a [`remix`](https://www.npmjs.com/package/remix) v3 router, and its l
 Build the resolver once, then name the module whose stylesheets every page links and the browser entry every page loads. Both are source paths relative to the app root.
 
 ```typescript
-import { assets } from "@sdxc/assets-middleware";
 import { createAssetResolver } from "@pitlane/assets";
 import manifest from "@pitlane/assets/manifest";
+import { assets } from "@sdxc/assets-middleware";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 

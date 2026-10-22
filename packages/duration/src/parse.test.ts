@@ -8,7 +8,7 @@
  */
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { InvalidDurationError } from "./invalid-duration-error.js";
 import { parse } from "./parse.js";

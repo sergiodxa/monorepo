@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createEnv } from "@sdxc/cloudflare-mocks";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Cloudflare.Env>({ SESSION_SECRET: "test-session-secret" }),

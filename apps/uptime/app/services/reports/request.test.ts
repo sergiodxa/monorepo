@@ -8,7 +8,7 @@
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { isSubmitted, resolveReportRequest } from "~/app/services/reports/request";
 import { createTestDatabase } from "~/app/test/db";

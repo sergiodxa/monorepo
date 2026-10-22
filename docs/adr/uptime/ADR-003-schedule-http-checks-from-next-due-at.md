@@ -49,7 +49,7 @@ index on `enabled_at`. The query runs once per every-minute cron delivery.
 > copy of the local D1 database file, because that is where the real schema and index set live.
 > D1 runs its own SQLite build, so the exact plan text and the planner's choices may differ in
 > production. What does **not** depend on the planner: `MAX(completed_at) … GROUP BY
-monitor_id` over an unfiltered table has to read every row of it, by any strategy. Confirm on
+> monitor_id` over an unfiltered table has to read every row of it, by any strategy. Confirm on
 > D1 directly with `wrangler d1 execute DB --remote --command "EXPLAIN QUERY PLAN …"`, and
 > treat `meta.rows_read` from a real response as the authoritative number — see
 > [ADR-019](./ADR-019-instrument-d1-rows-and-do-wall-time.md).

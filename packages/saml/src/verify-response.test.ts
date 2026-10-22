@@ -12,7 +12,7 @@ import type { XML } from "@sdxc/xml";
 
 import { Base64, randomBytes } from "@sdxc/crypto";
 import { isFailure, isSuccess } from "@sdxc/result";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { ResponseFixture, SignTarget } from "./fixtures/sign-response.js";
 import type { ReplayStore } from "./replay-store.js";

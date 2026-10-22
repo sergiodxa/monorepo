@@ -271,8 +271,8 @@ Give a `remix/data-schema` schema its JSON Schema with `withJSONSchema`, then ne
 other. A failed conversion names where it happened.
 
 ```typescript
-import { isFailure } from "@sdxc/result";
 import * as s from "@sdxc/json-schema";
+import { isFailure } from "@sdxc/result";
 import * as ds from "remix/data-schema";
 
 let slug = s.withJSONSchema(

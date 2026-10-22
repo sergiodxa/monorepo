@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { clientSecrets } from "~/app/models/tenant/clients";
 import { buildClientsHarness } from "~/app/test/harness/management/clients";

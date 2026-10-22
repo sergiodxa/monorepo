@@ -18,7 +18,7 @@ import { invoke as invokeCLI } from "@sdxc/cli/test";
 import { isSuccess, wrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { RegistryEntry } from "../../ui/registry.js";
 

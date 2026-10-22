@@ -11,7 +11,7 @@
 import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { activeDescendantKeys, chooseOption, chosenOption } from "./active-descendant-keys.js";
 

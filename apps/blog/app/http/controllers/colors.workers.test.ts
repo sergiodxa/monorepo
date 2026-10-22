@@ -7,7 +7,7 @@
  */
 
 import { env } from "cloudflare:test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { STATIC_PAGE } from "~/app/initializers/cache";
 import { createWebRouter } from "~/app/initializers/router";

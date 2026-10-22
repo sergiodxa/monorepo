@@ -11,7 +11,7 @@ import type { CreateValues } from "@sdxc/data-model";
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { LeadInput } from "~/app/models/leads";
 import type { TrialWatches } from "~/app/models/trial-watches";

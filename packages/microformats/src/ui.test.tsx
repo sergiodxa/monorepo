@@ -11,7 +11,7 @@ import type { Handle, Props, RemixNode } from "remix/component";
 import { unwrap } from "@sdxc/result";
 import { css } from "remix/component";
 import { renderToString } from "remix/component/server";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { MF2UI } from "./ui.js";
 

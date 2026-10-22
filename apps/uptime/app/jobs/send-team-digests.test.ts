@@ -21,7 +21,7 @@ import { verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { failure, isSuccess, success, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 import type { DigestPeriod } from "~/app/models/team-digests";

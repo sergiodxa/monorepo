@@ -8,7 +8,7 @@
  */
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Filter } from "./filter.js";
 

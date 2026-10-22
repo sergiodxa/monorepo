@@ -140,9 +140,9 @@ Some names are refused, each with the reason:
 ```typescript {% title="app/models/post.ts" %}
 import type { TableRow } from "remix/data-table";
 
-import { column as c, table } from "remix/data-table";
 import { createModel } from "@sdxc/data-model";
 import { generateUUID } from "@sdxc/uuid/v7";
+import { column as c, table } from "remix/data-table";
 
 /** The `posts` table, as its migration creates it. */
 export const postTable = table({

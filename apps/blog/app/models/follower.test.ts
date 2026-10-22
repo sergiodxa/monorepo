@@ -10,7 +10,7 @@
 import { followerStoreConformance } from "@sdxc/activitypub/testing";
 import { InvalidCursorError } from "@sdxc/pagination";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { FollowerRepository } from "~/app/models/follower";
 import { testDatabase } from "~/app/test/database";

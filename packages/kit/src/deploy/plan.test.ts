@@ -7,7 +7,7 @@
  */
 
 import { ExecError } from "@sdxc/cli";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { deployFailure, formatPlan, isUnknown, migrates, parsePending } from "./plan.js";
 

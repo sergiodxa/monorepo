@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Markdown as MarkdownTypes } from "../index.js";
 

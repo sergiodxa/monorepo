@@ -20,6 +20,13 @@ import { defineConfig } from "vite-plus";
 const BUILD_ID = Date.now().toString(36);
 
 export default defineConfig(({ command }) => ({
+	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
+	},
 	/**
 	 * Only a build is stamped. The dev server reloads code under one long-lived process, so it
 	 * stamps `null`, and every page it serves is rendered from the code as it stands now.

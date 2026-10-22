@@ -9,7 +9,7 @@
  */
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { pageRenderer } from "~/app/test/renderer";
 import routes from "~/routes/web";

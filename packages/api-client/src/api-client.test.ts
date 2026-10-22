@@ -12,7 +12,7 @@ import { runWithTrace, startTrace, toTraceParent } from "@sdxc/trace-context";
 import { parse as parseTraceState } from "@sdxc/trace-context/tracestate";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { APIClient } from "./api-client.js";
 

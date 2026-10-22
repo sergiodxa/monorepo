@@ -78,8 +78,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import Team from "~/app/models/team";
 import { NewTeamSchema } from "~/app/http/validators/team";
+import Team from "~/app/models/team";
 import { NewTeamPage } from "~/resources/views/new-team";
 import routes from "~/routes/web";
 

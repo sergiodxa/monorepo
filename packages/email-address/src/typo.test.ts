@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { parseEmailAddress } from "./parse.js";
 import { suggestDomain } from "./typo.js";

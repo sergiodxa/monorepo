@@ -3,7 +3,7 @@
  * in-memory D1 stand-in tests receive as the `DB` binding.
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { openDatabase } from "~/app/initializers/database";
 

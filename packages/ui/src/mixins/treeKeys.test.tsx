@@ -13,7 +13,7 @@
 import type { RenderResult } from "remix/component/test";
 
 import { render } from "remix/component/test";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { SelectionModel } from "../behaviors/selection-model.js";
 

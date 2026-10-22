@@ -7,7 +7,7 @@
  */
 
 import { isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { ENTERPRISE_USER_DEFINITION, GROUP_DEFINITION, USER_DEFINITION } from "./discovery.js";
 import { parseFilter } from "./filter.js";

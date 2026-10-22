@@ -10,7 +10,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /** The folder every guide is read from. */
 const DOCS = fileURLToPath(new URL("../../resources/docs/", import.meta.url));

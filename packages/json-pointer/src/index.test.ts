@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { JsonPointerError, JsonPointerParseError, get, parse, set, stringify } from "./index.js";
 

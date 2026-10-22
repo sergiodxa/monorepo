@@ -109,7 +109,7 @@ that, the cap looks like dropped alerts.
   volume reduction matters more than a 2.6× rate reduction).
 - **Existing alert rows keep `cooldown_minutes = 0`** unless backfilled. A schema default
   only affects new rows. Decide explicitly: either backfill `UPDATE alerts SET
-cooldown_minutes = 15 WHERE cooldown_minutes = 0` — which silently changes behaviour users
+  cooldown_minutes = 15 WHERE cooldown_minutes = 0` — which silently changes behaviour users
   may be relying on — or leave them and rely on the per-incident cap, which is why the cap
   is part of this ADR rather than a follow-up. **Recommended: leave existing rows, ship the
   cap.**

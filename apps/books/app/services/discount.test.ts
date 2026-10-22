@@ -11,7 +11,7 @@
 import type { Discount } from "@sdxc/billing";
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { findApplicableDiscount, selectDiscount } from "~/app/services/discount";
 import { memoryBilling, withUnreadableDiscounts } from "~/app/test/billing";

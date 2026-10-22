@@ -44,7 +44,7 @@ The template ships both commands:
   `cf d1 migrations list` remotely, from the journal locally). An up-to-date database prints
   nothing.
 - **`deploy`** runs `cf deploy --prebuilt`; `deploy --dry-run` runs `cf deploy --prebuilt
---dry-run`. The template has no `cf:deploy` script, so the command line is the one place a
+  --dry-run`. The template has no `cf:deploy` script, so the command line is the one place a
   deploy is defined.
 
 An app migrates or ships differently by editing those two files.
@@ -82,9 +82,9 @@ Flags:
 - `--yes` (`-y`): confirms without asking; required without a terminal.
 - `--dry-run`: runs the build and the plan, prints it, and changes nothing remote.
 - `--skip <step>`: leaves out `build`, `migrate` or `deploy`; repeated (`--skip build --skip
-migrate`) or as a list (`--skip build,migrate`). `--skip build` deploys the output already on
+  migrate`) or as a list (`--skip build,migrate`). `--skip build` deploys the output already on
   disk; `--skip migrate` deploys an app whose migrations are applied by other means; `--skip
-deploy` applies the migrations ahead of a later deploy.
+  deploy` applies the migrations ahead of a later deploy.
 
 ## Consequences
 

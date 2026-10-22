@@ -162,8 +162,9 @@ A module of prefix-bound factories keeps every prefix string in one file, and ea
 returns its own type.
 
 ```typescript
-import { typeid } from "@sdxc/typeid";
 import type { TypeID } from "@sdxc/typeid";
+
+import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v7";
 
 export let createUserId = typeid("user");
@@ -183,8 +184,9 @@ The database keeps a native UUID column; the prefix is applied on the way out an
 way in, and the round trip returns the same UUID.
 
 ```typescript
-import { TypeID } from "@sdxc/typeid";
 import type { UUID } from "@sdxc/uuid";
+
+import { TypeID } from "@sdxc/typeid";
 
 interface UserRow {
 	id: UUID;

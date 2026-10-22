@@ -10,7 +10,7 @@ import type { RemixNode } from "remix/component";
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";

@@ -10,7 +10,7 @@
 import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { ALLOWED_FILES, findRandomUUIDReferences } from "./random-uuid";
 

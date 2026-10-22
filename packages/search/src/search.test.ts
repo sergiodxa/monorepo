@@ -19,7 +19,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Pagination, QueryFailedError } from "@sdxc/pagination";
 import { isFailure, unwrap } from "@sdxc/result";
 import { column as c, Database, eq, gt, inList, lt, rawSql, sql, table } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { ARTICLES_SCHEMA } from "../test/schema.js";
 

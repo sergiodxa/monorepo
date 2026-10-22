@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { unwrap } from "@sdxc/result";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { addHeaderTags, headerTags, parseAuthor, resolveAuthor } from "./author.js";
 import { parseConfig } from "./config.js";

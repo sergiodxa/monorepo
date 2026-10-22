@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { argument, command, commands, createCLI, createCommand, spawnExec } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
 import * as s from "remix/data-schema";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { formatFiles } from "./format.js";
 

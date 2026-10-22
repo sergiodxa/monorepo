@@ -12,7 +12,7 @@ import type { Database as DataTable } from "remix/data-table";
 import { Database } from "@sdxc/database-middleware";
 import { createJobContext, Job } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import jobs from "~/app/jobs";
 import { testDatabase } from "~/app/test/database";

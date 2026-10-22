@@ -12,7 +12,7 @@ import { failure, isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import { fail } from "remix/data-table";
 import { createContextKey, createRouter, RequestContext } from "remix/router";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { createIds, postMeta, posts, users } from "./fixtures/schema.js";
 import { openDatabase } from "./fixtures/sqlite.js";

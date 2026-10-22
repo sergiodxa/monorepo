@@ -8,7 +8,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Cell } from "./lib/types.js";
 

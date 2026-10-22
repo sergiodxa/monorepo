@@ -325,8 +325,8 @@ export async function listEvents(url: URL) {
 `series()` states what each item is, so the pager is a loop with no arithmetic.
 
 ```tsx
-import type { Handle } from "remix/component";
 import type { PageSeries } from "@sdxc/pagination";
+import type { Handle } from "remix/component";
 
 import { css } from "remix/component";
 

@@ -13,7 +13,7 @@
 
 import type { ZoneFile } from "@sdxc/zone-file";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { DnsRecordType } from "~/app/services/dns/record-value";
 

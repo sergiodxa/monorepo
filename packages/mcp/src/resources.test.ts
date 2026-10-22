@@ -12,7 +12,7 @@
  */
 
 import { RequestContext } from "remix/router";
-import { describe, expect, expectTypeOf, test, vi } from "vitest";
+import { describe, expect, expectTypeOf, test, vi } from "vite-plus/test";
 
 import { createHandler } from "./handler.js";
 import { ErrorCode } from "./jsonrpc.js";

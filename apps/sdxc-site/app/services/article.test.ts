@@ -10,7 +10,7 @@
 import { Markdown } from "sdxc/markdown";
 import { toPlainText } from "sdxc/markdown/plain";
 import { isFailure } from "sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
 import { listPackages, readPackageReadme } from "~/app/services/packages";

@@ -9,7 +9,7 @@
 
 import { readdirSync, readFileSync } from "node:fs";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { MessageFunction, MessageValue } from "./index.js";
 

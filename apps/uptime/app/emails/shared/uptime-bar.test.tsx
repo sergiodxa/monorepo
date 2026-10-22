@@ -8,7 +8,7 @@
  */
 
 import { render } from "@sdxc/mail";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { UptimeBar as Bar } from "~/app/emails/shared/uptime-bar";
 

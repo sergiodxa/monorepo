@@ -12,7 +12,7 @@ import { invoke } from "@sdxc/cli/test";
 import { parseEmailAddress } from "@sdxc/email-address";
 import { isFailure, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { NewsletterCommandOptions } from "./cli.js";
 

@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 import type { Handle } from "remix/component";
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { MemoryTransport } from "./memory.js";
 

@@ -15,7 +15,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import routes from "~/routes/web";
 

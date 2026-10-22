@@ -51,7 +51,7 @@ The suite talks to a live dev server on **`http://localhost:3002`**.
    ```
 
    Or from source (slower start): `DATABASE_URL="sqlite://$DBFILE" bun
-packages/spec/src/cli.ts run apps/r3-auth/spec --allow-config`.
+   packages/spec/src/cli.ts run apps/r3-auth/spec --allow-config`.
 
 `--allow-config` applies the three grants `config.jsonc` declares: `net` scoped to
 `localhost:3002` (the `http`/`browser` origin), `env` scoped to `DATABASE_URL`
@@ -132,7 +132,7 @@ A few constraints of the v1 runtime shaped what each spec asserts:
 
 - **Redirects are followed, never observed.** `http` transparently follows up to
   ten redirect hops and returns the final response, so a guard's `303 →
-/authorize` surfaces as the sign-in page (a final `200`), not as a `3xx`. No
+  /authorize` surfaces as the sign-in page (a final `200`), not as a `3xx`. No
   spec asserts a `3xx` status or a `Location` header. `browser.url` observes the
   current URL but the runtime cannot _bind_ that observation into a value, so a
   redirect carrying a random value (an authorization `code`) is asserted by the
@@ -189,7 +189,7 @@ Two success paths remain out of reach, both for the same root cause:
 
 - **A browser-obtained authorization code cannot be exchanged.** The
   `authorization_code` grant itself is expressible (`http.post … form {…} basic
-…`), but lifting the fresh `code` out of the `/authorize` redirect would need to
+  …`), but lifting the fresh `code` out of the `/authorize` redirect would need to
   bind `browser.url` into a value, which the runtime cannot do — and the codes
   live in KV, which the `db` seed cannot populate. The token-endpoint specs use
   the `refresh_token` grant (a seeded session) to reach the same signed token set.

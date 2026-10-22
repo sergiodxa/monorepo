@@ -8,7 +8,7 @@
  */
 
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Grants } from "./permissions.js";
 import type { SuiteResult } from "./workers.js";

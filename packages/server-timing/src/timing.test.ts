@@ -11,7 +11,7 @@
 
 import { setTimeout as sleep } from "node:timers/promises";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Timing } from "./timing.js";
 

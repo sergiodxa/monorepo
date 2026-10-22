@@ -33,7 +33,7 @@
 	"peerDependencies": {
 		"@sdxc/jobs": "workspace:*",
 		"remix": "3.0.0",
-		"vitest": "^4.1.10"
+		"vitest": "^4.1.10 || ^5.0.5"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/jobs": {

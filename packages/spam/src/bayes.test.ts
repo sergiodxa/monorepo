@@ -10,7 +10,7 @@ import { DatabaseSync as SqliteDatabase } from "node:sqlite";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { TokenStore } from "./bayes.js";
 import type { Label, SpamCheck, Submission } from "./check.js";

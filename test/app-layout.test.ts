@@ -11,7 +11,7 @@ import { globSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	APP_FOLDERS,

@@ -8,7 +8,7 @@
  */
 import { isFailure, unwrap } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { OPML } from "./index.js";
 

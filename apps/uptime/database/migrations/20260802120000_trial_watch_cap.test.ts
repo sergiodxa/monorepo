@@ -12,7 +12,7 @@
 import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { applyMigration, applyMigrations } from "~/app/test/db";
 

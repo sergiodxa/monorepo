@@ -9,7 +9,7 @@
 
 import { generateUUID } from "@sdxc/uuid/v4";
 import { setupServer } from "msw/node";
-import { afterAll, beforeAll, beforeEach } from "vitest";
+import { afterAll, beforeAll, beforeEach } from "vite-plus/test";
 
 import type { Newsletter } from "../contract.js";
 import type { Subscriber } from "../types.js";

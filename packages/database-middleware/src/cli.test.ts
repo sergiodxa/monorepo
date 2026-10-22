@@ -15,7 +15,7 @@ import type { Database as DataTable } from "remix/data-table";
 import { command, commands, createCLI, success } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { DB_COMMAND, Database, database, dbHandler } from "./cli.js";
 

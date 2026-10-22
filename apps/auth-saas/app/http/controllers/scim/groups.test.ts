@@ -10,7 +10,7 @@
  */
 
 import { PATCH_OP_SCHEMA } from "@sdxc/scim";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import {
 	buildScimHarness,

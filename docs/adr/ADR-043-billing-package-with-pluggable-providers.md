@@ -347,7 +347,12 @@ export interface Customer {
 }
 
 export type SubscriptionStatus =
-	"trialing" | "active" | "past_due" | "canceled" | "revoked" | "incomplete";
+	| "trialing"
+	| "active"
+	| "past_due"
+	| "canceled"
+	| "revoked"
+	| "incomplete";
 ```
 
 Normalized vocabularies are parsed at the provider boundary with `remix/data-schema`, not declared and hoped for. A platform status the provider cannot map is a mapping failure the conformance suite catches, because Pay's dead `STATUSES` constant is what happens otherwise: the vocabulary exists, nothing enforces it, and a predicate and a scope end up disagreeing about the same row.

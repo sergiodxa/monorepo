@@ -10,7 +10,7 @@
 /* @jsxImportSource remix/component */
 
 import { renderToStream } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Markdown } from "../index.js";
 import { FRAME_TAG } from "../plugin/frames.js";

@@ -8,7 +8,7 @@
 
 import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { ISSUES_SCHEMA, issuesFrom, toPointer, validationProblem } from "./issues.js";
 import { parseProblem } from "./parse.js";

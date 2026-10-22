@@ -8,7 +8,7 @@ import { renderToString } from "remix/component/server";
  * @copyright Sergio Xalambrí 2026
  */
 import { p } from "sdxc/u/size";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 describe("HTMLSelectElement under the Workers runtime types", () => {
 	test("is an Element", () => {

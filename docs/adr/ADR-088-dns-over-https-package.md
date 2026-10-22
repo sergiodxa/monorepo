@@ -99,7 +99,7 @@ What stays out, and where it lives:
 
 - Caching lives with the caller: every answer carries its TTL, and `@sdxc/cache`'s `fetch` stores it
 - Record identity for monitoring (MX preference re-printing, IPv6 canonical form, the `(name, type,
-value)` diff key) lives in `apps/uptime/app/lib/dns-record-value.ts`, which builds on
+  value)` diff key) lives in `apps/uptime/app/lib/dns-record-value.ts`, which builds on
   `parseRecordData` for TXT
 - SSRF and private-address policy live in `apps/uptime/app/services/trial-guard.ts`
 - Custom hostname registration and its TXT validation records live in `@sdxc/hostname`
@@ -446,7 +446,7 @@ control; only a public resolver sees them.
 ## Notes
 
 - Cloudflare's JSON endpoint is `https://cloudflare-dns.com/dns-query` with `Accept:
-application/dns-json`; Google's is `https://dns.google/resolve` and answers JSON regardless of
+  application/dns-json`; Google's is `https://dns.google/resolve` and answers JSON regardless of
   `Accept`
 - The package lowercases names and drops the trailing dot on output only; the query goes out as the
   caller wrote it, so an internationalized name must already be in its ASCII (punycode) form

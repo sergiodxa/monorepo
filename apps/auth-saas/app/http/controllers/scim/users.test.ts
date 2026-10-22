@@ -10,7 +10,7 @@
  */
 
 import { PATCH_OP_SCHEMA } from "@sdxc/scim";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	TENANT_ID_HEADER,

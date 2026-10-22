@@ -57,8 +57,8 @@ picks a version by its import path, and switching versions changes only that pat
 | `@sdxc/uuid`    | No generator                      | The `UUID` type, `isUUID`, `assertUUID`, errors |
 
 ```typescript
-import { generateUUID } from "@sdxc/uuid/v7";
 import { generateUUID as generateTokenId } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 ```
 
 The root entry point keeps validation only, so every module that creates IDs names its

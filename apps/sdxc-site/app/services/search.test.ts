@@ -9,7 +9,7 @@
 
 import { Markdown } from "sdxc/markdown";
 import { isSuccess } from "sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { prepareArticle, preparePackageReadme, tableOfContents } from "~/app/services/article";
 import { listGuides, MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";

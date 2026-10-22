@@ -4,7 +4,7 @@
  */
 
 import { isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import policy from "~/app/policies/policy";
 

@@ -9,7 +9,7 @@
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ParsedQuery, SearchClause, SearchTerm } from "./query.js";
 

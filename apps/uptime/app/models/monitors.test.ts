@@ -17,7 +17,7 @@ import { NotFound } from "@sdxc/data-model";
 import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { Monitors } from "~/app/models/monitors";
 import type { HttpP99Scope } from "~/app/services/analytics";

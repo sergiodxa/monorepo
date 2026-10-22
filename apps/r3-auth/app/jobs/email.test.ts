@@ -16,7 +16,7 @@ import { isComposedEmail, Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import emails from "~/app/emails";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";

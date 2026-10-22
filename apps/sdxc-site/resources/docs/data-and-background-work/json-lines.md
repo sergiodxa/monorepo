@@ -31,8 +31,8 @@ npm add @sdxc/http @sdxc/jsonl @sdxc/result remix
 line as the response is read, so memory stays flat however many records the export holds:
 
 ```typescript {% title="app/http/controllers/activity/export.ts" %}
-import { encode } from "@sdxc/jsonl";
 import { attachment } from "@sdxc/http/response";
+import { encode } from "@sdxc/jsonl";
 import { createAction } from "remix/router";
 
 import { activityEvents } from "~/app/models/activity";

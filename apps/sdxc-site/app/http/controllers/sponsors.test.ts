@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { MemoryCache } from "sdxc/cache/memory";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { SponsorRoster } from "~/app/services/sponsors";
 

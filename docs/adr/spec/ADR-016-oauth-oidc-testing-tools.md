@@ -103,7 +103,7 @@ Namespace `jwt`, two tools:
   error — no silent fallback to another key; when the header omits a `kid`, the
   sole key or the single EC/P-256 key is used); import it with
   `crypto.subtle.importKey("jwk", {kty,crv,x,y}, {name:"ECDSA",
-namedCurve:"P-256"}, false, ["verify"])`; verify the raw r‖s signature over
+  namedCurve:"P-256"}, false, ["verify"])`; verify the raw r‖s signature over
   `header.payload` with `crypto.subtle.verify`; then reject an expired (`exp`) or
   not-yet-valid (`nbf`) token. Any failure is a `ToolError`; only success returns
   the payload.

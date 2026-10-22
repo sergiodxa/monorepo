@@ -8,7 +8,7 @@
  */
 
 import { toUnixSeconds } from "@sdxc/dates";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import LogoutToken from "~/app/services/tokens/logout-token";
 

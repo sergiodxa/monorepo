@@ -12,7 +12,7 @@
 
 import * as s from "@sdxc/json-schema";
 import { Log } from "@sdxc/logger";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { ToolError } from "./errors.js";
 import { createHandler } from "./handler.js";

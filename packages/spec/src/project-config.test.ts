@@ -16,7 +16,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
 import { isFailure, isSuccess, success } from "@sdxc/result";
-import { expect, test, vi } from "vitest";
+import { expect, test, vi } from "vite-plus/test";
 
 import type { ToolContext } from "./plugin.js";
 import type { Value } from "./values.js";

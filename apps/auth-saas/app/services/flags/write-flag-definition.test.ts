@@ -13,7 +13,7 @@ import type { StoredFlagSet } from "@sdxc/flags-engine/store";
 import type { Database } from "remix/data-table";
 
 import { success } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 

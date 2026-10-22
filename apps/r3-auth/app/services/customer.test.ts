@@ -10,7 +10,7 @@
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { BillableSubject } from "~/app/services/customer";
 

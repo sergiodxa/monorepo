@@ -9,7 +9,7 @@
 import { parseDocument } from "@sdxc/html/document";
 import { isFailure, unwrap } from "@sdxc/result";
 import { parseSafe } from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { MF2 } from "./index.js";
 

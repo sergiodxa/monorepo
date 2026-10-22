@@ -200,6 +200,7 @@ Use React Router's multi-directory pattern with `flatRoutes()`:
 ```typescript
 // app/routes.ts
 import type { RouteConfig } from "@react-router/dev/routes";
+
 import { prefix } from "@react-router/dev/routes";
 import { flatRoutes } from "@react-router/fs-routes";
 

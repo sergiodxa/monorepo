@@ -296,8 +296,8 @@ import { toHTML } from "@sdxc/markdown/html";
 import { isFailure } from "@sdxc/result";
 import { outboundLinks, plan } from "@sdxc/webmention/sender";
 
-import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/initializers/dispatcher";
+import jobs from "~/app/jobs";
 import { sentTargets } from "~/app/models/mentions";
 import { findPost } from "~/app/models/posts";
 

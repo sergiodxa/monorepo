@@ -8,7 +8,7 @@
  */
 
 import { idempotencyKeys } from "@sdxc/idempotency/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { buildSubjectsHarness } from "~/app/test/harness/management/subjects";
 

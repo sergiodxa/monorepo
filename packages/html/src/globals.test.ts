@@ -9,7 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
-import { expectTypeOf, test } from "vitest";
+import { expectTypeOf, test } from "vite-plus/test";
 
 import type { DOMElement } from "./lib/dom.js";
 

@@ -59,8 +59,8 @@ A code drawn at a fixed size gets harder to scan as its version grows, because e
 smaller. `maxVersion` caps it, and data that needs more fails with `too-long` instead:
 
 ```typescript {% title="app/services/tickets/badge-code.ts" %}
-import { QR } from "@sdxc/qr";
 import { currentLog } from "@sdxc/logger";
+import { QR } from "@sdxc/qr";
 import { isFailure } from "@sdxc/result";
 
 export function badgeCode(url: string) {

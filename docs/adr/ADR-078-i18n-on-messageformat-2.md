@@ -167,7 +167,7 @@ function createI18n<R extends Messages>(options: {
 ```
 
 - **Lookup.** `t(key, values?)` walks the chain `[locale, primary(locale), fallback,
-primary(fallback)]` (deduplicated, restricted to languages in `resources`) for the first string
+  primary(fallback)]` (deduplicated, restricted to languages in `resources`) for the first string
   leaf at the dotted `key`, and returns `key` when there is none.
 - **Compilation.** Each hit becomes a `MessageFormat` for the language it was found in, compiled
   on first use and cached per language and key in a module-level `Map`. Messages are immutable, so

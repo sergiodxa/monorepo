@@ -10,7 +10,7 @@
 import { parse, stringify } from "@sdxc/icalendar";
 import { stringifyRecurrence } from "@sdxc/icalendar/rrule";
 import { isSuccess, unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 

@@ -9,7 +9,7 @@
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { column as c, Database, table } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { createD1Database } from "./d1.js";
 import { createSqlStorage } from "./sql-storage.js";

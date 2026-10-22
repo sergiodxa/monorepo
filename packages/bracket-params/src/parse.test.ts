@@ -10,7 +10,7 @@ import { isFailure, isSuccess } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { ParseOptions } from "./index.js";
 

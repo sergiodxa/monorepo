@@ -207,11 +207,12 @@ whose error code says what to do with the row:
 ```typescript {% title="app/services/notifications/push.ts" %}
 import type { WebPushError } from "@sdxc/web-push";
 import type { Database } from "remix/data-table";
-import type { PushSubscriptionRow } from "~/app/models/push-subscriptions";
 
 import { isFailure } from "@sdxc/result";
 import { WebPush } from "@sdxc/web-push";
 import { env } from "cloudflare:workers";
+
+import type { PushSubscriptionRow } from "~/app/models/push-subscriptions";
 
 import Subscriptions from "~/app/models/push-subscriptions";
 

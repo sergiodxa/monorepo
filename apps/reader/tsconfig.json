@@ -17,7 +17,7 @@
 		"jsxImportSource": "remix/component",
 		"types": [
 			"@total-typescript/ts-reset",
-			"@cloudflare/vitest-pool-workers/types",
+			"@cloudflare/vitest-plugin/types",
 			"vite/client",
 			"bun",
 			"node"

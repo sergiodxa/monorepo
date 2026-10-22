@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expectTypeOf, test } from "vitest";
+import { describe, expectTypeOf, test } from "vite-plus/test";
 
 import type { IsAny } from "./is-any.js";
 

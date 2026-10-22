@@ -87,8 +87,8 @@ import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { serializeInvoice } from "~/app/models/invoice";
 import { paging } from "~/app/http/validators/paging";
+import { serializeInvoice } from "~/app/models/invoice";
 import problems from "~/config/problems";
 import { invoices } from "~/database/schema";
 import routes from "~/routes/api";

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { endOfDay, startOfDay, startOfWeek } from "./boundaries.js";
 import { diffInDays, eachDayOfInterval, isSameDay } from "./compare.js";

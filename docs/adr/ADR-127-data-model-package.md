@@ -1404,7 +1404,7 @@ and recursion guards on top.
   issue paths.
 - `./testing` gains `overrideModel(model, build)`, which replaces members in every binding of a
   model, including the per-request ones middleware makes, and `publishModels(ctx, registry,
-context)` for a test running a handler on a context it built.
+  context)` for a test running a handler on a context it built.
 - A chained call on a lazy entry whose import fails rejects once, at the end of the chain; the
   intermediate calls' promises no longer surface as unhandled rejections.
 - Still open: a `.default()` column needs an `optional` entry, and `created_at`/`updated_at` are

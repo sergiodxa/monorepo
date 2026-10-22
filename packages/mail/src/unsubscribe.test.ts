@@ -9,7 +9,7 @@
 
 import { Base64Url, Hex, hmac } from "@sdxc/crypto";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { MailError } from "./errors.js";
 import {

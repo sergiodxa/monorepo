@@ -9,7 +9,7 @@
 
 import { success } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { expectTypeOf, test } from "vitest";
+import { expectTypeOf, test } from "vite-plus/test";
 
 import { createLanguage } from "./language.js";
 import { defineOperator } from "./operator.js";

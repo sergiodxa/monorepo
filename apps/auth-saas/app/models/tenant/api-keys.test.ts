@@ -11,7 +11,7 @@
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { ApiKeyVerificationCache, CreateApiKeyInput } from "~/app/models/tenant/api-keys";
 import type { AuditActor } from "~/app/models/tenant/audit-events";

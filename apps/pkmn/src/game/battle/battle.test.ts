@@ -10,7 +10,7 @@
 import type { Random } from "@sdxc/random";
 
 import { unwrap } from "@sdxc/result";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import type { NatureId } from "~/game/data/nature";
 import type { SpeciesId } from "~/game/data/species";

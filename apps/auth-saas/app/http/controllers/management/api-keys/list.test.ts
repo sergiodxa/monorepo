@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { AuditActor } from "~/app/models/tenant/audit-events";
 import type { ApiKeysHarness } from "~/app/test/harness/management/api-keys";

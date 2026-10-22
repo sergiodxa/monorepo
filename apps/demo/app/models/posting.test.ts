@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import { POSTING_LIFETIME_DAYS } from "~/app/models/posting";
 import { bindModels } from "~/app/test/models";

@@ -11,7 +11,7 @@ import type { AnyAbility, Decision } from "@sdxc/authz";
 
 import { testAccess } from "@sdxc/authz/testing";
 import { isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Switches } from "~/app/policies/policy";
 

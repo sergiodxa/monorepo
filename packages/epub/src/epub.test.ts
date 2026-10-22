@@ -8,7 +8,7 @@
  */
 import { isFailure, isSuccess } from "@sdxc/result";
 import { unzipSync } from "fflate";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { EPUB } from "./epub.js";
 import {

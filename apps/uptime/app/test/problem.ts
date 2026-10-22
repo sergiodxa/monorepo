@@ -8,7 +8,7 @@
  */
 
 import { isSuccess } from "@sdxc/result";
-import { expect } from "vitest";
+import { expect } from "vite-plus/test";
 
 import { apiProblems } from "~/app/services/api/problems";
 

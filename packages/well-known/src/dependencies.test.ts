@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 import { findModuleReferences } from "@sdxc/codemod";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /** The packages a document subpath may import. */
 const ALLOWED = new Set([

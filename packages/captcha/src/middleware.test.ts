@@ -14,7 +14,7 @@ import { setupServer } from "msw/node";
 import * as s from "remix/data-schema";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { MemoryCaptcha } from "./memory.js";
 import { captcha } from "./middleware.js";

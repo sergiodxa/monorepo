@@ -15,7 +15,7 @@ import type { ExecReply } from "@sdxc/cli/test";
 
 import { invoke } from "@sdxc/cli/test";
 import { success } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { createSDXC } from "../cli.js";
 

@@ -55,8 +55,7 @@ import { isFailure } from "@sdxc/result";
 let encoded = QR.encode(payload, { maxVersion: 10 });
 
 if (isFailure(encoded)) {
-	if (encoded.error.code === "too-long")
-		encoded.error.bits; // { needed, available }
+	if (encoded.error.code === "too-long") encoded.error.bits; // { needed, available }
 	else encoded.error.message; // which option was out of range
 }
 ```
@@ -122,10 +121,11 @@ Code `invalid-options`: a version outside 1–40, `minVersion` above `maxVersion
 Encode where a failure can be logged, and render the code above the setup key, which stays as the text alternative.
 
 ```tsx
+import type { Handle } from "remix/component";
+
 import { QR } from "@sdxc/qr";
 import { QrCode } from "@sdxc/qr/ui";
 import { isSuccess } from "@sdxc/result";
-import type { Handle } from "remix/component";
 
 function EnrolPage(handle: Handle<{ uri: string; setupKey: string; qr: QR | null }>) {
 	return () => {

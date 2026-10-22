@@ -10,7 +10,7 @@
 import { createRecordingCache, NON_CACHEABLE_POLICY } from "@sdxc/workers-cache";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 

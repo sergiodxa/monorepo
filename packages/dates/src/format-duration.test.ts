@@ -9,7 +9,7 @@
 
 import type { DurationString } from "@sdxc/duration";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { formatDuration } from "./format-duration.js";
 

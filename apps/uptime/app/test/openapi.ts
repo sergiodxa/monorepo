@@ -10,7 +10,7 @@
 import type { Middleware } from "remix/router";
 
 import { createConformanceRecorder } from "@sdxc/openapi/testing";
-import { afterAll, expect } from "vitest";
+import { afterAll, expect } from "vite-plus/test";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
 

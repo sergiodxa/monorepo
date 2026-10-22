@@ -21,7 +21,7 @@ import { Log } from "@sdxc/logger";
 import { success, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { MONITORING_PRODUCT, PING_METER } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";

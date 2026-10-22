@@ -9,7 +9,7 @@
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env } from "cloudflare:test";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { SponsorRoster } from "~/app/services/sponsors";
 

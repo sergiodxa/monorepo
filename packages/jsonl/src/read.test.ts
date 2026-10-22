@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Entry, JSONLError, ReadOptions } from "./index.js";
 

@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { ArtifactStore } from "../artifacts.js";
 import type { SpecError } from "../errors.js";

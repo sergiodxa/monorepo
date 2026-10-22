@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Billing } from "../core/contract.js";
 import type { OptionalCapability } from "../core/supports.js";

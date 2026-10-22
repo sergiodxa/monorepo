@@ -8,7 +8,7 @@
  */
 
 import { parseHTML } from "linkedom";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { DOMElement } from "./dom.js";
 

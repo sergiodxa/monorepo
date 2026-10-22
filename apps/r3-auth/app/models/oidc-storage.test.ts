@@ -11,7 +11,7 @@ import type { Database } from "remix/data-table";
 
 import { createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { AuthModels } from "~/app/models";
 

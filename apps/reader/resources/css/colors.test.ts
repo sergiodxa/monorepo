@@ -19,7 +19,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /** The app's own palette, which is where every `--ui-color-{scale}-{step}` is declared. */
 const PALETTE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "colors.css"), "utf8");

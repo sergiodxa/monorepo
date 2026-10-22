@@ -7,7 +7,7 @@
  */
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import { pageRenderer } from "~/app/test/renderer";

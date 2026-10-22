@@ -13,7 +13,7 @@
 import type { Middleware } from "remix/router";
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { headRequests } from "./head-requests.js";
 

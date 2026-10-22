@@ -9,7 +9,7 @@
 
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { isClientIdUrl, resolveCimdClient } from "~/app/services/tenant/client-id-metadata";
 

@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 import { command, commands, createCLI, success } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
 import { failure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { MailCommandOptions } from "./cli.js";
 import type { NormalizedMessage, SentMessage, Transport } from "./types.js";

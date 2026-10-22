@@ -13,7 +13,7 @@ import { readBytes } from "@sdxc/outbound";
 import { isFailure } from "@sdxc/result";
 import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import {
 	hostOf,

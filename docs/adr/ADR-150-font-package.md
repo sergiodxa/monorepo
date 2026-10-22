@@ -50,7 +50,7 @@ for (let { glyph, x } of line.glyphs)
   - `layout(text, size, options?: { tracking?: number; kerning?: boolean }): Font.Line` —
     iterates code points, applies kerning (on by default) and `tracking` (extra pixels after
     every glyph but the last), and returns `{ glyphs: { glyph, codePoint, x, advance }[],
-width }` in pixels.
+    width }` in pixels.
   - `measure(text, size, options?)` — `layout(...).width` without building the glyph list.
 - No shaping: no GSUB ligatures, no GPOS, no bidirectional text. Text the font has no glyph
   for draws `.notdef`.

@@ -16,7 +16,7 @@ import type { Middleware } from "remix/router";
 import i18n from "@sdxc/i18n/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import en from "~/resources/locales/en";

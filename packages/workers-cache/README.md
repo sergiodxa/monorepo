@@ -244,8 +244,9 @@ A middleware shared by a group of routes adds a tag to every response in it, so 
 the whole group. Tags accumulate, so each handler's own tags join it.
 
 ```typescript
-import { createTags, purge } from "@sdxc/workers-cache";
 import type { Middleware } from "remix/router";
+
+import { createTags, purge } from "@sdxc/workers-cache";
 
 let TAGS = createTags({
 	docs: () => "docs",
@@ -300,9 +301,10 @@ router.post("/posts/:id", async (ctx) => {
 directly, and a `PurgeError` tells you what stayed stale.
 
 ```typescript
+import type { CacheInterface } from "@sdxc/workers-cache";
+
 import { isFailure } from "@sdxc/result";
 import { purge } from "@sdxc/workers-cache";
-import type { CacheInterface } from "@sdxc/workers-cache";
 
 export async function purgeBlog(cache: CacheInterface) {
 	let result = await purge(cache, { prefixes: ["example.com/blog/"] });

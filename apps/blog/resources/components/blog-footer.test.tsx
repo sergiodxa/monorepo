@@ -9,7 +9,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { ACTOR_ID } from "~/config/activitypub";
 import { BlogFooter, FEDIVERSE_HANDLE, FOOTER_TRACKS } from "~/resources/components/blog-footer";

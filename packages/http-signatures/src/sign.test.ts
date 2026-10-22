@@ -10,7 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isFailure, success, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { importEd25519Private, rfc9421Request, TEST_BODY } from "./fixtures/keys.js";
 

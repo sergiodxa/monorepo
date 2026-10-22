@@ -8,7 +8,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { fromDayKey, parseDayKey, toDayKey } from "./day-key.js";
 import { InvalidDayKeyError } from "./invalid-day-key-error.js";

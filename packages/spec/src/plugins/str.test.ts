@@ -11,7 +11,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { SpecError } from "../errors.js";
 import type { ToolArg, Value } from "../values.js";

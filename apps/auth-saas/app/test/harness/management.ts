@@ -16,7 +16,7 @@ import { HostnameClient } from "@sdxc/hostname";
 import { createConformanceRecorder } from "@sdxc/openapi/testing";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { afterAll, expect } from "vitest";
+import { afterAll, expect } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 

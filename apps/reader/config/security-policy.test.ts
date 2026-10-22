@@ -9,7 +9,7 @@
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { SECURITY_POLICY } from "~/config/security-policy";
 

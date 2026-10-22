@@ -217,8 +217,8 @@ import { renderToString } from "remix/component/server";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Releases from "~/app/models/release";
 import { badgeFont } from "~/app/initializers/badge-font";
+import Releases from "~/app/models/release";
 import { badgeLayout } from "~/app/services/badges/badge-layout";
 import routes from "~/routes/web";
 

@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe } from "vitest";
+import { describe } from "vite-plus/test";
 
 import type { ConformanceOptions } from "../../testing/conformance.js";
 

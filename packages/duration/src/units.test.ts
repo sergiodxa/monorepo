@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { LONG_UNIT_MS, longUnitToMs, SECOND_MS, SHORT_UNIT_MS, shortUnitToMs } from "./units.js";
 

@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { backdropFilterFunction, COMPOSITE_BACKDROP_FILTER } from "./backdrop-filter.js";
 import { declarations } from "./serialize.js";

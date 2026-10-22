@@ -8,7 +8,7 @@
 import { unwrap } from "@sdxc/result";
 import { css } from "remix/component";
 import { renderToString } from "remix/component/server";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import type { SvgPath } from "./svg-path.js";
 

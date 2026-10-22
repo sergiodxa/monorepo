@@ -9,7 +9,7 @@
  */
 
 import { parseFlagSet } from "@sdxc/flags-engine";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { features, FLAG_SET, flags } from "~/app/initializers/flags";
 import { SWEEP_CONCURRENCY } from "~/app/services/concurrency";
