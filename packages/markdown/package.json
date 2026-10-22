@@ -21,6 +21,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/yaml": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"

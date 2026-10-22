@@ -7,6 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 
 import type { Markdown } from "../index.js";
@@ -126,10 +127,11 @@ export function variables(
 			return { type: "text", value: String(value), position: node.position };
 		}
 
-		let kind;
-		if (Array.isArray(value)) kind = "a list";
-		else if (value === null) kind = "null";
-		else kind = "an object";
+		let kind = iife(() => {
+			if (Array.isArray(value)) return "a list";
+			if (value === null) return "null";
+			return "an object";
+		});
 		throw new Error(
 			`$${node.name} holds ${kind}, and only a string, number or boolean can stand in text`,
 		);

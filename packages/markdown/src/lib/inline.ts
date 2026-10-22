@@ -1,3 +1,5 @@
+import type { Result } from "@sdxc/result";
+
 /**
  * The second phase of the reference strategy: the delimiter stack over one leaf
  * block's text, producing emphasis, links, code spans, and this dialect's inline
@@ -6,8 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Markdown } from "../index.js";
@@ -600,9 +601,10 @@ class InlineRun {
 
 		if (below) below.bracketAfter = true;
 
-		let previousLink;
-		if (below) previousLink = below.image ? below.previousLink : below;
-		else previousLink = null;
+		let previousLink = iife(() => {
+			if (below) return below.image ? below.previousLink : below;
+			return null;
+		});
 		this.#brackets = {
 			cell,
 			index,
@@ -1086,10 +1088,11 @@ class InlineRun {
 	 * @returns The next closer to consider
 	 */
 	#wrap(opener: Delimiter, closer: Delimiter): Delimiter | null {
-		let used;
-		if (opener.char === "~") used = closer.length;
-		else if (closer.length >= 2 && opener.length >= 2) used = 2;
-		else used = 1;
+		let used = iife(() => {
+			if (opener.char === "~") return closer.length;
+			if (closer.length >= 2 && opener.length >= 2) return 2;
+			return 1;
+		});
 
 		opener.length -= used;
 		closer.length -= used;
@@ -1103,10 +1106,11 @@ class InlineRun {
 		let children = mergeAdjacentText(this.#cells.extract(openerCell.next, closerCell));
 		let position = this.#text.position(openerCell.end, closerCell.start);
 
-		let emphasis: Markdown.Emphasis | Markdown.Strong | Markdown.Strikethrough;
-		if (opener.char === "~") emphasis = { type: "strikethrough", children, position };
-		else if (used === 1) emphasis = { type: "emphasis", children, position };
-		else emphasis = { type: "strong", children, position };
+		let emphasis = iife((): Markdown.Emphasis | Markdown.Strong | Markdown.Strikethrough => {
+			if (opener.char === "~") return { type: "strikethrough", children, position };
+			if (used === 1) return { type: "emphasis", children, position };
+			return { type: "strong", children, position };
+		});
 		this.#cells.insertAfter(openerCell, emphasis, openerCell.end, closerCell.start);
 
 		this.#trim(openerCell, opener);

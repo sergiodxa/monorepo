@@ -1,3 +1,5 @@
+import type { Result } from "@sdxc/result";
+
 /**
  * The dialect's two extra syntaxes, scanned and read in one place: the `{% … %}`
  * annotation that decorates a block and the `<name …>` element that creates one.
@@ -6,8 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-
+import { iife } from "@sdxc/iife";
 import { failure, success } from "@sdxc/result";
 
 import type { Markdown } from "../index.js";
@@ -346,10 +347,11 @@ function readExpression(text: string, start: number, locate: Locate): ValueRead 
 
 	let word = KEYWORD.exec(text.slice(start))?.[0];
 	if (word !== undefined) {
-		let value;
-		if (word === "true") value = true;
-		else if (word === "false") value = false;
-		else value = null;
+		let value = iife(() => {
+			if (word === "true") return true;
+			if (word === "false") return false;
+			return null;
+		});
 		return { value, end: start + word.length };
 	}
 
