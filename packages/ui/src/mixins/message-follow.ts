@@ -192,7 +192,6 @@ function fulfillScrollRequest(host: HTMLElement, request: ScrollFollowModel.Scro
 				block: request.align,
 				behavior: request.smooth ? resolveScrollBehavior() : "instant",
 			});
-			return;
 		}
 	}
 }

@@ -146,7 +146,6 @@ export const calendarKeys = createMixin<HTMLElement, [model: CalendarModel]>((ha
 						case "End":
 							event.preventDefault();
 							model.focusMonthEnd();
-							return;
 					}
 				}),
 			],

@@ -122,11 +122,9 @@ export const longPress: MixinFactory<HTMLElement, [options?: LongPress.Options],
 		}
 
 		return (options = {}, props = options as ElementProps) => {
-			if (props === options) {
-				options = {};
-			}
+			let resolved = props === options ? {} : options;
 
-			let duration = options.duration ?? DEFAULT_DURATION;
+			let duration = resolved.duration ?? DEFAULT_DURATION;
 
 			return createElement(handle.element, {
 				mix: [

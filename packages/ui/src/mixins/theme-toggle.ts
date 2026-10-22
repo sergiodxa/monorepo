@@ -171,11 +171,9 @@ function applyMode(mode: ThemeToggle.Mode): void {
 export const themeToggle: MixinFactory<HTMLElement, [options?: ThemeToggle.Options], ElementProps> =
 	createMixin<HTMLElement, [options?: ThemeToggle.Options], ElementProps>((handle) => {
 		return (options = {}, props = options as ElementProps) => {
-			if (props === options) {
-				options = {};
-			}
+			let resolved = props === options ? {} : options;
 
-			let cookieName = options.cookieName ?? THEME_COOKIE_NAME;
+			let cookieName = resolved.cookieName ?? THEME_COOKIE_NAME;
 
 			return createElement(handle.element, {
 				mix: [

@@ -301,7 +301,6 @@ export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((h
 							if (!(event.ctrlKey || event.metaKey)) return;
 							event.preventDefault();
 							model.selectAll();
-							return;
 					}
 				}),
 			],
