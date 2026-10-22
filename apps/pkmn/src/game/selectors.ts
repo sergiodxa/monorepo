@@ -417,14 +417,18 @@ export function selectBattleView(gameData: GameData, world: World, battleId: Bat
 	let participants = world.battleParticipants[battleId];
 	if (!phase || !participants) throw new ReferenceError(`Missing battle ${battleId}.`);
 
-	let pendingRequest = world.battlePendingTurn[battleId]
-		? { type: "turn" as const, count: world.battlePendingTurn[battleId]!.requests.length }
-		: world.battlePendingReplacement[battleId]
-			? {
-					type: "replacement" as const,
-					count: world.battlePendingReplacement[battleId]!.requests.length,
-				}
-			: null;
+	let pendingRequest;
+	if (world.battlePendingTurn[battleId])
+		pendingRequest = {
+			type: "turn" as const,
+			count: world.battlePendingTurn[battleId]!.requests.length,
+		};
+	else if (world.battlePendingReplacement[battleId])
+		pendingRequest = {
+			type: "replacement" as const,
+			count: world.battlePendingReplacement[battleId]!.requests.length,
+		};
+	else pendingRequest = null;
 
 	return {
 		id: battleId,

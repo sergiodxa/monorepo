@@ -1170,8 +1170,10 @@ export class Battle {
 		}
 
 		if (effects.spikesLayers > 0 && grounded && canResolveNextHazard()) {
-			let fraction =
-				effects.spikesLayers === 1 ? 1 / 8 : effects.spikesLayers === 2 ? 1 / 6 : 1 / 4;
+			let fraction;
+			if (effects.spikesLayers === 1) fraction = 1 / 8;
+			else if (effects.spikesLayers === 2) fraction = 1 / 6;
+			else fraction = 1 / 4;
 			let damage = Math.max(
 				1,
 				Math.floor(getCreatureStat(this.gameData, combatant.creature, Stat.HP) * fraction),

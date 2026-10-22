@@ -519,7 +519,14 @@ interface GraphicPanelProps {
 function GraphicPanel(handle: Handle<GraphicPanelProps>) {
 	return () => {
 		let { graphic, onChange } = handle.props;
-		let mode = graphic === null ? "none" : "atlas" in graphic ? "atlas" : "image";
+		let mode;
+		if (graphic === null) mode = "none";
+		else if ("atlas" in graphic) mode = "atlas";
+		else mode = "image";
+		let graphicLabel;
+		if (mode === "none") graphicLabel = "none";
+		else if (mode === "atlas") graphicLabel = "atlas";
+		else graphicLabel = "img";
 		return (
 			<section mix={css(PANEL)}>
 				<h4 mix={PANEL_TITLE}>Graphic</h4>
@@ -537,7 +544,7 @@ function GraphicPanel(handle: Handle<GraphicPanelProps>) {
 							background: "#18181b",
 						})}
 					>
-						{graphic === null ? "none" : "atlas" in graphic ? "atlas" : "img"}
+						{graphicLabel}
 					</div>
 					<label mix={css({ ...LABEL_STYLE, flex: "1" })}>
 						Source
@@ -952,11 +959,10 @@ function summarize(command: EventCommand): string {
 			return `Show Choices: ${command.choices.map((choice) => choice.label || "…").join(", ")}`;
 		case "conditional-branch": {
 			let condition = command.condition;
-			let label = condition.switch
-				? `switch ${condition.switch}`
-				: condition.selfSwitch
-					? `self ${condition.selfSwitch}`
-					: "…";
+			let label;
+			if (condition.switch) label = `switch ${condition.switch}`;
+			else if (condition.selfSwitch) label = `self ${condition.selfSwitch}`;
+			else label = "…";
 			return `Conditional Branch: ${label} ON`;
 		}
 		case "control-switch":
@@ -1009,12 +1015,10 @@ function CommandsPanel(handle: Handle<CommandsPanelProps>) {
 		let rows: CommandRow[] = [];
 		flattenCommands(commands, [], 0, rows);
 
-		let selected =
-			selectedPath && !selectedPath[selectedPath.length - 1]
-				? null
-				: selectedPath
-					? readCommand(commands, selectedPath)
-					: null;
+		let selected = null;
+		if (selectedPath && selectedPath[selectedPath.length - 1]) {
+			selected = readCommand(commands, selectedPath);
+		}
 
 		function insertAt(target: CommandPath) {
 			let command = defaultCommand(insertKind, {

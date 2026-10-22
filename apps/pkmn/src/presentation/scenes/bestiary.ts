@@ -57,9 +57,13 @@ export class BestiaryScene implements Scene {
 			drawText(ctx, "No sightings yet.", 16, 30, { color: theme.TEXT.muted });
 			return;
 		}
-		let items = bestiary.entries.map(
-			(entry) => `${entry.name}  ${entry.caught ? "◆ caught" : entry.seen ? "○ seen" : "-"}`,
-		);
+		let items = bestiary.entries.map((entry) => {
+			let mark;
+			if (entry.caught) mark = "◆ caught";
+			else if (entry.seen) mark = "○ seen";
+			else mark = "-";
+			return `${entry.name}  ${mark}`;
+		});
 		this.list.render(ctx, items, 8, 20, 224);
 	}
 }

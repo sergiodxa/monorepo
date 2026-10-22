@@ -107,12 +107,9 @@ export class HpBar {
 		ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
 		ctx.fillStyle = theme.HP_BAR_COLOR.track;
 		ctx.fillRect(x, y, width, height);
-		ctx.fillStyle =
-			ratio > 0.5
-				? theme.HP_BAR_COLOR.fillHigh
-				: ratio > 0.2
-					? theme.HP_BAR_COLOR.fillMedium
-					: theme.HP_BAR_COLOR.fillLow;
+		if (ratio > 0.5) ctx.fillStyle = theme.HP_BAR_COLOR.fillHigh;
+		else if (ratio > 0.2) ctx.fillStyle = theme.HP_BAR_COLOR.fillMedium;
+		else ctx.fillStyle = theme.HP_BAR_COLOR.fillLow;
 		ctx.fillRect(x, y, Math.round(width * ratio), height);
 
 		if (showNumbers) {
