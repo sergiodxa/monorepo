@@ -156,10 +156,10 @@ const NUMBER_CODEC: Codec<number> = {
 
 /** Stores booleans as `"1"` and `"0"`, reading the words `true` and `false` too. */
 const BOOLEAN_CODEC: Codec<boolean> = {
-	encode: (value) =>
-		typeof value === "boolean"
-			? { ok: true, text: value ? "1" : "0" }
-			: { ok: false, message: "Expected true or false" },
+	encode: (value) => {
+		if (typeof value === "boolean") return { ok: true, text: value ? "1" : "0" };
+		return { ok: false, message: "Expected true or false" };
+	},
 	decode: (text) => {
 		if (text === "1" || text === "true") return true;
 		if (text === "0" || text === "false") return false;
@@ -170,7 +170,10 @@ const BOOLEAN_CODEC: Codec<boolean> = {
 /** Accepts anything `Date` parses, stored and read back as ISO 8601. */
 const TIMESTAMP_CODEC: Codec<string> = {
 	encode: (value) => {
-		let date = value instanceof Date ? value : typeof value === "string" ? new Date(value) : null;
+		let date;
+		if (value instanceof Date) date = value;
+		else if (typeof value === "string") date = new Date(value);
+		else date = null;
 		if (date === null || Number.isNaN(date.getTime())) {
 			return { ok: false, message: "Expected a date" };
 		}
