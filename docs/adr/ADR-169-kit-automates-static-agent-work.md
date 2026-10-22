@@ -407,19 +407,18 @@ overrides / deploy-list wiring; reinventing create drifts from `@sdxc/kit` on ev
 - [x] Kit `run.entry` in `.config/sdxc.jsonc` (default `bootstrap/cli.ts`); schema via `sdxc:generate`
 - [x] Monorepo `cli/index.ts` + `cli/commands/doctor`, `"cli"` / `"doctor"` scripts, root
       `.config/sdxc.jsonc` with `run.entry: "cli/index.ts"`
-- [ ] Migrate `release` / `release bootstrap` into `cli/commands/`
-- [ ] Implement `sdxc fix` for command-shaped repairs (kit item 1)
-- [ ] Implement `sdxc fix env` (kit item 2)
-- [ ] Implement model/email registration repairs (kit item 3)
-- [ ] Implement `make secret` / `make binding` (kit item 4)
-- [ ] Implement `make do` (kit item 5)
-- [ ] Implement `sdxc setup` (list features, shared plan) + `setup auth` against r3-auth;
+- [x] Migrate `release` / `release bootstrap` / `release check-commits` into `cli/commands/`
+- [x] Implement `sdxc fix` for command-shaped repairs (kit item 1)
+- [x] Implement `sdxc fix env` (kit item 2)
+- [x] Implement model/email registration repairs (kit item 3)
+- [x] Implement `make secret` / `make binding` (kit item 4)
+- [x] Implement `make do` (kit item 5)
+- [x] Implement `sdxc setup` (list features, shared plan) + `setup auth` against r3-auth;
       defer `--provider auth-saas` until that issuer is ready for relying parties (kit item 6)
-- [ ] After `setup auth`, add the next catalog row that still costs agent turns (`billing` /
-      `flags` are the likely pair) (kit item 7)
-- [ ] Add CLI `package create` (create-package skill → command)
-- [ ] Add CLI `app register` (monorepo wiring after `sdxc create`, not a second scaffolder)
-- [ ] Point GHA at `bun run cli` / `sdxc run`; sync Deploy-app options; dry-run deploy if needed
+- [x] After `setup auth`, add `billing` and `flags` catalog rows (kit item 7)
+- [x] Add CLI `package create` (create-package skill → command)
+- [x] Add CLI `app register` (monorepo wiring after `sdxc create`, not a second scaffolder)
+- [x] Point GHA at `bun run cli`; sync Deploy-app options; dry-run deploy input already present
 - [ ] Measure agent turns before adding further kit kinds, `setup` features, or root commands
 
 ## Notes
