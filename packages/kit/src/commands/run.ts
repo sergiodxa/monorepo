@@ -1,7 +1,8 @@
 /**
- * The `sdxc run` handler: runs the project's own command line, `bootstrap/cli.ts`, with the
- * project's runtime and every token after `run` as typed, so a globally installed `sdxc` reaches
- * any project's commands without a package script.
+ * The `sdxc run` handler: runs the project's own command line with the project's runtime and
+ * every token after `run` as typed, so a globally installed `sdxc` reaches any project's
+ * commands without a package script. The entry module defaults to `bootstrap/cli.ts` and a
+ * project overrides it with `run.entry` in `.config/sdxc.jsonc`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,8 +21,8 @@ import { project } from "../middleware.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { readManifest } from "../upgrade/project.js";
 
-/** Where the app layout puts an app's command line, relative to the project root. */
-export const CLI_ENTRY = "bootstrap/cli.ts";
+/** Where an app's command line starts when `run.entry` is left at its default. */
+export const DEFAULT_CLI_ENTRY = "bootstrap/cli.ts";
 
 /**
  * `PATH` with the project's `node_modules/.bin` first, as a package script has it, so a child
@@ -36,13 +37,16 @@ export function projectPath(root: string, path: string | undefined): string {
 }
 
 /**
- * The command that starts the project's command line with `args`: under Bun for a project on
- * Bun and under Node otherwise.
+ * The command that starts the project's command line at `entry` with `args`: under Bun for a
+ * project on Bun and under Node otherwise.
  *
  * @param root - The project root, whose `package.json` and lock file name the package manager
+ * @param entry - The module to start, relative to the project root
+ * @param args - Tokens after `sdxc run`
  */
 export async function commandLine(
 	root: string,
+	entry: string,
 	args: readonly string[],
 ): Promise<Result<string[], Error>> {
 	let manifest = await readManifest(root);
@@ -51,26 +55,28 @@ export async function commandLine(
 		declared: manifest.data.manifest.packageManager,
 		findLockFile: lockFileAtOrAbove(root),
 	});
-	return success([manager.name === "bun" ? "bun" : "node", CLI_ENTRY, ...args]);
+	return success([manager.name === "bun" ? "bun" : "node", entry, ...args]);
 }
 
 /**
- * Runs `bootstrap/cli.ts` under Bun for a project on Bun and under Node otherwise, with its
- * output on the terminal and the project's `node_modules/.bin` first on `PATH`, as a package
- * script has it; the app's exit code is `sdxc run`'s, and only the app's messages print on failure.
+ * Runs the configured command-line entry under Bun for a project on Bun and under Node
+ * otherwise, with its output on the terminal and the project's `node_modules/.bin` first on
+ * `PATH`, as a package script has it; the app's exit code is `sdxc run`'s, and only the app's
+ * messages print on failure.
  */
 export default createCommand(SDXC_COMMANDS.run, {
 	middleware: [project()],
 	/** Fails naming the missing entry; otherwise hands the app's exit code back unchanged. */
 	async handler(ctx) {
 		let root = ctx.project.root;
-		let entry = join(root, CLI_ENTRY);
-		if (!isSuccess(await wrap(() => stat(entry)))) {
+		let entry = ctx.project.config.run.entry;
+		let absolute = join(root, entry);
+		if (!isSuccess(await wrap(() => stat(absolute)))) {
 			return failure(
-				new Error(`${CLI_ENTRY} not found in ${root}; an app's command line starts there`),
+				new Error(`${entry} not found in ${root}; an app's command line starts there`),
 			);
 		}
-		let command = await commandLine(root, ctx.arguments.args);
+		let command = await commandLine(root, entry, ctx.arguments.args);
 		if (isFailure(command)) return command;
 		let ran = await ctx.exec(command.data, {
 			cwd: root,
