@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Discovery } from "../../discovery.js";
@@ -277,10 +278,11 @@ function applyFiltered(
 	if (matched.length === 0) {
 		let pinned = op === "add" && target.filter ? pinnedValues(target.filter, attribute) : null;
 		if (!pinned) return badRequest("noTarget", `${target.text} matches no value.`);
-		let created;
-		if (sub) created = { ...pinned, [sub.name]: value };
-		else if (isWireObject(value)) created = { ...pinned, ...value };
-		else created = null;
+		let created = iife(() => {
+			if (sub) return { ...pinned, [sub.name]: value };
+			if (isWireObject(value)) return { ...pinned, ...value };
+			return null;
+		});
 		if (!created) return badRequest("invalidValue", `${target.text} needs an object value.`);
 		values.push(created);
 		keepOnePrimary(values, [created]);
@@ -298,9 +300,10 @@ function applyFiltered(
 	let written: unknown[] = [];
 	for (let [index, item] of values.entries()) {
 		if (!matched.includes(item)) continue;
-		let next;
-		if (op === "replace") next = { ...value };
-		else next = { ...(isWireObject(item) ? item : {}), ...value };
+		let next = iife(() => {
+			if (op === "replace") return { ...value };
+			return { ...(isWireObject(item) ? item : {}), ...value };
+		});
 		values[index] = next;
 		written.push(next);
 	}
@@ -444,10 +447,11 @@ function applyMultiValued(
 		return null;
 	}
 
-	let incoming: unknown[];
-	if (Array.isArray(value)) incoming = value;
-	else if (value === undefined) incoming = [];
-	else incoming = [value];
+	let incoming = iife((): unknown[] => {
+		if (Array.isArray(value)) return value;
+		if (value === undefined) return [];
+		return [value];
+	});
 
 	if (op === "remove") {
 		if (incoming.length === 0) {
@@ -540,16 +544,16 @@ export function applyPatch<Resource extends object>(
 	let copy = structuredClone(resource) as unknown as WireObject;
 
 	for (let [index, operation] of operations.entries()) {
-		let error;
-		if (operation.path === null)
-			error = isWireObject(operation.value)
-				? applyWithoutPath(copy, operation.op, operation.value, options.definitions)
-				: badRequest(
-						operation.op === "remove" ? "noTarget" : "invalidValue",
-						"The operation needs a path.",
-					);
-		else
-			error = applyAtPath(copy, operation.op, operation.path, operation.value, options.definitions);
+		let error = iife(() => {
+			if (operation.path === null)
+				return isWireObject(operation.value)
+					? applyWithoutPath(copy, operation.op, operation.value, options.definitions)
+					: badRequest(
+							operation.op === "remove" ? "noTarget" : "invalidValue",
+							"The operation needs a path.",
+						);
+			return applyAtPath(copy, operation.op, operation.path, operation.value, options.definitions);
+		});
 		if (error) {
 			return failure(
 				new ScimError(error.status, `Operations[${index}]: ${error.message}`, {
