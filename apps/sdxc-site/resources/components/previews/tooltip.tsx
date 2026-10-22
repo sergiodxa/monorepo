@@ -8,6 +8,7 @@
  */
 
 import { ArchiveIcon, StarIcon, Trash2Icon } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { anchorName, hstack, positionAnchor } from "@sdxc/u/layout";
 import { Button, Toolbar, Tooltip } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
@@ -58,10 +59,11 @@ export const TooltipPreview = clientEntry(import.meta.url, function TooltipPrevi
 	return () => (
 		<Toolbar aria-label="Thread actions">
 			{ACTIONS.map((action) => {
-				let Glyph;
-				if (action.id === "star") Glyph = StarIcon;
-				else if (action.id === "archive") Glyph = ArchiveIcon;
-				else Glyph = Trash2Icon;
+				let Glyph = iife(() => {
+					if (action.id === "star") return StarIcon;
+					if (action.id === "archive") return ArchiveIcon;
+					return Trash2Icon;
+				});
 
 				return (
 					<span key={action.id} mix={[hstack({ gap: 0, align: "center" })]}>

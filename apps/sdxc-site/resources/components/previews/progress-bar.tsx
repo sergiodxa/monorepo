@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is, m } from "@sdxc/u/size";
@@ -97,10 +98,11 @@ export const ProgressBarPreview = clientEntry(
 		handle.signal.addEventListener("abort", () => clearInterval(timer));
 
 		return () => {
-			let uploadLabel;
-			if (uploaded === 0) uploadLabel = "Upload";
-			else if (uploaded === 100) uploadLabel = "Upload again";
-			else uploadLabel = "Uploading…";
+			let uploadLabel = iife(() => {
+				if (uploaded === 0) return "Upload";
+				if (uploaded === 100) return "Upload again";
+				return "Uploading…";
+			});
 			return (
 				<div mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
 					<Header mix={[m(0)]}>Uploading 3 files</Header>

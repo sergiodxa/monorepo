@@ -10,6 +10,7 @@
 
 import type { Handle } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { rounded } from "sdxc/u/effects";
 import { raw } from "sdxc/u/general";
 import { vstack } from "sdxc/u/layout";
@@ -215,10 +216,11 @@ export default function SidebarAd(handle: Handle<SidebarAd.Props>) {
 	return () => {
 		let { ad } = handle.props;
 		let schemes = SURFACES[ad.surface];
-		let titleFace;
-		if (ad.titleFace === "serif") titleFace = font("serif");
-		else if (ad.titleFace === "mono") titleFace = font("mono");
-		else titleFace = null;
+		let titleFace = iife(() => {
+			if (ad.titleFace === "serif") return font("serif");
+			if (ad.titleFace === "mono") return font("mono");
+			return null;
+		});
 
 		return (
 			<a

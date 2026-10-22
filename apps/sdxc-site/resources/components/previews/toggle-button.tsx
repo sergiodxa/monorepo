@@ -10,6 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { CloudIcon, MapPinIcon, RouteIcon } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { Group, Text, ToggleButton } from "@sdxc/ui";
 import { pressToggle } from "@sdxc/ui/mixins";
@@ -70,10 +71,11 @@ export const ToggleButtonPreview = clientEntry(
 					]}
 				>
 					{LAYERS.map((layer) => {
-						let icon;
-						if (layer.id === "pins") icon = <MapPinIcon />;
-						else if (layer.id === "routes") icon = <RouteIcon />;
-						else icon = <CloudIcon />;
+						let icon = iife(() => {
+							if (layer.id === "pins") return <MapPinIcon />;
+							if (layer.id === "routes") return <RouteIcon />;
+							return <CloudIcon />;
+						});
 						return (
 							<ToggleButton
 								key={layer.id}

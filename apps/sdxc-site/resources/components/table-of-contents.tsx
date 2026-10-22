@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { clientEntry, ref } from "remix/component";
 import { ListIcon } from "sdxc/icons";
 import { bg, borderEdge, fg } from "sdxc/u/color";
@@ -122,10 +123,11 @@ export const TableOfContents = clientEntry(
 							let depth = Math.max(anchor.level - BASE_LEVEL, 0);
 							let isMarked = marked.includes(anchor.id);
 							let isLead = marked.at(0) === anchor.id;
-							let active;
-							if (isLead) active = "lead";
-							else if (isMarked) active = "";
-							else active = undefined;
+							let active = iife(() => {
+								if (isLead) return "lead";
+								if (isMarked) return "";
+								return undefined;
+							});
 
 							return (
 								<li key={anchor.id}>

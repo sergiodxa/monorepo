@@ -10,6 +10,7 @@
 import type { MarkdownWalkError } from "sdxc/markdown";
 import type { Result } from "sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { diagram } from "sdxc/diagram/markdown";
 import { highlight } from "sdxc/highlight/markdown";
 import { Markdown } from "sdxc/markdown";
@@ -93,11 +94,12 @@ function headingAnchors() {
  * while anything else in the repository resolves to the file on GitHub.
  */
 function rewriteHref(href: string, directory: string): string {
-	let sibling;
-	if (href.startsWith("https://www.npmjs.com/package/@sdxc/"))
-		sibling = href.slice("https://www.npmjs.com/package/@sdxc/".length);
-	else if (href.startsWith("/packages/")) sibling = href.slice("/packages/".length);
-	else sibling = null;
+	let sibling = iife(() => {
+		if (href.startsWith("https://www.npmjs.com/package/@sdxc/"))
+			return href.slice("https://www.npmjs.com/package/@sdxc/".length);
+		if (href.startsWith("/packages/")) return href.slice("/packages/".length);
+		return null;
+	});
 
 	if (sibling !== null && findPackage(sibling) !== null) {
 		return routes.api.show.href({ name: sibling });
