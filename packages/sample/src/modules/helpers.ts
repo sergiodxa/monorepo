@@ -268,14 +268,10 @@ export function createHelpersModule(random: Random, lookup: GeneratorLookup): He
 				let current = pattern.charAt(index);
 				if (current === "\\") {
 					let escaped = pattern.charAt(index + 1);
-					characters =
-						escaped === "d"
-							? "0123456789"
-							: escaped === "w"
-								? `${LETTERS}${LETTERS.toUpperCase()}0123456789_`
-								: escaped === "s"
-									? " "
-									: escaped;
+					if (escaped === "d") characters = "0123456789";
+					else if (escaped === "w") characters = `${LETTERS}${LETTERS.toUpperCase()}0123456789_`;
+					else if (escaped === "s") characters = " ";
+					else characters = escaped;
 					index += 2;
 				} else if (current === "[") {
 					let close = pattern.indexOf("]", index);
