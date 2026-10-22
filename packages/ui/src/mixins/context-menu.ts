@@ -65,9 +65,7 @@ export const contextMenu = createMixin<HTMLElement, [id: string, options?: Ancho
 			options: AnchorOptions = {},
 			props: ElementProps = options as ElementProps,
 		) => {
-			if (props === options) {
-				options = {};
-			}
+			let resolved = props === options ? {} : options;
 
 			return createElement(handle.element, {
 				mix: [
@@ -82,11 +80,11 @@ export const contextMenu = createMixin<HTMLElement, [id: string, options?: Ancho
 						let point = { x: event.clientX, y: event.clientY };
 
 						if (event.button !== SECONDARY_BUTTON) {
-							openSurfaceAt(id, point, options);
+							openSurfaceAt(id, point, resolved);
 							return;
 						}
 
-						document.addEventListener("pointerup", () => openSurfaceAt(id, point, options), {
+						document.addEventListener("pointerup", () => openSurfaceAt(id, point, resolved), {
 							capture: true,
 							once: true,
 							signal: lifetime,
@@ -100,7 +98,7 @@ export const contextMenu = createMixin<HTMLElement, [id: string, options?: Ancho
 						openSurfaceAt(
 							id,
 							{ x: rect.left, y: rect.top, width: rect.width, height: rect.height },
-							options,
+							resolved,
 						);
 					}),
 				],

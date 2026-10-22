@@ -150,15 +150,13 @@ export const dismiss: MixinFactory<HTMLElement, [options?: Dismiss.Options], Ele
 		}
 
 		return (options = {}, props = options as ElementProps) => {
-			if (props === options) {
-				options = {};
-			}
+			let resolved = props === options ? {} : options;
 
-			let pauseOnHover = options.pauseOnHover ?? true;
+			let pauseOnHover = resolved.pauseOnHover ?? true;
 
 			if (!initialized) {
 				initialized = true;
-				duration = options.duration === undefined ? DEFAULT_DURATION : options.duration;
+				duration = resolved.duration === undefined ? DEFAULT_DURATION : resolved.duration;
 
 				if (duration !== null) {
 					remaining = duration;

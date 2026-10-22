@@ -284,7 +284,6 @@ export const carouselControls = createMixin<HTMLElement>((handle) => {
 						case GOTO_COMMAND: {
 							let index = readGotoSlideIndex(commandEvent.source);
 							if (index !== null) scrollToSlide(viewport, index);
-							return;
 						}
 					}
 				}),

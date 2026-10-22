@@ -185,10 +185,10 @@ export const menubarKeys: MixinFactory<HTMLElement, [options?: MenubarKeys.Optio
 		let resetBufferId: ReturnType<typeof setTimeout> | undefined;
 
 		return (options = {}, props = options as ElementProps) => {
-			if (props === options) options = {};
+			let resolved = props === options ? {} : options;
 
-			let triggerSelector = options.triggerSelector ?? DEFAULT_TRIGGER_SELECTOR;
-			let itemSelector = options.itemSelector ?? DEFAULT_ITEM_SELECTOR;
+			let triggerSelector = resolved.triggerSelector ?? DEFAULT_TRIGGER_SELECTOR;
+			let itemSelector = resolved.itemSelector ?? DEFAULT_ITEM_SELECTOR;
 
 			return ref((host: HTMLElement, signal) => {
 				let initialTriggers = queryTriggers(host, triggerSelector);

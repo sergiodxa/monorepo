@@ -81,9 +81,9 @@ export const menuKeys: MixinFactory<HTMLElement, [options?: MenuKeys.Options], E
 		let resetBufferId: ReturnType<typeof setTimeout> | undefined;
 
 		return (options = {}, props = options as ElementProps) => {
-			if (props === options) options = {};
+			let resolved = props === options ? {} : options;
 
-			let selector = options.itemSelector ?? DEFAULT_ITEM_SELECTOR;
+			let selector = resolved.itemSelector ?? DEFAULT_ITEM_SELECTOR;
 
 			return ref((host: HTMLElement, signal) => {
 				let initialItems = queryItems(host, selector);
