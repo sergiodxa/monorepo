@@ -63,6 +63,15 @@ const DOCTOR_CRAP_DEFAULTS = { max: 12, coverage: "coverage/coverage-final.json"
 /** Integer at least 1; shared so doctor leaf schemas stay under the nested-call ceiling. */
 const POSITIVE_INTEGER = s.integer().pipe(checks.min(1));
 
+/** Integer at least 0; shared so doctor leaf schemas stay under the nested-call ceiling. */
+const NON_NEGATIVE_INTEGER = s.integer().pipe(checks.min(0));
+
+/** Integer at least 2; shared so doctor leaf schemas stay under the nested-call ceiling. */
+const INTEGER_AT_LEAST_TWO = s.integer().pipe(checks.min(2));
+
+/** Number at least 0; shared so doctor leaf schemas stay under the nested-call ceiling. */
+const NON_NEGATIVE_NUMBER = s.number().pipe(checks.min(0));
+
 /** The `doctor.testRatio` group as a project with no such key gets it. */
 const DOCTOR_TEST_RATIO_DEFAULTS = { min: 0.3 };
 
@@ -206,12 +215,10 @@ export const CONFIG_SCHEMA = s.object(
 					testRatio: s.defaulted(
 						s.object(
 							{
-								min: s
-									.defaulted(s.number().pipe(checks.min(0)), DOCTOR_TEST_RATIO_DEFAULTS.min)
-									.meta({
-										description:
-											"Minimum tests/code ratio from sdxc stats; the test-ratio check warns below it",
-									}),
+								min: s.defaulted(NON_NEGATIVE_NUMBER, DOCTOR_TEST_RATIO_DEFAULTS.min).meta({
+									description:
+										"Minimum tests/code ratio from sdxc stats; the test-ratio check warns below it",
+								}),
 							},
 							{ unknownKeys: "error" },
 						),
@@ -233,10 +240,7 @@ export const CONFIG_SCHEMA = s.object(
 						s.object(
 							{
 								minLines: s
-									.defaulted(
-										s.integer().pipe(checks.min(2)),
-										DOCTOR_DUPLICATION_DEFAULTS.minLines,
-									)
+									.defaulted(INTEGER_AT_LEAST_TWO, DOCTOR_DUPLICATION_DEFAULTS.minLines)
 									.meta({
 										description: "Minimum consecutive code lines that count as a duplicated block",
 									}),
@@ -253,10 +257,7 @@ export const CONFIG_SCHEMA = s.object(
 										"Mutation report JSON the mutation check reads, relative to the project root",
 								}),
 								maxSurvived: s
-									.defaulted(
-										s.integer().pipe(checks.min(0)),
-										DOCTOR_MUTATION_DEFAULTS.maxSurvived,
-									)
+									.defaulted(NON_NEGATIVE_INTEGER, DOCTOR_MUTATION_DEFAULTS.maxSurvived)
 									.meta({
 										description: "Maximum surviving mutants the mutation check allows",
 									}),
