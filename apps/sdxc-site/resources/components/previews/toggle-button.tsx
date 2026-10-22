@@ -69,23 +69,23 @@ export const ToggleButtonPreview = clientEntry(
 						on<HTMLDivElement, "click">("click", readPressed),
 					]}
 				>
-					{LAYERS.map((layer) => (
-						<ToggleButton
-							key={layer.id}
-							aria-pressed={pressed.has(layer.label) ? "true" : "false"}
-							aria-label={layer.label}
-							variant="outline"
-							mix={[pressToggle()]}
-						>
-							{layer.id === "pins" ? (
-								<MapPinIcon />
-							) : layer.id === "routes" ? (
-								<RouteIcon />
-							) : (
-								<CloudIcon />
-							)}
-						</ToggleButton>
-					))}
+					{LAYERS.map((layer) => {
+						let icon;
+						if (layer.id === "pins") icon = <MapPinIcon />;
+						else if (layer.id === "routes") icon = <RouteIcon />;
+						else icon = <CloudIcon />;
+						return (
+							<ToggleButton
+								key={layer.id}
+								aria-pressed={pressed.has(layer.label) ? "true" : "false"}
+								aria-label={layer.label}
+								variant="outline"
+								mix={[pressToggle()]}
+							>
+								{icon}
+							</ToggleButton>
+						);
+					})}
 				</Group>
 				<Text>
 					{pressed.size === 0 ? "No layers drawn" : `Drawing: ${[...pressed].join(", ")}`}

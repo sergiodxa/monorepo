@@ -215,8 +215,10 @@ export default function SidebarAd(handle: Handle<SidebarAd.Props>) {
 	return () => {
 		let { ad } = handle.props;
 		let schemes = SURFACES[ad.surface];
-		let titleFace =
-			ad.titleFace === "serif" ? font("serif") : ad.titleFace === "mono" ? font("mono") : null;
+		let titleFace;
+		if (ad.titleFace === "serif") titleFace = font("serif");
+		else if (ad.titleFace === "mono") titleFace = font("mono");
+		else titleFace = null;
 
 		return (
 			<a

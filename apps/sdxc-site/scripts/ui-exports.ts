@@ -367,7 +367,11 @@ function constant(node: DocNode, source: string): string {
 	let annotation = start[1]?.trim() ?? "";
 
 	if (initializer.split("\n").length > MAX_INITIALIZER_LINES) {
-		return `const ${node.name}${annotation ? ` ${annotation}` : node.type ? `: ${node.type}` : ""}`;
+		let suffix;
+		if (annotation) suffix = ` ${annotation}`;
+		else if (node.type) suffix = `: ${node.type}`;
+		else suffix = "";
+		return `const ${node.name}${suffix}`;
 	}
 
 	return `const ${node.name}${annotation ? ` ${annotation}` : ""} = ${outdent(initializer)}`;

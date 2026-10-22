@@ -122,12 +122,16 @@ export const TableOfContents = clientEntry(
 							let depth = Math.max(anchor.level - BASE_LEVEL, 0);
 							let isMarked = marked.includes(anchor.id);
 							let isLead = marked.at(0) === anchor.id;
+							let active;
+							if (isLead) active = "lead";
+							else if (isMarked) active = "";
+							else active = undefined;
 
 							return (
 								<li key={anchor.id}>
 									<a
 										href={`#${anchor.id}`}
-										data-active={isLead ? "lead" : isMarked ? "" : undefined}
+										data-active={active}
 										mix={[
 											relative(),
 											block(),
