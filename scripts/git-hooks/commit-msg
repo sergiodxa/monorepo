@@ -1,3 +1,4 @@
 #!/bin/sh
 root="$(git rev-parse --show-toplevel)"
-exec bun "$root/cli/index.ts" release check-commits --message-file "$1"
+export SDXC_COMMIT_MSG_FILE="$1"
+exec bun "$root/packages/kit/src/bin.ts" doctor --only commits

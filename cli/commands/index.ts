@@ -37,8 +37,7 @@ export default commands({
 		examples: ["doctor", "doctor --json", "doctor --only pins,remix", "doctor --skip ui"],
 	}),
 	release: commands({
-		description:
-			"Publish changed @sdxc packages under today's dated version, or bootstrap / check commits",
+		description: "Publish changed @sdxc packages under today's dated version, or bootstrap them",
 		flags: {
 			publish: flag.boolean("publish", {
 				description: "Publish to npm and create the GitHub Release; dry-run without it",
@@ -61,26 +60,6 @@ export default commands({
 				}),
 			},
 			examples: ["release bootstrap", "release bootstrap @sdxc/hostname --dry-run"],
-		}),
-		"check-commits": command({
-			description: "Fail when a commit lacks a release-note body or a capitalized summary",
-			arguments: {
-				range: argument(STRING, {
-					optional: true,
-					valueName: "range",
-					description: "A revision range such as BASE..HEAD; required without --message-file",
-				}),
-			},
-			flags: {
-				messageFile: flag.string("message-file", {
-					valueName: "path",
-					description: "A commit message file, as the commit-msg hook passes",
-				}),
-			},
-			examples: [
-				"release check-commits origin/main..HEAD",
-				"release check-commits --message-file .git/COMMIT_EDITMSG",
-			],
 		}),
 	}),
 	package: commands({

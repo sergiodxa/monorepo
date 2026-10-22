@@ -35,6 +35,7 @@
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
+		"@sdxc/kit": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/semver": "workspace:*",
