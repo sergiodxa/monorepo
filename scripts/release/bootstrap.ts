@@ -1,21 +1,19 @@
-#!/usr/bin/env bun
 /**
  * First publish for a package npm has never seen: `0.0.0-pre.1` goes out under the `alpha`
  * tag from the operator's own npm session, so the package exists for its trusted publisher to
  * be configured; the next daily run treats the package as new and publishes the dated version
  * that takes over `latest`. npm owns the terminal during each publish, because the account's
- * second factor is confirmed in the browser. `--dry-run` rehearses everything but the upload.
+ * second factor is confirmed in the browser. `dryRun` rehearses everything but the upload.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { join } from "node:path";
-import { parseArgs } from "node:util";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, match, success, wrap } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Published } from "./plan.js";
 import type { Package } from "./workspace.js";
@@ -36,21 +34,27 @@ const BOOTSTRAP_VERSION = "0.0.0-pre.1";
  */
 const BOOTSTRAP_TAG = "alpha";
 
+/** Options for one bootstrap run. */
+export interface BootstrapOptions {
+	/** Rehearse builds and publishes without uploading. */
+	dryRun?: boolean;
+	/** Package names to bootstrap; every unpublished public package when empty. */
+	packages?: readonly string[];
+	/** Operator output; defaults to stdout. */
+	say?: (text: string) => void;
+}
+
 /**
  * Bootstraps the requested packages (by default every public package absent from npm),
  * dependencies first, and ends with the trusted-publisher settings to enter on npmjs.com.
- * Every failure comes back as the `Result`, which the entry point turns into exit 1.
  */
-async function main(): Promise<Result<void, Error>> {
-	let args = wrap(() =>
-		parseArgs({
-			options: { "dry-run": { type: "boolean", default: false } },
-			allowPositionals: true,
-		}),
-	);
-	if (isFailure(args)) return args;
-	let { values, positionals } = args.data;
-	let dryRun = values["dry-run"] === true;
+export async function runBootstrap(options: BootstrapOptions = {}): Promise<Result<void, Error>> {
+	let dryRun = options.dryRun === true;
+	let say =
+		options.say ??
+		((text: string) => {
+			process.stdout.write(`${text}\n`);
+		});
 	let user = await whoami();
 	if (user === null) {
 		return failure(new Error("npm has no logged-in user; run `npm login`, then rerun"));
@@ -63,6 +67,7 @@ async function main(): Promise<Result<void, Error>> {
 	let registry = await viewPackages(publicPackages.map((pkg) => pkg.name));
 	if (isFailure(registry)) return registry;
 	let published = registry.data;
+	let positionals = [...(options.packages ?? [])];
 	let requested =
 		positionals.length > 0
 			? positionals
@@ -162,16 +167,3 @@ function packageNamed(packages: Package[], name: string): Result<Package, Error>
 	if (pkg === undefined) return failure(new Error(`${name} is not a public workspace package`));
 	return success(pkg);
 }
-
-/** Operator output goes to stdout, leaving stderr to npm's progress and the failure message. */
-function say(text: string): void {
-	process.stdout.write(`${text}\n`);
-}
-
-match(await main(), {
-	success: () => {},
-	failure: (error) => {
-		process.stderr.write(`${error.message}\n`);
-		process.exitCode = 1;
-	},
-});

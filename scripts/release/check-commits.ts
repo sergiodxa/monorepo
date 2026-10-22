@@ -1,19 +1,17 @@
-#!/usr/bin/env bun
 /**
- * Fails when a commit has no release note (ADR-140) or a lowercase summary (ADR-166):
- * `--message-file` checks one message for the `commit-msg` hook, and a revision range checks every
- * commit a push or pull request adds, so `--no-verify` never gets a commit into a release unseen.
+ * Fails when a commit has no release note or a lowercase summary: `messageFile` checks one
+ * message for the commit-msg hook, and a revision range checks every commit a push or pull
+ * request adds, so `--no-verify` never gets a commit into a release unseen.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { readFile } from "node:fs/promises";
-import { parseArgs } from "node:util";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, match, success, wrap } from "@sdxc/result";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { Commit } from "./commits.js";
 
@@ -27,18 +25,18 @@ import {
 } from "./commits.js";
 import { commitLogSince } from "./git.js";
 
-/** The commit that adopted ADR-140; it and everything before it predate the rule. */
+/** Commits at or before this SHA predate the release-note body rule. */
 const ENFORCED_AFTER = "83f765d186e8b357808513ff910986eb679f6d55";
 
-/** The last commit before summaries had to be capitalized; it and everything before it predate the rule. */
+/** Commits at or before this SHA predate the capitalized-summary rule. */
 const CAPITALIZED_AFTER = "177a9604d9228d6576bdb05a7e0b60d020093968";
 
 /** Subjects `git rebase --autosquash` folds away before anything reaches `main`. */
 const AUTOSQUASH_SUBJECT = /^(?:fixup|squash|amend)! /;
 
-/** What every rejection ends with, so the author knows what to write without opening the ADR. */
+/** What every rejection ends with, so the author knows what to write. */
 const GUIDANCE = [
-	"Every commit needs a body written as its public release note (ADR-140):",
+	"Every commit needs a body written as its public release note:",
 	"  feature   what it does and how to use it, with a short code example",
 	"  breaking  every migration step, with the code before and after",
 	"  fix       the behavior before and after, and whether consumers must act",
@@ -47,27 +45,28 @@ const GUIDANCE = [
 
 /** What a lowercase-summary rejection ends with. */
 const SUMMARY_GUIDANCE = [
-	"A commit title is `type(scope): Summary`, the summary starting with a capital letter (ADR-166):",
+	"A commit title is `type(scope): Summary`, the summary starting with a capital letter:",
 	"  feat(jwt): Add ES512 signing keys",
 	"Release notes print the summary alone, so it has to read as a sentence on its own.",
 ].join("\n");
 
-/** Checks the message file or the range from the command line; the failure is the report. */
-async function main(): Promise<Result<string, Error>> {
-	let args = wrap(() =>
-		parseArgs({
-			allowPositionals: true,
-			options: { "message-file": { type: "string" } },
-		}),
-	);
-	if (isFailure(args)) return args;
-	let messageFile = args.data.values["message-file"];
-	if (messageFile !== undefined) return checkMessageFile(messageFile);
-	let range = args.data.positionals[0];
-	if (range === undefined) {
-		return failure(new Error("Usage: check-commits.ts --message-file <path> | <range>"));
+/** Options for one commit check. */
+export interface CheckCommitsOptions {
+	/** A commit message file, as the commit-msg hook passes. */
+	messageFile?: string;
+	/** A revision range such as `BASE..HEAD`. */
+	range?: string;
+}
+
+/** Checks the message file or the range; the failure is the report. */
+export async function runCheckCommits(
+	options: CheckCommitsOptions,
+): Promise<Result<string, Error>> {
+	if (options.messageFile !== undefined) return checkMessageFile(options.messageFile);
+	if (options.range === undefined) {
+		return failure(new Error("Usage: release check-commits --message-file <path> | <range>"));
 	}
-	return checkRange(range);
+	return checkRange(options.range);
 }
 
 async function checkMessageFile(path: string): Promise<Result<string, Error>> {
@@ -121,13 +120,3 @@ async function lowercaseSince(range: string): Promise<Result<Commit[], Error>> {
 function listCommits(commits: Commit[]): string {
 	return commits.map((commit) => `  ${commit.sha.slice(0, 9)} ${commit.title}`).join("\n");
 }
-
-match(await main(), {
-	success: (report) => {
-		if (report !== "") process.stdout.write(`${report}\n`);
-	},
-	failure: (error) => {
-		process.stderr.write(`${error.message}\n`);
-		process.exitCode = 1;
-	},
-});
