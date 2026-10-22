@@ -135,9 +135,15 @@ function ensureConvertedApp(source: string, name: string) {
 	return ok(`${source.slice(0, open)}\n\t"${name}",${source.slice(open)}`);
 }
 
-/** Adds `name` to the Deploy-app workflow choice list when absent. */
+/** Adds `name` to the Deploy-app workflow choice list when absent (before `all` when present). */
 function ensureDeployOption(source: string, name: string) {
 	if (new RegExp(`^\\s+- ${name}$`, "m").test(source)) return ok(source);
+	let allMatch = source.match(/^(\s+- )all$/m);
+	if (allMatch && allMatch.index !== undefined) {
+		return ok(
+			`${source.slice(0, allMatch.index)}${allMatch[1]}${name}\n${source.slice(allMatch.index)}`,
+		);
+	}
 	let marker = "        options:\n";
 	let index = source.indexOf(marker);
 	if (index === -1) {
