@@ -112,6 +112,38 @@ Lint release drift, secrets, migrations, app layout and project checks
 | `--only <check>` | Run only the named checks             |
 | `--skip <check>` | Leave out the named checks            |
 
+#### `sdxc fix`
+
+Apply doctor repairs the kit can make safely
+
+| Flag        | Does                                           |
+| ----------- | ---------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing |
+
+#### `sdxc fix env`
+
+Append missing bindings.secret() keys to .env.example
+
+| Flag        | Does                                           |
+| ----------- | ---------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing |
+
+#### `sdxc fix models`
+
+Register unmapped createModel modules in app/models/index.ts
+
+| Flag        | Does                                           |
+| ----------- | ---------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing |
+
+#### `sdxc fix emails`
+
+Map unmapped emails in app/initializers/mail.ts
+
+| Flag        | Does                                           |
+| ----------- | ---------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing |
+
 #### `sdxc init`
 
 Write .config/sdxc.jsonc with every default spelled out
@@ -293,6 +325,35 @@ The test make writes beside a file, for an existing file without one
 
 Copy the built-in stubs into make.stubs to edit
 
+#### `sdxc make secret <NAME>`
+
+Declare a bindings.secret() in cloudflare.config.ts and append .env.example
+
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
+
+#### `sdxc make binding <kind> <NAME>`
+
+Declare a Cloudflare binding in cloudflare.config.ts
+
+| Flag        | Does                                                                                        |
+| ----------- | ------------------------------------------------------------------------------------------- |
+| `--dry-run` | Print what would be written and change nothing                                              |
+| `--force`   | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
+
+#### `sdxc make do <name>`
+
+Write a Durable Object class, re-export it from bootstrap/worker.ts, and declare its binding
+
+| Flag               | Does                                                                                        |
+| ------------------ | ------------------------------------------------------------------------------------------- |
+| `--role <role>`    | app/models when it owns stored state, app/services otherwise (default: service)             |
+| `--binding <NAME>` | The env binding key (default: derived from the class name)                                  |
+| `--dry-run`        | Print what would be written and change nothing                                              |
+| `--force`          | Replace the file, its test and its pairing .spec when they exist, keeping their declaration |
+
 #### `sdxc middleware`
 
 Print each router's global middleware and every chain in app/http/middleware
@@ -360,6 +421,16 @@ List the scheduled jobs, their next runs and the Worker triggers that fire them
 | Flag     | Does                       |
 | -------- | -------------------------- |
 | `--json` | Print the schedule as JSON |
+
+#### `sdxc setup [feature]`
+
+Install a multi-file feature (auth, billing, flags); lists known features with no name
+
+| Flag                    | Does                                                               |
+| ----------------------- | ------------------------------------------------------------------ |
+| `--provider <provider>` | Backend for features that vary (auth: r3-auth; billing: polar)     |
+| `-y, --yes`             | Write the plan; without it the plan is printed and nothing changes |
+| `--dry-run`             | Print what would be written and change nothing                     |
 
 #### `sdxc stats`
 
