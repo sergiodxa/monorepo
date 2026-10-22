@@ -248,11 +248,9 @@ export function expectDescriptorShape(expression: string): void {
 	}
 
 	if (fields.dayOfMonthRestricted) {
-		let kind: ScheduleDescriptor["kind"] = spelled
-			? everyMonth
-				? "monthly"
-				: "yearly"
-			: "expression";
+		let kind: ScheduleDescriptor["kind"];
+		if (spelled) kind = everyMonth ? "monthly" : "yearly";
+		else kind = "expression";
 		expect(where).toEqual({ expression, kind });
 		return;
 	}
