@@ -83,7 +83,10 @@ const BASE64URL_VALUES = toValueLookup(BASE64URL_ALPHABET);
  */
 function encodeBase64(bytes: Uint8Array, alphabet: string, padded: boolean): string {
 	let remainder = bytes.length % GROUP_BYTES;
-	let tail = remainder === 0 ? 0 : padded ? GROUP_CHARS : remainder + 1;
+	let tail;
+	if (remainder === 0) tail = 0;
+	else if (padded) tail = GROUP_CHARS;
+	else tail = remainder + 1;
 	let out = new Uint8Array(((bytes.length - remainder) / GROUP_BYTES) * GROUP_CHARS + tail);
 
 	let accumulator = 0;
