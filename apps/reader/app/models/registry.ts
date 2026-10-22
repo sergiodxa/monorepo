@@ -115,9 +115,7 @@ export async function renameFeed(feedId: string, title: string): Promise<boolean
 export async function retireFeed(feedId: string): Promise<void> {
 	try {
 		await catalog().feeds.retire(feedId, Date.now());
-	} catch {
-		return;
-	}
+	} catch {}
 }
 
 /**
@@ -129,9 +127,7 @@ export async function retireFeed(feedId: string): Promise<void> {
 export async function reviveFeed(feedId: string): Promise<void> {
 	try {
 		await catalog().feeds.revive(feedId);
-	} catch {
-		return;
-	}
+	} catch {}
 }
 
 /**
