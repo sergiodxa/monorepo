@@ -29,7 +29,7 @@ The template already depends on Vite+, Vitest and `@sdxc/cloudflare-mocks`. Add 
 reach for them:
 
 ```bash
-npm add -D msw @cloudflare/vitest-pool-workers @sdxc/spec
+npm add -D msw @cloudflare/vitest-plugin @sdxc/spec
 ```
 
 ## How the template runs tests
@@ -121,7 +121,7 @@ again, or that a query D1 would reject fails. Name those files `*.workers.test.t
 a second project:
 
 ```typescript {% title="vite.config.ts" %}
-import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vite-plus";
 import { defaultExclude } from "vitest/config";
 
@@ -161,7 +161,7 @@ export default defineConfig({
 its bindings from a `wrangler.jsonc`, so a project that configures its Worker in
 `cloudflare.config.ts` keeps one beside it that declares the same bindings; `remoteBindings:
 false` keeps a binding declared with `remote: true` from opening a session against your real
-account. Add `@cloudflare/vitest-pool-workers/types` to `compilerOptions.types` in your
+account. Add `@cloudflare/vitest-plugin/types` to `compilerOptions.types` in your
 `tsconfig.json` so `cloudflare:test` type-checks. `vp test run --project workers` runs one
 project.
 

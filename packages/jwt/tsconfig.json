@@ -2,6 +2,6 @@
 	"extends": "../../tsconfig.json",
 	"include": ["src/**/*"],
 	"compilerOptions": {
-		"types": ["@total-typescript/ts-reset", "bun", "@cloudflare/vitest-pool-workers/types"]
+		"types": ["@total-typescript/ts-reset", "bun", "@cloudflare/vitest-plugin/types"]
 	}
 }

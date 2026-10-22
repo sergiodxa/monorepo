@@ -6,7 +6,7 @@
 			"@total-typescript/ts-reset",
 			"@cloudflare/workers-types",
 			"bun",
-			"@cloudflare/vitest-pool-workers/types"
+			"@cloudflare/vitest-plugin/types"
 		]
 	}
 }

@@ -20,7 +20,7 @@
 			"vite/client",
 			"bun",
 			"node",
-			"@cloudflare/vitest-pool-workers/types"
+			"@cloudflare/vitest-plugin/types"
 		],
 		"rootDirs": ["."],
 		"paths": {

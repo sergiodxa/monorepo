@@ -13,7 +13,7 @@
  */
 import type { TestProjectInlineConfiguration } from "vite-plus";
 
-import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { cloudflareTest } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vite-plus";
 import { defaultExclude } from "vite-plus";
 
