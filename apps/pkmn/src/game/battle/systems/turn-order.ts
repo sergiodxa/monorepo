@@ -226,21 +226,22 @@ function resolveForcedMoveSelection(
 	combatant: CombatantState,
 	command: FightCommand,
 ): FightCommand {
+	let resolved = command;
 	if (combatant.volatile.encoreTurns > 0 && combatant.volatile.encoredMoveSlot !== null) {
-		command = {
-			...command,
+		resolved = {
+			...resolved,
 			move: combatant.volatile.encoredMoveSlot,
 		};
 	}
 
 	if (combatant.volatile.rampageTurns > 0 && combatant.volatile.rampageMoveSlot !== null) {
-		command = {
-			...command,
+		resolved = {
+			...resolved,
 			move: combatant.volatile.rampageMoveSlot,
 		};
 	}
 
-	return command;
+	return resolved;
 }
 
 function canCommitMoveSlot(combatant: CombatantState, moveSlot: 0 | 1 | 2 | 3): boolean {
