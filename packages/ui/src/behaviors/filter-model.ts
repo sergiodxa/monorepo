@@ -232,12 +232,9 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 
 		let index = this.#matches.findIndex((option) => option.id === this.#activeId);
 
-		let nextIndex =
-			index === -1
-				? delta > 0
-					? 0
-					: this.#matches.length - 1
-				: (index + delta + this.#matches.length) % this.#matches.length;
+		let nextIndex;
+		if (index === -1) nextIndex = delta > 0 ? 0 : this.#matches.length - 1;
+		else nextIndex = (index + delta + this.#matches.length) % this.#matches.length;
 
 		let nextOption = this.#matches[nextIndex];
 
