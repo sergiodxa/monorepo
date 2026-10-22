@@ -72,11 +72,9 @@ export default createAction(routes.folders.file, {
 		/** The rail draws feeds under their folders, so where this one is drawn has moved. */
 		if (filed.ok) await forgetRailFeeds(viewer.id);
 
-		let outcome = filed.ok
-			? filed.folder === null
-				? "unfiled"
-				: "filed"
-			: FILING_OUTCOMES[filed.reason];
+		let outcome;
+		if (filed.ok) outcome = filed.folder === null ? "unfiled" : "filed";
+		else outcome = FILING_OUTCOMES[filed.reason];
 
 		let query = new URLSearchParams({ [FOLDER_PARAM]: outcome });
 

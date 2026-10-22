@@ -43,7 +43,9 @@ export default createAction(routes.feeds.notify, {
 
 		let result = await userStore(viewer.id).setFeedNotify(feedId, submitted[NOTIFY_FIELD]);
 
-		let outcome = result.ok ? (result.notify ? "on" : "off") : "missing";
+		let outcome;
+		if (result.ok) outcome = result.notify ? "on" : "off";
+		else outcome = "missing";
 		let query = new URLSearchParams({ [NOTIFY_PARAM]: outcome });
 
 		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {

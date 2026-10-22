@@ -279,6 +279,13 @@ function notificationNote(
  */
 function notificationsSection(ctx: AppContext, notifications: UserStore.Notifications) {
 	let note = notificationNote(ctx);
+	let emailHint;
+	if (!notifications.emailAllowed) emailHint = ctx.intl.t("notifications.channels.emailLocked");
+	else if (notifications.address) {
+		emailHint = ctx.intl.t("notifications.channels.emailHint", {
+			address: notifications.address,
+		});
+	} else emailHint = ctx.intl.t("notifications.channels.emailUnknown");
 
 	return (
 		<section
@@ -341,15 +348,7 @@ function notificationsSection(ctx: AppContext, notifications: UserStore.Notifica
 					{ctx.intl.t("notifications.channels.email")}
 				</Checkbox>
 
-				<Text mix={[text("xs"), fg("neutral.muted")]}>
-					{notifications.emailAllowed
-						? notifications.address
-							? ctx.intl.t("notifications.channels.emailHint", {
-									address: notifications.address,
-								})
-							: ctx.intl.t("notifications.channels.emailUnknown")
-						: ctx.intl.t("notifications.channels.emailLocked")}
-				</Text>
+				<Text mix={[text("xs"), fg("neutral.muted")]}>{emailHint}</Text>
 
 				<Button type="submit">{ctx.intl.t("notifications.channels.save")}</Button>
 			</form>
