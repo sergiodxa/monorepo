@@ -1,7 +1,7 @@
 /**
  * The `feature-scatter` check: a feature folder name that appears under one app layer should
  * also appear under the others that already use feature folders, so a glob on that name finds
- * the whole feature (ADR-129).
+ * the whole feature.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
