@@ -74,7 +74,7 @@ jobs:
           fi
 
   deploy:
-    name: Deploy ${{ env.APP }}
+    name: Deploy ${{ inputs.app || 'sdxc-site' }}
     needs: secrets
     if: needs.secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
