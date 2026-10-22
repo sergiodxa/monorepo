@@ -56,7 +56,10 @@ export function pick(resolution: Resolution, build: Build): Result<Match, HTMLQu
 		return failure(new HTMLAmbiguousMatchError(message, available, candidates));
 	}
 
-	let index = at === "first" ? 0 : at === "last" ? matched.length - 1 : at - 1;
+	let index;
+	if (at === "first") index = 0;
+	else if (at === "last") index = matched.length - 1;
+	else index = at - 1;
 	if (!Number.isInteger(index) || index < 0 || index >= matched.length) {
 		let message = `No ${subject} at position ${String(at)}; ${matched.length} matched.`;
 		return failure(new HTMLNotFoundError(message, available));
