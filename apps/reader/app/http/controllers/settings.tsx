@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
@@ -279,13 +280,14 @@ function notificationNote(
  */
 function notificationsSection(ctx: AppContext, notifications: UserStore.Notifications) {
 	let note = notificationNote(ctx);
-	let emailHint;
-	if (!notifications.emailAllowed) emailHint = ctx.intl.t("notifications.channels.emailLocked");
-	else if (notifications.address) {
-		emailHint = ctx.intl.t("notifications.channels.emailHint", {
-			address: notifications.address,
-		});
-	} else emailHint = ctx.intl.t("notifications.channels.emailUnknown");
+	let emailHint = iife(() => {
+		if (!notifications.emailAllowed) return ctx.intl.t("notifications.channels.emailLocked");
+		if (notifications.address)
+			return ctx.intl.t("notifications.channels.emailHint", {
+				address: notifications.address,
+			});
+		return ctx.intl.t("notifications.channels.emailUnknown");
+	});
 
 	return (
 		<section

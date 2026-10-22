@@ -10,6 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { CircleCheckIcon, CircleIcon } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { fg } from "@sdxc/u/color";
 import { flex, shrink } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
@@ -251,10 +252,11 @@ export const ReadToggle = clientEntry(
 		});
 
 		return () => {
-			let label;
-			if (hasFailed) label = handle.props.failed;
-			else if (isRead) label = handle.props.markUnread;
-			else label = handle.props.markRead;
+			let label = iife(() => {
+				if (hasFailed) return handle.props.failed;
+				if (isRead) return handle.props.markUnread;
+				return handle.props.markRead;
+			});
 
 			return (
 				<form

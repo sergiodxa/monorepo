@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -47,10 +48,11 @@ export default createAction(routes.feeds.pin, {
 		/** The rail draws a pinned feed apart from the rest, so where this one is drawn moved. */
 		if (result.ok) await forgetRailFeeds(viewer.id);
 
-		let outcome;
-		if (result.ok) outcome = result.pinned ? "pinned" : "unpinned";
-		else if (result.reason === "pin-limit") outcome = "full";
-		else outcome = "missing";
+		let outcome = iife(() => {
+			if (result.ok) return result.pinned ? "pinned" : "unpinned";
+			if (result.reason === "pin-limit") return "full";
+			return "missing";
+		});
 
 		let query = new URLSearchParams({ [PIN_PARAM]: outcome });
 

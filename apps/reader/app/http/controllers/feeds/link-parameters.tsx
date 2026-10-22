@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -48,9 +49,10 @@ export default createAction(routes.feeds.linkParameters, {
 			submitted[PARAMETERS_FIELD],
 		);
 
-		let outcome;
-		if (result.ok) outcome = result.keepLinkParameters ? "kept" : "stripped";
-		else outcome = "missing";
+		let outcome = iife(() => {
+			if (result.ok) return result.keepLinkParameters ? "kept" : "stripped";
+			return "missing";
+		});
 		let query = new URLSearchParams({ [PARAMETERS_PARAM]: outcome });
 
 		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {

@@ -35,6 +35,7 @@
 		"@sdxc/http": "workspace:*",
 		"@sdxc/i18n": "workspace:*",
 		"@sdxc/icons": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/lazy-frame": "workspace:*",

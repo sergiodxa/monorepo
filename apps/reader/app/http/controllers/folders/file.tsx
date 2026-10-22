@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -72,9 +73,10 @@ export default createAction(routes.folders.file, {
 		/** The rail draws feeds under their folders, so where this one is drawn has moved. */
 		if (filed.ok) await forgetRailFeeds(viewer.id);
 
-		let outcome;
-		if (filed.ok) outcome = filed.folder === null ? "unfiled" : "filed";
-		else outcome = FILING_OUTCOMES[filed.reason];
+		let outcome = iife(() => {
+			if (filed.ok) return filed.folder === null ? "unfiled" : "filed";
+			return FILING_OUTCOMES[filed.reason];
+		});
 
 		let query = new URLSearchParams({ [FOLDER_PARAM]: outcome });
 
