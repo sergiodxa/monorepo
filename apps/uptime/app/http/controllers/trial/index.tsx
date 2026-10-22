@@ -537,6 +537,139 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 	let firstScreen =
 		probe === undefined ? [minBs(FIRST_SCREEN_MIN_BLOCK_SIZE), vstack({ justify: "center" })] : [];
 
+	let resultFollowUp;
+	if (redirected) {
+		resultFollowUp = (
+			<div mix={[vstack({ gap: 4 })]}>
+				<div mix={[vstack({ gap: 2 })]}>
+					<Heading level={3} mix={[m(0), fontSize("base")]}>
+						{t("page.trial.result.redirect.title")}
+					</Heading>
+					<Text>{t("page.trial.result.redirect.description")}</Text>
+				</div>
+
+				{probe.location === null ? (
+					<Text mix={[fg("neutral.muted")]}>
+						{t("page.trial.result.redirect.unknownDestination")}
+					</Text>
+				) : (
+					<form
+						method="post"
+						action={routes.trial.check.action.href()}
+						mix={[vstack({ gap: 3, align: "start" })]}
+					>
+						<Text mix={[wordBreak("break-all")]}>
+							{t("page.trial.result.redirect.destination", {
+								url: probe.location,
+							})}
+						</Text>
+						<HoneypotFields {...honeypot} />
+						<input type="hidden" name={TRIAL_URL_FIELD} value={probe.location} />
+						<Button type="submit" variant="outline">
+							{t("page.trial.result.redirect.action")}
+						</Button>
+					</form>
+				)}
+			</div>
+		);
+	} else if (monitorOffer !== undefined) {
+		resultFollowUp = (
+			<div mix={[vstack({ gap: 4 })]}>
+				<div mix={[vstack({ gap: 2 })]}>
+					<Heading level={3} mix={[m(0), fontSize("base")]}>
+						{t("page.trial.monitor.title")}
+					</Heading>
+					<Text>
+						{monitorOffer.subscribeHref === null
+							? t("page.trial.monitor.description")
+							: t("page.trial.monitor.subscribeDescription")}
+					</Text>
+				</div>
+
+				<div mix={[vstack({ gap: 3 })]}>
+					<LinkButton href={monitorOffer.createHref} mix={[is("full"), justify("center")]}>
+						{t("page.trial.monitor.create")}
+						<ArrowRightIcon size={18} strokeWidth={1.5} />
+					</LinkButton>
+					{monitorOffer.subscribeHref === null ? null : (
+						<LinkButton
+							href={monitorOffer.subscribeHref}
+							color="neutral"
+							variant="outline"
+							data-rmx-document=""
+							mix={[is("full"), justify("center")]}
+						>
+							{t("page.trial.monitor.subscribe")}
+						</LinkButton>
+					)}
+				</div>
+			</div>
+		);
+	} else {
+		resultFollowUp = (
+			<div mix={[vstack({ gap: 6 })]}>
+				<div mix={[vstack({ gap: 3 })]}>
+					<Heading level={3} mix={[m(0), fontSize("base")]}>
+						{t("page.trial.lead.title", { days })}
+					</Heading>
+					<Text>{t("page.trial.lead.description", { days })}</Text>
+
+					<ul
+						mix={[
+							m(0),
+							p(0),
+							listStyle("none"),
+							grid(),
+							gap(2),
+							fontSize("sm"),
+							leading(1.5),
+							fg("neutral"),
+						]}
+					>
+						{expectations.map((item) => (
+							<li key={item} mix={[flex(), items("start"), gap(2)]}>
+								<CheckIcon size={16} strokeWidth={2} mix={[fg("brand"), mbs("2px")]} />
+								<span mix={[wordBreak("break-word")]}>{item}</span>
+							</li>
+						))}
+					</ul>
+				</div>
+
+				<form method="post" action={routes.trial.lead.href()} mix={[vstack({ gap: 4 })]}>
+					<HoneypotFields {...honeypot} />
+					<TextField
+						name="email"
+						type="email"
+						label={t("page.trial.lead.email.label")}
+						placeholder={t("page.trial.lead.email.placeholder")}
+						errorMessage={leadError ? leadErrorMessage(leadError, t) : undefined}
+						defaultValue={leadError?.email ?? view.leadEmail}
+						autoComplete="email"
+						required
+					/>
+					{leadError?.reason === "typo" ? (
+						<input type="hidden" name={TRIAL_EMAIL_CONFIRMED_FIELD} value={leadError.email} />
+					) : null}
+
+					<div mix={[vstack({ gap: 1 })]}>
+						<Checkbox name="consent" value="true" aria-describedby={CONSENT_NOTE_ID}>
+							<span mix={[fontSize("sm")]}>{t("page.trial.lead.consent")}</span>
+						</Checkbox>
+						<Description id={CONSENT_NOTE_ID} mix={[pis(CHECKBOX_LABEL_OFFSET)]}>
+							{t("page.trial.lead.consentNote")}
+						</Description>
+					</div>
+
+					<Description>{t("page.trial.lead.promise")}</Description>
+
+					{expiredAlert}
+
+					<Button type="submit">{t("page.trial.lead.submit", { days })}</Button>
+				</form>
+			</div>
+		);
+	}
+
 	return ctx.render(
 		<DocumentLayout
 			assets={ctx.assets}
@@ -694,150 +827,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 											</Text>
 										</div>
 
-										{redirected ? (
-											<div mix={[vstack({ gap: 4 })]}>
-												<div mix={[vstack({ gap: 2 })]}>
-													<Heading level={3} mix={[m(0), fontSize("base")]}>
-														{t("page.trial.result.redirect.title")}
-													</Heading>
-													<Text>{t("page.trial.result.redirect.description")}</Text>
-												</div>
-
-												{probe.location === null ? (
-													<Text mix={[fg("neutral.muted")]}>
-														{t("page.trial.result.redirect.unknownDestination")}
-													</Text>
-												) : (
-													<form
-														method="post"
-														action={routes.trial.check.action.href()}
-														mix={[vstack({ gap: 3, align: "start" })]}
-													>
-														<Text mix={[wordBreak("break-all")]}>
-															{t("page.trial.result.redirect.destination", {
-																url: probe.location,
-															})}
-														</Text>
-														<HoneypotFields {...honeypot} />
-														<input type="hidden" name={TRIAL_URL_FIELD} value={probe.location} />
-														<Button type="submit" variant="outline">
-															{t("page.trial.result.redirect.action")}
-														</Button>
-													</form>
-												)}
-											</div>
-										) : monitorOffer !== undefined ? (
-											<div mix={[vstack({ gap: 4 })]}>
-												<div mix={[vstack({ gap: 2 })]}>
-													<Heading level={3} mix={[m(0), fontSize("base")]}>
-														{t("page.trial.monitor.title")}
-													</Heading>
-													<Text>
-														{monitorOffer.subscribeHref === null
-															? t("page.trial.monitor.description")
-															: t("page.trial.monitor.subscribeDescription")}
-													</Text>
-												</div>
-
-												<div mix={[vstack({ gap: 3 })]}>
-													<LinkButton
-														href={monitorOffer.createHref}
-														mix={[is("full"), justify("center")]}
-													>
-														{t("page.trial.monitor.create")}
-														<ArrowRightIcon size={18} strokeWidth={1.5} />
-													</LinkButton>
-													{monitorOffer.subscribeHref === null ? null : (
-														<LinkButton
-															href={monitorOffer.subscribeHref}
-															color="neutral"
-															variant="outline"
-															data-rmx-document=""
-															mix={[is("full"), justify("center")]}
-														>
-															{t("page.trial.monitor.subscribe")}
-														</LinkButton>
-													)}
-												</div>
-											</div>
-										) : (
-											<div mix={[vstack({ gap: 6 })]}>
-												<div mix={[vstack({ gap: 3 })]}>
-													<Heading level={3} mix={[m(0), fontSize("base")]}>
-														{t("page.trial.lead.title", { days })}
-													</Heading>
-													<Text>{t("page.trial.lead.description", { days })}</Text>
-
-													<ul
-														mix={[
-															m(0),
-															p(0),
-															listStyle("none"),
-															grid(),
-															gap(2),
-															fontSize("sm"),
-															leading(1.5),
-															fg("neutral"),
-														]}
-													>
-														{expectations.map((item) => (
-															<li key={item} mix={[flex(), items("start"), gap(2)]}>
-																<CheckIcon
-																	size={16}
-																	strokeWidth={2}
-																	mix={[fg("brand"), mbs("2px")]}
-																/>
-																<span mix={[wordBreak("break-word")]}>{item}</span>
-															</li>
-														))}
-													</ul>
-												</div>
-
-												<form
-													method="post"
-													action={routes.trial.lead.href()}
-													mix={[vstack({ gap: 4 })]}
-												>
-													<HoneypotFields {...honeypot} />
-													<TextField
-														name="email"
-														type="email"
-														label={t("page.trial.lead.email.label")}
-														placeholder={t("page.trial.lead.email.placeholder")}
-														errorMessage={leadError ? leadErrorMessage(leadError, t) : undefined}
-														defaultValue={leadError?.email ?? view.leadEmail}
-														autoComplete="email"
-														required
-													/>
-													{leadError?.reason === "typo" ? (
-														<input
-															type="hidden"
-															name={TRIAL_EMAIL_CONFIRMED_FIELD}
-															value={leadError.email}
-														/>
-													) : null}
-
-													<div mix={[vstack({ gap: 1 })]}>
-														<Checkbox
-															name="consent"
-															value="true"
-															aria-describedby={CONSENT_NOTE_ID}
-														>
-															<span mix={[fontSize("sm")]}>{t("page.trial.lead.consent")}</span>
-														</Checkbox>
-														<Description id={CONSENT_NOTE_ID} mix={[pis(CHECKBOX_LABEL_OFFSET)]}>
-															{t("page.trial.lead.consentNote")}
-														</Description>
-													</div>
-
-													<Description>{t("page.trial.lead.promise")}</Description>
-
-													{expiredAlert}
-
-													<Button type="submit">{t("page.trial.lead.submit", { days })}</Button>
-												</form>
-											</div>
-										)}
+										{resultFollowUp}
 									</Card.Content>
 								</Card>
 							</HeadingScope>

@@ -208,10 +208,14 @@ export function alertMessage(input: AlertMessageInput): Message {
 	};
 	if (input.incident) data["incident"] = { ...input.incident };
 
+	let severity;
+	if (recovered) severity = "success";
+	else if (input.eventType === "degraded") severity = "warning";
+	else severity = "critical";
 	return {
 		title: `${input.monitorName} is ${statusWord(input.eventType)}`,
 		text,
-		severity: recovered ? "success" : input.eventType === "degraded" ? "warning" : "critical",
+		severity: severity,
 		fields: [{ label: "Type", value: input.monitorType, inline: true }],
 		links: [{ label: "Open dashboard", url: input.dashboardUrl }],
 		timestamp: input.occurredAt,

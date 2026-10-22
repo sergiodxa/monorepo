@@ -126,10 +126,14 @@ export function transitionToast(
 ): AppToast | undefined {
 	if (current === null || current === previous) return undefined;
 
+	let color;
+	if (current === "up") color = "success";
+	else if (current === "degraded") color = "warning";
+	else color = "danger";
 	return {
 		title: t(`page.monitor.run.toast.${current}`, { name }),
 		description: t("page.monitor.run.toast.changed"),
-		color: current === "up" ? "success" : current === "degraded" ? "warning" : "danger",
+		color: color,
 	};
 }
 

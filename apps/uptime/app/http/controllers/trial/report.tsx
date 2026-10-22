@@ -221,12 +221,35 @@ export default createAction(routes.trial.report, async (ctx) => {
 	 * already monitored and must not be sold again; an attempt past its own `converts_until`
 	 * may still be sold, but the promise that its history carries over is no longer true.
 	 */
-	let offer =
-		watch.converted_at !== null
-			? "converted"
-			: isConvertible(watch, now)
-				? "convertible"
-				: "expired";
+	let offer;
+	if (watch.converted_at !== null) offer = "converted";
+	else if (isConvertible(watch, now)) offer = "convertible";
+	else offer = "expired";
+
+	let incidentBody;
+	if (!measured) {
+		incidentBody = <Text>{t("page.trial.report.incidents.unknown")}</Text>;
+	} else if (incidents.length === 0) {
+		incidentBody = <Text>{t("page.trial.report.incidents.none", { count: stats.checks })}</Text>;
+	} else {
+		incidentBody = (
+			<>
+				<Text>{t("page.trial.report.incidents.summary", { count: incidents.length })}</Text>
+				<ul mix={[m(0), pi(0), vstack({ gap: 2 }), raw({ listStyle: "none" })]}>
+					{incidents.map((incident) => (
+						<li key={incident.startedAt} mix={[fontSize("sm")]}>
+							{incidentLine(incident, locale, t)}
+						</li>
+					))}
+				</ul>
+			</>
+		);
+	}
+
+	let ctaBody;
+	if (offer === "converted") ctaBody = t("page.trial.report.cta.converted.body");
+	else if (offer === "convertible") ctaBody = t("page.trial.report.cta.convertible.body");
+	else ctaBody = t("page.trial.report.cta.expired.body");
 
 	return ctx.render(
 		<DocumentLayout
@@ -328,26 +351,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 								<Card.Header>
 									<Card.Title>{t("page.trial.report.incidents.title")}</Card.Title>
 								</Card.Header>
-								<Card.Content mix={[vstack({ gap: 3 })]}>
-									{!measured ? (
-										<Text>{t("page.trial.report.incidents.unknown")}</Text>
-									) : incidents.length === 0 ? (
-										<Text>{t("page.trial.report.incidents.none", { count: stats.checks })}</Text>
-									) : (
-										<>
-											<Text>
-												{t("page.trial.report.incidents.summary", { count: incidents.length })}
-											</Text>
-											<ul mix={[m(0), pi(0), vstack({ gap: 2 }), raw({ listStyle: "none" })]}>
-												{incidents.map((incident) => (
-													<li key={incident.startedAt} mix={[fontSize("sm")]}>
-														{incidentLine(incident, locale, t)}
-													</li>
-												))}
-											</ul>
-										</>
-									)}
-								</Card.Content>
+								<Card.Content mix={[vstack({ gap: 3 })]}>{incidentBody}</Card.Content>
 							</Card>
 
 							{timings === null ? null : (
@@ -387,13 +391,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 											? t("page.trial.report.cta.converted.title")
 											: t("page.trial.report.cta.title", { price: formatUsd(BASE_PRICE_USD) })}
 									</Heading>
-									<Text mix={[fontSize("sm"), fg("neutral")]}>
-										{offer === "converted"
-											? t("page.trial.report.cta.converted.body")
-											: offer === "convertible"
-												? t("page.trial.report.cta.convertible.body")
-												: t("page.trial.report.cta.expired.body")}
-									</Text>
+									<Text mix={[fontSize("sm"), fg("neutral")]}>{ctaBody}</Text>
 									<LinkButton href={routes.app.index.href()} size="lg">
 										{offer === "converted"
 											? t("page.trial.report.cta.converted.action")

@@ -48,11 +48,10 @@ export default createAction(routes.app.team.dashboard.index, {
 
 		let cookieTab = await dashboardTabCookie.parse(ctx.request.headers.get("Cookie"));
 		let queryTab = ctx.url.searchParams.get("tab");
-		let tab: DashboardTab = isDashboardTab(queryTab)
-			? queryTab
-			: isDashboardTab(cookieTab)
-				? cookieTab
-				: "http";
+		let tab: DashboardTab;
+		if (isDashboardTab(queryTab)) tab = queryTab;
+		else if (isDashboardTab(cookieTab)) tab = cookieTab;
+		else tab = "http";
 
 		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
 
