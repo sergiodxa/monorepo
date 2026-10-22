@@ -121,14 +121,32 @@
 							"minimum": 1,
 							"default": 4,
 							"description": "Maximum cyclomatic complexity per function; the complexity check warns above it"
-						},
-						"moduleLines": {
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"max": 4
+					}
+				},
+				"moduleSize": {
+					"type": "object",
+					"properties": {
+						"maxLines": {
 							"type": "integer",
 							"minimum": 1,
 							"default": 200,
 							"description": "Maximum code lines per module; the module-size check warns above it"
-						},
-						"crap": {
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"maxLines": 200
+					}
+				},
+				"crap": {
+					"type": "object",
+					"properties": {
+						"max": {
 							"type": "integer",
 							"minimum": 1,
 							"default": 12,
@@ -142,9 +160,7 @@
 					},
 					"additionalProperties": false,
 					"default": {
-						"max": 4,
-						"moduleLines": 200,
-						"crap": 12,
+						"max": 12,
 						"coverage": "coverage/coverage-final.json"
 					}
 				}
@@ -156,9 +172,13 @@
 					"accept": []
 				},
 				"complexity": {
-					"max": 4,
-					"moduleLines": 200,
-					"crap": 12,
+					"max": 4
+				},
+				"moduleSize": {
+					"maxLines": 200
+				},
+				"crap": {
+					"max": 12,
 					"coverage": "coverage/coverage-final.json"
 				}
 			}

@@ -66,10 +66,14 @@ const EXPECTED = `{
 		"complexity": {
 			// Maximum cyclomatic complexity per function; the complexity check warns above it
 			"max": 4,
+		},
+		"moduleSize": {
 			// Maximum code lines per module; the module-size check warns above it
-			"moduleLines": 200,
+			"maxLines": 200,
+		},
+		"crap": {
 			// Maximum CRAP score per function; the crap check warns above it
-			"crap": 12,
+			"max": 12,
 			// Istanbul coverage-final.json the crap check reads, relative to the project root
 			"coverage": "coverage/coverage-final.json",
 		},

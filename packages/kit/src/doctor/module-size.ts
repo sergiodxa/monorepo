@@ -20,12 +20,12 @@ import { passed, skipped } from "./check.js";
 import { isAppSource, listFiles } from "./files.js";
 
 /**
- * Warns on each module whose code lines exceed `doctor.complexity.moduleLines`.
+ * Warns on each module whose code lines exceed `doctor.moduleSize.maxLines`.
  */
 export const moduleSizeCheck: Check = {
 	name: "module-size",
 	async run(context): Promise<CheckResult> {
-		let max = context.config.doctor.complexity.moduleLines;
+		let max = context.config.doctor.moduleSize.maxLines;
 		let findings: string[] = [];
 		let files = 0;
 		for (let folder of PROJECT_FOLDERS) {
@@ -49,7 +49,7 @@ export const moduleSizeCheck: Check = {
 					? "Found 1 module above the size limit"
 					: `Found ${findings.length} modules above the size limit`,
 			findings,
-			fix: `Extract helpers or split the module, or raise doctor.complexity.moduleLines in .config/sdxc.jsonc`,
+			fix: `Extract helpers or split the module, or raise doctor.moduleSize.maxLines in .config/sdxc.jsonc`,
 		};
 	},
 };

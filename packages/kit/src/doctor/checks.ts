@@ -28,8 +28,7 @@ import { uiCheck } from "./ui.js";
 
 /**
  * Every built-in check: release drift, the install and the `remix` peer first, then the
- * Worker's secrets and types, then the app's own code, layout and clean-code metrics, then
- * copied components.
+ * Worker's secrets and types, then the app's own code and layout, then copied components.
  */
 export const CHECKS: readonly Check[] = [
 	pinsCheck,

@@ -35,8 +35,10 @@ folders, score CRAP from coverage, or ship agent-tuned defaults through `.config
    - `module-size` — code lines per module (same counting as `sdxc stats`), default max 200
    - `dependencies` — import cycles and outward layer edges
    - `crap` — CRAP from complexity + Istanbul coverage; **skip** when the coverage file is absent
-3. Thresholds live under `doctor.complexity` in the kit config schema (`max`, `moduleLines`,
-   `crap`, `coverage`). All four checks **warn**, matching ADR-160's convention-vs-break split.
+3. Each check that takes a threshold owns its own `doctor.*` group, as `migrations` already
+   does: `doctor.complexity.max`, `doctor.moduleSize.maxLines`, `doctor.crap.max` and
+   `doctor.crap.coverage`. There is no shared clean-code config object. All four checks
+   **warn**, matching ADR-160's convention-vs-break split.
 4. Kit depends on `oxc-parser` for complexity and `@sdxc/diagram` for SVG. Import graphs stay on
    `@sdxc/codemod` so doctor and diagram share one edge finder.
 
