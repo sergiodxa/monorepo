@@ -1,18 +1,19 @@
 ---
 title: Inspect a project
-description: Read what an app holds without opening its files, with sdxc models, schedule, middleware, initializers, notes and stats, each as a table or as JSON for an agent.
+description: Read what an app holds without opening its files, with sdxc models, schedule, middleware, initializers, notes, stats and diagram, each as a table, Mermaid or JSON for an agent.
 section:
     title: The sdxc command
     order: 2
 order: 7.5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-22
 outcomes:
     - "How to see each model's table and whether its migrations match it"
     - "How to check that every scheduled job has a trigger that fires it"
     - "How to read the middleware a request runs, and where each instance comes from"
+    - "How to draw the layer architecture as Mermaid or SVG"
 ---
 
-Six read-only commands answer the questions you would otherwise open files for. Each runs from
+Seven read-only commands answer the questions you would otherwise open files for. Each runs from
 any folder in the project, changes nothing, and takes `--json` for a script or an agent.
 
 | Command             | Answers                                                       |
@@ -23,6 +24,7 @@ any folder in the project, changes nothing, and takes `--json` for a script or a
 | `sdxc initializers` | where the app's one instance of each thing is built           |
 | `sdxc notes`        | which `TODO` and `FIXME` comments are left                    |
 | `sdxc stats`        | how much code each kind holds, and the code to test ratio     |
+| `sdxc diagram`      | how the app-layout layers import each other                   |
 
 [`sdxc routes`](/docs/sdxc/list-routes) answers the seventh: which route reaches which controller.
 
@@ -181,6 +183,35 @@ Tests                   24    855   514
 Total                   90   2991  1669
 
 Code: 1155  Tests: 514  Code to test ratio: 1:0.4
+```
+
+## Architecture diagram
+
+`sdxc diagram` walks the same import graph the `dependencies` doctor check uses and prints a
+Mermaid flowchart of the app-layout layers. Edges that break Clean Architecture's dependency
+rule (inner layer importing an outer one) are dashed and labelled. `--json` prints the graph
+for an agent; `--svg architecture.svg` draws it with [`@sdxc/diagram`](/api/diagram) and writes
+the file under the project root:
+
+```bash
+sdxc diagram
+sdxc diagram --json
+sdxc diagram --svg architecture.svg
+```
+
+```text
+Modules: 42
+Imports: 87
+Layer edges: 9
+Dependency-rule breaches: 0
+Import cycles: 0
+
+flowchart TB
+  L_http["http"]
+  L_services["services"]
+  L_models["models"]
+  L_http -->|12 imports| L_services
+  L_services -->|8 imports| L_models
 ```
 
 ## Where to go next
