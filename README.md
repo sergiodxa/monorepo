@@ -317,6 +317,7 @@ references live at [sdxc.dev](https://sdxc.dev).
 | [@sdxc/database-middleware](packages/database-middleware) | Middleware that publishes a remix/data-table database as ctx.db on a request, a job or a command  |
 | [@sdxc/dates](packages/dates)                             | Zone-aware date operations with Intl-only formatting                                              |
 | [@sdxc/duration](packages/duration)                       | Typed duration strings converted to milliseconds or seconds                                       |
+| [@sdxc/iife](packages/iife)                               | Immediately invoke a callback where an expression is needed                                       |
 | [@sdxc/random](packages/random)                           | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state |
 | [@sdxc/result](packages/result)                           | Result type for error handling                                                                    |
 | [@sdxc/sample](packages/sample)                           | Seeded generation of believable people, places, prose, numbers and identifiers                    |

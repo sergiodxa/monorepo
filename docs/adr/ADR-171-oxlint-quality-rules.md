@@ -60,8 +60,10 @@ with the size caps: `eqeqeq` (`always`, `null: "ignore"` for idiomatic `== null`
 
 - Nested ternary: `eslint/no-nested-ternary` deny; `unicorn/no-nested-ternary` allow.
   Unicorn's variant requires parentheses that Oxfmt strips, which thrash with
-  `bun check:fix`. Banning nesting and rewriting to `if`/`else` (or a named local)
-  matches the formatter.
+  `bun check:fix`. Banning nesting matches the formatter. Prefer
+  `@sdxc/iife` so the block stays an expression (`let x = iife(() => { … })`)
+  instead of an outer mutable `let` filled by `if`/`else`; reach for a named
+  helper when the block outgrows a short callback.
 - Lonely if: `no-lonely-if` deny; `unicorn/no-lonely-if` allow.
 - Vitest: load the `vitest` plugin only in the test-file override, deny
   `vitest/max-nested-describe`, and allow the plugin's style defaults that would otherwise
