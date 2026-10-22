@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Tests the optimal segmenter: the modes Nayuki's reference picks for every fixture, and
  * the properties a seeded corpus checks, that no segmentation costs more bits than the
@@ -6,8 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "@sdxc/random";
-
+import { iife } from "@sdxc/iife";
 import { createRandom, systemSeed } from "@sdxc/random";
 import { describe, expect, test } from "vitest";
 
@@ -44,10 +45,11 @@ function mixedText(random: Random): string {
  */
 function singleModeBits(text: string, version: number): number {
 	let length = text.length;
-	let mode: QrMode;
-	if (/^[0-9]*$/.test(text)) mode = "numeric";
-	else if (/^[0-9A-Z $%*+\-./:]*$/.test(text)) mode = "alphanumeric";
-	else mode = "byte";
+	let mode = iife((): QrMode => {
+		if (/^[0-9]*$/.test(text)) return "numeric";
+		if (/^[0-9A-Z $%*+\-./:]*$/.test(text)) return "alphanumeric";
+		return "byte";
+	});
 	let bytes = new TextEncoder().encode(text).length;
 	let count = mode === "byte" ? bytes : length;
 	if (count >= 2 ** charCountBits(mode, version)) return Infinity;
