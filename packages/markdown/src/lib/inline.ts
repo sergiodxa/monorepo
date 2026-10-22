@@ -1103,7 +1103,7 @@ class InlineRun {
 		let children = mergeAdjacentText(this.#cells.extract(openerCell.next, closerCell));
 		let position = this.#text.position(openerCell.end, closerCell.start);
 
-		let emphasis;
+		let emphasis: Markdown.Emphasis | Markdown.Strong | Markdown.Strikethrough;
 		if (opener.char === "~") emphasis = { type: "strikethrough", children, position };
 		else if (used === 1) emphasis = { type: "emphasis", children, position };
 		else emphasis = { type: "strong", children, position };
