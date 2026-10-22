@@ -112,6 +112,41 @@
 					"default": {
 						"accept": []
 					}
+				},
+				"complexity": {
+					"type": "object",
+					"properties": {
+						"max": {
+							"type": "integer",
+							"minimum": 1,
+							"default": 4,
+							"description": "Maximum cyclomatic complexity per function; the complexity check warns above it"
+						},
+						"moduleLines": {
+							"type": "integer",
+							"minimum": 1,
+							"default": 200,
+							"description": "Maximum code lines per module; the module-size check warns above it"
+						},
+						"crap": {
+							"type": "integer",
+							"minimum": 1,
+							"default": 12,
+							"description": "Maximum CRAP score per function; the crap check warns above it"
+						},
+						"coverage": {
+							"type": "string",
+							"default": "coverage/coverage-final.json",
+							"description": "Istanbul coverage-final.json the crap check reads, relative to the project root"
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"max": 4,
+						"moduleLines": 200,
+						"crap": 12,
+						"coverage": "coverage/coverage-final.json"
+					}
 				}
 			},
 			"additionalProperties": false,
@@ -119,6 +154,12 @@
 				"checks": ".config/sdxc/checks",
 				"migrations": {
 					"accept": []
+				},
+				"complexity": {
+					"max": 4,
+					"moduleLines": 200,
+					"crap": 12,
+					"coverage": "coverage/coverage-final.json"
 				}
 			}
 		},
