@@ -63,6 +63,18 @@ const DOCTOR_CRAP_DEFAULTS = { max: 12, coverage: "coverage/coverage-final.json"
 /** Integer at least 1; shared so doctor leaf schemas stay under the nested-call ceiling. */
 const POSITIVE_INTEGER = s.integer().pipe(checks.min(1));
 
+/** The `doctor.testRatio` group as a project with no such key gets it. */
+const DOCTOR_TEST_RATIO_DEFAULTS = { min: 0.3 };
+
+/** The `doctor.fanOut` group as a project with no such key gets it. */
+const DOCTOR_FAN_OUT_DEFAULTS = { max: 15 };
+
+/** The `doctor.duplication` group as a project with no such key gets it. */
+const DOCTOR_DUPLICATION_DEFAULTS = { minLines: 8 };
+
+/** The `doctor.mutation` group as a project with no such key gets it. */
+const DOCTOR_MUTATION_DEFAULTS = { report: "reports/mutation/mutation.json", maxSurvived: 0 };
+
 /** The `doctor` group as a project with no `doctor` key gets it. */
 const DOCTOR_DEFAULTS = {
 	checks: ".config/sdxc/checks",
@@ -70,6 +82,10 @@ const DOCTOR_DEFAULTS = {
 	complexity: DOCTOR_COMPLEXITY_DEFAULTS,
 	moduleSize: DOCTOR_MODULE_SIZE_DEFAULTS,
 	crap: DOCTOR_CRAP_DEFAULTS,
+	testRatio: DOCTOR_TEST_RATIO_DEFAULTS,
+	fanOut: DOCTOR_FAN_OUT_DEFAULTS,
+	duplication: DOCTOR_DUPLICATION_DEFAULTS,
+	mutation: DOCTOR_MUTATION_DEFAULTS,
 };
 
 /** The `run` group as a project with no `run` key gets it. */
@@ -186,6 +202,68 @@ export const CONFIG_SCHEMA = s.object(
 							{ unknownKeys: "error" },
 						),
 						DOCTOR_CRAP_DEFAULTS,
+					),
+					testRatio: s.defaulted(
+						s.object(
+							{
+								min: s
+									.defaulted(s.number().pipe(checks.min(0)), DOCTOR_TEST_RATIO_DEFAULTS.min)
+									.meta({
+										description:
+											"Minimum tests/code ratio from sdxc stats; the test-ratio check warns below it",
+									}),
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_TEST_RATIO_DEFAULTS,
+					),
+					fanOut: s.defaulted(
+						s.object(
+							{
+								max: s.defaulted(POSITIVE_INTEGER, DOCTOR_FAN_OUT_DEFAULTS.max).meta({
+									description:
+										"Maximum distinct modules one file may import; the fan-out check warns above it",
+								}),
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_FAN_OUT_DEFAULTS,
+					),
+					duplication: s.defaulted(
+						s.object(
+							{
+								minLines: s
+									.defaulted(
+										s.integer().pipe(checks.min(2)),
+										DOCTOR_DUPLICATION_DEFAULTS.minLines,
+									)
+									.meta({
+										description: "Minimum consecutive code lines that count as a duplicated block",
+									}),
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_DUPLICATION_DEFAULTS,
+					),
+					mutation: s.defaulted(
+						s.object(
+							{
+								report: s.defaulted(s.string(), DOCTOR_MUTATION_DEFAULTS.report).meta({
+									description:
+										"Mutation report JSON the mutation check reads, relative to the project root",
+								}),
+								maxSurvived: s
+									.defaulted(
+										s.integer().pipe(checks.min(0)),
+										DOCTOR_MUTATION_DEFAULTS.maxSurvived,
+									)
+									.meta({
+										description: "Maximum surviving mutants the mutation check allows",
+									}),
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_MUTATION_DEFAULTS,
 					),
 				},
 				{ unknownKeys: "error" },
@@ -309,6 +387,7 @@ function configuredPaths(config: Config): Array<[string, string]> {
 		["make.stubs", config.make.stubs],
 		["doctor.checks", config.doctor.checks],
 		["doctor.crap.coverage", config.doctor.crap.coverage],
+		["doctor.mutation.report", config.doctor.mutation.report],
 		["run.entry", config.run.entry],
 		["lock", config.lock],
 	];

@@ -12,23 +12,31 @@ import type { Check, CheckReport } from "./check.js";
 import { complexityCheck } from "./complexity.js";
 import { crapCheck } from "./crap.js";
 import { dependenciesCheck } from "./dependencies.js";
+import { duplicationCheck } from "./duplication.js";
 import { emailsCheck } from "./emails.js";
 import { envCheck } from "./env.js";
+import { fanOutCheck } from "./fan-out.js";
+import { featureScatterCheck } from "./feature-scatter.js";
 import { installedCheck } from "./installed.js";
 import { jsdocCheck } from "./jsdoc.js";
 import { layoutCheck } from "./layout.js";
 import { migrationsCheck } from "./migrations.js";
 import { modelsCheck } from "./models.js";
 import { moduleSizeCheck } from "./module-size.js";
+import { mutationCheck } from "./mutation.js";
+import { orphansCheck } from "./orphans.js";
 import { pinsCheck } from "./pins.js";
 import { remixCheck } from "./remix.js";
+import { resultThrowsCheck } from "./result-throws.js";
 import { routesCheck } from "./routes.js";
+import { testRatioCheck } from "./test-ratio.js";
 import { typegenCheck } from "./typegen.js";
 import { uiCheck } from "./ui.js";
 
 /**
  * Every built-in check: release drift, the install and the `remix` peer first, then the
- * Worker's secrets and types, then the app's own code and layout, then copied components.
+ * Worker's secrets and types, then the app's own code, layout and quality metrics, then
+ * copied components.
  */
 export const CHECKS: readonly Check[] = [
 	pinsCheck,
@@ -45,7 +53,14 @@ export const CHECKS: readonly Check[] = [
 	complexityCheck,
 	moduleSizeCheck,
 	dependenciesCheck,
+	fanOutCheck,
+	orphansCheck,
+	featureScatterCheck,
+	duplicationCheck,
+	resultThrowsCheck,
+	testRatioCheck,
 	crapCheck,
+	mutationCheck,
 	uiCheck,
 ];
 
