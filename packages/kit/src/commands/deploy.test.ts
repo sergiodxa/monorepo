@@ -256,6 +256,27 @@ describe("sdxc deploy", () => {
 		expect(ran(run.exec)).toEqual([COMMANDS.build, COMMANDS.pending]);
 	});
 
+	test("surfaces the pending-list child's stderr when listing fails", async () => {
+		let root = await project();
+
+		let run = await invoke(createSDXC(), ["deploy", "--yes"], {
+			cwd: root,
+			interactive: false,
+			exec: {
+				...replies(),
+				[COMMANDS.pending]: {
+					code: 1,
+					stderr: "Authentication error [code: 10000]\n",
+				},
+			},
+		});
+
+		expect(run.code).toBe(1);
+		expect(run.stderr).toContain("Listing pending migrations");
+		expect(run.stderr).toContain("Authentication error [code: 10000]");
+		expect(ran(run.exec)).toEqual([COMMANDS.build, COMMANDS.pending]);
+	});
+
 	test("stops before anything remote when the app has no deploy command", async () => {
 		let root = await project();
 

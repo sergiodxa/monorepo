@@ -16,7 +16,14 @@ import { isFailure, isSuccess, wrap } from "@sdxc/result";
 import type { MigrationStep } from "../deploy/plan.js";
 
 import { SDXC_COMMANDS } from "../contract.js";
-import { deployFailure, formatPlan, isUnknown, migrates, parsePending } from "../deploy/plan.js";
+import {
+	deployFailure,
+	execDetail,
+	formatPlan,
+	isUnknown,
+	migrates,
+	parsePending,
+} from "../deploy/plan.js";
 import { project } from "../middleware.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { readManifest } from "../upgrade/project.js";
@@ -96,7 +103,7 @@ export default createCommand(SDXC_COMMANDS.deploy, {
 			} else {
 				return failure(
 					new Error(
-						`Listing pending migrations with db migrate --remote --pending failed; nothing was migrated or deployed: ${listed.error.message}`,
+						`Listing pending migrations with db migrate --remote --pending failed; nothing was migrated or deployed: ${execDetail(listed.error)}`,
 					),
 				);
 			}
