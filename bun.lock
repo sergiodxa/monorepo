@@ -1288,11 +1288,13 @@
         "@sdxc/cli": "workspace:*",
         "@sdxc/codemod": "workspace:*",
         "@sdxc/cron": "workspace:*",
+        "@sdxc/diagram": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/jsonc": "workspace:*",
         "@sdxc/jsonl": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/semver": "workspace:*",
+        "oxc-parser": "^0.154.0",
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",

@@ -44,7 +44,16 @@ const DEFAULTS = {
 		specs: true,
 		stubs: ".config/sdxc/stubs",
 	},
-	doctor: { checks: ".config/sdxc/checks", migrations: { accept: [] } },
+	doctor: {
+		checks: ".config/sdxc/checks",
+		migrations: { accept: [] },
+		complexity: {
+			max: 4,
+			moduleLines: 200,
+			crap: 12,
+			coverage: "coverage/coverage-final.json",
+		},
+	},
 	run: { entry: "bootstrap/cli.ts" },
 	lock: ".config/sdxc.lock.jsonl",
 };
@@ -130,6 +139,12 @@ describe("loadConfig", () => {
 		expect(unwrap(accepted).config.doctor).toEqual({
 			checks: ".config/sdxc/checks",
 			migrations: { accept },
+			complexity: {
+				max: 4,
+				moduleLines: 200,
+				crap: 12,
+				coverage: "coverage/coverage-final.json",
+			},
 		});
 		expect(isFailure(partial) && partial.error.message.split("\n").sort()).toEqual([
 			"sdxc.jsonc: doctor.migrations.accept.0.column: Expected string",

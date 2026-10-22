@@ -51,8 +51,23 @@ const DOCTOR_MIGRATIONS_DEFAULTS: { accept: s.InferOutput<typeof ACCEPTED_MIGRAT
 	accept: [],
 };
 
+/**
+ * Clean-code thresholds for the complexity, module-size and crap doctor checks: tuned for
+ * agent-written code (cyclomatic 4, CRAP 12) and overridable per project.
+ */
+const DOCTOR_COMPLEXITY_DEFAULTS = {
+	max: 4,
+	moduleLines: 200,
+	crap: 12,
+	coverage: "coverage/coverage-final.json",
+};
+
 /** The `doctor` group as a project with no `doctor` key gets it. */
-const DOCTOR_DEFAULTS = { checks: ".config/sdxc/checks", migrations: DOCTOR_MIGRATIONS_DEFAULTS };
+const DOCTOR_DEFAULTS = {
+	checks: ".config/sdxc/checks",
+	migrations: DOCTOR_MIGRATIONS_DEFAULTS,
+	complexity: DOCTOR_COMPLEXITY_DEFAULTS,
+};
 
 /** The `run` group as a project with no `run` key gets it. */
 const RUN_DEFAULTS = { entry: "bootstrap/cli.ts" };
@@ -129,6 +144,38 @@ export const CONFIG_SCHEMA = s.object(
 							{ unknownKeys: "error" },
 						),
 						DOCTOR_MIGRATIONS_DEFAULTS,
+					),
+					complexity: s.defaulted(
+						s.object(
+							{
+								max: s
+									.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_COMPLEXITY_DEFAULTS.max)
+									.meta({
+										description:
+											"Maximum cyclomatic complexity per function; the complexity check warns above it",
+									}),
+								moduleLines: s
+									.defaulted(
+										s.integer().pipe(checks.min(1)),
+										DOCTOR_COMPLEXITY_DEFAULTS.moduleLines,
+									)
+									.meta({
+										description:
+											"Maximum code lines per module; the module-size check warns above it",
+									}),
+								crap: s
+									.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_COMPLEXITY_DEFAULTS.crap)
+									.meta({
+										description: "Maximum CRAP score per function; the crap check warns above it",
+									}),
+								coverage: s.defaulted(s.string(), DOCTOR_COMPLEXITY_DEFAULTS.coverage).meta({
+									description:
+										"Istanbul coverage-final.json the crap check reads, relative to the project root",
+								}),
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_COMPLEXITY_DEFAULTS,
 					),
 				},
 				{ unknownKeys: "error" },
@@ -251,6 +298,7 @@ function configuredPaths(config: Config): Array<[string, string]> {
 		["ui.directory", config.ui.directory],
 		["make.stubs", config.make.stubs],
 		["doctor.checks", config.doctor.checks],
+		["doctor.complexity.coverage", config.doctor.complexity.coverage],
 		["run.entry", config.run.entry],
 		["lock", config.lock],
 	];
