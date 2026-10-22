@@ -10,6 +10,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { fg } from "@sdxc/u/color";
 import { vars } from "@sdxc/u/general";
 import { listStyle } from "@sdxc/u/general";
@@ -88,10 +89,11 @@ export function SponsorsView() {
 				<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
 					Rather give once? Send{" "}
 					{TIP_AMOUNTS.map((amount, index) => {
-						let separator;
-						if (index === 0) separator = "";
-						else if (index === TIP_AMOUNTS.length - 1) separator = " or ";
-						else separator = ", ";
+						let separator = iife(() => {
+							if (index === 0) return "";
+							if (index === TIP_AMOUNTS.length - 1) return " or ";
+							return ", ";
+						});
 						return (
 							<>
 								{separator}
