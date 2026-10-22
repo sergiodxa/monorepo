@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { APIClient } from "@sdxc/api-client";
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 
 import type { Answer } from "../deliver.js";
@@ -139,10 +140,11 @@ export class Pushover extends APIClient implements Destination {
 
 		let critical = severityOf(message) === "critical";
 		let emergency = critical ? this.#emergency : null;
-		let priority;
-		if (emergency) priority = "2";
-		else if (critical) priority = "1";
-		else priority = "0";
+		let priority = iife(() => {
+			if (emergency) return "2";
+			if (critical) return "1";
+			return "0";
+		});
 		let payload: PushoverPayload = {
 			title: fitText(message.title, LIMITS.title),
 			message: body === "" ? fitText(message.title, LIMITS.message, pushoverHtml.escape) : body,

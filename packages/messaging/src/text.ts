@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
 import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
 
@@ -370,10 +371,11 @@ function writeList(node: Markdown.List, dialect: Dialect, budget: Budget): strin
 			.join("\n");
 		if (body === "") continue;
 
-		let box;
-		if (item.checked === undefined) box = "";
-		else if (item.checked) box = "☑ ";
-		else box = "☐ ";
+		let box = iife(() => {
+			if (item.checked === undefined) return "";
+			if (item.checked) return "☑ ";
+			return "☐ ";
+		});
 		let marker = node.ordered ? `${number}. ` : "• ";
 		number += 1;
 		let indent = " ".repeat(marker.length);
