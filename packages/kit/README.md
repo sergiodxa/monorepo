@@ -30,7 +30,7 @@ sdxc upgrade                         # move to the latest release and print a pr
 sdxc doctor                          # report release drift, missing secrets and app-layout slips
 sdxc routes --json                   # every route, its controller and middleware, for an agent
 sdxc routes -g posts --method post   # narrow it, as rails routes does; --unused, -c, -E too
-sdxc run users find ada@example.com  # run the app's own command line, bootstrap/cli.ts
+sdxc run users find ada@example.com  # run the project's command line (run.entry)
 sdxc deploy                          # build, then the app's db migrate --remote and deploy
 ```
 
@@ -65,7 +65,7 @@ Every `@sdxc/*` package versions as the UTC date it was published, and a daily r
 | `sdxc initializers` | Lists the initializers, their exports and the factories that build them                 |
 | `sdxc notes`        | Lists the `TODO`, `FIXME`, `HACK` and `OPTIMIZE` comments in the app's code             |
 | `sdxc stats`        | Counts lines of code per kind of code, and the code to test ratio                       |
-| `sdxc run`          | Runs the app's own command line, `bootstrap/cli.ts`, with the project's runtime         |
+| `sdxc run`          | Runs the project's command line (`run.entry`, default `bootstrap/cli.ts`)               |
 | `sdxc doctor`       | Lints the project: release drift, secrets, migrations, layout, JSDoc and its own checks |
 | `sdxc ui`           | Copies `@sdxc/ui` components into the project and points imports at the copies          |
 | `sdxc upgrade`      | Moves the `@sdxc/*` packages and `remix` to a release and prints the prompt             |
@@ -336,7 +336,7 @@ Print every route with its controller and the middleware that runs for it
 
 #### `sdxc run [command...]`
 
-Run the project's own command line, bootstrap/cli.ts, with its runtime
+Run the project's own command line (run.entry, default bootstrap/cli.ts)
 
 #### `sdxc scaffold <name> [field[:type][?]...]`
 

@@ -56,7 +56,7 @@ describe("help", () => {
 				"  models        Print each model's table and whether the migrations create it, from app/models",
 				"  notes         List the TODO, FIXME, HACK and OPTIMIZE comments in the app's code",
 				"  routes        Print every route with its controller and the middleware that runs for it",
-				"  run           Run the project's own command line, bootstrap/cli.ts, with its runtime",
+				"  run           Run the project's own command line (run.entry, default bootstrap/cli.ts)",
 				"  scaffold      Write a resource's model, migration, pages, tests and more, declared and mapped",
 				"  schedule      List the scheduled jobs, their next runs and the Worker triggers that fire them",
 				"  stats         Count lines of code per kind of code the app layout names, and the test ratio",

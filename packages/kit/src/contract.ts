@@ -522,7 +522,7 @@ export const SDXC_COMMANDS = commands({
 		],
 	}),
 	run: command({
-		description: "Run the project's own command line, bootstrap/cli.ts, with its runtime",
+		description: "Run the project's own command line (run.entry, default bootstrap/cli.ts)",
 		arguments: {
 			args: argument.rest({
 				valueName: "command",

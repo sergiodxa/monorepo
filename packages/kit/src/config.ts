@@ -54,6 +54,9 @@ const DOCTOR_MIGRATIONS_DEFAULTS: { accept: s.InferOutput<typeof ACCEPTED_MIGRAT
 /** The `doctor` group as a project with no `doctor` key gets it. */
 const DOCTOR_DEFAULTS = { checks: ".config/sdxc/checks", migrations: DOCTOR_MIGRATIONS_DEFAULTS };
 
+/** The `run` group as a project with no `run` key gets it. */
+const RUN_DEFAULTS = { entry: "bootstrap/cli.ts" };
+
 /**
  * Every configuration key. Each leaf carries its default, or an example when it has none, and
  * a description that becomes its comment in `sdxc init`'s output; an unknown key is an error, so
@@ -131,6 +134,18 @@ export const CONFIG_SCHEMA = s.object(
 				{ unknownKeys: "error" },
 			),
 			DOCTOR_DEFAULTS,
+		),
+		run: s.defaulted(
+			s.object(
+				{
+					entry: s.defaulted(s.string(), RUN_DEFAULTS.entry).meta({
+						description:
+							"Module `sdxc run` starts, relative to the project root; apps keep the default",
+					}),
+				},
+				{ unknownKeys: "error" },
+			),
+			RUN_DEFAULTS,
 		),
 		format: s.optional(s.array(s.string()).pipe(checks.minItems(1))).meta({
 			description: "Command run on every file the CLI writes or edits, paths appended",
@@ -236,6 +251,7 @@ function configuredPaths(config: Config): Array<[string, string]> {
 		["ui.directory", config.ui.directory],
 		["make.stubs", config.make.stubs],
 		["doctor.checks", config.doctor.checks],
+		["run.entry", config.run.entry],
 		["lock", config.lock],
 	];
 	for (let [chain, folder] of Object.entries(config.make.migrations)) {

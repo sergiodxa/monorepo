@@ -122,6 +122,20 @@
 				}
 			}
 		},
+		"run": {
+			"type": "object",
+			"properties": {
+				"entry": {
+					"type": "string",
+					"default": "bootstrap/cli.ts",
+					"description": "Module `sdxc run` starts, relative to the project root; apps keep the default"
+				}
+			},
+			"additionalProperties": false,
+			"default": {
+				"entry": "bootstrap/cli.ts"
+			}
+		},
 		"format": {
 			"type": "array",
 			"items": {
