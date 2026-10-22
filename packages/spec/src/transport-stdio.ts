@@ -293,9 +293,9 @@ async function spawnChild(
 		cwd,
 	});
 	child.stdin?.on("error", () => {});
-	let failed = await new Promise<Error | undefined>((settle) => {
-		child.once("spawn", () => settle(undefined));
-		child.once("error", (error: Error) => settle(error));
+	let failed = await new Promise<Error | undefined>((resolve) => {
+		child.once("spawn", () => resolve(undefined));
+		child.once("error", (error: Error) => resolve(error));
 	});
 	if (failed !== undefined) throw failed;
 	let stdin = child.stdin;
