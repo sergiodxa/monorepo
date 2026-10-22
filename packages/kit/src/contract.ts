@@ -12,6 +12,7 @@ import * as s from "remix/data-schema";
 
 import { BUILTIN_TEMPLATES, DEFAULT_TEMPLATE } from "./create/templates.js";
 import { DEPLOY_STEPS } from "./deploy/plan.js";
+import { BINDING_KINDS } from "./make/binding.js";
 import {
 	ACTION_NAMES,
 	DESTROY_KINDS,
@@ -22,6 +23,10 @@ import {
 import { DEFAULT_TAGS } from "./notes.js";
 import { ROUTE_SORTS } from "./routes/filter.js";
 import { FIELD_TYPE_NAMES } from "./scaffold/fields.js";
+import { SETUP_FEATURES } from "./setup/catalog.js";
+
+/** Feature names `sdxc setup` accepts, as a non-empty tuple for the argument schema. */
+const SETUP_FEATURE_NAMES = SETUP_FEATURES.map((feature) => feature.name) as [string, ...string[]];
 
 /** Route methods `make controller --method` accepts; `form` declares a GET page with a POST action. */
 export const METHODS = ["get", "post", "put", "patch", "delete", "form"] as const;
@@ -189,6 +194,25 @@ export const SDXC_COMMANDS = commands({
 				.list(),
 		},
 		examples: ["doctor", "doctor --json", "doctor --only pins,remix", "doctor --skip ui"],
+	}),
+	fix: commands({
+		description: "Apply doctor repairs the kit can make safely",
+		flags: { dryRun: DRY_RUN_FLAG },
+		env: command({
+			description: "Append missing bindings.secret() keys to .env.example",
+			flags: { dryRun: DRY_RUN_FLAG },
+			examples: ["fix env", "fix env --dry-run"],
+		}),
+		models: command({
+			description: "Register unmapped createModel modules in app/models/index.ts",
+			flags: { dryRun: DRY_RUN_FLAG },
+			examples: ["fix models", "fix models --dry-run"],
+		}),
+		emails: command({
+			description: "Map unmapped emails in app/initializers/mail.ts",
+			flags: { dryRun: DRY_RUN_FLAG },
+			examples: ["fix emails", "fix emails --dry-run"],
+		}),
 	}),
 	init: command({
 		description: "Write .config/sdxc.jsonc with every default spelled out",
@@ -437,6 +461,67 @@ export const SDXC_COMMANDS = commands({
 				}),
 			},
 		}),
+		secret: command({
+			description: "Declare a bindings.secret() in cloudflare.config.ts and append .env.example",
+			tasks: true,
+			arguments: {
+				name: argument(nonEmpty("Name it"), {
+					valueName: "NAME",
+					description: "The binding key, SCREAMING_SNAKE or kebab-case",
+					prompt: prompt.text({
+						message: "What should the secret be called?",
+						placeholder: "API_KEY",
+					}),
+				}),
+			},
+			flags: { dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
+			examples: ["make secret API_KEY", "make secret api-key --dry-run"],
+		}),
+		binding: command({
+			description: "Declare a Cloudflare binding in cloudflare.config.ts",
+			tasks: true,
+			arguments: {
+				kind: argument(s.enum_(BINDING_KINDS), {
+					description: `The bindings helper: ${BINDING_KINDS.join(", ")}`,
+				}),
+				name: argument(nonEmpty("Name it"), {
+					valueName: "NAME",
+					description: "The binding key, SCREAMING_SNAKE or kebab-case",
+				}),
+			},
+			flags: { dryRun: DRY_RUN_FLAG, force: FORCE_FLAG },
+			examples: ["make binding kv CACHE", "make binding secret API_KEY"],
+		}),
+		do: command({
+			description:
+				"Write a Durable Object class, re-export it from bootstrap/worker.ts, and declare its binding",
+			tasks: true,
+			arguments: {
+				name: argument(nonEmpty("Name it"), {
+					description: "The class name, such as Feed or geo-fetch",
+					prompt: prompt.text({
+						message: "What should the Durable Object be called?",
+						placeholder: "Feed",
+					}),
+				}),
+			},
+			flags: {
+				role: flag.string("role", {
+					valueName: "role",
+					schema: s.enum_(["model", "service"] as const),
+					default: "service",
+					description:
+						"app/models when it owns stored state, app/services otherwise (default: service)",
+				}),
+				binding: flag.string("binding", {
+					valueName: "NAME",
+					description: "The env binding key (default: derived from the class name)",
+				}),
+				dryRun: DRY_RUN_FLAG,
+				force: FORCE_FLAG,
+			},
+			examples: ["make do Feed --role model", "make do geo-fetch --binding GEO_FETCH"],
+		}),
 	}),
 	middleware: command({
 		description: "Print each router's global middleware and every chain in app/http/middleware",
@@ -581,6 +666,34 @@ export const SDXC_COMMANDS = commands({
 		description: "List the scheduled jobs, their next runs and the Worker triggers that fire them",
 		flags: { json: flag.boolean("json", { description: "Print the schedule as JSON" }) },
 		examples: ["schedule", "schedule --json"],
+	}),
+	setup: command({
+		description:
+			"Install a multi-file feature (auth, billing, flags); lists known features with no name",
+		arguments: {
+			feature: argument(s.enum_(SETUP_FEATURE_NAMES), {
+				optional: true,
+				description: "The feature to install; lists the catalog when left out",
+			}),
+		},
+		flags: {
+			provider: flag.string("provider", {
+				valueName: "provider",
+				description: "Backend for features that vary (auth: r3-auth; billing: polar)",
+			}),
+			yes: flag.boolean("yes", {
+				short: "y",
+				description: "Write the plan; without it the plan is printed and nothing changes",
+			}),
+			dryRun: DRY_RUN_FLAG,
+		},
+		examples: [
+			"setup",
+			"setup auth",
+			"setup auth --provider r3-auth -y",
+			"setup billing --provider polar --dry-run",
+			"setup flags -y",
+		],
 	}),
 	stats: command({
 		description: "Count lines of code per kind of code the app layout names, and the test ratio",
