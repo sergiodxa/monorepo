@@ -55,12 +55,11 @@ describe("Returns no metadata", () => {
 	])("$flagType $key", async ({ key, flagType, defaultValue }) => {
 		let client = await stable();
 
-		let details =
-			flagType === "Boolean"
-				? await client.booleanDetails(key, defaultValue as boolean)
-				: flagType === "String"
-					? await client.stringDetails(key, defaultValue as string)
-					: await client.numberDetails(key, defaultValue as number);
+		let details;
+		if (flagType === "Boolean") details = await client.booleanDetails(key, defaultValue as boolean);
+		else if (flagType === "String")
+			details = await client.stringDetails(key, defaultValue as string);
+		else details = await client.numberDetails(key, defaultValue as number);
 
 		expect(details.flagMetadata).toEqual({});
 	});

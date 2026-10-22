@@ -201,10 +201,14 @@ export class InMemoryProvider implements Provider {
 		// A flag with targeting that named no variant fell back, which the specification calls
 		// DEFAULT — "dynamic evaluation yielded no result". STATIC is for a flag that never
 		// evaluated anything, so the two say different things about why this variant was served.
+		let reason;
+		if (targeted) reason = "TARGETING_MATCH";
+		else if (flag.contextEvaluator) reason = "DEFAULT";
+		else reason = "STATIC";
 		return resolved(value, {
 			...details,
 			variant,
-			reason: targeted ? "TARGETING_MATCH" : flag.contextEvaluator ? "DEFAULT" : "STATIC",
+			reason: reason,
 		});
 	}
 }
