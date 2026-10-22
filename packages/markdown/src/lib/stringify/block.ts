@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * Writes blocks back as source, one normalized spelling per construct: ATX
  * headings, backtick fences, `-` bullets, padded tables. An annotation rides the
@@ -135,10 +137,11 @@ function writeList(node: Markdown.List): string {
 
 /** One item, its continuation lines indented to sit under the text the marker opened. */
 function writeListItem(node: Markdown.ListItem, marker: string, separator: string): string {
-	let box;
-	if (node.checked === undefined) box = "";
-	else if (node.checked) box = "[x] ";
-	else box = "[ ] ";
+	let box = iife(() => {
+		if (node.checked === undefined) return "";
+		if (node.checked) return "[x] ";
+		return "[ ] ";
+	});
 	let body = `${box}${above(node.attributes, stringifyBlocks(node.children, separator))}`;
 	let indent = " ".repeat(marker.length);
 
