@@ -600,6 +600,9 @@ class InlineRun {
 
 		if (below) below.bracketAfter = true;
 
+		let previousLink;
+		if (below) previousLink = below.image ? below.previousLink : below;
+		else previousLink = null;
 		this.#brackets = {
 			cell,
 			index,
@@ -607,7 +610,7 @@ class InlineRun {
 			active: true,
 			bracketAfter: false,
 			previous: below,
-			previousLink: below ? (below.image ? below.previousLink : below) : null,
+			previousLink: previousLink,
 			previousDelimiter: this.#delimiters,
 		};
 	}
@@ -1083,8 +1086,10 @@ class InlineRun {
 	 * @returns The next closer to consider
 	 */
 	#wrap(opener: Delimiter, closer: Delimiter): Delimiter | null {
-		let used =
-			opener.char === "~" ? closer.length : closer.length >= 2 && opener.length >= 2 ? 2 : 1;
+		let used;
+		if (opener.char === "~") used = closer.length;
+		else if (closer.length >= 2 && opener.length >= 2) used = 2;
+		else used = 1;
 
 		opener.length -= used;
 		closer.length -= used;
@@ -1098,16 +1103,11 @@ class InlineRun {
 		let children = mergeAdjacentText(this.#cells.extract(openerCell.next, closerCell));
 		let position = this.#text.position(openerCell.end, closerCell.start);
 
-		this.#cells.insertAfter(
-			openerCell,
-			opener.char === "~"
-				? { type: "strikethrough", children, position }
-				: used === 1
-					? { type: "emphasis", children, position }
-					: { type: "strong", children, position },
-			openerCell.end,
-			closerCell.start,
-		);
+		let emphasis;
+		if (opener.char === "~") emphasis = { type: "strikethrough", children, position };
+		else if (used === 1) emphasis = { type: "emphasis", children, position };
+		else emphasis = { type: "strong", children, position };
+		this.#cells.insertAfter(openerCell, emphasis, openerCell.end, closerCell.start);
 
 		this.#trim(openerCell, opener);
 		this.#trim(closerCell, closer);
