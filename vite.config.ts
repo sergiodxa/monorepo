@@ -537,6 +537,7 @@ export default defineConfig({
 			"node",
 			"oxc",
 			"promise",
+			"react",
 			"typescript",
 			"unicorn",
 		],
@@ -545,6 +546,11 @@ export default defineConfig({
 			"jsx_a11y/control-has-associated-label": "allow",
 			"jsx_a11y/no-noninteractive-element-interactions": "allow",
 			"jsx_a11y/prefer-tag-over-role": "allow",
+			/**
+			 * Loading the react plugin for `jsx-max-depth` also turns on its style defaults;
+			 * only the depth cap is part of this quality pass.
+			 */
+			"react/jsx-key": "allow",
 
 			/**
 			 * A statement that computes a value and drops it reads like an action while doing
@@ -554,6 +560,50 @@ export default defineConfig({
 			 * caller uses what a call returns.
 			 */
 			"no-unused-expressions": "deny",
+
+			/**
+			 * Size and complexity caps (ADR-171). Oxlint defaults would fail thousands of
+			 * existing functions; thresholds below are the adoption floor so CI stops further
+			 * growth while screens and parsers are split. Competing duplicates stay `allow`
+			 * so one plugin owns each check. Exemptions go in `lint.overrides` here — never
+			 * `oxlint-disable` comments in source.
+			 */
+			"max-params": ["deny", { max: 11 }],
+			"max-depth": ["deny", { max: 6 }],
+			"max-lines-per-function": ["deny", { max: 500, skipBlankLines: true, skipComments: true }],
+			"max-lines": ["deny", { max: 2000, skipBlankLines: true, skipComments: true }],
+			"max-nested-callbacks": ["deny", { max: 10 }],
+			"max-statements": ["deny", { max: 120 }],
+			"max-classes-per-file": ["deny", { max: 12, ignoreExpressions: true }],
+			complexity: ["deny", { max: 100 }],
+			"no-else-return": "deny",
+			/**
+			 * Oxfmt strips the parentheses `unicorn/no-nested-ternary` requires, so that
+			 * rule and the formatter thrash. Ban nesting outright with the eslint rule and
+			 * rewrite to `if`/`else` or a named local instead.
+			 */
+			"eslint/no-nested-ternary": "deny",
+			"unicorn/no-nested-ternary": "allow",
+			"unicorn/max-nested-calls": ["deny", { max: 7 }],
+			"react/jsx-max-depth": ["deny", { max: 12 }],
+
+			/**
+			 * Shape rules that keep control flow and collections readable. `== null` stays
+			 * legal under `eqeqeq` because it is the repo's nullish check; eslint owns
+			 * lonely-ifs, unicorn's duplicate stays off.
+			 */
+			eqeqeq: ["deny", "always", { null: "ignore" }],
+			"no-var": "deny",
+			"no-lonely-if": "deny",
+			"unicorn/no-lonely-if": "allow",
+			"no-unneeded-ternary": "deny",
+			"no-useless-return": "deny",
+			"default-case-last": "deny",
+			"oxc/no-accumulating-spread": "deny",
+			"unicorn/prefer-array-flat-map": "deny",
+			"unicorn/prefer-array-flat": "deny",
+			"no-param-reassign": "deny",
+			"promise/param-names": "deny",
 		},
 		settings: {
 			"jsx-a11y": {
@@ -578,6 +628,109 @@ export default defineConfig({
 					"jsx_a11y/anchor-has-content": "allow",
 					"jsx_a11y/alt-text": "allow",
 					"jsx_a11y/label-has-associated-control": "allow",
+				},
+			},
+			{
+				/**
+				 * App controllers and views still carry page-sized functions and deep JSX.
+				 * Packages keep the full size caps; apps keep nesting, params and hygiene,
+				 * and take the stricter limits as those screens are split (ADR-171).
+				 */
+				files: ["apps/**"],
+				rules: {
+					"max-lines-per-function": "allow",
+					"max-statements": "allow",
+					"max-lines": "allow",
+					"max-classes-per-file": "allow",
+					"max-params": ["deny", { max: 10 }],
+					complexity: ["deny", { max: 55 }],
+					"react/jsx-max-depth": "allow",
+				},
+			},
+			{
+				/**
+				 * Release and CLI scripts are orchestration, not library API surface; line and
+				 * statement caps that keep packages small do not apply the same way here.
+				 */
+				files: ["scripts/**", "cli/**"],
+				rules: {
+					"max-lines-per-function": "allow",
+					"max-statements": "allow",
+					"max-lines": "allow",
+					complexity: ["deny", { max: 55 }],
+				},
+			},
+			{
+				/**
+				 * Locale catalogs, password dictionaries, icon registries and similar tables are
+				 * generated or translated bulk data; splitting them to satisfy `max-lines` would
+				 * only add indirection.
+				 */
+				files: [
+					"**/*.data.ts",
+					"**/locales/**",
+					"**/resources/content/**",
+					"packages/icons/src/registry.ts",
+					"packages/icons/src/icon-names.ts",
+					"packages/icons/src/index.ts",
+					"packages/email-address/src/disposable-domains.ts",
+					"packages/sample/src/data/**",
+					"apps/pkmn/src/content/**",
+				],
+				rules: {
+					"max-lines": "allow",
+				},
+			},
+			{
+				/**
+				 * Domain error hierarchies keep related `Error` subclasses in one module so
+				 * callers import from a single path; the class-per-file cap still applies
+				 * everywhere else.
+				 */
+				files: ["**/errors.ts"],
+				rules: {
+					"max-classes-per-file": "allow",
+				},
+			},
+			{
+				/**
+				 * Specs list many cases in one `it`/`describe`, so line and statement caps that
+				 * keep production functions small punish the wrong thing here. Listed last so
+				 * it wins over the apps override for app test files. Vitest loads only for
+				 * tests so its defaults do not fire on app and package sources.
+				 */
+				files: [
+					"**/*.test.ts",
+					"**/*.test.tsx",
+					"**/*.workers.test.ts",
+					"**/*.workers.test.tsx",
+					"**/test/**",
+				],
+				plugins: ["vitest"],
+				rules: {
+					"vitest/max-nested-describe": ["deny", { max: 5 }],
+					/**
+					 * Loading the vitest plugin also turns on its style defaults; those are not
+					 * part of this quality pass and would fail under `denyWarnings`.
+					 */
+					"vitest/require-to-throw-message": "allow",
+					"vitest/no-conditional-expect": "allow",
+					"vitest/valid-expect": "allow",
+					"vitest/valid-title": "allow",
+					"vitest/expect-expect": "allow",
+					"vitest/require-mock-type-parameters": "allow",
+					"vitest/no-standalone-expect": "allow",
+					"vitest/no-conditional-tests": "allow",
+					"vitest/no-disabled-tests": "allow",
+					"max-lines-per-function": "allow",
+					"max-statements": "allow",
+					"max-lines": "allow",
+					"max-classes-per-file": "allow",
+					"max-params": "allow",
+					complexity: "allow",
+					"react/jsx-max-depth": "allow",
+					"unicorn/max-nested-calls": "allow",
+					"promise/param-names": "allow",
 				},
 			},
 		],

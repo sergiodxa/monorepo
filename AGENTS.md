@@ -117,6 +117,7 @@ sdxc deploy --skip migrate      # The same for an app without a database (books,
 - MUST import `env` from `cloudflare:workers` and never from `process.env` or other sources
 - MUST extend root `tsconfig.json` in all packages and applications
 - MUST add a new app's formatting or lint exceptions to `fmt.overrides` / `lint.overrides` in the root `vite.config.ts`, never as a per-package config file
+- MUST NOT silence size, nesting, complexity, or shape Oxlint rules with `oxlint-disable` / `oxlint-disable-next-line` / `oxlint-disable-line` in source; fix the code or adjust `lint.overrides` / thresholds in the root `vite.config.ts` (ADR-171)
 - MUST register every new app as a Vitest project in the root `vite.config.ts` and verify it with `vp test run --project <name>`; an app missing from `test.projects` collects none of its tests and still exits 0. Packages need no entry — one project covers `packages/*/src/**/*.test.ts?(x)`, so keep package tests under `src/`
 - MUST add new rules to this document when necessary, and update existing ones if they become outdated or need clarification
 - MUST follow the guidelines in this document, and suggest improvements when necessary
