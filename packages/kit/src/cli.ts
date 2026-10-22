@@ -70,6 +70,22 @@ export function createSDXC(
 		lazy(() => import("./commands/doctor.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.fix,
+		lazy(() => import("./commands/fix.js").then((module) => ({ default: module.group }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.fix.env,
+		lazy(() => import("./commands/fix.js").then((module) => ({ default: module.env }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.fix.models,
+		lazy(() => import("./commands/fix.js").then((module) => ({ default: module.models }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.fix.emails,
+		lazy(() => import("./commands/fix.js").then((module) => ({ default: module.emails }))),
+	);
+	cli.map(
 		SDXC_COMMANDS.init,
 		lazy(() => import("./commands/init.js")),
 	);
@@ -162,6 +178,18 @@ export function createSDXC(
 		lazy(() => import("./commands/make.js").then((module) => ({ default: module.stubs }))),
 	);
 	cli.map(
+		SDXC_COMMANDS.make.secret,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.secret }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.binding,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.binding }))),
+	);
+	cli.map(
+		SDXC_COMMANDS.make.do,
+		lazy(() => import("./commands/make.js").then((module) => ({ default: module.durableObject }))),
+	);
+	cli.map(
 		SDXC_COMMANDS.routes,
 		lazy(() => import("./commands/routes.js")),
 	);
@@ -172,6 +200,10 @@ export function createSDXC(
 	cli.map(
 		SDXC_COMMANDS.run,
 		lazy(() => import("./commands/run.js")),
+	);
+	cli.map(
+		SDXC_COMMANDS.setup,
+		lazy(() => import("./commands/setup.js")),
 	);
 	cli.map(
 		SDXC_COMMANDS.ui.list,

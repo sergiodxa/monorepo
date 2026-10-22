@@ -18,7 +18,16 @@ https://sdxc.dev/docs/getting-started/the-sdxc-command.
 sdxc make <kind> <name>            # write a file where the layout puts it, with its test
 sdxc make <kind> <name> --dry-run  # print what it would write, and write nothing
 sdxc make model <name> [field...]  # a model, the migration creating its table, and its factory
+sdxc make secret <NAME>            # declare bindings.secret() and append .env.example
+sdxc make binding <kind> <NAME>    # declare a Cloudflare binding in cloudflare.config.ts
+sdxc make do <Name> [--role …]     # Durable Object class, worker re-export and binding
 sdxc scaffold <name> [field:type]  # model, migration, pages, tests and a feature .spec
+sdxc setup                         # list installable features (auth, billing, flags)
+sdxc setup auth [-y]               # OIDC relying party; prints a plan unless -y writes it
+sdxc fix                           # re-run command-shaped doctor repairs (typegen, ui, …)
+sdxc fix env                       # append missing secrets to .env.example
+sdxc fix models                    # register unmapped createModel modules
+sdxc fix emails                    # map unmapped emails in the mail initializer
 sdxc ui add <component>            # copy an @sdxc/ui component into the app to edit it
 sdxc routes --json                 # every route, its controller and the middleware it runs
 sdxc doctor --json                 # release drift, installs, secrets, migrations and wiring
@@ -40,7 +49,11 @@ bun run test                       # every test, under Vitest
   once. Controllers, commands and MCP tools also get a pairing `.spec` under `spec/` (pages use
   `browser`, API routes use `http`, commands use `cli`, MCP tools use `mcp`); `--no-spec` or
   `make.specs: false` skips it. `sdxc make email <name> field ...` takes fields as `make model`
-  does; they become the email's props.
+  does; they become the email's props. Bindings and Durable Objects use `sdxc make secret`,
+  `sdxc make binding` and `sdxc make do` instead of hand-editing `cloudflare.config.ts`.
+- Install a multi-file feature with `sdxc setup <feature>` (`auth`, `billing`, `flags`). Without
+  `-y` it prints the plan and writes nothing; `-y` applies it. Prefer `sdxc fix` over re-typing
+  a doctor finding's fix string when the repair is command-shaped, env, models or emails.
 - For a resource people list, show, create, edit and delete, start from
   `sdxc scaffold <name> title body:text` (`--mcp` and `--command` add its tools and commands, and
   one feature `.spec` mixes the surfaces the scaffold wrote).

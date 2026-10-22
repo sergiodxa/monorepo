@@ -16,6 +16,7 @@ import type { MakeInput } from "../make/index.js";
 
 import { METHODS, SDXC_COMMANDS } from "../contract.js";
 import { makeActions } from "../make/actions.js";
+import { makeBinding, makeDo, makeSecret } from "../make/binding.js";
 import { make } from "../make/index.js";
 import { copyStubs } from "../make/stubs.js";
 import { makeTest } from "../make/test.js";
@@ -263,6 +264,51 @@ export const stubs = createCommand(SDXC_COMMANDS.make.stubs, {
 		if (isFailure(copied)) return copied;
 		for (let path of copied.data.written) ctx.stdout(`Wrote ${path}\n`);
 		for (let path of copied.data.kept) ctx.stdout(`Kept ${path}, which already exists\n`);
+		return success();
+	},
+});
+
+/** `sdxc make secret`. */
+export const secret = createCommand(SDXC_COMMANDS.make.secret, {
+	middleware: MAKE_MIDDLEWARE,
+	async handler(ctx) {
+		let made = await makeSecret(ctx, ctx.project.root, {
+			name: ctx.arguments.name,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		});
+		if (isFailure(made)) return made;
+		return success();
+	},
+});
+
+/** `sdxc make binding`. */
+export const binding = createCommand(SDXC_COMMANDS.make.binding, {
+	middleware: MAKE_MIDDLEWARE,
+	async handler(ctx) {
+		let made = await makeBinding(ctx, ctx.project.root, {
+			kind: ctx.arguments.kind,
+			name: ctx.arguments.name,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		});
+		if (isFailure(made)) return made;
+		return success();
+	},
+});
+
+/** `sdxc make do`. */
+export const durableObject = createCommand(SDXC_COMMANDS.make.do, {
+	middleware: MAKE_MIDDLEWARE,
+	async handler(ctx) {
+		let made = await makeDo(ctx, ctx.project.root, ctx.packageRoot, {
+			name: ctx.arguments.name,
+			role: ctx.flags.role,
+			binding: ctx.flags.binding,
+			dryRun: ctx.flags.dryRun,
+			force: ctx.flags.force,
+		});
+		if (isFailure(made)) return made;
 		return success();
 	},
 });
