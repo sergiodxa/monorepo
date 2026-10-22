@@ -1,19 +1,17 @@
 name: Deploy app
 
 # Every Worker app ships through `sdxc deploy`: build, then the app's own `db migrate --remote`
-# and `deploy`. On demand, pick an app from Actions → Deploy app → Run workflow. On each
-# published package release, the same workflow redeploys only sdxc-site — the docs are built
-# from the packages themselves, so they stay current with what just shipped. Apps without a
-# D1 database pass `--skip migrate` so the plan never looks for a migrate command that is
-# not there.
+# and `deploy`. On demand, pick an app (or `all`) from Actions → Deploy app → Run workflow. On
+# each published package release, the same workflow redeploys only sdxc-site — the docs are
+# built from the packages themselves, so they stay current with what just shipped. Apps without
+# a D1 database pass `--skip migrate` so the plan never looks for a migrate command that is
+# not there. Choosing `all` expands to one matrix job per deployable app.
 
 permissions:
   contents: read
 
 env:
   BUN_VERSION: 1.4.2
-  # A manual run uses the chosen app; a release event has no inputs, so the docs site deploys.
-  APP: ${{ inputs.app || 'sdxc-site' }}
 
 defaults:
   run:
@@ -25,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       app:
-        description: App to deploy
+        description: App to deploy (`all` runs every deployable app in parallel)
         type: choice
         required: true
         options:
@@ -34,16 +32,11 @@ on:
           - r3-auth
           - sdxc-site
           - uptime
+          - all
       dry_run:
         description: Build and print the deploy plan without migrating or uploading
         type: boolean
         default: false
-
-# A deploy is never cancelled part-way: the previous one for the same app finishes and this
-# waits, so the worker is never replaced by a run that was interrupted mid-upload.
-concurrency:
-  group: deploy-app-${{ inputs.app || 'sdxc-site' }}
-  cancel-in-progress: false
 
 jobs:
   # Secrets are unreadable in a job-level `if:`, so this job reads them into a step and
@@ -69,19 +62,77 @@ jobs:
           if [ ${#missing[@]} -eq 0 ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
           else
-            echo "::notice::Skipping the ${{ env.APP }} deploy: missing secret(s) ${missing[*]}"
+            echo "::notice::Skipping deploy: missing secret(s) ${missing[*]}"
             echo "configured=false" >> "$GITHUB_OUTPUT"
           fi
 
-  deploy:
-    name: Deploy ${{ inputs.app || 'sdxc-site' }}
+  # A release always ships sdxc-site; a manual run ships the chosen app, or every
+  # workflow_dispatch option except `all` when that choice is selected. Reading the
+  # options from this file keeps `all` aligned with what `app register --deploy` appends.
+  apps:
+    name: Resolve apps
     needs: secrets
     if: needs.secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Resolve deploy matrix
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SELECTED: ${{ inputs.app }}
+        run: |
+          if [ "$EVENT_NAME" = "release" ]; then
+            matrix='["sdxc-site"]'
+          elif [ "$SELECTED" = "all" ]; then
+            matrix=$(
+              awk '
+                /^[[:space:]]+options:/ { in_opts = 1; next }
+                in_opts && /^[[:space:]]+- / {
+                  app = $2
+                  if (app != "all") {
+                    if (n++) printf ","
+                    printf "\"%s\"", app
+                  }
+                  next
+                }
+                in_opts { exit }
+              ' .github/workflows/deploy-apps.yml
+            )
+            matrix="[$matrix]"
+          else
+            matrix=$(jq -cn --arg app "$SELECTED" '[$app]')
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "Deploying: $matrix"
+
+  deploy:
+    name: Deploy ${{ matrix.app }}
+    needs: [secrets, apps]
+    if: needs.secrets.outputs.configured == 'true'
+    runs-on: ubuntu-latest
     timeout-minutes: 20
+    # A deploy is never cancelled part-way: the previous one for the same app finishes and
+    # this waits, so the worker is never replaced by a run that was interrupted mid-upload.
+    # Keyed per app so an `all` run serializes with a single-app deploy of the same name.
+    concurrency:
+      group: deploy-app-${{ matrix.app }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJSON(needs.apps.outputs.matrix) }}
+    env:
+      APP: ${{ matrix.app }}
     defaults:
       run:
-        working-directory: apps/${{ env.APP }}
+        working-directory: apps/${{ matrix.app }}
 
     steps:
       - name: Checkout
