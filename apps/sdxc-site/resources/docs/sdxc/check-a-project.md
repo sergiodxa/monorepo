@@ -35,11 +35,18 @@ warn  routes      Found 1 route no router maps: GET /pricing (routes/web.ts pric
 pass  models      app/models/index.ts registers every model in app/models/
 pass  emails      3 declared emails mapped, tested and previewable
 pass  jsdoc         Every comment is JSDoc within three description lines
-pass  complexity    Every function stays at cyclomatic complexity 4 or below
-pass  module-size   Every module stays within 200 code lines
-pass  dependencies  No import cycles; every layer edge points inward
-skip  crap          No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor
-skip  ui            No @sdxc/ui component is copied
+pass  complexity       Every function stays at cyclomatic complexity 4 or below
+pass  module-size      Every module stays within 200 code lines
+pass  dependencies     No import cycles; every layer edge points inward
+pass  fan-out          Every module imports at most 15 others
+pass  orphans          Every non-entry module is imported somewhere
+skip  feature-scatter  Fewer than two layers use feature folders
+pass  duplication      No duplicated blocks of 8+ code lines
+pass  result-throws    App source returns Result failures instead of throw
+pass  test-ratio       Code to test ratio is 1:0.8 (min 1:0.3)
+skip  crap             No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor
+skip  mutation         No mutation report at reports/mutation/mutation.json; run mutation tests then re-run doctor
+skip  ui               No @sdxc/ui component is copied
 ```
 
 A `fail` is something that breaks an install, a build, CI or a new database. A `warn` is a
@@ -53,24 +60,31 @@ pre-commit hook. Warnings leave the exit code at 0.
 
 They run in this order:
 
-| Check          | Fails or warns when                                                                                                                                                                | Fix                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `pins`         | fail: an `@sdxc` package is behind its version at the project's release; warn: one is pinned to no release                                                                         | `sdxc upgrade <release>`                           |
-| `installed`    | fail: `node_modules` holds an `@sdxc` package or `remix` at another version than `package.json` pins, or lacks one                                                                 | the install command                                |
-| `remix`        | fail: `remix` differs from the version the project's release declares                                                                                                              | `sdxc upgrade <release>`                           |
-| `env`          | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                                 | the line to add, or the declaration                |
-| `typegen`      | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                               | `sdxc run typegen`                                 |
-| `migrations`   | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                                      | the migration to correct, or the entry             |
-| `layout`       | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                                     | the file to move                                   |
-| `routes`       | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                               |
-| `models`       | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                                   | the registration to add                            |
-| `emails`       | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write            |
-| `jsdoc`        | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits                 |
-| `complexity`   | warn: a function's cyclomatic complexity exceeds `doctor.complexity.max` (default 4)                                                                                               | split the function, or raise the max               |
-| `module-size`  | warn: a module's code lines exceed `doctor.moduleSize.maxLines` (default 200)                                                                                                      | split the module, or raise the limit               |
-| `dependencies` | warn: an import cycle, or an import from an inner layer to an outer one (models must not import http, and so on)                                                                   | `sdxc diagram` shows the graph                     |
-| `crap`         | warn: a function's CRAP score exceeds `doctor.crap.max` (default 12); skip when the coverage file is missing                                                                       | lower complexity, raise coverage, or raise the max |
-| `ui`           | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff`           |
+| Check             | Fails or warns when                                                                                                                                                                | Fix                                                |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `pins`            | fail: an `@sdxc` package is behind its version at the project's release; warn: one is pinned to no release                                                                         | `sdxc upgrade <release>`                           |
+| `installed`       | fail: `node_modules` holds an `@sdxc` package or `remix` at another version than `package.json` pins, or lacks one                                                                 | the install command                                |
+| `remix`           | fail: `remix` differs from the version the project's release declares                                                                                                              | `sdxc upgrade <release>`                           |
+| `env`             | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                                 | the line to add, or the declaration                |
+| `typegen`         | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                               | `sdxc run typegen`                                 |
+| `migrations`      | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                                      | the migration to correct, or the entry             |
+| `layout`          | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                                     | the file to move                                   |
+| `routes`          | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                               |
+| `models`          | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                                   | the registration to add                            |
+| `emails`          | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write            |
+| `jsdoc`           | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits                 |
+| `complexity`      | warn: a function's cyclomatic complexity exceeds `doctor.complexity.max` (default 4)                                                                                               | split the function, or raise the max               |
+| `module-size`     | warn: a module's code lines exceed `doctor.moduleSize.maxLines` (default 200)                                                                                                      | split the module, or raise the limit               |
+| `dependencies`    | warn: an import cycle, or an import from an inner layer to an outer one (models must not import http, and so on)                                                                   | `sdxc diagram` shows the graph                     |
+| `fan-out`         | warn: a module imports more distinct project modules than `doctor.fanOut.max` (default 15)                                                                                         | split the module, or raise the max                 |
+| `orphans`         | warn: a non-entry module nothing in the project imports                                                                                                                            | delete it, or wire it from an entry                |
+| `feature-scatter` | warn: a feature folder already in two layers is missing from another layer that hosts multi-layer features                                                                         | add the folder, or drop the unused layer copy      |
+| `duplication`     | warn: the same block of `doctor.duplication.minLines` (default 8) code lines appears in more than one module                                                                       | extract a shared helper, or raise the min          |
+| `result-throws`   | warn: app source uses `throw`                                                                                                                                                      | return `failure(...)` from `@sdxc/result`          |
+| `test-ratio`      | warn: `tests / code` from `sdxc stats` is below `doctor.testRatio.min` (default 0.3)                                                                                               | add tests, or lower the min                        |
+| `crap`            | warn: a function's CRAP score exceeds `doctor.crap.max` (default 12); skip when the coverage file is missing                                                                       | lower complexity, raise coverage, or raise the max |
+| `mutation`        | warn: surviving mutants exceed `doctor.mutation.maxSurvived` (default 0); skip when the report file is missing                                                                     | kill survivors, or raise the max                   |
+| `ui`              | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff`           |
 
 The project's release is the newest date among its `@sdxc` pins, so `pins` names each package
 that lags behind the others. `pins` and `remix` read the npm registry; without it they report
@@ -98,15 +112,16 @@ spill onto a second line. Tooling directives (`@ts-expect-error`, `oxlint-disabl
 rest the repository already allows) stay as they are. Tags other than that one-line set do not
 count toward the description budget.
 
-`complexity`, `module-size`, `dependencies` and `crap` cover project-level metrics oxlint does
-not. Each check reads its own keys under `doctor` in
-[configuration](/docs/sdxc/configuration#doctor): `doctor.complexity.max`,
-`doctor.moduleSize.maxLines`, and `doctor.crap.max` / `doctor.crap.coverage`. `dependencies`
-applies Clean Architecture's dependency rule to the app-layout layers: outer kinds (routes,
-resources, http, jobs) may import inner ones (services, policies, models); the reverse warns,
-and so does any import cycle. `crap` combines complexity with Istanbul coverage (default
-`coverage/coverage-final.json`) using `CRAP = CC² × (1 − coverage)³ + CC`; without that file
-the check skips.
+`complexity`, `module-size`, `dependencies`, `fan-out`, `orphans`, `feature-scatter`,
+`duplication`, `result-throws`, `test-ratio`, `crap` and `mutation` cover project-level metrics
+oxlint does not. Each check that takes a threshold reads its own keys under `doctor` in
+[configuration](/docs/sdxc/configuration#doctor). `dependencies` applies Clean Architecture's
+dependency rule to the app-layout layers: outer kinds (routes, resources, http, jobs) may
+import inner ones (services, policies, models); the reverse warns, and so does any import
+cycle. `fan-out` and `orphans` read the same import graph. `crap` combines complexity with
+Istanbul coverage (default `coverage/coverage-final.json`) using
+`CRAP = CC² × (1 − coverage)³ + CC`; without that file the check skips. `mutation` skips the
+same way when its report file is missing.
 
 ### Accept a migration that already ran
 
