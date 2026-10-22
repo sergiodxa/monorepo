@@ -90,7 +90,5 @@ export class Handlers {
 function call(handler: EventHandler, details: EventDetails): void {
 	try {
 		handler(details);
-	} catch {
-		return;
-	}
+	} catch {}
 }
