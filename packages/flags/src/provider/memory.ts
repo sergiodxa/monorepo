@@ -8,6 +8,8 @@
 
 import type { JSONValue } from "@sdxc/types";
 
+import { iife } from "@sdxc/iife";
+
 import type { EvaluationContext } from "../core/context.js";
 import type { ResolutionDetails } from "../core/details.js";
 import type { FlagMetadata, ProviderMetadata } from "../core/metadata.js";
@@ -201,10 +203,11 @@ export class InMemoryProvider implements Provider {
 		// A flag with targeting that named no variant fell back, which the specification calls
 		// DEFAULT — "dynamic evaluation yielded no result". STATIC is for a flag that never
 		// evaluated anything, so the two say different things about why this variant was served.
-		let reason;
-		if (targeted) reason = "TARGETING_MATCH";
-		else if (flag.contextEvaluator) reason = "DEFAULT";
-		else reason = "STATIC";
+		let reason = iife(() => {
+			if (targeted) return "TARGETING_MATCH";
+			if (flag.contextEvaluator) return "DEFAULT";
+			return "STATIC";
+		});
 		return resolved(value, {
 			...details,
 			variant,

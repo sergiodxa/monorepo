@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
 import { describe, expect, test } from "vitest";
 
 import type { Client } from "../core/client.js";
@@ -55,11 +56,11 @@ describe("Returns no metadata", () => {
 	])("$flagType $key", async ({ key, flagType, defaultValue }) => {
 		let client = await stable();
 
-		let details;
-		if (flagType === "Boolean") details = await client.booleanDetails(key, defaultValue as boolean);
-		else if (flagType === "String")
-			details = await client.stringDetails(key, defaultValue as string);
-		else details = await client.numberDetails(key, defaultValue as number);
+		let details = await iife(async () => {
+			if (flagType === "Boolean") return client.booleanDetails(key, defaultValue as boolean);
+			if (flagType === "String") return client.stringDetails(key, defaultValue as string);
+			return client.numberDetails(key, defaultValue as number);
+		});
 
 		expect(details.flagMetadata).toEqual({});
 	});
