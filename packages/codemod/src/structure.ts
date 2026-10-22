@@ -276,7 +276,9 @@ export function afterLine(source: string, offset: number): number {
 			at += 1;
 		} else if (source.startsWith("//", at)) {
 			let end = source.indexOf("\n", at);
-			return end === -1 ? source.length : source[end - 1] === "\r" ? end - 1 : end;
+			if (end === -1) return source.length;
+			if (source[end - 1] === "\r") return end - 1;
+			return end;
 		} else if (source.startsWith("/*", at)) {
 			let end = source.indexOf("*/", at);
 			if (end === -1 || source.slice(at, end).includes("\n")) return offset;

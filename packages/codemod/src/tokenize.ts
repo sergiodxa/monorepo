@@ -284,12 +284,10 @@ class Scanner {
 		}
 		let open = this.stack[this.stack.length - 1];
 		if (open !== undefined) {
-			let what =
-				open.type === "template"
-					? "template literal"
-					: open.type.startsWith("jsx")
-						? "JSX element"
-						: `\`${this.source[open.start]}\``;
+			let what;
+			if (open.type === "template") what = "template literal";
+			else if (open.type.startsWith("jsx")) what = "JSX element";
+			else what = `\`${this.source[open.start]}\``;
 			return failure(this.fail("unterminated", `${what} is never closed`, open.start));
 		}
 		return success(this.tokens);

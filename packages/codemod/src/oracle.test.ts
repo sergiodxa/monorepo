@@ -49,12 +49,10 @@ function oracleReferences(filename: string, source: string): string[] | null {
 				[request.start, request.end],
 				[entry.start, entry.end],
 				entry.entries.map((name) => {
-					let imported =
-						name.importName.kind === "Default"
-							? "default"
-							: name.importName.kind === "NamespaceObject"
-								? "*"
-								: (name.importName.name ?? "");
+					let imported;
+					if (name.importName.kind === "Default") imported = "default";
+					else if (name.importName.kind === "NamespaceObject") imported = "*";
+					else imported = name.importName.name ?? "";
 					return `${name.isType ? "type " : ""}${imported} as ${name.localName.value}`;
 				}),
 			),
