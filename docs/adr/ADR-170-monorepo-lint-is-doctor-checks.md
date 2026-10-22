@@ -33,8 +33,9 @@ root first (so those checks run), then in every app. CI and the commit-msg hook 
 `release check-commits` (or similar) verb.
 
 Apply the same cut when adding further monorepo lint: if the step only diagnoses and names a
-fix, it is a doctor check. If it publishes, scaffolds, or wires the repo, it stays a CLI
-command.
+fix, it is a doctor check. Candidates include deploy-workflow drift (choices that name apps
+not yet shipped), public-package table gaps, and other repo rules today enforced only in
+`test/` or CI scripts. If it publishes, scaffolds, or wires the repo, it stays a CLI command.
 
 ## Consequences
 

@@ -22,7 +22,7 @@ const STRING: StandardSchemaV1<string, string> = {
 /** The monorepo's commands; new ones are declared here and mapped in `cli/index.ts`. */
 export default commands({
 	doctor: command({
-		description: "Run sdxc doctor from the workspace kit in every app under apps/",
+		description: "Run sdxc doctor at the monorepo root and in every app under apps/",
 		flags: {
 			json: flag.boolean("json", { description: "Print each app's report as JSON" }),
 			only: flag
@@ -94,7 +94,7 @@ export default commands({
 		description: "Wire apps created with sdxc create into this monorepo",
 		register: command({
 			description:
-				"Add Vitest project, layout allowlist and deploy-workflow choice for an existing apps/<name>",
+				"Add Vitest project and layout allowlist for an existing apps/<name>; --deploy adds Deploy-app",
 			arguments: {
 				name: argument(STRING, {
 					valueName: "name",
@@ -109,10 +109,14 @@ export default commands({
 					default: true,
 					description: "Also add the app to the layout-test allowlist (default: true)",
 				}),
+				deploy: flag.boolean("deploy", {
+					description: "Also add the app to the Deploy-app workflow choice list",
+				}),
 			},
 			examples: [
 				"app register demo",
 				"app register demo --dry-run",
+				"app register blog --deploy",
 				"app register legacy --no-converted",
 			],
 		}),
