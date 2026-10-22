@@ -245,9 +245,10 @@ function linePenalty(size: number, moduleAt: (position: number) => number): numb
 
 	/** Record a finished run; the first run absorbs the light quiet zone before the line. */
 	function pushRun(length: number) {
-		if (history[0] === 0) length += size;
+		let run = length;
+		if (history[0] === 0) run += size;
 		history.pop();
-		history.unshift(length);
+		history.unshift(run);
 	}
 
 	/** Finder-like patterns ending at the newest light run, counting either side's margin. */
