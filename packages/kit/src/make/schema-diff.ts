@@ -12,6 +12,7 @@ import { DatabaseSync } from "node:sqlite";
 import type { Result } from "@sdxc/result";
 import type { ColumnDefinition, ColumnTypeName } from "remix/data-table";
 
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { TableShape } from "./schema.js";
@@ -341,10 +342,11 @@ function columnDifference(
 	definition: ColumnDefinition,
 	existing: CurrentColumn,
 ): string | null {
-	let generated;
-	if (definition.computed === undefined) generated = 0;
-	else if (definition.computed.stored) generated = 3;
-	else generated = 2;
+	let generated = iife(() => {
+		if (definition.computed === undefined) return 0;
+		if (definition.computed.stored) return 3;
+		return 2;
+	});
 	let hidden = existing.hidden === 2 || existing.hidden === 3 ? existing.hidden : 0;
 	if (generated !== hidden) return "changes how it is generated";
 	let accepted = ACCEPTED_AFFINITIES[definition.type] ?? ["TEXT"];
