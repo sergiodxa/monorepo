@@ -8,6 +8,8 @@
  */
 import type { DOMDocument, DOMElement } from "@sdxc/html/document";
 
+import { iife } from "@sdxc/iife";
+
 import type { MF2 } from "../index.js";
 
 import type { PropertyKind } from "./backcompat.js";
@@ -144,10 +146,11 @@ function nestedValue(
 	if (property.kind === "e" && typeof parsed === "object" && "html" in parsed) {
 		return { ...nested.item, ...parsed };
 	}
-	let own;
-	if (property.kind === "p") own = nested.name;
-	else if (property.kind === "u") own = nested.url;
-	else own = undefined;
+	let own = iife(() => {
+		if (property.kind === "p") return nested.name;
+		if (property.kind === "u") return nested.url;
+		return undefined;
+	});
 	let value = asValue(own) ?? asValue(parsed) ?? "";
 	return { ...nested.item, value };
 }
