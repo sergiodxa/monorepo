@@ -20,6 +20,7 @@
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/html": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/jsonc": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
 		"@sdxc/random": "workspace:*",

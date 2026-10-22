@@ -12,6 +12,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { SpecError } from "../errors.js";
@@ -483,10 +484,11 @@ function shapeResult(tool: McpTool, response: Response, body: ValueObject): Valu
 	let content = Array.isArray(result?.content) ? result.content : [];
 	let text = firstText(content);
 	let structured = result?.structuredContent;
-	let json: Value;
-	if (structured !== undefined) json = structured;
-	else if (text !== null) json = parseJson(text);
-	else json = null;
+	let json = iife((): Value => {
+		if (structured !== undefined) return structured;
+		if (text !== null) return parseJson(text);
+		return null;
+	});
 	let status = response.status;
 	let ok = response.ok && rpcError === null;
 	if (tool === "discover") {
