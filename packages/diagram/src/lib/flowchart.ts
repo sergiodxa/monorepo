@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { CompoundGroup, CompoundNode } from "./compound.js";
 import type { Stroke } from "./draw.js";
 import type { Box, Head, Outline, Point } from "./geometry.js";
@@ -312,10 +314,11 @@ function readLink(text: string, at: number): { link: FlowLink; end: number } | n
 			let label = rest.slice(0, close.index).trim();
 			let run = (close[1] ?? "").length;
 			let head = close[2];
-			let length;
-			if (kind === "-.") length = run;
-			else if (head) length = run - 1;
-			else length = run - 2;
+			let length = iife(() => {
+				if (kind === "-.") return run;
+				if (head) return run - 1;
+				return run - 2;
+			});
 			return {
 				link: {
 					lines: splitLines(unquote(label)),
@@ -336,10 +339,11 @@ function readLink(text: string, at: number): { link: FlowLink; end: number } | n
 	let head = plain[3];
 	if (/^-+$/.test(body) && !head && body.length < 3) return null;
 
-	let length: number;
-	if (body.startsWith("~")) length = 1;
-	else if (body.includes(".")) length = body.length - 2;
-	else length = head ? body.length - 1 : body.length - 2;
+	let length = iife((): number => {
+		if (body.startsWith("~")) return 1;
+		if (body.includes(".")) return body.length - 2;
+		return head ? body.length - 1 : body.length - 2;
+	});
 
 	let end = PLAIN_LINK.lastIndex;
 	let lines: string[] = [];
