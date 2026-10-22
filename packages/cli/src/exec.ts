@@ -135,32 +135,23 @@ export const spawnExec: Exec = (command, request) =>
 		}
 		let shown = displayCommand(command);
 		let direct = (target: Output, stream: NodeJS.WriteStream) => target === stream;
-		let outTarget: Output | null =
-			request.stdio === "inherit"
-				? request.stdout
-				: request.stdio === "stderr"
-					? request.stderr
-					: null;
+		let outTarget: Output | null = null;
+		if (request.stdio === "inherit") outTarget = request.stdout;
+		else if (request.stdio === "stderr") outTarget = request.stderr;
 		let errTarget: Output | null =
 			request.stdio === "inherit" || request.stdio === "stderr" ? request.stderr : null;
-		let stdout: "inherit" | "pipe" | "ignore" | number =
-			request.stdio === "ignore"
-				? "ignore"
-				: outTarget === null
-					? "pipe"
-					: direct(outTarget, process.stdout)
-						? "inherit"
-						: direct(outTarget, process.stderr)
-							? 2
-							: "pipe";
-		let stderr: "inherit" | "pipe" | "ignore" =
-			request.stdio === "ignore"
-				? "ignore"
-				: errTarget !== null && direct(errTarget, process.stderr)
-					? "inherit"
-					: "pipe";
-		let stdin: "inherit" | "pipe" | "ignore" =
-			request.input !== undefined ? "pipe" : request.stdio === "inherit" ? "inherit" : "ignore";
+		let stdout: "inherit" | "pipe" | "ignore" | number;
+		if (request.stdio === "ignore") stdout = "ignore";
+		else if (outTarget === null) stdout = "pipe";
+		else if (direct(outTarget, process.stdout)) stdout = "inherit";
+		else if (direct(outTarget, process.stderr)) stdout = 2;
+		else stdout = "pipe";
+		let stderr: "inherit" | "pipe" | "ignore" = "pipe";
+		if (request.stdio === "ignore") stderr = "ignore";
+		else if (errTarget !== null && direct(errTarget, process.stderr)) stderr = "inherit";
+		let stdin: "inherit" | "pipe" | "ignore" = "ignore";
+		if (request.input !== undefined) stdin = "pipe";
+		else if (request.stdio === "inherit") stdin = "inherit";
 		let child = spawn(program, args, {
 			cwd: request.cwd,
 			env: { ...request.env } as NodeJS.ProcessEnv,
