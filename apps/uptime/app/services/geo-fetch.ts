@@ -42,9 +42,10 @@ export async function proxyProbe(request: Request): Promise<Response> {
 	 * endpoint has no business seeing which of our callers asked for it.
 	 */
 	let followRedirects = request.headers.get(NO_REDIRECT_HEADER) === null;
+	let probeRequest = request;
 	if (!followRedirects) {
-		request = new Request(request);
-		request.headers.delete(NO_REDIRECT_HEADER);
+		probeRequest = new Request(request);
+		probeRequest.headers.delete(NO_REDIRECT_HEADER);
 	}
 
 	try {
@@ -53,7 +54,9 @@ export async function proxyProbe(request: Request): Promise<Response> {
 		 * Redirect mode `manual` returns a redirect as the 3xx response it is,
 		 * letting the caller classify it as distinct from the target being unreachable.
 		 */
-		let response = await fetch(request, { redirect: followRedirects ? "follow" : "manual" });
+		let response = await fetch(probeRequest, {
+			redirect: followRedirects ? "follow" : "manual",
+		});
 		let end = performance.now();
 
 		response = new Response(response.body, response);
