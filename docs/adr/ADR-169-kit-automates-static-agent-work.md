@@ -190,11 +190,11 @@ guide update so agents learn the verb from the release that ships it.
 
 ### Monorepo backlog (root CLI on `@sdxc/cli`, then workflows)
 
-Existing `scripts/release/`, `scripts/doctor-apps.ts`, `deploy-apps.yml` and `release.yml`
-already prove the criterion. Rebuild them on `@sdxc/cli` — which does **not** prescribe a file
-layout — so agents and CI share one verb surface. Do **not** add `bootstrap/cli.ts` at the
-monorepo root: that path is the Worker _app_ layout (ADR-129), and this repository is not an
-app. Put the monorepo CLI under `cli/` instead.
+Existing `scripts/release/`, `deploy-apps.yml` and `release.yml` already prove the criterion.
+Rebuild them on `@sdxc/cli` — which does **not** prescribe a file layout — so agents and CI
+share one verb surface. Do **not** add `bootstrap/cli.ts` at the monorepo root: that path is
+the Worker _app_ layout (ADR-129), and this repository is not an app. Put the monorepo CLI
+under `cli/` instead. `doctor` already lives there.
 
 #### Configurable `sdxc run` entry (kit)
 
@@ -396,7 +396,7 @@ overrides / deploy-list wiring; reinventing create drifts from `@sdxc/kit` on ev
 - [ADR-163: `sdxc scaffold`](./ADR-163-sdxc-scaffold.md)
 - Remix CLI `doctor --fix` (vendor docs under `docs/vendor/@remix-run/cli`)
 - `.github/workflows/deploy-apps.yml`, `deploy-sdxc.yml`, `release.yml`, `ci.yml`
-- `scripts/release/`, `scripts/doctor-apps.ts` (migrate onto root CLI)
+- `scripts/release/` (migrate onto root CLI); `doctor` already on `cli/commands/doctor`
 - [ADR-129: App Folder Layout](./ADR-129-app-folder-layout.md) (`bootstrap/` is for apps)
 - [ADR-145: `@sdxc/cli`](./ADR-145-cli-package.md)
 - [ADR-142: `sdxc create` Templates](./ADR-142-sdxc-create-templates.md)
