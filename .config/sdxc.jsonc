@@ -1,0 +1,7 @@
+{
+	"$schema": "https://unpkg.com/@sdxc/kit/config.schema.json",
+	"run": {
+		// Monorepo CLI lives under cli/, not bootstrap/ (ADR-169)
+		"entry": "cli/index.ts",
+	},
+}
