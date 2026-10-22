@@ -444,7 +444,7 @@ function applyMultiValued(
 		return null;
 	}
 
-	let incoming;
+	let incoming: unknown[];
 	if (Array.isArray(value)) incoming = value;
 	else if (value === undefined) incoming = [];
 	else incoming = [value];
