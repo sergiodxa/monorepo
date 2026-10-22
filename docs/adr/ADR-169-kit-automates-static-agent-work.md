@@ -13,11 +13,12 @@ being moved into code in three places:
 
 - **`@sdxc/kit`** — `make`, `scaffold`, `destroy`, `routes`, `doctor`, `upgrade`, `deploy` for
   any project on the `@sdxc/*` packages.
-- **Repo scripts** — `scripts/release/`, `scripts/doctor-apps.ts`, `scripts/upgrade-dependencies.ts`
-  and the rest under `scripts/`, invoked from root `package.json` and CI.
+- **Repo command line** — today ad-hoc `scripts/` (`release/`, `doctor-apps.ts`, …) invoked from
+  root `package.json` and CI; this ADR moves them onto `@sdxc/cli` at the repo root
+  (`bun run cli` / `sdxc run` via `bootstrap/cli.ts`).
 - **GitHub Actions** — `deploy-apps.yml`, `deploy-sdxc.yml`, `release.yml`, and the doctor /
-  commit-check jobs in `ci.yml`, so a person or agent triggers a workflow instead of replaying
-  the sequence by hand.
+  commit-check jobs in `ci.yml`, so a person or agent triggers a workflow that calls that CLI
+  (or kit) instead of replaying the sequence by hand.
 
 The limit is not imagination: it is whether the step has a deterministic shape. A rule that
 needs a product judgment stays with a person or an agent. A rule whose inputs and outputs are
@@ -77,11 +78,11 @@ defaults.
 
 ### Pick the surface that matches the audience
 
-| Audience / scope                                                                    | Surface                                                                         |
-| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| Any project on `@sdxc/*`                                                            | `@sdxc/kit` (`make`, `scaffold`, `setup`, `destroy`, `doctor`, `fix`, `deploy`) |
-| This monorepo only (release, doctor-all-apps, package bootstrap, create-app wiring) | `scripts/` + root `package.json`                                                |
-| Production or shared CI for this monorepo                                           | `.github/workflows/` calling those scripts or the kit binary                    |
+| Audience / scope                                                  | Surface                                                                         |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Any project on `@sdxc/*`                                          | `@sdxc/kit` (`make`, `scaffold`, `setup`, `destroy`, `doctor`, `fix`, `deploy`) |
+| This monorepo only (release, doctor-all-apps, package/app wiring) | Root `@sdxc/cli` via `bootstrap/cli.ts` (`bun run cli` / `sdxc run`)            |
+| Production or shared CI for this monorepo                         | `.github/workflows/` calling that CLI or the kit binary                         |
 
 A step that belongs in more than one place still has one owner: the kit owns the algorithm
 (`sdxc deploy`); the workflow owns when and where it runs with repo secrets. Do not reimplement
@@ -97,7 +98,8 @@ deploy order inside YAML.
 | Project drifted from a rule the kit can prove             | `sdxc doctor` reports; `sdxc fix` applies only named safe repairs               |
 | Release moved and the code must follow                    | `sdxc upgrade` + its prompt (agent applies _code_ changes)                      |
 | Ship an app in this monorepo                              | `Deploy app` workflow (or `sdxc deploy` locally); never hand-ordered `cf` calls |
-| Publish packages / check every app / enforce commit shape | `bun run release`, `bun run doctor`, release commit check in CI                 |
+| Publish packages / check every app / enforce commit shape | Root CLI (`bun run cli` / `sdxc run`) + CI calling those commands               |
+| New app in this monorepo                                  | `sdxc create` for the app tree, then root CLI `app register` for monorepo wires |
 
 `doctor` stays read-only (ADR-160). A separate `sdxc fix [check…]` (or `sdxc doctor --fix`
 that only enables that path) applies repairs the report already knows how to express. A check
@@ -183,40 +185,62 @@ catalog the same way they discover `make` kinds.
 Each kit item lands with tests, `--dry-run`, a line in the managed `AGENTS.md` section, and a
 guide update so agents learn the verb from the release that ships it.
 
-### Monorepo backlog (new scripts and workflows)
+### Monorepo backlog (root CLI on `@sdxc/cli`, then workflows)
 
 Existing `scripts/release/`, `scripts/doctor-apps.ts`, `deploy-apps.yml` and `release.yml`
-already prove the criterion. The gaps below are **new** work on those surfaces — same bar as
-the kit backlog, just not published to npm.
+already prove the criterion. Rebuild them on the same command-line stack apps already use, so
+agents and CI share one verb surface — and extend `@sdxc/cli` when that stack is missing a
+piece, rather than inventing a second CLI for the monorepo.
 
-#### Scripts (`scripts/` + root `package.json`)
+#### Root command line (`@sdxc/cli`)
 
-1. **`bun run make:package <name>`.** Write the six minimum package files the create-package
-   skill lists (`package.json`, `tsconfig.json`, `README.md`, `LICENSE.md`, `src/index.ts`,
-   `src/index.test.ts`), add the root README table row and the sdxc-site docs group entry, and
-   print the remaining operator steps (`release:bootstrap`, trusted publisher). Agents stop
-   inventing the skeleton from the skill.
-2. **`bun run make:app <name>`.** Scaffold an app the create-app skill describes, then wire the
-   monorepo pieces the skill leaves as hand edits: Vitest project in root `vite.config.ts`,
-   `fmt.overrides` / `lint.overrides` when needed, and any layout-test allowlist. Prints the
-   deploy-workflow follow-up until item 3 below lands.
-3. **Keep `release:bootstrap`, `doctor` and `release` as the only ways** to bootstrap a package
-   on npm, lint every app, and publish — agents call the script, they do not re-encode ADR-007
-   in chat.
+1. **Add `bootstrap/cli.ts` at the repo root** that runs a `createCLI` instance (commands
+   declared and mapped through `lazy()`, as an app's `app/initializers/cli.ts` does). Root
+   `package.json` gains `"cli": "bun ./bootstrap/cli.ts"`, so everyday use is
+   `bun run cli <command> …` — the same shape as every Worker app.
+2. **Make `sdxc run` work at the monorepo root.** Kit's `run` already looks for
+   `bootstrap/cli.ts` at the project root and starts it with the project's runtime. Once the
+   entry exists, `sdxc run release`, `sdxc run doctor`, `sdxc run package create …` are the
+   same handlers as `bun run cli …`, with no second implementation. If the root needs a
+   different working directory, package-manager detection, or middleware than a Worker app,
+   fix that in `@sdxc/cli` / kit `run` once and reuse it.
+3. **Migrate today's scripts into commands** under that CLI (`release`, `doctor`,
+   `release bootstrap`, dependency upgrade, and the new ones below), deleting the one-off
+   `bun scripts/….ts` entry points as each lands. Handlers keep living next to their tests;
+   only the entry and the contract move onto `@sdxc/cli`.
+4. **Improve `@sdxc/cli` when the monorepo hits a gap** (nested command groups, shared
+   monorepo middleware, richer `ctx.exec` / task reporting, etc.). The monorepo is a first-class
+   consumer of the package, not a special case that bypasses it.
+
+#### Commands the root CLI gains
+
+1. **`package create <name>` (or `make package`).** Write the six minimum package files the
+   create-package skill lists, add the root README table row and the sdxc-site docs group
+   entry, and print the remaining operator steps (`release bootstrap`, trusted publisher).
+   Agents stop inventing the skeleton from the skill.
+2. **`app register <name>` (or `app wire`) — not a second scaffolder.** Creating an app is
+   **`sdxc create`** (kit writes the app tree from the template) **plus** monorepo-only wiring
+   this command owns: Vitest project in root `vite.config.ts`, `fmt.overrides` /
+   `lint.overrides` when needed, layout-test allowlist, and the deploy-workflow app list (until
+   GHA generates it). Do not reimplement `sdxc create` inside the monorepo CLI; call it or
+   document the two-step (`sdxc create apps/<name>` → `bun run cli app register <name>` /
+   `sdxc run app register <name>`). A convenience command may shell the create step then wire,
+   but the template still comes from kit.
+3. **`release`, `doctor`, `release bootstrap`** remain the only ways to publish, lint every
+   app, and bootstrap a package on npm — now invoked as CLI commands, not ad-hoc script paths.
 
 #### GitHub Actions (`.github/workflows/`)
 
-1. **Generate or sync the `Deploy app` choice list** from the apps that actually ship (or from
-   a single source `make:app` updates), so adding an app is not a second hand edit of
-   `deploy-apps.yml` options.
-2. **PR / agent-friendly dry-run deploy** when useful: a workflow_dispatch (or pull_request
-   path) that runs `sdxc deploy --dry-run` for a named app without requiring a person to
-   reconstruct flags — same concurrency group rules as production deploy.
-3. **Do not reimplement kit or script logic in YAML.** New workflows call `bun run …` or the
-   kit binary; if the algorithm is missing, add the script first, then the workflow.
+1. **Call the root CLI from workflows** (`bun run cli …` or `sdxc run …`), never a raw
+   `bun scripts/….ts` once the command exists. YAML stays orchestration (secrets, concurrency,
+   matrix); algorithms stay in the CLI.
+2. **Generate or sync the `Deploy app` choice list** from the apps that ship (or from what
+   `app register` updates), so adding an app is not a second hand edit of `deploy-apps.yml`.
+3. **PR / agent-friendly dry-run deploy** when useful: workflow_dispatch (or pull_request) that
+   runs `sdxc deploy --dry-run` for a named app — same concurrency rules as production.
 
-Each monorepo item lands with a test or a dry-run assertion, a root script name (or workflow
-name) the skills/`AGENTS.md` can point at, and removal of the hand recipe it replaces.
+Each monorepo item lands with a test or dry-run assertion, a command name skills/`AGENTS.md`
+can point at, and removal of the hand recipe or bare script path it replaces.
 
 ### What agents still own
 
@@ -264,8 +288,9 @@ name) the skills/`AGENTS.md` can point at, and removal of the hand recipe it rep
 ### Neutral
 
 - Remix's `doctor --fix` is a precedent, not a dependency.
-- Existing workflows and scripts are the pattern; the monorepo backlog above is the unfinished
-  work on that pattern, parallel to the kit backlog for consumer apps.
+- The monorepo becomes another `@sdxc/cli` app (without being a Worker): same package, same
+  `bootstrap/cli.ts` entry `sdxc run` already knows. Kit backlog and root-CLI backlog stay
+  parallel; GHA only orchestrates them.
 
 ## Alternatives Considered
 
@@ -286,32 +311,45 @@ repairs) keeps the report path unchanged.
 **Rejected because**: those edits need intent. A wrong JSDoc rewrite or a silent `ALTER`
 "repair" costs more than the tokens it saves.
 
-### 4. Fold monorepo `create-package` into the published kit
+### 4. Fold monorepo `create-package` / app wiring into the published kit
 
-**Rejected** because consumer apps do not create `@sdxc/*` workspaces. That scaffolding belongs
-in this repository's `scripts/`, beside `release` and `doctor-apps`.
+**Rejected** because consumer apps do not create `@sdxc/*` workspaces or register Vitest
+projects in this repo's `vite.config.ts`. Package scaffolding and monorepo wiring belong on
+the **root CLI** (`bootstrap/cli.ts`). App _trees_ still come from **`sdxc create`** (kit);
+only the monorepo follow-up is root-CLI.
 
-### 5. Encode deploy order only in GitHub Actions
+### 5. Keep one-off `bun scripts/….ts` entry points forever
+
+**Rejected** because apps already standardized on `@sdxc/cli` (`bun run cli` / `sdxc run`). A
+second script style forces agents to learn two invocation models and leaves help, prompts and
+`--dry-run` inconsistent. Migrate scripts onto the root CLI; improve `@sdxc/cli` when needed.
+
+### 6. Encode deploy order only in GitHub Actions
 
 **Rejected because**: local dry-runs and agents outside Actions still need the same order.
 ADR-161 put it in `sdxc deploy`; workflows call that command.
 
-### 6. Stretch `sdxc make` / `scaffold` instead of a `setup` verb
+### 7. Stretch `sdxc make` / `scaffold` instead of a `setup` verb
 
 **Rejected because**: auth, billing and flags are not one resource with fields. Each is a fixed
 graph across layers (`make` would leave the agent to remember the other seven files). `setup`
 owns multi-file feature installs; `make` stays one kind per invocation.
 
-### 7. Ship every optional feature only inside `sdxc create --template`
+### 8. Ship every optional feature only inside `sdxc create --template`
 
 **Rejected as the only path** because existing apps need the same wiring, and a template that
 always includes auth/billing/flags forces every project to carry secrets and middleware it does
 not use. `create` may offer features as opt-in flags later by calling `setup` under the hood.
 
-### 8. One mega `sdxc setup` that installs everything popular
+### 9. One mega `sdxc setup` that installs everything popular
 
 **Rejected because**: apps diverge. A catalog of named features, installed deliberately, keeps
 each plan small, testable and reversible.
+
+### 10. Reimplement `sdxc create` inside the monorepo CLI as `make:app`
+
+**Rejected because**: kit already owns the app template. The monorepo only adds Vitest /
+overrides / deploy-list wiring; reinventing create drifts from `@sdxc/kit` on every release.
 
 ## References
 
@@ -324,7 +362,9 @@ each plan small, testable and reversible.
 - [ADR-163: `sdxc scaffold`](./ADR-163-sdxc-scaffold.md)
 - Remix CLI `doctor --fix` (vendor docs under `docs/vendor/@remix-run/cli`)
 - `.github/workflows/deploy-apps.yml`, `deploy-sdxc.yml`, `release.yml`, `ci.yml`
-- `scripts/release/`, `scripts/doctor-apps.ts`
+- `scripts/release/`, `scripts/doctor-apps.ts` (migrate onto root CLI)
+- [ADR-145: `@sdxc/cli`](./ADR-145-cli-package.md)
+- [ADR-142: `sdxc create` Templates](./ADR-142-sdxc-create-templates.md)
 
 ## Current Progress
 
@@ -339,11 +379,12 @@ each plan small, testable and reversible.
       defer `--provider auth-saas` until that issuer is ready for relying parties (kit item 6)
 - [ ] After `setup auth`, add the next catalog row that still costs agent turns (`billing` /
       `flags` are the likely pair) (kit item 7)
-- [ ] Implement `bun run make:package` (monorepo script item 1)
-- [ ] Implement `bun run make:app` (monorepo script item 2)
-- [ ] Sync Deploy-app workflow options from the app list (GHA item 1)
-- [ ] Add dry-run deploy workflow path if agents still reconstruct flags (GHA item 2)
-- [ ] Measure agent turns before adding further kit kinds, `setup` features, scripts or workflows
+- [ ] Add root `bootstrap/cli.ts` + `bun run cli`; confirm `sdxc run` reaches it
+- [ ] Migrate `release` / `doctor` / `release bootstrap` onto that CLI; improve `@sdxc/cli` if needed
+- [ ] Add root CLI `package create` (create-package skill → command)
+- [ ] Add root CLI `app register` (monorepo wiring after `sdxc create`, not a second scaffolder)
+- [ ] Point GHA at `bun run cli` / `sdxc run`; sync Deploy-app options; dry-run deploy if needed
+- [ ] Measure agent turns before adding further kit kinds, `setup` features, or root commands
 
 ## Notes
 
@@ -352,6 +393,8 @@ hand-edit recipe and name the command, script or workflow instead. If the docs s
 paragraph of "then open these three files" or "then run these four shell commands in order",
 the feature is not done. For any `setup <feature>`, success is: a fresh `sdxc create` app runs
 `sdxc setup <feature> -y`, fills the secrets the plan names, and exercises the happy path
-without an agent copying the living reference by hand. For a monorepo script or workflow,
-success is: the create-package / create-app skill (or deploy playbook) shrinks to the verb and
-flags, with no second file list to invent.
+without an agent copying the living reference by hand. For the monorepo, success is:
+`bun run cli --help` / `sdxc run --help` lists release, doctor and package/app commands; the
+create-package skill names `sdxc run package create` (or equivalent); creating an app is
+documented as `sdxc create` then `sdxc run app register`, with no hand-edited
+`vite.config.ts` / deploy options list.
