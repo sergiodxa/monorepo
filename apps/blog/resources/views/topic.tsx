@@ -270,53 +270,61 @@ function TopicRow(handle: Handle<{ item: TopicViewModel.Item }>) {
  * @returns A view function that renders from a topic page model.
  */
 export function TopicView() {
-	return ({ model, assets }: { model: TopicViewModel.Page; assets: DocumentAssets }) => (
-		<BlogLayout
-			assets={assets}
-			title={model.title}
-			description={model.summary}
-			activePath={model.path}
-			card={{
-				path: model.path,
-				version: socialCardVersion(
-					model.title,
-					model.summary,
-					...model.items.slice(0, LISTING_ENTRIES).map((item) => item.key),
-				),
-			}}
-		>
-			<main mix={[mf("h-feed"), grid(), gap(4)]}>
-				<Heading level={1} mix={[mf("p-name"), text("3xl")]}>
-					{model.title}
-				</Heading>
-				<div mix={[grid()]}>
-					{model.description ? (
-						<Typeset preset="reading" mix={[maxIs("52ch"), fg("neutral")]}>
-							{toRemix(model.description)}
-						</Typeset>
-					) : null}
-					<p mix={[m(0), text("lg"), fg("neutral")]}>
-						Subscribe to {model.subscribeTo} using <Link href={model.feeds.rss}>RSS</Link>,{" "}
-						<Link href={model.feeds.atom}>Atom</Link>, or{" "}
-						<Link href={model.feeds.json}>JSON Feed</Link>.
-					</p>
-				</div>
-				{model.items.length === 0 ? (
-					<p mix={[m(0), text("base"), fg("neutral")]}>{model.empty}</p>
-				) : model.entries ? (
-					<dl mix={[m(0), grid(), gap(3)]}>
-						{model.items.map((item) =>
-							item.type === "entry" ? <GlossaryEntry key={item.key} entry={item.entry} /> : null,
-						)}
-					</dl>
-				) : (
-					<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
-						{model.items.map((item) => (
-							<TopicRow key={item.key} item={item} />
-						))}
-					</ol>
-				)}
-			</main>
-		</BlogLayout>
-	);
+	return ({ model, assets }: { model: TopicViewModel.Page; assets: DocumentAssets }) => {
+		let listing;
+		if (model.items.length === 0) {
+			listing = <p mix={[m(0), text("base"), fg("neutral")]}>{model.empty}</p>;
+		} else if (model.entries) {
+			listing = (
+				<dl mix={[m(0), grid(), gap(3)]}>
+					{model.items.map((item) =>
+						item.type === "entry" ? <GlossaryEntry key={item.key} entry={item.entry} /> : null,
+					)}
+				</dl>
+			);
+		} else {
+			listing = (
+				<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
+					{model.items.map((item) => (
+						<TopicRow key={item.key} item={item} />
+					))}
+				</ol>
+			);
+		}
+		return (
+			<BlogLayout
+				assets={assets}
+				title={model.title}
+				description={model.summary}
+				activePath={model.path}
+				card={{
+					path: model.path,
+					version: socialCardVersion(
+						model.title,
+						model.summary,
+						...model.items.slice(0, LISTING_ENTRIES).map((item) => item.key),
+					),
+				}}
+			>
+				<main mix={[mf("h-feed"), grid(), gap(4)]}>
+					<Heading level={1} mix={[mf("p-name"), text("3xl")]}>
+						{model.title}
+					</Heading>
+					<div mix={[grid()]}>
+						{model.description ? (
+							<Typeset preset="reading" mix={[maxIs("52ch"), fg("neutral")]}>
+								{toRemix(model.description)}
+							</Typeset>
+						) : null}
+						<p mix={[m(0), text("lg"), fg("neutral")]}>
+							Subscribe to {model.subscribeTo} using <Link href={model.feeds.rss}>RSS</Link>,{" "}
+							<Link href={model.feeds.atom}>Atom</Link>, or{" "}
+							<Link href={model.feeds.json}>JSON Feed</Link>.
+						</p>
+					</div>
+					{listing}
+				</main>
+			</BlogLayout>
+		);
+	};
 }

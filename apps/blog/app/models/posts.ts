@@ -84,7 +84,13 @@ export const Posts = createModel(posts, {
 				.filter((row) => isPublishedAt(row.published_at))
 				.map((row) => ({ id: row.id, timestamp: timestampFromPublishedOrCreated(row) }))
 				.filter((row) => Number.isFinite(row.timestamp))
-				.sort((a, b) => b.timestamp - a.timestamp || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+				.sort((a, b) => {
+					let byTime = b.timestamp - a.timestamp;
+					if (byTime !== 0) return byTime;
+					if (a.id < b.id) return 1;
+					if (a.id > b.id) return -1;
+					return 0;
+				});
 		},
 
 		/**
