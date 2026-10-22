@@ -148,7 +148,7 @@ async function readCompilerOptions(
 			let file = resolve(dirname(path), parent.endsWith(".json") ? parent : `${parent}.json`);
 			let options = await readCompilerOptions(file, depth + 1);
 			if (isFailure(options)) return options;
-			inherited = { ...inherited, ...options.data };
+			Object.assign(inherited, options.data);
 		}
 	}
 	let own = config.compilerOptions ?? {};

@@ -71,13 +71,11 @@ async function modelFiles(root: string): Promise<Array<{ name: string; file: str
 function columnsOf(table: TableShape): ModelColumn[] {
 	return Object.entries(table.columns).map(([name, definition]) => {
 		let reference = definition.references;
-		let key = table.primaryKey.includes(name)
-			? "primary"
-			: reference !== undefined
-				? `${reference.table.name}.${reference.columns.join(", ")}`
-				: definition.unique !== undefined && definition.unique !== false
-					? "unique"
-					: null;
+		let key: string | null = null;
+		if (table.primaryKey.includes(name)) key = "primary";
+		else if (reference !== undefined)
+			key = `${reference.table.name}.${reference.columns.join(", ")}`;
+		else if (definition.unique !== undefined && definition.unique !== false) key = "unique";
 		return {
 			name,
 			type: definition.type,
