@@ -174,11 +174,10 @@ function dropInvisible(html: string): string {
 function decodeEntities(text: string): string {
 	return text.replace(ENTITY, (match: string, reference: string) => {
 		let name = reference.toLowerCase();
-		let code = name.startsWith("#x")
-			? Number.parseInt(name.slice(2), 16)
-			: name.startsWith("#")
-				? Number.parseInt(name.slice(1), 10)
-				: Number.NaN;
+		let code;
+		if (name.startsWith("#x")) code = Number.parseInt(name.slice(2), 16);
+		else if (name.startsWith("#")) code = Number.parseInt(name.slice(1), 10);
+		else code = Number.NaN;
 		if (Number.isNaN(code)) return NAMED_ENTITIES[name] ?? match;
 		if (code < 1 || code > 0x10ffff) return match;
 		return String.fromCodePoint(code);
