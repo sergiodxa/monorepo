@@ -122,13 +122,10 @@ export const SaveToggle = clientEntry(
 		}
 
 		return () => {
-			let label = isFull
-				? handle.props.full
-				: hasFailed
-					? handle.props.failed
-					: isSaved
-						? handle.props.unsave
-						: handle.props.save;
+			let label = handle.props.save;
+			if (isFull) label = handle.props.full;
+			else if (hasFailed) label = handle.props.failed;
+			else if (isSaved) label = handle.props.unsave;
 
 			return (
 				<form
