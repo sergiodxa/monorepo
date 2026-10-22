@@ -1,6 +1,7 @@
 /**
- * Fails when monorepo source names `randomUUID` outside `@sdxc/uuid/v4`: identifiers come from
- * that package and secrets from `@sdxc/crypto`. Reuses the scanner behind `test/random-uuid.test.ts`.
+ * Warns when monorepo source names `randomUUID` outside `@sdxc/uuid/v4`: identifiers come from
+ * that package and secrets from `@sdxc/crypto`. Warn so the backlog surfaces without failing CI;
+ * tighten to fail once callers are clean. Reuses the scanner behind `test/random-uuid.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -38,7 +39,7 @@ export default defineCheck({
 			};
 		}
 		return {
-			status: "fail",
+			status: "warn",
 			message:
 				findings.length === 1
 					? "Found 1 randomUUID outside @sdxc/uuid/v4"

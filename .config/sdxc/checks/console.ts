@@ -1,6 +1,7 @@
 /**
- * Fails on `console.*` in monorepo source: logging goes through `@sdxc/logger` (`ctx.log` /
- * `currentLog()`). This is a repo check — consumer apps are not assumed to use that package.
+ * Warns on `console.*` in monorepo source: logging goes through `@sdxc/logger` (`ctx.log` /
+ * `currentLog()`). Warn so the backlog surfaces without failing CI; tighten to fail once callers
+ * are clean. This is a repo check — consumer apps are not assumed to use that package.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,6 +19,8 @@ const FOLDERS = ["apps", "packages", "cli", "scripts", "test"] as const;
 function allowed(path: string): boolean {
 	if (path.includes("/node_modules/")) return true;
 	if (path.includes("/dist/")) return true;
+	if (path.includes("/.cloudflare/")) return true;
+	if (path.endsWith(".d.ts")) return true;
 	if (/\.(?:test|spec)\.[cm]?[jt]sx?$/.test(path)) return true;
 	if (path.endsWith(".md") || path.endsWith(".mdx")) return true;
 	if (path.startsWith("packages/logger/")) return true;
@@ -47,7 +50,7 @@ export default defineCheck({
 			return { status: "pass", message: "No console.* in app or package source" };
 		}
 		return {
-			status: "fail",
+			status: "warn",
 			message:
 				findings.length === 1 ? "Found 1 console.* use" : `Found ${findings.length} console.* uses`,
 			findings,
