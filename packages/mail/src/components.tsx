@@ -374,7 +374,9 @@ export function Text(handle: Handle<Text.Props>) {
 	return () => {
 		let { children, muted = false, color, size = 16, align = "left" } = handle.props;
 		let resolved = color ?? (muted ? MUTED_COLOR : TEXT_COLOR);
-		let className = color === undefined ? (muted ? "mail-muted" : "mail-text") : undefined;
+		let className;
+		if (color === undefined) className = muted ? "mail-muted" : "mail-text";
+		else className = undefined;
 
 		return (
 			<p
