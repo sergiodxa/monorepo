@@ -11,6 +11,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, success } from "@sdxc/result";
 
 import type { BinaryLike, Bytes } from "./lib/bytes.js";
@@ -83,10 +84,11 @@ const BASE64URL_VALUES = toValueLookup(BASE64URL_ALPHABET);
  */
 function encodeBase64(bytes: Uint8Array, alphabet: string, padded: boolean): string {
 	let remainder = bytes.length % GROUP_BYTES;
-	let tail;
-	if (remainder === 0) tail = 0;
-	else if (padded) tail = GROUP_CHARS;
-	else tail = remainder + 1;
+	let tail = iife(() => {
+		if (remainder === 0) return 0;
+		if (padded) return GROUP_CHARS;
+		return remainder + 1;
+	});
 	let out = new Uint8Array(((bytes.length - remainder) / GROUP_BYTES) * GROUP_CHARS + tail);
 
 	let accumulator = 0;
