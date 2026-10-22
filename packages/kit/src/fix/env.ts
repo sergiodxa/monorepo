@@ -44,12 +44,10 @@ export async function planEnvFix(root: string): Promise<Result<EnvFixPlan, Error
 		return success({ missing: [], diff: "", after: before });
 	}
 	let block = missing.map((key) => `${key}=`).join("\n");
-	let after =
-		before === ""
-			? `${block}\n`
-			: before.endsWith("\n")
-				? `${before}\n${block}\n`
-				: `${before}\n\n${block}\n`;
+	let after;
+	if (before === "") after = `${block}\n`;
+	else if (before.endsWith("\n")) after = `${before}\n${block}\n`;
+	else after = `${before}\n\n${block}\n`;
 	return success({
 		missing,
 		diff: unifiedDiff(ENV_EXAMPLE_FILE, before === "" ? null : before, after),

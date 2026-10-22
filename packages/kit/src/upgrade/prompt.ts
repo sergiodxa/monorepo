@@ -299,12 +299,12 @@ function agentsNote(input: PromptInput): string | null {
 	}
 	let url = `${PACKAGE_FILES}/${RELEASE_PACKAGE}@${input.to}/${AGENTS_TEMPLATE}`;
 	let markers = "`<!-- sdxc:start …-->` and `<!-- sdxc:end -->`";
-	let state =
-		input.agents === "missing"
-			? `This project has no \`${AGENTS_FILE}\`.`
-			: input.agents === "unmarked"
-				? `\`${AGENTS_FILE}\` has no sdxc section, so the upgrade left it as it is.`
-				: `\`${AGENTS_FILE}\` needs exactly one ${markers} line pair, so the upgrade left it as it is.`;
+	let state;
+	if (input.agents === "missing") state = `This project has no \`${AGENTS_FILE}\`.`;
+	else if (input.agents === "unmarked")
+		state = `\`${AGENTS_FILE}\` has no sdxc section, so the upgrade left it as it is.`;
+	else
+		state = `\`${AGENTS_FILE}\` needs exactly one ${markers} line pair, so the upgrade left it as it is.`;
 	let action =
 		input.agents === "unbalanced"
 			? `Restore one pair around the sdxc section, which for release ${input.to} is in ${url}.`

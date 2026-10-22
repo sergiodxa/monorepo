@@ -65,12 +65,10 @@ export function ensureImport(
 			});
 		}
 	}
-	let clause =
-		what.kind === "namespace"
-			? `* as ${preferred}`
-			: what.kind === "default"
-				? preferred
-				: `{ ${what.name} }`;
+	let clause;
+	if (what.kind === "namespace") clause = `* as ${preferred}`;
+	else if (what.kind === "default") clause = preferred;
+	else clause = `{ ${what.name} }`;
 	let local = what.kind === "named" ? what.name : preferred;
 	let statement = `import ${clause} from ${literal(specifier)};`;
 	return success({ source: insertImport(source, references.data, statement), local });

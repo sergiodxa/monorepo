@@ -232,11 +232,13 @@ export async function runProjectChecks(
 	let ran = await ctx.exec(command, { cwd: options.root, stdio: "collect", input });
 	let entries = isFailure(ran) ? null : parseEntries(ran.data.stdout);
 	if (entries === null) {
-		let detail = isFailure(ran)
-			? "stderr" in ran.error && ran.error.stderr.trim() !== ""
-				? ran.error.stderr.trim()
-				: ran.error.message
-			: "The runner printed no report";
+		let detail;
+		if (isFailure(ran))
+			detail =
+				"stderr" in ran.error && ran.error.stderr.trim() !== ""
+					? ran.error.stderr.trim()
+					: ran.error.message;
+		else detail = "The runner printed no report";
 		return {
 			reports: [
 				failed(
