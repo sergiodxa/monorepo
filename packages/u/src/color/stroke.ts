@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,10 +25,11 @@ import { color } from "../internal/tokens.js";
  * @example css({ stroke: "none" })
  */
 export function stroke<Node extends Element = Element>(value?: ColorValue | (string & {})) {
-	let strokeValue;
-	if (value === "none") strokeValue = "none";
-	else if (value) strokeValue = color(value, "fg");
-	else strokeValue = varUtility("ui-fg", "CanvasText");
+	let strokeValue = iife(() => {
+		if (value === "none") return "none";
+		if (value) return color(value, "fg");
+		return varUtility("ui-fg", "CanvasText");
+	});
 	return utility<Node>(() => ({
 		stroke: strokeValue,
 	}));

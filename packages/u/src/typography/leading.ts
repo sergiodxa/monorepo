@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,14 +33,12 @@ const LEADING_FALLBACKS: Record<NamedLeadingValue, number> = {
  * @example css({ lineHeight: "2rem" })
  */
 export function leading<Node extends Element = Element>(value: LeadingValue = "normal") {
-	let lineHeight;
-	if (typeof value === "number") lineHeight = value;
-	else if (value in LEADING_FALLBACKS) {
-		lineHeight = varUtility(
-			`ui-leading-${value}`,
-			`${LEADING_FALLBACKS[value as NamedLeadingValue]}`,
-		);
-	} else lineHeight = value;
+	let lineHeight = iife(() => {
+		if (typeof value === "number") return value;
+		if (value in LEADING_FALLBACKS)
+			return varUtility(`ui-leading-${value}`, `${LEADING_FALLBACKS[value as NamedLeadingValue]}`);
+		return value;
+	});
 	return utility<Node>(() => ({
 		lineHeight,
 	}));

@@ -39,6 +39,9 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
+	"dependencies": {
+		"@sdxc/iife": "workspace:*"
+	},
 	"devDependencies": {
 		"remix": "3.0.0"
 	},
