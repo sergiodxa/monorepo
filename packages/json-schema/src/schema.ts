@@ -219,7 +219,7 @@ export function nullable<S extends AnySchema>(
 
 /** Widens a described schema to accept `null`, keeping `enum` and `const` in agreement with `type`. */
 function withNull(json: JSONSchema): JSONSchema {
-	let types;
+	let types: JSONSchema.TypeName[];
 	if (json.type === undefined) types = [];
 	else if (Array.isArray(json.type)) types = json.type;
 	else types = [json.type];
