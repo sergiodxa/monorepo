@@ -204,8 +204,10 @@ export function formatReport(report: MessageReport): string[] {
 			`  h=${signature.signedHeaders.join(":")}`,
 		);
 		for (let header of signature.coverage) {
-			let state =
-				header.present === 0 ? "absent from message" : header.covered ? "signed" : "NOT signed";
+			let state;
+			if (header.present === 0) state = "absent from message";
+			else if (header.covered) state = "signed";
+			else state = "NOT signed";
 			let extra = header.overSigned ? ", over-signed" : "";
 			lines.push(
 				`  ${header.name}: ${state} (present ${header.present}, listed ${header.listed}${extra})`,
