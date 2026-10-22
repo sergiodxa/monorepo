@@ -30,10 +30,6 @@ export function createMonorepoCLI() {
 		lazy(() => import("./commands/release-bootstrap.js")),
 	);
 	cli.map(
-		commandset.release["check-commits"],
-		lazy(() => import("./commands/release-check-commits.js")),
-	);
-	cli.map(
 		commandset.package.create,
 		lazy(() => import("./commands/package-create.js")),
 	);
