@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { Module, Project, Value } from "./modules.js";
 import type { CallNode, FunctionNode, Node, ObjectNode } from "./parse.js";
 
@@ -403,11 +405,13 @@ async function middlewareEntry(
 	node: Node,
 ): Promise<MiddlewareEntry> {
 	let text = module.reader.text(node);
-	let name;
-	if (node.kind === "function") name = "(inline)";
-	else if (text.length > NAME_LIMIT && node.kind === "call")
-		name = `${module.reader.text(node.callee)}(…)`;
-	else name = text;
+	let name = iife(() => {
+		if (node.kind === "function") return "(inline)";
+		if (text.length > NAME_LIMIT && node.kind === "call") {
+			return `${module.reader.text(node.callee)}(…)`;
+		}
+		return text;
+	});
 	let root: Node = node;
 	while (root.kind === "call" || root.kind === "member") {
 		root = root.kind === "call" ? root.callee : root.object;

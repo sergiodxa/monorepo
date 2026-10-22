@@ -11,6 +11,7 @@ import { readFile, stat } from "node:fs/promises";
 import { join, posix } from "node:path";
 
 import { findModuleReferences, tokenize } from "@sdxc/codemod";
+import { iife } from "@sdxc/iife";
 import { isFailure, isSuccess, wrap } from "@sdxc/result";
 
 import type { Declarations, Node } from "./parse.js";
@@ -265,10 +266,11 @@ export class Project {
 		let tokens = tokenize(path, source.data);
 		let references = findModuleReferences(path, source.data);
 		if (isFailure(tokens) || isFailure(references)) {
-			let error;
-			if (isFailure(tokens)) error = tokens.error;
-			else if (isFailure(references)) error = references.error;
-			else error = null;
+			let error = iife(() => {
+				if (isFailure(tokens)) return tokens.error;
+				if (isFailure(references)) return references.error;
+				return null;
+			});
 			this.diagnostics.push(`${path}: could not be read (${error?.message ?? "unknown error"})`);
 			return null;
 		}

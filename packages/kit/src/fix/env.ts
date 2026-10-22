@@ -11,6 +11,7 @@ import { join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import { unifiedDiff } from "../diff.js";
@@ -44,10 +45,11 @@ export async function planEnvFix(root: string): Promise<Result<EnvFixPlan, Error
 		return success({ missing: [], diff: "", after: before });
 	}
 	let block = missing.map((key) => `${key}=`).join("\n");
-	let after;
-	if (before === "") after = `${block}\n`;
-	else if (before.endsWith("\n")) after = `${before}\n${block}\n`;
-	else after = `${before}\n\n${block}\n`;
+	let after = iife(() => {
+		if (before === "") return `${block}\n`;
+		if (before.endsWith("\n")) return `${before}\n${block}\n`;
+		return `${before}\n\n${block}\n`;
+	});
 	return success({
 		missing,
 		diff: unifiedDiff(ENV_EXAMPLE_FILE, before === "" ? null : before, after),

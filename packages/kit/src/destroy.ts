@@ -15,6 +15,7 @@ import type { Token } from "@sdxc/codemod";
 import type { Result } from "@sdxc/result";
 
 import { findStatements, removeProperty, removeStatements, tokenize } from "@sdxc/codemod";
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { FileEdit } from "./make/declare.js";
@@ -72,11 +73,12 @@ async function resolveModule(
 	from: string,
 	specifier: string,
 ): Promise<string | null> {
-	let base;
-	if (specifier.startsWith("~/")) base = specifier.slice(2);
-	else if (specifier.startsWith("."))
-		base = posix.normalize(posix.join(posix.dirname(from), specifier));
-	else base = null;
+	let base = iife(() => {
+		if (specifier.startsWith("~/")) return specifier.slice(2);
+		if (specifier.startsWith("."))
+			return posix.normalize(posix.join(posix.dirname(from), specifier));
+		return null;
+	});
 	if (base === null) return null;
 	let bare = base.replace(/\.[cm]?js$/, "");
 	for (let candidate of [base, `${bare}.ts`, `${bare}.tsx`, `${bare}/index.ts`]) {
@@ -142,9 +144,10 @@ async function unmap(
 				let imported = new RegExp(`import\\s+${local}\\s+from\\s+"([^"]+)"`).exec(source)?.[1];
 				let module =
 					imported === undefined ? null : await resolveModule(root, initializer, imported);
-				let call;
-				if (kind === "mcp") call = resource ? "resources" : "tools";
-				else call = DECLARATION_CALLS[kind];
+				let call = iife(() => {
+					if (kind === "mcp") return resource ? "resources" : "tools";
+					return DECLARATION_CALLS[kind];
+				});
 				if (module === null || call === undefined || path.length === 0) continue;
 				let declarations = await current(root, edits, module);
 				if (declarations === null) continue;
