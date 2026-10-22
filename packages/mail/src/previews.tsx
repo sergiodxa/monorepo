@@ -255,6 +255,12 @@ function PreviewInbox(handle: Handle<InboxProps>) {
 		let { base, locales, locale, entries, selected, requested, view, text, stylesheets } =
 			handle.props;
 		let readable = selected?.previewable === true && selected.failed !== true;
+		let emptyTitle: string;
+		if (selected === undefined && requested !== undefined) {
+			emptyTitle = `No template is mapped for the "${requested}" email.`;
+		} else if (selected === undefined) emptyTitle = "Select an email to read it.";
+		else if (selected.failed === true) emptyTitle = selected.subject;
+		else emptyTitle = `The "${selected.name}" email has no preview(); add one to its template.`;
 		return (
 			<html lang="en" class="system" mix={colorScheme("light dark")}>
 				<head>
@@ -393,15 +399,7 @@ function PreviewInbox(handle: Handle<InboxProps>) {
 						<main mix={[vstack({ gap: 0 }), minBs(0), minIs(0)]}>
 							{!readable || selected === undefined ? (
 								<Empty mix={m("auto")} color={selected?.failed === true ? "danger" : "neutral"}>
-									<Empty.Title>
-										{selected === undefined && requested !== undefined
-											? `No template is mapped for the "${requested}" email.`
-											: selected === undefined
-												? "Select an email to read it."
-												: selected.failed === true
-													? selected.subject
-													: `The "${selected.name}" email has no preview(); add one to its template.`}
-									</Empty.Title>
+									<Empty.Title>{emptyTitle}</Empty.Title>
 								</Empty>
 							) : (
 								<>
