@@ -267,15 +267,11 @@ export class BattleScene implements Scene {
 				return;
 			}
 			let trainerName = this.options.trainerName;
-			this.message = this.captured
-				? "The wild creature was caught!"
-				: winnerSide === 0
-					? trainerName
-						? `You defeated ${trainerName}!`
-						: "You won the battle!"
-					: winnerSide === 1
-						? "You were defeated..."
-						: "The battle ended in a draw.";
+			if (this.captured) this.message = "The wild creature was caught!";
+			else if (winnerSide === 0) {
+				this.message = trainerName ? `You defeated ${trainerName}!` : "You won the battle!";
+			} else if (winnerSide === 1) this.message = "You were defeated...";
+			else this.message = "The battle ended in a draw.";
 			this.settleReward(game, winnerSide);
 			this.finishing = true;
 			return;

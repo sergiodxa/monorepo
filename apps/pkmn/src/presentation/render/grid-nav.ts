@@ -33,18 +33,18 @@ export function gridNavigate(
 	count: number,
 ): number {
 	if (count <= 0) return 0;
-	if (columns <= 0) columns = 1;
+	let cols = columns <= 0 ? 1 : columns;
 
 	let current = Math.max(0, Math.min(index, count - 1));
-	let row = Math.floor(current / columns);
-	let column = current % columns;
-	let rows = Math.ceil(count / columns);
+	let row = Math.floor(current / cols);
+	let column = current % cols;
+	let rows = Math.ceil(count / cols);
 
 	switch (direction) {
 		case "left":
 		case "right": {
-			let rowStart = row * columns;
-			let rowCount = Math.min(columns, count - rowStart);
+			let rowStart = row * cols;
+			let rowCount = Math.min(cols, count - rowStart);
 			let step = direction === "right" ? 1 : -1;
 			let nextColumn = (column + step + rowCount) % rowCount;
 			return rowStart + nextColumn;
@@ -53,7 +53,7 @@ export function gridNavigate(
 		case "down": {
 			let step = direction === "down" ? 1 : -1;
 			let nextRow = (row + step + rows) % rows;
-			let candidate = nextRow * columns + column;
+			let candidate = nextRow * cols + column;
 			return Math.min(candidate, count - 1);
 		}
 	}
