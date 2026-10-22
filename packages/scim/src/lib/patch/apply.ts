@@ -277,11 +277,10 @@ function applyFiltered(
 	if (matched.length === 0) {
 		let pinned = op === "add" && target.filter ? pinnedValues(target.filter, attribute) : null;
 		if (!pinned) return badRequest("noTarget", `${target.text} matches no value.`);
-		let created = sub
-			? { ...pinned, [sub.name]: value }
-			: isWireObject(value)
-				? { ...pinned, ...value }
-				: null;
+		let created;
+		if (sub) created = { ...pinned, [sub.name]: value };
+		else if (isWireObject(value)) created = { ...pinned, ...value };
+		else created = null;
 		if (!created) return badRequest("invalidValue", `${target.text} needs an object value.`);
 		values.push(created);
 		keepOnePrimary(values, [created]);
@@ -299,7 +298,9 @@ function applyFiltered(
 	let written: unknown[] = [];
 	for (let [index, item] of values.entries()) {
 		if (!matched.includes(item)) continue;
-		let next = op === "replace" ? { ...value } : { ...(isWireObject(item) ? item : {}), ...value };
+		let next;
+		if (op === "replace") next = { ...value };
+		else next = { ...(isWireObject(item) ? item : {}), ...value };
 		values[index] = next;
 		written.push(next);
 	}
@@ -443,7 +444,10 @@ function applyMultiValued(
 		return null;
 	}
 
-	let incoming = Array.isArray(value) ? value : value === undefined ? [] : [value];
+	let incoming;
+	if (Array.isArray(value)) incoming = value;
+	else if (value === undefined) incoming = [];
+	else incoming = [value];
 
 	if (op === "remove") {
 		if (incoming.length === 0) {
@@ -536,15 +540,16 @@ export function applyPatch<Resource extends object>(
 	let copy = structuredClone(resource) as unknown as WireObject;
 
 	for (let [index, operation] of operations.entries()) {
-		let error =
-			operation.path === null
-				? isWireObject(operation.value)
-					? applyWithoutPath(copy, operation.op, operation.value, options.definitions)
-					: badRequest(
-							operation.op === "remove" ? "noTarget" : "invalidValue",
-							"The operation needs a path.",
-						)
-				: applyAtPath(copy, operation.op, operation.path, operation.value, options.definitions);
+		let error;
+		if (operation.path === null)
+			error = isWireObject(operation.value)
+				? applyWithoutPath(copy, operation.op, operation.value, options.definitions)
+				: badRequest(
+						operation.op === "remove" ? "noTarget" : "invalidValue",
+						"The operation needs a path.",
+					);
+		else
+			error = applyAtPath(copy, operation.op, operation.path, operation.value, options.definitions);
 		if (error) {
 			return failure(
 				new ScimError(error.status, `Operations[${index}]: ${error.message}`, {
