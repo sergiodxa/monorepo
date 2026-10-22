@@ -100,8 +100,10 @@ async function serve(build: () => Result<OpenAPI.Document, OpenAPIBuildError>): 
 	let json = stringify(built.data);
 	let yaml = stringify(built.data, { format: "yaml" });
 	if (json.status === "failure" || yaml.status === "failure") {
-		let error =
-			json.status === "failure" ? json.error : yaml.status === "failure" ? yaml.error : null;
+		let error;
+		if (json.status === "failure") error = json.error;
+		else if (yaml.status === "failure") error = yaml.error;
+		else error = null;
 		return {
 			ok: false,
 			title: "The OpenAPI document failed to serialize",
