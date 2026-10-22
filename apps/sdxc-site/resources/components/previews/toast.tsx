@@ -10,6 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { CircleAlertIcon, CircleCheckIcon, InfoIcon } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { hstack } from "@sdxc/u/layout";
 import { Button, Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
@@ -140,10 +141,11 @@ export const ToastPreview = clientEntry(import.meta.url, function ToastPreview(h
 
 			<Toast.Region aria-label="Notifications" placement="bottom-end">
 				{toaster.toasts.map((toast) => {
-					let icon;
-					if (toast.data.color === "success") icon = <CircleCheckIcon />;
-					else if (toast.data.color === "danger") icon = <CircleAlertIcon />;
-					else icon = <InfoIcon />;
+					let icon = iife(() => {
+						if (toast.data.color === "success") return <CircleCheckIcon />;
+						if (toast.data.color === "danger") return <CircleAlertIcon />;
+						return <InfoIcon />;
+					});
 					return (
 						<Toast
 							key={toast.id}

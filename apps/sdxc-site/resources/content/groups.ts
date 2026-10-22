@@ -170,6 +170,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 		packages: [
 			"result",
 			"types",
+			"iife",
 			"dates",
 			"duration",
 			"strings",

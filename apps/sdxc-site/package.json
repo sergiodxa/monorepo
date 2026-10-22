@@ -18,6 +18,7 @@
 		"@sdxc/font": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/icons": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/raster": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/u": "workspace:*",
