@@ -312,7 +312,10 @@ function readLink(text: string, at: number): { link: FlowLink; end: number } | n
 			let label = rest.slice(0, close.index).trim();
 			let run = (close[1] ?? "").length;
 			let head = close[2];
-			let length = kind === "-." ? run : head ? run - 1 : run - 2;
+			let length;
+			if (kind === "-.") length = run;
+			else if (head) length = run - 1;
+			else length = run - 2;
 			return {
 				link: {
 					lines: splitLines(unquote(label)),
