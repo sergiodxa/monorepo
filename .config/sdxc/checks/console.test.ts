@@ -1,5 +1,5 @@
 /**
- * The console doctor check: passes clean source and fails when `console.log` appears.
+ * The console doctor check: passes clean source and warns when `console.log` appears.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -76,12 +76,12 @@ describe("console doctor check", () => {
 		expect((await check.run(ctx)).status).toBe("pass");
 	});
 
-	test("fails on console.log in package source", async () => {
+	test("warns on console.log in package source", async () => {
 		let ctx = await context({
 			"packages/result/src/index.ts": "console.log('x');\n",
 		});
 		let result = await check.run(ctx);
-		expect(result.status).toBe("fail");
+		expect(result.status).toBe("warn");
 		expect(result.findings?.[0]).toContain("console.log");
 	});
 

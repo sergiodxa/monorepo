@@ -1,5 +1,5 @@
 /**
- * The uuid-secrets doctor check: passes sanctioned generators and fails on randomUUID.
+ * The uuid-secrets doctor check: passes sanctioned generators and warns on randomUUID.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -77,12 +77,12 @@ describe("uuid-secrets doctor check", () => {
 		expect((await check.run(ctx)).status).toBe("pass");
 	});
 
-	test("fails on crypto.randomUUID", async () => {
+	test("warns on crypto.randomUUID", async () => {
 		let ctx = await context({
 			"packages/result/src/id.ts": "export const id = crypto.randomUUID();\n",
 		});
 		let result = await check.run(ctx);
-		expect(result.status).toBe("fail");
+		expect(result.status).toBe("warn");
 		expect(result.findings?.[0]).toContain("randomUUID");
 	});
 });
