@@ -316,22 +316,20 @@ export class MessageFormat {
 	#call(expression: Expression, scope: Scope, fallbackName?: string): Resolved {
 		let arg = expression.arg;
 		let name = expression.function?.name ?? fallbackName ?? "string";
-		let source =
-			arg?.type === "literal"
-				? `|${arg.value.replaceAll("\\", "\\\\").replaceAll("|", "\\|")}|`
-				: arg
-					? `$${arg.name}`
-					: `:${name}`;
+		let source;
+		if (arg?.type === "literal")
+			source = `|${arg.value.replaceAll("\\", "\\\\").replaceAll("|", "\\|")}|`;
+		else if (arg) source = `$${arg.name}`;
+		else source = `:${name}`;
 		let input: unknown;
 		if (arg?.type === "literal") input = arg.value;
 		else if (arg) input = this.#operand(arg.name, scope);
 
 		let custom = this.#options.functions;
-		let fn: MessageFunction | DefaultFunction | undefined = Object.hasOwn(custom, name)
-			? custom[name]
-			: Object.hasOwn(DEFAULT_FUNCTIONS, name)
-				? DEFAULT_FUNCTIONS[name]
-				: undefined;
+		let fn: MessageFunction | DefaultFunction | undefined;
+		if (Object.hasOwn(custom, name)) fn = custom[name];
+		else if (Object.hasOwn(DEFAULT_FUNCTIONS, name)) fn = DEFAULT_FUNCTIONS[name];
+		else fn = undefined;
 		if (!fn) {
 			scope.onError(
 				new MessageError("unknown-function", `Unknown function \`:${name}\``, { source }),
@@ -409,12 +407,10 @@ export class MessageFormat {
 
 	/** Markup resolution: always succeeds, dropping `u:dir` with an error and moving `u:id` out. */
 	#markup(markup: Markup, scope: Scope): MessageMarkupPart {
-		let source =
-			markup.kind === "close"
-				? `/${markup.name}`
-				: markup.kind === "open"
-					? `#${markup.name}`
-					: `#${markup.name}/`;
+		let source;
+		if (markup.kind === "close") source = `/${markup.name}`;
+		else if (markup.kind === "open") source = `#${markup.name}`;
+		else source = `#${markup.name}/`;
 		let { options } = this.#resolveOptions(markup.options, scope);
 		let part: MessageMarkupPart = { type: "markup", kind: markup.kind, source, name: markup.name };
 		if ("u:dir" in options) {
