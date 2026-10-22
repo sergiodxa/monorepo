@@ -38,9 +38,10 @@ those project-level shapes (ADR-172).
      `doctor.mutation.maxSurvived`; **skip** when the report file is absent
 2. Report order after `dependencies`: fan-out, orphans, feature-scatter, duplication,
    result-throws, test-ratio, crap, mutation, then `ui`.
-3. Oxlint in this monorepo enables `max-params`, `max-depth`, `max-nested-callbacks`,
-   `max-lines-per-function`, `max-statements` and `no-nested-ternary` as **warn**. Repo doctor
-   checks `console` and `uuid-secrets` live under `.config/sdxc/checks/`.
+3. Repo doctor checks `console` and `uuid-secrets` live under `.config/sdxc/checks/`. Oxlint
+   function-shape rules (`max-params`, nesting, function length, …) are **deny** in this
+   monorepo with adoption-floor thresholds in `vite.config.ts`; kit doctor does not duplicate
+   them.
 
 ## Consequences
 

@@ -49,7 +49,9 @@ every consumer app.
 ### Negative
 
 - Enabling `max-params` / nesting still needs an explicit oxlint config change; doctor will not
-  paper over a disabled rule.
+  paper over a disabled rule. This monorepo enables those rules as `"deny"` with adoption-floor
+  thresholds in `vite.config.ts` (generous enough for the existing backlog, tight enough to
+  stop further growth).
 - Repo checks must be maintained beside the monorepo, not reused automatically in every
   generated app.
 
