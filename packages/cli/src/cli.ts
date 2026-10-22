@@ -22,6 +22,7 @@ import type { Entry, Tree } from "./tree.js";
 import { CommandContext } from "./context.js";
 import { describeEntry } from "./describe.js";
 import { CancelledError, EXIT_CODES, exitCodeOf, UsageError } from "./errors.js";
+import { ExecError } from "./exec.js";
 import { isAction } from "./handler.js";
 import { renderHelp } from "./help.js";
 import { isLazy } from "./lazy.js";
@@ -329,7 +330,10 @@ function asError(error: unknown): Error {
 	return error instanceof Error ? error : new Error(String(error));
 }
 
-/** Prints a failed run's message and answers its exit code. */
+/**
+ * Prints a failed run's message and answers its exit code. An `ExecError` also prints the
+ * child's stderr so CI sees wrangler/cf authentication lines instead of only "exited with 1".
+ */
 function report(
 	error: Error,
 	entry: Entry,
@@ -341,6 +345,12 @@ function report(
 		session.screen.write(session.stderr, `${error.message}\n\n${help}`);
 	} else if (!(error instanceof CancelledError) && error.message !== "") {
 		session.screen.write(session.stderr, `${error.message}\n`);
+		if (error instanceof ExecError && error.stderr !== "") {
+			session.screen.write(
+				session.stderr,
+				error.stderr.endsWith("\n") ? error.stderr : `${error.stderr}\n`,
+			);
+		}
 	}
 	return exitCodeOf(error);
 }

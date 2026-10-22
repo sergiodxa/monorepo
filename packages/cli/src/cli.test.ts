@@ -236,6 +236,26 @@ describe("running", () => {
 		});
 	});
 
+	test("prints an ExecError child's stderr under its exit summary", async () => {
+		let { ExecError } = await import("./exec.js");
+		let contract = commands({ child: command() });
+		let cli = createCLI({ name: "p", commands: contract });
+		cli.map(contract.child, () =>
+			failure(
+				new ExecError("bunx wrangler d1 migrations list db --remote exited with 1", {
+					command: ["bunx", "wrangler"],
+					code: 1,
+					stderr: "Authentication error [code: 10000]\n",
+				}),
+			),
+		);
+
+		let run = await invoke(cli, ["child"]);
+		expect(run.code).toBe(1);
+		expect(run.stderr).toContain("exited with 1");
+		expect(run.stderr).toContain("Authentication error [code: 10000]");
+	});
+
 	test("runs a mapped group when no member is named", async () => {
 		let cli = createCLI({ name: "sdxc", commands: CONTRACT });
 		cli.map(CONTRACT.ui, (ctx) => {
