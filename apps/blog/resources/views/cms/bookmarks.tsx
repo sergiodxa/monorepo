@@ -10,6 +10,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
@@ -292,10 +293,11 @@ function CheckReport(handle: Handle<{ check: CMSBookmarksActionView.Check }>) {
 	return () => {
 		let { check } = handle.props;
 		let status = check.httpStatus === null ? "" : ` (${String(check.httpStatus)})`;
-		let checkTone;
-		if (!check.open) checkTone = "neutral";
-		else if (check.status === "gone") checkTone = "danger";
-		else checkTone = "warning";
+		let checkTone = iife(() => {
+			if (!check.open) return "neutral";
+			if (check.status === "gone") return "danger";
+			return "warning";
+		});
 
 		return (
 			<div mix={[grid(), gap(2)]}>

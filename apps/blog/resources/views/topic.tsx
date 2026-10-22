@@ -11,6 +11,7 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle } from "remix/component";
 
 import { formatParts, parseDate } from "@sdxc/dates";
+import { iife } from "@sdxc/iife";
 import { toRemix } from "@sdxc/markdown/remix";
 import { mf } from "@sdxc/microformats/ui";
 import { isFailure } from "@sdxc/result";
@@ -271,26 +272,25 @@ function TopicRow(handle: Handle<{ item: TopicViewModel.Item }>) {
  */
 export function TopicView() {
 	return ({ model, assets }: { model: TopicViewModel.Page; assets: DocumentAssets }) => {
-		let listing;
-		if (model.items.length === 0) {
-			listing = <p mix={[m(0), text("base"), fg("neutral")]}>{model.empty}</p>;
-		} else if (model.entries) {
-			listing = (
-				<dl mix={[m(0), grid(), gap(3)]}>
-					{model.items.map((item) =>
-						item.type === "entry" ? <GlossaryEntry key={item.key} entry={item.entry} /> : null,
-					)}
-				</dl>
-			);
-		} else {
-			listing = (
+		let listing = iife(() => {
+			if (model.items.length === 0)
+				return <p mix={[m(0), text("base"), fg("neutral")]}>{model.empty}</p>;
+			if (model.entries)
+				return (
+					<dl mix={[m(0), grid(), gap(3)]}>
+						{model.items.map((item) =>
+							item.type === "entry" ? <GlossaryEntry key={item.key} entry={item.entry} /> : null,
+						)}
+					</dl>
+				);
+			return (
 				<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
 					{model.items.map((item) => (
 						<TopicRow key={item.key} item={item} />
 					))}
 				</ol>
 			);
-		}
+		});
 		return (
 			<BlogLayout
 				assets={assets}

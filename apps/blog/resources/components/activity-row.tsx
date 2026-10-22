@@ -10,6 +10,7 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { formatParts, parseDate } from "@sdxc/dates";
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@sdxc/u/layout";
@@ -119,27 +120,29 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 		let { id, role, "aria-selected": selected } = handle.props;
 		let compact = handle.props.size === "sm";
 		let icon = POST_KINDS[kind];
-		let dateCell;
-		if (date && inline) {
-			dateCell = (
-				<Link href={href} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
-					<time datetime={isoDate(date)} mix={[fg("neutral.muted"), text("sm"), nowrap(), dateMix]}>
+		let dateCell = iife(() => {
+			if (date && inline)
+				return (
+					<Link href={href} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
+						<time
+							datetime={isoDate(date)}
+							mix={[fg("neutral.muted"), text("sm"), nowrap(), dateMix]}
+						>
+							{formatDate(date)}
+						</time>
+					</Link>
+				);
+			if (date)
+				return (
+					<time
+						datetime={isoDate(date)}
+						mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(compact ? 0.5 : 1), dateMix]}
+					>
 						{formatDate(date)}
 					</time>
-				</Link>
-			);
-		} else if (date) {
-			dateCell = (
-				<time
-					datetime={isoDate(date)}
-					mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(compact ? 0.5 : 1), dateMix]}
-				>
-					{formatDate(date)}
-				</time>
-			);
-		} else {
-			dateCell = <span />;
-		}
+				);
+			return <span />;
+		});
 
 		return (
 			<li
