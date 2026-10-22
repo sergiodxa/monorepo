@@ -113,7 +113,7 @@ function toItem(item: JSONFeed.Item, feedAuthors: Feed.Author[], url?: string): 
  * single author a 1.0 document wrote, which 1.1 tells a reader to prefer against.
  */
 function toAuthors(authors?: JSONFeed.Author[], author?: JSONFeed.Author): Feed.Author[] {
-	let source;
+	let source: JSONFeed.Author[];
 	if (authors && authors.length > 0) source = authors;
 	else if (author) source = [author];
 	else source = [];
