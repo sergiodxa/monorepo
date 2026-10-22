@@ -9,6 +9,8 @@
 
 import { emitKeypressEvents } from "node:readline";
 
+import { iife } from "@sdxc/iife";
+
 import { graphemes } from "./style.js";
 
 /** One key press, shaped as `node:readline` reports it. */
@@ -133,10 +135,11 @@ export function keyFromName(name: string): Key {
 	let bare = ctrl ? name.slice(5) : name;
 	let named = NAMED_KEYS[bare];
 	if (named !== undefined) {
-		let sequence;
-		if (named === "space") sequence = " ";
-		else if (named === "return") sequence = "\r";
-		else sequence = "";
+		let sequence = iife(() => {
+			if (named === "space") return " ";
+			if (named === "return") return "\r";
+			return "";
+		});
 		return { name: named, sequence, ctrl, meta: false, shift: false };
 	}
 	let shift = bare !== bare.toLowerCase();
