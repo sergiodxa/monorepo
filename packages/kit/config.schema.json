@@ -163,6 +163,72 @@
 						"max": 12,
 						"coverage": "coverage/coverage-final.json"
 					}
+				},
+				"testRatio": {
+					"type": "object",
+					"properties": {
+						"min": {
+							"type": "number",
+							"minimum": 0,
+							"default": 0.3,
+							"description": "Minimum tests/code ratio from sdxc stats; the test-ratio check warns below it"
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"min": 0.3
+					}
+				},
+				"fanOut": {
+					"type": "object",
+					"properties": {
+						"max": {
+							"type": "integer",
+							"minimum": 1,
+							"default": 15,
+							"description": "Maximum distinct modules one file may import; the fan-out check warns above it"
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"max": 15
+					}
+				},
+				"duplication": {
+					"type": "object",
+					"properties": {
+						"minLines": {
+							"type": "integer",
+							"minimum": 2,
+							"default": 8,
+							"description": "Minimum consecutive code lines that count as a duplicated block"
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"minLines": 8
+					}
+				},
+				"mutation": {
+					"type": "object",
+					"properties": {
+						"report": {
+							"type": "string",
+							"default": "reports/mutation/mutation.json",
+							"description": "Mutation report JSON the mutation check reads, relative to the project root"
+						},
+						"maxSurvived": {
+							"type": "integer",
+							"minimum": 0,
+							"default": 0,
+							"description": "Maximum surviving mutants the mutation check allows"
+						}
+					},
+					"additionalProperties": false,
+					"default": {
+						"report": "reports/mutation/mutation.json",
+						"maxSurvived": 0
+					}
 				}
 			},
 			"additionalProperties": false,
@@ -180,6 +246,19 @@
 				"crap": {
 					"max": 12,
 					"coverage": "coverage/coverage-final.json"
+				},
+				"testRatio": {
+					"min": 0.3
+				},
+				"fanOut": {
+					"max": 15
+				},
+				"duplication": {
+					"minLines": 8
+				},
+				"mutation": {
+					"report": "reports/mutation/mutation.json",
+					"maxSurvived": 0
 				}
 			}
 		},

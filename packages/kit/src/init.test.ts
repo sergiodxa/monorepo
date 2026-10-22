@@ -77,6 +77,24 @@ const EXPECTED = `{
 			// Istanbul coverage-final.json the crap check reads, relative to the project root
 			"coverage": "coverage/coverage-final.json",
 		},
+		"testRatio": {
+			// Minimum tests/code ratio from sdxc stats; the test-ratio check warns below it
+			"min": 0.3,
+		},
+		"fanOut": {
+			// Maximum distinct modules one file may import; the fan-out check warns above it
+			"max": 15,
+		},
+		"duplication": {
+			// Minimum consecutive code lines that count as a duplicated block
+			"minLines": 8,
+		},
+		"mutation": {
+			// Mutation report JSON the mutation check reads, relative to the project root
+			"report": "reports/mutation/mutation.json",
+			// Maximum surviving mutants the mutation check allows
+			"maxSurvived": 0,
+		},
 	},
 	"run": {
 		// Module \`sdxc run\` starts, relative to the project root; apps keep the default

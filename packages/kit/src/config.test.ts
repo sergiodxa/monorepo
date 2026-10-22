@@ -50,6 +50,10 @@ const DEFAULTS = {
 		complexity: { max: 4 },
 		moduleSize: { maxLines: 200 },
 		crap: { max: 12, coverage: "coverage/coverage-final.json" },
+		testRatio: { min: 0.3 },
+		fanOut: { max: 15 },
+		duplication: { minLines: 8 },
+		mutation: { report: "reports/mutation/mutation.json", maxSurvived: 0 },
 	},
 	run: { entry: "bootstrap/cli.ts" },
 	lock: ".config/sdxc.lock.jsonl",
@@ -139,6 +143,10 @@ describe("loadConfig", () => {
 			complexity: { max: 4 },
 			moduleSize: { maxLines: 200 },
 			crap: { max: 12, coverage: "coverage/coverage-final.json" },
+			testRatio: { min: 0.3 },
+			fanOut: { max: 15 },
+			duplication: { minLines: 8 },
+			mutation: { report: "reports/mutation/mutation.json", maxSurvived: 0 },
 		});
 		expect(isFailure(partial) && partial.error.message.split("\n").sort()).toEqual([
 			"sdxc.jsonc: doctor.migrations.accept.0.column: Expected string",
