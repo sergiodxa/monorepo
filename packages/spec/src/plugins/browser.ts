@@ -2127,9 +2127,9 @@ async function captureBrowser(args: string[]): Promise<[string, string]> {
 	child.stderr?.setEncoding("utf8");
 	child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
 	child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
-	await new Promise<void>((settle, reject) => {
+	await new Promise<void>((resolve, reject) => {
 		child.once("error", reject);
-		child.once("close", () => settle());
+		child.once("close", () => resolve());
 	});
 	return [stdout, stderr];
 }

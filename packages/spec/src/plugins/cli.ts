@@ -191,15 +191,15 @@ async function start(args: ToolArg[], context: ToolContext): Promise<Result<Star
 	child.stderr?.setEncoding("utf8");
 	child.stdout?.on("data", (chunk: string) => void (program.output += chunk));
 	child.stderr?.on("data", (chunk: string) => void (program.output += chunk));
-	program.exited = new Promise<number>((settle) => {
+	program.exited = new Promise<number>((resolve) => {
 		child.once("close", (exitCode: number | null) => {
 			program.exitCode = exitCode ?? 1;
-			settle(program.exitCode);
+			resolve(program.exitCode);
 		});
 	});
-	let spawned = await new Promise<Error | undefined>((settle) => {
-		child.once("spawn", () => settle(undefined));
-		child.once("error", settle);
+	let spawned = await new Promise<Error | undefined>((resolve) => {
+		child.once("spawn", () => resolve(undefined));
+		child.once("error", resolve);
 	});
 	if (spawned !== undefined) {
 		return failure(
@@ -386,9 +386,9 @@ async function capture(
 	child.stderr?.setEncoding("utf8");
 	child.stdout?.on("data", (chunk: string) => void (stdout += chunk));
 	child.stderr?.on("data", (chunk: string) => void (stderr += chunk));
-	let code = await new Promise<number>((settle, reject) => {
+	let code = await new Promise<number>((resolve, reject) => {
 		child.once("error", reject);
-		child.once("close", (exitCode: number | null) => settle(exitCode ?? 1));
+		child.once("close", (exitCode: number | null) => resolve(exitCode ?? 1));
 	});
 	return { stdout, stderr, exit_code: code };
 }

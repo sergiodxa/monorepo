@@ -156,10 +156,11 @@ async function perform(
 	maxResponseBytes: number | undefined,
 ): Promise<Result<Value, SpecError>> {
 	let current = url;
+	let requestInit = init;
 	for (let redirects = 0; ; redirects++) {
 		let response: Response;
 		try {
-			response = await fetch(current, { ...init, redirect: "manual" });
+			response = await fetch(current, { ...requestInit, redirect: "manual" });
 		} catch (error) {
 			return failure(
 				new ToolError(`http.${verb} request to ${current.href} failed: ${describeFailure(error)}`),
@@ -180,7 +181,7 @@ async function perform(
 		if (isFailure(next)) return next;
 		let allowed = permissions.checkNet(next.data.hostname, portOf(next.data));
 		if (isFailure(allowed)) return allowed;
-		init = redirectInit(init, response.status, current, next.data);
+		requestInit = redirectInit(requestInit, response.status, current, next.data);
 		current = next.data;
 	}
 }
