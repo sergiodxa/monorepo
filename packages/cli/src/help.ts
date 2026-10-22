@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { FlagSpec } from "./flag.js";
 import type { Style } from "./style.js";
 import type { Entry } from "./tree.js";
@@ -115,10 +117,11 @@ function flagLabel(spec: FlagSpec): string {
 	let names: string[] = [];
 	if (spec.short !== undefined) names.push(`-${spec.short}`);
 	if (spec.kind === "boolean") {
-		let prefix;
-		if (spec.prompt !== undefined || spec.default === undefined) prefix = "[no-]";
-		else if (spec.default === true) prefix = "no-";
-		else prefix = "";
+		let prefix = iife(() => {
+			if (spec.prompt !== undefined || spec.default === undefined) return "[no-]";
+			if (spec.default === true) return "no-";
+			return "";
+		});
 		names.push(`--${prefix}${spec.name}`);
 		for (let alias of spec.aliases) names.push(`--${prefix}${alias}`);
 		return names.join(", ");

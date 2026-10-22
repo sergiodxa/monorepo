@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { iife } from "@sdxc/iife";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { ArgumentSpec } from "./argument.js";
@@ -148,10 +149,11 @@ export async function resolveInputs(
 			return success(spec.variadic ? checked.data : checked.data[0]);
 		};
 		if (given.length === 0) {
-			let fallback: { value: unknown } | undefined;
-			if (spec.hasDefault) fallback = { value: spec.default };
-			else if (spec.optional) fallback = { value: undefined };
-			else if (spec.variadic && spec.min === 0) fallback = { value: [] };
+			let fallback = iife((): { value: unknown } | undefined => {
+				if (spec.hasDefault) return { value: spec.default };
+				if (spec.optional) return { value: undefined };
+				if (spec.variadic && spec.min === 0) return { value: [] };
+			});
 			missing.push({
 				label,
 				names: [key],
@@ -184,10 +186,11 @@ export async function resolveInputs(
 			return success(many ? checked.data : checked.data[0]);
 		};
 		if (occurrences.length === 0) {
-			let fallback: { value: unknown } | undefined;
-			if (spec.hasDefault) fallback = { value: spec.default };
-			else if (spec.kind === "boolean") fallback = { value: false };
-			else if (!spec.required) fallback = { value: many ? [] : undefined };
+			let fallback = iife((): { value: unknown } | undefined => {
+				if (spec.hasDefault) return { value: spec.default };
+				if (spec.kind === "boolean") return { value: false };
+				if (!spec.required) return { value: many ? [] : undefined };
+			});
 			missing.push({
 				label,
 				names: [key, spec.name],

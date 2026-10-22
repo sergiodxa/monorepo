@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { Key } from "./keys.js";
 import type { Choice, PromptKind, PromptKinds } from "./prompt.js";
 import type { Style } from "./style.js";
@@ -172,9 +174,10 @@ function numberLine(options: PromptKinds["number"], initial: unknown): Interacti
 			if (key.name === "up" || key.name === "down") {
 				let current = editor.text === "" ? (fallback ?? options.min ?? 0) : Number(editor.text);
 				if (Number.isNaN(current)) current = fallback ?? 0;
-				let next;
-				if (editor.text === "" && fallback === undefined) next = current;
-				else next = current + (key.name === "up" ? step : -step);
+				let next = iife(() => {
+					if (editor.text === "" && fallback === undefined) return current;
+					return current + (key.name === "up" ? step : -step);
+				});
 				editor = new Editor(String(clamp(next)));
 				return undefined;
 			}
@@ -295,11 +298,13 @@ function list(choices: readonly unknown[], initial: unknown, mode: ListMode): In
 		render(style, header) {
 			let lines: string[] = [];
 			if (mode.search === true) {
-				let shownQuery;
-				if (query.chars.length === 0)
-					shownQuery =
-						mode.placeholder === undefined ? style.inverse(" ") : style.dim(mode.placeholder);
-				else shownQuery = query.render(style);
+				let shownQuery = iife(() => {
+					if (query.chars.length === 0)
+						return mode.placeholder === undefined
+							? style.inverse(" ")
+							: style.dim(mode.placeholder);
+					return query.render(style);
+				});
 				lines.push(`${header} › ${shownQuery}`);
 			} else lines.push(header);
 			let shown = visible();

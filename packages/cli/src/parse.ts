@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { Entry, FlagEntry, Tree } from "./tree.js";
 
 import { isGroup } from "./command.js";
@@ -240,11 +242,13 @@ function unknownFlag(tree: Tree, entry: Entry, token: string): string {
 	let owners = long ? (tree.owners.get(name) ?? tree.owners.get(positive) ?? []) : [];
 	if (owners.length > 0) {
 		let titles = owners.map((owner) => owner.title);
-		let listed;
-		if (titles.length === 1) listed = titles[0] as string;
-		else if (titles.length > NAMED_OWNERS)
-			listed = `${titles.slice(0, NAMED_OWNERS).join(", ")} and ${titles.length - NAMED_OWNERS} more`;
-		else listed = `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) as string}`;
+		let listed = iife((): string => {
+			if (titles.length === 1) return titles[0] as string;
+			if (titles.length > NAMED_OWNERS) {
+				return `${titles.slice(0, NAMED_OWNERS).join(", ")} and ${titles.length - NAMED_OWNERS} more`;
+			}
+			return `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) as string}`;
+		});
 		return `${spelled} is not a flag of ${entry.title}; ${listed} ${titles.length === 1 ? "takes" : "take"} it`;
 	}
 	let candidates: string[] = [];

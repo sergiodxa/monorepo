@@ -11,6 +11,7 @@ import { spawn } from "node:child_process";
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, success } from "@sdxc/result";
 
 import type { Output } from "./screen.js";
@@ -140,12 +141,13 @@ export const spawnExec: Exec = (command, request) =>
 		else if (request.stdio === "stderr") outTarget = request.stderr;
 		let errTarget: Output | null =
 			request.stdio === "inherit" || request.stdio === "stderr" ? request.stderr : null;
-		let stdout: "inherit" | "pipe" | "ignore" | number;
-		if (request.stdio === "ignore") stdout = "ignore";
-		else if (outTarget === null) stdout = "pipe";
-		else if (direct(outTarget, process.stdout)) stdout = "inherit";
-		else if (direct(outTarget, process.stderr)) stdout = 2;
-		else stdout = "pipe";
+		let stdout = iife((): "inherit" | "pipe" | "ignore" | number => {
+			if (request.stdio === "ignore") return "ignore";
+			if (outTarget === null) return "pipe";
+			if (direct(outTarget, process.stdout)) return "inherit";
+			if (direct(outTarget, process.stderr)) return 2;
+			return "pipe";
+		});
 		let stderr: "inherit" | "pipe" | "ignore" = "pipe";
 		if (request.stdio === "ignore") stderr = "ignore";
 		else if (errTarget !== null && direct(errTarget, process.stderr)) stderr = "inherit";
