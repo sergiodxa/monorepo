@@ -657,14 +657,11 @@ function writeFiles(
 	}
 	let coverImageId: string | undefined;
 	for (let [index, asset] of [...assets.values()].entries()) {
-		let id = uniqueId(
-			asset.kind === "cover"
-				? "cover-image"
-				: asset.kind === "style"
-					? `style-${index + 1}`
-					: `resource-${index + 1}`,
-			taken,
-		);
+		let itemId;
+		if (asset.kind === "cover") itemId = "cover-image";
+		else if (asset.kind === "style") itemId = `style-${index + 1}`;
+		else itemId = `resource-${index + 1}`;
+		let id = uniqueId(itemId, taken);
 		if (asset.kind === "cover") coverImageId = id;
 		manifest.push({
 			id,
