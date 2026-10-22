@@ -139,40 +139,41 @@ export const ToastPreview = clientEntry(import.meta.url, function ToastPreview(h
 			</div>
 
 			<Toast.Region aria-label="Notifications" placement="bottom-end">
-				{toaster.toasts.map((toast) => (
-					<Toast
-						key={toast.id}
-						id={`preview-toast-${toast.id}`}
-						color={toast.data.color}
-						live={toast.data.color === "danger" ? "assertive" : "polite"}
-						mix={[
-							dismiss({ duration: null }),
-							on<HTMLDivElement, "ui:dismiss">("ui:dismiss", () => void toaster.dismiss(toast.id)),
-							on<HTMLDivElement, "pointerenter">("pointerenter", () => toaster.pause(toast.id)),
-							on<HTMLDivElement, "pointerleave">("pointerleave", () => toaster.resume(toast.id)),
-						]}
-					>
-						<Toast.Icon>
-							{toast.data.color === "success" ? (
-								<CircleCheckIcon />
-							) : toast.data.color === "danger" ? (
-								<CircleAlertIcon />
-							) : (
-								<InfoIcon />
-							)}
-						</Toast.Icon>
-						<Toast.Content>
-							<Toast.Title>{toast.data.title}</Toast.Title>
-							<Toast.Description>{toast.data.description}</Toast.Description>
-						</Toast.Content>
-						{toast.data.action ? <Toast.Action>{toast.data.action}</Toast.Action> : null}
-						<Toast.Close
-							aria-label="Dismiss"
-							commandfor={`preview-toast-${toast.id}`}
-							command="--ui-dismiss"
-						/>
-					</Toast>
-				))}
+				{toaster.toasts.map((toast) => {
+					let icon;
+					if (toast.data.color === "success") icon = <CircleCheckIcon />;
+					else if (toast.data.color === "danger") icon = <CircleAlertIcon />;
+					else icon = <InfoIcon />;
+					return (
+						<Toast
+							key={toast.id}
+							id={`preview-toast-${toast.id}`}
+							color={toast.data.color}
+							live={toast.data.color === "danger" ? "assertive" : "polite"}
+							mix={[
+								dismiss({ duration: null }),
+								on<HTMLDivElement, "ui:dismiss">(
+									"ui:dismiss",
+									() => void toaster.dismiss(toast.id),
+								),
+								on<HTMLDivElement, "pointerenter">("pointerenter", () => toaster.pause(toast.id)),
+								on<HTMLDivElement, "pointerleave">("pointerleave", () => toaster.resume(toast.id)),
+							]}
+						>
+							<Toast.Icon>{icon}</Toast.Icon>
+							<Toast.Content>
+								<Toast.Title>{toast.data.title}</Toast.Title>
+								<Toast.Description>{toast.data.description}</Toast.Description>
+							</Toast.Content>
+							{toast.data.action ? <Toast.Action>{toast.data.action}</Toast.Action> : null}
+							<Toast.Close
+								aria-label="Dismiss"
+								commandfor={`preview-toast-${toast.id}`}
+								command="--ui-dismiss"
+							/>
+						</Toast>
+					);
+				})}
 			</Toast.Region>
 		</>
 	);

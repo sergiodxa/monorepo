@@ -96,46 +96,52 @@ export const ProgressBarPreview = clientEntry(
 
 		handle.signal.addEventListener("abort", () => clearInterval(timer));
 
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
-				<Header mix={[m(0)]}>Uploading 3 files</Header>
+		return () => {
+			let uploadLabel;
+			if (uploaded === 0) uploadLabel = "Upload";
+			else if (uploaded === 100) uploadLabel = "Upload again";
+			else uploadLabel = "Uploading…";
+			return (
+				<div mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
+					<Header mix={[m(0)]}>Uploading 3 files</Header>
 
-				<ProgressBar>
-					<div mix={[hstack({ gap: 2, justify: "between" })]}>
-						<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>hero@2x.png</span>
-						<ProgressBar.ValueLabel>{`${uploaded}%`}</ProgressBar.ValueLabel>
-					</div>
-					<ProgressBar.Indicator value={uploaded} max={100} aria-label="hero@2x.png upload" />
-				</ProgressBar>
+					<ProgressBar>
+						<div mix={[hstack({ gap: 2, justify: "between" })]}>
+							<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>hero@2x.png</span>
+							<ProgressBar.ValueLabel>{`${uploaded}%`}</ProgressBar.ValueLabel>
+						</div>
+						<ProgressBar.Indicator value={uploaded} max={100} aria-label="hero@2x.png upload" />
+					</ProgressBar>
 
-				<ProgressBar>
-					<div mix={[hstack({ gap: 2, justify: "between" })]}>
-						<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-							walkthrough.mp4
-						</span>
-						<ProgressBar.ValueLabel>Transcoding…</ProgressBar.ValueLabel>
-					</div>
-					<ProgressBar.Indicator aria-label="walkthrough.mp4 transcoding" mix={[shimmer()]} />
-				</ProgressBar>
+					<ProgressBar>
+						<div mix={[hstack({ gap: 2, justify: "between" })]}>
+							<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+								walkthrough.mp4
+							</span>
+							<ProgressBar.ValueLabel>Transcoding…</ProgressBar.ValueLabel>
+						</div>
+						<ProgressBar.Indicator aria-label="walkthrough.mp4 transcoding" mix={[shimmer()]} />
+					</ProgressBar>
 
-				<ProgressBar>
-					<div mix={[hstack({ gap: 2, justify: "between" })]}>
-						<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>changelog.md</span>
-						<ProgressBar.ValueLabel>Done</ProgressBar.ValueLabel>
-					</div>
-					<ProgressBar.Indicator value={100} max={100} aria-label="changelog.md upload" />
-				</ProgressBar>
+					<ProgressBar>
+						<div mix={[hstack({ gap: 2, justify: "between" })]}>
+							<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>changelog.md</span>
+							<ProgressBar.ValueLabel>Done</ProgressBar.ValueLabel>
+						</div>
+						<ProgressBar.Indicator value={100} max={100} aria-label="changelog.md upload" />
+					</ProgressBar>
 
-				<Button
-					type="button"
-					variant="outline"
-					size="sm"
-					mix={[on<HTMLButtonElement, "click">("click", startUpload)]}
-				>
-					{uploaded === 0 ? "Upload" : uploaded === 100 ? "Upload again" : "Uploading…"}
-				</Button>
-			</div>
-		);
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						mix={[on<HTMLButtonElement, "click">("click", startUpload)]}
+					>
+						{uploadLabel}
+					</Button>
+				</div>
+			);
+		};
 	},
 );
 

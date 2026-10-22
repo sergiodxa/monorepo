@@ -93,11 +93,11 @@ function headingAnchors() {
  * while anything else in the repository resolves to the file on GitHub.
  */
 function rewriteHref(href: string, directory: string): string {
-	let sibling = href.startsWith("https://www.npmjs.com/package/@sdxc/")
-		? href.slice("https://www.npmjs.com/package/@sdxc/".length)
-		: href.startsWith("/packages/")
-			? href.slice("/packages/".length)
-			: null;
+	let sibling;
+	if (href.startsWith("https://www.npmjs.com/package/@sdxc/"))
+		sibling = href.slice("https://www.npmjs.com/package/@sdxc/".length);
+	else if (href.startsWith("/packages/")) sibling = href.slice("/packages/".length);
+	else sibling = null;
 
 	if (sibling !== null && findPackage(sibling) !== null) {
 		return routes.api.show.href({ name: sibling });

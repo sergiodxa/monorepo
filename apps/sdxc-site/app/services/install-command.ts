@@ -45,7 +45,11 @@ export function installVariants(command: string): Record<PackageManager, string>
 		} else {
 			variants[manager] = [
 				manager,
-				...words.map((word) => (DEV_FLAGS.has(word) ? "-D" : GLOBAL_FLAGS.has(word) ? "-g" : word)),
+				...words.map((word) => {
+					if (DEV_FLAGS.has(word)) return "-D";
+					if (GLOBAL_FLAGS.has(word)) return "-g";
+					return word;
+				}),
 			].join(" ");
 		}
 	}

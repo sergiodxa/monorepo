@@ -58,8 +58,10 @@ export const TooltipPreview = clientEntry(import.meta.url, function TooltipPrevi
 	return () => (
 		<Toolbar aria-label="Thread actions">
 			{ACTIONS.map((action) => {
-				let Glyph =
-					action.id === "star" ? StarIcon : action.id === "archive" ? ArchiveIcon : Trash2Icon;
+				let Glyph;
+				if (action.id === "star") Glyph = StarIcon;
+				else if (action.id === "archive") Glyph = ArchiveIcon;
+				else Glyph = Trash2Icon;
 
 				return (
 					<span key={action.id} mix={[hstack({ gap: 0, align: "center" })]}>
