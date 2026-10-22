@@ -279,10 +279,11 @@ export class Reader {
 
 	/** `[async] function name(…) { … }` at `index`, as a function node, or `null`. */
 	private functionDeclaration(
-		index: number,
+		at: number,
 		limit: number,
 	): { name: string | null; node: FunctionNode } | null {
-		let start = index;
+		let start = at;
+		let index = at;
 		if (this.isWord(index, "async")) index += 1;
 		if (!this.isWord(index, "function")) return null;
 		index += 1;
@@ -520,12 +521,9 @@ export class Reader {
 				index = this.afterComma(this.skipToDelimiter(index + 1, close), close);
 				continue;
 			}
-			let name =
-				key?.type === "identifier" || key?.type === "number"
-					? key.value
-					: key?.type === "string"
-						? cook(key.value)
-						: null;
+			let name: string | null = null;
+			if (key?.type === "identifier" || key?.type === "number") name = key.value;
+			else if (key?.type === "string") name = cook(key.value);
 			if (name === null) {
 				index = this.afterComma(this.skipToDelimiter(index, close), close);
 				continue;

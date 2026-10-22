@@ -100,7 +100,8 @@ async function initializeGit(
 		ctx.stdout("git is not on the PATH, so no repository was initialized\n");
 		return success(undefined);
 	}
-	if (wanted === undefined) {
+	let shouldInit = wanted;
+	if (shouldInit === undefined) {
 		let answer = await ctx.prompt.confirm({
 			message: `Initialize a git repository in ${shown}?`,
 			default: false,
@@ -108,9 +109,9 @@ async function initializeGit(
 			name: "git",
 		});
 		if (isFailure(answer)) return answer;
-		wanted = answer.data;
+		shouldInit = answer.data;
 	}
-	if (!wanted) return success(undefined);
+	if (!shouldInit) return success(undefined);
 	let initialized = await ctx.exec(["git", "init", "--quiet"], {
 		cwd: directory,
 		stdio: "ignore",

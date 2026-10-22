@@ -170,7 +170,7 @@ async function installed(packageRoot: string, dependency: string): Promise<Resul
 
 /** Runs a script with `args` in `cwd` under `runtime`, Node by default, collecting both output streams. */
 function run(args: string[], cwd: string, runtime = process.execPath): Promise<Spawned> {
-	return new Promise((settle) => {
+	return new Promise((resolve) => {
 		let output = "";
 		let child = spawn(runtime, args, { cwd, shell: false });
 		child.stdout.on("data", (chunk: Buffer) => {
@@ -179,7 +179,7 @@ function run(args: string[], cwd: string, runtime = process.execPath): Promise<S
 		child.stderr.on("data", (chunk: Buffer) => {
 			output += chunk.toString();
 		});
-		child.once("error", (error) => settle({ code: null, output: error.message }));
-		child.once("close", (code) => settle({ code, output }));
+		child.once("error", (error) => resolve({ code: null, output: error.message }));
+		child.once("close", (code) => resolve({ code, output }));
 	});
 }
