@@ -178,9 +178,7 @@ class FlagClient implements Client {
 		try {
 			let provider = this.#host.binding(this.#scope.domain).provider;
 			provider.track?.(name, this.#merged(context), details);
-		} catch {
-			return;
-		}
+		} catch {}
 	}
 
 	#evaluate<T extends FlagValue>(
