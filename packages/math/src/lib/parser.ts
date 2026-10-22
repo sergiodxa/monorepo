@@ -320,12 +320,10 @@ class Parser {
 			throw this.error(`Unknown delimiter ${next.value}`, next);
 		}
 
-		let value =
-			next.kind === "command"
-				? DELIMITER_COMMANDS[next.value]
-				: DELIMITER_CHARACTERS.has(next.value) || next.value === "/"
-					? next.value
-					: undefined;
+		let value;
+		if (next.kind === "command") value = DELIMITER_COMMANDS[next.value];
+		else if (DELIMITER_CHARACTERS.has(next.value) || next.value === "/") value = next.value;
+		else value = undefined;
 
 		if (value === undefined) {
 			if (next.kind === "end") throw this.error("Expected a delimiter", next);
