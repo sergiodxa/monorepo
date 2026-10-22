@@ -77,11 +77,11 @@ defaults.
 
 ### Pick the surface that matches the audience
 
-| Audience / scope                                                                    | Surface                                                                |
-| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Any project on `@sdxc/*`                                                            | `@sdxc/kit` (`make`, `scaffold`, `destroy`, `doctor`, `fix`, `deploy`) |
-| This monorepo only (release, doctor-all-apps, package bootstrap, create-app wiring) | `scripts/` + root `package.json`                                       |
-| Production or shared CI for this monorepo                                           | `.github/workflows/` calling those scripts or the kit binary           |
+| Audience / scope                                                                    | Surface                                                                         |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Any project on `@sdxc/*`                                                            | `@sdxc/kit` (`make`, `scaffold`, `setup`, `destroy`, `doctor`, `fix`, `deploy`) |
+| This monorepo only (release, doctor-all-apps, package bootstrap, create-app wiring) | `scripts/` + root `package.json`                                                |
+| Production or shared CI for this monorepo                                           | `.github/workflows/` calling those scripts or the kit binary                    |
 
 A step that belongs in more than one place still has one owner: the kit owns the algorithm
 (`sdxc deploy`); the workflow owns when and where it runs with repo secrets. Do not reimplement
@@ -92,6 +92,7 @@ deploy order inside YAML.
 | Situation                                                 | Mechanism                                                                       |
 | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
 | Creating a new kind of file or wiring                     | `sdxc make` / `sdxc scaffold` (extend kinds and stubs)                          |
+| Installing a cross-cutting feature into an existing app   | `sdxc setup <feature>` (edits app code _and_ config as one plan)                |
 | Removing what `make` wrote                                | `sdxc destroy`                                                                  |
 | Project drifted from a rule the kit can prove             | `sdxc doctor` reports; `sdxc fix` applies only named safe repairs               |
 | Release moved and the code must follow                    | `sdxc upgrade` + its prompt (agent applies _code_ changes)                      |
@@ -102,6 +103,51 @@ deploy order inside YAML.
 that only enables that path) applies repairs the report already knows how to express. A check
 without a coded repair keeps printing prose; the agent still does that one. Never invent a
 repair that `doctor` would not have named.
+
+### `sdxc setup` for features that span app code and config
+
+`make` writes one kind of file (and its declaration/mapping). Some features are not one file:
+they need an initializer, middleware, controllers, routes, secrets, CSP entries, package pins
+and a test helper, in a fixed graph. That is `sdxc setup <feature> [flags]` — a family of
+installers, not a one-off for auth.
+
+- **One plan, many files.** The command prints (and with confirmation writes) every path it
+  will touch — app modules _and_ config — then runs package install / `typegen` when the plan
+  added a dependency or a secret. `--dry-run` is the default agent path until `-y` / `--yes`.
+- **A living app is the stub.** Each setup copies the shape from an app that already runs the
+  feature (blog for OIDC, uptime for billing and flags), expressed as kit stubs and codemods
+  instead of an agent reading those files.
+- **Provider / backend is a flag when it varies.** `sdxc setup auth --provider r3-auth` (default)
+  vs `--provider auth-saas` once that issuer is ready; `sdxc setup billing --provider polar`
+  the same way. The app-side contracts (`@sdxc/auth`, `@sdxc/billing`) stay stable; only the
+  backend URL, secrets and registration hints change.
+- **Idempotent where possible.** A second run against an app that already has the feature
+  reports what is present and only fills gaps (missing secret line, unmapped route), or refuses
+  when a hand-edited file no longer matches the stub.
+- **Opt-in, not the template default.** The `sdxc create` template stays lean (session actor,
+  honeypot, Turnstile, mail, MCP skeleton). Features that every app does not need arrive through
+  `setup`, so a project pays for OIDC, billing or flags only when it asks.
+
+`setup` does not invent product policy: which abilities exist, who may sign in, which products
+to sell, or which flags to define stay for the agent after the mechanical wiring is in place.
+
+#### Feature catalog (auth first; others when the graph is stable)
+
+| `sdxc setup …`   | What it wires                                                                                          | Living reference     |
+| ---------------- | ------------------------------------------------------------------------------------------------------ | -------------------- |
+| `auth`           | OIDC relying party, login/callback/logout, client secrets, CSP `formAction`, `signIn()` test helper    | blog                 |
+| `billing`        | `@sdxc/billing` provider, middleware, webhook route, portal/checkout secrets, product catalog stub     | uptime               |
+| `flags`          | `@sdxc/flags` + engine store, router/dispatcher middleware, empty catalog, wide-event hook             | uptime               |
+| `hostname`       | `@sdxc/hostname` client, custom-hostname routes/services, zone secrets                                 | uptime (status)      |
+| `storage` / `r2` | R2 binding, file-storage initializer, `.env.example` / typegen                                         | apps that use R2     |
+| `cache`          | `@sdxc/workers-cache` (or cache middleware) on chosen routes                                           | apps that edge-cache |
+| `activitypub`    | Federation initializer, routes, actor config, related jobs                                             | blog                 |
+| `mcp` (harden)   | Turn the template's empty MCP skeleton into an authenticated/tool-ready server when that graph settles | template + apps      |
+
+Ship one feature at a time. A row above is a candidate once its living reference has a
+deterministic file list a test can assert — not a commitment to implement them together.
+`sdxc setup` with no feature lists the ones this kit release knows, so agents discover the
+catalog the same way they discover `make` kinds.
 
 ### Kit backlog (ordered by agent token cost vs. implementation risk)
 
@@ -115,13 +161,22 @@ repair that `doctor` would not have named.
    same codemod `make` uses. Only when the file path is unambiguous.
 4. **`sdxc make secret <NAME>` and `sdxc make binding <kind> <NAME>`.** Edit
    `cloudflare.config.ts`, append `.env.example` when the binding is a secret, and print
-   `sdxc run typegen` (or run it). Agents today hand-edit three places.
+   `sdxc run typegen` (or run it). Agents today hand-edit three places. `setup` reuses these
+   for the secrets a feature needs.
 5. **`sdxc make durable-object <Name>`.** Write the class under `app/models/` or
    `app/services/` (`--role`), re-export it from `bootstrap/worker.ts`, and declare the binding
    in `cloudflare.config.ts`. The class body stays a stub; placement is a flag, not a guess.
-6. **Stop kit expansion until measured.** Do not auto-rewrite JSDoc prose, move files between
-   layout folders, or rewrite migration SQL. Those fail the criterion: the "right" edit needs
-   reading intent.
+6. **`sdxc setup` command + `setup auth`.** Introduce the `setup` verb (list known features,
+   `--dry-run` / `-y`, shared plan printer) and ship `auth` first against `r3-auth`, with
+   `--provider` ready for auth-saas later. Graph from blog's relying-party wiring, reduced to
+   the template's session/`actor` world. Reuse `make secret` / `make binding` for the secrets
+   and bindings the plan needs.
+7. **Next `setup` features after `auth` proves the pattern.** Prefer `billing` and `flags`
+   (uptime already runs both) over inventing new graphs; add `hostname`, `storage`, `cache`,
+   `activitypub` only when an agent still copies those by hand often enough to measure.
+8. **Stop unbounded kit expansion.** Do not auto-rewrite JSDoc prose, move files between
+   layout folders, or rewrite migration SQL. Do not fold template defaults (honeypot, Turnstile,
+   mail) into `setup` until the template itself goes leaner on purpose.
 
 Each kit item lands with tests, `--dry-run`, a line in the managed `AGENTS.md` section, and a
 guide update so agents learn the verb from the release that ships it.
@@ -139,12 +194,18 @@ hand recipe:
 
 ### What agents still own
 
-- Choosing _whether_ to add a feature, which resource to scaffold, and which fields matter.
-- Filling stubs: handler bodies, policy nuance past `everyone`/`member`, email copy, UI.
+- Choosing _whether_ to run `sdxc setup <feature>`, which resource to scaffold, and which
+  fields matter.
+- Filling stubs after a setup: handler bodies, policy nuance, email copy, UI, subject↔account
+  mapping after `setup auth`, product catalog after `setup billing`, flag definitions after
+  `setup flags`.
 - Applying upgrade prompts that change call sites in app code.
 - Writing Conventional Commit subjects and bodies for consumers (ADR-007 / ADR-140): the shape
   is fixed (and CI checks it), the content is not.
 - Deciding _that_ an app should ship; the workflow or `sdxc deploy` owns _how_.
+- Registering the OAuth client on the issuer (or confirming credentials): `setup` writes the
+  app side and names the values; minting them on r3-auth / auth-saas stays an operator step
+  until that server exposes an API the kit can call safely.
 
 ## Consequences
 
@@ -156,17 +217,23 @@ hand recipe:
   Release planning lives in `scripts/release/`, not in an agent's memory of ADR-007.
 - **Clear boundary.** "Can we express this in a test or a dry-run?" is the gate, so tooling does
   not grow into an unsupervised refactor bot.
+- **Feature installs stop being tribal knowledge.** `sdxc setup <feature>` replaces "read the
+  living app and copy these eight files" with one command per cross-cutting concern.
 
 ### Negative
 
-- **`fix` is a new mutation surface** in the kit. It needs the same confirmation /
+- **`fix` and `setup` are new mutation surfaces** in the kit. They need the same confirmation /
   `--yes` / `--dry-run` discipline as `destroy` and `deploy`, and CI must keep calling
   `doctor` without `--fix`.
-- **Ambiguous projects stay manual.** A hand-rolled models index will not get a silent rewrite;
-  `fix` must refuse rather than guess.
+- **Ambiguous projects stay manual.** A hand-rolled models index or a half-wired auth stack
+  will not get a silent rewrite; `fix` / `setup` must refuse rather than guess.
 - **Three surfaces to choose from.** Putting a monorepo-only step in the published kit (or
   reimplementing kit logic in YAML) creates two sources of truth; the audience table is the
   guardrail.
+- **Providers move.** Auth issuers and billing backends change; each setup's `--provider` and
+  docs must name the cutover, or agents wire the wrong host.
+- **Catalog pressure.** Every new `@sdxc/*` concern will want a `setup` entry; the criterion
+  (deterministic graph + living reference + measured agent cost) is what keeps the list short.
 
 ### Neutral
 
@@ -203,6 +270,23 @@ in this repository's `scripts/`, beside `release` and `doctor-apps`.
 **Rejected because**: local dry-runs and agents outside Actions still need the same order.
 ADR-161 put it in `sdxc deploy`; workflows call that command.
 
+### 6. Stretch `sdxc make` / `scaffold` instead of a `setup` verb
+
+**Rejected because**: auth, billing and flags are not one resource with fields. Each is a fixed
+graph across layers (`make` would leave the agent to remember the other seven files). `setup`
+owns multi-file feature installs; `make` stays one kind per invocation.
+
+### 7. Ship every optional feature only inside `sdxc create --template`
+
+**Rejected as the only path** because existing apps need the same wiring, and a template that
+always includes auth/billing/flags forces every project to carry secrets and middleware it does
+not use. `create` may offer features as opt-in flags later by calling `setup` under the hood.
+
+### 8. One mega `sdxc setup` that installs everything popular
+
+**Rejected because**: apps diverge. A catalog of named features, installed deliberately, keeps
+each plan small, testable and reversible.
+
 ## References
 
 - [ADR-007: Publishable Package Releases](./ADR-007-publishable-package-releases.md)
@@ -225,12 +309,18 @@ ADR-161 put it in `sdxc deploy`; workflows call that command.
 - [ ] Implement model/email registration repairs (kit item 3)
 - [ ] Implement `make secret` / `make binding` (kit item 4)
 - [ ] Implement `make durable-object` (kit item 5)
+- [ ] Implement `sdxc setup` (list features, shared plan) + `setup auth` against r3-auth;
+      defer `--provider auth-saas` until that issuer is ready for relying parties (kit item 6)
+- [ ] After `setup auth`, add the next catalog row that still costs agent turns (`billing` /
+      `flags` are the likely pair) (kit item 7)
 - [ ] When create-app / create-package skills still describe hand recipes, add matching `scripts/`
-- [ ] Measure agent turns before adding further kit kinds
+- [ ] Measure agent turns before adding further kit kinds or `setup` features
 
 ## Notes
 
 The test for a feature aimed at agents: after it ships, `AGENTS.md` (or the skill) can drop the
 hand-edit recipe and name the command, script or workflow instead. If the docs still need a
 paragraph of "then open these three files" or "then run these four shell commands in order",
-the feature is not done.
+the feature is not done. For any `setup <feature>`, success is: a fresh `sdxc create` app runs
+`sdxc setup <feature> -y`, fills the secrets the plan names, and exercises the happy path
+without an agent copying the living reference by hand.
