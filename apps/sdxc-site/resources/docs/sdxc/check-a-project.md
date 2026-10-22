@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 6
-lastUpdated: 2026-10-20
+lastUpdated: 2026-10-22
 outcomes:
     - "What each `sdxc doctor` check looks for, and the fix it names when it fails"
     - "How to accept a migration that already ran instead of rewriting it"
@@ -34,8 +34,12 @@ pass  layout      app/ holds only the layout's folders and nothing imports boots
 warn  routes      Found 1 route no router maps: GET /pricing (routes/web.ts pricing) is mapped by no router. Fix: Map each route in its router initializer as router.map(route, lazy(() => import(…))); sdxc make controller writes and maps one
 pass  models      app/models/index.ts registers every model in app/models/
 pass  emails      3 declared emails mapped, tested and previewable
-pass  jsdoc       Every comment is JSDoc within three description lines
-skip  ui          No @sdxc/ui component is copied
+pass  jsdoc         Every comment is JSDoc within three description lines
+pass  complexity    Every function stays at cyclomatic complexity 4 or below
+pass  module-size   Every module stays within 200 code lines
+pass  dependencies  No import cycles; every layer edge points inward
+skip  crap          No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor
+skip  ui            No @sdxc/ui component is copied
 ```
 
 A `fail` is something that breaks an install, a build, CI or a new database. A `warn` is a
@@ -49,20 +53,24 @@ pre-commit hook. Warnings leave the exit code at 0.
 
 They run in this order:
 
-| Check        | Fails or warns when                                                                                                                                                                | Fix                                      |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
-| `pins`       | fail: an `@sdxc` package is behind its version at the project's release; warn: one is pinned to no release                                                                         | `sdxc upgrade <release>`                 |
-| `installed`  | fail: `node_modules` holds an `@sdxc` package or `remix` at another version than `package.json` pins, or lacks one                                                                 | the install command                      |
-| `remix`      | fail: `remix` differs from the version the project's release declares                                                                                                              | `sdxc upgrade <release>`                 |
-| `env`        | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                                 | the line to add, or the declaration      |
-| `typegen`    | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                               | `sdxc run typegen`                       |
-| `migrations` | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                                      | the migration to correct, or the entry   |
-| `layout`     | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                                     | the file to move                         |
-| `routes`     | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                     |
-| `models`     | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                                   | the registration to add                  |
-| `emails`     | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write  |
-| `jsdoc`      | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits       |
-| `ui`         | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff` |
+| Check          | Fails or warns when                                                                                                                                                                | Fix                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `pins`         | fail: an `@sdxc` package is behind its version at the project's release; warn: one is pinned to no release                                                                         | `sdxc upgrade <release>`                           |
+| `installed`    | fail: `node_modules` holds an `@sdxc` package or `remix` at another version than `package.json` pins, or lacks one                                                                 | the install command                                |
+| `remix`        | fail: `remix` differs from the version the project's release declares                                                                                                              | `sdxc upgrade <release>`                           |
+| `env`          | fail: `.env.example` leaves out a secret `cloudflare.config.ts` declares; warn: it lists a key no binding declares                                                                 | the line to add, or the declaration                |
+| `typegen`      | warn: `.cloudflare/types/index.d.ts` is missing, or older than `cloudflare.config.ts`, `.dev.vars` or `.env.example`                                                               | `sdxc run typegen`                                 |
+| `migrations`   | fail: a `make.migrations` chain does not replay on an empty database with double-quoted strings off; warn: an accepted error no longer occurs                                      | the migration to correct, or the entry             |
+| `layout`       | warn: a folder in `app/` the layout does not have, or an import of `bootstrap/` from `app/`, `config/`, `database/`, `resources/` or `routes/`                                     | the file to move                                   |
+| `routes`       | warn: a route no router maps, or a controller or action that loads with the router                                                                                                 | the mapping to write                               |
+| `models`       | warn: a file in `app/models/` calls `createModel` and `app/models/index.ts` does not register it                                                                                   | the registration to add                            |
+| `emails`       | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write            |
+| `jsdoc`        | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits                 |
+| `complexity`   | warn: a function's cyclomatic complexity exceeds `doctor.complexity.max` (default 4)                                                                                               | split the function, or raise the max               |
+| `module-size`  | warn: a module's code lines exceed `doctor.complexity.moduleLines` (default 200)                                                                                                   | split the module, or raise the limit               |
+| `dependencies` | warn: an import cycle, or an import from an inner layer to an outer one (models must not import http, and so on)                                                                   | `sdxc diagram` shows the graph                     |
+| `crap`         | warn: a function's CRAP score exceeds `doctor.complexity.crap` (default 12); skip when the coverage file is missing                                                                | lower complexity, raise coverage, or raise the max |
+| `ui`           | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff`           |
 
 The project's release is the newest date among its `@sdxc` pins, so `pins` names each package
 that lags behind the others. `pins` and `remix` read the npm registry; without it they report
@@ -89,6 +97,15 @@ past three prose lines, when `@description` appears, or when `@param`, `@returns
 spill onto a second line. Tooling directives (`@ts-expect-error`, `oxlint-disable`, and the
 rest the repository already allows) stay as they are. Tags other than that one-line set do not
 count toward the description budget.
+
+`complexity`, `module-size`, `dependencies` and `crap` are the clean-code gates oxlint does not
+cover at project scope. Cyclomatic complexity and module size use the thresholds under
+`doctor.complexity` in [configuration](/docs/sdxc/configuration#doctor). `dependencies` applies
+Clean Architecture's dependency rule to the app-layout layers: outer kinds (routes, resources,
+http, jobs) may import inner ones (services, policies, models); the reverse warns, and so does
+any import cycle. `crap` combines complexity with Istanbul coverage
+(`doctor.complexity.coverage`, default `coverage/coverage-final.json`) using
+`CRAP = CC² × (1 − coverage)³ + CC`; without that file the check skips.
 
 ### Accept a migration that already ran
 
