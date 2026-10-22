@@ -146,12 +146,10 @@ export class BagScene implements Scene {
 				: game.dispatch({ type: "use-medicine", playerId: HERO_ID, creatureId, itemId });
 
 		let creature = game.engine.selectCreatureSummary(creatureId);
-		let message =
-			events.length === 0
-				? `It won't have any effect.`
-				: action === "evolution"
-					? `${creature.name} evolved!`
-					: `Used ${itemName} on ${creature.name}.`;
+		let message;
+		if (events.length === 0) message = `It won't have any effect.`;
+		else if (action === "evolution") message = `${creature.name} evolved!`;
+		else message = `Used ${itemName} on ${creature.name}.`;
 
 		game.scenes.pop();
 		game.scenes.push(new DialogueScene([message]));

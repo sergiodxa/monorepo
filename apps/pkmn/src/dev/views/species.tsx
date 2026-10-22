@@ -660,6 +660,11 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 	function renderLearnsetRow(entry: Species["learnset"][number], index: number) {
 		if (!("level" in entry)) {
 			let moveId = "moveId" in entry ? entry.moveId : `TM/HM ${entry.tmhm}`;
+			let learnsetKind;
+			if ("tmhm" in entry) learnsetKind = "TM/HM";
+			else if ("tutor" in entry) learnsetKind = "Tutor";
+			else learnsetKind = "Egg";
+
 			return (
 				<li
 					key={index}
@@ -671,7 +676,7 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 						color: "#9ca3af",
 					})}
 				>
-					<span>{"tmhm" in entry ? "TM/HM" : "tutor" in entry ? "Tutor" : "Egg"}</span>
+					<span>{learnsetKind}</span>
 					<span>{moveId}</span>
 					<button
 						type="button"
@@ -903,7 +908,10 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 	/** Renders the Sprite section: source (none / atlas region / image) controls. */
 	function renderSprite() {
 		let sprite = species.sprite ?? null;
-		let spriteMode = sprite === null ? "none" : "atlas" in sprite ? "atlas" : "image";
+		let spriteMode;
+		if (sprite === null) spriteMode = "none";
+		else if ("atlas" in sprite) spriteMode = "atlas";
+		else spriteMode = "image";
 		let atlasId = sprite && "atlas" in sprite ? sprite.atlas : (ATLAS_IDS[0] ?? "");
 		let region = sprite && "region" in sprite ? sprite.region : NONE;
 		let imageId = sprite && "image" in sprite ? sprite.image : (IMAGE_IDS[0] ?? NONE);
