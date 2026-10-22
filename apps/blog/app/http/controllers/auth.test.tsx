@@ -14,7 +14,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { AppContext } from "~/app/initializers/router";
 import type * as schema from "~/database/schema";

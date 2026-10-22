@@ -213,8 +213,9 @@ Build the instance once at module scope, and let the document layout accept `Seo
 page supplies its own copy and structured data while the tag set stays identical everywhere.
 
 ```tsx
-import { createSeo, Seo } from "@sdxc/seo";
 import type { Handle, RemixNode } from "remix/component";
+
+import { createSeo, Seo } from "@sdxc/seo";
 
 export const SEO = createSeo({
 	baseUrl: "https://example.com",

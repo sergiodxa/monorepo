@@ -187,7 +187,8 @@ const AUTHENTICATION_METHODS = {
 
 namespace IdToken {
 	type AuthenticationMethod =
-		(typeof AUTHENTICATION_METHODS)[keyof typeof AUTHENTICATION_METHODS] | (string & {});
+		| (typeof AUTHENTICATION_METHODS)[keyof typeof AUTHENTICATION_METHODS]
+		| (string & {});
 }
 ```
 

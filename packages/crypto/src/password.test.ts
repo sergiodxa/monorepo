@@ -12,7 +12,7 @@
 import { scryptSync } from "node:crypto";
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Base64Url } from "./encoding.js";
 import { MalformedHashError, UnsupportedAlgorithmError } from "./errors.js";

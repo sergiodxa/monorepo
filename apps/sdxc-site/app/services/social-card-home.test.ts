@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import type * as SocialCardModule from "~/app/services/social-card";
 

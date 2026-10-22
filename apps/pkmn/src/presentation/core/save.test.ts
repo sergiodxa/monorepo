@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, expect, test } from "vite-plus/test";
 
 import type { PersistentWorld, PresentationSave } from "./save";
 

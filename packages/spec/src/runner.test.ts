@@ -14,7 +14,7 @@ import { dirname, join, resolve } from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { failure, isFailure, success } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import type { SuiteResult } from "./diagnostics.js";
 import type { Grants } from "./permissions.js";

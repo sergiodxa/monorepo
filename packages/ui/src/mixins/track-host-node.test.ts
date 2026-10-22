@@ -9,7 +9,7 @@
 
 import type { MixinHandle } from "remix/component";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { trackHostNode } from "./track-host-node.js";
 

@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { declarations, serialize } from "../internal/serialize.js";
 import { when } from "../state/when.js";

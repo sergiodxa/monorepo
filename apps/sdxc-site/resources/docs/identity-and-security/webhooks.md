@@ -305,8 +305,8 @@ each delivery before anything trusts it, and a handler per event type does the w
 ```typescript {% title="app/http/controllers/webhooks/billing.ts" %}
 import { BillingWebhook } from "@sdxc/billing";
 
-import jobs from "~/app/jobs";
 import { polar } from "~/app/initializers/billing";
+import jobs from "~/app/jobs";
 import { deliveries } from "~/app/models/webhook-deliveries";
 
 export default new BillingWebhook(

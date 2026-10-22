@@ -8,7 +8,7 @@
  */
 import { unwrap } from "@sdxc/result";
 import * as ds from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import * as checks from "./checks.js";
 import * as coerce from "./coerce.js";

@@ -10,7 +10,7 @@
 import { parseEmailAddress } from "@sdxc/email-address";
 import { IP } from "@sdxc/ip";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Newsletter } from "./contract.js";
 import type { Subscriber } from "./types.js";

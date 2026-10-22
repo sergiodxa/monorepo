@@ -9,7 +9,7 @@
 import { readFile } from "node:fs/promises";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { SIGNATURE, writeChunk } from "./chunks.js";
 import { decode } from "./decode.js";

@@ -342,8 +342,8 @@ each outbound write a key that survives the job's own retries with nothing store
 A new `apps/uptime/app/http/middleware/idempotency.ts`:
 
 ```ts
-import { idempotency } from "@sdxc/idempotency/middleware";
 import { DataTableStore } from "@sdxc/idempotency/data-table";
+import { idempotency } from "@sdxc/idempotency/middleware";
 
 import { apiProblems } from "~/app/services/api-problems";
 

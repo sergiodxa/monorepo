@@ -32,8 +32,7 @@ import { isSuccess, match, unwrap } from "@sdxc/result";
 
 let result = divide(10, 2);
 
-if (isSuccess(result))
-	console.log(result.data); // 5
+if (isSuccess(result)) console.log(result.data); // 5
 else console.error(result.error.message);
 
 let label = match(result, {

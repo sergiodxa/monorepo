@@ -10,7 +10,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Sink, SuiteResult, TestResult } from "./diagnostics.js";
 import type { SourceFile } from "./source.js";

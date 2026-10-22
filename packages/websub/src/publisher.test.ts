@@ -8,7 +8,7 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { links, publish, publishRequest } from "./publisher.js";
 

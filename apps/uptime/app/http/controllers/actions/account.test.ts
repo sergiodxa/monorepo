@@ -21,7 +21,7 @@ import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";

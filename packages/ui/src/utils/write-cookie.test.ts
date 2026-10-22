@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { ONE_YEAR_SECONDS, writeCookie } from "./write-cookie.js";
 

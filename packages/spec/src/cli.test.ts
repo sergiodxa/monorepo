@@ -14,7 +14,7 @@ import { basename, dirname, join } from "node:path";
 import type { InvokeOptions } from "@sdxc/cli/test";
 
 import { invoke } from "@sdxc/cli/test";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { cli } from "./cli.js";
 

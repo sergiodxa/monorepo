@@ -6,7 +6,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { TenantsHarness } from "~/app/test/harness/management/tenants";
 

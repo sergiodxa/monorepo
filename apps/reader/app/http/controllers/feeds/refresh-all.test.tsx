@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { createTestRouter, fetchRoute, ORIGIN, VIEWER } from "~/app/test/controller";
 import { createUserStoreDouble } from "~/app/test/store";

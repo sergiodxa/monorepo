@@ -8,7 +8,7 @@
  */
 
 import { isFailure, isSuccess, success, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Access, AccessBinding } from "./access.js";
 import type { Decision } from "./decision.js";

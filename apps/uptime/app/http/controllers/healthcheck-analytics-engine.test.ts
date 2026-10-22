@@ -15,7 +15,7 @@
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";

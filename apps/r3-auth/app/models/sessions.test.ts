@@ -12,7 +12,7 @@ import type { Database } from "remix/data-table";
 import { isFailure, unwrap } from "@sdxc/result";
 import { isUUID } from "@sdxc/uuid";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { AuthModels } from "~/app/models";
 

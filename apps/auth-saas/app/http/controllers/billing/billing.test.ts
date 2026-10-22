@@ -21,7 +21,7 @@ import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 import type Tenant from "~/app/models/tenant/object";

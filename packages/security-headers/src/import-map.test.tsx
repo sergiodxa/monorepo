@@ -8,7 +8,7 @@ import { ImportMap, renderToString } from "remix/component/server";
  * @copyright Sergio Xalambrí 2026
  */
 import { createRouter } from "remix/router";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import { securityHeaders } from "./middleware.js";
 

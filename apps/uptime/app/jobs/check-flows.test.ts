@@ -16,7 +16,7 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { FlowCheckResult } from "~/app/services/flow-check";
 import type { NotifyMessage } from "~/app/services/notify-queue";

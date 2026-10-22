@@ -6,7 +6,7 @@
 import type { AnyEmailDeclaration } from "@sdxc/mail";
 
 import { isEmailDeclaration } from "@sdxc/mail";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import emails from "~/app/emails";
 import { mail } from "~/app/initializers/mail";

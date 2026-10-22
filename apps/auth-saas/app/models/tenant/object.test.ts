@@ -11,7 +11,7 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import Tenant from "~/app/models/tenant/object";
 

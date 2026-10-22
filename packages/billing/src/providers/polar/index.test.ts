@@ -13,7 +13,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { sign } from "@sdxc/webhooks";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import type { BillingErrorCode } from "../../core/errors.js";
 import type { Secret } from "../../core/secret.js";

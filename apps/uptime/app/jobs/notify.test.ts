@@ -14,7 +14,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { NotifyInput } from "~/app/jobs";
 

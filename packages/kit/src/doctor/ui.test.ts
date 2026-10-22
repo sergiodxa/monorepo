@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import type { RegistryEntry } from "../ui/registry.js";
 

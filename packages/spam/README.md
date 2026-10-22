@@ -328,8 +328,8 @@ The classifier reads the site's own history, so build it per request from that t
 database, and send every moderator decision back through `report`.
 
 ```typescript
-import type { Database } from "remix/data-table";
 import type { Label, Submission } from "@sdxc/spam";
+import type { Database } from "remix/data-table";
 
 import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
 import { bayes, DataTableTokenStore } from "@sdxc/spam/bayes";

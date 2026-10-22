@@ -10,7 +10,7 @@
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 /** Repo root, resolved from this file so the check targets the same tree from any cwd. */
 const ROOT = join(import.meta.dirname, "..");

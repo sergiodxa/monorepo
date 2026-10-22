@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createLogger } from "sdxc/logger";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /** The records the cron's logger wrote during the current test. */
 let records: Record<string, unknown>[] = [];

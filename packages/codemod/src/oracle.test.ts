@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { isFailure } from "@sdxc/result";
 import { parseSync } from "oxc-parser";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { findModuleReferences } from "./references.js";
 import { analyze } from "./structure.js";

@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { column, table } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createTableStatement } from "../make/schema.js";
 

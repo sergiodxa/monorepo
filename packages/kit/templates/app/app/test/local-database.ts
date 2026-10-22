@@ -12,7 +12,7 @@ import { createModel, createModels } from "@sdxc/data-model";
 import { defineSeed } from "@sdxc/data-model/seed";
 import { unwrap } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 
 /** Where the temporary project keeps its database, and the project's root. */
 export interface TemporaryProject {

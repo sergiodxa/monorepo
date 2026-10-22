@@ -8,7 +8,7 @@
  */
 
 import { env } from "cloudflare:test";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { JWK } from "./jwk.js";
 import { createR2KeyStorage } from "./r2-key-storage.js";

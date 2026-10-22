@@ -10,7 +10,7 @@
 import { isSuccess } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { destinationFor } from "~/app/services/alerts/destination";
 import { alertMessage } from "~/app/services/alerts/message";

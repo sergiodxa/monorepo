@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import type { Item } from "~/game/data/item";
 import type { CreatureSummaryView } from "~/game/selectors";

@@ -8,7 +8,7 @@
  */
 
 import { JWK } from "@sdxc/jwt";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { AccessToken } from "./access-token.js";
 

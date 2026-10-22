@@ -12,7 +12,7 @@ import type { EmailPropsOutput } from "@sdxc/mail";
 import { Mailer, render } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import emails from "~/app/emails";
 import { mail } from "~/app/initializers/mail";

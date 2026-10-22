@@ -11,7 +11,7 @@
 import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { memoryBilling, purchase } from "~/app/test/billing";
 import { fetchApp } from "~/app/test/router";

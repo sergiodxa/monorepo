@@ -8,7 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { AppRouter } from "~/app/test/controller";
 import type { UserStoreDouble } from "~/app/test/store";

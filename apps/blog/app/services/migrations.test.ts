@@ -7,7 +7,7 @@
 
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { applyMigrations, pendingMigrations } from "~/app/services/migrations";
 

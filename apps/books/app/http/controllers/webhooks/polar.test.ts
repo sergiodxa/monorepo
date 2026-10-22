@@ -16,7 +16,7 @@ import { Log } from "@sdxc/logger";
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { isFailure, unwrap } from "@sdxc/result";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { handlers, retryDelivery } from "~/app/http/controllers/webhooks/polar";
 import { memoryBilling, purchase } from "~/app/test/billing";

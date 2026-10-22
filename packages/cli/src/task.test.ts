@@ -8,7 +8,7 @@
  */
 
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { CommandContext } from "./context.js";
 import type { CommandResult } from "./middleware.js";

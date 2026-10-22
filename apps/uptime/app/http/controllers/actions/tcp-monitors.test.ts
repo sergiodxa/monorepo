@@ -23,7 +23,7 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 

@@ -14,7 +14,7 @@
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { AGENT_RATE_LIMIT } from "~/app/http/middleware/agent-rate-limit";
 import { createWebRouter } from "~/app/initializers/router";

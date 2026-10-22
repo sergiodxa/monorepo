@@ -16,7 +16,7 @@
 
 import { Log } from "@sdxc/logger";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import mcp from "~/app/initializers/mcp";
 import resourceset from "~/app/mcp/resources";

@@ -174,7 +174,8 @@ the client keeps no list of which statuses are failures.
 
 ```typescript
 type CreateArticle =
-	{ article: { id: string; title: string }; ok: true } | { error: string; ok: false };
+	| { article: { id: string; title: string }; ok: true }
+	| { error: string; ok: false };
 
 let response = await fetch("/api/articles", {
 	method: "POST",

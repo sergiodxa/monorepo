@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import {
 	RETENTION_BATCH_SIZE,

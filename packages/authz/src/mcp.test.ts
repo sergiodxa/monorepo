@@ -10,7 +10,7 @@
 import * as s from "@sdxc/json-schema";
 import { createHandler, LATEST_PROTOCOL_VERSION, MetaKey, tool, tools } from "@sdxc/mcp";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { abilities, ability, context } from "./catalog.js";
 import { allow, deny, fact } from "./grants.js";

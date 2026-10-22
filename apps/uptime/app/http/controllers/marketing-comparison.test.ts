@@ -23,7 +23,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vite-plus/test";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 

@@ -93,10 +93,10 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Posting from "~/app/models/posting";
 import { PostingSchema } from "~/app/http/validators/posting";
-import { renderForm } from "~/resources/views/posting-form";
 import jobs from "~/app/jobs";
+import Posting from "~/app/models/posting";
+import { renderForm } from "~/resources/views/posting-form";
 import routes from "~/routes/web";
 
 export const create = createAction(routes.postings.create, async (ctx) => {

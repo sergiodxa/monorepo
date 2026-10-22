@@ -19,7 +19,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns/check";
 import type { DnsRecordType } from "~/app/services/dns/record-value";

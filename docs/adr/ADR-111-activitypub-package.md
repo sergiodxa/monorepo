@@ -454,7 +454,7 @@ if (response) return response; // null when HTML wins
 ```
 
 - `respond` asks `wantsActivity`, which asks `accepts(request).preferred("text/html", "application/activity+json",
-"application/ld+json")` and answers `true` only when an AS2 type wins. `*/*` resolves to
+  "application/ld+json")` and answers `true` only when an AS2 type wins. `*/*` resolves to
   HTML, so browsers and crawlers are unaffected.
 - `respond` writes `Content-Type: application/activity+json; charset=utf-8`, an `ETag`, a
   `Cache-Control` from `@sdxc/http/cache` (public, 5 minutes by default), `Vary: Accept`, and a
@@ -462,7 +462,7 @@ if (response) return response; // null when HTML wins
   `fetch`. A `Tombstone` answers `410`, which is how a
   remote server learns a post was deleted when it refetches.
 - HTML pages that have an AS2 representation add `<link rel="alternate"
-type="application/activity+json" href="…">`. Mastodon follows that link when someone pastes
+  type="application/activity+json" href="…">`. Mastodon follows that link when someone pastes
   the page URL into its search box.
 
 ### Fetching remote documents
@@ -487,7 +487,7 @@ unless the federation's `resolver.signed` option is `false`.
 
 - Requests go through `@sdxc/outbound`'s `follow` with a 10-second deadline, then `readText`
   with a 1 MB cap, and `Accept: application/activity+json, application/ld+json;
-profile="https://www.w3.org/ns/activitystreams"`. Every hop passes `checkUrl`, so a remote
+  profile="https://www.w3.org/ns/activitystreams"`. Every hop passes `checkUrl`, so a remote
   actor whose inbox or key points at `169.254.169.254` is refused, not fetched.
 - A document is accepted only when its `id` equals the URL it was fetched from, or has the
   same origin as the final URL after redirects. A `keyId` resolves to the actor that owns it,
@@ -679,7 +679,7 @@ if (isFailure(sent)) {
 | `checkUrl` refused                 | `refused-url`         | No                                |
 
 - `DELIVERY_BACKOFF` is `createBackoff({ steps: ["5 minutes", "30 minutes", "2 hours", "6
-hours", "12 hours"], jitter: 0.2 })`. That covers about 21 hours within the 5 retries of the
+  hours", "12 hours"], jitter: 0.2 })`. That covers about 21 hours within the 5 retries of the
   blog's queue consumer. An app with more retries passes its own schedule.
 
 ### `@sdxc/http-signatures`

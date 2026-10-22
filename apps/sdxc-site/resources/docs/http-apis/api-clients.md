@@ -227,9 +227,9 @@ entry's extensions. Here the caller is a service in a Worker holding the API key
 ```typescript {% title="app/services/books/submit-book.ts" %}
 import type { InferInput } from "@sdxc/json-schema";
 
-import { env } from "cloudflare:workers";
 import { generateIdempotencyKey } from "@sdxc/idempotency/client";
 import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
 
 import { BooksClient } from "~/app/services/books/client";
 import { BOOK_INPUT } from "~/contract/books";

@@ -14,7 +14,7 @@ import { Log } from "@sdxc/logger";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { createSession, Session } from "remix/session";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { createTags } from "./create-tags.js";
 import cacheMiddleware from "./middleware.js";

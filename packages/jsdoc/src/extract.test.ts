@@ -7,7 +7,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ExtractOptions } from "./extract.js";
 import type { DocModule, DocNode } from "./types.js";

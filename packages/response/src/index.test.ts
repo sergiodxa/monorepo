@@ -7,7 +7,7 @@
  */
 
 import { Location } from "@sdxc/location";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	accepted,

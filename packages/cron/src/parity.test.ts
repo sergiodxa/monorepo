@@ -11,7 +11,7 @@
 
 import { unwrap } from "@sdxc/result";
 import { CronExpressionParser } from "cron-parser";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Schedule } from "./schedule.js";
 

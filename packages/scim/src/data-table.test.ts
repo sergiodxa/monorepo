@@ -9,7 +9,7 @@
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { and, eq, gt, gte, ilike, isNull, like, lt, lte, ne, notNull, or } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ColumnMap } from "./data-table.js";
 

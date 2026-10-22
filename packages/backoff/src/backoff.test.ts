@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createRandom } from "@sdxc/random";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createBackoff } from "./backoff.js";
 

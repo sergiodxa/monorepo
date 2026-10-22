@@ -9,7 +9,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { TestApp } from "~/app/test/http";
 import type { Fixtures } from "~/app/test/seed";

@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { render } from "./render.js";
 

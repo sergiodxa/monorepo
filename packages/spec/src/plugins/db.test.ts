@@ -17,7 +17,7 @@ import { join } from "node:path";
 import type { Result } from "@sdxc/result";
 
 import { isFailure } from "@sdxc/result";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { Connection } from "../bases.js";
 import type { SpecError } from "../errors.js";

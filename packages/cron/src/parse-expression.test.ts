@@ -8,7 +8,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { CronFieldSet } from "./fields.js";
 import type { InvalidCronExpression } from "./invalid-cron-expression.js";

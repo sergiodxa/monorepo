@@ -12,7 +12,7 @@ import type { AppRuntime, Handle } from "remix/component";
 
 import { clientEntry, Frame, run } from "remix/component";
 import { renderToStream, renderToString } from "remix/component/server";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { LiveFrame } from "./live-frame.js";
 

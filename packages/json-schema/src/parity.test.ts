@@ -11,7 +11,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import * as ds from "remix/data-schema";
 import * as dsChecks from "remix/data-schema/checks";
 import * as dsCoerce from "remix/data-schema/coerce";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import * as checks from "./checks.js";
 import * as coerce from "./coerce.js";

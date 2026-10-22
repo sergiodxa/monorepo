@@ -11,7 +11,7 @@
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { EntitlementProvider } from "~/app/services/entitlement-provider";
 

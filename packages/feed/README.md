@@ -279,8 +279,8 @@ Read hubs from both the response's `Link` header and the document, then subscrib
 topic declared beside the chosen hub.
 
 ```typescript
-import { Feed } from "@sdxc/feed";
 import { randomToken } from "@sdxc/crypto";
+import { Feed } from "@sdxc/feed";
 import { isFailure } from "@sdxc/result";
 
 let fetched = await Feed.fetch(feedUrl);

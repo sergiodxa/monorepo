@@ -11,7 +11,7 @@ import { join } from "node:path";
 
 import { parseFont } from "@sdxc/font";
 import { decode } from "@sdxc/png";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { SOCIAL_CARD_SIZE } from "~/app/services/social-card";
 import { renderSocialCard } from "~/app/services/social-card-image";

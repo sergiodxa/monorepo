@@ -7,7 +7,7 @@
  */
 import { isFailure, unwrap } from "@sdxc/result";
 import { RoutePattern } from "remix/route-pattern";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { toPathTemplate } from "./path.js";
 import { apiKey, bearer, oauth2, openIdConnect } from "./security.js";

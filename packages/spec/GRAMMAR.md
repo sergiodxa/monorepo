@@ -239,7 +239,7 @@ http.post "https://id.example.com/oauth/introspect" basic "client-id" "secret" f
   body.
 - `bearer <token>` — consumes one string and sets `Authorization: Bearer <token>`.
 - `basic <user> <pass>` — consumes two strings and sets `Authorization: Basic
-<base64(user:pass)>` (RFC 7617). It is the one option word that takes two
+  <base64(user:pass)>` (RFC 7617). It is the one option word that takes two
   values.
 
 A call carries at most one body (the bare body, or one of `json`/`form`/`text`),

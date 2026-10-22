@@ -10,7 +10,7 @@
 import type { Handle } from "remix/component";
 
 import { renderToString } from "remix/component/server";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { createI18n } from "../lib/i18n.js";
 

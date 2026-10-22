@@ -119,9 +119,9 @@ account, never to one customer's share of it. Price the quantities one unit of w
 at the list rate:
 
 ```typescript {% title="app/services/unit-cost.ts" %}
-import type { Usage } from "~/app/services/estimate";
-
 import { centsPerUnit } from "@sdxc/cloudflare-pricing";
+
+import type { Usage } from "~/app/services/estimate";
 
 import { METERS } from "~/app/services/estimate";
 

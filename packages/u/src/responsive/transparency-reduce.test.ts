@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { bg } from "../color/bg.js";
 import { serialize } from "../internal/serialize.js";

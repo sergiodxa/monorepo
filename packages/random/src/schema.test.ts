@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import * as s from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { RANDOM_STATE_SCHEMA } from "./schema.js";
 import { createRandom, restoreRandom } from "./seeded.js";

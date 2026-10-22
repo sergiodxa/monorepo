@@ -10,7 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { UptimeModels } from "~/app/models";
 import type { ContentCheckRule } from "~/app/models/content-checks";

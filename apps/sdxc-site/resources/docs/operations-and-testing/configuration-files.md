@@ -124,9 +124,9 @@ A command line reads its configuration once per run, in middleware, and every ha
 it typed:
 
 ```typescript {% title="src/middleware/config.ts" %}
-import type { CommandMiddleware } from "@sdxc/cli";
-
 import { join } from "node:path";
+
+import type { CommandMiddleware } from "@sdxc/cli";
 
 import { isFailure } from "@sdxc/result";
 import { createContextKey } from "remix/router";

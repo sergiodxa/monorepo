@@ -10,7 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import { PostSearch } from "~/app/models/search";

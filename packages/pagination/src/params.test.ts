@@ -12,7 +12,7 @@
 
 import { isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { paginate } from "./headers.js";
 import { DEFAULT_MAX_PER_PAGE, DEFAULT_PAGING_NAMES, DEFAULT_PER_PAGE } from "./names.js";

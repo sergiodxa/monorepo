@@ -136,9 +136,9 @@ property declared on `RequestContext`, and middleware that sets the value per re
 ```typescript {% title="app/http/middleware/billing.ts" %}
 import type { Middleware } from "remix/router";
 
-import type { BillingClient } from "~/app/services/billing";
-
 import { createContextKey } from "remix/router";
+
+import type { BillingClient } from "~/app/services/billing";
 
 export const Billing = createContextKey<BillingClient>();
 

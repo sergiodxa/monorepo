@@ -4,7 +4,7 @@
  */
 
 import { Log } from "@sdxc/logger";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { SECURITY_TXT } from "~/config/security-txt";

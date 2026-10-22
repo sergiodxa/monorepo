@@ -8,7 +8,7 @@
  */
 
 import { Markdown } from "@sdxc/markdown";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { Token } from "./lexer.js";
 

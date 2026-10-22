@@ -10,7 +10,7 @@
 import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /** Repo root, resolved from this file so the scan targets the same tree from any cwd. */
 const ROOT = join(import.meta.dirname, "..");

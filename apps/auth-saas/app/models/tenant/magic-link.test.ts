@@ -15,7 +15,7 @@ import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { magicLinkAttempts } from "~/app/models/tenant/magic-link";
 import Tenant from "~/app/models/tenant/object";

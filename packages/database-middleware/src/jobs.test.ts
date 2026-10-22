@@ -14,7 +14,7 @@ import type { Database as DataTable } from "remix/data-table";
 
 import { createJobDispatcher, createJobHandler, job, jobs } from "@sdxc/jobs";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { Database, database } from "./jobs.js";
 

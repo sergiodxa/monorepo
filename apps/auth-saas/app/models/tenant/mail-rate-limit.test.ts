@@ -11,7 +11,7 @@
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { checkAndSpendMailEnvelope } from "~/app/models/tenant/mail-rate-limit";
 import mailRateLimitMigration from "~/database/tenant-migrations/0011-mail-rate-limit.sql?raw";

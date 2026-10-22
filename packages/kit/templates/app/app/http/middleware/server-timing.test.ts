@@ -2,7 +2,7 @@
  * The `Server-Timing` header every response carries, checked through the app's router.
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 

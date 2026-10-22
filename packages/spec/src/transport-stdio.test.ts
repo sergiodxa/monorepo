@@ -15,7 +15,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 
 import { createRandom } from "@sdxc/random";
 import { isFailure, isSuccess, success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Grants } from "./permissions.js";
 import type { ToolContext } from "./plugin.js";

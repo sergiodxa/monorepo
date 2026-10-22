@@ -8,7 +8,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { checkEmailAddress, refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { useMailServerDns } from "~/app/test/mail-servers";

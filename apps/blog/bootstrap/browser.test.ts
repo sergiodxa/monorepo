@@ -11,7 +11,7 @@ import { globSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 /** The app's root, which every path this test reports is relative to. */
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");

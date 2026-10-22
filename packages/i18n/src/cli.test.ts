@@ -10,7 +10,7 @@
 import { argument, command, commands, createCLI, success } from "@sdxc/cli";
 import { invoke } from "@sdxc/cli/test";
 import * as s from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import i18n, { CurrentIntl, CurrentLocale, Translators } from "./cli.js";
 

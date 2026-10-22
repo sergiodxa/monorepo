@@ -13,7 +13,7 @@ import type { Bytes } from "@sdxc/crypto";
 
 import { Base64Url, concatBytes, randomBytes, sha256 } from "@sdxc/crypto";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	AttestationError,

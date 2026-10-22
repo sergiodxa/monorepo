@@ -40,8 +40,10 @@ their grammar, and a language with no grammar comes back as one `plain` token.
 ### Render tokens as components
 
 ```tsx
-import { tokenize } from "@sdxc/highlight";
 import type { Handle } from "remix/component";
+
+import { tokenize } from "@sdxc/highlight";
+
 import "@sdxc/highlight/styles.css";
 
 function CodeBlock(handle: Handle<{ code: string; language: string }>) {
@@ -211,6 +213,7 @@ stylesheet reads for the block's text colour.
 
 ```typescript
 import { highlight, normalizeLanguage } from "@sdxc/highlight";
+
 import "@sdxc/highlight/styles.css";
 
 function codeBlock(code: string, language: string) {
@@ -250,6 +253,7 @@ demand all twenty.
 
 ```tsx
 import type { Token } from "@sdxc/highlight";
+
 import { tokenize } from "@sdxc/highlight";
 
 let PALETTE: Partial<Record<Token.Type, string>> = {
@@ -300,6 +304,7 @@ lacks in front of `tokenize`:
 
 ```typescript
 import type { Grammar } from "@sdxc/highlight";
+
 import { normalizeLanguage, scan, tokenize } from "@sdxc/highlight";
 
 let ini: Grammar = {
@@ -329,6 +334,7 @@ A construct that nests inside itself pushes its own mode again, so the matching 
 
 ```typescript
 import type { Rule } from "@sdxc/highlight";
+
 import { compose, scan } from "@sdxc/highlight";
 
 import { ini } from "./ini.js";

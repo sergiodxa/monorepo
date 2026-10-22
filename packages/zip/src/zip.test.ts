@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { isFailure, isSuccess } from "@sdxc/result";
 import { unzipSync } from "fflate";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { crc32 } from "./crc32.js";
 import { Zip, ZipError } from "./zip.js";

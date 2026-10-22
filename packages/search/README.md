@@ -469,8 +469,8 @@ import type { Database } from "remix/data-table";
 
 import { isFailure } from "@sdxc/result";
 
-import { ARTICLE_SEARCH } from "./search.js";
 import { enqueue } from "./jobs.js";
+import { ARTICLE_SEARCH } from "./search.js";
 
 async function reindexArticles(db: Database, after: number | null) {
 	let progress = await ARTICLE_SEARCH.reindex(db, { after, limit: 500 });

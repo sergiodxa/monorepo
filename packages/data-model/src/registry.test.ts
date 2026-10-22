@@ -14,7 +14,7 @@ import { Pagination } from "@sdxc/pagination";
 import { unwrap } from "@sdxc/result";
 import { Query } from "remix/data-table";
 import { createContextKey, createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createIds, posts, users } from "./fixtures/schema.js";
 import { openDatabase } from "./fixtures/sqlite.js";

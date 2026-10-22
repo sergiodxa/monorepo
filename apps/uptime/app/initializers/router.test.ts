@@ -15,7 +15,7 @@ import { env } from "cloudflare:workers";
 import { createCookie } from "remix/cookie";
 import { session } from "remix/middleware/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

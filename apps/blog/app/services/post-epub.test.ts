@@ -10,7 +10,7 @@
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { PostEpubInput } from "./post-epub";
 

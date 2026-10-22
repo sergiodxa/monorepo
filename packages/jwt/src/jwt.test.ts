@@ -9,7 +9,7 @@
  */
 
 import * as jose from "jose";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { JWK } from "./jwk.js";
 import { JWT } from "./jwt.js";

@@ -11,7 +11,7 @@
 
 import { Base64Url } from "@sdxc/crypto";
 import { isFailure, unwrap } from "@sdxc/result";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { isSupported, subscribe } from "./browser.js";
 

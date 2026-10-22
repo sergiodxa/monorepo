@@ -313,9 +313,9 @@ import * as s from "remix/data-schema";
 
 import { checkYourEmail } from "~/app/http/controllers/sign-up/bots";
 import { renderSignUp } from "~/app/http/controllers/sign-up/render";
+import { createAccount } from "~/app/services/accounts";
 import { passwordMessage } from "~/app/services/password-message";
 import { checkSignUpEmail } from "~/app/services/sign-up-email";
-import { createAccount } from "~/app/services/accounts";
 
 const SIGN_UP = s.object({
 	email: s.string(),

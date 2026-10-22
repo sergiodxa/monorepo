@@ -148,8 +148,8 @@ import type { JobMiddleware } from "@pkg/jobs";
 
 import { createD1DatabaseAdapter } from "@pkg/data-table-d1";
 import { env } from "cloudflare:workers";
-import { createContextKey } from "remix/router";
 import { Database as DataTable } from "remix/data-table";
+import { createContextKey } from "remix/router";
 
 export const Database = createContextKey<DataTable>();
 

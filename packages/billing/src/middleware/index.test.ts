@@ -9,7 +9,7 @@
 
 import { isFailure, isSuccess } from "@sdxc/result";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Billing } from "../core/contract.js";
 

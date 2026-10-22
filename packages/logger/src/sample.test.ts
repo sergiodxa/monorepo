@@ -7,7 +7,7 @@
  */
 
 import { createRandom } from "@sdxc/random";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Sample } from "./sample.js";
 

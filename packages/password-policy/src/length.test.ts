@@ -7,7 +7,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { checkLength, DEFAULT_MAX_LENGTH, DEFAULT_MIN_LENGTH } from "./length.js";
 import { PasswordPolicyError } from "./password-policy-error.js";

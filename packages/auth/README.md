@@ -520,8 +520,8 @@ Give a resource server its RFC 9728 identifier and it publishes metadata naming 
 and every `401` points at that document.
 
 ```typescript
-import { ResourceServer } from "@sdxc/auth/resource-server";
 import { bearerFailure, bearerScheme } from "@sdxc/auth/remix/schemes";
+import { ResourceServer } from "@sdxc/auth/resource-server";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { protectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 import { auth, requireAuth } from "remix/middleware/auth";

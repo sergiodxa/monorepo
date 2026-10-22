@@ -126,9 +126,9 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/models/book";
 import { idempotent } from "~/app/http/middleware/idempotency";
 import { BOOK_INPUT } from "~/app/http/validators/books";
+import Book, { serializeBook } from "~/app/models/book";
 import problems from "~/config/problems";
 import routes from "~/routes/api";
 
@@ -286,9 +286,9 @@ import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/models/book";
 import { writableBook } from "~/app/http/controllers/api/books/writable-book";
 import { BOOK_INPUT } from "~/app/http/validators/books";
+import Book, { serializeBook } from "~/app/models/book";
 import problems from "~/config/problems";
 import routes from "~/routes/api";
 
@@ -392,12 +392,12 @@ The update's rules live in two pure pieces, `writableBook` and the create schema
 applies patches to a book without a request. A book built by hand stands in for a row:
 
 ```typescript {% title="app/http/controllers/api/books/writable-book.test.ts" %}
-import type { BookRow } from "~/app/models/book";
-
 import { applyValidated } from "@sdxc/merge-patch";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure, unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
+
+import type { BookRow } from "~/app/models/book";
 
 import { writableBook } from "~/app/http/controllers/api/books/writable-book";
 import { BOOK_INPUT } from "~/app/http/validators/books";

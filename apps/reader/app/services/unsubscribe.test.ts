@@ -14,7 +14,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { signUnsubscribeToken, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import emails from "~/app/emails";
 import { mail } from "~/app/initializers/mail";

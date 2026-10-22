@@ -15,7 +15,7 @@ import { importKey, open, randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { AuditActor } from "~/app/models/tenant/audit-events";
 import type { RegisterWebhookEndpointInput } from "~/app/models/tenant/webhook-endpoints";

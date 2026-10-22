@@ -1,6 +1,6 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import * as ds from "remix/data-schema";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 /**
  * Tests for the combinators: the keywords each emits, how presence shapes `required`,

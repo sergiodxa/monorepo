@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { Toaster } from "./toaster.js";
 

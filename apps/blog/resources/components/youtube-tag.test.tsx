@@ -10,7 +10,7 @@
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { PostViewModel } from "~/app/http/view-models/post";
 import { YouTubeTag } from "~/resources/components/youtube-tag";

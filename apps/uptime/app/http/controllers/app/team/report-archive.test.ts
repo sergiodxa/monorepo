@@ -18,7 +18,7 @@ import { unzipSync } from "fflate";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";

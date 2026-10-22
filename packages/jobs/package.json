@@ -38,7 +38,7 @@
 		"@cloudflare/workers-types": "^5.20261011.1",
 		"@sdxc/cli": "workspace:*",
 		"remix": "3.0.0",
-		"vitest": "^4.1.10"
+		"vitest": "^4.1.10 || ^5.0.5"
 	},
 	"peerDependenciesMeta": {
 		"@cloudflare/workers-types": {

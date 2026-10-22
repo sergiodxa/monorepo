@@ -308,8 +308,8 @@ export function calendarResponse(
 #### `"./rrule"`
 
 ```ts
-import type { Result } from "@sdxc/result";
 import type { ICalendar } from "@sdxc/icalendar";
+import type { Result } from "@sdxc/result";
 
 export class RecurrenceRuleError extends Error {
 	override name = "RecurrenceRuleError";
@@ -339,8 +339,8 @@ export function occurrences(
 #### `"./timezone"`
 
 ```ts
-import type { Result } from "@sdxc/result";
 import type { ICalendar } from "@sdxc/icalendar";
+import type { Result } from "@sdxc/result";
 
 export class TimeZoneError extends Error {
 	override name = "TimeZoneError";

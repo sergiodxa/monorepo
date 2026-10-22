@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { toHTML } from "../html/index.js";
 import { Markdown } from "../index.js";

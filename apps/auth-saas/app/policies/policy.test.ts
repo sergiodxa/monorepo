@@ -10,7 +10,7 @@
 import type { AnyAbility } from "@sdxc/authz";
 
 import { testAccess } from "@sdxc/authz/testing";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { MembershipRole } from "~/app/models/memberships";
 

@@ -74,8 +74,8 @@ if (item) {
 ### Mark up a template
 
 ```tsx
-import { css } from "remix/component";
 import { mf, MicroTime } from "@sdxc/microformats/ui";
+import { css } from "remix/component";
 
 <article mix={[mf("h-entry"), css({ padding: 16 })]}>
 	<h1 mix={[mf("p-name")]}>{post.title}</h1>
@@ -246,8 +246,9 @@ Micropub's JSON create body is an mf2 item, and its `q=source` answer is the sto
 written back.
 
 ```typescript
-import { ITEM_SCHEMA, stringify } from "@sdxc/microformats";
 import type { MF2 } from "@sdxc/microformats";
+
+import { ITEM_SCHEMA, stringify } from "@sdxc/microformats";
 import { postType } from "@sdxc/microformats/vocabulary";
 import { parseSafe } from "remix/data-schema";
 

@@ -141,21 +141,21 @@ Add to dependencies:
 **File:** `apps/auth/app/routes/authorize.tsx`
 
 ```typescript
-// Before
-import { badRequest, notFound, ok, StatusCode } from "~/helpers/response";
-
 // After
 import { badRequest, notFound, ok } from "@pkg/response";
+
+// Before
+import { badRequest, notFound, ok, StatusCode } from "~/helpers/response";
 ```
 
 **File:** `apps/auth/app/routes/auth.$provider.callback.tsx`
 
 ```typescript
-// Before
-import { badRequest } from "~/helpers/response";
-
 // After
 import { badRequest } from "@pkg/response";
+
+// Before
+import { badRequest } from "~/helpers/response";
 ```
 
 #### Step 1.3: Update Response Body Consumers
@@ -287,6 +287,7 @@ Ensure it follows the standard pattern:
 
 ```typescript
 import { createBatchedLoggerMiddleware, type BatchedLogger } from "@pkg/logger";
+
 import { getContext } from "./context-storage";
 
 let [loggerMiddleware, getLoggerFromContext] = createBatchedLoggerMiddleware();

@@ -3,7 +3,7 @@ import { defineProblems } from "@sdxc/problem";
 import { isFailure, unwrap } from "@sdxc/result";
 import * as ds from "remix/data-schema";
 import { get, route } from "remix/routes";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /**
  * Tests for assembling a document: path templates and parameters, named schemas hoisted

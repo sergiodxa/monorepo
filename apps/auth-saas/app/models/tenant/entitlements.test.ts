@@ -10,7 +10,7 @@
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { applyEntitlements, entitlementEnforcement } from "~/app/models/tenant/entitlements";
 import entitlementsMigration from "~/database/tenant-migrations/0012-entitlements.sql?raw";

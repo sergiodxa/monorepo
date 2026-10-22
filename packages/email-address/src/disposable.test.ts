@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { DISPOSABLE_DOMAINS } from "./disposable-domains.js";
 import { checkDisposable, DisposableDomainError, isDisposableDomain } from "./disposable.js";

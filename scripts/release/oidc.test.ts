@@ -11,7 +11,7 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { githubIdToken, preflightTrustedPublishers } from "./oidc.js";
 

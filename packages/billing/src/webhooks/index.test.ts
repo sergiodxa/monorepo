@@ -11,7 +11,7 @@ import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
 import { sign } from "@sdxc/webhooks";
 import { createRouter, RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Order, Subscription } from "../core/types.js";
 

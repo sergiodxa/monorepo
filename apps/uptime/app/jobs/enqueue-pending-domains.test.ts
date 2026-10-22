@@ -15,7 +15,7 @@ import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /**
  * The queue the job enqueues through. It lives at module scope because the

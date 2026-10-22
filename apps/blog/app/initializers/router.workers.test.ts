@@ -11,7 +11,7 @@
 import { isFailure } from "@sdxc/result";
 import { parse } from "@sdxc/well-known/security-txt";
 import { env } from "cloudflare:test";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";

@@ -10,7 +10,7 @@ import type { Random } from "@sdxc/random";
 
 import { createRandom } from "@sdxc/random";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type * as ZoneFile from "./types.js";
 

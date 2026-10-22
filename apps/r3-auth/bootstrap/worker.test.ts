@@ -13,7 +13,7 @@ import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { createEnv, createExecutionContext, createQueue } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /** The queue the cron produces into. */
 let queue = createQueue({ name: "auth" });

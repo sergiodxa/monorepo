@@ -16,7 +16,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { FeedDO } from "~/app/models/feed-store";
 import type { Tier } from "~/app/services/entitlement";

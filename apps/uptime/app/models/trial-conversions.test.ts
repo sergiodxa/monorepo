@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { TrialSignup } from "~/app/models/trial-conversions";
 

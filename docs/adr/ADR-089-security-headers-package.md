@@ -292,7 +292,10 @@ export namespace SecurityHeaders {
 		referrerPolicy?: ReferrerPolicy | ReferrerPolicy[];
 		permissionsPolicy?: PermissionsPolicy.Policy;
 		crossOriginOpenerPolicy?:
-			"same-origin" | "same-origin-allow-popups" | "noopener-allow-popups" | "unsafe-none";
+			| "same-origin"
+			| "same-origin-allow-popups"
+			| "noopener-allow-popups"
+			| "unsafe-none";
 		crossOriginEmbedderPolicy?: "require-corp" | "credentialless" | "unsafe-none";
 		crossOriginResourcePolicy?: "same-origin" | "same-site" | "cross-origin";
 		/** @default true */
@@ -304,7 +307,8 @@ export namespace SecurityHeaders {
 	/** A policy patch: a header set to `null` is not sent for that response. */
 	export type Override = {
 		[Name in keyof Policy]?: Name extends
-			"contentSecurityPolicy" | "contentSecurityPolicyReportOnly"
+			| "contentSecurityPolicy"
+			| "contentSecurityPolicyReportOnly"
 			? CSP.Override | null
 			: Policy[Name] | null;
 	};

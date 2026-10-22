@@ -69,8 +69,8 @@ anything platform-specific reaches a command through the app's own middleware.
 ### 1. Commands are a contract
 
 ```typescript
-import * as s from "remix/data-schema";
 import { argument, command, commands, flag } from "@sdxc/cli";
+import * as s from "remix/data-schema";
 
 export let sdxc = commands({
 	init: command({

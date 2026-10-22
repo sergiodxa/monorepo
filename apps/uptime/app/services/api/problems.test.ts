@@ -8,7 +8,7 @@
  */
 
 import { isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { expandReference } from "~/app/http/openapi/reference";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";

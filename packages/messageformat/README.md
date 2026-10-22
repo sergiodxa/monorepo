@@ -242,8 +242,9 @@ Register functions by name; they receive the message's locales, the resolved opt
 operand, and throw a `MessageError` to fall back.
 
 ```typescript
-import { MessageError, MessageFormat } from "@sdxc/messageformat";
 import type { MessageFunction } from "@sdxc/messageformat";
+
+import { MessageError, MessageFormat } from "@sdxc/messageformat";
 
 let list: MessageFunction = (context, options, input) => {
 	if (!Array.isArray(input)) {
@@ -275,8 +276,9 @@ message.format({ people: "Ana" }); // "Invited: {$people}"
 build elements from it.
 
 ```typescript
-import { MessageFormat } from "@sdxc/messageformat";
 import type { MessagePart } from "@sdxc/messageformat";
+
+import { MessageFormat } from "@sdxc/messageformat";
 
 interface Node {
 	tag?: string;

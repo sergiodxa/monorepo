@@ -15,7 +15,7 @@ import type { CSSMixinDescriptor } from "remix/component";
 
 import { css } from "remix/component";
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Tabs, tabIndicatorMix } from "./tabs.js";
 

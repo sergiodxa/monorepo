@@ -19,7 +19,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 import type Tenant from "~/app/models/tenant/object";

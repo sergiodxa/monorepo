@@ -249,10 +249,9 @@ A save stores each stream's state next to the world, and loading restores it, so
 draws what the uninterrupted game would have drawn:
 
 ```typescript
-import * as s from "remix/data-schema";
-
 import { restoreRandom } from "@sdxc/random";
 import { RANDOM_STATE_SCHEMA } from "@sdxc/random/schema";
+import * as s from "remix/data-schema";
 
 function save(world: World, encounters: SeededRandom): SaveFile {
 	return { world: serializeWorld(world), random: { encounters: encounters.state() } };
@@ -428,7 +427,7 @@ Changing it would change every generated value in every spec suite.
 - `@sdxc/sample`, `@sdxc/spec` and `@sdxc/logger` are public, and a public package cannot
   depend on a private one, so `@sdxc/random` is public from its first commit: it gets a
   description, a `LICENSE.md`, a ✅ in the root README table, and `bun run release:bootstrap
-@sdxc/random` before the release that first carries it.
+  @sdxc/random` before the release that first carries it.
 - `apps/pkmn` already writes saves (`src/presentation/core/save.ts`). Storing the session
   stream's `state()` in the save is what makes a loaded game draw the values the uninterrupted
   game would have drawn.

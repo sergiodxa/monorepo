@@ -9,7 +9,7 @@
 
 import { NotFound } from "@sdxc/data-model";
 import { isFailure, unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 import type { MembershipRole } from "~/app/models/memberships";

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { decode } from "./decode.js";
 import { encode } from "./encode.js";

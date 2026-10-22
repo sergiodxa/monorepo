@@ -387,7 +387,13 @@ This is deliberately not "pure" ECS: there are no archetype queries or per-frame
 ```typescript
 type EntityId = string; // "<kind>:<key>"
 type EntityKind =
-	"player" | "creature" | "battle" | "battle-side" | "battle-member" | "encounter" | "world";
+	| "player"
+	| "creature"
+	| "battle"
+	| "battle-side"
+	| "battle-member"
+	| "encounter"
+	| "world";
 
 createEntityId("creature", "starter-1"); // "creature:starter-1"
 parseEntityId("player:hero"); // { kind: "player", key: "hero", id }
@@ -415,7 +421,7 @@ interface World {
 	creatureIdentity: ComponentStore<{
 		speciesId: SpeciesId;
 		nickname?: string;
-		gender?: "male" | "female" | "genderless"; /* planned */
+		gender?: "male" | "female" | "genderless" /* planned */;
 	}>;
 	creatureProgress: ComponentStore<{
 		natureId: NatureId;
@@ -1256,7 +1262,7 @@ The battle scene is a consumer of the engine's ordered battle events; it never c
 
 ```typescript
 interface AnimationTask {
-	update(dt: number): boolean; /* done */
+	update(dt: number): boolean /* done */;
 }
 
 class AnimationQueue {

@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { Package, PackageManifest } from "./workspace.js";
 

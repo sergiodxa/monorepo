@@ -7,7 +7,7 @@
  */
 import { parseProblem } from "@sdxc/problem";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	ACCEPT_PATCH_HEADER,

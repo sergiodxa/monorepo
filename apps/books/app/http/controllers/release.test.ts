@@ -10,7 +10,7 @@
 import type { Billing } from "@sdxc/billing";
 import type { MemoryDiscountSeed } from "@sdxc/billing/providers/memory";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CLIENT_ENTRY_HREF } from "~/app/test/assets-manifest";
 import { memoryBilling, withUnreadableDiscounts } from "~/app/test/billing";

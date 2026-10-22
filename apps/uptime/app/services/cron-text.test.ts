@@ -14,7 +14,7 @@ import type { Messages, Translate } from "@sdxc/i18n";
 import { Schedule } from "@sdxc/cron";
 import { createI18n } from "@sdxc/i18n";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { describeSchedule, invalidCronMessage } from "~/app/services/cron-text";
 import de from "~/resources/locales/de";

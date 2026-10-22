@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { DEFAULT_ICON_ARIA_HIDDEN } from "./decorative-icon.js";
 

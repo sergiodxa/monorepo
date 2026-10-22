@@ -10,7 +10,7 @@ import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { RSS } from "./index.js";
 

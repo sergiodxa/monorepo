@@ -94,9 +94,9 @@ import type { Seo } from "@sdxc/seo";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Post from "~/app/models/post";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { seo } from "~/app/initializers/seo";
+import Post from "~/app/models/post";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -167,8 +167,8 @@ import { xml } from "@sdxc/http/response";
 import { fromRoutes } from "@sdxc/sitemap/remix";
 import { createAction } from "remix/router";
 
-import Post from "~/app/models/post";
 import { seo } from "~/app/initializers/seo";
+import Post from "~/app/models/post";
 import routes from "~/routes/web";
 
 export default createAction(routes.sitemap, async (ctx) => {

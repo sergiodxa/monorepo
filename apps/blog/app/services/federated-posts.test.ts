@@ -12,7 +12,7 @@ import type { Database } from "remix/data-table";
 import { PUBLIC, stringify } from "@sdxc/activitypub";
 import { localObjectsConformance } from "@sdxc/activitypub/testing";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { PublicTypePath } from "~/app/models/kinds";
 

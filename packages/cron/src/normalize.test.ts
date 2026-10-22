@@ -9,7 +9,7 @@
  */
 
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { normalizeExpression } from "./normalize.js";
 import { parseExpression } from "./parse-expression.js";

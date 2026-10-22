@@ -13,7 +13,7 @@ import type { XML } from "@sdxc/xml";
 import { randomBytes } from "@sdxc/crypto";
 import { Base64 } from "@sdxc/crypto";
 import { isFailure, isSuccess } from "@sdxc/result";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { ReplayStore } from "./replay-store.js";
 

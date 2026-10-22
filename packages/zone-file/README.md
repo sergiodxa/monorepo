@@ -21,8 +21,8 @@ package.
 ### Read a zone file
 
 ```typescript
-import { formatRecordData, parse } from "@sdxc/zone-file";
 import { isFailure } from "@sdxc/result";
+import { formatRecordData, parse } from "@sdxc/zone-file";
 
 let text = `$TTL 1h
 @    IN SOA ns1 hostmaster ( 1 2h 1h 1w 5m )
@@ -50,8 +50,8 @@ typed fields of its type (`address`, `host`, `serial`…) and where it was writt
 An entry that does not parse becomes a rejection, and the rest of the file still reads.
 
 ```typescript
-import { parse } from "@sdxc/zone-file";
 import { unwrap } from "@sdxc/result";
+import { parse } from "@sdxc/zone-file";
 
 let zone = unwrap(parse("bad IN A 999.1.1.1\nok IN A 192.0.2.1\n", { origin: "example.com" }));
 
@@ -202,8 +202,8 @@ the trailing dot on fully-qualified names; `relativeNames: "origin-suffix"` read
 absolute.
 
 ```typescript
-import { parse } from "@sdxc/zone-file";
 import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/zone-file";
 
 function importZone(text: string, domain: string) {
 	let parsed = parse(text, { origin: domain, relativeNames: "origin-suffix" });
@@ -226,8 +226,8 @@ Reading and printing gives every zone one spelling — lowercased names, canonic
 TXT — so two exports diff only where their records differ.
 
 ```typescript
-import { parse, stringify } from "@sdxc/zone-file";
 import { unwrap } from "@sdxc/result";
+import { parse, stringify } from "@sdxc/zone-file";
 
 function normalize(text: string, origin: string): string {
 	let zone = unwrap(parse(text, { origin }));
@@ -246,8 +246,8 @@ For an all-or-nothing import, treat any rejection as a failure and report each w
 import type { Result } from "@sdxc/result";
 import type { Zone } from "@sdxc/zone-file";
 
-import { parse } from "@sdxc/zone-file";
 import { failure, isFailure, success } from "@sdxc/result";
+import { parse } from "@sdxc/zone-file";
 
 function parseStrict(text: string, origin: string): Result<Zone, Error> {
 	let parsed = parse(text, { origin, maxBytes: 256 * 1024 });
@@ -285,8 +285,8 @@ A resolver answers with a type code and RDATA that may be in generic form. Readi
 was spelled.
 
 ```typescript
-import { formatRecordData, parse, parseRecordData, typeName } from "@sdxc/zone-file";
 import { isSuccess, unwrap } from "@sdxc/result";
+import { formatRecordData, parse, parseRecordData, typeName } from "@sdxc/zone-file";
 
 interface Answer {
 	name: string;

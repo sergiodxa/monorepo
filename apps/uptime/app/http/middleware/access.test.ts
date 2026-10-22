@@ -13,7 +13,7 @@ import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
 import { requireAbility } from "@sdxc/authz/middleware/router";
 import { isFailure } from "@sdxc/result";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ApiKeyScope, SelectApiKey, SelectMembership, SelectTeam } from "~/database/schema";
 

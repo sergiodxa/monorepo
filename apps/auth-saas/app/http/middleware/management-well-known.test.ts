@@ -19,7 +19,7 @@ import { unwrap } from "@sdxc/result";
 import { parse as parseJwks } from "@sdxc/well-known/jwks";
 import { parse as parseProtectedResource } from "@sdxc/well-known/oauth-protected-resource";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { Models } from "~/app/models";
 

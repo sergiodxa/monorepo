@@ -13,7 +13,7 @@
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { Tool, ToolSchema } from "./tools.js";
 

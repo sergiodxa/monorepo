@@ -12,7 +12,7 @@ import type { Database } from "remix/data-table";
 import { failure, isFailure, unwrap } from "@sdxc/result";
 import { fail } from "remix/data-table";
 import { createContextKey, RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createModel, createModels } from "../index.js";
 

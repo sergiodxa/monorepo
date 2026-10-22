@@ -68,7 +68,7 @@ copied component) reports `skip`, so the same command runs on any project.
    binding added since types as missing until it runs.
 6. **`migrations`**: every chain in `make.migrations` replays on an empty in-memory SQLite
    database with double-quoted string literals disabled, the replay `make migration
---from-model` already uses. A file that stops the replay fails, named with SQLite's error: a
+   --from-model` already uses. A file that stops the replay fails, named with SQLite's error: a
    new database, tenant or test run replays the whole chain, and with double-quoted strings on,
    as the adapters run, `"old_name"` in a rebuild's `SELECT` silently copies the string.
    A migration that already ran in production cannot be edited, so a project lists its known

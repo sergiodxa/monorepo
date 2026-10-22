@@ -231,10 +231,10 @@ the way a router's middleware publishes `ctx.db`. `ctx.set` with a `property` al
 value under that name, and `CommandMiddleware` carries its type to every handler:
 
 ```typescript {% title="src/middleware/config.ts" %}
-import type { CommandMiddleware } from "@sdxc/cli";
-
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+
+import type { CommandMiddleware } from "@sdxc/cli";
 
 import { failure } from "@sdxc/cli";
 import { isFailure, wrap } from "@sdxc/result";

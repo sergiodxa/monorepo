@@ -19,7 +19,7 @@ import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import i18n from "~/app/http/middleware/i18n";

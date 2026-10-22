@@ -15,7 +15,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:http";
 import { resolve } from "node:path";
 
-import { afterAll, expect, test } from "vitest";
+import { afterAll, expect, test } from "vite-plus/test";
 
 /** Absolute path of this package, the example run's working directory. */
 const PACKAGE_DIR = resolve(import.meta.dirname, "..");

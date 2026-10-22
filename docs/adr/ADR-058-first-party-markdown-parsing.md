@@ -717,8 +717,8 @@ document can be rendered per tenant, per locale, or per plan from one parse.
 ### Highlighting belongs to the highlighter
 
 ```ts
-import { Markdown } from "@sdxc/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 
 let result = Markdown.walk(parsed.document, highlight);
 ```
@@ -884,8 +884,8 @@ no consumer moves until the fourth is green:
 The whole path, replacing what the docs controller does today:
 
 ```tsx
-import { Markdown } from "@sdxc/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
+import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";

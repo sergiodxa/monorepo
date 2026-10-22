@@ -15,7 +15,7 @@ import type { Middleware } from "remix/router";
 import { lazy } from "@sdxc/lazy-route";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type Tenant from "~/app/models/tenant/object";
 

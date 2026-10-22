@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { fixture, removeFixtures } from "./fixture.js";
 import { modelsCheck } from "./models.js";

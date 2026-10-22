@@ -15,7 +15,7 @@ import { session } from "remix/middleware/session";
 import { createRouter, RequestContext } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Issuer } from "../issuer.js";
 import { RelyingParty } from "../relying-party.js";

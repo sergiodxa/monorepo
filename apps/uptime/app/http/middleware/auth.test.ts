@@ -13,7 +13,7 @@ import { session } from "remix/middleware/session";
 import { createRouter, type Middleware } from "remix/router";
 import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

@@ -8,7 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import type { Context } from "./read.js";
 

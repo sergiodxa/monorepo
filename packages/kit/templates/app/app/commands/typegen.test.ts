@@ -8,7 +8,7 @@ import { dirname } from "node:path";
 
 import { invoke } from "@sdxc/cli/test";
 import { isFailure, wrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { TYPES_FILE } from "~/app/commands/typegen";
 import { cli } from "~/app/initializers/cli";

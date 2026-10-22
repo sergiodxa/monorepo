@@ -4,7 +4,7 @@
 
 import { invoke } from "@sdxc/cli/test";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { postsSeed, useTemporaryProject } from "~/app/test/local-database";
 

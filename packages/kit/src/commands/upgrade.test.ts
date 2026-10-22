@@ -16,7 +16,7 @@ import type { InvokeOptions } from "@sdxc/cli/test";
 import { invoke } from "@sdxc/cli/test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { createSDXC } from "../cli.js";
 import { registryDocument } from "../testing.js";

@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { declarations, serialize } from "../internal/serialize.js";
 

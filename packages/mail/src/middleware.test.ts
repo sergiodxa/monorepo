@@ -10,7 +10,7 @@
 
 import { Log } from "@sdxc/logger";
 import { RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { MemoryTransport } from "./memory.js";
 import mail from "./middleware.js";

@@ -16,7 +16,7 @@ import type { RunInit } from "remix/component";
 
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, beforeAll, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, expect, test, vi } from "vite-plus/test";
 
 /** The app's root, which every path this test reports is relative to. */
 const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "..");

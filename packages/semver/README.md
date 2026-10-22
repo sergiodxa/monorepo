@@ -38,8 +38,8 @@ import { compare } from "@sdxc/semver";
 ### Read a version's elements
 
 ```typescript
-import { parse } from "@sdxc/semver";
 import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/semver";
 
 let result = parse("v2.1.0-rc.3+build.9");
 
@@ -134,8 +134,8 @@ allows({ comparison: ">=", version: "3.0.0" }, "unknown"); // false
 Sort with `compare()`, then skip prereleases by reading the parsed elements. Entries that are not versions sort to the front and never win.
 
 ```typescript
-import { compare, parse } from "@sdxc/semver";
 import { isSuccess } from "@sdxc/result";
+import { compare, parse } from "@sdxc/semver";
 
 function newestStable(versions: string[]): string | undefined {
 	return [...versions]
@@ -173,8 +173,8 @@ Validate input once with `parse()` and name each rejection from the error's `tex
 ```typescript
 import type { SemVer } from "@sdxc/semver";
 
-import { parse } from "@sdxc/semver";
 import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/semver";
 
 function readVersions(input: string[]): { versions: SemVer[]; rejected: string[] } {
 	let versions: SemVer[] = [];

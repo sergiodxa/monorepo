@@ -42,12 +42,13 @@ it is given, with no file system, no imports followed and no type checker, so th
 always produces the same document. Walking the files is your part:
 
 ```typescript {% title="scripts/read-sources.ts" %}
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import type { DocModule, ExtractError } from "@sdxc/jsdoc";
 
 import { extract } from "@sdxc/jsdoc";
 import { isFailure } from "@sdxc/result";
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 
 export interface Sources {
 	modules: DocModule[];
@@ -86,9 +87,9 @@ A barrel such as `src/index.ts` that only re-exports produces no symbols of its 
 which symbols are public and under which name:
 
 ```typescript {% title="scripts/public-symbols.ts" %}
-import type { DocModule, DocNode } from "@sdxc/jsdoc";
-
 import { posix } from "node:path";
+
+import type { DocModule, DocNode } from "@sdxc/jsdoc";
 
 function resolve(from: string, specifier: string): string {
 	return posix.join(posix.dirname(from), specifier).replace(/\.js$/, ".ts");
@@ -192,10 +193,11 @@ The script ties the three together, fails the build on a file that does not pars
 two documents: the full model, for any tool that wants it, and the pages, for the Worker:
 
 ```typescript {% title="scripts/extract-reference.ts" %}
+import { mkdirSync, writeFileSync } from "node:fs";
+
 import type { DocProject } from "@sdxc/jsdoc";
 
 import { SCHEMA_VERSION } from "@sdxc/jsdoc";
-import { mkdirSync, writeFileSync } from "node:fs";
 
 import { publicSymbols } from "~/scripts/public-symbols";
 import { readSources } from "~/scripts/read-sources";

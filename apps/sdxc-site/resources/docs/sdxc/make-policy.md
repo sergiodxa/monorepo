@@ -46,9 +46,9 @@ against a record, typed by the model's row when `app/models/post.ts` exports `Po
 like a missing one:
 
 ```typescript {% title="app/policies/abilities.ts" %}
-import type { PostRow } from "~/app/models/post";
-
 import { abilities, ability, context } from "@sdxc/authz";
+
+import type { PostRow } from "~/app/models/post";
 
 export default abilities({
 	post: {

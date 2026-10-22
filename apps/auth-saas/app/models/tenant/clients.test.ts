@@ -14,7 +14,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, randomBytes } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { Database } from "remix/data-table";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { RegisterClientInput } from "~/app/models/tenant/clients";
 

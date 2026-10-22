@@ -10,7 +10,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { InvalidSecretError } from "./errors.js";
 import { decodeSecret, resolveSecrets } from "./secret.js";

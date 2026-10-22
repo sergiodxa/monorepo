@@ -11,11 +11,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { TestProjectInlineConfiguration } from "vitest/config";
+import type { TestProjectInlineConfiguration } from "vite-plus";
 
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vite-plus";
-import { defaultExclude } from "vitest/config";
+import { defaultExclude } from "vite-plus";
 
 import { clientEntryIdentity } from "./test/client-entry-plugin.ts";
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
@@ -39,6 +39,11 @@ process.env.WRANGLER_LOG ??= "warn";
  * names here. Sits outside `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
  */
 const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	/**
+	 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+	 * the root config into every inline project.
+	 */
+	extends: false,
 	plugins: [
 		cloudflareTest({
 			miniflare: {
@@ -52,6 +57,11 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	],
 	resolve: { tsconfigPaths: true },
 	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
 		name: "packages-workers",
 		include: ["packages/*/src/**/*.workers.test.ts?(x)"],
 		testTimeout: 20_000,
@@ -64,6 +74,11 @@ const PACKAGES_WORKERS_PROJECT: TestProjectInlineConfiguration = {
  * from `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
  */
 const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	/**
+	 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+	 * the root config into every inline project.
+	 */
+	extends: false,
 	root: "apps/uptime",
 	plugins: [
 		cloudflareTest({
@@ -83,6 +98,11 @@ const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 		},
 	},
 	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
 		name: "uptime-workers",
 		include: ["**/*.workers.test.ts?(x)"],
 		testTimeout: 20_000,
@@ -90,6 +110,11 @@ const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 };
 
 const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	/**
+	 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+	 * the root config into every inline project.
+	 */
+	extends: false,
 	root: "apps/blog",
 	plugins: [
 		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
@@ -110,6 +135,11 @@ const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 		},
 	},
 	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
 		name: "blog-workers",
 		include: ["**/*.workers.test.ts?(x)"],
 		testTimeout: 20_000,
@@ -121,6 +151,11 @@ const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
  * `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
  */
 const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	/**
+	 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+	 * the root config into every inline project.
+	 */
+	extends: false,
 	root: "apps/reader",
 	plugins: [
 		cloudflareTest({
@@ -140,6 +175,11 @@ const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 		},
 	},
 	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
 		name: "reader-workers",
 		include: ["**/*.workers.test.ts?(x)"],
 		testTimeout: 20_000,
@@ -152,6 +192,11 @@ const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
  * pool. Declared apart from `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
  */
 const AUTH_SAAS_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	/**
+	 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+	 * the root config into every inline project.
+	 */
+	extends: false,
 	root: "apps/auth-saas",
 	plugins: [
 		cloudflareTest({
@@ -170,6 +215,11 @@ const AUTH_SAAS_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 		},
 	},
 	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
 		name: "auth-saas-workers",
 		include: ["**/*.workers.test.ts?(x)"],
 		testTimeout: 20_000,
@@ -190,6 +240,16 @@ export default defineConfig({
 
 	test: {
 		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
+		/**
+		 * Each inline project keeps its own Vite server, so a plugin or config hook
+		 * runs once per project.
+		 */
+		sharedViteServer: false,
+		/**
 		 * Console output reaches the terminal only from a failing test, where the wide event or
 		 * swallowed error is the evidence; a passing run stays down to the summary.
 		 */
@@ -197,11 +257,21 @@ export default defineConfig({
 		projects: [
 			{
 				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
+				/**
 				 * The repo-root `test/` directory: cross-cutting guards that scan every workspace,
 				 * so they belong to no single one. Repo tooling under `scripts/` tests here too.
 				 */
 				resolve: { tsconfigPaths: true },
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "root",
 					include: [
 						"test/**/*.test.ts?(x)",
@@ -215,6 +285,11 @@ export default defineConfig({
 			},
 			{
 				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
+				/**
 				 * One project covers every package: none of them uses a `~/*` alias or ships a
 				 * Vite config, so the root tsconfig resolves them all. `.spec` files belong to
 				 * `@sdxc/spec`'s own runner and never match this glob.
@@ -222,6 +297,11 @@ export default defineConfig({
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "packages",
 					include: ["packages/*/src/**/*.test.ts?(x)"],
 					/**
@@ -241,6 +321,11 @@ export default defineConfig({
 			},
 			{
 				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
+				/**
 				 * Rooted at the app so its own tsconfig — and therefore the `~/*` aliases and
 				 * `jsxImportSource` — apply, which a root-rooted run cannot see.
 				 */
@@ -253,6 +338,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "uptime",
 					include: ["**/*.test.ts?(x)"],
 					/**
@@ -270,6 +360,11 @@ export default defineConfig({
 				},
 			},
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				root: "apps/blog",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
@@ -279,6 +374,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "blog",
 					include: ["**/*.test.ts?(x)"],
 					/**
@@ -300,6 +400,11 @@ export default defineConfig({
 			PACKAGES_WORKERS_PROJECT,
 			UPTIME_WORKERS_PROJECT,
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				root: "apps/r3-auth",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
@@ -309,6 +414,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "r3-auth",
 					/**
 					 * Building a whole app in `beforeEach` — full migration plus an RSA key generated
@@ -322,6 +432,11 @@ export default defineConfig({
 				},
 			},
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				/**
 				 * The talk's demo board. Rooted at the app for its `~/*` aliases, and given the
 				 * Cloudflare stub because `cloudflare:workers` supplies the `DB` binding and the
@@ -337,6 +452,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "demo",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
@@ -349,6 +469,11 @@ export default defineConfig({
 				},
 			},
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				root: "apps/books",
 				plugins: [cloudflareWorkersStub()],
 				resolve: {
@@ -358,6 +483,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "books",
 					include: ["**/*.test.ts?(x)"],
 					pool: "threads",
@@ -370,6 +500,11 @@ export default defineConfig({
 				},
 			},
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				root: "apps/sdxc-site",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
@@ -379,6 +514,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "sdxc-site",
 					include: ["**/*.test.ts?(x)", ".config/sdxc/checks/*.test.ts"],
 					globalSetup: ["scripts/catalogue.setup.ts"],
@@ -391,6 +531,11 @@ export default defineConfig({
 				},
 			},
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				root: "apps/auth-saas",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
@@ -400,6 +545,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "auth-saas",
 					include: ["**/*.test.ts?(x)"],
 					/**
@@ -418,6 +568,11 @@ export default defineConfig({
 			},
 			AUTH_SAAS_WORKERS_PROJECT,
 			{
+				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
 				root: "apps/reader",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
@@ -427,6 +582,11 @@ export default defineConfig({
 					},
 				},
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "reader",
 					include: ["**/*.test.ts?(x)"],
 					/**
@@ -445,6 +605,11 @@ export default defineConfig({
 			READER_WORKERS_PROJECT,
 			{
 				/**
+				 * This project keeps its own plugins and options. Vitest 5 otherwise merges
+				 * the root config into every inline project.
+				 */
+				extends: false,
+				/**
 				 * The one app whose sources live under `src/`, and the one with no Cloudflare
 				 * bindings — nothing here imports `cloudflare:workers`, so the stub plugin has
 				 * nothing to stand in for. Rooted at the app for its `~/*` aliases.
@@ -452,6 +617,11 @@ export default defineConfig({
 				root: "apps/pkmn",
 				resolve: { tsconfigPaths: true },
 				test: {
+					/**
+					 * Mock call history survives from setup into the test. Vitest 5 clears it
+					 * before each test, which would hide calls these suites assert on.
+					 */
+					clearMocks: false,
 					name: "pkmn",
 					/**
 					 * Four dev-export tests snapshot, write and restore the app's real manifest and

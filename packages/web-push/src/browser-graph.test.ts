@@ -10,7 +10,7 @@
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 /** The workspace's `packages/` directory, where every `@sdxc/*` import resolves. */
 const PACKAGES = resolve(import.meta.dirname, "../..");

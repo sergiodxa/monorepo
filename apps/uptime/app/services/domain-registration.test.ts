@@ -12,7 +12,7 @@ import type { RDAP } from "@sdxc/rdap";
 import { DAY_MS } from "@sdxc/dates/zone";
 import { RDAPError } from "@sdxc/rdap";
 import { failure, success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { RegistrationState } from "./domain-registration";
 

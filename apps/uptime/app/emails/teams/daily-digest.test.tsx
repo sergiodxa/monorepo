@@ -12,7 +12,7 @@ import type { EmailPropsOutput } from "@sdxc/mail";
 
 import { render } from "@sdxc/mail";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { TeamDigestMonitor } from "~/app/emails/shared/team-digest";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";

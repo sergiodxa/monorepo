@@ -22,7 +22,7 @@ import { MemoryTransport } from "@sdxc/mail/memory";
 import { CurrentMailer } from "@sdxc/mail/middleware/jobs";
 import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
 

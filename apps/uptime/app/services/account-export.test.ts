@@ -12,7 +12,7 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { AlertConfig, SelectTeam } from "~/database/schema";
 

@@ -9,7 +9,7 @@
  */
 
 import { isSuccess, unwrap } from "@sdxc/result";
-import { expect } from "vitest";
+import { expect } from "vite-plus/test";
 
 import type { ScheduleDescriptor } from "../src/describe.js";
 import type { CronFieldSet } from "../src/fields.js";

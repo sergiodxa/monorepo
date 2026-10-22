@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 
 import type { UserStore } from "~/app/models/user-store";
 

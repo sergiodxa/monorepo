@@ -17,7 +17,7 @@ import { wellKnown } from "@sdxc/well-known/middleware";
 import { parse as parseProtectedResource } from "@sdxc/well-known/oauth-protected-resource";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import {
 	TENANT_ID_HEADER,

@@ -62,7 +62,6 @@ canvas.mask(
 
 ```typescript
 import { parseFont } from "@sdxc/font";
-
 import { isFailure } from "@sdxc/result";
 
 let font = parseFont(fontBytes);

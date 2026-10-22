@@ -5,7 +5,7 @@
 
 import { Mailer } from "@sdxc/mail";
 import { env } from "cloudflare:workers";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { queue, transport } from "~/app/initializers/mail-transport";
 import { MAIL_FROM } from "~/config/constants";

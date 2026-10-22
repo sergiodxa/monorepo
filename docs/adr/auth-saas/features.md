@@ -2584,7 +2584,7 @@ Hobby and Pro up to 3; Business 10 included, then $20/mo each.
 3. **50,000 MRU on Hobby is a cap, not an overage tier.** Cross it and you are _required_ to upgrade,
    with a one-month grace period. Same for 100 MRO.
 4. **B2B is a two-step paywall.** Basic organizations are free, but 21+ members per org, custom roles,
-   verified domains, auto-join and org-scoped SSO all need the $100/mo add-on — *and* that add-on is
+   verified domains, auto-join and org-scoped SSO all need the $100/mo add-on — _and_ that add-on is
    what switches MRO metering on, so crossing 100 organizations costs $100/mo before the first $1 of
    overage.
 5. **The 4th dashboard seat costs $250–300/mo**, because it forces the Business plan. This is the
@@ -2714,7 +2714,7 @@ for 10% of monthly actives once each.
   published range but Auth0 does not commit to it beyond 50,000, so extrapolating to $7,000/mo would
   be a guess.
 - **[A3]** _Known:_ the $3,000/month base platform is mandatory at every scale, annual contract, and
-  is identical whether you have 1,000 or 100,000 MAU. *Unknown:* the B2C Suite, which is MAU-metered
+  is identical whether you have 1,000 or 100,000 MAU. _Unknown:_ the B2C Suite, which is MAU-metered
   on top and unpublished at every scale. The floor is therefore $36,000/year before the first MAU is
   priced.
 - **[A4]** Workforce Identity is licensed per employee for federating _your staff into apps_. Pricing

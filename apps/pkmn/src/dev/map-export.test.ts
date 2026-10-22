@@ -13,7 +13,7 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vite-plus/test";
 
 import { EMPTY_CELL, type MapData } from "~/presentation/render/map-schema";
 import { Collision } from "~/presentation/render/tilemap";

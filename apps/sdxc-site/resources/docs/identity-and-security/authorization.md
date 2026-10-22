@@ -171,8 +171,8 @@ function is read the first time a check needs it, and only once.
 ```typescript {% title="app/http/middleware/access.ts" %}
 import { access } from "@sdxc/authz/middleware/router";
 
-import policy from "~/app/policies/policy";
 import { renderDenied } from "~/app/http/middleware/denied";
+import policy from "~/app/policies/policy";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -205,10 +205,10 @@ import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { createAction } from "remix/router";
 
-import abilities from "~/app/policies/abilities";
-import { Projects } from "~/app/models/projects";
 import { teamAccess } from "~/app/http/middleware/access";
 import { readProjectForm } from "~/app/http/validators/project";
+import { Projects } from "~/app/models/projects";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/web";
 
 export default createAction(routes.projects.update, {
@@ -260,9 +260,9 @@ import { requireAbility } from "@sdxc/authz/middleware/router";
 import { notFound } from "@sdxc/http/response/html";
 import { createAction } from "remix/router";
 
-import abilities from "~/app/policies/abilities";
-import { Projects } from "~/app/models/projects";
 import { teamAccess } from "~/app/http/middleware/access";
+import { Projects } from "~/app/models/projects";
+import abilities from "~/app/policies/abilities";
 import { ProjectPage } from "~/resources/views/project";
 import routes from "~/routes/web";
 
@@ -315,8 +315,8 @@ own page:
 import type { Refusal } from "@sdxc/authz";
 import type { RequestContext } from "remix/router";
 
-import routes from "~/routes/web";
 import { ForbiddenPage, NotFoundPage } from "~/resources/views/errors";
+import routes from "~/routes/web";
 
 export function renderDenied(ctx: RequestContext, decision: Refusal) {
 	if (decision.as === "notFound") {
@@ -379,8 +379,8 @@ the chain:
 import { fromEntitlements } from "@sdxc/authz/facts/billing";
 import { access } from "@sdxc/authz/middleware/router";
 
-import policy from "~/app/policies/policy";
 import { renderDenied } from "~/app/http/middleware/denied";
+import policy from "~/app/policies/policy";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -454,17 +454,17 @@ sources every job shares, added to the dispatcher's chain after flags. With the 
 it typed from the registered policy:
 
 ```typescript {% title="app/initializers/dispatcher.ts" %}
-import { authz } from "@sdxc/authz/middleware/dispatcher";
 import { fromFlags } from "@sdxc/authz/facts/flags";
+import { authz } from "@sdxc/authz/middleware/dispatcher";
 import { database } from "@sdxc/database-middleware/jobs";
 import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { createJobDispatcher } from "@sdxc/jobs";
 
-import policy from "~/app/policies/policy";
-import { queue } from "~/app/initializers/queue";
 import { openDatabase } from "~/app/initializers/database";
 import { features, flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
+import { queue } from "~/app/initializers/queue";
+import policy from "~/app/policies/policy";
 
 export const dispatcher = createJobDispatcher({
 	logger,
@@ -484,10 +484,10 @@ shared ones by root:
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import abilities from "~/app/policies/abilities";
 import jobs from "~/app/jobs";
 import { Entitlements } from "~/app/models/entitlements";
 import { Members } from "~/app/models/members";
+import abilities from "~/app/policies/abilities";
 
 export default createJobHandler(jobs.reports.export, async (ctx) => {
 	let { teamId, userId } = ctx.input;
@@ -593,9 +593,9 @@ import type { InputOf } from "@sdxc/mcp";
 import { guard, requireToolAbility } from "@sdxc/authz/mcp";
 import { createTool } from "@sdxc/mcp";
 
-import abilities from "~/app/policies/abilities";
-import { Projects } from "~/app/models/projects";
 import toolset from "~/app/mcp/tools";
+import { Projects } from "~/app/models/projects";
+import abilities from "~/app/policies/abilities";
 
 type Input = InputOf<typeof toolset.renameProject>;
 

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { parseSafe } from "remix/data-schema";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import {
 	EMPTY_CELL,

@@ -12,7 +12,7 @@ import type { CaptchaOutcome } from "@sdxc/captcha/middleware";
 import { CaptchaError } from "@sdxc/captcha";
 import { createAnalyticsEngine } from "@sdxc/cloudflare-mocks";
 import { failure, success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	passesConditionalTurnstileChallenge,

@@ -29,7 +29,16 @@ import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import { language as languageCookie, returnTo } from "~/app/initializers/cookies";
 import { createTestBilling } from "~/app/test/billing";

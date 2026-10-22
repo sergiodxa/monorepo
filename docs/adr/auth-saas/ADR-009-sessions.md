@@ -113,7 +113,7 @@ Each parses its input with `remix/data-schema` inside the object and returns pla
 - `resolveSession(input)` — takes the token, the wall clock, and the request's address, agent
   and location. It hashes and looks up, enforces both clocks, slides the idle window, records
   last-seen, and answers `{ status: "active", sessionId, subjectId, authTime, amr, expiresAt,
-idleExpiresAt }` or `{ status: "expired" | "revoked" | "unknown" }` — a whole operation,
+  idleExpiresAt }` or `{ status: "expired" | "revoked" | "unknown" }` — a whole operation,
   attach this request to its session, which is why the write it performs lives inside it.
 - `listSubjectSessions(input)` — a page of summaries for the account UI: id, creation,
   last-seen, methods, agent, address, location, and whether the row is the caller's own.

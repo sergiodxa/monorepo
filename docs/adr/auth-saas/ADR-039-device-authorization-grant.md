@@ -143,7 +143,7 @@ million, and twenty an hour is the whole of what one address gets.
   grant, validates the scope, mints both codes, and answers the RFC 8628 response.
 - `beginDeviceApproval({ userCode, sessionId, now })` — spends an attempt against the code budget
   and resolves the pending row, answering `{ kind: "approve", screen } | { kind: "unknown" } |
-{ kind: "expired" }`, so a wrong code costs a guess inside the call that looks it up.
+  { kind: "expired" }`, so a wrong code costs a guess inside the call that looks it up.
 - `decideDeviceApproval({ interactionId, sessionId, approved, now })` — binds the session, records
   the decision, unions the grant, and answers what the screen renders next.
 - `redeemDeviceCode({ deviceCode, clientId, clientSecret, authScheme, now })` — enforces the

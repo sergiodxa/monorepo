@@ -12,7 +12,7 @@ import type { Middleware } from "remix/router";
 import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { assetResolver } from "~/app/initializers/assets";
 import { CHUNK_SPECIFIER, CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";

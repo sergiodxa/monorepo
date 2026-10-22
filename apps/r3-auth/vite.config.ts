@@ -11,9 +11,16 @@
 
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { remix } from "@pitlane/vite-plugin-remix";
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+	test: {
+		/**
+		 * Mock call history survives from setup into the test. Vitest 5 clears it
+		 * before each test, which would hide calls these suites assert on.
+		 */
+		clearMocks: false,
+	},
 	server: { port: 3002 },
 
 	resolve: { tsconfigPaths: true },

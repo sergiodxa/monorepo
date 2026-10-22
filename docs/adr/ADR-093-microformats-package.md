@@ -224,8 +224,8 @@ into a `Date` would invent the missing parts. The typed views convert where they
 #### `"./vocabulary"` — typed views
 
 ```ts
-import type { Result } from "@sdxc/result";
 import type { MF2, MicroformatsShapeError } from "@sdxc/microformats";
+import type { Result } from "@sdxc/result";
 
 export namespace Vocabulary {
 	export interface Card {
@@ -279,7 +279,15 @@ export namespace Vocabulary {
 	}
 
 	export type PostType =
-		"rsvp" | "repost" | "like" | "reply" | "bookmark" | "photo" | "video" | "article" | "note";
+		| "rsvp"
+		| "repost"
+		| "like"
+		| "reply"
+		| "bookmark"
+		| "photo"
+		| "video"
+		| "article"
+		| "note";
 }
 
 export function readEntry(item: MF2.Item): Result<Vocabulary.Entry, MicroformatsShapeError>;
@@ -343,7 +351,13 @@ export namespace MF2UI {
 	export type CardText = "name" | "nickname" | "org" | "note" | "locality" | "country-name";
 	export type CardUrl = "url" | "uid" | "photo" | "email";
 	export type Root =
-		"h-entry" | "h-card" | "h-feed" | "h-cite" | "h-event" | "h-adr" | `h-x-${string}`;
+		| "h-entry"
+		| "h-card"
+		| "h-feed"
+		| "h-cite"
+		| "h-event"
+		| "h-adr"
+		| `h-x-${string}`;
 	export type Property =
 		| `p-${EntryText | CardText}`
 		| `u-${EntryUrl | CardUrl}`

@@ -9,7 +9,7 @@
 import { failure, isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { ExecRequest } from "./exec.js";
 import type { ChainContext } from "./handler.js";

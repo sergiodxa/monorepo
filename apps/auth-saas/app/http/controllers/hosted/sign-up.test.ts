@@ -15,7 +15,7 @@ import type { Result } from "@sdxc/result";
 
 import { isComposedEmail, MailError } from "@sdxc/mail";
 import { failure } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { Harness } from "~/app/test/harness/hosted";
 

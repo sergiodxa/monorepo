@@ -17,7 +17,7 @@ import { MemoryAdapter, RateLimitError } from "@sdxc/rate-limit";
 import { failure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
 import { AuthSession } from "./auth-session.js";

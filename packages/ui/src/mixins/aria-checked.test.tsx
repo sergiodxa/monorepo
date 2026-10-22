@@ -12,7 +12,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Checkbox } from "../components/checkbox.js";
 import { RadioGroup } from "../components/radio-group.js";

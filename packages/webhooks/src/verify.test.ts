@@ -13,7 +13,7 @@ import type { DurationInput } from "@sdxc/duration";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ReplayStore } from "./replay-store.js";
 import type { SignedDelivery } from "./sign.js";

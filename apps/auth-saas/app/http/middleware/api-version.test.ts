@@ -7,7 +7,7 @@
  */
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	API_VERSION_HEADER,

@@ -10,7 +10,7 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { renderToStream } from "remix/component/server";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vite-plus/test";
 
 import { CalendarModel } from "../behaviors/calendar-model.js";
 import { DragSession } from "../behaviors/drag-session.js";

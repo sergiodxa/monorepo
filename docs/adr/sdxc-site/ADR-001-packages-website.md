@@ -126,8 +126,8 @@ One snippet, chosen because it shows the house style rather than a feature — a
 composes three packages and never throws:
 
 ```typescript
-import { badRequest, ok } from "@sdxc/response";
 import { Markdown } from "@sdxc/markdown";
+import { badRequest, ok } from "@sdxc/response";
 import { isFailure } from "@sdxc/result";
 
 export async function handler(request: Request) {

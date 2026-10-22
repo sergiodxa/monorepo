@@ -12,7 +12,7 @@ import { join } from "node:path";
 
 import * as s from "@sdxc/json-schema";
 import { unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import type { Config } from "./config.js";
 import type { UILockEntry } from "./lock.js";

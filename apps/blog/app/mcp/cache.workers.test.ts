@@ -14,7 +14,7 @@ import type { CallToolResult, ToolContext } from "@sdxc/mcp";
 import { env } from "cloudflare:test";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import createEnvMiddleware from "~/app/http/middleware/env";
 

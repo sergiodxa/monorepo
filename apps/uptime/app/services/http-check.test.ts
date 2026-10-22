@@ -18,7 +18,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { CostResource } from "~/app/services/cost-rates";

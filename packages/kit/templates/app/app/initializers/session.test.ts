@@ -5,7 +5,7 @@
 
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { sessionCookie, sessionStorage } from "~/app/initializers/session";
 

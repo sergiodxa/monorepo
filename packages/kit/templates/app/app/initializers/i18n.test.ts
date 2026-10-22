@@ -2,7 +2,7 @@
  * The translator a job or an email uses, which reads the same bundles a page does.
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { translate } from "~/app/initializers/i18n";
 

@@ -11,7 +11,7 @@ import type { Session, SessionStorage } from "remix/session";
 
 import { createCookie } from "remix/cookie";
 import { createSession } from "remix/session";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { LanguageDetector } from "./language-detector.js";
 

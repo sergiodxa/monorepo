@@ -14,7 +14,7 @@ import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { rawSql } from "remix/data-table";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { TestApp } from "~/app/test/http";
 import type { Fixtures } from "~/app/test/seed";

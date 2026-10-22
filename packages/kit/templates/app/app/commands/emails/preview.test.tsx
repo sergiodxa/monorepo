@@ -6,7 +6,7 @@
 import { invoke } from "@sdxc/cli/test";
 import { createEmail, Email, email, emails } from "@sdxc/mail";
 import * as s from "remix/data-schema";
-import { beforeAll, describe, expect, test } from "vitest";
+import { beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { cli } from "~/app/initializers/cli";
 import { mail } from "~/app/initializers/mail";

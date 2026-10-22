@@ -469,10 +469,11 @@ disk, draws a card with a title too long for three lines, and decodes the PNG to
 size. The version test proves the hash follows the text and only the text:
 
 ```typescript {% title="app/services/social-cards/draw.test.ts" %}
+import { readFile } from "node:fs/promises";
+
 import { parseFont } from "@sdxc/font";
 import { decode } from "@sdxc/png";
 import { unwrap } from "@sdxc/result";
-import { readFile } from "node:fs/promises";
 import { expect, test } from "vitest";
 
 import { cardVersion } from "~/app/services/social-cards/content";

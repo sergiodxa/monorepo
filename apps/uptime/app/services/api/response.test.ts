@@ -7,7 +7,7 @@
  */
 
 import { Forbidden, Ok } from "@sdxc/http/status-code";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { apiSuccess } from "~/app/services/api/response";
 

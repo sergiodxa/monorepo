@@ -8,7 +8,7 @@ import type { CSSMixinDescriptor } from "remix/component";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CHART_COLOR_SLOT_COUNT } from "./chart-palette.js";
 import { legendToggle } from "./legend-toggle.js";

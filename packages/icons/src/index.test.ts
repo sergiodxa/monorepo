@@ -9,7 +9,7 @@
 
 import { readFile } from "node:fs/promises";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import * as icons from "./index.js";
 

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { success } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { SpamCheck } from "./check.js";
 

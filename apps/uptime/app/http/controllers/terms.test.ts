@@ -19,7 +19,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

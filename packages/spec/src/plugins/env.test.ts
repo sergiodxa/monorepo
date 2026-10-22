@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 
 import { createRandom } from "@sdxc/random";
 import { isFailure, success } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import type { SpecError } from "../errors.js";
 import type { PermissionSet } from "../permissions.js";

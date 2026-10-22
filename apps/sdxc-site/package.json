@@ -33,6 +33,6 @@
 		"@sdxc/kit": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"cf": "1.0.0-beta.5",
-		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3"
+		"vite": "catalog:"
 	}
 }

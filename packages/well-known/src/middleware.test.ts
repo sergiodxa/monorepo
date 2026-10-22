@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { WellKnownEntry } from "./middleware.js";
 import type { SecurityTxt } from "./security-txt.js";

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createRandom } from "@sdxc/random";
-import { expect, test } from "vitest";
+import { expect, test } from "vite-plus/test";
 
 import { ITEMS } from "~/content/items";
 import { TYPE_MATCHUPS } from "~/content/matchups";

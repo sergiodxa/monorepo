@@ -13,7 +13,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { isUUID } from "@sdxc/uuid";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import Tenant from "~/app/models/tenant/object";
 

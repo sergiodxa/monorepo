@@ -111,10 +111,11 @@ A guard middleware reads the address through the `ClientIP` key and answers befo
 when it falls outside an allowed range:
 
 ```typescript
+import type { Middleware } from "remix/router";
+
 import getClientIP, { ClientIP } from "@sdxc/get-client-ip/middleware";
 import { IP } from "@sdxc/ip";
 import { isSuccess } from "@sdxc/result";
-import type { Middleware } from "remix/router";
 import { createRouter } from "remix/router";
 
 let OFFICE = IP.Range.parse("203.0.113.0/24");

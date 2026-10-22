@@ -20,7 +20,7 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { SaveConnectionInput } from "~/app/models/tenant/connections";
 

@@ -9,7 +9,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as coerce from "remix/data-schema/coerce";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { Markdown as MarkdownTypes } from "../index.js";
 

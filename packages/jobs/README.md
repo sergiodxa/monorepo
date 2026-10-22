@@ -506,8 +506,8 @@ import { createJobContext, Job } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { expect, test } from "vitest";
 
-import handler from "./jobs/send-receipt.js";
 import jobs from "./jobs.js";
+import handler from "./jobs/send-receipt.js";
 import { Database } from "./middleware.js";
 
 test("asks for a retry while the mailer rate limits", async () => {

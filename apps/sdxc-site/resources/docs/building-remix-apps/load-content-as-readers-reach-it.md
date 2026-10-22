@@ -131,8 +131,8 @@ The list's action renders the whole page for a visit and only the rows for a fra
 ```tsx {% title="app/http/controllers/jobs/index.tsx" %}
 import { createAction } from "remix/router";
 
-import Jobs from "~/app/models/job";
 import { fragment, isFrameRequest } from "~/app/http/fragment";
+import Jobs from "~/app/models/job";
 import { JobList, JobsPage } from "~/resources/views/jobs";
 import routes from "~/routes/web";
 

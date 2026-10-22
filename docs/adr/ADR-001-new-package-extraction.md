@@ -248,8 +248,9 @@ packages/sitemap/
 **Exports:**
 
 ```typescript
-import { useMemo, useCallback, useState } from "react";
 import type { useFetcher } from "react-router";
+
+import { useMemo, useCallback, useState } from "react";
 
 /**
  * Boolean toggle state hook

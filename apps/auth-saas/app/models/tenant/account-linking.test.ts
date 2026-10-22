@@ -25,7 +25,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { isUUID } from "@sdxc/uuid";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Database, gte } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { MatchedSubjectForLinking } from "~/app/models/tenant/account-linking";
 

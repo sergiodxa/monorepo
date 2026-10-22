@@ -10,7 +10,7 @@
 
 import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import healthcheck from "~/app/http/controllers/healthcheck";
 import models from "~/app/http/middleware/models";

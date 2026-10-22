@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import * as AnalyticsEngine from "./analytics-engine.js";
 import * as D1 from "./d1.js";

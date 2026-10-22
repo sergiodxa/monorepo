@@ -8,7 +8,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { parseDateTimeLocal, toDateTimeLocal } from "./date-time-local.js";
 import { InvalidDateTimeLocalError } from "./invalid-date-time-local-error.js";

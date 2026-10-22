@@ -23,9 +23,9 @@ Results come from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) (
 ### Verify an inbound request
 
 ```typescript
-import { env } from "cloudflare:workers";
 import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
+import { env } from "cloudflare:workers";
 
 let result = await Webhooks.verify(request, { secret: env.WEBHOOK_SECRET });
 if (isFailure(result)) return new Response(null, { status: 401 });
@@ -77,8 +77,8 @@ signature headers and is yours to add to.
 ### Reject replays
 
 ```typescript
-import { env } from "cloudflare:workers";
 import * as Webhooks from "@sdxc/webhooks";
+import { env } from "cloudflare:workers";
 
 let store = new Webhooks.KVReplayStore(env.WEBHOOKS);
 
@@ -186,9 +186,9 @@ Answer each failure for what it means: an authentic duplicate already did its wo
 but unmodelled event should not be retried, and everything else is rejected.
 
 ```typescript
-import { env } from "cloudflare:workers";
 import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
+import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
 let Event = s.object({ type: s.string(), data: s.object({ id: s.string() }) });
@@ -257,8 +257,8 @@ async function deliver(endpoint: string, event: unknown, id: string, secret: str
 List the new secret first and keep the old one until every delivery signed with it has drained.
 
 ```typescript
-import { env } from "cloudflare:workers";
 import * as Webhooks from "@sdxc/webhooks";
+import { env } from "cloudflare:workers";
 
 let secrets = [env.WEBHOOK_SECRET, env.WEBHOOK_SECRET_PREVIOUS].filter(Boolean);
 
@@ -271,9 +271,9 @@ Keep accepted ids in a table you can inspect by implementing `ReplayStore`. Repo
 for ids that were remembered and have not expired.
 
 ```typescript
-import { env } from "cloudflare:workers";
 import { toMs } from "@sdxc/duration";
 import * as Webhooks from "@sdxc/webhooks";
+import { env } from "cloudflare:workers";
 
 let store: Webhooks.ReplayStore = {
 	async seen(id) {

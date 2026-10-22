@@ -159,11 +159,11 @@ export class LogoutToken {
 #### Phase 3: Auth Server Logout Notification Service
 
 ```typescript
+import { LogoutToken } from "~/entities/logout-token";
 // apps/auth/app/services/backchannel-logout.ts
 import { db } from "~/middleware/drizzle";
 import Client from "~/models/client";
 import Grant from "~/models/grant";
-import { LogoutToken } from "~/entities/logout-token";
 
 interface NotificationResult {
 	clientId: string;
@@ -229,9 +229,10 @@ export async function notifyClientsOfLogout(
 ```typescript
 // apps/uptime/app/routes/backchannel-logout.tsx
 import { badRequest, ok } from "@pkg/response";
+import { env } from "cloudflare:workers";
+
 import { LogoutToken } from "~/entities/logout-token";
 import Session from "~/models/session";
-import { env } from "cloudflare:workers";
 
 export async function action({ request }: Route.ActionArgs) {
 	// Only accept POST

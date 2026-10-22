@@ -103,8 +103,8 @@ adapters that ship run it, and a driver you write yourself runs the same one:
 ```typescript {% title="app/models/d1-cache.test.ts" %}
 import { conformance } from "@sdxc/cache/conformance";
 
-import { D1Cache } from "~/app/models/d1-cache";
 import { openDatabase } from "~/app/initializers/database";
+import { D1Cache } from "~/app/models/d1-cache";
 
 conformance({ name: "D1Cache", create: () => new D1Cache(openDatabase()) });
 ```

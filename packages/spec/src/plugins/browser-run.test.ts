@@ -12,7 +12,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { isFailure, isSuccess, success } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import type { Grants } from "../permissions.js";
 import type { ToolContext } from "../plugin.js";

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { listUiExports, readUiExport } from "~/app/services/ui-exports";
 import { UI_SUBPATHS } from "~/app/services/ui-subpaths";

@@ -10,7 +10,7 @@
 import type { RequestHandler } from "remix/router";
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { frameFailures } from "./frame-failures";
 

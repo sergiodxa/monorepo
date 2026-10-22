@@ -17,7 +17,7 @@ import type { Database } from "remix/data-table";
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { SelectTeam } from "~/database/schema";
 

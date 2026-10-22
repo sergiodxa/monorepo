@@ -8,7 +8,7 @@
  */
 
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { IP } from "./ip.js";
 import { SPECIAL_PURPOSE_RANGES } from "./special-purpose.js";

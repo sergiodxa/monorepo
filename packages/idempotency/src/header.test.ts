@@ -7,7 +7,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { IdempotencyKeyError } from "./errors.js";
 import { formatIdempotencyKey, IDEMPOTENCY_KEY_HEADER, readIdempotencyKey } from "./header.js";

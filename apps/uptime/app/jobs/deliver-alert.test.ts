@@ -15,7 +15,7 @@ import type { Database } from "remix/data-table";
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { MemoryDestination } from "@sdxc/messaging/memory";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { AlertConfig, SelectAlert, SelectAlertEvent } from "~/database/schema";
 

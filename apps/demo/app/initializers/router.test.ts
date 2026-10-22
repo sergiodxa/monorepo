@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, expect, test } from "vite-plus/test";
 
 import { cache, LISTING_KEY } from "~/app/initializers/cache";
 import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/initializers/captcha";

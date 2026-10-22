@@ -51,8 +51,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import Team from "~/app/models/team";
 import { NewTeamSchema } from "~/app/http/validators/team";
+import Team from "~/app/models/team";
 import { NewTeamPage } from "~/resources/views/new-team";
 import routes from "~/routes/web";
 
@@ -91,9 +91,9 @@ A service of yours that can fail answers the same way, with `success` and `failu
 controller calling it keeps one shape all the way down:
 
 ```typescript {% title="app/services/articles/import.ts" %}
-import { Markdown } from "@sdxc/markdown";
 import type { Result } from "@sdxc/result";
 
+import { Markdown } from "@sdxc/markdown";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 

@@ -10,7 +10,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { pageRenderer } from "~/app/test/renderer";

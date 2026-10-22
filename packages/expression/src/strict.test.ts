@@ -11,7 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import type { ExpressionError } from "./expression-error.js";
 

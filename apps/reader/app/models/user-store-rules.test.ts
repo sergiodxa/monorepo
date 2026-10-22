@@ -28,7 +28,16 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import type { UserStore } from "~/app/models/user-store";
 

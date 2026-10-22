@@ -10,7 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";

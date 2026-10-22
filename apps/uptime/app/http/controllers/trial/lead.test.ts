@@ -27,7 +27,7 @@ import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 

@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 import { invoke } from "@sdxc/cli/test";
 import { unwrap } from "@sdxc/result";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test } from "vite-plus/test";
 
 import { createSDXC } from "../cli.js";
 import { defaultPackageRoot } from "../create/templates.js";

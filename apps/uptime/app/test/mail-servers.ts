@@ -10,7 +10,7 @@
 import { CLOUDFLARE } from "@sdxc/doh";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll } from "vite-plus/test";
 
 /** What a domain's lookups answer: mail hosts, no mail host at all, or a resolver failure. */
 export type MailServerAnswer = "receives-mail" | "no-mail-server" | "lookup-failed";

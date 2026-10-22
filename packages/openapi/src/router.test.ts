@@ -11,7 +11,7 @@ import type { RequestContext } from "remix/router";
 import { failure, unwrap } from "@sdxc/result";
 import { createContextKey, createRouter } from "remix/router";
 import { get } from "remix/routes";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { OpenAPIBuildError } from "./errors.js";
 import { openapiHandler } from "./router.js";

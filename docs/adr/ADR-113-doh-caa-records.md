@@ -174,9 +174,8 @@ formatRecordData({ type: "MX", preference: 10, exchange: "mx.example.com" }); //
 namespace of types from `src/caa/types.ts`.
 
 ```ts
-import type { Result } from "@sdxc/result";
-
 import type { DoH, DoHError } from "@sdxc/doh";
+import type { Result } from "@sdxc/result";
 
 export namespace CAA {
 	/** One CAA record's data, from an answer or from `parseRecordData("CAA", …)` on a zone-file line. */

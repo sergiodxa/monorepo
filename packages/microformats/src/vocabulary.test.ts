@@ -8,7 +8,7 @@
  */
 import { isFailure, unwrap } from "@sdxc/result";
 import { number, object, string } from "remix/data-schema";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	authorOf,

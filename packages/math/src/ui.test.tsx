@@ -13,7 +13,7 @@ import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { math } from "./markdown.js";
 import { MathFormula, MathTag } from "./ui.js";

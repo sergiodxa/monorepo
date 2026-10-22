@@ -7,7 +7,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Published, ReleasePlan } from "./plan.js";
 import type { Package } from "./workspace.js";

@@ -12,7 +12,7 @@ import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll } from "vitest";
+import { afterAll, afterEach, beforeAll } from "vite-plus/test";
 
 import type { Newsletter } from "../contract.js";
 import type { ConfirmationPolicy } from "../memory.js";

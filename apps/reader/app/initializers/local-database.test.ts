@@ -9,7 +9,7 @@
 import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 import { column as c, table } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CATALOG, LOCAL_DATABASE_FILE, openLocalDatabase } from "~/app/initializers/local-database";
 

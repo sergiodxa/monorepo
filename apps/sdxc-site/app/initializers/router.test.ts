@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createLogger } from "sdxc/logger";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 const TRACE_ID = "4bf92f3577b34da6a3ce929d0e0e4736";
 const PARENT_ID = "00f067aa0ba902b7";

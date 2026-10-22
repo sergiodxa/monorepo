@@ -12,7 +12,7 @@ import { Database } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { UptimeModels } from "~/app/models";
 

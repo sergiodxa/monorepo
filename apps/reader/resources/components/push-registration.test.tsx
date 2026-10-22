@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Mock } from "vitest";
+import type { Mock } from "vite-plus/test";
 
 import { Base64Url } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
@@ -17,7 +17,16 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { run } from "remix/component";
 import { renderToStream } from "remix/component/server";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import PushRegistration from "~/resources/components/push-registration";
 

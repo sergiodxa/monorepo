@@ -15,7 +15,7 @@ import { Job, createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import type Tenant from "~/app/models/tenant/object";
 import type {

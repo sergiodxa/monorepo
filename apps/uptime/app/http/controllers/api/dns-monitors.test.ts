@@ -16,7 +16,7 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 

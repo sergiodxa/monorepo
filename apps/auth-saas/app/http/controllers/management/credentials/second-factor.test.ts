@@ -9,7 +9,7 @@
 
 import { totp } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { CredentialsHarness } from "~/app/test/harness/management/credentials";
 

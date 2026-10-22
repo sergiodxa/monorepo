@@ -15,7 +15,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 import type { ApiKeyScope, MonitorStatus } from "~/database/schema";

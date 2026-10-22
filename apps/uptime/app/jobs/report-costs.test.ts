@@ -18,7 +18,16 @@ import { failure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 import { RATE_CARD_VERSION } from "~/app/services/cost-rates";
 import { createActiveSubscription, createTestBilling } from "~/app/test/billing";

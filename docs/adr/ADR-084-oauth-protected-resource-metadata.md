@@ -247,6 +247,7 @@ export function parse(header: string): Result<BearerChallenge[], ChallengeParseE
 
 ```ts
 import type { ProtectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
+
 import type { BearerChallenge } from "./bearer-challenge.js";
 
 export class ResourceServer {

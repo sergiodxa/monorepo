@@ -17,7 +17,7 @@ import { isComposedEmail, Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type {
 	AlertEventSnapshot,

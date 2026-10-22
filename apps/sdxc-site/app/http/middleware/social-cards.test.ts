@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { parseFont } from "@sdxc/font";
 import { success } from "@sdxc/result";
 import { createMemoryFileStorage } from "remix/file-storage/memory";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { socialCardKey } from "~/app/services/social-card";
 

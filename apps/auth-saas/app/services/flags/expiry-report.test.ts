@@ -12,7 +12,7 @@ import type { FlagStore } from "@sdxc/flags-engine/store";
 import { FlagStoreError } from "@sdxc/flags-engine/store";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import { failure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { findOverdueReleaseFlags } from "./expiry-report";
 

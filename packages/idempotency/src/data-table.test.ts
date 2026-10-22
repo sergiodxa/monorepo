@@ -13,7 +13,7 @@ import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure, unwrap } from "@sdxc/result";
 import { Database, sql } from "remix/data-table";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	DataTableStore,

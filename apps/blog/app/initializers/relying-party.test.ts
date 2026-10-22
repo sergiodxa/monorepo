@@ -20,7 +20,7 @@ import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import type { AuthProfile } from "~/app/initializers/relying-party";
 

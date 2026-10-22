@@ -6,7 +6,7 @@
  */
 
 import { generateUUID } from "@sdxc/uuid/v4";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Base32 } from "./base32.js";
 

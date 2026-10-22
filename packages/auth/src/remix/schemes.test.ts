@@ -18,7 +18,7 @@ import { Auth, auth, requireAuth } from "remix/middleware/auth";
 import { session } from "remix/middleware/session";
 import { createRouter, RequestContext } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test } from "vite-plus/test";
 
 import { AccessToken } from "../access-token.js";
 import { AuthError } from "../auth-error.js";

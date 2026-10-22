@@ -321,8 +321,9 @@ The wall-clock math the operations above are built on, for code that reads or wr
 Bucket rows on the reader's day key, then lay the window out as weeks with localized headers.
 
 ```typescript
-import { formatWeekday, groupByWeek, lastNDays, toDayKey } from "@sdxc/dates";
 import type { Weekday } from "@sdxc/dates";
+
+import { formatWeekday, groupByWeek, lastNDays, toDayKey } from "@sdxc/dates";
 
 function activityGrid(events: { at: Date }[], locale: string, timeZone: string) {
 	let counts = new Map<string, number>();
@@ -412,6 +413,8 @@ function readStartsAt(form: FormData, cookieZone: string, locale: string) {
 Offer presets over completed days and hold a hand-picked range to the same limits. Data that rolls up nightly is complete through yesterday.
 
 ```typescript
+import type { DayRange } from "@sdxc/dates";
+
 import {
 	addMonths,
 	formatDate,
@@ -426,7 +429,6 @@ import {
 	validateDayRange,
 	yearToDateRange,
 } from "@sdxc/dates";
-import type { DayRange } from "@sdxc/dates";
 import { isSuccess, success } from "@sdxc/result";
 
 let timeZone = "UTC";

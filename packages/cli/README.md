@@ -235,9 +235,11 @@ Runs a command without a terminal and answers `{ code, stdout, stderr, exec }`. 
 Middleware runs before each handler and publishes what commands share, typed through a context key.
 
 ```typescript
-import { argument, command, commands, createCLI, failure, success } from "@sdxc/cli";
-import type { CommandMiddleware } from "@sdxc/cli";
 import { DatabaseSync } from "node:sqlite";
+
+import type { CommandMiddleware } from "@sdxc/cli";
+
+import { argument, command, commands, createCLI, failure, success } from "@sdxc/cli";
 import * as s from "remix/data-schema";
 import { createContextKey } from "remix/router";
 

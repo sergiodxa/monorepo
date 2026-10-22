@@ -7,7 +7,7 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ToolContext } from "../plugin.js";
 import type { Value } from "../values.js";

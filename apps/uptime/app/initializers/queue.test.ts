@@ -15,7 +15,7 @@ import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 /** The envelope a job lands on the queue as, trace members included. */
 interface Envelope {

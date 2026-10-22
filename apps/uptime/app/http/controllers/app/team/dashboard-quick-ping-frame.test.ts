@@ -31,7 +31,7 @@ import { renderWith } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { GeoFetchDO } from "~/app/test/geo-fetch";

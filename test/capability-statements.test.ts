@@ -10,7 +10,7 @@
 import { globSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { CAPABILITY_BYPASS_REASON, findBareCapabilityStatements } from "./capability-statements";
 

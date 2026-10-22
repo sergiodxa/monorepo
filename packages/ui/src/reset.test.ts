@@ -10,7 +10,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 const RESET = readFileSync(new URL("./reset.css", import.meta.url), "utf8");
 

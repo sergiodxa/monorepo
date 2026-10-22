@@ -7,7 +7,7 @@
  */
 import { isFailure, isSuccess } from "@sdxc/result";
 import { StructuredFieldStringifyError } from "@sdxc/structured-fields";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { parse, stringify } from "./permissions-policy.js";
 

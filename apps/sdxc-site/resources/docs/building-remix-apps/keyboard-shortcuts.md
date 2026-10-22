@@ -58,8 +58,8 @@ the request, so the controller answers it once and the first paint already shows
 glyphs:
 
 ```tsx {% title="app/http/controllers/inbox.tsx" %}
-import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { parse } from "@sdxc/user-agent";
+import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { createAction } from "remix/router";
 
 import { Messages } from "~/app/models/messages";

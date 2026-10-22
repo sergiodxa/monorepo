@@ -16,7 +16,7 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 import * as Webhooks from "@sdxc/webhooks";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { AuditActor } from "~/app/models/tenant/audit-events";
 

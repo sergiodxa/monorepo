@@ -328,9 +328,9 @@ export function string(): Schema<unknown, string>;
 #### `@sdxc/openapi` — `"."`
 
 ```ts
-import type { Result } from "@sdxc/result";
 import type { JSONSchema, Schema } from "@sdxc/json-schema";
 import type { ProblemCatalog, ProblemEntries } from "@sdxc/problem";
+import type { Result } from "@sdxc/result";
 import type { Route } from "remix/fetch-router";
 import type { MatchParams } from "remix/route-pattern/match";
 

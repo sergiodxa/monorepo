@@ -253,8 +253,8 @@ Publish the provider with the middleware, then branch on the two codes a visitor
 ```typescript
 import { parseEmailAddress } from "@sdxc/email-address";
 import { IP } from "@sdxc/ip";
-import newsletter from "@sdxc/newsletter/middleware";
 import { ButtondownNewsletter } from "@sdxc/newsletter/buttondown";
+import newsletter from "@sdxc/newsletter/middleware";
 import { isFailure } from "@sdxc/result";
 import { createRouter } from "remix/router";
 
@@ -295,8 +295,8 @@ For a list that varies per tenant, pass a factory instead: `newsletter({ provide
 Install a `MemoryNewsletter` in place of the real provider, arm a failure, and assert on what it recorded.
 
 ```typescript
-import newsletter from "@sdxc/newsletter/middleware";
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
+import newsletter from "@sdxc/newsletter/middleware";
 import { createRouter } from "remix/router";
 import { expect, test } from "vitest";
 

@@ -6,7 +6,7 @@
  */
 
 import { invoke } from "sdxc/cli/test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { cli } from "~/app/initializers/cli";
 

@@ -12,7 +12,7 @@
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { NotifyMessage } from "~/app/services/notify-queue";
 

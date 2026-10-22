@@ -14,7 +14,7 @@ import { join } from "node:path";
 import type { Result } from "@sdxc/result";
 
 import { isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { ConfigPermissionEntry, Grants } from "./permissions.js";
 

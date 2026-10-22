@@ -11,7 +11,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Grants } from "./permissions.js";
 import type { SuiteResult } from "./workers.js";

@@ -9,7 +9,7 @@
  */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { SearchTabs } from "~/resources/components/search-tabs";
 

@@ -12,7 +12,7 @@ import type { Result } from "@sdxc/result";
 import { Markdown } from "@sdxc/markdown";
 import { toHTML } from "@sdxc/markdown/html";
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { createMathVisitor, math, renderMath } from "./markdown.js";
 

@@ -7,7 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { EvolutionMethod } from "~/game/data/evolution";
 import { GrowthRate } from "~/game/data/growth-rate";

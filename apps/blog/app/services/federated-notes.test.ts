@@ -8,7 +8,7 @@
  */
 
 import { PUBLIC } from "@sdxc/activitypub";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { ACTOR_ID, FOLLOWERS_ID } from "~/config/activitypub";
 

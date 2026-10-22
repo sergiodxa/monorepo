@@ -135,6 +135,7 @@ let edit = moveImports("page.tsx", source, {
 
 ```tsx {% title="page.tsx" %}
 import { Button } from "@acme/ui";
+
 import { Dialog } from "~/components/dialog";
 ```
 

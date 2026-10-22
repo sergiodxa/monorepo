@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { cacheHops, cacheStatus } from "./cache-status.js";
 import { CACHE_STATUS_HEADER } from "./platform.js";

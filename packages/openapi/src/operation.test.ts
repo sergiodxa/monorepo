@@ -8,7 +8,7 @@
  */
 import * as s from "@sdxc/json-schema";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { defineOperation } from "./operation.js";
 import {

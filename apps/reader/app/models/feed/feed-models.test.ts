@@ -12,7 +12,7 @@ import { NotFound } from "@sdxc/data-model";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { FeedModels } from "~/app/models/feed";
 

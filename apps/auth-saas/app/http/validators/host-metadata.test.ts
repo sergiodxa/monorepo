@@ -11,7 +11,7 @@
  */
 import { isFailure, isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { HostMetadataSchema } from "~/app/http/validators/host-metadata";
 

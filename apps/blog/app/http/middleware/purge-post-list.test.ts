@@ -11,7 +11,7 @@ import { createRecordingCache } from "@sdxc/workers-cache";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { createRouter } from "remix/router";
 import { del, get, patch, post, put } from "remix/routes";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import purgePostList from "./purge-post-list";
 

@@ -26,7 +26,7 @@ import { decodeCursor } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { FeedDO } from "~/app/models/feed-store";
 import type { UserStore } from "~/app/models/user-store";

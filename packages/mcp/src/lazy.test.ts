@@ -11,7 +11,7 @@
 
 import * as s from "@sdxc/json-schema";
 import { createContextKey, RequestContext } from "remix/router";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import type { ToolMiddleware } from "./tools.js";
 

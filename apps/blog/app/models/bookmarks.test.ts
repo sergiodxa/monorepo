@@ -9,7 +9,7 @@
 
 import { createD1Database } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { openDatabase } from "~/app/initializers/database";
 import {

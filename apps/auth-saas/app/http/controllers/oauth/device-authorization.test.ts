@@ -11,7 +11,7 @@ import type { Middleware } from "remix/router";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, expect, test } from "vite-plus/test";
 
 import {
 	TENANT_ID_HEADER,

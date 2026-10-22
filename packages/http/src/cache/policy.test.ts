@@ -10,7 +10,7 @@
  */
 
 import { CacheControl } from "remix/headers";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { policy } from "./policy.js";
 

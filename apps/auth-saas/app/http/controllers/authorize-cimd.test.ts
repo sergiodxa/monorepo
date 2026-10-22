@@ -12,7 +12,7 @@ import { Base64Url, randomToken, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { Harness } from "~/app/test/harness/hosted";
 

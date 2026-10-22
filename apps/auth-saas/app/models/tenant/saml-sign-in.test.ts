@@ -16,7 +16,7 @@ import { isFailure } from "@sdxc/result";
 import { Certificate } from "@sdxc/saml";
 import { isUUID } from "@sdxc/uuid";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { beforeAll, beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { ResponseFixture } from "~/app/test/saml-fixtures";
 

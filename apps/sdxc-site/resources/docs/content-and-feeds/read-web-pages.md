@@ -114,8 +114,8 @@ import { isFailure } from "@sdxc/result";
 import { fetchRobots } from "@sdxc/robots/fetch";
 
 import jobs from "~/app/jobs";
-import { excerptOf } from "~/app/services/excerpt";
 import { Links } from "~/app/models/links";
+import { excerptOf } from "~/app/services/excerpt";
 
 const USER_AGENT = "Shelf/1.0 (+https://shelf.example/about/bot)";
 

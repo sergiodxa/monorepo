@@ -8,7 +8,7 @@
  */
 
 import { isFailure } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createBaseSet, createConnectionSet } from "./bases.js";
 

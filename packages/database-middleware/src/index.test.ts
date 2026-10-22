@@ -15,7 +15,7 @@ import type { Middleware } from "remix/router";
 import { sql } from "remix/data-table";
 import { createSqliteDatabase } from "remix/data-table/sqlite";
 import { createRouter } from "remix/router";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { Database, database } from "./index.js";
 

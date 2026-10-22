@@ -11,7 +11,7 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { sf } from "./schema.js";
 

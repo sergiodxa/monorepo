@@ -10,7 +10,7 @@
 /* @jsxImportSource remix/component */
 
 import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { Fence } from "./fence.js";
 

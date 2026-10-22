@@ -14,7 +14,7 @@ import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { RegisterClientInput } from "~/app/models/tenant/clients";
 

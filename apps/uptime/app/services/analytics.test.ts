@@ -15,7 +15,16 @@ import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloud
 import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	test,
+	vi,
+} from "vite-plus/test";
 
 /**
  * The dashboard cache and the ping dataset. Both live at module scope because the module

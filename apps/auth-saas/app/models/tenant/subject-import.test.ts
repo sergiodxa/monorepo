@@ -17,7 +17,7 @@ import { password } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vite-plus/test";
 
 import type { ImportSubjectRow } from "~/app/models/tenant/subject-import";
 

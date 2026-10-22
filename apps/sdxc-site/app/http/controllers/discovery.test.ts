@@ -9,7 +9,7 @@
  */
 
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "sdxc/mcp";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";

@@ -235,9 +235,9 @@ import { getServiceContainer } from "@pkg/service-container";
 import { Database } from "remix/data-table";
 import { createController } from "remix/router";
 
-import { alertEvents, monitors } from "~/database/schema";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiError } from "~/app/services/api-response";
+import { alertEvents, monitors } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** Query parameter names and page-size limits, shared by parsing and `Link` generation. */

@@ -10,7 +10,7 @@ import { readFile, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { afterAll, describe, expect, test } from "vitest";
+import { afterAll, describe, expect, test } from "vite-plus/test";
 
 import type { TrainerDefinition } from "~/content/trainers";
 

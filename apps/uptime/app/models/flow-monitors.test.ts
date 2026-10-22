@@ -10,7 +10,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import { createMemoryFileStorage } from "remix/file-storage/memory";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { FlowCheckResult } from "~/app/services/flow-check";
 

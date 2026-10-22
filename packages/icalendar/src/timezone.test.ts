@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 
 import { instantFromParts } from "@sdxc/dates/zone";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { TimeZoneError, vtimezone } from "./timezone.js";
 

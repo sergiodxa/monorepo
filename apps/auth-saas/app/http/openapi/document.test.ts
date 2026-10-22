@@ -10,7 +10,7 @@ import { parse, stringify } from "@sdxc/openapi";
 import { openapiHandler } from "@sdxc/openapi/router";
 import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { buildManagementDocument } from "~/app/http/openapi/document";
 import { MANAGEMENT_SCOPES } from "~/app/services/management-scopes";

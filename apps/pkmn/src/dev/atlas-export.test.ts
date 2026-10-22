@@ -12,7 +12,7 @@ import { readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { isFailure, isSuccess } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	AtlasExportError,

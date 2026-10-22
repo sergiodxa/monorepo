@@ -9,7 +9,7 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { HoneypotOutcome } from "./middleware.js";
 

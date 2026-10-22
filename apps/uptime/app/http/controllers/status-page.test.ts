@@ -29,7 +29,7 @@ import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { SEO } from "~/app/initializers/seo";
 import { createTestDatabase } from "~/app/test/db";

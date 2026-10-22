@@ -18,7 +18,7 @@ import {
 	createRouter,
 } from "remix/router";
 import { form, get as getRoute, route } from "remix/routes";
-import { describe, expect, expectTypeOf, test } from "vitest";
+import { describe, expect, expectTypeOf, test } from "vite-plus/test";
 
 import { lazy } from "./lazy.js";
 

@@ -4,7 +4,7 @@
  * file, so the cold import of the chain and its document stays outside each test's time limit.
  */
 
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import { createWebRouter } from "~/app/initializers/router";
 

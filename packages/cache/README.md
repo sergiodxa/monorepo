@@ -168,6 +168,7 @@ Type a dependency as `Cache` so production passes the KV adapter and a test pass
 
 ```typescript
 import type { Cache } from "@sdxc/cache";
+
 import { MemoryCache } from "@sdxc/cache/memory";
 import { isFailure } from "@sdxc/result";
 import { expect, test, vi } from "vitest";
@@ -262,6 +263,7 @@ A caller that prefers exceptions rethrows the original error, keeping its own er
 
 ```typescript
 import type { Cache } from "@sdxc/cache";
+
 import { isFailure } from "@sdxc/result";
 
 async function cachedReport(cache: Cache, month: string) {
@@ -280,6 +282,7 @@ conformance suite against it in a test file.
 
 ```typescript
 import type { Cache } from "@sdxc/cache";
+
 import { CacheError } from "@sdxc/cache";
 import { conformance } from "@sdxc/cache/conformance";
 import { failure } from "@sdxc/result";

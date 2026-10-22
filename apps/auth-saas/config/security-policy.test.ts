@@ -13,7 +13,7 @@ import { isFailure } from "@sdxc/result";
 import { parse } from "@sdxc/security-headers/csp";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import {
 	MANAGEMENT_SECURITY_POLICY,

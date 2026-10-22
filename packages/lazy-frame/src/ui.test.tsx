@@ -14,7 +14,7 @@ import type { RenderResult } from "remix/component/test";
 
 import { renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, test, vi } from "vite-plus/test";
 
 import { LazyFrame } from "./ui.js";
 

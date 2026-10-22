@@ -48,13 +48,18 @@
 		"happy-dom": "^20.14.5",
 		"msw": "^2.15.0",
 		"oxc-parser": "^0.154.0",
+		"oxfmt": "0.73.0",
+		"oxlint": "1.88.0",
+		"oxlint-tsgolint": "7.0.2004",
 		"typescript": "^6.0.3",
-		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
-		"vite-plus": "0.3.3",
-		"vitest": "4.1.11"
+		"vite": "catalog:",
+		"vite-plus": "catalog:",
+		"vitest": "catalog:"
 	},
 	"overrides": {
-		"miniflare": "5.20260926.0-alpha"
+		"miniflare": "5.20260926.0-alpha",
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	},
 	"devEngines": {
 		"packageManager": [
@@ -67,5 +72,10 @@
 				"name": "npm"
 			}
 		]
+	},
+	"catalog": {
+		"vite": "npm:@voidzero-dev/vite-plus-core@1.3.0",
+		"vitest": "5.0.5",
+		"vite-plus": "1.3.0"
 	}
 }

@@ -9,7 +9,7 @@
 
 import { failure, success, unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vite-plus/test";
 
 import { createLanguage } from "./language.js";
 import { defineOperator } from "./operator.js";

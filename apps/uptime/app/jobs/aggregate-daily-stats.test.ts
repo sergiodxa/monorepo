@@ -19,7 +19,7 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vite-plus/test";
 
 import type { HttpDailyAggregate } from "~/app/services/analytics";
 

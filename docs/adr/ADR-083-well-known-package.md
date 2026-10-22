@@ -523,9 +523,9 @@ export function respond<Document>(
 #### `"./middleware"`
 
 ```ts
-import type { Middleware, RequestContext } from "remix/router";
 import type { WellKnownFormat } from "@sdxc/well-known";
 import type { RespondOptions } from "@sdxc/well-known/response";
+import type { Middleware, RequestContext } from "remix/router";
 
 /** What one name answers with; `null` falls through to the next middleware, usually a 404. */
 export type WellKnownEntry = (ctx: RequestContext) => Response | null | Promise<Response | null>;
@@ -553,8 +553,8 @@ blog's `/.well-known/avatar` stays an ordinary route beside it.
 **security.txt on the auth servers**, the first adopters, through the middleware:
 
 ```ts
-import { securityTxt } from "@sdxc/well-known/security-txt";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { securityTxt } from "@sdxc/well-known/security-txt";
 
 import { SECURITY_TXT } from "~/app/config";
 

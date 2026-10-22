@@ -8,7 +8,7 @@
  */
 import { JWK } from "@sdxc/jwt";
 import { isFailure, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Jwk, JwkSet } from "./jwks.js";
 

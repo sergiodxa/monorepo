@@ -9,7 +9,7 @@
 
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from "vite-plus/test";
 
 import type { Element } from "./tree.js";
 
