@@ -31,12 +31,15 @@ const LEADING_FALLBACKS: Record<NamedLeadingValue, number> = {
  * @example css({ lineHeight: "2rem" })
  */
 export function leading<Node extends Element = Element>(value: LeadingValue = "normal") {
+	let lineHeight;
+	if (typeof value === "number") lineHeight = value;
+	else if (value in LEADING_FALLBACKS) {
+		lineHeight = varUtility(
+			`ui-leading-${value}`,
+			`${LEADING_FALLBACKS[value as NamedLeadingValue]}`,
+		);
+	} else lineHeight = value;
 	return utility<Node>(() => ({
-		lineHeight:
-			typeof value === "number"
-				? value
-				: value in LEADING_FALLBACKS
-					? varUtility(`ui-leading-${value}`, `${LEADING_FALLBACKS[value as NamedLeadingValue]}`)
-					: value,
+		lineHeight,
 	}));
 }

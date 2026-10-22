@@ -23,8 +23,11 @@ import { color } from "../internal/tokens.js";
  * @example css({ stroke: "none" })
  */
 export function stroke<Node extends Element = Element>(value?: ColorValue | (string & {})) {
+	let strokeValue;
+	if (value === "none") strokeValue = "none";
+	else if (value) strokeValue = color(value, "fg");
+	else strokeValue = varUtility("ui-fg", "CanvasText");
 	return utility<Node>(() => ({
-		stroke:
-			value === "none" ? "none" : value ? color(value, "fg") : varUtility("ui-fg", "CanvasText"),
+		stroke: strokeValue,
 	}));
 }
