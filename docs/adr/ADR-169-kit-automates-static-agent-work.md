@@ -13,8 +13,8 @@ being moved into code in three places:
 
 - **`@sdxc/kit`** — `make`, `scaffold`, `destroy`, `routes`, `doctor`, `upgrade`, `deploy` for
   any project on the `@sdxc/*` packages.
-- **Repo command line** — today ad-hoc `scripts/` (`release/`, `doctor-apps.ts`, …) invoked from
-  root `package.json` and CI; this ADR moves them onto `@sdxc/cli` under `cli/` (not under
+- **Repo command line** — ad-hoc `scripts/` (release and related) invoked from root
+  `package.json` and CI; this ADR moves them onto `@sdxc/cli` under `cli/` (not under
   `bootstrap/`), reached as `bun run cli` and, once kit learns a configurable entry, `sdxc run`.
 - **GitHub Actions** — `deploy-apps.yml`, `deploy-sdxc.yml`, `release.yml`, and the doctor /
   commit-check jobs in `ci.yml`, so a person or agent triggers a workflow that calls that CLI
@@ -36,9 +36,9 @@ fixed belongs in one of those three surfaces — not in another paragraph of `AG
   `--skip migrate` when the app has no D1). An agent that deploys by shelling `cf deploy` by
   hand burns tokens and can invert the order.
 - The daily release (`scripts/release/`, `release.yml`) already decides which packages publish
-  from commits (ADR-007). CI runs `bun run doctor` via `scripts/doctor-apps.ts` and checks
-  Conventional Commit bodies with `scripts/release/check-commits.ts`. Those are the same
-  pattern as kit: encode the rule once, run it everywhere.
+  from commits (ADR-007). CI runs `bun run doctor` via the root CLI and checks Conventional
+  Commit bodies with `scripts/release/check-commits.ts`. Those are the same pattern as kit:
+  encode the rule once, run it everywhere.
 - `sdxc doctor` (ADR-160) is deliberately read-only. Each finding already names a `fix`, often
   another `sdxc` command or a one-line file edit. Agents copy those strings and apply them by
   hand — the gap this ADR's kit backlog closes.
