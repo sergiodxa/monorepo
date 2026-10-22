@@ -13,7 +13,7 @@ import type { Handle } from "remix/component";
 import { intl } from "@sdxc/i18n/ui";
 import { PlayIcon } from "@sdxc/icons";
 import { m } from "@sdxc/u/size";
-import { Button } from "@sdxc/ui";
+import { Button, Toast } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
 import * as s from "remix/data-schema";
 
@@ -126,7 +126,7 @@ export function transitionToast(
 ): AppToast | undefined {
 	if (current === null || current === previous) return undefined;
 
-	let color;
+	let color: Toast.Color;
 	if (current === "up") color = "success";
 	else if (current === "degraded") color = "warning";
 	else color = "danger";
