@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { Token } from "./lexer.js";
 import type { Limits } from "./symbols.js";
 import type { MathNode } from "./tree.js";
@@ -320,10 +322,11 @@ class Parser {
 			throw this.error(`Unknown delimiter ${next.value}`, next);
 		}
 
-		let value;
-		if (next.kind === "command") value = DELIMITER_COMMANDS[next.value];
-		else if (DELIMITER_CHARACTERS.has(next.value) || next.value === "/") value = next.value;
-		else value = undefined;
+		let value = iife(() => {
+			if (next.kind === "command") return DELIMITER_COMMANDS[next.value];
+			if (DELIMITER_CHARACTERS.has(next.value) || next.value === "/") return next.value;
+			return undefined;
+		});
 
 		if (value === undefined) {
 			if (next.kind === "end") throw this.error("Expected a delimiter", next);
