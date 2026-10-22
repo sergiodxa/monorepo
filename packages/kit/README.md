@@ -104,7 +104,7 @@ Remove a file sdxc make wrote, its test, its pairing .spec, its mapping and its 
 
 #### `sdxc doctor`
 
-Lint release drift, secrets, migrations, app layout and project checks
+Lint release drift, secrets, migrations, app layout, clean-code metrics and project checks
 
 | Flag             | Does                                  |
 | ---------------- | ------------------------------------- |
@@ -439,6 +439,15 @@ Count lines of code per kind of code the app layout names, and the test ratio
 | Flag     | Does                     |
 | -------- | ------------------------ |
 | `--json` | Print the counts as JSON |
+
+#### `sdxc diagram`
+
+Draw the project's layer architecture as Mermaid, or as SVG through @sdxc/diagram
+
+| Flag           | Does                                                                               |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `--json`       | Print the import graph as JSON instead of Mermaid                                  |
+| `--svg <path>` | Write an SVG drawing to this path (relative to the project root) via @sdxc/diagram |
 
 #### `sdxc ui list`
 

@@ -181,7 +181,8 @@ export const SDXC_COMMANDS = commands({
 		],
 	}),
 	doctor: command({
-		description: "Lint release drift, secrets, migrations, app layout and project checks",
+		description:
+			"Lint release drift, secrets, migrations, app layout, clean-code metrics and project checks",
 		flags: {
 			json: flag.boolean("json", { description: "Print the report as JSON for an agent" }),
 			only: flag
@@ -699,6 +700,21 @@ export const SDXC_COMMANDS = commands({
 		description: "Count lines of code per kind of code the app layout names, and the test ratio",
 		flags: { json: flag.boolean("json", { description: "Print the counts as JSON" }) },
 		examples: ["stats", "stats --json"],
+	}),
+	diagram: command({
+		description:
+			"Draw the project's layer architecture as Mermaid, or as SVG through @sdxc/diagram",
+		flags: {
+			json: flag.boolean("json", {
+				description: "Print the import graph as JSON instead of Mermaid",
+			}),
+			svg: flag.string("svg", {
+				valueName: "path",
+				description:
+					"Write an SVG drawing to this path (relative to the project root) via @sdxc/diagram",
+			}),
+		},
+		examples: ["diagram", "diagram --json", "diagram --svg architecture.svg"],
 	}),
 	ui: commands({
 		description: "Copy @sdxc/ui components into the project and keep imports on the copies",

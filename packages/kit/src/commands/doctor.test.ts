@@ -155,18 +155,22 @@ describe("sdxc doctor", () => {
 		expect(result.code).toBe(0);
 		expect(result.stdout).toBe(
 			[
-				"pass  pins        Every @sdxc package is at release 2026.10.1; sdxc upgrade moves them to 2026.10.14",
-				"pass  installed   3 packages are installed at the versions package.json pins",
-				"pass  remix       remix 3.0.0 is the peer release 2026.10.1 declares",
-				"pass  env         .env.example lists every secret cloudflare.config.ts declares",
-				"pass  typegen     .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
-				"skip  migrations  The project has no migrations",
-				"skip  layout      No app/ folder in the project",
-				"skip  routes      No routes/ folder in the project",
-				"skip  models      No app/models/index.ts in the project",
-				"skip  emails      No app/emails/index.ts in the project",
-				"skip  jsdoc       No app source to read for comments",
-				"skip  ui          No @sdxc/ui component is copied",
+				"pass  pins          Every @sdxc package is at release 2026.10.1; sdxc upgrade moves them to 2026.10.14",
+				"pass  installed     3 packages are installed at the versions package.json pins",
+				"pass  remix         remix 3.0.0 is the peer release 2026.10.1 declares",
+				"pass  env           .env.example lists every secret cloudflare.config.ts declares",
+				"pass  typegen       .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  migrations    The project has no migrations",
+				"skip  layout        No app/ folder in the project",
+				"skip  routes        No routes/ folder in the project",
+				"skip  models        No app/models/index.ts in the project",
+				"skip  emails        No app/emails/index.ts in the project",
+				"skip  jsdoc         No app source to read for comments",
+				"skip  complexity    No app source to measure complexity",
+				"skip  module-size   No app source to measure module size",
+				"skip  dependencies  No app source to check dependencies",
+				"skip  crap          No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor",
+				"skip  ui            No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
 		);
@@ -180,18 +184,22 @@ describe("sdxc doctor", () => {
 		expect(result.code).toBe(1);
 		expect(result.stdout).toBe(
 			[
-				"fail  pins        1 @sdxc package is behind release 2026.10.14: @sdxc/jwt 2026.9.1 -> 2026.10.1. Fix: sdxc upgrade 2026.10.14",
-				"fail  installed   node_modules differs from package.json: @sdxc/cli 2026.9.4 is installed, package.json pins 2026.10.14; remix is not installed. Fix: bun install",
-				"fail  remix       remix 3.0.0 differs from the 3.1.0 release 2026.10.14 declares: remix 3.0.0 -> 3.1.0. Fix: sdxc upgrade 2026.10.14",
-				"fail  env         .env.example leaves out a secret cloudflare.config.ts declares: API_KEY is declared with bindings.secret(). Fix: printf '\\nAPI_KEY=\\n' >> .env.example",
-				"pass  typegen     .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
-				"skip  migrations  The project has no migrations",
-				"skip  layout      No app/ folder in the project",
-				"skip  routes      No routes/ folder in the project",
-				"skip  models      No app/models/index.ts in the project",
-				"skip  emails      No app/emails/index.ts in the project",
-				"skip  jsdoc       No app source to read for comments",
-				"skip  ui          No @sdxc/ui component is copied",
+				"fail  pins          1 @sdxc package is behind release 2026.10.14: @sdxc/jwt 2026.9.1 -> 2026.10.1. Fix: sdxc upgrade 2026.10.14",
+				"fail  installed     node_modules differs from package.json: @sdxc/cli 2026.9.4 is installed, package.json pins 2026.10.14; remix is not installed. Fix: bun install",
+				"fail  remix         remix 3.0.0 differs from the 3.1.0 release 2026.10.14 declares: remix 3.0.0 -> 3.1.0. Fix: sdxc upgrade 2026.10.14",
+				"fail  env           .env.example leaves out a secret cloudflare.config.ts declares: API_KEY is declared with bindings.secret(). Fix: printf '\\nAPI_KEY=\\n' >> .env.example",
+				"pass  typegen       .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  migrations    The project has no migrations",
+				"skip  layout        No app/ folder in the project",
+				"skip  routes        No routes/ folder in the project",
+				"skip  models        No app/models/index.ts in the project",
+				"skip  emails        No app/emails/index.ts in the project",
+				"skip  jsdoc         No app source to read for comments",
+				"skip  complexity    No app source to measure complexity",
+				"skip  module-size   No app source to measure module size",
+				"skip  dependencies  No app source to check dependencies",
+				"skip  crap          No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor",
+				"skip  ui            No @sdxc/ui component is copied",
 				"",
 			].join("\n"),
 		);
@@ -208,7 +216,7 @@ describe("sdxc doctor", () => {
 
 		expect(result.code).toBe(1);
 		expect(result.stdout).toContain(
-			"fail  pins        1 @sdxc package is behind release 2026.10.1: @sdxc/csv 2026.9.1 -> 2026.9.20 (sdxc upgrade moves it to 2026.9.20). Fix: sdxc upgrade 2026.10.1\n",
+			"fail  pins          1 @sdxc package is behind release 2026.10.1: @sdxc/csv 2026.9.1 -> 2026.9.20 (sdxc upgrade moves it to 2026.9.20). Fix: sdxc upgrade 2026.10.1\n",
 		);
 	});
 
@@ -239,6 +247,10 @@ describe("sdxc doctor", () => {
 			["models", "skip"],
 			["emails", "skip"],
 			["jsdoc", "skip"],
+			["complexity", "skip"],
+			["module-size", "skip"],
+			["dependencies", "skip"],
+			["crap", "skip"],
 			["ui", "skip"],
 		]);
 		expect(report.checks[0]).toMatchObject({
@@ -274,6 +286,10 @@ describe("sdxc doctor", () => {
 			["models", "skip"],
 			["emails", "skip"],
 			["jsdoc", "skip"],
+			["complexity", "skip"],
+			["module-size", "skip"],
+			["dependencies", "skip"],
+			["crap", "skip"],
 			["ui", "skip"],
 		]);
 		expect(report.checks[0]?.message).toMatch(/^Could not reach the npm registry/);
@@ -331,18 +347,22 @@ describe("sdxc doctor with project checks", () => {
 		expect(result.code).toBe(0);
 		expect(result.stdout).toBe(
 			[
-				"pass  env          .env.example lists every secret cloudflare.config.ts declares",
-				"pass  typegen      .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
-				"skip  migrations   The project has no migrations",
-				"skip  layout       No app/ folder in the project",
-				"skip  routes       No routes/ folder in the project",
-				"skip  models       No app/models/index.ts in the project",
-				"skip  emails       No app/emails/index.ts in the project",
-				"skip  jsdoc        No app source to read for comments",
-				"skip  ui           No @sdxc/ui component is copied",
-				"warn  has-license  LICENSE: LICENSE is missing",
-				"pass  config       checks live in .config/sdxc/checks; app",
-				"pass  readme       README.md starts with # App",
+				"pass  env           .env.example lists every secret cloudflare.config.ts declares",
+				"pass  typegen       .cloudflare/types/index.d.ts is newer than cloudflare.config.ts and the env files",
+				"skip  migrations    The project has no migrations",
+				"skip  layout        No app/ folder in the project",
+				"skip  routes        No routes/ folder in the project",
+				"skip  models        No app/models/index.ts in the project",
+				"skip  emails        No app/emails/index.ts in the project",
+				"skip  jsdoc         No app source to read for comments",
+				"skip  complexity    No app source to measure complexity",
+				"skip  module-size   No app source to measure module size",
+				"skip  dependencies  No app source to check dependencies",
+				"skip  crap          No coverage at coverage/coverage-final.json; run tests with coverage then re-run doctor",
+				"skip  ui            No @sdxc/ui component is copied",
+				"warn  has-license   LICENSE: LICENSE is missing",
+				"pass  config        checks live in .config/sdxc/checks; app",
+				"pass  readme        README.md starts with # App",
 				"",
 			].join("\n"),
 		);
@@ -404,7 +424,7 @@ describe("sdxc doctor with project checks", () => {
 
 		let result = await doctorWithChecks(root, [
 			"--skip",
-			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,jsdoc,ui",
+			"pins,installed,remix,env,typegen,migrations,layout,routes,models,emails,jsdoc,complexity,module-size,dependencies,crap,ui",
 		]);
 
 		expect(result.code).toBe(1);
@@ -445,7 +465,7 @@ export default defineCheck({
 
 		expect(result.code).toBe(1);
 		expect(result.stderr).toContain(
-			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, ui, readme",
+			"No check is named nope; sdxc doctor runs pins, installed, remix, env, typegen, migrations, layout, routes, models, emails, jsdoc, complexity, module-size, dependencies, crap, ui, readme",
 		);
 	});
 });

@@ -63,6 +63,16 @@ const EXPECTED = `{
 			// Migration errors \`sdxc doctor\` steps past, each a file that already ran and the column its error names
 			"accept": [],
 		},
+		"complexity": {
+			// Maximum cyclomatic complexity per function; the complexity check warns above it
+			"max": 4,
+			// Maximum code lines per module; the module-size check warns above it
+			"moduleLines": 200,
+			// Maximum CRAP score per function; the crap check warns above it
+			"crap": 12,
+			// Istanbul coverage-final.json the crap check reads, relative to the project root
+			"coverage": "coverage/coverage-final.json",
+		},
 	},
 	"run": {
 		// Module \`sdxc run\` starts, relative to the project root; apps keep the default

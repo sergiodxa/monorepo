@@ -114,6 +114,10 @@ export function createSDXC(
 		lazy(() => import("./commands/stats.js")),
 	);
 	cli.map(
+		SDXC_COMMANDS.diagram,
+		lazy(() => import("./commands/diagram.js")),
+	);
+	cli.map(
 		SDXC_COMMANDS.make,
 		lazy(() => import("./commands/make.js").then((module) => ({ default: module.group }))),
 	);
