@@ -126,7 +126,10 @@ export function variables(
 			return { type: "text", value: String(value), position: node.position };
 		}
 
-		let kind = Array.isArray(value) ? "a list" : value === null ? "null" : "an object";
+		let kind;
+		if (Array.isArray(value)) kind = "a list";
+		else if (value === null) kind = "null";
+		else kind = "an object";
 		throw new Error(
 			`$${node.name} holds ${kind}, and only a string, number or boolean can stand in text`,
 		);

@@ -135,7 +135,10 @@ function writeList(node: Markdown.List): string {
 
 /** One item, its continuation lines indented to sit under the text the marker opened. */
 function writeListItem(node: Markdown.ListItem, marker: string, separator: string): string {
-	let box = node.checked === undefined ? "" : node.checked ? "[x] " : "[ ] ";
+	let box;
+	if (node.checked === undefined) box = "";
+	else if (node.checked) box = "[x] ";
+	else box = "[ ] ";
 	let body = `${box}${above(node.attributes, stringifyBlocks(node.children, separator))}`;
 	let indent = " ".repeat(marker.length);
 

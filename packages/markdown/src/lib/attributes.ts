@@ -346,7 +346,10 @@ function readExpression(text: string, start: number, locate: Locate): ValueRead 
 
 	let word = KEYWORD.exec(text.slice(start))?.[0];
 	if (word !== undefined) {
-		let value = word === "true" ? true : word === "false" ? false : null;
+		let value;
+		if (word === "true") value = true;
+		else if (word === "false") value = false;
+		else value = null;
 		return { value, end: start + word.length };
 	}
 
