@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@sdxc/font": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/png": "workspace:*"
 	}
 }
