@@ -203,7 +203,7 @@ export default defineConfig({
 				resolve: { tsconfigPaths: true },
 				test: {
 					name: "root",
-					include: ["test/**/*.test.ts?(x)", "scripts/**/*.test.ts"],
+					include: ["test/**/*.test.ts?(x)", "scripts/**/*.test.ts", "cli/**/*.test.ts"],
 					pool: "threads",
 					testTimeout: 20_000,
 				},

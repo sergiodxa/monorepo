@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-22
+**Accepted** - 2026-10-22
 
 ## Background
 
@@ -198,8 +198,8 @@ app. Put the monorepo CLI under `cli/` instead.
 
 #### Configurable `sdxc run` entry (kit)
 
-Today `sdxc run` hardcodes `bootstrap/cli.ts` (`CLI_ENTRY` in kit). That default stays for
-apps. Add a project config key so a non-app project can point elsewhere:
+`sdxc run` used to hardcode `bootstrap/cli.ts`. That default stays for apps via `run.entry`.
+A non-app project points elsewhere:
 
 ```jsonc
 // .config/sdxc.jsonc at the monorepo root
@@ -403,8 +403,11 @@ overrides / deploy-list wiring; reinventing create drifts from `@sdxc/kit` on ev
 
 ## Current Progress
 
-- [x] Criterion recorded as Proposed (kit, scripts and workflows as one family)
-- [ ] Accept or revise the criterion with Sergio
+- [x] Criterion accepted
+- [x] Kit `run.entry` in `.config/sdxc.jsonc` (default `bootstrap/cli.ts`); schema via `sdxc:generate`
+- [x] Monorepo `cli/index.ts` + `cli/commands/doctor`, `"cli"` / `"doctor"` scripts, root
+      `.config/sdxc.jsonc` with `run.entry: "cli/index.ts"`
+- [ ] Migrate `release` / `release bootstrap` into `cli/commands/`
 - [ ] Implement `sdxc fix` for command-shaped repairs (kit item 1)
 - [ ] Implement `sdxc fix env` (kit item 2)
 - [ ] Implement model/email registration repairs (kit item 3)
@@ -414,11 +417,6 @@ overrides / deploy-list wiring; reinventing create drifts from `@sdxc/kit` on ev
       defer `--provider auth-saas` until that issuer is ready for relying parties (kit item 6)
 - [ ] After `setup auth`, add the next catalog row that still costs agent turns (`billing` /
       `flags` are the likely pair) (kit item 7)
-- [ ] Add kit `run.entry` in `.config/sdxc.jsonc` (default `bootstrap/cli.ts`); schema + tests
-- [ ] Add monorepo `cli/index.ts` + `cli/commands/`, `"cli": "bun ./cli/index.ts"`, and
-      root `.config/sdxc.jsonc` with `run.entry: "cli/index.ts"`
-- [ ] Migrate `release` / `doctor` / `release bootstrap` into `cli/commands/`; improve
-      `@sdxc/cli` if needed
 - [ ] Add CLI `package create` (create-package skill → command)
 - [ ] Add CLI `app register` (monorepo wiring after `sdxc create`, not a second scaffolder)
 - [ ] Point GHA at `bun run cli` / `sdxc run`; sync Deploy-app options; dry-run deploy if needed
