@@ -9,6 +9,8 @@
 
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { iife } from "@sdxc/iife";
+
 /** What encoding a value for storage produced: the rows' texts, or why the value is refused. */
 export type EncodeResult = { ok: true; texts: string[] } | { ok: false; message: string };
 
@@ -170,10 +172,11 @@ const BOOLEAN_CODEC: Codec<boolean> = {
 /** Accepts anything `Date` parses, stored and read back as ISO 8601. */
 const TIMESTAMP_CODEC: Codec<string> = {
 	encode: (value) => {
-		let date;
-		if (value instanceof Date) date = value;
-		else if (typeof value === "string") date = new Date(value);
-		else date = null;
+		let date = iife(() => {
+			if (value instanceof Date) return value;
+			if (typeof value === "string") return new Date(value);
+			return null;
+		});
 		if (date === null || Number.isNaN(date.getTime())) {
 			return { ok: false, message: "Expected a date" };
 		}
