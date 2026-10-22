@@ -483,7 +483,10 @@ function shapeResult(tool: McpTool, response: Response, body: ValueObject): Valu
 	let content = Array.isArray(result?.content) ? result.content : [];
 	let text = firstText(content);
 	let structured = result?.structuredContent;
-	let json: Value = structured !== undefined ? structured : text !== null ? parseJson(text) : null;
+	let json: Value;
+	if (structured !== undefined) json = structured;
+	else if (text !== null) json = parseJson(text);
+	else json = null;
 	let status = response.status;
 	let ok = response.ok && rpcError === null;
 	if (tool === "discover") {
