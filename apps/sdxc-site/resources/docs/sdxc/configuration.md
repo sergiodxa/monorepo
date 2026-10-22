@@ -61,12 +61,9 @@ type, or a path outside the project stops the command with one line per problem:
 	"doctor": {
 		"checks": ".config/sdxc/checks",
 		"migrations": { "accept": [] },
-		"complexity": {
-			"max": 4,
-			"moduleLines": 200,
-			"crap": 12,
-			"coverage": "coverage/coverage-final.json",
-		},
+		"complexity": { "max": 4 },
+		"moduleSize": { "maxLines": 200 },
+		"crap": { "max": 12, "coverage": "coverage/coverage-final.json" },
 	},
 	"format": ["bunx", "vp", "fmt", "--no-error-on-unmatched-pattern"],
 	"lock": ".config/sdxc.lock.jsonl",
@@ -132,14 +129,14 @@ entry, the copies are imported by relative path.
 
 What [`sdxc doctor`](/docs/sdxc/check-a-project) runs besides its built-in checks.
 
-| Key                             | Default                          | What it decides                                            |
-| ------------------------------- | -------------------------------- | ---------------------------------------------------------- |
-| `doctor.checks`                 | `".config/sdxc/checks"`          | the folder of your own checks, each module run by `doctor` |
-| `doctor.migrations.accept`      | `[]`                             | migration errors the `migrations` check steps past         |
-| `doctor.complexity.max`         | `4`                              | maximum cyclomatic complexity per function                 |
-| `doctor.complexity.moduleLines` | `200`                            | maximum code lines per module                              |
-| `doctor.complexity.crap`        | `12`                             | maximum CRAP score per function                            |
-| `doctor.complexity.coverage`    | `"coverage/coverage-final.json"` | Istanbul coverage file the `crap` check reads              |
+| Key                          | Default                          | What it decides                                            |
+| ---------------------------- | -------------------------------- | ---------------------------------------------------------- |
+| `doctor.checks`              | `".config/sdxc/checks"`          | the folder of your own checks, each module run by `doctor` |
+| `doctor.migrations.accept`   | `[]`                             | migration errors the `migrations` check steps past         |
+| `doctor.complexity.max`      | `4`                              | maximum cyclomatic complexity per function                 |
+| `doctor.moduleSize.maxLines` | `200`                            | maximum code lines per module                              |
+| `doctor.crap.max`            | `12`                             | maximum CRAP score per function                            |
+| `doctor.crap.coverage`       | `"coverage/coverage-final.json"` | Istanbul coverage file the `crap` check reads              |
 
 Each entry in `doctor.migrations.accept` is `{ "file", "column" }`: a migration file name,
 without its folder, and the column SQLite's error names. It is for a migration production

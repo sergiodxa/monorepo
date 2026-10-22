@@ -67,9 +67,9 @@ They run in this order:
 | `emails`       | fail: an email `app/emails/index.ts` declares that `app/initializers/mail.ts` maps no template for; warn: a template without a test beside it, or without `preview()`              | the mapping, test or `preview` to write            |
 | `jsdoc`        | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits                 |
 | `complexity`   | warn: a function's cyclomatic complexity exceeds `doctor.complexity.max` (default 4)                                                                                               | split the function, or raise the max               |
-| `module-size`  | warn: a module's code lines exceed `doctor.complexity.moduleLines` (default 200)                                                                                                   | split the module, or raise the limit               |
+| `module-size`  | warn: a module's code lines exceed `doctor.moduleSize.maxLines` (default 200)                                                                                                      | split the module, or raise the limit               |
 | `dependencies` | warn: an import cycle, or an import from an inner layer to an outer one (models must not import http, and so on)                                                                   | `sdxc diagram` shows the graph                     |
-| `crap`         | warn: a function's CRAP score exceeds `doctor.complexity.crap` (default 12); skip when the coverage file is missing                                                                | lower complexity, raise coverage, or raise the max |
+| `crap`         | warn: a function's CRAP score exceeds `doctor.crap.max` (default 12); skip when the coverage file is missing                                                                       | lower complexity, raise coverage, or raise the max |
 | `ui`           | warn: a copied component is behind the installed release; edited copies are listed for review                                                                                      | `sdxc ui update <names>`, `sdxc ui diff`           |
 
 The project's release is the newest date among its `@sdxc` pins, so `pins` names each package
@@ -98,14 +98,15 @@ spill onto a second line. Tooling directives (`@ts-expect-error`, `oxlint-disabl
 rest the repository already allows) stay as they are. Tags other than that one-line set do not
 count toward the description budget.
 
-`complexity`, `module-size`, `dependencies` and `crap` are the clean-code gates oxlint does not
-cover at project scope. Cyclomatic complexity and module size use the thresholds under
-`doctor.complexity` in [configuration](/docs/sdxc/configuration#doctor). `dependencies` applies
-Clean Architecture's dependency rule to the app-layout layers: outer kinds (routes, resources,
-http, jobs) may import inner ones (services, policies, models); the reverse warns, and so does
-any import cycle. `crap` combines complexity with Istanbul coverage
-(`doctor.complexity.coverage`, default `coverage/coverage-final.json`) using
-`CRAP = CC² × (1 − coverage)³ + CC`; without that file the check skips.
+`complexity`, `module-size`, `dependencies` and `crap` cover project-level metrics oxlint does
+not. Each check reads its own keys under `doctor` in
+[configuration](/docs/sdxc/configuration#doctor): `doctor.complexity.max`,
+`doctor.moduleSize.maxLines`, and `doctor.crap.max` / `doctor.crap.coverage`. `dependencies`
+applies Clean Architecture's dependency rule to the app-layout layers: outer kinds (routes,
+resources, http, jobs) may import inner ones (services, policies, models); the reverse warns,
+and so does any import cycle. `crap` combines complexity with Istanbul coverage (default
+`coverage/coverage-final.json`) using `CRAP = CC² × (1 − coverage)³ + CC`; without that file
+the check skips.
 
 ### Accept a migration that already ran
 
