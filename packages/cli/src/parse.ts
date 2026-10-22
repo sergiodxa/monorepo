@@ -240,12 +240,11 @@ function unknownFlag(tree: Tree, entry: Entry, token: string): string {
 	let owners = long ? (tree.owners.get(name) ?? tree.owners.get(positive) ?? []) : [];
 	if (owners.length > 0) {
 		let titles = owners.map((owner) => owner.title);
-		let listed =
-			titles.length === 1
-				? (titles[0] as string)
-				: titles.length > NAMED_OWNERS
-					? `${titles.slice(0, NAMED_OWNERS).join(", ")} and ${titles.length - NAMED_OWNERS} more`
-					: `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) as string}`;
+		let listed;
+		if (titles.length === 1) listed = titles[0] as string;
+		else if (titles.length > NAMED_OWNERS)
+			listed = `${titles.slice(0, NAMED_OWNERS).join(", ")} and ${titles.length - NAMED_OWNERS} more`;
+		else listed = `${titles.slice(0, -1).join(", ")} and ${titles.at(-1) as string}`;
 		return `${spelled} is not a flag of ${entry.title}; ${listed} ${titles.length === 1 ? "takes" : "take"} it`;
 	}
 	let candidates: string[] = [];

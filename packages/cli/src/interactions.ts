@@ -172,10 +172,9 @@ function numberLine(options: PromptKinds["number"], initial: unknown): Interacti
 			if (key.name === "up" || key.name === "down") {
 				let current = editor.text === "" ? (fallback ?? options.min ?? 0) : Number(editor.text);
 				if (Number.isNaN(current)) current = fallback ?? 0;
-				let next =
-					editor.text === "" && fallback === undefined
-						? current
-						: current + (key.name === "up" ? step : -step);
+				let next;
+				if (editor.text === "" && fallback === undefined) next = current;
+				else next = current + (key.name === "up" ? step : -step);
 				editor = new Editor(String(clamp(next)));
 				return undefined;
 			}
@@ -296,12 +295,11 @@ function list(choices: readonly unknown[], initial: unknown, mode: ListMode): In
 		render(style, header) {
 			let lines: string[] = [];
 			if (mode.search === true) {
-				let shownQuery =
-					query.chars.length === 0
-						? mode.placeholder === undefined
-							? style.inverse(" ")
-							: style.dim(mode.placeholder)
-						: query.render(style);
+				let shownQuery;
+				if (query.chars.length === 0)
+					shownQuery =
+						mode.placeholder === undefined ? style.inverse(" ") : style.dim(mode.placeholder);
+				else shownQuery = query.render(style);
 				lines.push(`${header} › ${shownQuery}`);
 			} else lines.push(header);
 			let shown = visible();
@@ -319,12 +317,13 @@ function list(choices: readonly unknown[], initial: unknown, mode: ListMode): In
 			for (let index of window) {
 				let option = options[index] as (typeof options)[number];
 				let pointer = index === cursor ? style.cyan("❯") : " ";
-				let box = mode.mode === "many" ? `${selected.has(index) ? style.green("◉") : "◯"} ` : "";
-				let label = option.disabled
-					? style.dim(`${option.label} (disabled)`)
-					: index === cursor
-						? style.cyan(option.label)
-						: option.label;
+				let box;
+				if (mode.mode === "many") box = `${selected.has(index) ? style.green("◉") : "◯"} `;
+				else box = "";
+				let label;
+				if (option.disabled) label = style.dim(`${option.label} (disabled)`);
+				else if (index === cursor) label = style.cyan(option.label);
+				else label = option.label;
 				let hint = option.hint === "" ? "" : ` ${style.dim(option.hint)}`;
 				lines.push(`${pointer} ${box}${label}${hint}`);
 			}

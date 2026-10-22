@@ -115,12 +115,10 @@ function flagLabel(spec: FlagSpec): string {
 	let names: string[] = [];
 	if (spec.short !== undefined) names.push(`-${spec.short}`);
 	if (spec.kind === "boolean") {
-		let prefix =
-			spec.prompt !== undefined || spec.default === undefined
-				? "[no-]"
-				: spec.default === true
-					? "no-"
-					: "";
+		let prefix;
+		if (spec.prompt !== undefined || spec.default === undefined) prefix = "[no-]";
+		else if (spec.default === true) prefix = "no-";
+		else prefix = "";
 		names.push(`--${prefix}${spec.name}`);
 		for (let alias of spec.aliases) names.push(`--${prefix}${alias}`);
 		return names.join(", ");
