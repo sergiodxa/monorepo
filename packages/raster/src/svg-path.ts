@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { Path } from "./path.js";
 import type { Raster } from "./types.js";
 
@@ -153,14 +155,16 @@ export function tracePathData(d: string, into: Path, transform: Raster.Matrix = 
 			} else if (command === "q" || command === "t") {
 				let [a = 0, b = 0, c = 0, e = 0] = values;
 				let smooth = previous === "q" || previous === "t";
-				let qx;
-				if (command === "q") qx = a + dx;
-				else if (smooth) qx = 2 * x - controlX;
-				else qx = x;
-				let qy;
-				if (command === "q") qy = b + dy;
-				else if (smooth) qy = 2 * y - controlY;
-				else qy = y;
+				let qx = iife(() => {
+					if (command === "q") return a + dx;
+					if (smooth) return 2 * x - controlX;
+					return x;
+				});
+				let qy = iife(() => {
+					if (command === "q") return b + dy;
+					if (smooth) return 2 * y - controlY;
+					return y;
+				});
 				controlX = qx;
 				controlY = qy;
 				quadTo(qx, qy, (command === "q" ? c : a) + dx, (command === "q" ? e : b) + dy);
