@@ -370,7 +370,10 @@ function writeList(node: Markdown.List, dialect: Dialect, budget: Budget): strin
 			.join("\n");
 		if (body === "") continue;
 
-		let box = item.checked === undefined ? "" : item.checked ? "☑ " : "☐ ";
+		let box;
+		if (item.checked === undefined) box = "";
+		else if (item.checked) box = "☑ ";
+		else box = "☐ ";
 		let marker = node.ordered ? `${number}. ` : "• ";
 		number += 1;
 		let indent = " ".repeat(marker.length);
