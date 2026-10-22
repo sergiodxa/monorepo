@@ -11,6 +11,7 @@
 
 import { readFile } from "node:fs/promises";
 
+import { iife } from "@sdxc/iife";
 import { isFailure, wrap } from "@sdxc/result";
 
 /** The headers RFC 8058 §3.3 requires a valid DKIM signature to cover, lowercased. */
@@ -204,10 +205,11 @@ export function formatReport(report: MessageReport): string[] {
 			`  h=${signature.signedHeaders.join(":")}`,
 		);
 		for (let header of signature.coverage) {
-			let state;
-			if (header.present === 0) state = "absent from message";
-			else if (header.covered) state = "signed";
-			else state = "NOT signed";
+			let state = iife(() => {
+				if (header.present === 0) return "absent from message";
+				if (header.covered) return "signed";
+				return "NOT signed";
+			});
 			let extra = header.overSigned ? ", over-signed" : "";
 			lines.push(
 				`  ${header.name}: ${state} (present ${header.present}, listed ${header.listed}${extra})`,

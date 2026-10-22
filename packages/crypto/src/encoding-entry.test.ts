@@ -38,13 +38,16 @@ async function externalSpecifiers(entry: string): Promise<string[]> {
 }
 
 describe("the @sdxc/crypto/encoding entry", () => {
-	test("reaches only @sdxc/result outside this package", async () => {
+	test("reaches only @sdxc/iife and @sdxc/result outside this package", async () => {
 		let manifest = JSON.parse(await readFile(join(PACKAGE_ROOT, "package.json"), "utf8")) as {
 			exports: Record<string, string>;
 		};
 		let entry = manifest.exports["./encoding"];
 		if (entry === undefined) throw new Error("@sdxc/crypto/encoding is not exported");
 
-		expect(await externalSpecifiers(join(PACKAGE_ROOT, entry))).toEqual(["@sdxc/result"]);
+		expect(await externalSpecifiers(join(PACKAGE_ROOT, entry))).toEqual([
+			"@sdxc/iife",
+			"@sdxc/result",
+		]);
 	});
 });
