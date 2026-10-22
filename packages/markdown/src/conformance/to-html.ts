@@ -271,11 +271,11 @@ class Printer {
 				this.#cr();
 				this.#lit(node.value);
 				this.#cr();
-				return;
+				break;
 			}
 
 			case "footnoteDefinition":
-				return;
+				break;
 
 			case "tag": {
 				this.#tag(node.name, attributesOf(node.attributes));

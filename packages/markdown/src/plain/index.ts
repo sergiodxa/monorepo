@@ -111,11 +111,11 @@ function collectBlocks(node: Markdown.Node, options: ResolvedOptions, blocks: st
 
 		case "code":
 			if (options.code) push(blocks, node.content);
-			return;
+			break;
 
 		case "html":
 		case "thematicBreak":
-			return;
+			break;
 
 		case "document":
 		case "blockquote":
@@ -141,7 +141,6 @@ function collectBlocks(node: Markdown.Node, options: ResolvedOptions, blocks: st
 
 		default:
 			push(blocks, inlineText(node, options));
-			return;
 	}
 }
 
