@@ -34,6 +34,7 @@
 		"@cloudflare/vitest-pool-workers": "^0.21.3",
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/codemod": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/jsonl": "workspace:*",
 		"@sdxc/kit": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
