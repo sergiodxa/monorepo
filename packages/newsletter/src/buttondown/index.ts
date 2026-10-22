@@ -11,6 +11,7 @@ import type { Result } from "@sdxc/result";
 
 import { APIClient } from "@sdxc/api-client";
 import { Hex, hmac, timingSafeEqual } from "@sdxc/crypto";
+import { iife } from "@sdxc/iife";
 import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
@@ -130,10 +131,11 @@ export interface ButtondownNewsletterOptions {
 
 /** The path addressing one subscriber, which Buttondown resolves by id or by address. */
 function subscriberPath(ref: SubscriberRef | string): string {
-	let key;
-	if (typeof ref === "string") key = ref;
-	else if ("id" in ref) key = ref.id;
-	else key = ref.email.address;
+	let key = iife(() => {
+		if (typeof ref === "string") return ref;
+		if ("id" in ref) return ref.id;
+		return ref.email.address;
+	});
 	return `subscribers/${encodeURIComponent(key)}`;
 }
 

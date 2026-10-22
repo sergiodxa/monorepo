@@ -13,6 +13,7 @@ import type { Schema } from "remix/data-schema";
 
 import { APIClient } from "@sdxc/api-client";
 import { Hex, hmac, timingSafeEqual } from "@sdxc/crypto";
+import { iife } from "@sdxc/iife";
 import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
@@ -502,10 +503,11 @@ export class KitNewsletter extends APIClient implements Newsletter {
 				: toFormReferrer(input.attribution);
 
 		if (dropped.length > 0) {
-			let reason;
-			if (form === null) reason = "no_form";
-			else if (referrer === null) reason = "no_landing_page";
-			else reason = "no_field";
+			let reason = iife(() => {
+				if (form === null) return "no_form";
+				if (referrer === null) return "no_landing_page";
+				return "no_field";
+			});
 			currentLog()?.note("newsletter.attribution_dropped", {
 				connection: this.connection,
 				fields: dropped.join(","),
