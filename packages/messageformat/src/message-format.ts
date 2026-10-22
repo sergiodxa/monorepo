@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 
 import type { Declaration, Expression, Markup, MessageData, Pattern } from "./data-model.js";
@@ -321,15 +322,16 @@ export class MessageFormat {
 			source = `|${arg.value.replaceAll("\\", "\\\\").replaceAll("|", "\\|")}|`;
 		else if (arg) source = `$${arg.name}`;
 		else source = `:${name}`;
-		let input: unknown;
-		if (arg?.type === "literal") input = arg.value;
-		else if (arg) input = this.#operand(arg.name, scope);
-
+		let input = iife((): unknown => {
+			if (arg?.type === "literal") return arg.value;
+			if (arg) return this.#operand(arg.name, scope);
+		});
 		let custom = this.#options.functions;
-		let fn: MessageFunction | DefaultFunction | undefined;
-		if (Object.hasOwn(custom, name)) fn = custom[name];
-		else if (Object.hasOwn(DEFAULT_FUNCTIONS, name)) fn = DEFAULT_FUNCTIONS[name];
-		else fn = undefined;
+		let fn = iife((): MessageFunction | DefaultFunction | undefined => {
+			if (Object.hasOwn(custom, name)) return custom[name];
+			if (Object.hasOwn(DEFAULT_FUNCTIONS, name)) return DEFAULT_FUNCTIONS[name];
+			return undefined;
+		});
 		if (!fn) {
 			scope.onError(
 				new MessageError("unknown-function", `Unknown function \`:${name}\``, { source }),
