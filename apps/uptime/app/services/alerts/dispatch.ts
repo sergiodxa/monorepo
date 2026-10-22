@@ -483,6 +483,10 @@ export async function notifyDnsResult(
 	/** Only reachable with an `ok` status when the policy above found a recovery. */
 	let isRecovery = result.status === "ok";
 
+	let eventType;
+	if (isRecovery) eventType = "up";
+	else if (result.status === "error") eventType = "down";
+	else eventType = "degraded";
 	await dispatchAlerts({
 		models,
 		mailer,
@@ -490,7 +494,7 @@ export async function notifyDnsResult(
 		monitorId: monitor.id,
 		monitorType: "dns",
 		monitorName: monitor.name,
-		eventType: isRecovery ? "up" : result.status === "error" ? "down" : "degraded",
+		eventType: eventType,
 		snapshot: {
 			type: "dns",
 			status: result.status,
@@ -518,6 +522,10 @@ export async function notifyTcpResult(
 	/** Only reachable with an `up` status when the policy above found a recovery. */
 	let isRecovery = result.status === "up";
 
+	let eventType;
+	if (isRecovery) eventType = "up";
+	else if (result.status === "down") eventType = "down";
+	else eventType = "degraded";
 	await dispatchAlerts({
 		models,
 		mailer,
@@ -525,7 +533,7 @@ export async function notifyTcpResult(
 		monitorId: monitor.id,
 		monitorType: "tcp",
 		monitorName: monitor.name,
-		eventType: isRecovery ? "up" : result.status === "down" ? "down" : "degraded",
+		eventType: eventType,
 		snapshot: {
 			type: "tcp",
 			status: result.status,
@@ -555,6 +563,10 @@ export async function notifyCronJobResult(
 	/** Only reachable with a `healthy` status when the policy above found a recovery. */
 	let isRecovery = newStatus === "healthy";
 
+	let eventType;
+	if (isRecovery) eventType = "up";
+	else if (newStatus === "missed") eventType = "down";
+	else eventType = "degraded";
 	await dispatchAlerts({
 		models,
 		mailer,
@@ -562,7 +574,7 @@ export async function notifyCronJobResult(
 		monitorId: monitor.id,
 		monitorType: "cron",
 		monitorName: monitor.name,
-		eventType: isRecovery ? "up" : newStatus === "missed" ? "down" : "degraded",
+		eventType: eventType,
 		snapshot: {
 			type: "cron",
 			status: newStatus,

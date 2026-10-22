@@ -120,17 +120,23 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 	let scheduleChanged =
 		existing.cron_expression !== cronExpression || existing.timezone !== values.timezone;
 
+	let nextExpectedAt;
+	if (is_enabled)
+		nextExpectedAt =
+			scheduleChanged || !wasEnabled
+				? calculateNextExpected(cronExpression, values.timezone)
+				: existing.next_expected_at;
+	else nextExpectedAt = null;
+	let enabledAt;
+	if (is_enabled) enabledAt = wasEnabled ? existing.enabled_at : Date.now();
+	else enabledAt = null;
 	unwrap(
 		await ctx.models.cronJobMonitors.update(monitor_id, {
 			...values,
 			cron_expression: cronExpression,
 			description: description || null,
-			enabled_at: is_enabled ? (wasEnabled ? existing.enabled_at : Date.now()) : null,
-			next_expected_at: is_enabled
-				? scheduleChanged || !wasEnabled
-					? calculateNextExpected(cronExpression, values.timezone)
-					: existing.next_expected_at
-				: null,
+			enabled_at: enabledAt,
+			next_expected_at: nextExpectedAt,
 		}),
 	);
 
