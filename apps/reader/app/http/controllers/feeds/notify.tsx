@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -43,9 +44,10 @@ export default createAction(routes.feeds.notify, {
 
 		let result = await userStore(viewer.id).setFeedNotify(feedId, submitted[NOTIFY_FIELD]);
 
-		let outcome;
-		if (result.ok) outcome = result.notify ? "on" : "off";
-		else outcome = "missing";
+		let outcome = iife(() => {
+			if (result.ok) return result.notify ? "on" : "off";
+			return "missing";
+		});
 		let query = new URLSearchParams({ [NOTIFY_PARAM]: outcome });
 
 		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {

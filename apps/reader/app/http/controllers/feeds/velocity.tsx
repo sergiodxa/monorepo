@@ -8,6 +8,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { iife } from "@sdxc/iife";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
@@ -49,10 +50,11 @@ export default createAction(routes.feeds.velocity, {
 		/** A shorter span takes posts out of the feed, which is a count the rail draws. */
 		if (result.ok) await forgetRailFeeds(viewer.id);
 
-		let outcome;
-		if (result.ok) outcome = "saved";
-		else if (result.reason === "not-following") outcome = "missing";
-		else outcome = "invalid";
+		let outcome = iife(() => {
+			if (result.ok) return "saved";
+			if (result.reason === "not-following") return "missing";
+			return "invalid";
+		});
 		let query = new URLSearchParams({ [VELOCITY_PARAM]: outcome });
 
 		return redirect(`${routes.feed.href({ feed: feedId })}?${query}`, {
