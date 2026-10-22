@@ -364,6 +364,7 @@ describe("readPackages", () => {
 			"@sdxc/cli",
 			"@sdxc/duration",
 			"@sdxc/html",
+			"@sdxc/iife",
 			"@sdxc/jsonc",
 			"@sdxc/jsonl",
 			"@sdxc/random",
