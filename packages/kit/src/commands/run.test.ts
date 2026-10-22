@@ -1,7 +1,8 @@
 /**
- * Tests `sdxc run` as a developer meets it: the app's own command line receives every token
+ * Tests `sdxc run` as a developer meets it: the project's command line receives every token
  * after `run`, it runs under the project's runtime, its exit code becomes `sdxc run`'s, and a
- * project without `bootstrap/cli.ts` gets a message naming the file.
+ * project without the configured entry gets a message naming that file. `run.entry` overrides
+ * the default `bootstrap/cli.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -112,6 +113,42 @@ describe("sdxc run", () => {
 
 		expect(run.code).toBe(1);
 		expect(run.stderr).toContain("bootstrap/cli.ts not found");
+		expect(run.exec).toEqual([]);
+	});
+
+	test("starts the module run.entry names instead of bootstrap/cli.ts", async () => {
+		let root = await project({
+			...app("bun@1.3.0"),
+			".config/sdxc.jsonc": '{\n\t"run": { "entry": "cli/index.ts" }\n}\n',
+			"cli/index.ts": "await cli.run(process.argv.slice(2));\n",
+		});
+
+		let run = await invoke(createSDXC(), ["run", "doctor"], {
+			cwd: root,
+			exec: { "bun cli/index.ts doctor": { code: 0 } },
+		});
+
+		expect(run.code).toBe(0);
+		expect(run.exec).toEqual([
+			{
+				command: ["bun", "cli/index.ts", "doctor"],
+				cwd: root,
+				stdio: "inherit",
+			},
+		]);
+	});
+
+	test("names the configured entry when that file is missing", async () => {
+		let root = await project({
+			"package.json": JSON.stringify({ name: "monorepo" }),
+			".config/sdxc.jsonc": '{\n\t"run": { "entry": "cli/index.ts" }\n}\n',
+		});
+
+		let run = await invoke(createSDXC(), ["run", "doctor"], { cwd: root });
+
+		expect(run.code).toBe(1);
+		expect(run.stderr).toContain("cli/index.ts not found");
+		expect(run.stderr).not.toContain("bootstrap/cli.ts not found");
 		expect(run.exec).toEqual([]);
 	});
 });

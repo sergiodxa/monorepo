@@ -21,7 +21,7 @@ import { project } from "../middleware.js";
 import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
 import { readManifest } from "../upgrade/project.js";
 
-import { CLI_ENTRY, commandLine, projectPath } from "./run.js";
+import { commandLine, projectPath } from "./run.js";
 
 /**
  * Runs build, `db migrate --remote` and `deploy` in that order and stops at the first failure,
@@ -41,11 +41,12 @@ export default createCommand(SDXC_COMMANDS.deploy, {
 			return usage("--skip migrate and --skip deploy leave nothing to run in production");
 		}
 		let root = ctx.project.root;
+		let entry = ctx.project.config.run.entry;
 		let path = projectPath(root, ctx.env.PATH);
-		if (!isSuccess(await wrap(() => stat(join(root, CLI_ENTRY))))) {
+		if (!isSuccess(await wrap(() => stat(join(root, entry))))) {
 			return failure(
 				new Error(
-					`${CLI_ENTRY} is missing; sdxc deploy runs the app's db migrate --remote and deploy commands from it`,
+					`${entry} is missing; sdxc deploy runs the app's db migrate --remote and deploy commands from it`,
 				),
 			);
 		}
@@ -75,7 +76,7 @@ export default createCommand(SDXC_COMMANDS.deploy, {
 
 		let migrations: MigrationStep = { status: "skipped", reason: "--skip migrate" };
 		if (!skip.has("migrate")) {
-			let listing = await commandLine(root, ["db", "migrate", "--remote", "--pending"]);
+			let listing = await commandLine(root, entry, ["db", "migrate", "--remote", "--pending"]);
 			if (isFailure(listing)) return listing;
 			let listed = await ctx.exec(listing.data, {
 				cwd: root,
@@ -102,7 +103,7 @@ export default createCommand(SDXC_COMMANDS.deploy, {
 		}
 
 		if (!skip.has("deploy")) {
-			let checking = await commandLine(root, ["deploy", "--dry-run"]);
+			let checking = await commandLine(root, entry, ["deploy", "--dry-run"]);
 			if (isFailure(checking)) return checking;
 			let checked = await ctx.exec(checking.data, {
 				cwd: root,
@@ -145,7 +146,7 @@ export default createCommand(SDXC_COMMANDS.deploy, {
 		}
 
 		if (migrates(migrations)) {
-			let command = await commandLine(root, ["db", "migrate", "--remote"]);
+			let command = await commandLine(root, entry, ["db", "migrate", "--remote"]);
 			if (isFailure(command)) return command;
 			/** `CI=1` makes `cf` take the yes this run already got instead of asking again. */
 			let migrated = await ctx.exec(command.data, {
@@ -166,7 +167,7 @@ export default createCommand(SDXC_COMMANDS.deploy, {
 			ctx.stdout(`${migrated(migrations)}; deploy skipped\n`);
 			return success();
 		}
-		let command = await commandLine(root, ["deploy"]);
+		let command = await commandLine(root, entry, ["deploy"]);
 		if (isFailure(command)) return command;
 		let deployed = await ctx.exec(command.data, {
 			cwd: root,

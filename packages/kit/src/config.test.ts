@@ -45,6 +45,7 @@ const DEFAULTS = {
 		stubs: ".config/sdxc/stubs",
 	},
 	doctor: { checks: ".config/sdxc/checks", migrations: { accept: [] } },
+	run: { entry: "bootstrap/cli.ts" },
 	lock: ".config/sdxc.lock.jsonl",
 };
 
