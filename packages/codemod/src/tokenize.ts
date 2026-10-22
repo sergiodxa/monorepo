@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { iife } from "@sdxc/iife";
 import { failure, success } from "@sdxc/result";
 
 import { CodemodError } from "./errors.js";
@@ -284,10 +285,11 @@ class Scanner {
 		}
 		let open = this.stack[this.stack.length - 1];
 		if (open !== undefined) {
-			let what;
-			if (open.type === "template") what = "template literal";
-			else if (open.type.startsWith("jsx")) what = "JSX element";
-			else what = `\`${this.source[open.start]}\``;
+			let what = iife(() => {
+				if (open.type === "template") return "template literal";
+				if (open.type.startsWith("jsx")) return "JSX element";
+				return `\`${this.source[open.start]}\``;
+			});
 			return failure(this.fail("unterminated", `${what} is never closed`, open.start));
 		}
 		return success(this.tokens);

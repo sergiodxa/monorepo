@@ -11,6 +11,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 import { parseSync } from "oxc-parser";
 import { describe, expect, test } from "vitest";
@@ -49,10 +50,11 @@ function oracleReferences(filename: string, source: string): string[] | null {
 				[request.start, request.end],
 				[entry.start, entry.end],
 				entry.entries.map((name) => {
-					let imported;
-					if (name.importName.kind === "Default") imported = "default";
-					else if (name.importName.kind === "NamespaceObject") imported = "*";
-					else imported = name.importName.name ?? "";
+					let imported = iife(() => {
+						if (name.importName.kind === "Default") return "default";
+						if (name.importName.kind === "NamespaceObject") return "*";
+						return name.importName.name ?? "";
+					});
 					return `${name.isType ? "type " : ""}${imported} as ${name.localName.value}`;
 				}),
 			),
