@@ -23,6 +23,7 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 import { IdToken } from "@sdxc/auth/id-token";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { iife } from "@sdxc/iife";
 import { JWK } from "@sdxc/jwt";
 import { unwrap } from "@sdxc/result";
 import { isUUID } from "@sdxc/uuid";
@@ -294,10 +295,11 @@ function insertConnectionIdentity(
 	providerEmailVerified: boolean | null,
 ) {
 	let now = Date.now();
-	let verifiedFlag;
-	if (providerEmailVerified === null) verifiedFlag = null;
-	else if (providerEmailVerified) verifiedFlag = 1;
-	else verifiedFlag = 0;
+	let verifiedFlag = iife(() => {
+		if (providerEmailVerified === null) return null;
+		if (providerEmailVerified) return 1;
+		return 0;
+	});
 	state.storage.sql.exec(
 		`INSERT INTO connection_identities
 			(connection_id, provider_subject, subject_id, access_token_sealed, refresh_token_sealed, token_expires_at, provider_email, provider_email_verified, linked_by, linked_at, last_sign_in_at, granted_scopes, claims_json, created_at, updated_at)

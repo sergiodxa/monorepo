@@ -10,6 +10,7 @@
 import type { OperationInputError } from "@sdxc/openapi";
 import type { Schema } from "remix/data-schema";
 
+import { iife } from "@sdxc/iife";
 import { issuesFrom } from "@sdxc/problem";
 import * as s from "remix/data-schema";
 
@@ -55,10 +56,11 @@ export function parseBody<Output>(
  * if (isFailure(input)) return operationInputProblem(input.error);
  */
 export function operationInputProblem(error: OperationInputError): Response {
-	let locationLabel;
-	if (error.location === "body") locationLabel = "body";
-	else if (error.location === "query") locationLabel = "query string";
-	else locationLabel = "path";
+	let locationLabel = iife(() => {
+		if (error.location === "body") return "body";
+		if (error.location === "query") return "query string";
+		return "path";
+	});
 	return managementProblem("validationFailed", {
 		detail: `The request ${locationLabel} did not pass validation.`,
 		extensions: { errors: issuesFrom(error) },

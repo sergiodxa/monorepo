@@ -12,6 +12,7 @@ import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
 import { Hex, sha256 } from "@sdxc/crypto";
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
@@ -300,12 +301,11 @@ export const magicLinkCompleteSubmit = createAction(
 		let token = ctx.formData.get("token");
 		let code = ctx.formData.get("code");
 
-		let credential;
-		if (typeof token === "string" && token.length > 0)
-			credential = { kind: "link", token } as const;
-		else if (typeof code === "string" && code.length > 0)
-			credential = { kind: "code", code } as const;
-		else credential = null;
+		let credential = iife(() => {
+			if (typeof token === "string" && token.length > 0) return { kind: "link", token } as const;
+			if (typeof code === "string" && code.length > 0) return { kind: "code", code } as const;
+			return null;
+		});
 
 		if (!credential) return renderInvalid(ctx);
 
