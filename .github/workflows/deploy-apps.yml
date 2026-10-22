@@ -29,9 +29,12 @@ on:
         type: choice
         required: true
         options:
+          - auth-saas
           - blog
           - books
+          - demo
           - r3-auth
+          - reader
           - sdxc-site
           - uptime
       dry_run:
