@@ -145,12 +145,10 @@ export class Canvas {
 					kerning: options.kerning ?? true,
 				});
 				let align = options.align ?? "start";
-				let originX =
-					align === "center"
-						? options.x - layout.width / 2
-						: align === "end"
-							? options.x - layout.width
-							: options.x;
+				let originX;
+				if (align === "center") originX = options.x - layout.width / 2;
+				else if (align === "end") originX = options.x - layout.width;
+				else originX = options.x;
 				let baseline = options.y + index * fitted.size * fitted.lineHeight;
 				let path = new Path();
 				for (let glyph of layout.glyphs) {

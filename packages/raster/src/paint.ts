@@ -99,7 +99,11 @@ export function shadeSpan(
 	if (shader.kind === "linear") {
 		let t = (x0 + 0.5 - shader.x0) * shader.ux + (py - shader.y0) * shader.uy;
 		for (let index = 0; index < count * 4; index += 4) {
-			let entry = (t <= 0 ? 0 : t >= 1 ? last : (t * last + 0.5) | 0) * 4;
+			let stopIndex;
+			if (t <= 0) stopIndex = 0;
+			else if (t >= 1) stopIndex = last;
+			else stopIndex = (t * last + 0.5) | 0;
+			let entry = stopIndex * 4;
 			out[index] = lut[entry] as number;
 			out[index + 1] = lut[entry + 1] as number;
 			out[index + 2] = lut[entry + 2] as number;
