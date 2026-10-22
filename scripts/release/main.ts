@@ -1,9 +1,8 @@
-#!/usr/bin/env bun
 /**
- * Daily release entry point: finds the public packages that changed since the latest release
- * tag, builds them and every public dependent into a staging directory, publishes them under
- * today's dated version and creates the matching GitHub Release. Without `--publish` the same
- * path runs as a dry run, so a local run shows exactly what CI is about to do.
+ * Daily release: finds the public packages that changed since the latest release tag, builds
+ * them and every public dependent into a staging directory, publishes them under today's dated
+ * version and creates the matching GitHub Release. Without `publish` the same path runs as a
+ * dry run, so a local run shows exactly what CI is about to do.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,11 +10,10 @@
 
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parseArgs } from "node:util";
 
 import type { Result } from "@sdxc/result";
 
-import { failure, isFailure, match, success, wrap } from "@sdxc/result";
+import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { Published, ReleasePlan } from "./plan.js";
 import type { Package } from "./workspace.js";
@@ -59,23 +57,28 @@ import {
 /** Dated versions are the stable releases, so every one of them publishes as `latest`. */
 const RELEASE_TAG = "latest";
 
+/** Options for one daily release run. */
+export interface ReleaseOptions {
+	/** Publish to npm and create the GitHub Release; dry-run when false. */
+	publish?: boolean;
+	/** Treat every public package as changed. */
+	force?: boolean;
+	/** Operator output; defaults to stdout. */
+	say?: (text: string) => void;
+}
+
 /**
  * One release run from planning to the GitHub Release, returning early with a plain message
- * whenever there is nothing to do. Every failure comes back as the `Result`, and the entry
- * point turns it into exit 1 with the message on stderr.
+ * whenever there is nothing to do. Every failure comes back as the `Result`.
  */
-async function main(): Promise<Result<void, Error>> {
-	let args = wrap(() =>
-		parseArgs({
-			options: {
-				publish: { type: "boolean", default: false },
-				force: { type: "boolean", default: false },
-			},
-		}),
-	);
-	if (isFailure(args)) return args;
-	let publishing = args.data.values.publish === true;
-	let force = args.data.values.force === true;
+export async function runRelease(options: ReleaseOptions = {}): Promise<Result<void, Error>> {
+	let publishing = options.publish === true;
+	let force = options.force === true;
+	let say =
+		options.say ??
+		((text: string) => {
+			process.stdout.write(`${text}\n`);
+		});
 
 	await fetchTags();
 	let today = releaseVersion(new Date());
@@ -324,16 +327,3 @@ function packageNamed(packages: Package[], name: string): Result<Package, Error>
 	if (pkg === undefined) return failure(new Error(`${name} is not a workspace package`));
 	return success(pkg);
 }
-
-/** Operator output goes to stdout, leaving stderr to npm's progress and the failure message. */
-function say(text: string): void {
-	process.stdout.write(`${text}\n`);
-}
-
-match(await main(), {
-	success: () => {},
-	failure: (error) => {
-		process.stderr.write(`${error.message}\n`);
-		process.exitCode = 1;
-	},
-});
