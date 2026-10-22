@@ -13,6 +13,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	},
