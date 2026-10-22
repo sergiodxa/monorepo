@@ -10,6 +10,8 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { iife } from "@sdxc/iife";
+
 /**
  * Font stack that resolves to a native UI face in every major mail client. No family
  * needs quoting, which keeps the inline style free of escaped character references.
@@ -374,9 +376,10 @@ export function Text(handle: Handle<Text.Props>) {
 	return () => {
 		let { children, muted = false, color, size = 16, align = "left" } = handle.props;
 		let resolved = color ?? (muted ? MUTED_COLOR : TEXT_COLOR);
-		let className;
-		if (color === undefined) className = muted ? "mail-muted" : "mail-text";
-		else className = undefined;
+		let className = iife(() => {
+			if (color === undefined) return muted ? "mail-muted" : "mail-text";
+			return undefined;
+		});
 
 		return (
 			<p

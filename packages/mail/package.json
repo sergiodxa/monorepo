@@ -22,6 +22,7 @@
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
+		"@sdxc/iife": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
