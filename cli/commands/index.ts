@@ -1,6 +1,6 @@
 /**
  * Every command the monorepo command line answers: release, doctor, and the package/app
- * wiring commands ADR-169 adds. Handlers live beside this contract under `cli/commands/`.
+ * wiring commands. Handlers live beside this contract under `cli/commands/`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

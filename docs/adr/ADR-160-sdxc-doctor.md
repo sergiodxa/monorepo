@@ -165,10 +165,10 @@ A project with no dated `@sdxc/*` pin skips both, since it has no release to com
 
 ### In CI
 
-The monorepo runs `bun run doctor` in CI after typegen: `scripts/doctor-apps.ts` runs the kit's
-command line from the checkout in every app, each report folded under the app's name, and fails
-the job when any app fails. Apps pin `@sdxc/*` packages to the workspace, so `pins` and `remix`
-skip without asking the registry, and the run stays offline.
+The monorepo runs `bun run doctor` in CI after typegen: the root CLI's `doctor` command runs the
+kit's command line from the checkout in every app, each report folded under the app's name, and
+fails the job when any app fails. Apps pin `@sdxc/*` packages to the workspace, so `pins` and
+`remix` skip without asking the registry, and the run stays offline.
 
 ### Reading the Worker config
 
