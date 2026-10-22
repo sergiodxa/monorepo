@@ -146,7 +146,7 @@ export function convertPlural(
 		let result = convertPattern(form, tags);
 		addCounts(counts, result.counts);
 		issues.push(...result.issues);
-		let key = suffix;
+		let key: string = suffix;
 		if (suffix === "zero") key = "0";
 		else if (suffix === "other") key = "*";
 		lines.push(`${key} {{${result.pattern}}}`);
