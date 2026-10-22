@@ -164,9 +164,15 @@ export function layoutGraph(
 		for (let level = start + 1; level < end; level += 1) {
 			let carried = level === middle ? label : undefined;
 			let dummy = vertices.length;
+			let along;
+			if (carried) along = horizontal ? carried.width + 8 : carried.height;
+			else along = 0;
+			let cross;
+			if (carried) cross = horizontal ? carried.height : carried.width + 8;
+			else cross = 0;
 			vertices.push({
-				cross: carried ? (horizontal ? carried.height : carried.width + 8) : 0,
-				along: carried ? (horizontal ? carried.width + 8 : carried.height) : 0,
+				cross: cross,
+				along: along,
 				rank: level,
 				dummy: true,
 				x: 0,
@@ -409,7 +415,10 @@ function placeAcross(
 	}
 
 	let gap = (a: Vertex, b: Vertex): number => {
-		let space = a.dummy && b.dummy ? nodeGap / 4 : a.dummy || b.dummy ? nodeGap / 2 : nodeGap;
+		let space;
+		if (a.dummy && b.dummy) space = nodeGap / 4;
+		else if (a.dummy || b.dummy) space = nodeGap / 2;
+		else space = nodeGap;
 		return (a.cross + b.cross) / 2 + space;
 	};
 
@@ -436,8 +445,10 @@ function placeAcross(
 			for (let list of neighbors) {
 				for (let other of list[vertex] ?? []) {
 					let neighbor = vertices[other] as Vertex;
-					let weight =
-						current.dummy && neighbor.dummy ? 8 : current.dummy || neighbor.dummy ? 2 : 1;
+					let weight;
+					if (current.dummy && neighbor.dummy) weight = 8;
+					else if (current.dummy || neighbor.dummy) weight = 2;
+					else weight = 1;
 					sum += neighbor.x * weight;
 					total += weight;
 				}
