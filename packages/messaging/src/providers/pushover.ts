@@ -139,11 +139,15 @@ export class Pushover extends APIClient implements Destination {
 
 		let critical = severityOf(message) === "critical";
 		let emergency = critical ? this.#emergency : null;
+		let priority;
+		if (emergency) priority = "2";
+		else if (critical) priority = "1";
+		else priority = "0";
 		let payload: PushoverPayload = {
 			title: fitText(message.title, LIMITS.title),
 			message: body === "" ? fitText(message.title, LIMITS.message, pushoverHtml.escape) : body,
 			html: "1",
-			priority: emergency ? "2" : critical ? "1" : "0",
+			priority: priority,
 		};
 
 		if (message.timestamp) {
