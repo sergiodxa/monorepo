@@ -176,12 +176,12 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, {
 				});
 			}
 
-			let error =
-				signedIn.reason === "password_expired"
-					? ctx.intl.t("hostedSignIn.errors.passwordExpired")
-					: signedIn.reason === "dau_cap_reached"
-						? ctx.intl.t("hostedSignIn.errors.dauCapReached")
-						: ctx.intl.t("hostedSignIn.errors.invalidCredentials");
+			let error;
+			if (signedIn.reason === "password_expired")
+				error = ctx.intl.t("hostedSignIn.errors.passwordExpired");
+			else if (signedIn.reason === "dau_cap_reached")
+				error = ctx.intl.t("hostedSignIn.errors.dauCapReached");
+			else error = ctx.intl.t("hostedSignIn.errors.invalidCredentials");
 			return renderSignInPage(ctx, { loginHint, forced, challenge, error });
 		}
 

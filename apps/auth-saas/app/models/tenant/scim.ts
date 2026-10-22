@@ -479,9 +479,11 @@ function stableStringify(value: unknown): string {
 	if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
 
 	if (value !== null && typeof value === "object") {
-		let entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
-			a < b ? -1 : a > b ? 1 : 0,
-		);
+		let entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) => {
+			if (a < b) return -1;
+			if (a > b) return 1;
+			return 0;
+		});
 		return `{${entries.map(([key, val]) => `${JSON.stringify(key)}:${stableStringify(val)}`).join(",")}}`;
 	}
 

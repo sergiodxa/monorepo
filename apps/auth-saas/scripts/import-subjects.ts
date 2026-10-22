@@ -46,11 +46,17 @@ async function main() {
 	let raw = JSON.parse(await Bun.file(inputPath).text()) as
 		| SourceSubject[]
 		| Array<{ results: SourceSubject[] }>;
-	let rows: SourceSubject[] = Array.isArray(raw)
-		? "results" in (raw[0] ?? {})
-			? (raw as Array<{ results: SourceSubject[] }>).flatMap((page) => page.results)
-			: (raw as SourceSubject[])
-		: [];
+	let rows: SourceSubject[];
+	if (Array.isArray(raw))
+		rows =
+			"results" in (raw[0] ?? {})
+				? (
+						raw as Array<{
+							results: SourceSubject[];
+						}>
+					).flatMap((page) => page.results)
+				: (raw as SourceSubject[]);
+	else rows = [];
 
 	let tokenResponse = await fetch(`${issuer}/oauth/token`, {
 		method: "POST",
