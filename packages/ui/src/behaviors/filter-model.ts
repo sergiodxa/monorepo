@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
 import { TypedEventTarget } from "remix/component";
 
 import { dispatchChange } from "../utils/dispatch-change.js";
@@ -232,9 +233,10 @@ export class FilterModel extends TypedEventTarget<FilterModel.EventMap> {
 
 		let index = this.#matches.findIndex((option) => option.id === this.#activeId);
 
-		let nextIndex;
-		if (index === -1) nextIndex = delta > 0 ? 0 : this.#matches.length - 1;
-		else nextIndex = (index + delta + this.#matches.length) % this.#matches.length;
+		let nextIndex = iife(() => {
+			if (index === -1) return delta > 0 ? 0 : this.#matches.length - 1;
+			return (index + delta + this.#matches.length) % this.#matches.length;
+		});
 
 		let nextOption = this.#matches[nextIndex];
 

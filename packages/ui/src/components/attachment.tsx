@@ -10,6 +10,7 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -489,10 +490,11 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 		let { href, commandfor, command, target, role, tabIndex, children, mix, ...rest } =
 			handle.props;
 		let isConfigured = href !== undefined || commandfor !== undefined;
-		let inferredRole: "link" | "button" | undefined;
-		if (href !== undefined) inferredRole = "link";
-		else if (isConfigured) inferredRole = "button";
-		else inferredRole = undefined;
+		let inferredRole = iife((): "link" | "button" | undefined => {
+			if (href !== undefined) return "link";
+			if (isConfigured) return "button";
+			return undefined;
+		});
 		let resolvedRole = role ?? inferredRole;
 		let resolvedTabIndex = tabIndex ?? (isConfigured ? 0 : undefined);
 
