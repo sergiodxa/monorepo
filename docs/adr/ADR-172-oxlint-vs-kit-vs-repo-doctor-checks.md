@@ -58,9 +58,13 @@ every consumer app.
 - ADR-171's `complexity` doctor check remains: it feeds CRAP and ships agent-facing thresholds
   through `doctor.complexity`. Further oxlint-available limits (params, nesting, function
   length) do not follow that path unless they gain a similar project-level reason.
+- Follow-up gates that oxlint still cannot see (fan-out, orphans, duplication, test ratio,
+  mutation, and related) are kit doctor checks under
+  [ADR-173](./ADR-173-kit-doctor-quality-gates.md).
 
 ## References
 
 - [ADR-160: `sdxc doctor`](./ADR-160-sdxc-doctor.md)
 - [ADR-170: Monorepo lint belongs in `doctor.checks`](./ADR-170-monorepo-lint-is-doctor-checks.md)
 - [ADR-171: Architecture diagram and clean-code doctor checks](./ADR-171-kit-architecture-diagram-and-clean-code-doctor.md)
+- [ADR-173: Kit doctor quality gates beyond complexity](./ADR-173-kit-doctor-quality-gates.md)
