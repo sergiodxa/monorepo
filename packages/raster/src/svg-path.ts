@@ -153,8 +153,14 @@ export function tracePathData(d: string, into: Path, transform: Raster.Matrix = 
 			} else if (command === "q" || command === "t") {
 				let [a = 0, b = 0, c = 0, e = 0] = values;
 				let smooth = previous === "q" || previous === "t";
-				let qx = command === "q" ? a + dx : smooth ? 2 * x - controlX : x;
-				let qy = command === "q" ? b + dy : smooth ? 2 * y - controlY : y;
+				let qx;
+				if (command === "q") qx = a + dx;
+				else if (smooth) qx = 2 * x - controlX;
+				else qx = x;
+				let qy;
+				if (command === "q") qy = b + dy;
+				else if (smooth) qy = 2 * y - controlY;
+				else qy = y;
 				controlX = qx;
 				controlY = qy;
 				quadTo(qx, qy, (command === "q" ? c : a) + dx, (command === "q" ? e : b) + dy);
