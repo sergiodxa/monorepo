@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
+
 import type { Box, Point } from "./geometry.js";
 
 /** A node to place, by its size. */
@@ -164,12 +166,14 @@ export function layoutGraph(
 		for (let level = start + 1; level < end; level += 1) {
 			let carried = level === middle ? label : undefined;
 			let dummy = vertices.length;
-			let along;
-			if (carried) along = horizontal ? carried.width + 8 : carried.height;
-			else along = 0;
-			let cross;
-			if (carried) cross = horizontal ? carried.height : carried.width + 8;
-			else cross = 0;
+			let along = iife(() => {
+				if (carried) return horizontal ? carried.width + 8 : carried.height;
+				return 0;
+			});
+			let cross = iife(() => {
+				if (carried) return horizontal ? carried.height : carried.width + 8;
+				return 0;
+			});
 			vertices.push({
 				cross: cross,
 				along: along,
@@ -415,10 +419,11 @@ function placeAcross(
 	}
 
 	let gap = (a: Vertex, b: Vertex): number => {
-		let space;
-		if (a.dummy && b.dummy) space = nodeGap / 4;
-		else if (a.dummy || b.dummy) space = nodeGap / 2;
-		else space = nodeGap;
+		let space = iife(() => {
+			if (a.dummy && b.dummy) return nodeGap / 4;
+			if (a.dummy || b.dummy) return nodeGap / 2;
+			return nodeGap;
+		});
 		return (a.cross + b.cross) / 2 + space;
 	};
 
@@ -445,10 +450,11 @@ function placeAcross(
 			for (let list of neighbors) {
 				for (let other of list[vertex] ?? []) {
 					let neighbor = vertices[other] as Vertex;
-					let weight;
-					if (current.dummy && neighbor.dummy) weight = 8;
-					else if (current.dummy || neighbor.dummy) weight = 2;
-					else weight = 1;
+					let weight = iife(() => {
+						if (current.dummy && neighbor.dummy) return 8;
+						if (current.dummy || neighbor.dummy) return 2;
+						return 1;
+					});
 					sum += neighbor.x * weight;
 					total += weight;
 				}
