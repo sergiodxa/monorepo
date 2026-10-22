@@ -187,11 +187,11 @@ export function project(
 			let projected: WireObject = {};
 			for (let [member, item] of Object.entries(value)) {
 				let attribute = findAttribute(extension.attributes, member);
-				let next = attribute
-					? projectAttribute(item, extension, attribute, included, excluded)
-					: included === null && !excluded.schemas.has(extension.id.toLowerCase())
-						? item
-						: undefined;
+				let next;
+				if (attribute) next = projectAttribute(item, extension, attribute, included, excluded);
+				else if (included === null && !excluded.schemas.has(extension.id.toLowerCase()))
+					next = item;
+				else next = undefined;
 				if (next !== undefined) projected[member] = next;
 			}
 			if (Object.keys(projected).length > 0) result[key] = projected;
@@ -203,11 +203,11 @@ export function project(
 			definitions,
 			prefer,
 		);
-		let next = resolved
-			? projectAttribute(value, resolved.schema, resolved.attribute, included, excluded)
-			: included === null
-				? value
-				: undefined;
+		let next;
+		if (resolved)
+			next = projectAttribute(value, resolved.schema, resolved.attribute, included, excluded);
+		else if (included === null) next = value;
+		else next = undefined;
 		if (next !== undefined) result[key] = next;
 	}
 
