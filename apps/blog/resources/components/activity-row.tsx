@@ -119,6 +119,27 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 		let { id, role, "aria-selected": selected } = handle.props;
 		let compact = handle.props.size === "sm";
 		let icon = POST_KINDS[kind];
+		let dateCell;
+		if (date && inline) {
+			dateCell = (
+				<Link href={href} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
+					<time datetime={isoDate(date)} mix={[fg("neutral.muted"), text("sm"), nowrap(), dateMix]}>
+						{formatDate(date)}
+					</time>
+				</Link>
+			);
+		} else if (date) {
+			dateCell = (
+				<time
+					datetime={isoDate(date)}
+					mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(compact ? 0.5 : 1), dateMix]}
+				>
+					{formatDate(date)}
+				</time>
+			);
+		} else {
+			dateCell = <span />;
+		}
 
 		return (
 			<li
@@ -162,25 +183,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 						<p mix={[m(0), text("sm"), fg("neutral.muted"), truncate()]}>{description}</p>
 					) : null}
 				</div>
-				{date && inline ? (
-					<Link href={href} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
-						<time
-							datetime={isoDate(date)}
-							mix={[fg("neutral.muted"), text("sm"), nowrap(), dateMix]}
-						>
-							{formatDate(date)}
-						</time>
-					</Link>
-				) : date ? (
-					<time
-						datetime={isoDate(date)}
-						mix={[fg("neutral.muted"), text("sm"), nowrap(), mbs(compact ? 0.5 : 1), dateMix]}
-					>
-						{formatDate(date)}
-					</time>
-				) : (
-					<span />
-				)}
+				{dateCell}
 			</li>
 		);
 	};

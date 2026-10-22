@@ -87,12 +87,18 @@ export function SponsorsView() {
 
 				<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
 					Rather give once? Send{" "}
-					{TIP_AMOUNTS.map((amount, index) => (
-						<>
-							{index === 0 ? "" : index === TIP_AMOUNTS.length - 1 ? " or " : ", "}
-							<Link href={`${PROFILE.paypal.profile}/${amount}USD`}>${amount}</Link>
-						</>
-					))}{" "}
+					{TIP_AMOUNTS.map((amount, index) => {
+						let separator;
+						if (index === 0) separator = "";
+						else if (index === TIP_AMOUNTS.length - 1) separator = " or ";
+						else separator = ", ";
+						return (
+							<>
+								{separator}
+								<Link href={`${PROFILE.paypal.profile}/${amount}USD`}>${amount}</Link>
+							</>
+						);
+					})}{" "}
 					through PayPal, or any amount on <Link href={PROFILE.kofi.profile}>Ko-fi</Link>.
 				</p>
 

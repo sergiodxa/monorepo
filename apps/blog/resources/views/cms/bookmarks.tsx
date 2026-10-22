@@ -292,16 +292,16 @@ function CheckReport(handle: Handle<{ check: CMSBookmarksActionView.Check }>) {
 	return () => {
 		let { check } = handle.props;
 		let status = check.httpStatus === null ? "" : ` (${String(check.httpStatus)})`;
+		let checkTone;
+		if (!check.open) checkTone = "neutral";
+		else if (check.status === "gone") checkTone = "danger";
+		else checkTone = "warning";
 
 		return (
 			<div mix={[grid(), gap(2)]}>
 				<p
 					role={check.open ? "alert" : "status"}
-					mix={[
-						m(0),
-						fg(check.open ? (check.status === "gone" ? "danger" : "warning") : "neutral"),
-						weight(check.open ? "medium" : "normal"),
-					]}
+					mix={[m(0), fg(checkTone), weight(check.open ? "medium" : "normal")]}
 				>
 					{CHECK_SUMMARIES[check.status]}
 					{status} when checked on {check.checkedOn}.
