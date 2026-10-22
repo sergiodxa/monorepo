@@ -23,6 +23,7 @@ import {
 	MailIcon,
 	NetworkIcon,
 } from "@sdxc/icons";
+import { iife } from "@sdxc/iife";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, unwrap } from "@sdxc/result";
 import { bg, fg, linearGradient } from "@sdxc/u/color";
@@ -537,76 +538,75 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 	let firstScreen =
 		probe === undefined ? [minBs(FIRST_SCREEN_MIN_BLOCK_SIZE), vstack({ justify: "center" })] : [];
 
-	let resultFollowUp;
-	if (probe !== undefined && redirected) {
-		resultFollowUp = (
-			<div mix={[vstack({ gap: 4 })]}>
-				<div mix={[vstack({ gap: 2 })]}>
-					<Heading level={3} mix={[m(0), fontSize("base")]}>
-						{t("page.trial.result.redirect.title")}
-					</Heading>
-					<Text>{t("page.trial.result.redirect.description")}</Text>
-				</div>
+	let resultFollowUp = iife(() => {
+		if (probe !== undefined && redirected)
+			return (
+				<div mix={[vstack({ gap: 4 })]}>
+					<div mix={[vstack({ gap: 2 })]}>
+						<Heading level={3} mix={[m(0), fontSize("base")]}>
+							{t("page.trial.result.redirect.title")}
+						</Heading>
+						<Text>{t("page.trial.result.redirect.description")}</Text>
+					</div>
 
-				{probe.location === null ? (
-					<Text mix={[fg("neutral.muted")]}>
-						{t("page.trial.result.redirect.unknownDestination")}
-					</Text>
-				) : (
-					<form
-						method="post"
-						action={routes.trial.check.action.href()}
-						mix={[vstack({ gap: 3, align: "start" })]}
-					>
-						<Text mix={[wordBreak("break-all")]}>
-							{t("page.trial.result.redirect.destination", {
-								url: probe.location,
-							})}
+					{probe.location === null ? (
+						<Text mix={[fg("neutral.muted")]}>
+							{t("page.trial.result.redirect.unknownDestination")}
 						</Text>
-						<HoneypotFields {...honeypot} />
-						<input type="hidden" name={TRIAL_URL_FIELD} value={probe.location} />
-						<Button type="submit" variant="outline">
-							{t("page.trial.result.redirect.action")}
-						</Button>
-					</form>
-				)}
-			</div>
-		);
-	} else if (monitorOffer !== undefined) {
-		resultFollowUp = (
-			<div mix={[vstack({ gap: 4 })]}>
-				<div mix={[vstack({ gap: 2 })]}>
-					<Heading level={3} mix={[m(0), fontSize("base")]}>
-						{t("page.trial.monitor.title")}
-					</Heading>
-					<Text>
-						{monitorOffer.subscribeHref === null
-							? t("page.trial.monitor.description")
-							: t("page.trial.monitor.subscribeDescription")}
-					</Text>
-				</div>
-
-				<div mix={[vstack({ gap: 3 })]}>
-					<LinkButton href={monitorOffer.createHref} mix={[is("full"), justify("center")]}>
-						{t("page.trial.monitor.create")}
-						<ArrowRightIcon size={18} strokeWidth={1.5} />
-					</LinkButton>
-					{monitorOffer.subscribeHref === null ? null : (
-						<LinkButton
-							href={monitorOffer.subscribeHref}
-							color="neutral"
-							variant="outline"
-							data-rmx-document=""
-							mix={[is("full"), justify("center")]}
+					) : (
+						<form
+							method="post"
+							action={routes.trial.check.action.href()}
+							mix={[vstack({ gap: 3, align: "start" })]}
 						>
-							{t("page.trial.monitor.subscribe")}
-						</LinkButton>
+							<Text mix={[wordBreak("break-all")]}>
+								{t("page.trial.result.redirect.destination", {
+									url: probe.location,
+								})}
+							</Text>
+							<HoneypotFields {...honeypot} />
+							<input type="hidden" name={TRIAL_URL_FIELD} value={probe.location} />
+							<Button type="submit" variant="outline">
+								{t("page.trial.result.redirect.action")}
+							</Button>
+						</form>
 					)}
 				</div>
-			</div>
-		);
-	} else {
-		resultFollowUp = (
+			);
+		if (monitorOffer !== undefined)
+			return (
+				<div mix={[vstack({ gap: 4 })]}>
+					<div mix={[vstack({ gap: 2 })]}>
+						<Heading level={3} mix={[m(0), fontSize("base")]}>
+							{t("page.trial.monitor.title")}
+						</Heading>
+						<Text>
+							{monitorOffer.subscribeHref === null
+								? t("page.trial.monitor.description")
+								: t("page.trial.monitor.subscribeDescription")}
+						</Text>
+					</div>
+
+					<div mix={[vstack({ gap: 3 })]}>
+						<LinkButton href={monitorOffer.createHref} mix={[is("full"), justify("center")]}>
+							{t("page.trial.monitor.create")}
+							<ArrowRightIcon size={18} strokeWidth={1.5} />
+						</LinkButton>
+						{monitorOffer.subscribeHref === null ? null : (
+							<LinkButton
+								href={monitorOffer.subscribeHref}
+								color="neutral"
+								variant="outline"
+								data-rmx-document=""
+								mix={[is("full"), justify("center")]}
+							>
+								{t("page.trial.monitor.subscribe")}
+							</LinkButton>
+						)}
+					</div>
+				</div>
+			);
+		return (
 			<div mix={[vstack({ gap: 6 })]}>
 				<div mix={[vstack({ gap: 3 })]}>
 					<Heading level={3} mix={[m(0), fontSize("base")]}>
@@ -668,7 +668,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 				</form>
 			</div>
 		);
-	}
+	});
 
 	return ctx.render(
 		<DocumentLayout

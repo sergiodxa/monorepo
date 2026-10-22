@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { iife } from "@sdxc/iife";
 import { flex, flexWrap, gap, hidden, items } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { mbe } from "@sdxc/u/size";
@@ -48,10 +49,11 @@ export default createAction(routes.app.team.dashboard.index, {
 
 		let cookieTab = await dashboardTabCookie.parse(ctx.request.headers.get("Cookie"));
 		let queryTab = ctx.url.searchParams.get("tab");
-		let tab: DashboardTab;
-		if (isDashboardTab(queryTab)) tab = queryTab;
-		else if (isDashboardTab(cookieTab)) tab = cookieTab;
-		else tab = "http";
+		let tab = iife((): DashboardTab => {
+			if (isDashboardTab(queryTab)) return queryTab;
+			if (isDashboardTab(cookieTab)) return cookieTab;
+			return "http";
+		});
 
 		let toast = ctx.get(Session)?.get("toast") as Toast | undefined;
 
