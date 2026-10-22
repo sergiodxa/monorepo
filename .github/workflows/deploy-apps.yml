@@ -59,12 +59,22 @@ jobs:
           missing=()
           [ -n "$CLOUDFLARE_API_TOKEN" ] || missing+=(CLOUDFLARE_API_TOKEN)
           [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing+=(CLOUDFLARE_ACCOUNT_ID)
-          if [ ${#missing[@]} -eq 0 ]; then
-            echo "configured=true" >> "$GITHUB_OUTPUT"
-          else
+          if [ ${#missing[@]} -ne 0 ]; then
             echo "::notice::Skipping deploy: missing secret(s) ${missing[*]}"
             echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          # Apps that migrate (blog, uptime, r3-auth) call D1 before upload. Workers-only
+          # apps still deploy when this probe fails, but the warning names the usual cause of
+          # "db migrate --remote --pending exited with 1" with an empty log.
+          d1=$(curl -sS -o /tmp/d1.json -w "%{http_code}" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")
+          if [ "$d1" != "200" ] || ! jq -e '.success == true' /tmp/d1.json >/dev/null; then
+            echo "::warning::CLOUDFLARE_API_TOKEN cannot list D1 databases (HTTP $d1). Grant Account → D1 → Edit on the token named for this workflow, or apps that migrate will fail at db migrate --remote --pending."
+            jq -c '{success,errors}' /tmp/d1.json || true
+          fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
 
   # A release always ships sdxc-site; a manual run ships the chosen app, or every
   # workflow_dispatch option except `all` when that choice is selected. Reading the
