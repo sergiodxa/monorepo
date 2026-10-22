@@ -56,10 +56,7 @@ interface PlannedEdit {
 }
 
 /** Plans the monorepo wiring edits for `name`. */
-async function planRegister(
-	name: string,
-	options: { converted: boolean; deploy: boolean },
-) {
+async function planRegister(name: string, options: { converted: boolean; deploy: boolean }) {
 	let edits: PlannedEdit[] = [];
 	let vite = await wrap(() => readFile(join(REPO_ROOT, "vite.config.ts"), "utf8"));
 	if (isFailure(vite)) return vite;
