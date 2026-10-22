@@ -538,7 +538,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 		probe === undefined ? [minBs(FIRST_SCREEN_MIN_BLOCK_SIZE), vstack({ justify: "center" })] : [];
 
 	let resultFollowUp;
-	if (redirected) {
+	if (probe !== undefined && redirected) {
 		resultFollowUp = (
 			<div mix={[vstack({ gap: 4 })]}>
 				<div mix={[vstack({ gap: 2 })]}>

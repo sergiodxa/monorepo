@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Message, MessageData } from "@sdxc/messaging";
+import type { Message, MessageData, Severity } from "@sdxc/messaging";
 
 import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/database/schema";
 
@@ -208,7 +208,7 @@ export function alertMessage(input: AlertMessageInput): Message {
 	};
 	if (input.incident) data["incident"] = { ...input.incident };
 
-	let severity;
+	let severity: Severity;
 	if (recovered) severity = "success";
 	else if (input.eventType === "degraded") severity = "warning";
 	else severity = "critical";
