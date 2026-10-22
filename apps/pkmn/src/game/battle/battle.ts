@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Coordinates the battle domain model and turn-resolution flow: the
  * battle-facing types, and how combatants, effects, actions, and outcome
@@ -7,7 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "@sdxc/random";
+import { iife } from "@sdxc/iife";
 
 import type { GameData } from "~/game/data/game-data";
 import type { ItemId, MedicineEffect } from "~/game/data/item";
@@ -1170,10 +1172,11 @@ export class Battle {
 		}
 
 		if (effects.spikesLayers > 0 && grounded && canResolveNextHazard()) {
-			let fraction;
-			if (effects.spikesLayers === 1) fraction = 1 / 8;
-			else if (effects.spikesLayers === 2) fraction = 1 / 6;
-			else fraction = 1 / 4;
+			let fraction = iife(() => {
+				if (effects.spikesLayers === 1) return 1 / 8;
+				if (effects.spikesLayers === 2) return 1 / 6;
+				return 1 / 4;
+			});
 			let damage = Math.max(
 				1,
 				Math.floor(getCreatureStat(this.gameData, combatant.creature, Stat.HP) * fraction),

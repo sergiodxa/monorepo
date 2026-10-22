@@ -1,3 +1,5 @@
+import { iife } from "@sdxc/iife";
+
 /**
  * The species-detail screen: one recorded species' dossier.
  *
@@ -49,10 +51,11 @@ export interface DetailRow {
  * habitat collapses to a single {@link UNKNOWN_HABITAT} row.
  */
 export function speciesDetailRows(species: SpeciesDetailView): DetailRow[] {
-	let status;
-	if (species.caught) status = "Caught";
-	else if (species.seen) status = "Seen";
-	else status = "-";
+	let status = iife(() => {
+		if (species.caught) return "Caught";
+		if (species.seen) return "Seen";
+		return "-";
+	});
 	let rows: DetailRow[] = [
 		{ label: "NO", value: `#${String(species.number).padStart(3, "0")}` },
 		{ label: "TYPE", value: species.types.join(" / ") },

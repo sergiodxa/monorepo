@@ -11,6 +11,7 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
+import { iife } from "@sdxc/iife";
 import { isFailure } from "@sdxc/result";
 import { css, on } from "remix/component";
 
@@ -660,10 +661,11 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 	function renderLearnsetRow(entry: Species["learnset"][number], index: number) {
 		if (!("level" in entry)) {
 			let moveId = "moveId" in entry ? entry.moveId : `TM/HM ${entry.tmhm}`;
-			let learnsetKind;
-			if ("tmhm" in entry) learnsetKind = "TM/HM";
-			else if ("tutor" in entry) learnsetKind = "Tutor";
-			else learnsetKind = "Egg";
+			let learnsetKind = iife(() => {
+				if ("tmhm" in entry) return "TM/HM";
+				if ("tutor" in entry) return "Tutor";
+				return "Egg";
+			});
 
 			return (
 				<li
@@ -908,10 +910,11 @@ export function SpeciesTool(handle: Handle<Record<string, never>>) {
 	/** Renders the Sprite section: source (none / atlas region / image) controls. */
 	function renderSprite() {
 		let sprite = species.sprite ?? null;
-		let spriteMode;
-		if (sprite === null) spriteMode = "none";
-		else if ("atlas" in sprite) spriteMode = "atlas";
-		else spriteMode = "image";
+		let spriteMode = iife(() => {
+			if (sprite === null) return "none";
+			if ("atlas" in sprite) return "atlas";
+			return "image";
+		});
 		let atlasId = sprite && "atlas" in sprite ? sprite.atlas : (ATLAS_IDS[0] ?? "");
 		let region = sprite && "region" in sprite ? sprite.region : NONE;
 		let imageId = sprite && "image" in sprite ? sprite.image : (IMAGE_IDS[0] ?? NONE);

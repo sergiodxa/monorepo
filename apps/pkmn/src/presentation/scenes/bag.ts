@@ -8,6 +8,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { iife } from "@sdxc/iife";
+
 import type { Item } from "~/game/data/item";
 import type { CreatureSummaryView } from "~/game/selectors";
 import type { MoveSet } from "~/game/world/creature";
@@ -146,10 +148,11 @@ export class BagScene implements Scene {
 				: game.dispatch({ type: "use-medicine", playerId: HERO_ID, creatureId, itemId });
 
 		let creature = game.engine.selectCreatureSummary(creatureId);
-		let message;
-		if (events.length === 0) message = `It won't have any effect.`;
-		else if (action === "evolution") message = `${creature.name} evolved!`;
-		else message = `Used ${itemName} on ${creature.name}.`;
+		let message = iife(() => {
+			if (events.length === 0) return `It won't have any effect.`;
+			if (action === "evolution") return `${creature.name} evolved!`;
+			return `Used ${itemName} on ${creature.name}.`;
+		});
 
 		game.scenes.pop();
 		game.scenes.push(new DialogueScene([message]));
