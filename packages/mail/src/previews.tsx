@@ -259,7 +259,7 @@ function PreviewInbox(handle: Handle<InboxProps>) {
 		if (selected === undefined && requested !== undefined) {
 			emptyTitle = `No template is mapped for the "${requested}" email.`;
 		} else if (selected === undefined) emptyTitle = "Select an email to read it.";
-		else if (selected.failed === true) emptyTitle = selected.subject;
+		else if (selected.failed === true) emptyTitle = selected.subject ?? "";
 		else emptyTitle = `The "${selected.name}" email has no preview(); add one to its template.`;
 		return (
 			<html lang="en" class="system" mix={colorScheme("light dark")}>
