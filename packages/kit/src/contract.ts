@@ -182,7 +182,7 @@ export const SDXC_COMMANDS = commands({
 	}),
 	doctor: command({
 		description:
-			"Lint release drift, secrets, migrations, app layout, clean-code metrics and project checks",
+			"Lint release drift, secrets, migrations, app layout, complexity and project checks",
 		flags: {
 			json: flag.boolean("json", { description: "Print the report as JSON for an agent" }),
 			only: flag

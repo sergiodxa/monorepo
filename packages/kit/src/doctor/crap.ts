@@ -22,13 +22,13 @@ import { passed, skipped } from "./check.js";
 import { isAppSource, listFiles } from "./files.js";
 
 /**
- * Warns on each function whose CRAP score exceeds `doctor.complexity.crap` when coverage data
- * is present at `doctor.complexity.coverage`.
+ * Warns on each function whose CRAP score exceeds `doctor.crap.max` when coverage data is
+ * present at `doctor.crap.coverage`.
  */
 export const crapCheck: Check = {
 	name: "crap",
 	async run(context): Promise<CheckResult> {
-		let { crap: max, coverage: coverageFile } = context.config.doctor.complexity;
+		let { max, coverage: coverageFile } = context.config.doctor.crap;
 		if (!(await coverageExists(context.root, coverageFile))) {
 			return skipped(`No coverage at ${coverageFile}; run tests with coverage then re-run doctor`);
 		}
@@ -66,7 +66,7 @@ export const crapCheck: Check = {
 					? "Found 1 function above the CRAP limit"
 					: `Found ${findings.length} functions above the CRAP limit`,
 			findings,
-			fix: `Lower complexity, raise coverage, or raise doctor.complexity.crap in .config/sdxc.jsonc`,
+			fix: `Lower complexity, raise coverage, or raise doctor.crap.max in .config/sdxc.jsonc`,
 		};
 	},
 };

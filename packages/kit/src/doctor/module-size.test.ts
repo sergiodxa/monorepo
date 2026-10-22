@@ -24,7 +24,7 @@ describe("moduleSizeCheck", () => {
 		let body = Array.from({ length: 20 }, (_, i) => `export const n${i} = ${i};`).join("\n");
 		let context = await fixture(
 			{ "app/models/big.ts": `${body}\n` },
-			{ config: { doctor: { complexity: { moduleLines: 10 } } } },
+			{ config: { doctor: { moduleSize: { maxLines: 10 } } } },
 		);
 
 		let result = await moduleSizeCheck.run(context);

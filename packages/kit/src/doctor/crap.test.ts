@@ -34,7 +34,7 @@ describe("crapCheck", () => {
 					},
 				}),
 			},
-			{ config: { doctor: { complexity: { crap: 2 } } } },
+			{ config: { doctor: { crap: { max: 2 } } } },
 		);
 
 		let result = await crapCheck.run(context);

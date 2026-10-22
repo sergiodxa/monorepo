@@ -51,22 +51,22 @@ const DOCTOR_MIGRATIONS_DEFAULTS: { accept: s.InferOutput<typeof ACCEPTED_MIGRAT
 	accept: [],
 };
 
-/**
- * Clean-code thresholds for the complexity, module-size and crap doctor checks: tuned for
- * agent-written code (cyclomatic 4, CRAP 12) and overridable per project.
- */
-const DOCTOR_COMPLEXITY_DEFAULTS = {
-	max: 4,
-	moduleLines: 200,
-	crap: 12,
-	coverage: "coverage/coverage-final.json",
-};
+/** The `doctor.complexity` group as a project with no such key gets it. */
+const DOCTOR_COMPLEXITY_DEFAULTS = { max: 4 };
+
+/** The `doctor.moduleSize` group as a project with no such key gets it. */
+const DOCTOR_MODULE_SIZE_DEFAULTS = { maxLines: 200 };
+
+/** The `doctor.crap` group as a project with no such key gets it. */
+const DOCTOR_CRAP_DEFAULTS = { max: 12, coverage: "coverage/coverage-final.json" };
 
 /** The `doctor` group as a project with no `doctor` key gets it. */
 const DOCTOR_DEFAULTS = {
 	checks: ".config/sdxc/checks",
 	migrations: DOCTOR_MIGRATIONS_DEFAULTS,
 	complexity: DOCTOR_COMPLEXITY_DEFAULTS,
+	moduleSize: DOCTOR_MODULE_SIZE_DEFAULTS,
+	crap: DOCTOR_CRAP_DEFAULTS,
 };
 
 /** The `run` group as a project with no `run` key gets it. */
@@ -154,28 +154,39 @@ export const CONFIG_SCHEMA = s.object(
 										description:
 											"Maximum cyclomatic complexity per function; the complexity check warns above it",
 									}),
-								moduleLines: s
-									.defaulted(
-										s.integer().pipe(checks.min(1)),
-										DOCTOR_COMPLEXITY_DEFAULTS.moduleLines,
-									)
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_COMPLEXITY_DEFAULTS,
+					),
+					moduleSize: s.defaulted(
+						s.object(
+							{
+								maxLines: s
+									.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_MODULE_SIZE_DEFAULTS.maxLines)
 									.meta({
 										description:
 											"Maximum code lines per module; the module-size check warns above it",
 									}),
-								crap: s
-									.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_COMPLEXITY_DEFAULTS.crap)
-									.meta({
-										description: "Maximum CRAP score per function; the crap check warns above it",
-									}),
-								coverage: s.defaulted(s.string(), DOCTOR_COMPLEXITY_DEFAULTS.coverage).meta({
+							},
+							{ unknownKeys: "error" },
+						),
+						DOCTOR_MODULE_SIZE_DEFAULTS,
+					),
+					crap: s.defaulted(
+						s.object(
+							{
+								max: s.defaulted(s.integer().pipe(checks.min(1)), DOCTOR_CRAP_DEFAULTS.max).meta({
+									description: "Maximum CRAP score per function; the crap check warns above it",
+								}),
+								coverage: s.defaulted(s.string(), DOCTOR_CRAP_DEFAULTS.coverage).meta({
 									description:
 										"Istanbul coverage-final.json the crap check reads, relative to the project root",
 								}),
 							},
 							{ unknownKeys: "error" },
 						),
-						DOCTOR_COMPLEXITY_DEFAULTS,
+						DOCTOR_CRAP_DEFAULTS,
 					),
 				},
 				{ unknownKeys: "error" },
@@ -298,7 +309,7 @@ function configuredPaths(config: Config): Array<[string, string]> {
 		["ui.directory", config.ui.directory],
 		["make.stubs", config.make.stubs],
 		["doctor.checks", config.doctor.checks],
-		["doctor.complexity.coverage", config.doctor.complexity.coverage],
+		["doctor.crap.coverage", config.doctor.crap.coverage],
 		["run.entry", config.run.entry],
 		["lock", config.lock],
 	];

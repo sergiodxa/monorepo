@@ -104,7 +104,7 @@ Remove a file sdxc make wrote, its test, its pairing .spec, its mapping and its 
 
 #### `sdxc doctor`
 
-Lint release drift, secrets, migrations, app layout, clean-code metrics and project checks
+Lint release drift, secrets, migrations, app layout, complexity and project checks
 
 | Flag             | Does                                  |
 | ---------------- | ------------------------------------- |
