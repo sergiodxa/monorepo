@@ -1,6 +1,7 @@
 /**
  * `app register`: wires an app that `sdxc create` already wrote under `apps/<name>` into this
- * monorepo — Vitest project, layout allowlist, and the Deploy-app workflow choice list.
+ * monorepo — Vitest project and layout allowlist. Pass `--deploy` to add the Deploy-app workflow
+ * choice only when the app is ready to ship.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,7 +21,7 @@ import commandset from "./index.js";
 /** Kebab-case app directory name. */
 const NAME = /^[a-z][a-z0-9]*(-[a-z0-9]+)*$/;
 
-/** Wires the named app into vite.config.ts, the layout allowlist and deploy-apps.yml. */
+/** Wires the named app into vite.config.ts, the layout allowlist, and optionally deploy-apps.yml. */
 export default createCommand(commandset.app.register, async (ctx) => {
 	let name = ctx.arguments.name.trim();
 	if (!NAME.test(name)) return usage(`"${name}" is not a kebab-case app name`);
@@ -31,7 +32,10 @@ export default createCommand(commandset.app.register, async (ctx) => {
 			`apps/${name} has no package.json; create it with \`sdxc create apps/${name}\` first`,
 		);
 	}
-	let planned = await planRegister(name, ctx.flags.converted !== false);
+	let planned = await planRegister(name, {
+		converted: ctx.flags.converted !== false,
+		deploy: ctx.flags.deploy === true,
+	});
 	if (isFailure(planned)) return exit(1, planned.error.message);
 	if (ctx.flags.dryRun) {
 		for (let edit of planned.data) ctx.stdout(`would edit ${edit.path}\n`);
@@ -52,7 +56,10 @@ interface PlannedEdit {
 }
 
 /** Plans the monorepo wiring edits for `name`. */
-async function planRegister(name: string, converted: boolean) {
+async function planRegister(
+	name: string,
+	options: { converted: boolean; deploy: boolean },
+) {
 	let edits: PlannedEdit[] = [];
 	let vite = await wrap(() => readFile(join(REPO_ROOT, "vite.config.ts"), "utf8"));
 	if (isFailure(vite)) return vite;
@@ -60,7 +67,7 @@ async function planRegister(name: string, converted: boolean) {
 	if (isFailure(viteAfter)) return viteAfter;
 	if (viteAfter.data !== vite.data) edits.push({ path: "vite.config.ts", after: viteAfter.data });
 
-	if (converted) {
+	if (options.converted) {
 		let layout = await wrap(() => readFile(join(REPO_ROOT, "test/app-layout.ts"), "utf8"));
 		if (isFailure(layout)) return layout;
 		let layoutAfter = ensureConvertedApp(layout.data, name);
@@ -70,14 +77,16 @@ async function planRegister(name: string, converted: boolean) {
 		}
 	}
 
-	let deploy = await wrap(() =>
-		readFile(join(REPO_ROOT, ".github/workflows/deploy-apps.yml"), "utf8"),
-	);
-	if (isFailure(deploy)) return deploy;
-	let deployAfter = ensureDeployOption(deploy.data, name);
-	if (isFailure(deployAfter)) return deployAfter;
-	if (deployAfter.data !== deploy.data) {
-		edits.push({ path: ".github/workflows/deploy-apps.yml", after: deployAfter.data });
+	if (options.deploy) {
+		let deploy = await wrap(() =>
+			readFile(join(REPO_ROOT, ".github/workflows/deploy-apps.yml"), "utf8"),
+		);
+		if (isFailure(deploy)) return deploy;
+		let deployAfter = ensureDeployOption(deploy.data, name);
+		if (isFailure(deployAfter)) return deployAfter;
+		if (deployAfter.data !== deploy.data) {
+			edits.push({ path: ".github/workflows/deploy-apps.yml", after: deployAfter.data });
+		}
 	}
 
 	if (edits.length === 0) {
