@@ -43,7 +43,7 @@ fixed belongs in one of those three surfaces — not in another paragraph of `AG
   hand — the gap this ADR's kit backlog closes.
 - Remix's own CLI ships `remix doctor --fix` for low-risk repairs. That pattern fits here as
   long as diagnosis stays separate from mutation.
-- Generators already close the loop for *new* app work: `make` declares and maps controllers,
+- Generators already close the loop for _new_ app work: `make` declares and maps controllers,
   jobs, emails, MCP tools and commands; `make middleware --mount` edits a chain; `make model`
   writes the migration and factory. Gaps show up when something was written without `make`, or
   when the change is a binding, a Durable Object class, or another kind the stubs never covered.
@@ -77,11 +77,11 @@ defaults.
 
 ### Pick the surface that matches the audience
 
-| Audience / scope                                              | Surface                                                                 |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| Any project on `@sdxc/*`                                      | `@sdxc/kit` (`make`, `scaffold`, `destroy`, `doctor`, `fix`, `deploy`) |
-| This monorepo only (release, doctor-all-apps, package bootstrap, create-app wiring) | `scripts/` + root `package.json`                                        |
-| Production or shared CI for this monorepo                     | `.github/workflows/` calling those scripts or the kit binary            |
+| Audience / scope                                                                    | Surface                                                                |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Any project on `@sdxc/*`                                                            | `@sdxc/kit` (`make`, `scaffold`, `destroy`, `doctor`, `fix`, `deploy`) |
+| This monorepo only (release, doctor-all-apps, package bootstrap, create-app wiring) | `scripts/` + root `package.json`                                       |
+| Production or shared CI for this monorepo                                           | `.github/workflows/` calling those scripts or the kit binary           |
 
 A step that belongs in more than one place still has one owner: the kit owns the algorithm
 (`sdxc deploy`); the workflow owns when and where it runs with repo secrets. Do not reimplement
@@ -89,14 +89,14 @@ deploy order inside YAML.
 
 ### Prefer generate over repair; prefer repair over narration; prefer a workflow over a playbook
 
-| Situation                                              | Mechanism                                                                      |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| Creating a new kind of file or wiring                  | `sdxc make` / `sdxc scaffold` (extend kinds and stubs)                         |
-| Removing what `make` wrote                             | `sdxc destroy`                                                                 |
-| Project drifted from a rule the kit can prove          | `sdxc doctor` reports; `sdxc fix` applies only named safe repairs              |
-| Release moved and the code must follow                 | `sdxc upgrade` + its prompt (agent applies *code* changes)                     |
-| Ship an app in this monorepo                           | `Deploy app` workflow (or `sdxc deploy` locally); never hand-ordered `cf` calls |
-| Publish packages / check every app / enforce commit shape | `bun run release`, `bun run doctor`, release commit check in CI             |
+| Situation                                                 | Mechanism                                                                       |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Creating a new kind of file or wiring                     | `sdxc make` / `sdxc scaffold` (extend kinds and stubs)                          |
+| Removing what `make` wrote                                | `sdxc destroy`                                                                  |
+| Project drifted from a rule the kit can prove             | `sdxc doctor` reports; `sdxc fix` applies only named safe repairs               |
+| Release moved and the code must follow                    | `sdxc upgrade` + its prompt (agent applies _code_ changes)                      |
+| Ship an app in this monorepo                              | `Deploy app` workflow (or `sdxc deploy` locally); never hand-ordered `cf` calls |
+| Publish packages / check every app / enforce commit shape | `bun run release`, `bun run doctor`, release commit check in CI                 |
 
 `doctor` stays read-only (ADR-160). A separate `sdxc fix [check…]` (or `sdxc doctor --fix`
 that only enables that path) applies repairs the report already knows how to express. A check
@@ -139,12 +139,12 @@ hand recipe:
 
 ### What agents still own
 
-- Choosing *whether* to add a feature, which resource to scaffold, and which fields matter.
+- Choosing _whether_ to add a feature, which resource to scaffold, and which fields matter.
 - Filling stubs: handler bodies, policy nuance past `everyone`/`member`, email copy, UI.
 - Applying upgrade prompts that change call sites in app code.
 - Writing Conventional Commit subjects and bodies for consumers (ADR-007 / ADR-140): the shape
   is fixed (and CI checks it), the content is not.
-- Deciding *that* an app should ship; the workflow or `sdxc deploy` owns *how*.
+- Deciding _that_ an app should ship; the workflow or `sdxc deploy` owns _how_.
 
 ## Consequences
 
