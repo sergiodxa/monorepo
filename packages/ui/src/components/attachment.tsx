@@ -489,7 +489,11 @@ Attachment.Trigger = function AttachmentTrigger(handle: Handle<Attachment.Trigge
 		let { href, commandfor, command, target, role, tabIndex, children, mix, ...rest } =
 			handle.props;
 		let isConfigured = href !== undefined || commandfor !== undefined;
-		let resolvedRole = role ?? (href !== undefined ? "link" : isConfigured ? "button" : undefined);
+		let inferredRole;
+		if (href !== undefined) inferredRole = "link";
+		else if (isConfigured) inferredRole = "button";
+		else inferredRole = undefined;
+		let resolvedRole = role ?? inferredRole;
 		let resolvedTabIndex = tabIndex ?? (isConfigured ? 0 : undefined);
 
 		if (import.meta.env?.DEV && !isConfigured) {
