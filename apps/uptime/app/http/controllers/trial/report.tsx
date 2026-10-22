@@ -10,6 +10,7 @@ import type { Translate } from "@sdxc/i18n";
 
 import { formatDate, formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
+import { iife } from "@sdxc/iife";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -221,18 +222,17 @@ export default createAction(routes.trial.report, async (ctx) => {
 	 * already monitored and must not be sold again; an attempt past its own `converts_until`
 	 * may still be sold, but the promise that its history carries over is no longer true.
 	 */
-	let offer;
-	if (watch.converted_at !== null) offer = "converted";
-	else if (isConvertible(watch, now)) offer = "convertible";
-	else offer = "expired";
+	let offer = iife(() => {
+		if (watch.converted_at !== null) return "converted";
+		if (isConvertible(watch, now)) return "convertible";
+		return "expired";
+	});
 
-	let incidentBody;
-	if (!measured) {
-		incidentBody = <Text>{t("page.trial.report.incidents.unknown")}</Text>;
-	} else if (incidents.length === 0) {
-		incidentBody = <Text>{t("page.trial.report.incidents.none", { count: stats.checks })}</Text>;
-	} else {
-		incidentBody = (
+	let incidentBody = iife(() => {
+		if (!measured) return <Text>{t("page.trial.report.incidents.unknown")}</Text>;
+		if (incidents.length === 0)
+			return <Text>{t("page.trial.report.incidents.none", { count: stats.checks })}</Text>;
+		return (
 			<>
 				<Text>{t("page.trial.report.incidents.summary", { count: incidents.length })}</Text>
 				<ul mix={[m(0), pi(0), vstack({ gap: 2 }), raw({ listStyle: "none" })]}>
@@ -244,12 +244,13 @@ export default createAction(routes.trial.report, async (ctx) => {
 				</ul>
 			</>
 		);
-	}
+	});
 
-	let ctaBody;
-	if (offer === "converted") ctaBody = t("page.trial.report.cta.converted.body");
-	else if (offer === "convertible") ctaBody = t("page.trial.report.cta.convertible.body");
-	else ctaBody = t("page.trial.report.cta.expired.body");
+	let ctaBody = iife(() => {
+		if (offer === "converted") return t("page.trial.report.cta.converted.body");
+		if (offer === "convertible") return t("page.trial.report.cta.convertible.body");
+		return t("page.trial.report.cta.expired.body");
+	});
 
 	return ctx.render(
 		<DocumentLayout

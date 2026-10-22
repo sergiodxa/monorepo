@@ -9,6 +9,8 @@
 
 import type { Message, MessageData, Severity } from "@sdxc/messaging";
 
+import { iife } from "@sdxc/iife";
+
 import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/database/schema";
 
 import { hasRecordSetEdit } from "~/app/services/dns/findings";
@@ -208,10 +210,11 @@ export function alertMessage(input: AlertMessageInput): Message {
 	};
 	if (input.incident) data["incident"] = { ...input.incident };
 
-	let severity: Severity;
-	if (recovered) severity = "success";
-	else if (input.eventType === "degraded") severity = "warning";
-	else severity = "critical";
+	let severity = iife((): Severity => {
+		if (recovered) return "success";
+		if (input.eventType === "degraded") return "warning";
+		return "critical";
+	});
 	return {
 		title: `${input.monitorName} is ${statusWord(input.eventType)}`,
 		text,

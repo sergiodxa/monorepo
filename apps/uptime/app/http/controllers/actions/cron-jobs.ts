@@ -10,6 +10,7 @@
 import { Schedule } from "@sdxc/cron";
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
+import { iife } from "@sdxc/iife";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
@@ -120,16 +121,17 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 	let scheduleChanged =
 		existing.cron_expression !== cronExpression || existing.timezone !== values.timezone;
 
-	let nextExpectedAt;
-	if (is_enabled)
-		nextExpectedAt =
-			scheduleChanged || !wasEnabled
+	let nextExpectedAt = iife(() => {
+		if (is_enabled)
+			return scheduleChanged || !wasEnabled
 				? calculateNextExpected(cronExpression, values.timezone)
 				: existing.next_expected_at;
-	else nextExpectedAt = null;
-	let enabledAt;
-	if (is_enabled) enabledAt = wasEnabled ? existing.enabled_at : Date.now();
-	else enabledAt = null;
+		return null;
+	});
+	let enabledAt = iife(() => {
+		if (is_enabled) return wasEnabled ? existing.enabled_at : Date.now();
+		return null;
+	});
 	unwrap(
 		await ctx.models.cronJobMonitors.update(monitor_id, {
 			...values,
