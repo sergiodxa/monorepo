@@ -48,7 +48,7 @@
 		"@sdxc/ui": "0.0.1",
 		"@sdxc/user-agent": "0.0.1",
 		"@sdxc/well-known": "0.0.1",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",

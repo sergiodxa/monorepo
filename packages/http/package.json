@@ -24,9 +24,9 @@
 		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	}
 }

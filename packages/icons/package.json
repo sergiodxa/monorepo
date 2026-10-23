@@ -14,10 +14,10 @@
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.5",
-		"lucide-static": "^1.55.0",
-		"remix": "3.0.0"
+		"lucide-static": "^1.61.0",
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	}
 }

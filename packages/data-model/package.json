@@ -22,7 +22,7 @@
 		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20261011.1",
+		"@cloudflare/workers-types": "^5.20261023.1",
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
@@ -32,13 +32,13 @@
 		"@sdxc/mcp": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/sample": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
 		"@sdxc/cli": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/sample": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/cli": {

@@ -24,14 +24,14 @@
 	},
 	"devDependencies": {
 		"@sdxc/json-schema": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/flags": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/mcp": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/billing": {

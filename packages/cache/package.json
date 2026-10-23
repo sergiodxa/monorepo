@@ -21,6 +21,6 @@
 		"@sdxc/uuid": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20261011.1"
+		"@cloudflare/workers-types": "^5.20261023.1"
 	}
 }

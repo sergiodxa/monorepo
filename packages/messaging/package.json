@@ -36,12 +36,12 @@
 		"@sdxc/webhooks": "workspace:*"
 	},
 	"devDependencies": {
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
 		"@sdxc/web-push": "workspace:*",
-		"remix": "3.0.0",
-		"vitest": "^4.1.10"
+		"remix": "3.1.0",
+		"vitest": "^4.1.11"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/web-push": {

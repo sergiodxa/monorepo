@@ -20,11 +20,11 @@
 	"devDependencies": {
 		"@sdxc/cli": "workspace:*",
 		"@types/node": "^26.6.5",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
 		"@sdxc/cli": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/cli": {

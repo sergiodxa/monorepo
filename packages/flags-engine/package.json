@@ -24,13 +24,13 @@
 		"@sdxc/types": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20261011.1",
+		"@cloudflare/workers-types": "^5.20261023.1",
 		"@sdxc/uuid": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"peerDependencies": {
-		"remix": "3.0.0",
-		"vitest": "^4.1.10"
+		"remix": "3.1.0",
+		"vitest": "^4.1.11"
 	},
 	"peerDependenciesMeta": {
 		"vitest": {

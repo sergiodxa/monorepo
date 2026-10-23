@@ -12,7 +12,7 @@
 		"@sdxc/iife": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.5"

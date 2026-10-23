@@ -23,7 +23,7 @@
 		"@sdxc/result": "workspace:*",
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
-		"remix": "3.0.0",
+		"remix": "3.1.0",
 		"sdxc": "workspace:*"
 	},
 	"devDependencies": {

@@ -18,10 +18,10 @@
 		"@sdxc/uuid": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20261011.1",
+		"@cloudflare/workers-types": "^5.20261023.1",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@types/node": "^26.6.5",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	}
 }

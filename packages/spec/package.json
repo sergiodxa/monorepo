@@ -26,6 +26,6 @@
 		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/sample": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	}
 }

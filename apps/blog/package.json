@@ -75,16 +75,16 @@
 		"@sdxc/websub": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
 		"@sdxc/workers-cache": "workspace:*",
-		"remix": "3.0.0"
+		"remix": "3.1.0"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.63.1",
+		"@cloudflare/vite-plugin": "^1.65.0",
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/http-signatures": "workspace:*",
 		"@sdxc/kit": "workspace:*",
 		"@sdxc/png": "workspace:*",
 		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
-		"wrangler": "^4.149.0"
+		"wrangler": "^4.152.0"
 	}
 }
