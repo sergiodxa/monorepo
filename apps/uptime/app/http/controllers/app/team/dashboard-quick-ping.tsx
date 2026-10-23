@@ -89,7 +89,6 @@ export default createAction(routes.app.team.dashboard.quickPing, {
 
 				<QuickPingForm
 					action={routes.actions.runPing.href({ team: ctx.team.slug })}
-					src={routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })}
 					url={result?.url}
 					label={ctx.intl.t("page.dashboard.quickPing.field.label")}
 					placeholder={ctx.intl.t("page.dashboard.quickPing.field.placeholder")}

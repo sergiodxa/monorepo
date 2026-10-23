@@ -1,6 +1,7 @@
 /**
  * Client island: the dashboard header's quick-check form, a real `<form>` posting
- * to the run-ping action so it works as a plain navigating submit.
+ * to the run-ping action so it works as a plain navigating submit, and once hydrated
+ * submits through its frame so the result renders without leaving the page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -31,6 +32,7 @@ import { is, m, maxIs, minIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { Button, Input, Label } from "@sdxc/ui";
+import { frameSubmit } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 /**
@@ -46,8 +48,6 @@ const HELP_ID = "quick-ping-help";
 type QuickPingFormProps = {
 	/** Where the form posts; the team-scoped `run-ping` action. */
 	action: string;
-	/** Fragment URL the frame reloads from once the check has run. */
-	src: string;
 	/** Kept after a check so the field still names the target the toast is about. */
 	url?: string;
 	/** Wraps the input to give it an accessible name that holds regardless of how the caption is styled. */
@@ -62,14 +62,17 @@ type QuickPingFormProps = {
 	submit: string;
 };
 
-/** Posts the URL to the run-ping action, then reloads the bar's frame with the answer. */
+/**
+ * Posts the URL to the run-ping action through the bar's frame, which renders the action's
+ * answer in the same request and keeps its own address for later reloads.
+ */
 export const QuickPingForm = clientEntry(
 	import.meta.url,
 	function QuickPingForm(handle: Handle<QuickPingFormProps>) {
 		let pending = false;
 
 		return () => {
-			let { action, src, url, label, placeholder, description, submit } = handle.props;
+			let { action, url, label, placeholder, description, submit } = handle.props;
 
 			return (
 				<form
@@ -117,29 +120,10 @@ export const QuickPingForm = clientEntry(
 							}),
 							items("center"),
 						]),
-						on("submit", async (event) => {
-							event.preventDefault();
-							if (pending) return;
-
-							pending = true;
+						frameSubmit(),
+						on("ui:frame-submit", (event) => {
+							pending = event.state === "pending";
 							void handle.update();
-							try {
-								/**
-								 * `manual` captures the redirect response itself, so its `Set-Cookie`
-								 * lands immediately — the redirect exists only for the no-JavaScript
-								 * submit path.
-								 */
-								await fetch(action, {
-									method: "POST",
-									body: new FormData(event.currentTarget),
-									redirect: "manual",
-								});
-								handle.frame.src = src;
-								await handle.frame.reload();
-							} finally {
-								pending = false;
-								void handle.update();
-							}
 						}),
 					]}
 				>

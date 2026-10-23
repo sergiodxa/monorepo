@@ -85,6 +85,12 @@ export type QuickPingOutcome = QuickPingResult | QuickPingError;
 export const QUICK_PING_RESULT = "pingResult";
 
 /**
+ * Name of the dashboard frame holding the quick-check bar. A submission the bar sends through
+ * that frame carries it as `x-remix-target`, and is answered with the bar itself.
+ */
+export const QUICK_PING_FRAME = "dashboard-quick-ping";
+
+/**
  * POST /actions/:team/run-ping — probes one URL and hands the result to the
  * dashboard. Defined as a standalone `Route` — the same shape `setDashboardTab`
  * uses — so it supplies its own `requireUser`/`requireTeam` chain directly.
@@ -93,8 +99,15 @@ export const runPing = createAction(routes.actions.runPing, {
 	middleware: [requireUser, requireTeam, teamAccess],
 	handler: async (ctx) => {
 		let session = ctx.get(Session);
-		let dashboard = routes.app.team.dashboard.index.href({ team: ctx.team.slug });
-		let back = redirect(dashboard, { status: redirect.Status.SeeOther });
+		/**
+		 * A page submission goes back to the dashboard; one sent through the bar's frame goes to
+		 * the bar's own fragment, which the frame renders from the same request.
+		 */
+		let destination =
+			ctx.request.headers.get("x-remix-target") === QUICK_PING_FRAME
+				? routes.app.team.dashboard.quickPing.href({ team: ctx.team.slug })
+				: routes.app.team.dashboard.index.href({ team: ctx.team.slug });
+		let back = redirect(destination, { status: redirect.Status.SeeOther });
 
 		/**
 		 * One id for this submission, minted before it is known whether there will be a check

@@ -348,17 +348,14 @@ describe("dashboard-quick-ping", () => {
 	});
 
 	/**
-	 * The form action is where the no-JavaScript path submits, and `src` is where the
-	 * hydrated island reloads the frame from — each points at its own URL.
+	 * The form action is where both paths submit: the no-JavaScript one as a page, the
+	 * hydrated one through the bar's frame, which the action answers with this fragment.
 	 */
-	test("points the form at the run-ping action and the frame back at itself", async () => {
+	test("points the form at the run-ping action", async () => {
 		let { db, team, membership } = await createFixture();
 
 		let body = await (await render(db, team, membership)).text();
 
 		expect(body).toContain(`action="${routes.actions.runPing.href({ team: team.slug })}"`);
-		expect(body).toContain(
-			`"src":"${routes.app.team.dashboard.quickPing.href({ team: team.slug })}"`,
-		);
 	});
 });

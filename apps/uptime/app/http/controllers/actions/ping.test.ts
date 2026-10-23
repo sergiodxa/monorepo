@@ -75,7 +75,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");
-let { runPing, QUICK_PING_RESULT } = await import("./ping");
+let { runPing, QUICK_PING_FRAME, QUICK_PING_RESULT } = await import("./ping");
 
 /** The entitlement gate logs every inconclusive lookup; the assertions read the flash. */
 vi.spyOn(console, "info").mockImplementation(() => {});
@@ -188,14 +188,14 @@ function cookieHeader(response: Response): string {
  * platform's post-response settling, then reads back what the action flashed — a
  * flash only readable one request after it was written, exactly how the dashboard reads it.
  */
-async function dispatch(db: Db, team: SelectTeam, url: string) {
+async function dispatch(db: Db, team: SelectTeam, url: string, headers?: Record<string, string>) {
 	let router = createTestRouter(db);
 
 	let request = new Request(
 		new URL(routes.actions.runPing.href({ team: team.slug }), "https://uptime.test"),
 		{
 			method: "POST",
-			headers: { "content-type": "application/x-www-form-urlencoded" },
+			headers: { "content-type": "application/x-www-form-urlencoded", ...headers },
 			body: new URLSearchParams({ url }),
 		},
 	);
@@ -241,6 +241,24 @@ describe("POST /actions/:team/run-ping", () => {
 			responseStatus: 200,
 			responseTimeMs: 12,
 		});
+	});
+
+	/**
+	 * The hydrated bar submits through its own frame, which renders whatever the request ends
+	 * on: the dashboard document there would nest a whole page inside the header.
+	 */
+	test("redirects a submission sent through the bar's frame to the bar itself", async () => {
+		let { db, team } = await createFixture();
+
+		let { response, flashed } = await dispatch(db, team, "https://example.com/health", {
+			"x-remix-target": QUICK_PING_FRAME,
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.dashboard.quickPing.href({ team: team.slug }),
+		);
+		expect(flashed.outcome?.kind).toBe("result");
 	});
 
 	test("probes with the quick check's defaults", async () => {
