@@ -273,6 +273,8 @@ Each mixin module documents why it needs JavaScript and what still works without
 | `dragReorder(session)`          | `GridList` / `Tree`        | Pointer reordering through a `DragSession`.                             |
 | `dropZone(session)`             | `DropZone`                 | File drag-and-drop through a `DragSession`.                             |
 | `dualRange()`                   | a two-thumb `Slider`       | Thumbs that cannot cross.                                               |
+| `frameRefresh(options)`         | any host in a frame        | Its frame reloaded on a schedule or an event, resting while hidden.     |
+| `frameSubmit(options?)`         | a `<form>` in a frame      | The form posted through its frame, answered in place in one request.    |
 | `gridListKeys(model)`           | `GridList`                 | The ARIA grid keyboard pattern over a `SelectionModel`.                 |
 | `headingLevelFallback(options)` | an island's `HeadingScope` | Reports the page's heading depth to `onLevel` once on attach.           |
 | `hotkey(combo)`                 | a `<dialog>`/`[popover]`   | A document-wide shortcut toggling its host.                             |

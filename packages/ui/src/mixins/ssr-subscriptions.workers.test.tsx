@@ -24,6 +24,8 @@ import { commandFilter } from "./command-filter.js";
 import { commandKeys } from "./command-keys.js";
 import { dragReorder } from "./drag-reorder.js";
 import { dropZone } from "./drop-zone.js";
+import { frameRefresh } from "./frame-refresh.js";
+import { frameSubmit } from "./frame-submit.js";
 import { gridListKeys } from "./grid-list-keys.js";
 import { messageFollow } from "./message-follow.js";
 import { rangePreview } from "./range-preview.js";
@@ -55,6 +57,8 @@ const CASES: [name: string, node: () => RemixNode][] = [
 	["messageFollow", () => <div mix={[messageFollow(new ScrollFollowModel())]} />],
 	["resizeHandle", () => <div mix={[resizeHandle("horizontal", new ResizeSession())]} />],
 	["viewTransition", () => <div mix={[viewTransition()]} />],
+	["frameSubmit", () => <form mix={[frameSubmit()]} />],
+	["frameRefresh", () => <div mix={[frameRefresh({ every: 1000, on: "app:saved" })]} />],
 	["whileLive in an island", () => <Island />],
 ];
 
