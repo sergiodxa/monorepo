@@ -64,7 +64,7 @@ run({
 
 ## API
 
-### `<LazyFrame src loadOn? rootMargin? fallback? url? parentUrl? sitsAbove? opener?>`
+### `<LazyFrame src loadOn? rootMargin? fallback? url? parentUrl? sitsAbove? opener? prefetch?>`
 
 From `@sdxc/lazy-frame/ui`, also its default export. Renders `children` inside a `<div>` until the reader reaches it, then a `Frame` for `src` with `fallback` (or `children`) covering the request. A loaded frame keeps its content when it scrolls away or its container closes.
 
@@ -75,6 +75,7 @@ From `@sdxc/lazy-frame/ui`, also its default export. Renders `children` inside a
 - `url` and `parentUrl`: the address of the page the frame holds, and of the page it sits in. Given both, the address bar's entry is replaced with `url` once the frame's top passes the top tenth of the viewport, and with `parentUrl` when the reader scrolls back above it, so a reload resumes where they had read to. Nested frames settle on the deepest one reached.
 - `sitsAbove`: marks a frame placed above content the reader already sees. It loads once the reader has scrolled past it and come back, and scrolls the page by what it adds so the content under their eyes stays put.
 - `opener`: with `loadOn="open"`, the `id` of a link that, once script runs, opens the frame's container and stays on the page.
+- `prefetch`: with `opener`, fetches `src` ahead once the visitor rests on or presses the opener; the frame reuses that response only when the server makes it cacheable (`Cache-Control: private, max-age=30`).
 
 ### Types
 

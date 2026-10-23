@@ -9,7 +9,7 @@
 
 import type { EntryComponent, Handle, RemixElement } from "remix/component";
 
-import { clientEntry, Frame, ref } from "remix/component";
+import { clientEntry, Frame, prefetch, ref } from "remix/component";
 
 /**
  * The band at the top of the viewport a frame has to reach into to be the one being read.
@@ -23,6 +23,9 @@ const DEFAULT_ROOT_MARGIN = "320px 0px";
 
 /** The elements whose opening loads a frame set to `loadOn="open"`. */
 const OPENABLE = "dialog, details, [popover]";
+
+/** How long a pointer or focus rests on the opener before its frame is fetched ahead. */
+const INTENT_DELAY_MS = 100;
 
 /** Something a frame renders in place of its content: an element, text, or nothing. */
 export type LazyFrameContent = RemixElement | string | number | boolean | null;
@@ -69,6 +72,14 @@ export type LazyFrameProps = {
 	 * frame and stays on the page.
 	 */
 	opener?: string;
+	/**
+	 * With `opener`, fetches `src` ahead once the visitor rests the pointer or focus on the
+	 * opener for 100ms, or presses it, so the dialog's content and the assets it names are
+	 * warm when it opens. The frame reuses that response only when the server makes it cacheable.
+	 *
+	 * @default false
+	 */
+	prefetch?: boolean;
 	/** What the server sends, what stands in until the fetch, and what a scriptless browser keeps. */
 	children?: LazyFrameContent;
 };
@@ -202,26 +213,111 @@ function open(container: Element): void {
 }
 
 /**
+ * Whether the connection invites speculative requests: a visitor who asked to save data or
+ * sits on a 2G link fetches only what they open.
+ */
+function allowsPrefetch(): boolean {
+	let connection: unknown = Reflect.get(navigator, "connection");
+	if (typeof connection !== "object" || connection === null) return true;
+	if (Reflect.get(connection, "saveData") === true) return false;
+	let effectiveType: unknown = Reflect.get(connection, "effectiveType");
+	return effectiveType !== "slow-2g" && effectiveType !== "2g";
+}
+
+/**
+ * Fetches `src` once the visitor shows intent on the opener: a mouse or focus resting on it
+ * for {@link INTENT_DELAY_MS}, or a primary press, which fires at once. It fires at most once
+ * per opener, and a pointer or focus that leaves early cancels its wait.
+ *
+ * @param opener - The control that opens the frame's container.
+ * @param signal - Aborts when the frame's host leaves the document.
+ * @param src - The frame's source, fetched ahead.
+ * @param isLoaded - Whether the frame already asked for `src`, which makes a fetch ahead moot.
+ */
+function prefetchOnIntent(
+	opener: HTMLElement,
+	signal: AbortSignal,
+	src: string,
+	isLoaded: () => boolean,
+): void {
+	let fired = false;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+
+	/** Fetches ahead unless it already happened or no longer helps. */
+	function fire(): void {
+		clearTimeout(timer);
+		if (fired || isLoaded() || !allowsPrefetch()) return;
+		fired = true;
+		prefetch(src);
+	}
+
+	/** Starts the wait a resting pointer or focus has to outlast. */
+	function rest(): void {
+		clearTimeout(timer);
+		timer = setTimeout(fire, INTENT_DELAY_MS);
+	}
+
+	/** Cancels the wait when the pointer or focus moves outside the opener. */
+	function leave(event: Event): void {
+		let next =
+			event instanceof FocusEvent || event instanceof MouseEvent ? event.relatedTarget : null;
+		if (next instanceof Node && opener.contains(next)) return;
+		clearTimeout(timer);
+	}
+
+	opener.addEventListener(
+		"pointerover",
+		(event) => {
+			if (event.pointerType === "mouse") rest();
+		},
+		{ signal },
+	);
+	opener.addEventListener("focusin", rest, { signal });
+	opener.addEventListener("pointerout", leave, { signal });
+	opener.addEventListener("focusout", leave, { signal });
+	opener.addEventListener(
+		"pointerdown",
+		(event) => {
+			let opensHere =
+				event.isPrimary &&
+				event.button === 0 &&
+				!event.altKey &&
+				!event.ctrlKey &&
+				!event.metaKey &&
+				!event.shiftKey;
+			if (opensHere) fire();
+		},
+		{ passive: true, signal },
+	);
+	signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+}
+
+/**
  * Loads the frame the first time the closest dialog, disclosure or popover opens, however
  * it opened: an invoker, a script, or a form. A frame whose container is already open
  * loads at once; one with no container renders `children` for good.
  *
  * @param node - The frame's host.
  * @param signal - Aborts when the host leaves the document.
- * @param opener - The `id` of the link turned into the container's opener, when given.
+ * @param props - The frame's props: `opener` names the link turned into the container's
+ *   control, and `prefetch` fetches `src` ahead on intent shown there.
  * @param request - Swaps `children` for the frame.
+ * @param isLoaded - Whether the frame already asked for `src`.
  */
 function watchOpen(
 	node: Element,
 	signal: AbortSignal,
-	opener: string | undefined,
+	props: LazyFrameProps,
 	request: () => void,
+	isLoaded: () => boolean,
 ): void {
 	let container = node.closest(OPENABLE);
 	if (container === null) return;
 
-	if (opener !== undefined) {
-		document.getElementById(opener)?.addEventListener(
+	let opener = props.opener === undefined ? null : document.getElementById(props.opener);
+
+	if (opener !== null) {
+		opener.addEventListener(
 			"click",
 			(event) => {
 				if (event.defaultPrevented) return;
@@ -230,6 +326,8 @@ function watchOpen(
 			},
 			{ signal },
 		);
+
+		if (props.prefetch === true) prefetchOnIntent(opener, signal, props.src, isLoaded);
 	}
 
 	if (isOpen(container)) return request();
@@ -357,6 +455,7 @@ function watchApproach(
  *
  * @example <LazyFrame src="/posts?page=2"><a href="/posts?page=2">Older posts</a></LazyFrame>
  * @example <LazyFrame src="/jobs/1?frame" loadOn="open" opener="job-1"><a href="/jobs/1">Read</a></LazyFrame>
+ * @example <LazyFrame src="/jobs/1?frame" loadOn="open" opener="job-1" prefetch><a href="/jobs/1">Read</a></LazyFrame>
  */
 export const LazyFrame: EntryComponent<LazyFrameProps> = clientEntry(
 	"@sdxc/lazy-frame/ui#LazyFrame",
@@ -372,7 +471,7 @@ export const LazyFrame: EntryComponent<LazyFrameProps> = clientEntry(
 
 		let watch = ref((node, signal) => {
 			if (handle.props.loadOn === "open") {
-				watchOpen(node, signal, handle.props.opener, request);
+				watchOpen(node, signal, handle.props, request, () => requested);
 			} else {
 				watchApproach(node, signal, handle.props, request);
 			}

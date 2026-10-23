@@ -12,9 +12,11 @@
 import type { RemixNode } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { LazyFrame } from "./ui.js";
 
@@ -234,5 +236,127 @@ describe('loadOn="open"', () => {
 		await result.act(() => {});
 		expect(result.$("a")?.textContent).toBe("Read");
 		expect(result.$("[data-loaded]")).toBeNull();
+	});
+});
+
+/** Where the runtime can intercept navigations, which is where it fetches frames ahead. */
+class InterceptableNavigateEvent extends Event {
+	get sourceElement(): Element | null {
+		return null;
+	}
+}
+
+describe("prefetch", () => {
+	/** The headers of each request for the frame's source, in the order they arrived. */
+	let fetched: Headers[] = [];
+
+	let server = setupServer(
+		http.get("*/jobs/1", ({ request }) => {
+			fetched.push(request.headers);
+			return HttpResponse.html("<p>Job</p>");
+		}),
+	);
+
+	beforeAll(() => {
+		server.listen({ onUnhandledRequest: "bypass" });
+		vi.stubGlobal("navigation", new EventTarget());
+		vi.stubGlobal("NavigateEvent", InterceptableNavigateEvent);
+	});
+
+	afterEach(() => {
+		fetched = [];
+		Reflect.deleteProperty(navigator, "connection");
+	});
+
+	afterAll(() => server.close());
+
+	/** Mounts a dialog that `#job-1` opens, fetching its frame ahead as `prefetch` says. */
+	function mountOpener(prefetch: boolean): HTMLElement {
+		let result = mount(
+			<div>
+				<a id="job-1" href="/jobs/1">
+					Open
+				</a>
+				<dialog>
+					<LazyFrame src="/jobs/1" loadOn="open" opener="job-1" prefetch={prefetch} />
+				</dialog>
+			</div>,
+		);
+		return result.$("#job-1") as HTMLElement;
+	}
+
+	/** Lets `ms` pass on the real clock the intent delay runs on. */
+	function pause(ms: number): Promise<void> {
+		return new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	/** Moves a mouse onto or off `opener`. */
+	function point(opener: Element, type: "pointerover" | "pointerout"): void {
+		opener.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerType: "mouse" }));
+	}
+
+	test("fetches the frame ahead once a mouse rests on the opener", async () => {
+		let opener = mountOpener(true);
+
+		point(opener, "pointerover");
+		expect(fetched).toHaveLength(0);
+
+		await vi.waitFor(() => expect(fetched).toHaveLength(1));
+		expect(fetched[0]?.get("accept")).toBe("text/html");
+		expect(fetched[0]?.get("x-remix-frame")).toBe("true");
+	});
+
+	test("skips a mouse that leaves before the delay", async () => {
+		let opener = mountOpener(true);
+
+		point(opener, "pointerover");
+		point(opener, "pointerout");
+		await pause(150);
+
+		expect(fetched).toHaveLength(0);
+	});
+
+	test("fetches ahead once focus rests on the opener", async () => {
+		let opener = mountOpener(true);
+
+		opener.focus();
+
+		await vi.waitFor(() => expect(fetched).toHaveLength(1));
+	});
+
+	test("fetches at once on a press, and once per opener", async () => {
+		let opener = mountOpener(true);
+
+		opener.dispatchEvent(
+			new PointerEvent("pointerdown", { bubbles: true, button: 0, isPrimary: true }),
+		);
+		await vi.waitFor(() => expect(fetched).toHaveLength(1));
+
+		opener.focus();
+		await pause(150);
+		expect(fetched).toHaveLength(1);
+	});
+
+	test("leaves a visitor saving data alone", async () => {
+		Object.defineProperty(navigator, "connection", {
+			configurable: true,
+			value: { saveData: true },
+		});
+		let opener = mountOpener(true);
+
+		opener.focus();
+		await pause(150);
+
+		expect(fetched).toHaveLength(0);
+	});
+
+	test("fetches nothing ahead unless asked", async () => {
+		let opener = mountOpener(false);
+
+		opener.focus();
+		point(opener, "pointerover");
+		await pause(150);
+
+		expect(fetched).toHaveLength(0);
 	});
 });
