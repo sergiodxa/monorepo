@@ -93,6 +93,11 @@ jobs:
             echo "secrets_store=false" >> "$GITHUB_OUTPUT"
             echo "::warning::CLOUDFLARE_API_TOKEN cannot read the Secrets Store (HTTP $store). Grant Account → Secrets Store → Read on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens"
             jq -c '{success,errors}' /tmp/secrets-store.json || true
+            # Names the token CI actually holds, so a grant made on another token, or a new
+            # token never copied into the repository secret, shows up as a mismatched id.
+            curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+              "https://api.cloudflare.com/client/v4/user/tokens/verify" |
+              jq -r '"::notice::CLOUDFLARE_API_TOKEN is token id \(.result.id // "unknown") (\(.result.status // "unverified")); compare it with the id shown for \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens"' || true
           fi
           echo "configured=true" >> "$GITHUB_OUTPUT"
 
