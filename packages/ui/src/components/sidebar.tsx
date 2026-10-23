@@ -85,8 +85,11 @@ import {
 } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
+
 import { durations, easings } from "../animations/tokens.js";
 import { hitArea } from "../styles/hit-area.js";
+import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";
 
 import { Dialog } from "./dialog.js";
@@ -116,6 +119,9 @@ const DEFAULT_SHOW_ON_HOVER = true;
 
 /** Whether {@link Sidebar.MenuSkeleton} renders a leading icon placeholder, when `showIcon` is omitted. */
 const DEFAULT_SHOW_ICON = false;
+
+/** Prefetch mode {@link Sidebar.MenuLink} and {@link Sidebar.MenuSubLink} fall back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: Sidebar.Prefetch = "none";
 
 /**
  * Named container {@link Sidebar.Provider} declares on its own host, so
@@ -313,7 +319,19 @@ export namespace Sidebar {
 		size?: MenuButtonSize;
 		/** Shorthand setting `aria-current="page"` when true and `aria-current` is otherwise unset. */
 		active?: boolean;
+		/**
+		 * `"intent"`/`"viewport"` write `data-rmx-prefetch`; `"render"` adds a `<link rel="prefetch">`
+		 * that also serves full-document navigations, so keep it to the first few links, since each
+		 * hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
 	};
+
+	/**
+	 * When a {@link Sidebar.MenuLink} or {@link Sidebar.MenuSubLink} destination
+	 * starts loading, the same modes every link component in this library accepts.
+	 */
+	export type Prefetch = LinkPrefetch;
 
 	/**
 	 * Props accepted by {@link Sidebar.MenuAction}.
@@ -367,6 +385,12 @@ export namespace Sidebar {
 		href: string;
 		/** Shorthand setting `aria-current="page"` when true and `aria-current` is otherwise unset. */
 		active?: boolean;
+		/**
+		 * `"intent"`/`"viewport"` write `data-rmx-prefetch`; `"render"` adds a `<link rel="prefetch">`
+		 * that also serves full-document navigations, so keep it to the first few links, since each
+		 * hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
 	};
 
 	/**
@@ -1170,8 +1194,8 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
 
 /**
  * Renders a native `<a>` row for navigation inside {@link Sidebar.Menu},
- * visually identical to {@link Sidebar.MenuButton}. `active` sets
- * `aria-current="page"` when unset, with styling reading that attribute directly.
+ * visually identical to {@link Sidebar.MenuButton} and followed by its `<link
+ * rel="prefetch">` when `prefetch="render"`. `active` sets `aria-current="page"` when unset.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the row's markup.
@@ -1180,15 +1204,19 @@ Sidebar.MenuButton = function SidebarMenuButton(handle: Handle<Sidebar.MenuButto
  * 	<HomeIcon aria-hidden />
  * 	<span data-sidebar-collapsed-hide>{t("nav.dashboard")}</span>
  * </Sidebar.MenuLink>
+ * @example
+ * <Sidebar.MenuLink href="/inbox" prefetch="intent">{t("nav.inbox")}</Sidebar.MenuLink>
  */
 Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps>) {
 	return () => {
-		let { size, active, "aria-current": ariaCurrent, mix, ...rest } = handle.props;
+		let { size, active, prefetch, "aria-current": ariaCurrent, mix, ...rest } = handle.props;
 		let resolvedSize = size ?? DEFAULT_MENU_BUTTON_SIZE;
 		let resolvedAriaCurrent = resolveAriaCurrent(active, ariaCurrent);
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
-		return (
+		let anchor = (
 			<a
+				data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 				{...rest}
 				aria-current={resolvedAriaCurrent}
 				data-slot="menu-link"
@@ -1200,6 +1228,15 @@ Sidebar.MenuLink = function SidebarMenuLink(handle: Handle<Sidebar.MenuLinkProps
 					mix,
 				]}
 			/>
+		);
+
+		if (!rendersPrefetchHint(resolvedPrefetch, rest.href)) return anchor;
+
+		return (
+			<>
+				{anchor}
+				<link rel="prefetch" href={rest.href} />
+			</>
 		);
 	};
 };
@@ -1507,8 +1544,8 @@ Sidebar.MenuSubButton = function SidebarMenuSubButton(handle: Handle<Sidebar.Men
 
 /**
  * Renders a native `<a>` row for navigation inside {@link Sidebar.MenuSub},
- * visually identical to {@link Sidebar.MenuSubButton}. `active` sets
- * `aria-current="page"` when `aria-current` is otherwise unset.
+ * visually identical to {@link Sidebar.MenuSubButton} and followed by its `<link
+ * rel="prefetch">` when `prefetch="render"`. `active` sets `aria-current="page"` when unset.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the row's markup.
@@ -1517,11 +1554,13 @@ Sidebar.MenuSubButton = function SidebarMenuSubButton(handle: Handle<Sidebar.Men
  */
 Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSubLinkProps>) {
 	return () => {
-		let { active, "aria-current": ariaCurrent, mix, ...rest } = handle.props;
+		let { active, prefetch, "aria-current": ariaCurrent, mix, ...rest } = handle.props;
 		let resolvedAriaCurrent = resolveAriaCurrent(active, ariaCurrent);
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
-		return (
+		let anchor = (
 			<a
+				data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 				{...rest}
 				aria-current={resolvedAriaCurrent}
 				data-slot="menu-sub-link"
@@ -1532,6 +1571,15 @@ Sidebar.MenuSubLink = function SidebarMenuSubLink(handle: Handle<Sidebar.MenuSub
 					mix,
 				]}
 			/>
+		);
+
+		if (!rendersPrefetchHint(resolvedPrefetch, rest.href)) return anchor;
+
+		return (
+			<>
+				{anchor}
+				<link rel="prefetch" href={rest.href} />
+			</>
 		);
 	};
 };

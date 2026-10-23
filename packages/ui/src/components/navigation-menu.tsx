@@ -42,6 +42,8 @@ import { scaleProperty } from "@sdxc/u/transform";
 import { fontSize, leading, text, textDecoration, weight } from "@sdxc/u/typography";
 import { attrs } from "remix/component";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
+
 import { durations, easings } from "../animations/tokens.js";
 import {
 	concentricRadius,
@@ -50,6 +52,7 @@ import {
 	surfacePadding,
 } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
 
 import { Popover } from "./popover.js";
 
@@ -99,6 +102,9 @@ const DEFAULT_CONTENT_PLACEMENT: NavigationMenu.ContentProps["placement"] = "bot
  * sizing the panel to its own content instead of a fixed wide measure.
  */
 const DEFAULT_CONTENT_SIZE: NavigationMenu.ContentSize = "default";
+
+/** Prefetch mode {@link NavigationMenu.Link} falls back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: NavigationMenu.Prefetch = "none";
 
 /**
  * Prop types for {@link NavigationMenu} and its compound parts.
@@ -186,7 +192,19 @@ export namespace NavigationMenu {
 	export type LinkProps = TagProps<"a"> & {
 		/** Destination the link navigates to. */
 		href: string;
+		/**
+		 * `"intent"`/`"viewport"` write `data-rmx-prefetch`; `"render"` adds a `<link rel="prefetch">`
+		 * that also serves full-document navigations, so keep it to the first few links, since each
+		 * hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
 	};
+
+	/**
+	 * When a {@link NavigationMenu.Link}'s destination starts loading, the same
+	 * modes every link component in this library accepts.
+	 */
+	export type Prefetch = LinkPrefetch;
 
 	/**
 	 * Every native `<div>` attribute, plus the `mix` passthrough.
@@ -440,14 +458,16 @@ NavigationMenu.Content = function NavigationMenuContent(
 };
 
 /**
- * Renders {@link NavigationMenu.LinkProps.children} as a native `<a>`.
- * `aria-current` marks the active page; `aria-disabled="true"` only mutes it
- * visually, since a plain `<a>` has no native disabled state to block clicks.
+ * Renders {@link NavigationMenu.LinkProps.children} as a native `<a>`, followed
+ * by its `<link rel="prefetch">` when `prefetch="render"`. `aria-current` marks
+ * the active page; `aria-disabled="true"` only mutes it visually.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
  * @example
  * <NavigationMenu.Link href="/pricing">{t("nav.pricing")}</NavigationMenu.Link>
+ * @example
+ * <NavigationMenu.Link href="/docs" prefetch="intent">{t("nav.docs")}</NavigationMenu.Link>
  * @example
  * <NavigationMenu.Link href="/dashboard" aria-current={pathname === "/dashboard" ? "page" : undefined}>
  * 	{t("nav.dashboard")}
@@ -455,11 +475,13 @@ NavigationMenu.Content = function NavigationMenuContent(
  */
 NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.LinkProps>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { prefetch, mix, ...rest } = handle.props;
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
-		return (
+		let anchor = (
 			<a
 				data-slot="link"
+				data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 				{...rest}
 				mix={[
 					interactiveTransition(),
@@ -485,6 +507,15 @@ NavigationMenu.Link = function NavigationMenuLink(handle: Handle<NavigationMenu.
 					mix,
 				]}
 			/>
+		);
+
+		if (!rendersPrefetchHint(resolvedPrefetch, rest.href)) return anchor;
+
+		return (
+			<>
+				{anchor}
+				<link rel="prefetch" href={rest.href} />
+			</>
 		);
 	};
 };

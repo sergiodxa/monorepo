@@ -21,7 +21,10 @@ import { bs, m, minIs, p, pi } from "@sdxc/u/size";
 import { active, hover, when } from "@sdxc/u/state";
 import { tabularNums, text, textDecoration, weight } from "@sdxc/u/typography";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
+
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
 import {
 	warnIfNoAccessibleLabel,
 	warnIfNoAccessibleName,
@@ -32,6 +35,9 @@ import {
  * which the platform accepts no other value.
  */
 const INVOKER_TYPE = "button";
+
+/** Prefetch mode {@link Pagination.Link} falls back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: Pagination.Prefetch = "none";
 
 /**
  * Prop types for {@link Pagination} and its compound parts.
@@ -53,11 +59,24 @@ export namespace Pagination {
 	export interface ItemProps extends TagProps<"li"> {}
 
 	/**
-	 * Every native `<a>` attribute, plus the `mix` passthrough. A type alias
-	 * rather than an interface, since native anchor props resolve through a
-	 * conditional type an `interface extends` clause can't statically extend.
+	 * When a {@link Pagination.Link}'s destination starts loading, the same
+	 * modes every link component in this library accepts.
 	 */
-	export type LinkProps = TagProps<"a">;
+	export type Prefetch = LinkPrefetch;
+
+	/**
+	 * Every native `<a>` attribute, plus `prefetch` and the `mix` passthrough. A
+	 * type alias rather than an interface, since native anchor props resolve
+	 * through a conditional type an `interface extends` clause can't extend.
+	 */
+	export type LinkProps = TagProps<"a"> & {
+		/**
+		 * `"intent"`/`"viewport"` write `data-rmx-prefetch`; `"render"` adds a `<link rel="prefetch">`
+		 * that also serves full-document navigations. The next-page link suits `"render"` or
+		 * `"intent"`. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
+	};
 
 	/**
 	 * Every native `<button>` attribute, unchanged, plus the `mix` passthrough.
@@ -146,14 +165,14 @@ Pagination.Item = function PaginationItem(handle: Handle<Pagination.ItemProps>) 
 };
 
 /**
- * Renders a page-number destination as a native `<a>`. Setting
- * `aria-current="page"` fills it with the active-page treatment, and
- * `aria-disabled="true"` mutes it and blocks pointer interaction.
+ * Renders a page-number destination as a native `<a>`, followed by its
+ * `<link rel="prefetch">` when `prefetch="render"`. `aria-current="page"` fills
+ * it with the active-page treatment; `aria-disabled="true"` mutes it.
  *
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
  * @example
- * <Pagination.Link href="?page=4">4</Pagination.Link>
+ * <Pagination.Link href="?page=6" prefetch="render">6</Pagination.Link>
  * @example
  * <Pagination.Link href="?page=5" aria-current="page">5</Pagination.Link>
  * @example
@@ -161,10 +180,12 @@ Pagination.Item = function PaginationItem(handle: Handle<Pagination.ItemProps>) 
  */
 Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) {
 	return () => {
-		let { mix, ...rest } = handle.props;
+		let { prefetch, mix, ...rest } = handle.props;
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
-		return (
+		let anchor = (
 			<a
+				data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
 				{...rest}
 				data-slot="link"
 				mix={[
@@ -192,6 +213,15 @@ Pagination.Link = function PaginationLink(handle: Handle<Pagination.LinkProps>) 
 					mix,
 				]}
 			/>
+		);
+
+		if (!rendersPrefetchHint(resolvedPrefetch, rest.href)) return anchor;
+
+		return (
+			<>
+				{anchor}
+				<link rel="prefetch" href={rest.href} />
+			</>
 		);
 	};
 };

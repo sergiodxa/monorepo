@@ -4,8 +4,7 @@
  * attributes, because inside a `<form>` an untyped button is a submit button and
  * the platform then refuses to run its command at all — judging that while it
  * parses `command`/`commandfor`, so a `type` written after them is refused the
- * same way. A control carrying no command is left untyped, so a previous/next
- * control a consumer wired to a real form still submits it.
+ * same way. Also covers the markup each {@link Pagination.Link} prefetch mode writes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -62,5 +61,49 @@ describe("Pagination.Button", () => {
 
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("commandfor="));
 		expect(html.indexOf('type="button"')).toBeLessThan(html.indexOf("command="));
+	});
+});
+
+describe("Pagination.Link prefetch", () => {
+	test("writes neither the attribute nor a hint by default", async () => {
+		let html = await renderToString(<Pagination.Link href="/next">2</Pagination.Link>);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(html).not.toContain('rel="prefetch"');
+	});
+
+	test.each(["intent", "viewport"] as const)(
+		'writes data-rmx-prefetch="%s" on the anchor and renders no hint',
+		async (mode) => {
+			let html = await renderToString(
+				<Pagination.Link href="/next" prefetch={mode}>
+					2
+				</Pagination.Link>,
+			);
+
+			expect(html).toMatch(new RegExp(`<a[^>]*data-rmx-prefetch="${mode}"`));
+			expect(html).not.toContain('rel="prefetch"');
+		},
+	);
+
+	test('renders a prefetch hint after the anchor, without the attribute, for "render"', async () => {
+		let html = await renderToString(
+			<Pagination.Link href="/next" prefetch="render">
+				2
+			</Pagination.Link>,
+		);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(html).toMatch(/<\/a><link rel="prefetch" href="\/next"\s*\/?>/);
+	});
+
+	test('renders no hint for "render" when the anchor has no destination', async () => {
+		let html = await renderToString(
+			<Pagination.Link href="" prefetch="render">
+				2
+			</Pagination.Link>,
+		);
+
+		expect(html).not.toContain('rel="prefetch"');
 	});
 });

@@ -3,7 +3,7 @@
  * against the viewport: a header or footer that lets the rail's background
  * show through paints the scrolling nav behind it in plain sight, so each
  * slot's own paint is asserted over `renderToString`'s output, as is the drawer
- * staying hidden while closed.
+ * staying hidden while closed and the markup each link prefetch mode writes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,5 +82,95 @@ describe("small sidebar controls", () => {
 
 		expect(html).toContain("--ui-target-size");
 		expect(html).toMatch(/position:\s*relative|position:\s*absolute/);
+	});
+});
+
+describe("Sidebar.MenuLink prefetch", () => {
+	test("writes neither the attribute nor a hint by default", async () => {
+		let html = await renderToString(<Sidebar.MenuLink href="/next">Inbox</Sidebar.MenuLink>);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(html).not.toContain('rel="prefetch"');
+	});
+
+	test.each(["intent", "viewport"] as const)(
+		'writes data-rmx-prefetch="%s" on the anchor and renders no hint',
+		async (mode) => {
+			let html = await renderToString(
+				<Sidebar.MenuLink href="/next" prefetch={mode}>
+					Inbox
+				</Sidebar.MenuLink>,
+			);
+
+			expect(html).toMatch(new RegExp(`<a[^>]*data-rmx-prefetch="${mode}"`));
+			expect(html).not.toContain('rel="prefetch"');
+		},
+	);
+
+	test('renders a prefetch hint after the anchor, without the attribute, for "render"', async () => {
+		let html = await renderToString(
+			<Sidebar.MenuLink href="/next" prefetch="render">
+				Inbox
+			</Sidebar.MenuLink>,
+		);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(html).toMatch(/<\/a><link rel="prefetch" href="\/next"\s*\/?>/);
+	});
+
+	test('renders no hint for "render" when the anchor has no destination', async () => {
+		let html = await renderToString(
+			<Sidebar.MenuLink href="" prefetch="render">
+				Inbox
+			</Sidebar.MenuLink>,
+		);
+
+		expect(html).not.toContain('rel="prefetch"');
+	});
+});
+
+describe("Sidebar.MenuSubLink prefetch", () => {
+	test("writes neither the attribute nor a hint by default", async () => {
+		let html = await renderToString(
+			<Sidebar.MenuSubLink href="/next">Profile</Sidebar.MenuSubLink>,
+		);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(html).not.toContain('rel="prefetch"');
+	});
+
+	test.each(["intent", "viewport"] as const)(
+		'writes data-rmx-prefetch="%s" on the anchor and renders no hint',
+		async (mode) => {
+			let html = await renderToString(
+				<Sidebar.MenuSubLink href="/next" prefetch={mode}>
+					Profile
+				</Sidebar.MenuSubLink>,
+			);
+
+			expect(html).toMatch(new RegExp(`<a[^>]*data-rmx-prefetch="${mode}"`));
+			expect(html).not.toContain('rel="prefetch"');
+		},
+	);
+
+	test('renders a prefetch hint after the anchor, without the attribute, for "render"', async () => {
+		let html = await renderToString(
+			<Sidebar.MenuSubLink href="/next" prefetch="render">
+				Profile
+			</Sidebar.MenuSubLink>,
+		);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(html).toMatch(/<\/a><link rel="prefetch" href="\/next"\s*\/?>/);
+	});
+
+	test('renders no hint for "render" when the anchor has no destination', async () => {
+		let html = await renderToString(
+			<Sidebar.MenuSubLink href="" prefetch="render">
+				Profile
+			</Sidebar.MenuSubLink>,
+		);
+
+		expect(html).not.toContain('rel="prefetch"');
 	});
 });
