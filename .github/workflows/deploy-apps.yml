@@ -78,7 +78,7 @@ jobs:
             echo "d1=true" >> "$GITHUB_OUTPUT"
           else
             echo "d1=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLOUDFLARE_API_TOKEN cannot list D1 databases (HTTP $d1). Grant Account → D1 → Edit on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens"
+            echo "::warning::CLOUDFLARE_API_TOKEN cannot list D1 databases (HTTP $d1). Grant Account → D1 → Edit on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens"
             jq -c '{success,errors}' /tmp/d1.json || true
           fi
           # A Worker that binds a Secrets Store secret uploads only when the token can read
@@ -91,13 +91,13 @@ jobs:
             echo "secrets_store=true" >> "$GITHUB_OUTPUT"
           else
             echo "secrets_store=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLOUDFLARE_API_TOKEN cannot read the Secrets Store (HTTP $store). Grant Account → Secrets Store → Read on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens"
+            echo "::warning::CLOUDFLARE_API_TOKEN cannot read the Secrets Store (HTTP $store). Grant Account → Secrets Store → Read on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens"
             jq -c '{success,errors}' /tmp/secrets-store.json || true
             # Names the token CI actually holds, so a grant made on another token, or a new
             # token never copied into the repository secret, shows up as a mismatched id.
             curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
               "https://api.cloudflare.com/client/v4/user/tokens/verify" |
-              jq -r '"::notice::CLOUDFLARE_API_TOKEN is token id \(.result.id // "unknown") (\(.result.status // "unverified")); compare it with the id shown for \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens"' || true
+              jq -r '"::notice::CLOUDFLARE_API_TOKEN is token id \(.result.id // "unknown") (\(.result.status // "unverified")); compare it with the id shown for \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens"' || true
           fi
           echo "configured=true" >> "$GITHUB_OUTPUT"
 
@@ -214,7 +214,7 @@ jobs:
           D1_OK: ${{ needs.secrets.outputs.d1 }}
         run: |
           if [ "$D1_OK" != "true" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN cannot list D1 databases, so ${{ matrix.app }} cannot run db migrate --remote. Grant Account → D1 → Edit on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
+            echo "::error::CLOUDFLARE_API_TOKEN cannot list D1 databases, so ${{ matrix.app }} cannot run db migrate --remote. Grant Account → D1 → Edit on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
             exit 1
           fi
 
@@ -229,7 +229,7 @@ jobs:
             exit 0
           fi
           if [ "$STORE_OK" != "true" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN cannot read the Secrets Store, so $APP cannot bind its Secrets Store secrets. Grant Account → Secrets Store → Read on the token \"GitHub Actions sdxc deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
+            echo "::error::CLOUDFLARE_API_TOKEN cannot read the Secrets Store, so $APP cannot bind its Secrets Store secrets. Grant Account → Secrets Store → Read on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
             exit 1
           fi
 
