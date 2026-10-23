@@ -22,6 +22,9 @@ import { interactiveTransition } from "../styles/interactive-transition.js";
 /** Semantic color role {@link Link} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Link.Color = "brand";
 
+/** Prefetch mode {@link Link} falls back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: Link.Prefetch = "none";
+
 /**
  * Prop types for {@link Link}.
  */
@@ -32,6 +35,13 @@ export namespace Link {
 	export type Color = SemanticColor;
 
 	/**
+	 * When the runtime starts loading the destination: once the visitor rests
+	 * on or presses the link (`"intent"`), once it scrolls into view
+	 * (`"viewport"`), or only on navigation (`"none"`).
+	 */
+	export type Prefetch = "none" | "intent" | "viewport";
+
+	/**
 	 * Props accepted by {@link Link}. A type alias rather than an interface,
 	 * since the native anchor props resolve through a conditional type that an
 	 * `interface extends` clause can't statically extend.
@@ -39,6 +49,11 @@ export namespace Link {
 	export type Props = TagProps<"a"> & {
 		/** Semantic color role. Defaults to {@link DEFAULT_COLOR}. */
 		color?: Color;
+		/**
+		 * Prefetch mode, written as `data-rmx-prefetch`; mark only links whose
+		 * GET is safe to repeat. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
 	};
 }
 
@@ -52,18 +67,20 @@ export namespace Link {
  * @example
  * <Link href="/about">{t("nav.about")}</Link>
  * @example
- * <Link href="/delete" color="danger">{t("actions.delete")}</Link>
+ * <Link href="/products/shirt" prefetch="intent">{t("products.shirt")}</Link>
  * @example
  * <Link href="/settings" aria-disabled="true">{t("nav.settings")}</Link>
  */
 export function Link(handle: Handle<Link.Props>) {
 	return () => {
-		let { color, mix, ...rest } = handle.props;
+		let { color, prefetch, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
 		return (
 			<a
 				data-color={resolvedColor}
+				data-rmx-prefetch={resolvedPrefetch === "none" ? undefined : resolvedPrefetch}
 				{...rest}
 				mix={[
 					when("&:focus-visible", [

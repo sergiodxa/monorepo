@@ -50,4 +50,26 @@ describe(LinkButton.name, () => {
 			/&::after \{[^}]*position: absolute;[^}]*inline-size: var\(--ui-target-size, 1\.5rem\);/,
 		);
 	});
+
+	test("leaves prefetching off unless a mode is chosen", async () => {
+		let html = await renderToString(<LinkButton href="/new">Create</LinkButton>);
+		let none = await renderToString(
+			<LinkButton href="/new" prefetch="none">
+				Create
+			</LinkButton>,
+		);
+
+		expect(html).not.toContain("data-rmx-prefetch");
+		expect(none).not.toContain("data-rmx-prefetch");
+	});
+
+	test.each(["intent", "viewport"] as const)("prefetches on %s", async (prefetch) => {
+		let html = await renderToString(
+			<LinkButton href="/new" prefetch={prefetch}>
+				Create
+			</LinkButton>,
+		);
+
+		expect(html).toMatch(new RegExp(`<a [^>]*data-rmx-prefetch="${prefetch}"`));
+	});
 });

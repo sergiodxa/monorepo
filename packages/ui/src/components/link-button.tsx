@@ -34,6 +34,9 @@ const DEFAULT_VARIANT: LinkButton.Variant = "solid";
 /** Size variant {@link LinkButton} falls back to when `size` is omitted. */
 const DEFAULT_SIZE: LinkButton.Size = "md";
 
+/** Prefetch mode {@link LinkButton} falls back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: LinkButton.Prefetch = "none";
+
 /**
  * Prop types for {@link LinkButton}.
  */
@@ -56,6 +59,13 @@ export namespace LinkButton {
 	export type Size = "sm" | "md" | "lg";
 
 	/**
+	 * When the runtime starts loading the destination: once the visitor rests
+	 * on or presses the link (`"intent"`), once it scrolls into view
+	 * (`"viewport"`), or only on navigation (`"none"`).
+	 */
+	export type Prefetch = "none" | "intent" | "viewport";
+
+	/**
 	 * Props accepted by {@link LinkButton}. A type alias rather than an
 	 * interface, since the native anchor props resolve to an intersection
 	 * type that TypeScript can't use in an `extends` clause.
@@ -67,6 +77,11 @@ export namespace LinkButton {
 		variant?: Variant;
 		/** Size variant. Defaults to {@link DEFAULT_SIZE}. */
 		size?: Size;
+		/**
+		 * Prefetch mode, written as `data-rmx-prefetch`; mark only links whose
+		 * GET is safe to repeat. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
 	};
 }
 
@@ -78,7 +93,7 @@ export namespace LinkButton {
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
  * @example
- * <LinkButton href="/projects/new">{t("actions.createProject")}</LinkButton>
+ * <LinkButton href="/projects/new" prefetch="intent">{t("actions.createProject")}</LinkButton>
  * @example
  * <LinkButton href="/projects" color="neutral" variant="outline" size="sm">{t("actions.cancel")}</LinkButton>
  * @example
@@ -86,10 +101,11 @@ export namespace LinkButton {
  */
 export function LinkButton(handle: Handle<LinkButton.Props>) {
 	return () => {
-		let { color, variant, size, children, mix, ...rest } = handle.props;
+		let { color, variant, size, prefetch, children, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 		let resolvedVariant = variant ?? DEFAULT_VARIANT;
 		let resolvedSize = size ?? DEFAULT_SIZE;
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 		let edges = glyphEdges(children);
 
 		return (
@@ -98,6 +114,7 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 				data-color={resolvedColor}
 				data-variant={resolvedVariant}
 				data-size={resolvedSize}
+				data-rmx-prefetch={resolvedPrefetch === "none" ? undefined : resolvedPrefetch}
 				data-glyph-start={edges.start || undefined}
 				data-glyph-end={edges.end || undefined}
 				mix={[
