@@ -15,9 +15,11 @@ import { cursor, raw, var as varUtility } from "@sdxc/u/general";
 import { data, when } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
 import type { SemanticColor } from "../utils/semantic-color.js";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
 
 /** Semantic color role {@link Link} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Link.Color = "brand";
@@ -35,11 +37,11 @@ export namespace Link {
 	export type Color = SemanticColor;
 
 	/**
-	 * When the runtime starts loading the destination: once the visitor rests
-	 * on or presses the link (`"intent"`), once it scrolls into view
-	 * (`"viewport"`), or only on navigation (`"none"`).
+	 * When the destination starts loading: on intent, once in the viewport, on
+	 * render through a `<link rel="prefetch">` that also serves full-document
+	 * navigations, or only on navigation (`"none"`).
 	 */
-	export type Prefetch = "none" | "intent" | "viewport";
+	export type Prefetch = LinkPrefetch;
 
 	/**
 	 * Props accepted by {@link Link}. A type alias rather than an interface,
@@ -50,8 +52,9 @@ export namespace Link {
 		/** Semantic color role. Defaults to {@link DEFAULT_COLOR}. */
 		color?: Color;
 		/**
-		 * Prefetch mode, written as `data-rmx-prefetch`; mark only links whose
-		 * GET is safe to repeat. Defaults to {@link DEFAULT_PREFETCH}.
+		 * Prefetch mode, for links whose GET is safe to repeat. `"render"` suits
+		 * multi-page navigations; a list keeps it to its first few items, since each
+		 * hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
 		 */
 		prefetch?: Prefetch;
 	};
@@ -67,7 +70,7 @@ export namespace Link {
  * @example
  * <Link href="/about">{t("nav.about")}</Link>
  * @example
- * <Link href="/products/shirt" prefetch="intent">{t("products.shirt")}</Link>
+ * <Link href="/products/shirt" prefetch="render">{t("products.shirt")}</Link>
  * @example
  * <Link href="/settings" aria-disabled="true">{t("nav.settings")}</Link>
  */
@@ -78,87 +81,92 @@ export function Link(handle: Handle<Link.Props>) {
 		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
 		return (
-			<a
-				data-color={resolvedColor}
-				data-rmx-prefetch={resolvedPrefetch === "none" ? undefined : resolvedPrefetch}
-				{...rest}
-				mix={[
-					when("&:focus-visible", [
-						outline({ color: "brand.ring", offset: 2 }),
-						data("color", "neutral", outline("neutral.ring")),
-						data("color", "success", outline("success.ring")),
-						data("color", "warning", outline("warning.ring")),
-						data("color", "danger", outline("danger.ring")),
-					]),
-					interactiveTransition(),
-					rounded("sm"),
-					data("color", "brand", fg("brand")),
-					data("color", "neutral", fg("neutral")),
-					data("color", "success", fg("success")),
-					data("color", "danger", fg("danger")),
-					data("color", "warning", fg("warning")),
-					when('&[aria-disabled="true"]', opacity(50)),
-					textDecoration("underline"),
-					cursor("pointer"),
-					data("color", "brand", [
-						/**
-						 * `color-mix()`'s color argument needs the raw CSS variable
-						 * (`var(--ui-brand-fg)`), so the property stays `raw()` while
-						 * the literal string becomes a builder call.
-						 */
-						raw({
-							textDecorationColor: colorMix(
-								"srgb",
-								{ color: varUtility("ui-brand-fg"), weight: 60 },
-								"transparent",
-							),
-						}),
-						when("&:hover", raw({ textDecorationColor: varUtility("ui-brand-fg") })),
-					]),
-					data("color", "neutral", [
-						raw({
-							textDecorationColor: colorMix(
-								"srgb",
-								{ color: varUtility("ui-neutral-fg"), weight: 50 },
-								"transparent",
-							),
-						}),
-						when("&:hover", raw({ textDecorationColor: varUtility("ui-neutral-fg") })),
-					]),
-					data("color", "success", [
-						raw({
-							textDecorationColor: colorMix(
-								"srgb",
-								{ color: varUtility("ui-success-fg"), weight: 60 },
-								"transparent",
-							),
-						}),
-						when("&:hover", raw({ textDecorationColor: varUtility("ui-success-fg") })),
-					]),
-					data("color", "danger", [
-						raw({
-							textDecorationColor: colorMix(
-								"srgb",
-								{ color: varUtility("ui-danger-fg"), weight: 60 },
-								"transparent",
-							),
-						}),
-						when("&:hover", raw({ textDecorationColor: varUtility("ui-danger-fg") })),
-					]),
-					data("color", "warning", [
-						raw({
-							textDecorationColor: colorMix(
-								"srgb",
-								{ color: varUtility("ui-warning-fg"), weight: 60 },
-								"transparent",
-							),
-						}),
-						when("&:hover", raw({ textDecorationColor: varUtility("ui-warning-fg") })),
-					]),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), textDecoration("none")]),
-					mix,
-				]}
-			/>
+			<>
+				<a
+					data-color={resolvedColor}
+					data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
+					{...rest}
+					mix={[
+						when("&:focus-visible", [
+							outline({ color: "brand.ring", offset: 2 }),
+							data("color", "neutral", outline("neutral.ring")),
+							data("color", "success", outline("success.ring")),
+							data("color", "warning", outline("warning.ring")),
+							data("color", "danger", outline("danger.ring")),
+						]),
+						interactiveTransition(),
+						rounded("sm"),
+						data("color", "brand", fg("brand")),
+						data("color", "neutral", fg("neutral")),
+						data("color", "success", fg("success")),
+						data("color", "danger", fg("danger")),
+						data("color", "warning", fg("warning")),
+						when('&[aria-disabled="true"]', opacity(50)),
+						textDecoration("underline"),
+						cursor("pointer"),
+						data("color", "brand", [
+							/**
+							 * `color-mix()`'s color argument needs the raw CSS variable
+							 * (`var(--ui-brand-fg)`), so the property stays `raw()` while
+							 * the literal string becomes a builder call.
+							 */
+							raw({
+								textDecorationColor: colorMix(
+									"srgb",
+									{ color: varUtility("ui-brand-fg"), weight: 60 },
+									"transparent",
+								),
+							}),
+							when("&:hover", raw({ textDecorationColor: varUtility("ui-brand-fg") })),
+						]),
+						data("color", "neutral", [
+							raw({
+								textDecorationColor: colorMix(
+									"srgb",
+									{ color: varUtility("ui-neutral-fg"), weight: 50 },
+									"transparent",
+								),
+							}),
+							when("&:hover", raw({ textDecorationColor: varUtility("ui-neutral-fg") })),
+						]),
+						data("color", "success", [
+							raw({
+								textDecorationColor: colorMix(
+									"srgb",
+									{ color: varUtility("ui-success-fg"), weight: 60 },
+									"transparent",
+								),
+							}),
+							when("&:hover", raw({ textDecorationColor: varUtility("ui-success-fg") })),
+						]),
+						data("color", "danger", [
+							raw({
+								textDecorationColor: colorMix(
+									"srgb",
+									{ color: varUtility("ui-danger-fg"), weight: 60 },
+									"transparent",
+								),
+							}),
+							when("&:hover", raw({ textDecorationColor: varUtility("ui-danger-fg") })),
+						]),
+						data("color", "warning", [
+							raw({
+								textDecorationColor: colorMix(
+									"srgb",
+									{ color: varUtility("ui-warning-fg"), weight: 60 },
+									"transparent",
+								),
+							}),
+							when("&:hover", raw({ textDecorationColor: varUtility("ui-warning-fg") })),
+						]),
+						when('&[aria-disabled="true"]', [cursor("not-allowed"), textDecoration("none")]),
+						mix,
+					]}
+				/>
+				{rendersPrefetchHint(resolvedPrefetch, rest.href) && (
+					<link rel="prefetch" href={rest.href} />
+				)}
+			</>
 		);
 	};
 }

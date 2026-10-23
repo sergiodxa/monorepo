@@ -19,11 +19,13 @@ import { bs, is, minBs, pb, pi, pie, pis } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
 import type { SemanticColor } from "../utils/semantic-color.js";
 
 import { hitArea } from "../styles/hit-area.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { glyphEdges } from "../utils/glyph-edges.js";
+import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
 
 /** Semantic color role {@link LinkButton} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: LinkButton.Color = "neutral";
@@ -59,11 +61,11 @@ export namespace LinkButton {
 	export type Size = "sm" | "md" | "lg";
 
 	/**
-	 * When the runtime starts loading the destination: once the visitor rests
-	 * on or presses the link (`"intent"`), once it scrolls into view
-	 * (`"viewport"`), or only on navigation (`"none"`).
+	 * When the destination starts loading: on intent, once in the viewport, on
+	 * render through a `<link rel="prefetch">` that also serves full-document
+	 * navigations, or only on navigation (`"none"`).
 	 */
-	export type Prefetch = "none" | "intent" | "viewport";
+	export type Prefetch = LinkPrefetch;
 
 	/**
 	 * Props accepted by {@link LinkButton}. A type alias rather than an
@@ -78,8 +80,9 @@ export namespace LinkButton {
 		/** Size variant. Defaults to {@link DEFAULT_SIZE}. */
 		size?: Size;
 		/**
-		 * Prefetch mode, written as `data-rmx-prefetch`; mark only links whose
-		 * GET is safe to repeat. Defaults to {@link DEFAULT_PREFETCH}.
+		 * Prefetch mode, for links whose GET is safe to repeat. `"render"` suits
+		 * multi-page navigations; a list keeps it to its first few items, since each
+		 * hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
 		 */
 		prefetch?: Prefetch;
 	};
@@ -109,191 +112,196 @@ export function LinkButton(handle: Handle<LinkButton.Props>) {
 		let edges = glyphEdges(children);
 
 		return (
-			<a
-				{...rest}
-				data-color={resolvedColor}
-				data-variant={resolvedVariant}
-				data-size={resolvedSize}
-				data-rmx-prefetch={resolvedPrefetch === "none" ? undefined : resolvedPrefetch}
-				data-glyph-start={edges.start || undefined}
-				data-glyph-end={edges.end || undefined}
-				mix={[
-					when("&:focus-visible", [
-						outline({ color: "brand.ring", offset: 2 }),
-						data("color", "neutral", outline("neutral.ring")),
-						data("color", "success", outline("success.ring")),
-						data("color", "warning", outline("warning.ring")),
-						data("color", "danger", outline("danger.ring")),
-					]),
-					interactiveTransition(),
-					inlineFlex(),
-					items("center"),
-					justify("center"),
-					gap(2),
-					/**
-					 * A glyph inside a link button is measured and held at size by the same rules
-					 * `Button` states, for the same reasons: it is sized against the label beside
-					 * it so the row keeps the height its text and padding ask for, and it never
-					 * shrinks, since the default `flex-shrink: 1` would compress the glyph rather
-					 * than the words and a squashed icon reads as a rendering fault.
-					 */
-					when("& > svg", [shrink(), is(4), bs(4)]),
-					rounded("md"),
-					weight("medium"),
-					/** A small control reaches `--ui-target-size` however a consumer positions it. */
-					hitArea({ anchor: "flex-center" }),
-					pi(4),
-					pb(2),
-					/**
-					 * Every variant carries the same border width, colored to match its
-					 * own fill (transparent for ghost), so solid, outline, and ghost
-					 * render at the same footprint.
-					 */
-					border({ width: 1 }),
-					/**
-					 * The row measure is stated, so the control lines up with a field of the same size when
-					 * a Group fuses the two, and still grows when a long label wraps.
-					 */
-					minBs("2.5rem"),
+			<>
+				<a
+					{...rest}
+					data-color={resolvedColor}
+					data-variant={resolvedVariant}
+					data-size={resolvedSize}
+					data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
+					data-glyph-start={edges.start || undefined}
+					data-glyph-end={edges.end || undefined}
+					mix={[
+						when("&:focus-visible", [
+							outline({ color: "brand.ring", offset: 2 }),
+							data("color", "neutral", outline("neutral.ring")),
+							data("color", "success", outline("success.ring")),
+							data("color", "warning", outline("warning.ring")),
+							data("color", "danger", outline("danger.ring")),
+						]),
+						interactiveTransition(),
+						inlineFlex(),
+						items("center"),
+						justify("center"),
+						gap(2),
+						/**
+						 * A glyph inside a link button is measured and held at size by the same rules
+						 * `Button` states, for the same reasons: it is sized against the label beside
+						 * it so the row keeps the height its text and padding ask for, and it never
+						 * shrinks, since the default `flex-shrink: 1` would compress the glyph rather
+						 * than the words and a squashed icon reads as a rendering fault.
+						 */
+						when("& > svg", [shrink(), is(4), bs(4)]),
+						rounded("md"),
+						weight("medium"),
+						/** A small control reaches `--ui-target-size` however a consumer positions it. */
+						hitArea({ anchor: "flex-center" }),
+						pi(4),
+						pb(2),
+						/**
+						 * Every variant carries the same border width, colored to match its
+						 * own fill (transparent for ghost), so solid, outline, and ghost
+						 * render at the same footprint.
+						 */
+						border({ width: 1 }),
+						/**
+						 * The row measure is stated, so the control lines up with a field of the same size when
+						 * a Group fuses the two, and still grows when a long label wraps.
+						 */
+						minBs("2.5rem"),
 
-					data("size", "sm", [pi(3), pb(1.5), minBs("2rem"), when("& > svg", [is(3), bs(3)])]),
-					data("size", "lg", [
-						pi(5),
-						pb(2.5),
-						text("base"),
-						minBs("3rem"),
-						when("& > svg", [is(5), bs(5)]),
-					]),
-					/**
-					 * A glyph beside a label carries its own side bearing, so the padding on that
-					 * side drops one step and the glyph and the words read as evenly inset.
-					 */
-					when("&[data-glyph-start]:has(> svg:first-child)", [
-						pis(3),
-						data("size", "sm", pis(2)),
-						data("size", "lg", pis(4)),
-					]),
-					when("&[data-glyph-end]:has(> svg:last-child)", [
-						pie(3),
-						data("size", "sm", pie(2)),
-						data("size", "lg", pie(4)),
-					]),
+						data("size", "sm", [pi(3), pb(1.5), minBs("2rem"), when("& > svg", [is(3), bs(3)])]),
+						data("size", "lg", [
+							pi(5),
+							pb(2.5),
+							text("base"),
+							minBs("3rem"),
+							when("& > svg", [is(5), bs(5)]),
+						]),
+						/**
+						 * A glyph beside a label carries its own side bearing, so the padding on that
+						 * side drops one step and the glyph and the words read as evenly inset.
+						 */
+						when("&[data-glyph-start]:has(> svg:first-child)", [
+							pis(3),
+							data("size", "sm", pis(2)),
+							data("size", "lg", pis(4)),
+						]),
+						when("&[data-glyph-end]:has(> svg:last-child)", [
+							pie(3),
+							data("size", "sm", pie(2)),
+							data("size", "lg", pie(4)),
+						]),
 
-					data("variant", "solid", [
-						data("color", "brand", [
-							bg("brand.solid"),
-							border("brand.solid"),
-							fg("brand.onSolid"),
-							hover([bg("brand.bg-solid-hover"), border("brand.bg-solid-hover")]),
-							active([bg("brand.bg-solid-pressed"), border("brand.bg-solid-pressed")]),
+						data("variant", "solid", [
+							data("color", "brand", [
+								bg("brand.solid"),
+								border("brand.solid"),
+								fg("brand.onSolid"),
+								hover([bg("brand.bg-solid-hover"), border("brand.bg-solid-hover")]),
+								active([bg("brand.bg-solid-pressed"), border("brand.bg-solid-pressed")]),
+							]),
+							data("color", "neutral", [
+								bg("neutral.solid"),
+								border("neutral.solid"),
+								fg("neutral.onSolid"),
+								hover([bg("neutral.bg-solid-hover"), border("neutral.bg-solid-hover")]),
+								active([bg("neutral.bg-solid-pressed"), border("neutral.bg-solid-pressed")]),
+							]),
+							data("color", "success", [
+								bg("success.solid"),
+								border("success.solid"),
+								fg("success.onSolid"),
+								hover([bg("success.bg-solid-hover"), border("success.bg-solid-hover")]),
+								active([bg("success.bg-solid-pressed"), border("success.bg-solid-pressed")]),
+							]),
+							data("color", "warning", [
+								bg("warning.solid"),
+								border("warning.solid"),
+								fg("warning.onSolid"),
+								hover([bg("warning.bg-solid-hover"), border("warning.bg-solid-hover")]),
+								active([bg("warning.bg-solid-pressed"), border("warning.bg-solid-pressed")]),
+							]),
+							data("color", "danger", [
+								bg("danger.solid"),
+								border("danger.solid"),
+								fg("danger.onSolid"),
+								hover([bg("danger.bg-solid-hover"), border("danger.bg-solid-hover")]),
+								active([bg("danger.bg-solid-pressed"), border("danger.bg-solid-pressed")]),
+							]),
 						]),
-						data("color", "neutral", [
-							bg("neutral.solid"),
-							border("neutral.solid"),
-							fg("neutral.onSolid"),
-							hover([bg("neutral.bg-solid-hover"), border("neutral.bg-solid-hover")]),
-							active([bg("neutral.bg-solid-pressed"), border("neutral.bg-solid-pressed")]),
-						]),
-						data("color", "success", [
-							bg("success.solid"),
-							border("success.solid"),
-							fg("success.onSolid"),
-							hover([bg("success.bg-solid-hover"), border("success.bg-solid-hover")]),
-							active([bg("success.bg-solid-pressed"), border("success.bg-solid-pressed")]),
-						]),
-						data("color", "warning", [
-							bg("warning.solid"),
-							border("warning.solid"),
-							fg("warning.onSolid"),
-							hover([bg("warning.bg-solid-hover"), border("warning.bg-solid-hover")]),
-							active([bg("warning.bg-solid-pressed"), border("warning.bg-solid-pressed")]),
-						]),
-						data("color", "danger", [
-							bg("danger.solid"),
-							border("danger.solid"),
-							fg("danger.onSolid"),
-							hover([bg("danger.bg-solid-hover"), border("danger.bg-solid-hover")]),
-							active([bg("danger.bg-solid-pressed"), border("danger.bg-solid-pressed")]),
-						]),
-					]),
 
-					data("variant", "outline", [
-						data("color", "brand", [
-							border("brand"),
-							fg("brand"),
-							hover([bg("brand.tint"), border("brand.border-hover")]),
-							active(bg("brand.bg-tint-hover")),
+						data("variant", "outline", [
+							data("color", "brand", [
+								border("brand"),
+								fg("brand"),
+								hover([bg("brand.tint"), border("brand.border-hover")]),
+								active(bg("brand.bg-tint-hover")),
+							]),
+							data("color", "neutral", [
+								border("neutral"),
+								fg("neutral"),
+								hover([bg("neutral.tint"), border("neutral.border-hover")]),
+								active(bg("neutral.bg-tint-hover")),
+							]),
+							data("color", "success", [
+								border("success"),
+								fg("success"),
+								hover([bg("success.tint"), border("success.border-hover")]),
+								active(bg("success.bg-tint-hover")),
+							]),
+							data("color", "warning", [
+								border("warning"),
+								fg("warning"),
+								hover([bg("warning.tint"), border("warning.border-hover")]),
+								active(bg("warning.bg-tint-hover")),
+							]),
+							data("color", "danger", [
+								border("danger"),
+								fg("danger"),
+								hover([bg("danger.tint"), border("danger.border-hover")]),
+								active(bg("danger.bg-tint-hover")),
+							]),
 						]),
-						data("color", "neutral", [
-							border("neutral"),
-							fg("neutral"),
-							hover([bg("neutral.tint"), border("neutral.border-hover")]),
-							active(bg("neutral.bg-tint-hover")),
-						]),
-						data("color", "success", [
-							border("success"),
-							fg("success"),
-							hover([bg("success.tint"), border("success.border-hover")]),
-							active(bg("success.bg-tint-hover")),
-						]),
-						data("color", "warning", [
-							border("warning"),
-							fg("warning"),
-							hover([bg("warning.tint"), border("warning.border-hover")]),
-							active(bg("warning.bg-tint-hover")),
-						]),
-						data("color", "danger", [
-							border("danger"),
-							fg("danger"),
-							hover([bg("danger.tint"), border("danger.border-hover")]),
-							active(bg("danger.bg-tint-hover")),
-						]),
-					]),
-					data("variant", "outline", bg("transparent")),
+						data("variant", "outline", bg("transparent")),
 
-					data("variant", "ghost", [
-						data("color", "brand", [
-							fg("brand"),
-							hover(bg("brand.tint")),
-							active(bg("brand.bg-tint-hover")),
+						data("variant", "ghost", [
+							data("color", "brand", [
+								fg("brand"),
+								hover(bg("brand.tint")),
+								active(bg("brand.bg-tint-hover")),
+							]),
+							data("color", "neutral", [
+								fg("neutral"),
+								hover(bg("neutral.bg-tint-hover")),
+								active(bg("neutral.bg-tint-pressed")),
+							]),
+							data("color", "success", [
+								fg("success"),
+								hover(bg("success.tint")),
+								active(bg("success.bg-tint-hover")),
+							]),
+							data("color", "warning", [
+								fg("warning"),
+								hover(bg("warning.tint")),
+								active(bg("warning.bg-tint-hover")),
+							]),
+							data("color", "danger", [
+								fg("danger"),
+								hover(bg("danger.tint")),
+								active(bg("danger.bg-tint-hover")),
+							]),
 						]),
-						data("color", "neutral", [
-							fg("neutral"),
-							hover(bg("neutral.bg-tint-hover")),
-							active(bg("neutral.bg-tint-pressed")),
-						]),
-						data("color", "success", [
-							fg("success"),
-							hover(bg("success.tint")),
-							active(bg("success.bg-tint-hover")),
-						]),
-						data("color", "warning", [
-							fg("warning"),
-							hover(bg("warning.tint")),
-							active(bg("warning.bg-tint-hover")),
-						]),
-						data("color", "danger", [
-							fg("danger"),
-							hover(bg("danger.tint")),
-							active(bg("danger.bg-tint-hover")),
-						]),
-					]),
-					data("variant", "ghost", [bg("transparent"), border("transparent")]),
+						data("variant", "ghost", [bg("transparent"), border("transparent")]),
 
-					when('&[aria-disabled="true"]', opacity(50)),
-					when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
+						when('&[aria-disabled="true"]', opacity(50)),
+						when('&[aria-disabled="true"]', [cursor("not-allowed"), pointerEvents()]),
 
-					cursor("default"),
-					userSelect(),
+						cursor("default"),
+						userSelect(),
 
-					text("sm"),
+						text("sm"),
 
-					data("size", "sm", text("xs")),
-					mix,
-				]}
-			>
-				{children}
-			</a>
+						data("size", "sm", text("xs")),
+						mix,
+					]}
+				>
+					{children}
+				</a>
+				{rendersPrefetchHint(resolvedPrefetch, rest.href) && (
+					<link rel="prefetch" href={rest.href} />
+				)}
+			</>
 		);
 	};
 }

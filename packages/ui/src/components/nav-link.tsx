@@ -17,12 +17,17 @@ import { cursor, raw } from "@sdxc/u/general";
 import { data, hover, when } from "@sdxc/u/state";
 import { textDecoration, weight } from "@sdxc/u/typography";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
 import type { SemanticColor } from "../utils/semantic-color.js";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
+import { prefetchAttribute, rendersPrefetchHint } from "../utils/link-prefetch.js";
 
 /** Semantic color role {@link NavLink} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: NavLink.Color = "neutral";
+
+/** Prefetch mode {@link NavLink} falls back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: NavLink.Prefetch = "none";
 
 /**
  * Prop types for {@link NavLink}.
@@ -32,6 +37,13 @@ export namespace NavLink {
 	 * Semantic color role, each mapped to its matching `--ui-*` variables.
 	 */
 	export type Color = SemanticColor;
+
+	/**
+	 * When the destination starts loading: on intent, once in the viewport, on
+	 * render through a `<link rel="prefetch">` that also serves full-document
+	 * navigations, or only on navigation (`"none"`).
+	 */
+	export type Prefetch = LinkPrefetch;
 
 	/**
 	 * Props accepted by {@link NavLink}, built as an intersection: the
@@ -49,6 +61,12 @@ export namespace NavLink {
 		 * from surrounding text.
 		 */
 		hasBackground?: boolean;
+		/**
+		 * Prefetch mode, for links whose GET is safe to repeat. `"render"` suits
+		 * multi-page navigations; a menu keeps it to its first few items, since each
+		 * hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
 	};
 }
 
@@ -60,7 +78,7 @@ export namespace NavLink {
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the link's markup.
  * @example
- * <NavLink href="/dashboard" color="brand">{t("nav.dashboard")}</NavLink>
+ * <NavLink href="/dashboard" color="brand" prefetch="render">{t("nav.dashboard")}</NavLink>
  * @example
  * <NavLink href="/settings" aria-current={pathname === "/settings" ? "page" : undefined}>{t("nav.settings")}</NavLink>
  * @example
@@ -68,76 +86,83 @@ export namespace NavLink {
  */
 export function NavLink(handle: Handle<NavLink.Props>) {
 	return () => {
-		let { color, hasBackground, mix, ...rest } = handle.props;
+		let { color, hasBackground, prefetch, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
+		let resolvedPrefetch = prefetch ?? DEFAULT_PREFETCH;
 
 		return (
-			<a
-				{...rest}
-				data-color={resolvedColor}
-				data-has-background={hasBackground || undefined}
-				mix={[
-					interactiveTransition(),
-					rounded("sm"),
-					when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
-					cursor("pointer"),
-					textDecoration("underline"),
-					raw({
-						textDecorationColor: colorMix(
-							"oklab",
-							{ color: "currentcolor", weight: 60 },
-							"transparent",
+			<>
+				<a
+					{...rest}
+					data-color={resolvedColor}
+					data-has-background={hasBackground || undefined}
+					data-rmx-prefetch={prefetchAttribute(resolvedPrefetch)}
+					mix={[
+						interactiveTransition(),
+						rounded("sm"),
+						when("&:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						cursor("pointer"),
+						textDecoration("underline"),
+						raw({
+							textDecorationColor: colorMix(
+								"oklab",
+								{ color: "currentcolor", weight: 60 },
+								"transparent",
+							),
+							textUnderlineOffset: "4px",
+						}),
+						hover(raw({ textDecorationColor: "currentcolor" })),
+						data("color", "brand", [
+							fg("brand"),
+							when('&[aria-current]:not([aria-current="false"])', [
+								weight(500),
+								fg("brand.emphasis"),
+							]),
+						]),
+						data("color", "neutral", [
+							fg("neutral"),
+							when('&[aria-current]:not([aria-current="false"])', [
+								weight(500),
+								fg("neutral.emphasis"),
+							]),
+						]),
+						data("color", "success", [
+							fg("success"),
+							when('&[aria-current]:not([aria-current="false"])', [
+								weight(500),
+								fg("success.emphasis"),
+							]),
+						]),
+						data("color", "warning", [
+							fg("warning"),
+							when('&[aria-current]:not([aria-current="false"])', [
+								weight(500),
+								fg("warning.emphasis"),
+							]),
+						]),
+						data("color", "danger", [
+							fg("danger"),
+							when('&[aria-current]:not([aria-current="false"])', [
+								weight(500),
+								fg("danger.emphasis"),
+							]),
+						]),
+						when('&[aria-current]:not([aria-current="false"])', [
+							weight(500),
+							raw({ textDecorationThickness: "2px", textDecorationColor: "currentcolor" }),
+						]),
+						data("has-background", textDecoration("none")),
+						when(
+							'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])',
+							textDecoration("none"),
 						),
-						textUnderlineOffset: "4px",
-					}),
-					hover(raw({ textDecorationColor: "currentcolor" })),
-					data("color", "brand", [
-						fg("brand"),
-						when('&[aria-current]:not([aria-current="false"])', [
-							weight(500),
-							fg("brand.emphasis"),
-						]),
-					]),
-					data("color", "neutral", [
-						fg("neutral"),
-						when('&[aria-current]:not([aria-current="false"])', [
-							weight(500),
-							fg("neutral.emphasis"),
-						]),
-					]),
-					data("color", "success", [
-						fg("success"),
-						when('&[aria-current]:not([aria-current="false"])', [
-							weight(500),
-							fg("success.emphasis"),
-						]),
-					]),
-					data("color", "warning", [
-						fg("warning"),
-						when('&[aria-current]:not([aria-current="false"])', [
-							weight(500),
-							fg("warning.emphasis"),
-						]),
-					]),
-					data("color", "danger", [
-						fg("danger"),
-						when('&[aria-current]:not([aria-current="false"])', [
-							weight(500),
-							fg("danger.emphasis"),
-						]),
-					]),
-					when('&[aria-current]:not([aria-current="false"])', [
-						weight(500),
-						raw({ textDecorationThickness: "2px", textDecorationColor: "currentcolor" }),
-					]),
-					data("has-background", textDecoration("none")),
-					when(
-						'&[data-has-background]:hover, &[data-has-background][aria-current]:not([aria-current="false"])',
-						textDecoration("none"),
-					),
-					mix,
-				]}
-			/>
+						mix,
+					]}
+				/>
+				{rendersPrefetchHint(resolvedPrefetch, rest.href) && (
+					<link rel="prefetch" href={rest.href} />
+				)}
+			</>
 		);
 	};
 }

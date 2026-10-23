@@ -1,6 +1,6 @@
 /**
- * Tests for {@link Link}: the anchor carries `data-rmx-prefetch` only when a
- * prefetch mode other than `"none"` is chosen, so links stay inert by default.
+ * Tests for {@link Link}: the anchor carries `data-rmx-prefetch` only for the
+ * runtime's modes, and `"render"` adds a `<link rel="prefetch">` after it instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,6 +23,8 @@ describe(Link.name, () => {
 		expect(html).toMatch(/<a [^>]*href="\/about"[^>]*>About<\/a>/);
 		expect(html).not.toContain("data-rmx-prefetch");
 		expect(none).not.toContain("data-rmx-prefetch");
+		expect(html).not.toContain("<link");
+		expect(none).not.toContain("<link");
 	});
 
 	test.each(["intent", "viewport"] as const)("prefetches on %s", async (prefetch) => {
@@ -33,5 +35,23 @@ describe(Link.name, () => {
 		);
 
 		expect(html).toMatch(new RegExp(`<a [^>]*data-rmx-prefetch="${prefetch}"`));
+		expect(html).not.toContain("<link");
+	});
+
+	test("renders a prefetch hint after the anchor on render", async () => {
+		let html = await renderToString(
+			<Link href="/about" prefetch="render">
+				About
+			</Link>,
+		);
+
+		expect(html).toMatch(/About<\/a><link rel="prefetch" href="\/about"/);
+		expect(html).not.toContain("data-rmx-prefetch");
+	});
+
+	test("renders no prefetch hint without a destination", async () => {
+		let html = await renderToString(<Link prefetch="render">About</Link>);
+
+		expect(html).not.toContain("<link");
 	});
 });

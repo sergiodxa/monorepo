@@ -61,6 +61,8 @@ describe(LinkButton.name, () => {
 
 		expect(html).not.toContain("data-rmx-prefetch");
 		expect(none).not.toContain("data-rmx-prefetch");
+		expect(html).not.toContain("<link");
+		expect(none).not.toContain("<link");
 	});
 
 	test.each(["intent", "viewport"] as const)("prefetches on %s", async (prefetch) => {
@@ -71,5 +73,23 @@ describe(LinkButton.name, () => {
 		);
 
 		expect(html).toMatch(new RegExp(`<a [^>]*data-rmx-prefetch="${prefetch}"`));
+		expect(html).not.toContain("<link");
+	});
+
+	test("renders a prefetch hint after the anchor on render", async () => {
+		let html = await renderToString(
+			<LinkButton href="/new" prefetch="render">
+				Create
+			</LinkButton>,
+		);
+
+		expect(html).toMatch(/Create<\/a><link rel="prefetch" href="\/new"/);
+		expect(html).not.toContain("data-rmx-prefetch");
+	});
+
+	test("renders no prefetch hint without a destination", async () => {
+		let html = await renderToString(<LinkButton prefetch="render">Create</LinkButton>);
+
+		expect(html).not.toContain("<link");
 	});
 });

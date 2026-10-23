@@ -20,12 +20,17 @@ import { m, mb, mis, p, pb, pi } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
 import { fontSize, textDecoration, weight } from "@sdxc/u/typography";
 
+import type { LinkPrefetch } from "../utils/link-prefetch.js";
+
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 
 import { Link } from "./link.js";
 
 /** Semantic color role {@link Breadcrumbs.Link} falls back to when `color` is omitted. */
 const DEFAULT_COLOR: Link.Color = "neutral";
+
+/** Prefetch mode {@link Breadcrumbs.Link} falls back to when `prefetch` is omitted. */
+const DEFAULT_PREFETCH: Breadcrumbs.Prefetch = "none";
 
 /**
  * Prop types for {@link Breadcrumbs} and its compound parts.
@@ -47,11 +52,25 @@ export namespace Breadcrumbs {
 	export interface ItemProps extends TagProps<"li"> {}
 
 	/**
-	 * Every prop {@link Link.Props} accepts, unchanged. A type alias rather than
-	 * an interface, since {@link Link.Props} resolves through a conditional type
+	 * When a segment's destination starts loading: on intent, once in the
+	 * viewport, on render through a `<link rel="prefetch">` that also serves
+	 * full-document navigations, or only on navigation (`"none"`).
+	 */
+	export type Prefetch = LinkPrefetch;
+
+	/**
+	 * Every prop {@link Link.Props} accepts. A type alias rather than an
+	 * interface, since {@link Link.Props} resolves through a conditional type
 	 * that an `interface extends` clause can't statically extend.
 	 */
-	export type LinkProps = Link.Props;
+	export type LinkProps = Link.Props & {
+		/**
+		 * Prefetch mode, for segments whose GET is safe to repeat. `"render"` suits
+		 * multi-page navigations; a long trail keeps it to its nearest parents, since
+		 * each hint is a request on page load. Defaults to {@link DEFAULT_PREFETCH}.
+		 */
+		prefetch?: Prefetch;
+	};
 }
 
 /**
@@ -159,7 +178,7 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
  * @param handle Runtime handle carrying the host `<a>`'s props.
  * @returns The render function producing the segment's markup.
  * @example
- * <Breadcrumbs.Link href="/settings">{t("nav.settings")}</Breadcrumbs.Link>
+ * <Breadcrumbs.Link href="/settings" prefetch="render">{t("nav.settings")}</Breadcrumbs.Link>
  * @example
  * <Breadcrumbs.Link href="/settings/profile" aria-current="page">
  * 	{t("nav.profile")}
@@ -169,12 +188,13 @@ Breadcrumbs.Item = function BreadcrumbsItem(handle: Handle<Breadcrumbs.ItemProps
  */
 Breadcrumbs.Link = function BreadcrumbsLink(handle: Handle<Breadcrumbs.LinkProps>) {
 	return () => {
-		let { color, mix, ...rest } = handle.props;
+		let { color, prefetch, mix, ...rest } = handle.props;
 		let resolvedColor = color ?? DEFAULT_COLOR;
 
 		return (
 			<Link
 				color={resolvedColor}
+				prefetch={prefetch ?? DEFAULT_PREFETCH}
 				{...rest}
 				data-slot="link"
 				mix={[

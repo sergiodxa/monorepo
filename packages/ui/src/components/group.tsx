@@ -72,14 +72,15 @@ export function Group(handle: Handle<Group.Props>) {
 					items("center"),
 					/**
 					 * The controls compose into one shape, so the cluster keeps the rounding on
-					 * its own outer corners and the seam where two of them meet is drawn once.
+					 * its own outer corners and the seam where two of them meet is drawn once; the
+					 * last control before a trailing `<link rel="prefetch">` hint keeps its corners.
 					 */
 					when("& > *:not(:first-child)", [
 						roundedCorner("start-start", "none"),
 						roundedCorner("end-start", "none"),
 						mis("-1px"),
 					]),
-					when("& > *:not(:last-child)", [
+					when("& > *:has(~ :not(link))", [
 						roundedCorner("start-end", "none"),
 						roundedCorner("end-end", "none"),
 					]),
