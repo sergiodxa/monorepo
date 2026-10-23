@@ -39,6 +39,7 @@ import type { TopicViewModel } from "~/app/http/view-models/topic";
 import { LISTING_ENTRIES, socialCardVersion } from "~/app/services/social-card";
 import { ActivityRow } from "~/resources/components/activity-row";
 import { InlinePost } from "~/resources/components/inline-post";
+import { entryPrefetch } from "~/resources/components/prefetch-hints";
 import { BlogLayout } from "~/resources/layouts/blog";
 
 /**
@@ -79,9 +80,11 @@ function absoluteHref(rawHref: string) {
  * An article or a tutorial as an `h-entry`: its linked title, a preview badge while scheduled,
  * and its date, so a microformats reader of the listing finds every entry in it.
  */
-function PageRow(handle: Handle<{ item: Extract<TopicViewModel.Item, { type: "page" }> }>) {
+function PageRow(
+	handle: Handle<{ item: Extract<TopicViewModel.Item, { type: "page" }>; prefetch: Link.Prefetch }>,
+) {
 	return () => {
-		let { item } = handle.props;
+		let { item, prefetch } = handle.props;
 		return (
 			<li
 				mix={[
@@ -97,7 +100,7 @@ function PageRow(handle: Handle<{ item: Extract<TopicViewModel.Item, { type: "pa
 				]}
 			>
 				<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-					<Link href={item.href} mix={[mf("u-url", "p-name")]}>
+					<Link href={item.href} prefetch={prefetch} mix={[mf("u-url", "p-name")]}>
 						{item.label}
 					</Link>
 					{item.preview && (
@@ -233,13 +236,16 @@ function GlossaryEntry(handle: Handle<{ entry: GlossaryViewModel.Entry; inList?:
 	};
 }
 
-/** One row of a mixed list, picked by the kind of post it shows. */
-function TopicRow(handle: Handle<{ item: TopicViewModel.Item }>) {
+/**
+ * One row of a mixed list, picked by the kind of post it shows; a row among the list's first
+ * entries prefetches the page it links to, while bookmarks and glossary cards link elsewhere.
+ */
+function TopicRow(handle: Handle<{ item: TopicViewModel.Item; index: number }>) {
 	return () => {
-		let { item } = handle.props;
+		let { item, index } = handle.props;
 		switch (item.type) {
 			case "page":
-				return <PageRow item={item} />;
+				return <PageRow item={item} prefetch={entryPrefetch(index, item.href)} />;
 			case "bookmark":
 				return <BookmarkRow item={item.bookmark} />;
 			case "entry":
@@ -251,6 +257,7 @@ function TopicRow(handle: Handle<{ item: TopicViewModel.Item }>) {
 						kindLabel={item.kindLabel}
 						href={item.href}
 						date={item.date}
+						prefetch={entryPrefetch(index, item.href)}
 						description={item.description ?? undefined}
 						inline={item.inline ? <InlinePost {...item.inline} /> : undefined}
 						linkMix={item.inline ? [mf("u-url")] : undefined}
@@ -285,8 +292,8 @@ export function TopicView() {
 				);
 			return (
 				<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
-					{model.items.map((item) => (
-						<TopicRow key={item.key} item={item} />
+					{model.items.map((item, index) => (
+						<TopicRow key={item.key} item={item} index={index} />
 					))}
 				</ol>
 			);

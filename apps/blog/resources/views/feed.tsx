@@ -25,6 +25,7 @@ import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
 import { ActivityRow } from "~/resources/components/activity-row";
 import { InlinePost } from "~/resources/components/inline-post";
+import { entryPrefetch } from "~/resources/components/prefetch-hints";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -101,6 +102,7 @@ export function FeedView() {
 							kind={item.kind}
 							href={item.href}
 							date={item.date}
+							prefetch={entryPrefetch(index, item.href)}
 							mix={[mf("h-entry")]}
 							inline={item.inline ? <InlinePost {...item.inline} /> : undefined}
 							linkMix={[

@@ -110,6 +110,12 @@ const NAVIGATION_ITEMS: Array<BlogLayout.NavigationItem> = [
 ];
 
 /**
+ * How many of the first {@link NAVIGATION_ITEMS} prefetch their page from every page: home and
+ * the two long-form sections, the destinations a reader leaves a page for most.
+ */
+const PREFETCHED_SECTIONS = 3;
+
+/**
  * Fixed attachment holds the sheen's light source still while content scrolls,
  * its base color repeats the gradient's outer stop so wide viewports stay seamless,
  * and the wash spans the two neutral steps brand 600 link text clears AA against.
@@ -196,11 +202,16 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							<data mix={[mf("p-note")]} value={PROFILE.summary} />
 						</p>
 						<nav aria-label="Main" mix={[gridArea("nav"), hstack({ gap: 2 }), flexWrap("wrap")]}>
-							{NAVIGATION_ITEMS.map((item) => {
+							{NAVIGATION_ITEMS.map((item, index) => {
 								let isActive = activePath === item.href;
 
 								return (
-									<NavPill key={item.href} href={item.href} active={isActive}>
+									<NavPill
+										key={item.href}
+										href={item.href}
+										active={isActive}
+										prefetch={!isActive && index < PREFETCHED_SECTIONS ? "render" : "none"}
+									>
 										<PillLabel>{item.label}</PillLabel>
 									</NavPill>
 								);

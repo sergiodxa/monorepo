@@ -14,6 +14,8 @@ import { m, mbs, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Heading, Link } from "@sdxc/ui";
 
+import { entryPrefetch } from "~/resources/components/prefetch-hints";
+
 /**
  * Groups the data shapes used to render related post cards.
  */
@@ -56,7 +58,7 @@ export function PostRelatedView() {
 						gridTemplate({ columns: repeat("auto-fit", "minmax(14rem, 1fr)") }),
 					]}
 				>
-					{model.items.map((item) => (
+					{model.items.map((item, index) => (
 						<article
 							key={item.href}
 							mix={[
@@ -66,7 +68,11 @@ export function PostRelatedView() {
 								bg("neutral.tint"),
 							]}
 						>
-							<Link href={item.href} mix={[text("lg"), weight("bold")]}>
+							<Link
+								href={item.href}
+								prefetch={entryPrefetch(index, item.href)}
+								mix={[text("lg"), weight("bold")]}
+							>
 								{item.label}
 							</Link>
 							<p mix={[m(0), mbs(3), fg("neutral")]}>{item.reason}</p>

@@ -18,6 +18,7 @@ import { Heading, Link } from "@sdxc/ui";
 
 import type { TopicViewModel } from "~/app/http/view-models/topic";
 
+import { entryPrefetch } from "~/resources/components/prefetch-hints";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -53,7 +54,7 @@ export function TopicsView() {
 					<p mix={[m(0), text("base"), fg("neutral")]}>No topics yet.</p>
 				) : (
 					<ul mix={[m(0), p(0), listStyle("none"), grid(), gap(3), mbs(2)]}>
-						{model.topics.map((topic) => (
+						{model.topics.map((topic, index) => (
 							<li
 								key={topic.href}
 								mix={[
@@ -66,7 +67,9 @@ export function TopicsView() {
 								]}
 							>
 								<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-									<Link href={topic.href}>{topic.title}</Link>
+									<Link href={topic.href} prefetch={entryPrefetch(index, topic.href)}>
+										{topic.title}
+									</Link>
 								</p>
 								{topic.summary ? (
 									<p mix={[m(0), text("base"), fg("neutral")]}>{topic.summary}</p>

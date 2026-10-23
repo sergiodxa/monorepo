@@ -61,6 +61,8 @@ export namespace ActivityRow {
 		"aria-selected"?: "true" | "false";
 		/** Extra mixins on the title link. */
 		linkMix?: TagProps<"a">["mix"];
+		/** When the row's destination loads, handed to whichever link carries `href`. */
+		prefetch?: Link.Prefetch;
 		/** Extra mixins on the paragraph holding the title, such as cutting it to one line. */
 		titleMix?: TagProps<"p">["mix"];
 		/** Extra mixins on the `<time>`. */
@@ -115,6 +117,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 			kindLabel,
 			linkMix,
 			mix,
+			prefetch,
 			titleMix,
 		} = handle.props;
 		let { id, role, "aria-selected": selected } = handle.props;
@@ -123,7 +126,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 		let dateCell = iife(() => {
 			if (date && inline)
 				return (
-					<Link href={href} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
+					<Link href={href} prefetch={prefetch} mix={[mbs(compact ? 0.5 : 1), linkMix]}>
 						<time
 							datetime={isoDate(date)}
 							mix={[fg("neutral.muted"), text("sm"), nowrap(), dateMix]}
@@ -176,7 +179,7 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 				<div mix={[minIs(0)]}>
 					{inline ?? (
 						<p mix={[m(0), text(compact ? "base" : "lg"), fg("neutral.emphasis"), titleMix]}>
-							<Link href={href} mix={linkMix}>
+							<Link href={href} prefetch={prefetch} mix={linkMix}>
 								{children}
 							</Link>
 							{badge}
