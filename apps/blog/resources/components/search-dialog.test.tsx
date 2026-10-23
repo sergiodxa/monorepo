@@ -360,6 +360,7 @@ afterEach(() => {
 	requests = [];
 	held.clear();
 	document.body.innerHTML = "";
+	for (let hint of document.head.querySelectorAll('link[rel="prefetch"]')) hint.remove();
 });
 
 describe("the search dialog", () => {
@@ -737,6 +738,56 @@ describe("the search dialog's keyboard", () => {
 		await vi.waitFor(() => expect(requests.at(-1)?.src).toBe("/frames/search?q=ten+react+router"));
 		await vi.waitFor(() => expect(chosen()).toBeNull());
 		expect(selectedRows()).toEqual([]);
+	});
+});
+
+describe("the search dialog's prefetching", () => {
+	/** The pages the document holds a prefetch hint for, oldest first. */
+	function prefetched(): Array<string> {
+		return Array.from(
+			document.head.querySelectorAll<HTMLLinkElement>('link[rel="prefetch"]'),
+			(hint) => new URL(hint.href).pathname,
+		);
+	}
+
+	/** Hydrates a page and opens the dialog, as ⌘K does. */
+	async function openDialog(): Promise<void> {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+		press(document.body, { key: "k", metaKey: true });
+	}
+
+	test("loads the top result's document once the results settle", async () => {
+		await openDialog();
+
+		type("topmost");
+		await settle();
+
+		await vi.waitFor(() => expect(prefetched()).toEqual(["/articles/topmost"]));
+	});
+
+	test("loads the document of the row the arrows rest on", async () => {
+		await openDialog();
+		type("ten");
+		await settle();
+		await vi.waitFor(() => expect(prefetched()).toEqual(["/articles/ten-1"]));
+
+		pressInBox("ArrowDown", 2);
+
+		await vi.waitFor(() => expect(prefetched()).toEqual(["/articles/ten-1", "/articles/ten-2"]));
+	});
+
+	test("loads nothing for results that settle in a closed dialog", async () => {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		type("closed dialog");
+		await settle();
+		await vi.waitFor(() => expect(input().getAttribute("aria-expanded")).toBe("true"));
+
+		expect(prefetched()).toEqual([]);
 	});
 });
 

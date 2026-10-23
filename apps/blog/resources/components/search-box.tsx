@@ -19,6 +19,7 @@ import {
 	chosenOption,
 	LIVE_FRAME_RELOAD_EVENT,
 	liveFrame,
+	prefetchOption,
 } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
@@ -33,6 +34,12 @@ export const SEARCH_DEBOUNCE_MS = 200;
  * it (the debounce plus a quick answer) swap in with no spinner flashing first.
  */
 export const SPINNER_DELAY_MS = 350;
+
+/**
+ * How a result's page loads ahead of the reader following it. Every link loads a whole document, so a `<link rel="prefetch">` warms the document the
+ * browser reuses when the reader follows a result.
+ */
+const SEARCH_PREFETCH = "document";
 
 /** How long the results card takes to grow or shrink to new results. */
 const RESIZE_MS = 180;
@@ -258,6 +265,7 @@ export const SearchBox = clientEntry(
 			} else {
 				markBusy(false);
 				markedKind = null;
+				prefetchTopResult(event.currentTarget);
 				if (before && event.currentTarget instanceof HTMLElement) {
 					chooseOption(event.currentTarget, chooseFirst ? 0 : -1);
 					animateResults(before, direction);
@@ -269,6 +277,16 @@ export const SearchBox = clientEntry(
 				spinning = false;
 				void handle.update();
 			}
+		}
+
+		/**
+		 * Starts loading the top result's page once fresh results settle in the open dialog,
+		 * since that row is the one Enter most likely opens.
+		 */
+		function prefetchTopResult(input: EventTarget | null): void {
+			if (blank || !(input instanceof HTMLElement)) return;
+			if (!document.getElementById(handle.props.dialogId)?.hasAttribute("open")) return;
+			prefetchOption(input, 0, SEARCH_PREFETCH);
 		}
 
 		/**
@@ -376,7 +394,7 @@ export const SearchBox = clientEntry(
 							debounce: SEARCH_DEBOUNCE_MS,
 							slowAfter: SPINNER_DELAY_MS,
 						}),
-						activeDescendantKeys(),
+						activeDescendantKeys({ prefetch: SEARCH_PREFETCH }),
 						on<HTMLInputElement, "keydown">("keydown", switchTabByArrow),
 						on<HTMLInputElement, "ui:live-frame">("ui:live-frame", onLiveFrame),
 						on<HTMLInputElement, "input">("input", (event) => {
