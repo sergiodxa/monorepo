@@ -306,6 +306,8 @@ Helpers for writing your own:
   stand-down rules as `isClaimedKeystroke(event, scope?)`.
 - `chooseOption(combobox, index)` and `chosenOption(combobox)` — set and read the option
   `activeDescendantKeys` has chosen, after a reload replaces the options.
+- `prefetchOption(combobox, index, strategy)` — loads an option's link ahead, as
+  `activeDescendantKeys({ prefetch })` does for a resting choice, e.g. the top result once it settles.
 - `syncAriaChecked(control)` — refreshes `ariaChecked` after a programmatic checked write or reset.
 - `colorChannelProperty(channel)` and `getCommandItemId(item, index)` — the custom property and the
   item id `channelSync` and `commandFilter` read.
