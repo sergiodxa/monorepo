@@ -1,7 +1,7 @@
 /**
  * Client island: a real `<form>` posts to the run action so it works with no JS;
- * once hydrated, `on("submit")` intercepts it to `fetch()` the same action
- * instead, keeping the button pending — a flow run can take most of thirty
+ * once hydrated it `fetch()`es the same action, keeping the button pending for the
+ * whole run, then toasts the outcome and reloads the page's latest-run cards.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,6 +42,12 @@ const RunResponseSchema = s.object({
 
 /** What the action answered, once parsed. */
 type RunResponse = s.InferOutput<typeof RunResponseSchema>;
+
+/**
+ * Name of the frame on the flow monitor's page holding its latest-run cards, which a finished
+ * run reloads so they show the run that just happened.
+ */
+export const FLOW_RESULTS_FRAME = "flow-monitor-card-results";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type RunFlowButtonProps = {
@@ -91,7 +97,10 @@ export function runToast(t: Translate, name: string, run: RunResponse): AppToast
 	return { title: t("page.flowMonitors.run.toast.down", { name }), description, color: "danger" };
 }
 
-/** Posts the run action, spinning until the flow finishes, then toasting its outcome. */
+/**
+ * Posts the run action, spinning until the flow finishes, then toasting its outcome and
+ * reloading the page's latest-run cards when the flow ran.
+ */
 export const RunFlowButton = clientEntry(
 	import.meta.url,
 	function RunFlowButton(handle: Handle<RunFlowButtonProps>) {
@@ -130,6 +139,7 @@ export const RunFlowButton = clientEntry(
 
 								let run = s.parse(RunResponseSchema, await response.json());
 								showToast(runToast(t, handle.props.name, run));
+								if (run.status !== null) await handle.frames.get(FLOW_RESULTS_FRAME)?.reload();
 							} catch {
 								/** A failed request has no outcome to report, so this stays silent rather than risking a wrong toast. */
 							} finally {

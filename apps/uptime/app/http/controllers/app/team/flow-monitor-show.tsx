@@ -26,7 +26,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
-import RunFlowButton from "~/resources/components/run-flow-button";
+import RunFlowButton, { FLOW_RESULTS_FRAME } from "~/resources/components/run-flow-button";
 import StatCard from "~/resources/components/stat-card";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
@@ -152,7 +152,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 						</div>
 
 						<Frame
-							name="flow-monitor-card-results"
+							name={FLOW_RESULTS_FRAME}
 							src={routes.app.team.flowMonitors.cards.results.href({
 								team: ctx.team.slug,
 								monitorId: monitor.id,
