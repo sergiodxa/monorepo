@@ -1,8 +1,9 @@
 /**
  * Proves every team action is mapped behind its guards through the real router: an anonymous
  * request is sent to sign in, a viewer outside the team gets a 404, and a plain member gets a
- * 403 from each admin action and each monitor delete. Action tests seed the team themselves, so
- * only this one notices a dropped guard.
+ * 403 from each admin action and each monitor delete; and that public pages, and only they, carry
+ * the browser cache policy. Action tests seed the team themselves, so only this one notices a
+ * dropped guard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -146,5 +147,66 @@ describe("team action guards", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).not.toBe(routes.home.href());
+	});
+});
+
+/** A `GET` through the real router, as the browser sends it for a page or a link prefetch. */
+async function get(path: string, headers: HeadersInit = {}): Promise<Response> {
+	return router.fetch(new Request(new URL(path, "https://uptime.test"), { headers }));
+}
+
+describe("public page caching", () => {
+	test.each([
+		routes.home.href(),
+		routes.marketing.feature.href({ slug: "monitors" }),
+		routes.trust.href(),
+		routes.docs.show.href({ slug: "overview" }),
+	])("%s lets the browser keep the page, with the CSP for its own nonce", async (path) => {
+		viewer = null;
+
+		let response = await get(path, { Accept: "text/html" });
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("Cache-Control")).toBe("private, max-age=300");
+		expect(response.headers.get("Vary")).toBe("cookie, accept-language");
+		let policy = response.headers.get("Content-Security-Policy-Report-Only") ?? "";
+		let nonce = (await response.text()).match(/nonce="([^"]+)"/)?.[1];
+		expect(nonce).toBeDefined();
+		expect(policy).toContain(`'nonce-${nonce}'`);
+	});
+
+	/**
+	 * A prefetch marks itself `X-Remix-Frame: true` and the navigation after it does not, so
+	 * the stored copy is reusable only when both get the same page under the same policy.
+	 */
+	test("answers a link prefetch with the page and policy the navigation gets", async () => {
+		viewer = null;
+		let path = routes.marketing.feature.href({ slug: "monitors" });
+
+		let navigation = await get(path, { Accept: "text/html" });
+		let prefetch = await get(path, { Accept: "text/html", "X-Remix-Frame": "true" });
+
+		expect(prefetch.headers.get("Cache-Control")).toBe(navigation.headers.get("Cache-Control"));
+		expect(prefetch.headers.get("Vary")).toBe(navigation.headers.get("Vary"));
+		let withoutNonce = (html: string) => html.replace(/nonce="[^"]*"/g, 'nonce=""');
+		expect(withoutNonce(await prefetch.text())).toBe(withoutNonce(await navigation.text()));
+	});
+
+	test("leaves an unknown marketing slug's 404 uncached", async () => {
+		viewer = null;
+
+		let response = await get(routes.marketing.feature.href({ slug: "no-such-feature" }));
+
+		expect(response.status).toBe(404);
+		expect(response.headers.get("Cache-Control")).toBeNull();
+		expect(response.headers.get("Vary")).toBeNull();
+	});
+
+	test("leaves a signed-in app page out of the public policy", async () => {
+		viewer = { id: "member-1", name: "", email: "", avatar: "" };
+
+		let response = await get(routes.app.team.dashboard.index.href({ team: team.slug }));
+
+		expect(response.headers.get("Cache-Control")).not.toBe("private, max-age=300");
 	});
 });

@@ -43,6 +43,7 @@ import auth, { getViewer } from "~/app/http/middleware/auth";
 import { frameFailures } from "~/app/http/middleware/frame-failures";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
+import publicPageCache from "~/app/http/middleware/public-page-cache";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
@@ -128,6 +129,12 @@ function adminGuards(ability: AnyAbility): Middleware[] {
  * the page lists every team the viewer belongs to.
  */
 const ACCOUNT_GUARDS: Middleware[] = [requireUser];
+
+/**
+ * Mapped ahead of every public landing page's controller, so the viewer's browser keeps the
+ * rendered page for five minutes and a link prefetch answers the navigation that follows it.
+ */
+const PUBLIC_PAGE_GUARDS: Middleware[] = [publicPageCache()];
 
 /** Inputs {@link createWebRouter} reads per request, which no module-scope binding can supply. */
 export interface WebRouterOptions {
@@ -293,7 +300,7 @@ export function createWebRouter(options: WebRouterOptions) {
 
 	router.map(
 		routes.home,
-		lazy(() => import("~/app/http/controllers/home"), [trialHoneypot]),
+		lazy(() => import("~/app/http/controllers/home"), [trialHoneypot, ...PUBLIC_PAGE_GUARDS]),
 	);
 	router.map(
 		routes.healthcheck,
@@ -365,43 +372,43 @@ export function createWebRouter(options: WebRouterOptions) {
 
 	router.map(
 		routes.marketing.feature,
-		lazy(() => import("~/app/http/controllers/marketing-feature")),
+		lazy(() => import("~/app/http/controllers/marketing-feature"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.marketing.audience,
-		lazy(() => import("~/app/http/controllers/marketing-audience")),
+		lazy(() => import("~/app/http/controllers/marketing-audience"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.marketing.useCase,
-		lazy(() => import("~/app/http/controllers/marketing-use-case")),
+		lazy(() => import("~/app/http/controllers/marketing-use-case"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.marketing.comparison,
-		lazy(() => import("~/app/http/controllers/marketing-comparison")),
+		lazy(() => import("~/app/http/controllers/marketing-comparison"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.browserFlows,
-		lazy(() => import("~/app/http/controllers/browser-flows")),
+		lazy(() => import("~/app/http/controllers/browser-flows"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.trust,
-		lazy(() => import("~/app/http/controllers/trust")),
+		lazy(() => import("~/app/http/controllers/trust"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.legal.privacy,
-		lazy(() => import("~/app/http/controllers/privacy")),
+		lazy(() => import("~/app/http/controllers/privacy"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.legal.terms,
-		lazy(() => import("~/app/http/controllers/terms")),
+		lazy(() => import("~/app/http/controllers/terms"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.docs.index,
-		lazy(() => import("~/app/http/controllers/docs-index")),
+		lazy(() => import("~/app/http/controllers/docs-index"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.docs.show,
-		lazy(() => import("~/app/http/controllers/docs-show")),
+		lazy(() => import("~/app/http/controllers/docs-show"), PUBLIC_PAGE_GUARDS),
 	);
 	router.map(
 		routes.sitemap,
