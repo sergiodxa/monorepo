@@ -48,6 +48,7 @@ export namespace FrameSubmit {
  * submission reports `pending` and then exactly one of the other states.
  */
 export class FrameSubmitEvent extends Event {
+	/** Where the submission stands; `pending` always comes first. */
 	readonly state: FrameSubmit.State;
 	/** The address the form submitted to. */
 	readonly action: string;
