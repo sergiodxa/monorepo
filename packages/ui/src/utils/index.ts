@@ -25,6 +25,7 @@ export * from "./hue-spectrum.js";
 export * from "./is-new-primary-press.js";
 export * from "./key-combo.js";
 export * from "./keyboard-nav.js";
+export * from "./link-prefetch.js";
 export * from "./merge-style.js";
 export * from "./paired-range-inputs.js";
 export * from "./placement.js";
