@@ -262,6 +262,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 				>
 					<a
 						href={routes.home.href()}
+						data-rmx-prefetch="intent"
 						mix={[
 							hstack({ align: "center", gap: "8px" }),
 							weight(700),
@@ -293,6 +294,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 							<NavLink
 								key={link.href}
 								href={link.href}
+								prefetch="intent"
 								hasBackground
 								mix={[
 									hidden(),
@@ -346,6 +348,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 										<a
 											key={link.href}
 											href={link.href}
+											data-rmx-prefetch="intent"
 											mix={[
 												block(),
 												fontSize("sm"),
@@ -370,6 +373,7 @@ export default function MarketingLayout(handle: Handle<MarketingLayout.Props>) {
 												<a
 													key={link.href}
 													href={link.href}
+													data-rmx-prefetch="intent"
 													mix={[
 														block(),
 														fontSize("sm"),

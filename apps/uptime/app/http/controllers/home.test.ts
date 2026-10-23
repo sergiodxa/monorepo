@@ -398,4 +398,38 @@ describe("GET /", () => {
 		expect(body).toContain("Open Dashboard");
 		expect(body).toContain(`href="${routes.app.index.href()}"`);
 	});
+
+	test("prefetches landing-page links on intent", async () => {
+		let response = await getHome(null);
+		let body = await response.text();
+
+		let destinations = [
+			routes.docs.index.href(),
+			routes.marketing.comparison.href({ slug: "uptimerobot" }),
+			routes.marketing.feature.href({ slug: "alerts" }),
+			routes.marketing.audience.href({ slug: "agencies" }),
+			routes.legal.privacy.href(),
+		];
+		for (let href of destinations) {
+			let anchors = body.match(new RegExp(`<a[^>]*href="${href}"[^>]*>`, "g")) ?? [];
+			expect(anchors.length, href).toBeGreaterThan(0);
+			for (let anchor of anchors) expect(anchor, href).toContain('data-rmx-prefetch="intent"');
+		}
+	});
+
+	test("leaves the dashboard CTA unprefetched", async () => {
+		let viewer: Viewer = {
+			id: "user-1",
+			name: "Ada Lovelace",
+			email: "ada@example.com",
+			avatar: "",
+		};
+
+		let response = await getHome(viewer);
+		let body = await response.text();
+
+		let anchors = body.match(new RegExp(`<a[^>]*href="${routes.app.index.href()}"[^>]*>`, "g"));
+		expect(anchors?.length).toBeGreaterThan(0);
+		for (let anchor of anchors ?? []) expect(anchor).not.toContain("data-rmx-prefetch");
+	});
 });

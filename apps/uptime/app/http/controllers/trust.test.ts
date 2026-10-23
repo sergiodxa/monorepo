@@ -120,8 +120,8 @@ describe("GET /trust", () => {
 		let response = await getTrust(null);
 
 		let body = await response.text();
-		expect(body).toContain(`<a href="${routes.legal.privacy.href()}">`);
-		expect(body).toContain(`<a href="${routes.legal.terms.href()}">`);
+		expect(body).toContain(`<a href="${routes.legal.privacy.href()}" data-rmx-prefetch="intent">`);
+		expect(body).toContain(`<a href="${routes.legal.terms.href()}" data-rmx-prefetch="intent">`);
 	});
 
 	/**

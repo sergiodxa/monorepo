@@ -108,6 +108,7 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 								<li key={doc.path}>
 									<NavLink
 										href={doc.path}
+										prefetch="intent"
 										hasBackground
 										aria-current={doc.path === activePath ? "page" : undefined}
 										mix={[navLink]}
@@ -127,6 +128,7 @@ export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Han
 										<li key={doc.path}>
 											<NavLink
 												href={doc.path}
+												prefetch="intent"
 												hasBackground
 												aria-current={doc.path === activePath ? "page" : undefined}
 												mix={[navLink]}

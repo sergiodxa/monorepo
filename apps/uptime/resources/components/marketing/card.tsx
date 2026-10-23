@@ -92,7 +92,11 @@ export default function MarketingCard(handle: Handle<MarketingCard.Props>) {
 
 		if (href) {
 			return (
-				<a href={href} mix={[block(), bs("full"), textDecoration("none"), fg("inherit")]}>
+				<a
+					href={href}
+					data-rmx-prefetch="intent"
+					mix={[block(), bs("full"), textDecoration("none"), fg("inherit")]}
+				>
 					{card}
 				</a>
 			);

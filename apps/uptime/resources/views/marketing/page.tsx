@@ -355,6 +355,7 @@ export default function MarketingPageView(handle: Handle<MarketingPageView.Props
 									)}
 									<LinkButton
 										href={`${routes.home.href()}#pricing`}
+										prefetch="intent"
 										color="neutral"
 										variant="outline"
 										size="lg"

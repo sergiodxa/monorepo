@@ -719,6 +719,7 @@ export default createAction(routes.home, async (ctx) => {
 						<div mix={[mbs(8), flex(), justify("center")]}>
 							<a
 								href={routes.browserFlows.href()}
+								data-rmx-prefetch="intent"
 								mix={[
 									inlineFlex(),
 									items("center"),
@@ -796,6 +797,7 @@ export default createAction(routes.home, async (ctx) => {
 									<a
 										key={audience.slug}
 										href={routes.marketing.audience.href({ slug: audience.slug })}
+										data-rmx-prefetch="intent"
 										mix={[
 											inlineFlex(),
 											items("center"),

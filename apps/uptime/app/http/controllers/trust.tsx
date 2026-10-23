@@ -175,7 +175,7 @@ export default createAction(routes.trust, async (ctx) => {
 						<h2>{ctx.intl.t("trust.sections.customerData.title")}</h2>
 						<p>
 							{ctx.intl.t("trust.sections.customerData.bodyPrefix")}
-							<a href={routes.legal.privacy.href()}>
+							<a href={routes.legal.privacy.href()} data-rmx-prefetch="intent">
 								{ctx.intl.t("trust.sections.customerData.privacyLinkText")}
 							</a>
 							{ctx.intl.t("trust.sections.customerData.bodySuffix")}
@@ -189,7 +189,7 @@ export default createAction(routes.trust, async (ctx) => {
 						</p>
 						<p>
 							{ctx.intl.t("trust.sections.ourIncidents.noSlaPrefix")}
-							<a href={routes.legal.terms.href()}>
+							<a href={routes.legal.terms.href()} data-rmx-prefetch="intent">
 								{ctx.intl.t("trust.sections.ourIncidents.termsLinkText")}
 							</a>
 							{ctx.intl.t("trust.sections.ourIncidents.noSlaSuffix")}

@@ -208,6 +208,7 @@ export default function BrowserFlowsView(handle: Handle<BrowserFlowsView.Props>)
 								)}
 								<LinkButton
 									href={`${routes.home.href()}#pricing`}
+									prefetch="intent"
 									color="neutral"
 									variant="outline"
 									size="lg"

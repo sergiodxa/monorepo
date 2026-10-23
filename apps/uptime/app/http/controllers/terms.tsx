@@ -86,7 +86,7 @@ export default createAction(routes.legal.terms, async (ctx) => {
 						<ul>
 							<li>
 								{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstPrefix")}
-								<a href={routes.legal.privacy.href()}>
+								<a href={routes.legal.privacy.href()} data-rmx-prefetch="intent">
 									{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstLinkText")}
 								</a>
 								{ctx.intl.t("legal.terms.sections.dataAndPrivacy.firstSuffix")}
