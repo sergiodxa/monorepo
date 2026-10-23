@@ -58,8 +58,7 @@ export const RefreshFrameButton = clientEntry(
 							pending = true;
 							void handle.update();
 							try {
-								handle.frame.src = src;
-								await handle.frame.reload();
+								await handle.frame.reload({ src });
 							} finally {
 								pending = false;
 								void handle.update();
