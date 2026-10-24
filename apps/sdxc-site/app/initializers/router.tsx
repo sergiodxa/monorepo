@@ -1,7 +1,8 @@
 /**
  * The site's fetch-router: the global middleware stack (head requests, async context, logging
- * and tracing, form data, cross-origin protection, document assets, HTML rendering) and every
- * route mapped onto its controller. The worker builds it per request and the router tests drive it.
+ * and tracing, form data, cross-origin protection, security headers, document assets, HTML
+ * rendering) and every route mapped onto its controller. The worker builds it per request and
+ * the router tests drive it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,15 +19,18 @@ import { assets } from "sdxc/assets-middleware";
 import { headRequests } from "sdxc/http/middleware/head-requests";
 import { lazy } from "sdxc/lazy-route";
 import { log } from "sdxc/logger/middleware";
+import { securityHeaders } from "sdxc/security-headers/middleware";
 import { trace } from "sdxc/trace-context/middleware";
 import { userAgent } from "sdxc/user-agent/middleware";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import canonicalHost from "~/app/http/middleware/canonical-host";
 import frameTransforms from "~/app/http/middleware/frame-transforms";
+import importMapHash from "~/app/http/middleware/import-map-hash";
 import socialCards from "~/app/http/middleware/social-cards";
 import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
+import { SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /** The context a controller sees once the router's middleware has run. */
@@ -58,11 +62,18 @@ export function createWebRouter() {
 			socialCards((request): Promise<Response> => router.fetch(request)),
 			userAgent(),
 			formData(),
-			cop(),
+			/** The CSP report endpoint takes the browser's own report POSTs and reads no cookie. */
+			cop({ insecureBypassPatterns: [routes.cspReports.href()] }),
+			/**
+			 * Right before the assets and the renderer, so the headers land on the response it
+			 * produced, and the import map's hash joins the policy once both have published.
+			 */
+			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
 			}),
+			importMapHash(),
 			render({ assets: assetResolver }),
 		],
 		defaultHandler,
@@ -215,6 +226,10 @@ export function createWebRouter() {
 	router.post(
 		routes.mcp.pattern,
 		lazy(() => import("~/app/http/controllers/mcp").then((it) => it.mcpEndpoint)),
+	);
+	router.map(
+		routes.cspReports,
+		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
 
 	return router;

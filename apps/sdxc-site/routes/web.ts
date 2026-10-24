@@ -121,4 +121,6 @@ export default route({
 	 * same path beside it, since the two halves answer to different shapes of caller.
 	 */
 	mcp: get("/mcp"),
+	/** Where browsers send the Content Security Policy violation reports the policy names. */
+	cspReports: post("/reports/csp"),
 });
