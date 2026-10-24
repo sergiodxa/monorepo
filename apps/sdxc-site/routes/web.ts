@@ -125,4 +125,9 @@ export default route({
 	cspReports: post("/reports/csp"),
 	/** Whether every store and service the site reads answers, for an uptime monitor to poll. */
 	health: get("/health"),
+	/** JSON Schema documents, each served at the URL its `$id` names. */
+	schemas: {
+		/** The `application/health+json` report format `/health` answers in. */
+		health: get("/schemas/health.json"),
+	},
 });
