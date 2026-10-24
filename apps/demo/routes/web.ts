@@ -1,7 +1,7 @@
 /**
- * Route table for the job board. Four patterns: the board itself, which both lists and
+ * Route table for the job board. Five patterns: the board itself, which both lists and
  * accepts a posting, one position on its own, the outbox that shows what the app mailed,
- * and the MCP endpoint an agent speaks to.
+ * the MCP endpoint an agent speaks to, and the health check a monitor polls.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import { form, get, post, route } from "remix/routes";
 
-/** Registers the board, one position, the outbox and the MCP endpoint. */
+/** Registers the board, one position, the outbox, the MCP endpoint and the health check. */
 export default route({
 	/** GET lists the open positions; POST publishes a new one. */
 	board: form("/"),
@@ -26,4 +26,7 @@ export default route({
 
 	/** The Model Context Protocol endpoint, answering the job tools and the posting resource. */
 	mcp: post("/mcp"),
+
+	/** The `application/health+json` report on the database the board reads. */
+	health: get("/health"),
 });

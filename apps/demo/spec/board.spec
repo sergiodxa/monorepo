@@ -1,5 +1,5 @@
 # The board end to end: a visitor publishes a position through the dialog, reads it
-# back, and the poster is mailed.
+# back, and the poster is mailed; a monitor reads the health check.
 
 use browser
 use cli
@@ -58,5 +58,15 @@ test "a published position is listed, opens in full, and mails its contact" {
 		}
 		expect browser.link "Apply by email" attribute "href" "mailto:hiring@acme.test"
 		expect html.text outbox.text "Senior Remix Engineer is live on the Remix Job Board"
+	}
+}
+
+test "the health check reports the database" {
+	when {
+		let response = http.get "/health"
+	}
+	then {
+		expect response.status 200
+		expect response.json.status "pass"
 	}
 }

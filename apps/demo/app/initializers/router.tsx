@@ -128,5 +128,10 @@ export function createWebRouter(
 		),
 	);
 
+	router.map(
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
+	);
+
 	return router;
 }

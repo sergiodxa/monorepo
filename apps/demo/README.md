@@ -74,6 +74,7 @@ queue live in the worker, and the captcha is a word the form prints.
 | `/positions/:id` | GET    | One position, complete              |
 | `/outbox`        | GET    | Every message the board sent        |
 | `/mcp`           | POST   | The Model Context Protocol endpoint |
+| `/health`        | GET    | The database's health report        |
 
 ## Database
 
