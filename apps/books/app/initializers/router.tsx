@@ -1,7 +1,7 @@
 /**
  * The books fetch-router: the global middleware stack (async context, request logging and tracing,
- * campaign attribution, form data, cross-origin protection, billing, newsletter, document assets, HTML
- * rendering) and every route mapped onto its controller.
+ * campaign attribution, form data, cross-origin protection, billing, newsletter, security headers,
+ * document assets, HTML rendering) and every route mapped onto its controller.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +19,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import newsletter from "@sdxc/newsletter/middleware";
+import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -32,6 +33,7 @@ import { polar } from "~/app/initializers/billing";
 import { attributionCookie } from "~/app/initializers/cookies";
 import { logger } from "~/app/initializers/logger";
 import { buttondown } from "~/app/initializers/newsletter";
+import { SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /** The context a controller sees once the router's middleware has run. */
@@ -73,20 +75,30 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 			/**
 			 * The billing webhook is a cross-origin POST authenticated by its
 			 * Standard-Webhooks signature, so it bypasses cross-origin protection: a
-			 * `cop()` rejection here would silently drop every paid-order event.
+			 * `cop()` rejection here would silently drop every paid-order event. The CSP report
+			 * endpoint takes the browser's own report POSTs and reads no cookie.
 			 */
-			cop({ insecureBypassPatterns: ["/webhooks/polar"] }),
+			cop({ insecureBypassPatterns: ["/webhooks/polar", "/reports/csp"] }),
 
 			billing({ provider }),
 			newsletter({ provider: list }),
 
 			/**
+			 * Right before the assets and the renderer, so the headers land on the response it
+			 * produced and the nonce exists before `assets()` reads it into `ctx.assets`.
+			 */
+			securityHeaders(SECURITY_POLICY),
+
+			/**
 			 * Resolves the document's stylesheets and client entry once per request, as
-			 * `ctx.assets`, which every page hands its document layout.
+			 * `ctx.assets`, which every page hands its document layout, with the CSP nonce its
+			 * import map carries.
 			 */
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
+				nonce: (ctx) =>
+					ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
 			}),
 			render({ assets: assetResolver }),
 		],
@@ -136,6 +148,10 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 	router.map(
 		routes.webhooks.polar,
 		lazy(() => import("~/app/http/controllers/webhooks/polar")),
+	);
+	router.map(
+		routes.cspReports,
+		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
 
 	return router;

@@ -41,4 +41,6 @@ export default route({
 	webhooks: route({
 		polar: post("/webhooks/polar"),
 	}),
+	/** Where browsers send the Content Security Policy violation reports the policy names. */
+	cspReports: post("/reports/csp"),
 });

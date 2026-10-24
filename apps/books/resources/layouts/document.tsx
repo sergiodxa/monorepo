@@ -45,7 +45,11 @@ namespace DocumentLayout {
 		 * column so each section can cap its own width without a wrapper element.
 		 */
 		children: RemixNode;
-		/** The stylesheets and client entry the request resolved, passed as `ctx.assets`. */
+		/**
+		 * The stylesheets and client entry the request resolved, passed as `ctx.assets`, with the
+		 * CSP nonce the import map carries; it is read only on a hydrating page, so a static page
+		 * advertises none.
+		 */
 		assets: DocumentAssets;
 		/** The document title. */
 		title: string;
@@ -112,7 +116,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<link rel="shortcut icon" href="/favicon.ico" data-rmx-key="favicon" />
 					{hydrates ? (
 						<>
-							<ImportMap value={script.importMap} />
+							<ImportMap value={script.importMap} nonce={assets.nonce} />
 							{script.preloads.map((href) => (
 								<link key={href} rel="modulepreload" href={href} data-rmx-key={href} />
 							))}
