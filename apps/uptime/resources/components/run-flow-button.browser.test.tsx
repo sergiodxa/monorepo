@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for the run-flow button hydrated on a page beside the flow monitor's latest-run cards:
  * a run that happened reloads those cards, which once stayed on the previous run until the
@@ -14,7 +12,7 @@ import type { AppRuntime } from "remix/component";
 import { createTranslator } from "@sdxc/i18n";
 import { setIntl } from "@sdxc/i18n/ui";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { setupWorker } from "msw/browser";
 import { Frame, run } from "remix/component";
 import { renderToStream } from "remix/component/server";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
@@ -39,17 +37,15 @@ const PASSED_RUN = {
 	detail: null,
 };
 
-let server = setupServer(http.post(`*${RUN_ACTION}`, () => HttpResponse.json(PASSED_RUN)));
+let worker = setupWorker(http.post(`*${RUN_ACTION}`, () => HttpResponse.json(PASSED_RUN)));
 
 let app: AppRuntime | undefined;
 
 /** The frame named in each frame request the page made after hydrating, oldest first. */
 let reloaded: Array<string | undefined> = [];
 
-beforeAll(() => {
-	server.listen({ onUnhandledRequest: "error" });
-	/** The test document's style sheet cannot parse the layered rules `css()` writes. */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
+beforeAll(async () => {
+	await worker.start({ onUnhandledRequest: "error", quiet: true });
 	setIntl(
 		createTranslator({ resources: { en }, supportedLanguages: ["en"], fallbackLanguage: "en" })()
 			.intl,
@@ -61,10 +57,10 @@ afterEach(() => {
 	app = undefined;
 	document.body.innerHTML = "";
 	reloaded = [];
-	server.resetHandlers();
+	worker.resetHandlers();
 });
 
-afterAll(() => server.close());
+afterAll(() => worker.stop());
 
 /** Hydrates the button on a page holding the latest-run cards' frame, and returns its form. */
 async function mount(): Promise<HTMLFormElement> {
@@ -99,7 +95,7 @@ describe("RunFlowButton", () => {
 	});
 
 	test("leaves the cards alone when the run was refused", async () => {
-		server.use(
+		worker.use(
 			http.post(`*${RUN_ACTION}`, () =>
 				HttpResponse.json({ ...PASSED_RUN, status: null, reason: "Disabled" }),
 			),

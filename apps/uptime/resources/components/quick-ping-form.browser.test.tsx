@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for the quick-check form hydrated inside the dashboard bar's frame: a submission goes
  * out once, through that frame and named after it, as the POST the run-ping action reads.
@@ -27,10 +25,7 @@ let app: AppRuntime | undefined;
 /** Every request the bar's frame made after hydrating, oldest first. */
 let requested: Array<{ src: string; options?: ResolveFrameOptions }> = [];
 
-beforeAll(() => {
-	/** The test document's style sheet cannot parse the layered rules `css()` writes. */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
-});
+beforeAll(() => {});
 
 afterEach(() => {
 	app?.dispose();
