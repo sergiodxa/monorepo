@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests that a YouTube URL pasted on its own line in a post renders as a player through
  * the post page's own parse and component map, while a labelled link to a video stays a link.
@@ -9,14 +7,17 @@
  */
 
 import { toRemix } from "@sdxc/markdown/remix";
-import { renderToString } from "remix/component/server";
+import { render } from "remix/component/test";
 import { describe, expect, test } from "vitest";
 
 import { PostViewModel } from "~/app/http/view-models/post";
 import { YouTubeTag } from "~/resources/components/youtube-tag";
 
-/** The article body as the post page renders it, parsed so a test queries elements. */
-async function renderArticle(content: string) {
+/**
+ * The article body as the post page renders it, mounted into a container outside the
+ * document: a detached player keeps its attributes and loads nothing, so no test reaches YouTube.
+ */
+function renderArticle(content: string): HTMLElement {
 	let page = PostViewModel.page(
 		{
 			postType: "articles",
@@ -31,17 +32,14 @@ async function renderArticle(content: string) {
 	);
 	if (!page.post.document) throw new Error("The article has no document");
 
-	let html = await renderToString(
-		<div>{toRemix(page.post.document, { components: { youtube: YouTubeTag } })}</div>,
-	);
-	let template = document.createElement("template");
-	template.innerHTML = html;
-	return template.content;
+	return render(<div>{toRemix(page.post.document, { components: { youtube: YouTubeTag } })}</div>, {
+		container: document.createElement("div"),
+	}).container;
 }
 
 describe("YouTubeTag", () => {
-	test("embeds a pasted watch URL from the nocookie host at its start time", async () => {
-		let body = await renderArticle(
+	test("embeds a pasted watch URL from the nocookie host at its start time", () => {
+		let body = renderArticle(
 			"https://www.youtube.com/watch?v=o07u1oKE6VA&t=905s\n\nAround six months ago…",
 		);
 		let iframe = body.querySelector("iframe");
@@ -53,16 +51,16 @@ describe("YouTubeTag", () => {
 		expect(body.querySelector("a")).toBeNull();
 	});
 
-	test("embeds a youtu.be link without a start time", async () => {
-		let body = await renderArticle("https://youtu.be/o07u1oKE6VA");
+	test("embeds a youtu.be link without a start time", () => {
+		let body = renderArticle("https://youtu.be/o07u1oKE6VA");
 
 		expect(body.querySelector("iframe")?.getAttribute("src")).toBe(
 			"https://www.youtube-nocookie.com/embed/o07u1oKE6VA",
 		);
 	});
 
-	test("keeps a labelled link to a video as a link", async () => {
-		let body = await renderArticle("Watch [the talk](https://youtu.be/o07u1oKE6VA).");
+	test("keeps a labelled link to a video as a link", () => {
+		let body = renderArticle("Watch [the talk](https://youtu.be/o07u1oKE6VA).");
 
 		expect(body.querySelector("iframe")).toBeNull();
 		expect(body.querySelector("a")?.getAttribute("href")).toBe("https://youtu.be/o07u1oKE6VA");

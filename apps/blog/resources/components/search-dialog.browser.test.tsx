@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * The search dialog hydrated in a real document: a page rendered through the app's own
  * renderer, its dialog frame resolved through the router the way the Worker resolves it,
@@ -11,7 +9,7 @@
 
 import { run } from "remix/component";
 import { createRouter } from "remix/router";
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
@@ -84,8 +82,8 @@ const MIXED = [
 
 /**
  * The dialog model for a query, titled after the text so a test can tell answers apart: ten
- * matches for text starting with `ten`, two kinds behind tabs for text starting with `mix`
- * (narrowed by `kind`), one match for anything else.
+ * matches for text starting with `ten`, linked under the query's first word, two kinds behind
+ * tabs for text starting with `mix` (narrowed by `kind`), one match for anything else.
  */
 function suggestionsFor(query: string, kind: string | null): SearchViewModel.Suggestions {
 	if (query === "") return { state: "blank", query: "" };
@@ -115,7 +113,9 @@ function suggestionsFor(query: string, kind: string | null): SearchViewModel.Sug
 		};
 	}
 	let items = query.startsWith("ten")
-		? Array.from({ length: 10 }, (_, index) => match(`/articles/ten-${index + 1}`, query))
+		? Array.from({ length: 10 }, (_, index) =>
+				match(`/articles/${query.split(" ")[0]}-${index + 1}`, query),
+			)
 		: [match(`/articles/${query}`, query)];
 	return {
 		state: "results",
@@ -247,6 +247,16 @@ function status(): string {
 	return document.querySelector(`#${SEARCH_DIALOG_ID} [role="status"]`)?.textContent ?? "";
 }
 
+/**
+ * Opens the dialog the way the trigger does. A closed dialog renders nothing, so the box
+ * inside it takes focus only once the dialog is open.
+ */
+function openSearch(): HTMLDialogElement {
+	let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+	dialog.showModal();
+	return dialog;
+}
+
 /** Types `text` into the box as a browser would, leaving the caret at its end. */
 function type(text: string): void {
 	let box = input();
@@ -338,15 +348,6 @@ async function settle(): Promise<void> {
 	await new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS + 50));
 }
 
-beforeAll(() => {
-	/**
-	 * This document's stylesheet parser rejects the cascade layer every mixin writes its rule
-	 * inside, and a rejected rule takes down the island being drawn with it. Nothing asserted
-	 * here reads a style, so the rules are accepted and dropped and the markup is drawn.
-	 */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
-});
-
 beforeEach(() => {
 	followed = [];
 	window.addEventListener("click", captureLinks);
@@ -437,6 +438,7 @@ describe("the search dialog", () => {
 		let router = application();
 		await loadPage(router);
 		await hydrate(router);
+		openSearch();
 
 		let box = input();
 		let page = document.getElementById("page");
@@ -658,6 +660,7 @@ describe("the search dialog's keyboard", () => {
 		let router = application();
 		await loadPage(router);
 		await hydrate(router);
+		openSearch();
 		type(text);
 		await settle();
 		await vi.waitFor(() => expect(input().getAttribute("aria-expanded")).toBe("true"));
@@ -769,13 +772,15 @@ describe("the search dialog's prefetching", () => {
 
 	test("loads the document of the row the arrows rest on", async () => {
 		await openDialog();
-		type("ten");
+		type("tenfold");
 		await settle();
-		await vi.waitFor(() => expect(prefetched()).toEqual(["/articles/ten-1"]));
+		await vi.waitFor(() => expect(prefetched()).toEqual(["/articles/tenfold-1"]));
 
 		pressInBox("ArrowDown", 2);
 
-		await vi.waitFor(() => expect(prefetched()).toEqual(["/articles/ten-1", "/articles/ten-2"]));
+		await vi.waitFor(() =>
+			expect(prefetched()).toEqual(["/articles/tenfold-1", "/articles/tenfold-2"]),
+		);
 	});
 
 	test("loads nothing for results that settle in a closed dialog", async () => {
@@ -829,6 +834,7 @@ describe("the search dialog's quick links", () => {
 
 	test("ArrowDown chooses through them from the box and Enter follows the chosen one", async () => {
 		await open("/");
+		openSearch();
 		input().focus();
 
 		pressInBox("ArrowDown", 2);
@@ -865,9 +871,7 @@ describe("following a link from the search dialog", () => {
 		let router = application();
 		await loadPage(router);
 		await hydrate(router);
-		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
-		dialog.showModal();
-		return dialog;
+		return openSearch();
 	}
 
 	test("lifts the dialog away toward the reader while the chosen page loads", async () => {
@@ -907,6 +911,7 @@ describe("the search dialog's kind tabs", () => {
 		let router = application();
 		await loadPage(router);
 		await hydrate(router);
+		openSearch();
 		type(text);
 		await settle();
 		await vi.waitFor(() => expect(input().getAttribute("aria-expanded")).toBe("true"));

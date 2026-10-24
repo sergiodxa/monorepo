@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests the blog footer's markup: each column a named navigation landmark with its heading,
  * the feeds and the Fediverse handle a reader follows, and the link to the CMS dashboard.
@@ -8,24 +6,32 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToString } from "remix/component/server";
-import { describe, expect, test } from "vitest";
+import type { RenderResult } from "remix/component/test";
+
+import { render } from "remix/component/test";
+import { afterEach, describe, expect, test } from "vitest";
 
 import { ACTOR_ID } from "~/config/activitypub";
 import { BlogFooter, FEDIVERSE_HANDLE, FOOTER_TRACKS } from "~/resources/components/blog-footer";
 import routes from "~/routes/web";
 
-/** The footer's HTML, parsed so a test queries elements rather than matching strings. */
-async function renderFooter() {
-	let html = await renderToString(<BlogFooter />);
-	let template = document.createElement("template");
-	template.innerHTML = html;
-	return template.content;
+/** The footer the current test mounted, unmounted after it. */
+let mounted: RenderResult | undefined;
+
+afterEach(() => {
+	mounted?.cleanup();
+	mounted = undefined;
+});
+
+/** Mounts the footer into the page and returns its container. */
+function renderFooter(): HTMLElement {
+	mounted = render(<BlogFooter />);
+	return mounted.container;
 }
 
 describe("BlogFooter", () => {
-	test("labels every column as a navigation landmark headed by its title", async () => {
-		let footer = await renderFooter();
+	test("labels every column as a navigation landmark headed by its title", () => {
+		let footer = renderFooter();
 		let landmarks = Array.from(footer.querySelectorAll("nav"));
 
 		expect(landmarks.map((nav) => nav.getAttribute("aria-label"))).toEqual(
@@ -36,8 +42,8 @@ describe("BlogFooter", () => {
 		}
 	});
 
-	test("stacks Elsewhere under Support in the last of four tracks", async () => {
-		let footer = await renderFooter();
+	test("stacks Elsewhere under Support in the last of four tracks", () => {
+		let footer = renderFooter();
 		let tracks = Array.from(footer.querySelector("footer")?.children ?? []).filter(
 			(child) => child.querySelector("nav") !== null,
 		);
@@ -50,8 +56,8 @@ describe("BlogFooter", () => {
 		).toEqual(["Support", "Elsewhere"]);
 	});
 
-	test("links the global feeds and the Fediverse actor", async () => {
-		let footer = await renderFooter();
+	test("links the global feeds and the Fediverse actor", () => {
+		let footer = renderFooter();
 		let follow = footer.querySelector('nav[aria-label="Follow"]');
 		let hrefs = Array.from(follow?.querySelectorAll("a") ?? []).map((a) => a.getAttribute("href"));
 
@@ -65,8 +71,8 @@ describe("BlogFooter", () => {
 		expect(follow?.querySelector(`a[href="${ACTOR_ID}"]`)?.textContent).toBe(FEDIVERSE_HANDLE);
 	});
 
-	test("marks only the author's off-site profiles as rel=me", async () => {
-		let footer = await renderFooter();
+	test("marks only the author's off-site profiles as rel=me", () => {
+		let footer = renderFooter();
 		let rels = Array.from(footer.querySelectorAll("a[rel~='me']")).map((a) =>
 			a.getAttribute("href"),
 		);
@@ -78,8 +84,8 @@ describe("BlogFooter", () => {
 		]);
 	});
 
-	test("links the CMS dashboard", async () => {
-		let footer = await renderFooter();
+	test("links the CMS dashboard", () => {
+		let footer = renderFooter();
 
 		expect(footer.querySelector(`a[href="${routes.cms.dashboard.href()}"]`)?.textContent).toBe(
 			"Dashboard",

@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests the search dialog's page-wide behaviour: the dialog closes once a soft navigation
  * from one of its results settles, so the page that loads never sits under its backdrop.
