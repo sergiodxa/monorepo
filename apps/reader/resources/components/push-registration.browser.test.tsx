@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * The notification prompt, exercised against a real document with a stand-in for the
  * browser's permission and push APIs. Safari and Firefox show the prompt only from a user
@@ -11,10 +9,10 @@
 
 import type { Mock } from "vitest";
 
-import { Base64Url } from "@sdxc/crypto";
+import { Base64Url } from "@sdxc/crypto/encoding";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { setupWorker } from "msw/browser";
 import { run } from "remix/component";
 import { renderToStream } from "remix/component/server";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -34,27 +32,21 @@ const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-1";
 const VAPID_PUBLIC_KEY =
 	"BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4";
 
-let server = setupServer();
+let worker = setupWorker();
 
 /** Every subscription the island posted. */
 let registered: unknown[] = [];
 
 let requestPermission: Mock<() => Promise<NotificationPermission>>;
 
-beforeAll(() => {
-	server.listen({ onUnhandledRequest: "error" });
-
-	/**
-	 * happy-dom parses no nested CSS, and the button's focus ring nests a rule per colour.
-	 * Nothing asserted here reads a style, so the rules are accepted and dropped.
-	 */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
+beforeAll(async () => {
+	await worker.start({ onUnhandledRequest: "error", quiet: true });
 });
-afterAll(() => server.close());
+afterAll(() => worker.stop());
 
 beforeEach(() => {
 	registered = [];
-	server.use(
+	worker.use(
 		http.post(`*${DEVICES}`, async ({ request }) => {
 			registered.push(await request.json());
 			return HttpResponse.json({ devices: 1 });
@@ -82,7 +74,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-	server.resetHandlers();
+	worker.resetHandlers();
 	vi.unstubAllGlobals();
 	document.body.innerHTML = "";
 });

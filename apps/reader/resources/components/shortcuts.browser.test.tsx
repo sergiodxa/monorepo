@@ -1,31 +1,27 @@
-// @vitest-environment happy-dom
-
 /**
  * The keys a reader works their queue with, exercised against a real document: the rows
- * the server sends, the marks hydrated on top of them, and the chrome the rail's own
+ * the worker sends, the marks hydrated on top of them, and the chrome the rail's own
  * bindings reach into.
  *
  * What is asserted here is the selection model. A page arriving below the rows, a page
  * arriving above them and a row taken away are all answered by asking the document again,
  * so each of those is a test rather than an argument, and every binding presses a control
- * the server already rendered rather than issuing a request of its own.
+ * the worker already rendered rather than issuing a request of its own.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
 
 import type { Handle } from "remix/component";
 import type { Mock } from "vitest";
 
 import { Sidebar } from "@sdxc/ui";
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { setupWorker } from "msw/browser";
 import { run } from "remix/component";
 import { renderToStream } from "remix/component/server";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { userEvent } from "vitest/browser";
 
 import type { Timeline } from "~/resources/views/timeline";
 
@@ -35,8 +31,16 @@ import ShortcutsIsland, {
 	watchKeys,
 	watchRowMarks,
 } from "~/resources/components/shortcuts";
+import SHORTCUTS_SOURCE from "~/resources/components/shortcuts.tsx?raw";
 import { SIDEBAR_ID, SIDEBAR_SEARCH_FIELD_ID } from "~/resources/layouts/app";
 import TimelineView from "~/resources/views/timeline";
+
+/**
+ * The document shell reads the request's context, which exists only inside the worker. The
+ * rows and chrome rendered here never draw it, so it is replaced by a shell that renders
+ * nothing and the rest of the layout module keeps its real exports.
+ */
+vi.mock("~/resources/layouts/document", () => ({ default: () => () => null }));
 
 /** Where the header's sweep posts, which `r` presses the form of. */
 const REFRESH_ALL_ACTION = "/feeds/refresh";
@@ -79,7 +83,7 @@ function entry(id: string, overrides: Partial<Timeline.Entry> = {}): Timeline.En
 	};
 }
 
-/** Renders a component the way the server sends it, as the markup a browser receives. */
+/** Renders a component the way the worker sends it, as the markup a browser receives. */
 async function html(node: ReturnType<typeof TimelineView>): Promise<string> {
 	return await new Response(renderToStream(node as never)).text();
 }
@@ -170,8 +174,7 @@ function current(): HTMLElement | null {
 
 /**
  * Places each row on an imaginary screen, so the assertions about a keystroke pressed with
- * nothing focused can say where the reader is looking. A layout engine is the one thing
- * this document has none of.
+ * nothing focused can say where the reader is looking whatever size the test's viewport is.
  *
  * @param tops - The top edge of each row, in the order the rows appear.
  */
@@ -182,10 +185,15 @@ function placeRows(tops: number[]): void {
 	});
 }
 
-/** Sends a keystroke the way a browser sends one, from wherever the reader is. */
-function press(key: string, init: KeyboardEventInit = {}): void {
-	let target = document.activeElement ?? document.body;
-	target.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...init }));
+/**
+ * Presses a key on the browser's own keyboard, so the event lands wherever focus really is
+ * and carries the modifiers the reader is holding.
+ *
+ * @param key - The character the key produces.
+ * @param modifier - A key held down for the length of the press.
+ */
+async function press(key: string, modifier?: "Control" | "Alt" | "Meta"): Promise<void> {
+	await userEvent.keyboard(modifier ? `{${modifier}>}${key}{/${modifier}}` : key);
 }
 
 /** What the panel's own button was told, so an assertion can say it was pressed. */
@@ -196,23 +204,16 @@ let announced: string[];
 
 let bindings: AbortController;
 
-let server = setupServer(
+let worker = setupWorker(
 	http.post("*/items/:itemId/read", () => new HttpResponse(null, { status: 204 })),
 	http.post("*/items/:itemId/save", () => new HttpResponse(null, { status: 204 })),
 );
 
-beforeAll(() => {
-	server.listen({ onUnhandledRequest: "error" });
-
-	/**
-	 * This document's stylesheet parser rejects the cascade layer every mixin writes its rule
-	 * inside, and a rejected rule takes down the island being drawn with it. Nothing asserted
-	 * here reads a style, so the rules are accepted and dropped and the markup is drawn.
-	 */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
+beforeAll(async () => {
+	await worker.start({ onUnhandledRequest: "error", quiet: true });
 });
 
-afterAll(() => server.close());
+afterAll(() => worker.stop());
 
 beforeEach(() => {
 	openedPanel = vi.fn();
@@ -237,7 +238,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	bindings.abort();
-	server.resetHandlers();
+	worker.resetHandlers();
 	document.body.innerHTML = "";
 });
 
@@ -247,13 +248,13 @@ describe("the keys a queue is worked with", () => {
 
 		rows()[0]!.focus();
 
-		press("j");
+		await press("j");
 		expect(current()).toBe(rows()[1]);
 
-		press("j");
+		await press("j");
 		expect(current()).toBe(rows()[2]);
 
-		press("k");
+		await press("k");
 		expect(current()).toBe(rows()[1]);
 	});
 
@@ -263,7 +264,7 @@ describe("the keys a queue is worked with", () => {
 		rows()[1]!.focus();
 		document.body.insertAdjacentHTML("beforeend", await page(["c", "d"]));
 
-		press("j");
+		await press("j");
 
 		expect(rows()).toHaveLength(4);
 		expect(current()).toBe(rows()[2]);
@@ -280,7 +281,7 @@ describe("the keys a queue is worked with", () => {
 
 		expect(current()).toBe(reading);
 
-		press("k");
+		await press("k");
 
 		expect(current()?.querySelector("h2")?.textContent).toContain("Post b");
 	});
@@ -289,7 +290,7 @@ describe("the keys a queue is worked with", () => {
 		document.body.innerHTML = await page(["a", "b", "c", "d"]);
 		placeRows([-200, -80, 30, 300]);
 
-		press("j");
+		await press("j");
 
 		expect(current()).toBe(rows()[2]);
 	});
@@ -304,7 +305,7 @@ describe("the keys a queue is worked with", () => {
 
 		placeRows([-200, 30, 300]);
 
-		press("j");
+		await press("j");
 
 		expect(current()).toBe(rows()[1]);
 		expect(current()?.querySelector("h2")?.textContent).toContain("Post c");
@@ -319,7 +320,7 @@ describe("the keys a queue is worked with", () => {
 		let scrolled = vi.spyOn(globalThis, "scrollBy").mockImplementation(() => undefined);
 		let focused = vi.spyOn(HTMLElement.prototype, "focus");
 
-		press("j");
+		await press("j");
 
 		expect(current()).toBe(last);
 		expect(focused).not.toHaveBeenCalled();
@@ -333,13 +334,13 @@ describe("the keys a queue is worked with", () => {
 describe("the controls a key presses", () => {
 	test("`m` submits the focused row's read form, flipping the mark before the request resolves", async () => {
 		let held = Promise.withResolvers<Response>();
-		server.use(http.post("*/items/a/read", () => held.promise));
+		worker.use(http.post("*/items/a/read", () => held.promise));
 
 		document.body.innerHTML = await page(["a"]);
 		await hydrate();
 
 		rows()[0]!.focus();
-		press("m");
+		await press("m");
 
 		await Promise.resolve();
 
@@ -350,13 +351,13 @@ describe("the controls a key presses", () => {
 	});
 
 	test("a refused `m` puts the mark back and the row wears the failure label", async () => {
-		server.use(http.post("*/items/a/read", () => new HttpResponse(null, { status: 500 })));
+		worker.use(http.post("*/items/a/read", () => new HttpResponse(null, { status: 500 })));
 
 		document.body.innerHTML = await page(["a"]);
 		await hydrate();
 
 		rows()[0]!.focus();
-		press("m");
+		await press("m");
 
 		await vi.waitFor(() => {
 			let mark = rows()[0]!.querySelector('form[action$="/read"] button')!;
@@ -371,7 +372,7 @@ describe("the controls a key presses", () => {
 		await hydrate();
 
 		rows()[0]!.focus();
-		press("s");
+		await press("s");
 
 		await vi.waitFor(() => {
 			let mark = rows()[0]!.querySelector('form[action$="/save"] button')!;
@@ -394,7 +395,7 @@ describe("the controls a key presses", () => {
 		});
 
 		rows()[0]!.focus();
-		press("o");
+		await press("o");
 
 		expect(followed).toHaveBeenCalledOnce();
 
@@ -422,7 +423,7 @@ describe("the controls a key presses", () => {
 
 		expect(row.querySelector("a[data-post-title]")).toBeNull();
 
-		press("o");
+		await press("o");
 
 		expect(current()).toBe(row);
 	});
@@ -435,7 +436,7 @@ describe("the controls a key presses", () => {
 		let submitted = vi.spyOn(sweep, "requestSubmit").mockImplementation(() => undefined);
 
 		rows()[0]!.focus();
-		press("r");
+		await press("r");
 
 		expect(submitted).toHaveBeenCalledOnce();
 	});
@@ -454,8 +455,8 @@ describe("the controls a key presses", () => {
 			});
 		}
 
-		press("J");
-		press("K");
+		await press("J");
+		await press("K");
 
 		expect(clicked).toEqual(["/reading/two", "/reading"]);
 	});
@@ -463,7 +464,7 @@ describe("the controls a key presses", () => {
 	test("`/` puts the caret in the sidebar's search box", async () => {
 		document.body.innerHTML = await html((<Chrome current="/reading" />) as never);
 
-		press("/");
+		await press("/");
 
 		expect(document.activeElement?.id).toBe(SIDEBAR_SEARCH_FIELD_ID);
 	});
@@ -472,18 +473,12 @@ describe("the controls a key presses", () => {
 		document.body.innerHTML =
 			(await page(["a"])) + (await html((<Chrome current="/reading" />) as never));
 
-		let button = document.querySelector<HTMLButtonElement>(
-			`button[commandfor="${SHORTCUTS_PANEL_ID}"]`,
-		)!;
 		let panel = document.querySelector<HTMLDialogElement>(`dialog#${SHORTCUTS_PANEL_ID}`)!;
-
-		/** This document has no invoker, so the button stands in for the one the platform runs. */
-		button.addEventListener("click", () => panel.showModal());
 
 		let row = rows()[0]!;
 		row.focus();
 
-		press("?");
+		await press("?");
 
 		expect(openedPanel).toHaveBeenCalledOnce();
 		expect(panel.open).toBe(true);
@@ -519,9 +514,9 @@ describe("when the bindings stand down", () => {
 		let row = rows()[0]!;
 		row.focus();
 
-		press("j", { ctrlKey: true });
-		press("j", { altKey: true });
-		press("j", { metaKey: true });
+		await press("j", "Control");
+		await press("j", "Alt");
+		await press("j", "Meta");
 
 		let composing = new KeyboardEvent("keydown", { key: "j", bubbles: true });
 		Object.defineProperty(composing, "isComposing", { value: true });
@@ -529,7 +524,7 @@ describe("when the bindings stand down", () => {
 
 		expect(current()).toBe(row);
 
-		press("j");
+		await press("j");
 		expect(current()).toBe(rows()[1]);
 	});
 
@@ -539,11 +534,11 @@ describe("when the bindings stand down", () => {
 		let row = rows()[0]!;
 		row.focus();
 
-		press("J", { shiftKey: true });
+		await press("J");
 
 		expect(current()).toBe(row);
 
-		press("j", { shiftKey: false });
+		await press("j");
 		expect(current()).toBe(rows()[1]);
 	});
 });
@@ -580,7 +575,7 @@ describe("the way a reader finds out the keys exist", () => {
 
 		document.body.innerHTML = markup;
 
-		/** The server sends the host and nothing in it: with no script, nothing here applies. */
+		/** The worker sends the host and nothing in it: with no script, nothing here applies. */
 		expect(document.querySelector("button")).toBeNull();
 		expect(document.querySelector("dialog")).toBeNull();
 
@@ -603,7 +598,7 @@ describe("the way a reader finds out the keys exist", () => {
 
 describe("what a binding is allowed to reach for", () => {
 	test("every binding resolves its control from the document, naming no frame", async () => {
-		let source = await readFile(join(import.meta.dirname, "shortcuts.tsx"), "utf8");
+		let source = SHORTCUTS_SOURCE;
 
 		/**
 		 * A frame resolved by name falls back to the whole page when the name is not mounted
