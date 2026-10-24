@@ -1,0 +1,27 @@
+{
+	"name": "@sdxc/health",
+	"version": "0.0.1",
+	"description": "Run dependency health checks and read application/health+json reports",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./schema": "./src/schema.ts",
+		"./schema.json": "./schema.json"
+	},
+	"scripts": {
+		"schema": "bun scripts/schema.ts",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"remix": "3.1.0"
+	},
+	"peerDependencies": {
+		"remix": "3.1.0"
+	}
+}

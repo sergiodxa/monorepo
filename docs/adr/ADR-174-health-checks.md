@@ -289,10 +289,11 @@ An app with no probes reports `pass` with an empty `checks`.
 `@sdxc/health/schema` describes what the draft allows, not only what `HealthCheck` emits, so
 it validates any service's report:
 
-- `status` is the only required field, at the top and in every check, and accepts the
-  draft's values in any case along with the `ok`, `up`, `error` and `down` aliases. JSON
-  Schema patterns take no flags, so case-insensitivity is spelled as a character-class
-  pattern; `parseHealth` turns what it accepts into `pass`, `warn` or `fail`.
+- `status` is the only required field of a report (every field of a check is optional,
+  as the draft makes them), and accepts the draft's values in any case along with the
+  `ok`, `up`, `error` and `down` aliases. JSON Schema patterns take no flags, so
+  case-insensitivity is spelled as a character-class pattern; `parseHealth` turns what it
+  accepts into `pass`, `warn` or `fail`.
 - `version`, `releaseId`, `serviceId`, `description` and `output` are strings; `notes` is an
   array of strings.
 - `links` is an object whose values are URIs (`format: "uri"`); its keys are any string,

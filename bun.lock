@@ -1066,6 +1066,21 @@
         "remix": "3.1.0",
       },
     },
+    "packages/health": {
+      "name": "@sdxc/health",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/json-schema": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "remix": "3.1.0",
+      },
+      "peerDependencies": {
+        "remix": "3.1.0",
+      },
+    },
     "packages/highlight": {
       "name": "@sdxc/highlight",
       "version": "0.0.1",
@@ -1860,6 +1875,7 @@
         "@sdxc/flags-engine": "workspace:*",
         "@sdxc/font": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
+        "@sdxc/health": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/honeypot": "workspace:*",
         "@sdxc/hostname": "workspace:*",
@@ -2996,6 +3012,8 @@
     "@sdxc/font": ["@sdxc/font@workspace:packages/font"],
 
     "@sdxc/get-client-ip": ["@sdxc/get-client-ip@workspace:packages/get-client-ip"],
+
+    "@sdxc/health": ["@sdxc/health@workspace:packages/health"],
 
     "@sdxc/highlight": ["@sdxc/highlight@workspace:packages/highlight"],
 
