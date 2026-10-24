@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Drives `subscribe` against a stand-in service worker container, push manager and
  * permission API: reusing a subscription made under the same key, replacing one made
@@ -9,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url } from "@sdxc/crypto";
+import { Base64Url } from "@sdxc/crypto/encoding";
 import { isFailure, unwrap } from "@sdxc/result";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -75,6 +73,22 @@ function installBrowser(permission: NotificationPermission): void {
 	vi.stubGlobal("Notification", { permission, requestPermission });
 }
 
+/** Undoes each {@link hideProperty} after the test, so the next one sees the real browser. */
+let restores: Array<() => void> = [];
+
+/**
+ * Removes `key` from `target` so an `in` check misses it, as in a browser that lacks the
+ * feature. A browser defines these on prototypes and the global object, so the property is
+ * deleted where it lives and its descriptor restored afterwards.
+ */
+function hideProperty(target: object, key: string): void {
+	let descriptor = Object.getOwnPropertyDescriptor(target, key);
+	if (!descriptor) return;
+	let saved: PropertyDescriptor = descriptor;
+	Reflect.deleteProperty(target, key);
+	restores.push(() => Object.defineProperty(target, key, saved));
+}
+
 beforeEach(() => {
 	existing = null;
 	subscribeCalls = [];
@@ -84,10 +98,12 @@ beforeEach(() => {
 afterEach(() => {
 	vi.unstubAllGlobals();
 	Reflect.deleteProperty(navigator, "serviceWorker");
+	for (let restore of restores.splice(0)) restore();
 });
 
 describe("isSupported", () => {
 	test("is false without a service worker container", () => {
+		hideProperty(Navigator.prototype, "serviceWorker");
 		expect(isSupported()).toBe(false);
 	});
 
@@ -99,6 +115,7 @@ describe("isSupported", () => {
 
 describe("subscribe", () => {
 	test("answers unsupported in a browser without the Push API", async () => {
+		hideProperty(globalThis, "PushManager");
 		let result = await subscribe({ worker: "/sw.js", applicationServerKey: CURRENT_KEY });
 
 		expect(isFailure(result) && result.error.code).toBe("unsupported");
