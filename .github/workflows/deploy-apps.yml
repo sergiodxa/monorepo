@@ -81,9 +81,10 @@ jobs:
             echo "::warning::CLOUDFLARE_API_TOKEN cannot list D1 databases (HTTP $d1). Grant Account → D1 → Edit on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens"
             jq -c '{success,errors}' /tmp/d1.json || true
           fi
-          # A Worker that binds a Secrets Store secret uploads only when the token can read
-          # the store; without it Cloudflare refuses the new version with error 10021 after
-          # the build and after `db migrate --remote`, so the probe runs before either.
+          # Binding a Secrets Store secret takes Secrets Store Edit on the token and a secret
+          # scoped to `workers`; without them Cloudflare refuses the new version with error
+          # 10021 after the build and `db migrate --remote`. Reading the store is the part a
+          # side-effect-free probe can check, so a missing grant fails before either step.
           store=$(curl -sS -o /tmp/secrets-store.json -w "%{http_code}" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
             "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/secrets_store/stores")
@@ -91,7 +92,7 @@ jobs:
             echo "secrets_store=true" >> "$GITHUB_OUTPUT"
           else
             echo "secrets_store=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::CLOUDFLARE_API_TOKEN cannot read the Secrets Store (HTTP $store). Grant Account → Secrets Store → Read on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens"
+            echo "::warning::CLOUDFLARE_API_TOKEN cannot read the Secrets Store (HTTP $store). Grant Account → Secrets Store → Edit on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens"
             jq -c '{success,errors}' /tmp/secrets-store.json || true
             # Names the token CI actually holds, so a grant made on another token, or a new
             # token never copied into the repository secret, shows up as a mismatched id.
@@ -219,7 +220,8 @@ jobs:
           fi
 
       # An app binding a Secrets Store secret fails the upload with error 10021 unless the
-      # token reads the store; stopping here keeps `db migrate --remote` from running first.
+      # token holds Secrets Store Edit; a token that cannot even read the store stops here,
+      # before `db migrate --remote` runs.
       - name: Require Secrets Store for apps that bind it
         env:
           STORE_OK: ${{ needs.secrets.outputs.secrets_store }}
@@ -229,7 +231,7 @@ jobs:
             exit 0
           fi
           if [ "$STORE_OK" != "true" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN cannot read the Secrets Store, so $APP cannot bind its Secrets Store secrets. Grant Account → Secrets Store → Read on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
+            echo "::error::CLOUDFLARE_API_TOKEN cannot read the Secrets Store, so $APP cannot bind its Secrets Store secrets. Grant Account → Secrets Store → Edit on the token \"GitHub Actions Monorepo Deploy\" at https://dash.cloudflare.com/profile/api-tokens then re-run."
             exit 1
           fi
 
