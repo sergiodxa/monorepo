@@ -37,6 +37,19 @@ import routes from "~/routes/web";
 const CLEAR_SITE_DATA: HeadersInit = { "Clear-Site-Data": '"*"' };
 
 /**
+ * Lets this response's iframes reach each relying party's front-channel logout URI, whose
+ * origins only the logout itself knows; every other response keeps `frame-src` at its default.
+ */
+function admitFrontchannelFrames(ctx: AppContext, urls: OIDC.FrontchannelLogoutUrl[]): void {
+	let origins = new Set<string>();
+	for (let entry of urls) {
+		let url = URL.parse(entry.url);
+		if (url) origins.add(url.origin);
+	}
+	ctx.securityHeaders.override({ contentSecurityPolicyReportOnly: { frameSrc: [...origins] } });
+}
+
+/**
  * Renders the interactive sign-out confirmation, the answer to every request that
  * leaves the parameters or the subject undetermined: the person in front of the browser
  * can still answer the question the page asks.
@@ -126,6 +139,7 @@ export default createController(routes.oidc.logout, {
 			let redirectUri = postLogoutUrl(ctx, logout.redirectUri, params.state);
 
 			if (logout.frontchannelUrls.length > 0) {
+				admitFrontchannelFrames(ctx, logout.frontchannelUrls);
 				return ctx.render(
 					<LogoutFrontchannelView
 						assets={ctx.assets}

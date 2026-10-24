@@ -401,6 +401,25 @@ describe("GET /oidc/logout", () => {
 		expect(html).toContain("Click here to continue");
 	});
 
+	test("the front-channel page lets its iframes reach each relying party's origin", async () => {
+		let tokens = await signIn(app, fixtures);
+		await registerOtherClient();
+
+		let response = await app.fetch(
+			new Request(
+				logoutUrl({
+					id_token_hint: tokens.id_token,
+					post_logout_redirect_uri: "https://client.example.com/logout",
+				}),
+				{ redirect: "manual" },
+			),
+		);
+
+		expect(response.headers.get("content-security-policy-report-only")).toContain(
+			`frame-src ${new URL(OTHER_FRONTCHANNEL).origin}`,
+		);
+	});
+
 	test("the front-channel page composes the styled document and still ships no script", async () => {
 		let tokens = await signIn(app, fixtures);
 		await registerOtherClient();

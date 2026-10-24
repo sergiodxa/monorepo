@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Base64, sha256 } from "@sdxc/crypto";
+import { isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/web";
@@ -18,17 +20,10 @@ import routes from "~/routes/web";
 const CACHE_CONTROL = "public, max-age=3600";
 
 /**
- * The check-session iframe document. Every byte of it is fixed here, independent of the
- * request, so it is safe to serve verbatim.
+ * The script answering relying parties' `postMessage` checks. Fixed here, so its SHA-256 hash
+ * admits it under the Content Security Policy on every response.
  */
-const CHECK_SESSION_HTML = `<!DOCTYPE html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<title>Check Session</title>
-</head>
-<body>
-<script>
+const CHECK_SESSION_SCRIPT = `
 (function() {
 	// Get the OP browser state from cookie
 	function getOpBrowserState() {
@@ -99,7 +94,20 @@ const CHECK_SESSION_HTML = `<!DOCTYPE html>
 		}
 	});
 })();
-</script>
+`;
+
+/**
+ * The check-session iframe document. Every byte of it is fixed here, independent of the
+ * request, so it is safe to serve verbatim.
+ */
+const CHECK_SESSION_HTML = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Check Session</title>
+</head>
+<body>
+<script>${CHECK_SESSION_SCRIPT}</script>
 </body>
 </html>`;
 
@@ -108,7 +116,18 @@ const CHECK_SESSION_HTML = `<!DOCTYPE html>
  * relying party loads it cross-origin, so framing stays open to any origin: an
  * `X-Frame-Options` or `frame-ancestors` policy here would break all of them.
  */
-export default createAction(routes.oidc.checkSession, () => {
+export default createAction(routes.oidc.checkSession, async (ctx) => {
+	let digest = await sha256(CHECK_SESSION_SCRIPT);
+	let scriptSrc = ctx.securityHeaders.policy.contentSecurityPolicyReportOnly?.scriptSrc ?? [];
+	ctx.securityHeaders.override({
+		contentSecurityPolicyReportOnly: {
+			frameAncestors: null,
+			scriptSrc: isSuccess(digest)
+				? [...scriptSrc, `sha256-${Base64.encode(digest.data)}`]
+				: scriptSrc,
+		},
+	});
+
 	return new Response(CHECK_SESSION_HTML, {
 		headers: {
 			"Content-Type": "text/html; charset=utf-8",

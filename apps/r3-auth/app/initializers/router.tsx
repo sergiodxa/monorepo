@@ -22,6 +22,7 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import mailer from "@sdxc/mail/middleware";
 import { previews } from "@sdxc/mail/previews";
+import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -45,14 +46,15 @@ import { mail } from "~/app/initializers/mail";
 import { queueEmail, transport } from "~/app/initializers/mail-transport";
 import { createRateLimiters } from "~/app/initializers/rate-limiters";
 import registry from "~/app/models";
+import { SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/web";
 
 /**
- * Paths exempt from cross-origin protection, each authenticated by its own
- * credential — a client secret or signed token — so misconfiguring this list
- * breaks every relying party's login at once.
+ * Paths exempt from cross-origin protection: each is authenticated by its own credential — a
+ * client secret or signed token — so misconfiguring this list breaks every relying party's
+ * login at once, except the CSP report endpoint, which only logs what browsers send it.
  */
-const COP_BYPASS_PATTERNS = ["/oauth/{path...}", "/api/{path...}", "/oidc/logout"];
+const COP_BYPASS_PATTERNS = ["/oauth/{path...}", "/api/{path...}", "/oidc/logout", "/reports/csp"];
 
 /** The context a controller sees once the router's middleware has run. */
 export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
@@ -124,9 +126,16 @@ export function createWebRouter(options: WebRouterOptions) {
 				queue: options.mailQueue ?? queueEmail,
 			}),
 			cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
+			/**
+			 * Right before the assets and the renderer, so the headers land on the response it
+			 * produced and the nonce exists before `assets()` reads it into `ctx.assets`.
+			 */
+			securityHeaders(SECURITY_POLICY),
 			assets(assetResolver, {
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
+				nonce: (ctx) =>
+					ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
 			}),
 			render({ assets: assetResolver }),
 		],
@@ -260,6 +269,10 @@ export function createWebRouter(options: WebRouterOptions) {
 	router.map(
 		routes.api.subject,
 		lazy(() => import("~/app/http/controllers/api/subject")),
+	);
+	router.map(
+		routes.cspReports,
+		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
 
 	return router;

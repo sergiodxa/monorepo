@@ -298,6 +298,7 @@
         "@sdxc/password-policy": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/security-headers": "workspace:*",
         "@sdxc/server-timing": "workspace:*",
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/trace-context": "workspace:*",

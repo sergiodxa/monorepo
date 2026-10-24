@@ -84,4 +84,6 @@ export default route({
 	api: {
 		subject: get("/api/subjects/:subjectId"),
 	},
+	/** Where browsers send the Content Security Policy violation reports the policy names. */
+	cspReports: post("/reports/csp"),
 });

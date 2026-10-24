@@ -29,6 +29,8 @@ namespace FormPostView {
 		noscriptMessage: string;
 		/** Document title, translated by the caller. */
 		title: string;
+		/** The response's CSP nonce, which admits the inline submit script. */
+		nonce: string;
 	}
 }
 
@@ -40,7 +42,7 @@ namespace FormPostView {
  */
 export default function FormPostView(handle: Handle<FormPostView.Setup>) {
 	return () => {
-		let { action, params, submitLabel, noscriptMessage, title } = handle.props;
+		let { action, params, submitLabel, noscriptMessage, title, nonce } = handle.props;
 		let fields = Object.entries(params);
 
 		return (
@@ -59,7 +61,7 @@ export default function FormPostView(handle: Handle<FormPostView.Setup>) {
 							<button type="submit">{submitLabel}</button>
 						</noscript>
 					</form>
-					<script>{SUBMIT_SCRIPT}</script>
+					<script nonce={nonce}>{SUBMIT_SCRIPT}</script>
 				</body>
 			</html>
 		);

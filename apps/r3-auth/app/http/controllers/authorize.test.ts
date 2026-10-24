@@ -279,6 +279,20 @@ describe("GET /authorize", () => {
 		expect(body).toContain("document.forms[0].submit()");
 	});
 
+	test("response_mode=form_post admits its submit script by the response's CSP nonce", async () => {
+		await signIn(app, fixtures);
+
+		let response = await app.fetch(
+			new Request(authorizeUrl(fixtures, { response_mode: "form_post" })),
+		);
+
+		let nonce = /<script nonce="([^"]+)">/.exec(await response.text())?.[1];
+		expect(nonce).toBeDefined();
+		expect(response.headers.get("content-security-policy-report-only")).toContain(
+			`'nonce-${nonce}'`,
+		);
+	});
+
 	test("response_mode=fragment puts the parameters in the hash, not the query", async () => {
 		await signIn(app, fixtures);
 

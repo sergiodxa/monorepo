@@ -21,7 +21,10 @@ import "@sdxc/ui/theme.css";
 namespace DocumentLayout {
 	export interface Props {
 		children: RemixNode;
-		/** The stylesheets and client entry the request resolved, published as `ctx.assets`. */
+		/**
+		 * The stylesheets and client entry the request resolved, published as `ctx.assets`, with
+		 * the CSP nonce the import map carries.
+		 */
 		assets: DocumentAssets;
 		/** Document title. Omitted for pages whose whole body is a redirect mechanism. */
 		title?: string;
@@ -49,7 +52,7 @@ namespace DocumentLayout {
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { children, assets, title, head, clientRuntime = true } = handle.props;
-		let { script, stylesheets } = assets;
+		let { script, stylesheets, nonce } = assets;
 
 		return (
 			<html lang="en" class="system" mix={[THEME, DOCUMENT]}>
@@ -62,7 +65,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					))}
 					{clientRuntime && (
 						<>
-							<ImportMap value={script.importMap} />
+							<ImportMap value={script.importMap} nonce={nonce} />
 							{script.preloads.map((href) => (
 								<link key={href} rel="modulepreload" href={href} />
 							))}

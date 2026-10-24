@@ -7,6 +7,7 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
+import type { SecurityHeadersContext } from "@sdxc/security-headers/middleware";
 import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 
@@ -26,6 +27,7 @@ const NO_STORE_HEADERS = { "Cache-Control": "no-store", Pragma: "no-cache" };
 export interface AuthorizationResponseContext {
 	render: Renderer<RemixNode>;
 	intl: I18n;
+	securityHeaders: SecurityHeadersContext;
 }
 
 /**
@@ -54,6 +56,7 @@ export async function authorizationResponse(
 				title={ctx.intl.t("authorize.formPost.title")}
 				submitLabel={ctx.intl.t("authorize.formPost.submit")}
 				noscriptMessage={ctx.intl.t("authorize.formPost.noscript")}
+				nonce={ctx.securityHeaders.nonce}
 			/>,
 			{ headers: NO_STORE_HEADERS },
 		);

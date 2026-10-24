@@ -60,6 +60,20 @@ describe("GET /account/profile", () => {
 		expect(html).toContain(routes.account.profileEdit.index.href());
 	});
 
+	test("admits every inline script by the nonce its Report-Only CSP names", async () => {
+		await signIn(app, fixtures);
+
+		let response = await app.fetch(new Request(`${ORIGIN}${routes.account.profile.href()}`));
+		let html = await response.text();
+		let policy = response.headers.get("content-security-policy-report-only") ?? "";
+		let nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
+		let inline = [...html.matchAll(/<script(?![^>]*\ssrc=)([^>]*)>/g)].map((match) => match[1]);
+
+		expect(nonce).toBeDefined();
+		expect(inline.length).toBeGreaterThan(0);
+		for (let attributes of inline) expect(attributes).toContain(`nonce="${nonce}"`);
+	});
+
 	test("marks its own navigation link as the current page", async () => {
 		await signIn(app, fixtures);
 
