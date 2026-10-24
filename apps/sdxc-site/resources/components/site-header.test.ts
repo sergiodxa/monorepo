@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests the header's search dialog markup: the box and the quick links sit in one column of
  * the page's own inside the dialog, so their spacing holds on every page whatever order the
@@ -9,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseDocument } from "@sdxc/html/document";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
@@ -18,14 +18,12 @@ import { SEARCH_DIALOG_INPUT_ID } from "~/resources/views/search-frame";
 
 describe("SiteHeader's search dialog", () => {
 	test("spaces the box and the quick links in a column of its own", async () => {
-		let html = await (await fetchApp("/docs")).text();
-		let page = document.createElement("template");
-		page.innerHTML = html.slice(html.indexOf("<body"), html.lastIndexOf("</body>"));
-		let dialog = page.content.getElementById(SEARCH_DIALOG_ID);
-		let column = dialog?.firstElementChild;
+		let page = unwrap(parseDocument(await (await fetchApp("/docs")).text()));
+		let dialog = page.querySelector(`#${SEARCH_DIALOG_ID}`);
+		let column = dialog?.children[0];
 
 		expect(dialog?.children).toHaveLength(1);
-		expect(column?.tagName).toBe("DIV");
+		expect(column?.localName).toBe("div");
 		expect(column?.querySelector(`#${SEARCH_DIALOG_INPUT_ID}`)).not.toBeNull();
 		expect(column?.querySelector(`#${SEARCH_QUICK_LINKS_ID}`)).not.toBeNull();
 	});

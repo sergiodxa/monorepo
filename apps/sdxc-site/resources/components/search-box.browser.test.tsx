@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests the search box's prefetching: once results settle in the open dialog the top result's
  * page loads through the runtime's frame prefetch, and results in a closed dialog load nothing.
@@ -26,14 +24,7 @@ const { LiveFrameEvent } = await import("sdxc/ui/mixins");
 
 let mounted: RenderResult | undefined;
 
-beforeAll(() => {
-	/**
-	 * This document's stylesheet parser rejects the cascade layer every mixin writes its rule
-	 * inside, and a rejected rule takes down the island being drawn with it. Nothing asserted
-	 * here reads a style, so the rules are accepted and dropped and the markup is drawn.
-	 */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
-});
+beforeAll(() => {});
 
 afterEach(() => {
 	mounted?.cleanup();

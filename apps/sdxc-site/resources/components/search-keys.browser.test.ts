@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 /**
  * Tests for the keys the search dialog answers to from anywhere on a page: ⌘K or Ctrl+K
  * toggles it, `/` opens it only where a slash is not text being typed, and Escape closes it;

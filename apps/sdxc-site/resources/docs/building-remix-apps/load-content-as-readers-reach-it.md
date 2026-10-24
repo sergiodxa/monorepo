@@ -402,14 +402,13 @@ test("names every island by a module the browser entry can load", async () => {
 is the one that catches a missing map entry. Every other assertion still passes when the
 browser cannot load the island, because the server writes the same HTML either way.
 
-To test a component of your own that wraps `LazyFrame`, mount it in a DOM with
-`remix/component/test` and answer its frames with `frameInit.resolveFrame`. The DOM has no
-layout engine, so stand in for `IntersectionObserver` with one that reports the crossings the
-test announces:
+To test a component of your own that wraps `LazyFrame`, run the test in a real browser with
+[Vitest Browser Mode](https://vitest.dev/guide/browser/), mount the component with
+`remix/component/test`, and answer its frames with `frameInit.resolveFrame`. The test decides
+when the reader nears the frame, so stand in for `IntersectionObserver` with one that reports
+the crossings the test announces:
 
-```tsx {% title="resources/views/jobs.test.tsx" %}
-// @vitest-environment happy-dom
-
+```tsx {% title="resources/views/jobs.browser.test.tsx" %}
 import { render } from "remix/component/test";
 import { beforeAll, expect, test, vi } from "vitest";
 
@@ -443,7 +442,6 @@ function approach(node: Element) {
 
 beforeAll(() => {
 	vi.stubGlobal("IntersectionObserver", AnnouncedObserver);
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
 });
 
 test("loads the older page once the reader nears it", async () => {
@@ -462,10 +460,8 @@ test("loads the older page once the reader nears it", async () => {
 });
 ```
 
-The observers are matched by target, which is the frame's `<div>`. The `insertRule` stub is
-there because happy-dom's stylesheet parser rejects the cascade layers `remix/component`
-mixins write into, and no assertion here reads a style. Announcing a crossing on a
-node the observer stopped watching does nothing, the same as a browser. A `loadOn="open"` frame
+The observers are matched by target, which is the frame's `<div>`. Announcing a crossing on
+a node the observer stopped watching does nothing, the same as the browser's own observer. A `loadOn="open"` frame
 needs no observer at all: open the dialog with `showModal()` and dispatch a `toggle` event on
 it.
 
