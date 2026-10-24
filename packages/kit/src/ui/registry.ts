@@ -21,7 +21,7 @@ export const REGISTRY_DIR = "registry/ui";
 
 /** A file the registry ships, named as its copy is named in the app: one path segment. */
 const REGISTRY_FILE = s.object({
-	path: s.string().pipe(checks.pattern(/^[a-z0-9][a-z0-9-]*(?:\.test)?\.tsx?$/)),
+	path: s.string().pipe(checks.pattern(/^[a-z0-9][a-z0-9-]*(?:(?:\.browser)?\.test)?\.tsx?$/)),
 	content: s.string(),
 });
 
