@@ -230,7 +230,7 @@ control, and a request to edit or delete it returns to its detail page unchanged
 | Route                      | Methods | Description                                                               |
 | -------------------------- | ------- | ------------------------------------------------------------------------- |
 | `/`                        | GET     | Redirects to `/authorize`                                                 |
-| `/healthcheck`             | GET     | `OK`, or a 500 naming the failed dependency (D1 or KV)                    |
+| `/health`                  | GET     | `application/health+json` report: 200 pass/warn, 503 when D1/KV/R2 fails  |
 | `/api/subjects/:subjectId` | GET     | `{ subject }` of a subject who authorized the `client_credentials` caller |
 
 Anything unmatched renders the localized 404 page.

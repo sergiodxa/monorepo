@@ -68,10 +68,15 @@ export interface TestAppOptions {
 	mailQueue?: (delivery: QueuedEmail) => Promise<void>;
 }
 
-/** Secrets read from `env` at call time, given values no real provider would accept. */
+/**
+ * Secrets read from `env` at call time, given values no real provider would accept, and the
+ * version metadata the health report reads its `releaseId` from.
+ */
 const TEST_ENV = {
 	GITHUB_CLIENT_ID: "test-github-client-id",
 	GITHUB_CLIENT_SECRET: "test-github-client-secret",
+	POLAR_ACCESS_TOKEN_LOCAL: "test-polar-access-token",
+	CF_VERSION_METADATA: { id: "test-version-id", tag: "", timestamp: "" },
 };
 
 /**

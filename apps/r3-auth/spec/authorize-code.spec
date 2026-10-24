@@ -2,7 +2,7 @@
 # already signed in and asks `/authorize` for a registered client is issued a code
 # via SSO and redirected to the client's `redirect_uri` carrying it — no second
 # sign-in, no consent screen. The client is seeded with a fixed id whose redirect URI
-# is this origin's `/healthcheck` (a plain 200 that answers "OK"), so the redirect
+# is this origin's discovery document (a plain 200 naming the `authorization_endpoint`), so the redirect
 # lands on a real page inside the one granted host.
 #
 # The landing page is the proof: reaching the client's own redirect target is
@@ -25,11 +25,11 @@ test "an authenticated authorize request redirects to the client carrying a code
 		seed_code_client
 	}
 	when {
-		browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&redirect_uri=http://localhost:3002/healthcheck&state=spec-code"
+		browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&redirect_uri=http://localhost:3002/.well-known/openid-configuration&state=spec-code"
 	}
 	then {
 		eventually {
-			expect browser.text "OK"
+			expect browser.text "authorization_endpoint"
 		}
 	}
 }

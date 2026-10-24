@@ -14,14 +14,14 @@ command seed_admin() {
 
 # Register a relying party with a fixed client id and a redirect URI on this same
 # origin, so a signed-in `/authorize` can complete an SSO redirect that lands on a
-# real 200 page (`/healthcheck`) inside the one granted host. `redirect_uri` is
+# real 200 page (the discovery document) inside the one granted host. `redirect_uri` is
 # unique in the schema, so the fixed row is deleted first and re-inserted, which also
 # clears any client a previous create-client run left on that URI; the delete
 # cascades to its grants and sessions. `created_at`/`updated_at` are the epoch-ms
 # integers the schema requires.
 command seed_code_client() {
-	db.query "DELETE FROM clients WHERE redirect_uri = 'http://localhost:3002/healthcheck'"
-	db.query "INSERT INTO clients (id, created_at, updated_at, name, secret, redirect_uri, logout_uri) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1786300000000, 1786300000000, 'Spec Code Client', 'spec-secret', 'http://localhost:3002/healthcheck', 'http://localhost:3002/healthcheck')"
+	db.query "DELETE FROM clients WHERE id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' OR redirect_uri = 'http://localhost:3002/.well-known/openid-configuration'"
+	db.query "INSERT INTO clients (id, created_at, updated_at, name, secret, redirect_uri, logout_uri) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1786300000000, 1786300000000, 'Spec Code Client', 'spec-secret', 'http://localhost:3002/.well-known/openid-configuration', 'http://localhost:3002/.well-known/openid-configuration')"
 }
 
 # A second relying party, registered beside `seed_code_client`'s, that holds no token of
@@ -31,7 +31,7 @@ command seed_code_client() {
 # column is unique.
 command seed_other_client() {
 	db.query "DELETE FROM clients WHERE id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'"
-	db.query "INSERT INTO clients (id, created_at, updated_at, name, secret, redirect_uri, logout_uri) VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 1786300000000, 1786300000000, 'Spec Other Client', 'other-secret', 'http://localhost:3002/healthcheck?other', 'http://localhost:3002/healthcheck?other')"
+	db.query "INSERT INTO clients (id, created_at, updated_at, name, secret, redirect_uri, logout_uri) VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 1786300000000, 1786300000000, 'Spec Other Client', 'other-secret', 'http://localhost:3002/.well-known/openid-configuration?other', 'http://localhost:3002/.well-known/openid-configuration?other')"
 }
 
 # A subject and one of its live sessions, so the machine endpoints have real state to

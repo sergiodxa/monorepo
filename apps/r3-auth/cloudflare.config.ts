@@ -109,6 +109,8 @@ export default defineConfig(({ mode }) => ({
 				namespace: "1005",
 				simple: { limit: mode === "production" ? 10 : 100, period: 60 },
 			}),
+			/** The deployed version's id, sent as the health report's `releaseId`. */
+			CF_VERSION_METADATA: bindings.versionMetadata(),
 			/**
 			 * Plain secrets, read on ordinary requests, so each one needs a local value too:
 			 * `.dev.vars` in development, `cf workers secrets` in production.

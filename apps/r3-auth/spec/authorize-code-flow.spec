@@ -23,7 +23,7 @@ test "the authorization_code flow issues tokens whose access token returns full 
 		login "spec-user@spec.test" "correct horse battery"
 	}
 	when {
-		browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&redirect_uri=http://localhost:3002/healthcheck&state=spec-code-flow&scope=openid+email+profile"
+		browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&redirect_uri=http://localhost:3002/.well-known/openid-configuration&state=spec-code-flow&scope=openid+email+profile"
 		# The landing IS the redirect the authorization produced; the fresh `code` and the
 		# echoed `state` are read straight out of it, once it is boxed for a dotted read.
 		let landing = browser.url
@@ -33,7 +33,7 @@ test "the authorization_code flow issues tokens whose access token returns full 
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "authorization_code"
 			code: code
-			redirect_uri: "http://localhost:3002/healthcheck"
+			redirect_uri: "http://localhost:3002/.well-known/openid-configuration"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		# Verified against the live JWKS: the payload returns only if the id_token is
 		# genuinely signed by this server's ES256 key, so the claims below are issuer
@@ -46,7 +46,7 @@ test "the authorization_code flow issues tokens whose access token returns full 
 		let replay = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "authorization_code"
 			code: code
-			redirect_uri: "http://localhost:3002/healthcheck"
+			redirect_uri: "http://localhost:3002/.well-known/openid-configuration"
 		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 	}
 	then {
@@ -82,10 +82,10 @@ test "the authorization_code flow issues tokens whose access token returns full 
 # browser asking GET /oidc/logout with a `post_logout_redirect_uri` ends the session and
 # is sent onward to that address with `state` echoed back — but only because the address
 # exactly equals a registered client's stored logout URI. seed_code_client registers
-# /healthcheck as both the redirect and the logout URI, so the address resolves to that
+# the discovery document as both the redirect and the logout URI, so the address resolves to that
 # client and the redirect is honored; an unregistered address would be dropped and the
-# browser kept on this server. Landing on /healthcheck (a plain 200 "OK") on the
-# `/healthcheck` path carrying the echoed `state` is the proof the post-logout redirect
+# browser kept on this server. Landing on the discovery document (a plain 200) on the
+# `/.well-known/openid-configuration` path carrying the echoed `state` is the proof the post-logout redirect
 # fired rather than the sign-out confirmation page rendering.
 test "RP-initiated logout redirects to the client's registered post-logout URI" {
 	given {
@@ -93,7 +93,7 @@ test "RP-initiated logout redirects to the client's registered post-logout URI" 
 		login "spec-user@spec.test" "correct horse battery"
 	}
 	when {
-		browser.navigate "http://localhost:3002/oidc/logout?post_logout_redirect_uri=http://localhost:3002/healthcheck&state=spec-logout"
+		browser.navigate "http://localhost:3002/oidc/logout?post_logout_redirect_uri=http://localhost:3002/.well-known/openid-configuration&state=spec-logout"
 		# The logout answers with a 303 to the post-logout URI; a first read lets that
 		# redirect land before the URL is captured, mirroring login.spec's settle reads.
 		browser.url
@@ -105,10 +105,10 @@ test "RP-initiated logout redirects to the client's registered post-logout URI" 
 	then {
 		# The path proves the browser left /oidc/logout for the client's address, and the
 		# echoed state proves it was this logout's redirect that put it there.
-		expect landedOn "/healthcheck"
+		expect landedOn "/.well-known/openid-configuration"
 		expect returnedState "spec-logout"
 		eventually {
-			expect browser.text "OK"
+			expect browser.text "authorization_endpoint"
 		}
 	}
 }
@@ -117,7 +117,7 @@ test "RP-initiated logout redirects to the client's registered post-logout URI" 
 # the client's own redirect_uri — never leaked elsewhere — in the response mode asked for
 # (`query` by default), per RFC 6749 §4.1.2.1. A code_challenge naming a method this
 # server does not implement is such a request: the unsupported-method check sends
-# `error=invalid_request` back to the seeded client's /healthcheck. Reading `error` and
+# `error=invalid_request` back to the seeded client's discovery-document URI. Reading `error` and
 # the echoed `state` out of the landing URL is the proof the redirect carried the OAuth
 # error envelope. It runs unauthenticated: that check precedes the sign-in branch, so no
 # login budget is spent.
@@ -126,7 +126,7 @@ test "an authorize request with an unsupported code_challenge_method redirects t
 		seed_code_client
 	}
 	when {
-		browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&redirect_uri=http://localhost:3002/healthcheck&state=spec-error&code_challenge=abc123&code_challenge_method=BOGUS"
+		browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa&redirect_uri=http://localhost:3002/.well-known/openid-configuration&state=spec-error&code_challenge=abc123&code_challenge_method=BOGUS"
 		# A first read lets the error redirect land before the URL is captured.
 		browser.url
 		let landing = browser.url
@@ -136,11 +136,11 @@ test "an authorize request with an unsupported code_challenge_method redirects t
 		let returnedState = url.query at.url "state"
 	}
 	then {
-		expect landedOn "/healthcheck"
+		expect landedOn "/.well-known/openid-configuration"
 		expect returnedError "invalid_request"
 		expect returnedState "spec-error"
 		eventually {
-			expect browser.text "OK"
+			expect browser.text "authorization_endpoint"
 		}
 	}
 }

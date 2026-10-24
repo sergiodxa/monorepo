@@ -99,7 +99,7 @@ through the `db` capability (`commands/seed.spec`), both idempotent:
   every request, so an already-signed-in browser becomes an admin on its next
   navigation.
 - **`seed_code_client()`** registers a relying party with a fixed client id whose
-  redirect URI is this origin's `/healthcheck`, so a signed-in `/authorize` can
+  redirect URI is this origin's discovery document, so a signed-in `/authorize` can
   complete an SSO redirect that lands on a real 200 page.
 
 ## Rate limiting
@@ -212,7 +212,7 @@ Two success paths remain out of reach, both for the same root cause:
 | `authorize-code.spec`        | signed-in `/authorize` → redirect carrying a `code`                          |
 | `id-token.spec`              | `refresh_token` grant → `jwt.verify`/`jwt.decode` the signed `id_token`      |
 | `home.spec`                  | `GET /`                                                                      |
-| `health.spec`                | `GET /healthcheck`                                                           |
+| `health.spec`                | `GET /health`                                                                |
 | `discovery.spec`             | both `.well-known` documents + `jwks.json`                                   |
 | `userinfo.spec`              | `GET /userinfo` — bearer challenge for a missing and a forged token          |
 | `authorize.spec`             | `form /authorize` (anonymous observables)                                    |

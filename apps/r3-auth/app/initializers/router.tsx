@@ -147,8 +147,8 @@ export function createWebRouter(options: WebRouterOptions) {
 		lazy(() => import("~/app/http/controllers/home")),
 	);
 	router.map(
-		routes.healthcheck,
-		lazy(() => import("~/app/http/controllers/healthcheck")),
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
 	);
 	router.map(
 		routes.userinfo,

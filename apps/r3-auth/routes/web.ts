@@ -19,7 +19,8 @@ import { form, get, post, route } from "remix/routes";
 export default route({
 	/** Redirects to {@link routes.authorize}, so the bare domain lands in the flow. */
 	home: get("/"),
-	healthcheck: get("/healthcheck"),
+	/** The dependency health report uptime monitors poll, in `application/health+json`. */
+	health: get("/health"),
 	userinfo: get("/userinfo"),
 	/** GET renders the sign-in UI (or performs SSO); POST logs in with credentials. */
 	authorize: form("/authorize"),

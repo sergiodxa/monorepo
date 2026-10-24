@@ -1,17 +1,18 @@
-# GET /healthcheck — the liveness probe. It reports "OK" only when both
-# dependencies it cannot serve a request without are reachable: the D1 database
-# and the KV namespace. A migrated local database and a running Worker are the
-# whole precondition; without migrations it answers 500 "Database connection
-# error" instead, which is why the suite README lists `sdxc run db migrate` as
-# setup.
+# GET /health — the dependency health report monitors poll. It answers
+# `application/health+json` with `200` while D1, KV and the stored signing key all
+# answer, whatever the third parties say, since GitHub, Polar and the breach lookup
+# only warn. Reading the JWKS first mints the signing key on a fresh local bucket, so
+# a migrated local database and a running Worker are the whole precondition.
 
-test "GET /healthcheck reports the server is live" {
+test "GET /health reports every critical dependency answering" {
+	given {
+		let keys = http.get "http://localhost:3002/.well-known/jwks.json"
+	}
 	when {
-		let result = http.get "http://localhost:3002/healthcheck"
+		let result = http.get "http://localhost:3002/health"
 	}
 	then {
 		expect result.status 200
-		expect result.ok true
-		expect result.text "OK"
+		expect result.json.serviceId "auth"
 	}
 }

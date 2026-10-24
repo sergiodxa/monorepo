@@ -233,13 +233,6 @@ describe("the remaining routes", () => {
 		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
 	});
 
-	test("GET /healthcheck answers OK when both dependencies answer", async () => {
-		let response = await app.fetch(new Request(`${ORIGIN}${routes.healthcheck.href()}`));
-
-		expect(response.status).toBe(200);
-		expect(await response.text()).toBe("OK");
-	});
-
 	test("an unknown path renders the localized 404 document", async () => {
 		let response = await app.fetch(new Request(`${ORIGIN}/nowhere-at-all`));
 
@@ -273,7 +266,7 @@ describe("the remaining routes", () => {
 
 describe("HEAD requests", () => {
 	test("answers a HEAD with the GET's status and headers and no body", async () => {
-		let path = `${ORIGIN}${routes.healthcheck.href()}`;
+		let path = `${ORIGIN}${routes.wellKnown.openidConfiguration.href()}`;
 
 		let get = await app.fetch(new Request(path));
 		let head = await app.fetch(new Request(path, { method: "HEAD" }));
