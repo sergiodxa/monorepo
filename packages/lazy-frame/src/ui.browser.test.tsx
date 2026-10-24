@@ -1,7 +1,5 @@
-// @vitest-environment happy-dom
-
 /**
- * Tests the lazy frame against a real document: what the server sends, the crossings that
+ * Tests the lazy frame against a real document: what the worker sends, the crossings that
  * load it or move the address bar, and the containers whose opening loads it. A layout
  * engine is the one thing this document lacks, so crossings are reported by hand.
  *
@@ -13,7 +11,7 @@ import type { RemixNode } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
 import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { setupWorker } from "msw/browser";
 import { renderToString } from "remix/component/server";
 import { render } from "remix/component/test";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
@@ -86,12 +84,6 @@ async function loaded(result: RenderResult): Promise<string | null | undefined> 
 
 beforeAll(() => {
 	vi.stubGlobal("IntersectionObserver", ReportedObserver);
-
-	/**
-	 * This document's stylesheet parser rejects the cascade layers mixins write into; no
-	 * assertion here reads a style, so the rules are accepted and dropped.
-	 */
-	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
 });
 
 afterEach(() => {
@@ -250,15 +242,15 @@ describe("prefetch", () => {
 	/** The headers of each request for the frame's source, in the order they arrived. */
 	let fetched: Headers[] = [];
 
-	let server = setupServer(
+	let worker = setupWorker(
 		http.get("*/jobs/1", ({ request }) => {
 			fetched.push(request.headers);
 			return HttpResponse.html("<p>Job</p>");
 		}),
 	);
 
-	beforeAll(() => {
-		server.listen({ onUnhandledRequest: "bypass" });
+	beforeAll(async () => {
+		await worker.start({ onUnhandledRequest: "bypass", quiet: true });
 		vi.stubGlobal("navigation", new EventTarget());
 		vi.stubGlobal("NavigateEvent", InterceptableNavigateEvent);
 	});
@@ -268,7 +260,7 @@ describe("prefetch", () => {
 		Reflect.deleteProperty(navigator, "connection");
 	});
 
-	afterAll(() => server.close());
+	afterAll(() => worker.stop());
 
 	/** Mounts a dialog that `#job-1` opens, fetching its frame ahead as `prefetch` says. */
 	function mountOpener(prefetch: boolean): HTMLElement {
