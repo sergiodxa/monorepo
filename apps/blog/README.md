@@ -57,8 +57,13 @@ right away. Format, lint, type check and test from the repository root (`bun che
 | Secrets     | `WAYBACK_ACCESS_KEY`, `WAYBACK_SECRET_KEY`            | archive.org keys from Secrets Store         |
 | Secret      | `ACTIVITYPUB_PRIVATE_KEY`                             | ActivityPub signing key from Secrets Store  |
 | Assets      | N/A                                                   | Static assets served from `build/client`    |
+| Version     | `CF_VERSION_METADATA`                                 | The deployed version `/health` reports      |
 
 Smart Placement and Observability are enabled.
+
+`GET /health` reads D1, the three KV namespaces, the `BACKUPS` and `SOCIAL_CARDS` buckets, the
+six Secrets Store secrets and the identity provider's own `/health`. It answers `503` when a
+binding or secret fails, and `200` with `warn` when only sign-in is down.
 
 `COOKIE_SESSION_SECRET` signs the session cookie, so a page request arriving without it, or
 with it empty, is answered with a 500.
@@ -222,6 +227,7 @@ with it empty, is answered with a 500.
 | `/:topic.atom`           | A kind's topic as Atom                                |
 | `/:topic.json`           | A kind's topic as JSON Feed                           |
 | `/sitemap.xml`           | Sitemap for search engines                            |
+| `/health`                | Dependency health report (`application/health+json`)  |
 | `/webmention`            | Webmention endpoint (POST)                            |
 | `/activitypub/actor`     | ActivityPub actor (`@hello@sergiodxa.com`)            |
 | `/activitypub/inbox`     | ActivityPub inbox, personal and shared (POST, signed) |

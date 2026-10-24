@@ -301,8 +301,8 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		lazy(() => import("~/app/http/controllers/sitemap")),
 	);
 	router.map(
-		routes.healthcheck,
-		lazy(() => import("~/app/http/controllers/healthcheck")),
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
 	);
 
 	/**

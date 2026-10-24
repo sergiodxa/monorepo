@@ -50,7 +50,7 @@ export default createAction(
 			activityPub: false,
 			nodeInfo: false,
 			sitemap: false,
-			healthcheck: false,
+			health: false,
 			mcp: false,
 			mcpMarkdown: false,
 			encoreSupport: false,

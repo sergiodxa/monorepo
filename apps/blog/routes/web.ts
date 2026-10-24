@@ -52,7 +52,8 @@ export default route({
 
 	sitemap: get("/sitemap.xml"),
 
-	healthcheck: get("/healthcheck"),
+	/** The dependency health report an uptime monitor polls. */
+	health: get("/health"),
 
 	/**
 	 * The Webmention endpoint every page advertises, taking form-encoded `source` and
