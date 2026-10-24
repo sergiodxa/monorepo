@@ -83,6 +83,9 @@
 	// rotating one leaves the other standing. Create it once per account with
 	// `bunx wrangler secrets-store secret create <store_id> --name UPTIME_UNSUBSCRIBE_SECRET
 	// --scopes workers --remote` before the deploy that reads it.
+	/** Names the deploy that answered `/health`, as the report's `releaseId`. */
+	"version_metadata": { "binding": "CF_VERSION_METADATA" },
+
 	"secrets_store_secrets": [
 		{
 			"binding": "UNSUBSCRIBE_SECRET",

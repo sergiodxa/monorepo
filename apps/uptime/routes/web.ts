@@ -18,8 +18,7 @@ import { del, form, get, patch, post, put, resources, route } from "remix/routes
  */
 export default route({
 	home: get("/"),
-	healthcheck: get("/healthcheck"),
-	healthcheckAnalyticsEngine: get("/healthcheck/analytics-engine"),
+	health: get("/health"),
 	statusPage: get("/status/:slug"),
 	/** A status page's maintenance as an iCalendar feed that calendar clients subscribe to. */
 	statusPageCalendar: get("/status/:slug/maintenance.ics"),

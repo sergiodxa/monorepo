@@ -303,12 +303,8 @@ export function createWebRouter(options: WebRouterOptions) {
 		lazy(() => import("~/app/http/controllers/home"), [trialHoneypot, ...PUBLIC_PAGE_GUARDS]),
 	);
 	router.map(
-		routes.healthcheck,
-		lazy(() => import("~/app/http/controllers/healthcheck")),
-	);
-	router.map(
-		routes.healthcheckAnalyticsEngine,
-		lazy(() => import("~/app/http/controllers/healthcheck-analytics-engine")),
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
 	);
 	router.map(
 		routes.auth,

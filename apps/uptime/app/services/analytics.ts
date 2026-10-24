@@ -53,8 +53,12 @@ export interface SparklinePoint {
  * try/catch so a thrown network/DNS/parse error degrades to `failure(...)`
  * instead of crashing callers that compose several via `Promise.all`.
  * @param sql SQL query text (the account's Analytics Engine SQL dialect).
+ * @param signal Aborts the request, which then resolves to a failure.
  */
-export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>> {
+export async function queryAnalytics<T>(
+	sql: string,
+	signal?: AbortSignal,
+): Promise<Result<T[], Error>> {
 	recordCost("aeQuery");
 
 	try {
@@ -67,6 +71,7 @@ export async function queryAnalytics<T>(sql: string): Promise<Result<T[], Error>
 					"Content-Type": "text/plain",
 				},
 				body: sql,
+				signal,
 			},
 		);
 

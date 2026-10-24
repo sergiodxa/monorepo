@@ -30,6 +30,15 @@ public-target check, the Turnstile challenge and a daily budget of free probes. 
 is `@sdxc/outbound`'s `checkUrl` (ports 80 and 443 only) and `resolveHost`, so a refusal's logged
 `detail` is that package's error code, and its README states the DNS rebinding limit the check carries.
 
+## Health check
+
+`GET /health` answers an `application/health+json` report from `app/initializers/health.ts`,
+naming the deploy that answered through the `CF_VERSION_METADATA` binding. It reads D1, the `KV`
+namespace, the `SOCIAL_CARDS` and `FLOW_TRACES` buckets, the `UNSUBSCRIBE_SECRET` secret and the
+`GeoFetchDO` object (through its `ping()` RPC method), and answers `503` when any of them fails.
+The Analytics Engine SQL API, auth.sergiodxa.com's own `/health` and Polar's `/healthz` only warn,
+keeping the response `200`, since monitoring keeps running without them. Every probe only reads.
+
 ## Data layer
 
 Every table is read and written through an `@sdxc/data-model` model in `app/models/`, bound per

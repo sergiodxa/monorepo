@@ -32,8 +32,7 @@ export default createAction(routes.sitemap, async ({ request }) => {
 
 	let sitemap = fromRoutes(routes, request.url, {
 		home: { priority: 1, frequency: "weekly", updatedAt },
-		healthcheck: false,
-		healthcheckAnalyticsEngine: false,
+		health: false,
 		statusPage: false,
 		statusPageCalendar: false,
 		statusPageMaintenanceEvent: false,

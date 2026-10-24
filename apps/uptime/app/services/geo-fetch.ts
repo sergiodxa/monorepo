@@ -93,4 +93,10 @@ export class GeoFetchDO extends DurableObject<Cloudflare.Env> {
 	override async fetch(request: Request): Promise<Response> {
 		return await proxyProbe(request);
 	}
+
+	/**
+	 * Answers the health check's RPC call. Resolving proves the class constructs and the
+	 * namespace routes to it; the object keeps no storage to reach.
+	 */
+	ping(): void {}
 }
