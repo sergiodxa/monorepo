@@ -73,8 +73,8 @@ export interface ComponentSource {
 
 /**
  * Every component in `packageDir/src/components`, sorted by name, each with its test when a
- * `<name>.test.tsx` or `<name>.test.ts` sits beside it. Tests that cover no single component
- * stay out.
+ * `<name>.test.tsx`, `<name>.test.ts`, or their `.browser.test` forms sit beside it. Tests that
+ * cover no single component stay out.
  */
 export async function readComponents(
 	packageDir: string,
@@ -89,9 +89,12 @@ export async function readComponents(
 		if (name === undefined) continue;
 		let source = await wrap(() => readFile(join(dir, file), "utf8"));
 		if (isFailure(source)) return source;
-		let testFile = [`${name}.test.tsx`, `${name}.test.ts`].find((candidate) =>
-			names.has(candidate),
-		);
+		let testFile = [
+			`${name}.test.tsx`,
+			`${name}.test.ts`,
+			`${name}.browser.test.tsx`,
+			`${name}.browser.test.ts`,
+		].find((candidate) => names.has(candidate));
 		let test: UIRegistryFile | null = null;
 		if (testFile !== undefined) {
 			let content = await wrap(() => readFile(join(dir, testFile), "utf8"));

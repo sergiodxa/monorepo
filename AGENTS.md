@@ -55,6 +55,19 @@ rather than a hand-written stub — which is what caught a cache asserting a 30-
 a real binding rejects. `node:sqlite` does not exist in workerd, so a test whose
 database comes from `@sdxc/cloudflare-mocks/sqlite` stays on the threads pool.
 
+A test that needs a DOM runs in a real browser: name it `*.browser.test.ts(x)` and it runs in
+headless Chromium through [Vitest Browser Mode](https://vitest.dev/guide/browser/), collected by
+the workspace's `<name>-browser` project (`browserProject()` in the root `vite.config.ts`). That
+gives it the layout, nested CSS, cascade layers and platform APIs a visitor's browser has, so a
+test never stubs `CSSStyleSheet.prototype.insertRule` or a missing API to get a component to
+render. Mount a component with `render()` from `remix/component/test` and assert on the live
+DOM — computed styles and layout included — rather than parsing `renderToString` output; render
+on the server only when the test is about server output or hydrating it with `run()`. Run
+`bunx playwright install chromium` once before the first local run. Browser tests
+import nothing that only runs on a server (`node:*`, `AsyncLocalStorage`, a whole app router);
+a test that renders server HTML and only reads the markup stays on the threads pool and parses
+it with `@sdxc/html/document`.
+
 Nothing runs under `bun test` any more — `bunfig.toml` preloads `scripts/reject-bun-test.ts`,
 so typing it prints the Vitest commands and exits rather than pointing Bun's runner at files
 whose `vi` calls its shim does not implement. Where a test needs a Bun-only API —
@@ -239,7 +252,8 @@ edge case. If the answer is nothing, write nothing.
 ### Testing
 
 - MUST back database tests with an in-memory adapter from `@sdxc/cloudflare-mocks/sqlite` that mirrors the production adapter, rather than mocking the query layer; that module absorbs the four ways `node:sqlite` diverges from `bun:sqlite`, so never re-fix those in app code
-- MUST mock outbound HTTP with MSW (`setupServer` from `msw/node`) in tests; never stub `globalThis.fetch` or inject a fake
+- MUST mock outbound HTTP with MSW in tests — `setupServer` from `msw/node`, or `setupWorker` from `msw/browser` in a `*.browser.test.ts(x)` file; never stub `globalThis.fetch` or inject a fake
+- MUST run a test that needs a DOM in Vitest Browser Mode as a `*.browser.test.ts(x)` file; never use a simulated DOM (`@vitest-environment happy-dom` or `jsdom`)
 - MUST NOT hand-write a fake for a Cloudflare binding (`as unknown as KVNamespace` and the like). Name the file `*.workers.test.ts` and use the real binding from `cloudflare:test`; a fake diverges silently, and every one this repo had stubbed `list()` to an empty result
 - MUST let the `cloudflareWorkersStub()` plugin supply `env`/bindings — it is on every project whose workspace uses Cloudflare bindings, so a test importing `cloudflare:workers` needs no mock of its own; reach for `vi.doMock` + `await import(...)` only to replace a module before the subject loads
 - MUST keep `*.test.ts` files type-safe: they are included in typechecking, so every test file must pass `bun typecheck`

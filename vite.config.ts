@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+
 /**
  * Root Vite+ configuration: the single place formatting, linting and type checking are
  * configured for every workspace. Ported from `.oxlintrc.json` and `.oxfmtrc.json`, which
@@ -14,11 +16,60 @@
 import type { TestProjectInlineConfiguration } from "vitest/config";
 
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
+import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vite-plus";
 import { defaultExclude } from "vitest/config";
 
 import { clientEntryIdentity } from "./test/client-entry-plugin.ts";
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
+
+/**
+ * The CommonJS entry of the CSS parser `linkedom` imports. The package's `browser` field names a
+ * build that only assigns a global, so a browser project resolving it by that field finds none of
+ * the exports `linkedom` reads; the `main` entry carries them.
+ */
+const CSSOM_ENTRY = createRequire(
+	createRequire(`${import.meta.dirname}/packages/html/package.json`).resolve("linkedom"),
+).resolve("@acemir/cssom");
+
+/**
+ * A test that needs a DOM runs in a real Chromium page through Vitest Browser Mode, so layout,
+ * nested CSS, cascade layers and platform APIs behave as they do for a visitor. Such a file is
+ * named `*.browser.test.ts(x)`; this builds the project that collects them for one workspace,
+ * sharing the workspace's plugins and aliases with its threads project. Outbound HTTP is mocked
+ * with `setupWorker` from `msw/browser`.
+ *
+ * @param name The workspace's threads project name; the browser project appends `-browser`.
+ * @param base The workspace's root, plugins and resolve options.
+ * @param include The globs to collect, relative to `base.root`.
+ */
+function browserProject(
+	name: string,
+	base: TestProjectInlineConfiguration,
+	include = ["**/*.browser.test.ts?(x)"],
+): TestProjectInlineConfiguration {
+	return {
+		...base,
+		resolve: {
+			...base.resolve,
+			alias: { ...(base.resolve?.alias as Record<string, string>), "@acemir/cssom": CSSOM_ENTRY },
+		},
+		/** Serves MSW's `mockServiceWorker.js` from the page's root scope, where `setupWorker` registers it. */
+		publicDir: `${import.meta.dirname}/test/browser-public`,
+		test: {
+			name: `${name}-browser`,
+			include,
+			browser: {
+				enabled: true,
+				headless: true,
+				provider: playwright(),
+				instances: [{ browser: "chromium" }],
+				screenshotFailures: false,
+			},
+			testTimeout: 20_000,
+		},
+	};
+}
 
 /**
  * Wrangler announces every `.dev.vars` file it reads at its `log` level, so each Workers
@@ -176,6 +227,75 @@ const AUTH_SAAS_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	},
 };
 
+/**
+ * One per workspace holding `*.browser.test.ts(x)` files. Declared apart from `projects` for the
+ * same reason as {@link BLOG_WORKERS_PROJECT}.
+ */
+const PACKAGES_BROWSER_PROJECT = browserProject(
+	"packages",
+	{
+		plugins: [cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>],
+		resolve: { tsconfigPaths: true },
+	},
+	["packages/*/src/**/*.browser.test.ts?(x)"],
+);
+
+const BLOG_BROWSER_PROJECT = browserProject("blog", {
+	root: "apps/blog",
+	plugins: [
+		cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>,
+		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
+	],
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/blog/app/test/assets-manifest.ts`,
+		},
+	},
+});
+
+const UPTIME_BROWSER_PROJECT = browserProject("uptime", {
+	root: "apps/uptime",
+	plugins: [
+		cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>,
+		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
+	],
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/test/assets-manifest.ts`,
+		},
+	},
+});
+
+const SDXC_SITE_BROWSER_PROJECT = browserProject("sdxc-site", {
+	root: "apps/sdxc-site",
+	plugins: [
+		cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>,
+		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
+	],
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc-site/app/test/assets-manifest.ts`,
+		},
+	},
+});
+
+const READER_BROWSER_PROJECT = browserProject("reader", {
+	root: "apps/reader",
+	plugins: [
+		cloudflareWorkersStub() as ReturnType<typeof cloudflareTest>,
+		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
+	],
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/test/assets-manifest.ts`,
+		},
+	},
+});
+
 export default defineConfig({
 	run: {
 		tasks: {
@@ -229,7 +349,7 @@ export default defineConfig({
 					 * `cloudflare:test`, which exists only inside the Workers pool. Vitest's
 					 * defaults are spread back in because naming `exclude` replaces them.
 					 */
-					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)", "**/*.browser.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -259,7 +379,7 @@ export default defineConfig({
 					 * `*.workers.test.ts` belongs to `uptime-workers`. Vitest's defaults are spread
 					 * back in because naming `exclude` replaces them.
 					 */
-					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)", "**/*.browser.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -286,7 +406,7 @@ export default defineConfig({
 					 * from the Workers pool. Defaults are spread back in: dropping the `node_modules`
 					 * default would send this glob through the app's symlinked deps, collecting the whole repo.
 					 */
-					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)", "**/*.browser.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -297,8 +417,11 @@ export default defineConfig({
 				},
 			},
 			BLOG_WORKERS_PROJECT,
+			BLOG_BROWSER_PROJECT,
 			PACKAGES_WORKERS_PROJECT,
+			PACKAGES_BROWSER_PROJECT,
 			UPTIME_WORKERS_PROJECT,
+			UPTIME_BROWSER_PROJECT,
 			{
 				root: "apps/r3-auth",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
@@ -381,6 +504,7 @@ export default defineConfig({
 				test: {
 					name: "sdxc-site",
 					include: ["**/*.test.ts?(x)", ".config/sdxc/checks/*.test.ts"],
+					exclude: [...defaultExclude, "**/*.browser.test.ts?(x)"],
 					globalSetup: ["scripts/catalogue.setup.ts"],
 					pool: "threads",
 					/**
@@ -406,7 +530,7 @@ export default defineConfig({
 					 * `*.workers.test.ts` belongs to `auth-saas-workers`. Vitest's defaults are
 					 * spread back in because naming `exclude` replaces them.
 					 */
-					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)", "**/*.browser.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -417,6 +541,7 @@ export default defineConfig({
 				},
 			},
 			AUTH_SAAS_WORKERS_PROJECT,
+			SDXC_SITE_BROWSER_PROJECT,
 			{
 				root: "apps/reader",
 				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
@@ -433,7 +558,7 @@ export default defineConfig({
 					 * `*.workers.test.ts` belongs to `reader-workers`. Vitest's defaults are spread
 					 * back in because naming `exclude` replaces them.
 					 */
-					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)", "**/*.browser.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -443,6 +568,7 @@ export default defineConfig({
 				},
 			},
 			READER_WORKERS_PROJECT,
+			READER_BROWSER_PROJECT,
 			{
 				/**
 				 * The one app whose sources live under `src/`, and the one with no Cloudflare
@@ -478,13 +604,15 @@ export default defineConfig({
 		 * would rewrite 600+ files nobody here authored and make the next vendor sync a
 		 * conflict; treat them as read-only. An OpenAPI snapshot is compared byte for byte
 		 * with what `stringify` writes, so formatting it would fail the drift test, and the
-		 * golden EPUB fixtures are compared byte for byte with what `EPUB.build` writes.
+		 * golden EPUB fixtures are compared byte for byte with what `EPUB.build` writes. MSW's
+		 * service worker is regenerated by `msw init`, so it stays exactly as MSW writes it.
 		 */
 		ignorePatterns: [
 			".agents/**",
 			"docs/vendor/**",
 			"**/openapi.snapshot.json",
 			"packages/epub/src/fixtures/**",
+			"test/browser-public/**",
 		],
 		useTabs: true,
 		experimentalSortPackageJson: true,
@@ -526,9 +654,9 @@ export default defineConfig({
 		/**
 		 * `sdxc create`'s built-in templates import `sdxc/*` as an installed project does, so
 		 * they resolve only once materialized; their own test materializes each one and type
-		 * checks it there.
+		 * checks it there. MSW's generated service worker stays exactly as `msw init` writes it.
 		 */
-		ignorePatterns: ["packages/kit/templates/**"],
+		ignorePatterns: ["packages/kit/templates/**", "test/browser-public/**"],
 		plugins: [
 			"eslint",
 			"import",

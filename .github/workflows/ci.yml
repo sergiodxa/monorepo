@@ -161,6 +161,36 @@ jobs:
       - *install-dependencies
       - *example-secrets
 
+      # A `*.browser.test.ts(x)` file runs in headless Chromium through Vitest Browser Mode, so
+      # only a workspace holding one installs the browser. Browser Mode runs headless, which
+      # needs only Chromium's headless shell; the download is cached per Playwright version,
+      # while the system libraries it links against install on every run.
+      - name: Detect browser tests
+        id: browser
+        env:
+          WORKSPACE: ${{ matrix.workspace }}
+        run: |
+          if [ "$WORKSPACE" != root ] && [ -n "$(git ls-files -- "$WORKSPACE/*.browser.test.ts" "$WORKSPACE/*.browser.test.tsx")" ]; then
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+            echo "playwright=$(jq -r .version node_modules/playwright/package.json)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache Chromium
+        if: steps.browser.outputs.needed == 'true'
+        id: chromium-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.browser.outputs.playwright }}-chromium-headless-shell
+
+      - name: Install Chromium
+        if: steps.browser.outputs.needed == 'true' && steps.chromium-cache.outputs.cache-hit != 'true'
+        run: bunx playwright install --only-shell chromium
+
+      - name: Install Chromium system dependencies
+        if: steps.browser.outputs.needed == 'true'
+        run: bunx playwright install-deps chromium
+
       # Vitest matches a relative filter as a substring of each project's own paths, so
       # `packages/u` would also run `ui`, `uuid` and `user-agent`. An absolute path ending in
       # a slash matches as a prefix instead: exactly this workspace, across every project that
