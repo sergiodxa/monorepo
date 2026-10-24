@@ -35,6 +35,7 @@
 		"@sdxc/flags-engine": "workspace:*",
 		"@sdxc/font": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/health": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/honeypot": "workspace:*",
 		"@sdxc/http": "workspace:*",

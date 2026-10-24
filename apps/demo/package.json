@@ -21,6 +21,7 @@
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/database-middleware": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/health": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/i18n": "workspace:*",
 		"@sdxc/jobs": "workspace:*",

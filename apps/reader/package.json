@@ -31,6 +31,7 @@
 		"@sdxc/feed": "workspace:*",
 		"@sdxc/flags": "workspace:*",
 		"@sdxc/flags-engine": "workspace:*",
+		"@sdxc/health": "workspace:*",
 		"@sdxc/html": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/i18n": "workspace:*",

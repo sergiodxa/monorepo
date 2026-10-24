@@ -16,6 +16,7 @@
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/font": "workspace:*",
+		"@sdxc/health": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/iife": "workspace:*",
