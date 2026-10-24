@@ -231,6 +231,10 @@ export function createWebRouter() {
 		routes.cspReports,
 		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
+	router.map(
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
+	);
 
 	return router;
 }

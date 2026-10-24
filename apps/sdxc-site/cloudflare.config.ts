@@ -53,6 +53,8 @@ export default defineConfig({
 			 * author's blog; this site's cards live under `sdxc/`.
 			 */
 			SOCIAL_CARDS: bindings.r2({ name: "social-cards" }),
+			/** The deployed version's id, which `/health` reports so a report names its deploy. */
+			CF_VERSION_METADATA: bindings.versionMetadata(),
 			GITHUB_TOKEN: bindings.secret(),
 			GITHUB_SPONSORS_WEBHOOK_SECRET: bindings.secret(),
 		},

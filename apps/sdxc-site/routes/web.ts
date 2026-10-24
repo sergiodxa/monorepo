@@ -123,4 +123,6 @@ export default route({
 	mcp: get("/mcp"),
 	/** Where browsers send the Content Security Policy violation reports the policy names. */
 	cspReports: post("/reports/csp"),
+	/** Whether every store and service the site reads answers, for an uptime monitor to poll. */
+	health: get("/health"),
 });
