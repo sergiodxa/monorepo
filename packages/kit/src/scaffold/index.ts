@@ -26,6 +26,7 @@ import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
 import { declare, declaresAbilities } from "../make/declare.js";
+import { ensureImport } from "../make/imports.js";
 import { SCAFFOLD_PIECES } from "../make/kinds.js";
 import { chainFolder, nextMigrationFile } from "../make/migrations.js";
 import { parseName } from "../make/names.js";
@@ -577,8 +578,8 @@ async function stageDeclarations(
 /**
  * `edits` with the resource's OpenAPI operations appended to `routes/api.ts`, after the routes
  * the staged declarations added, and added to the document `app/initializers/openapi.ts` builds.
- * A file laid out otherwise, such as one with no `@sdxc/json-schema` import, gets the code
- * printed for the user to place instead.
+ * A contract missing `@sdxc/json-schema` gets the import; one laid out otherwise, with no
+ * `defineOperation` or default export, gets the code printed for the user to place instead.
  */
 async function operationEdits(
 	root: string,
@@ -607,22 +608,22 @@ async function operationEdits(
 	let contract = `routes/${API_CONTRACT}.ts`;
 	let names = apiOperationNames(resource);
 	let source = await current(contract);
-	let locals = source === null ? null : operationLocals(source);
+	let operations = source === null ? null : operationLocals(contract, source);
 	let code = apiOperations(
 		resource,
-		locals ?? { s: "s", defineOperation: "defineOperation", routes: "ROUTES" },
+		operations?.locals ?? { s: "s", defineOperation: "defineOperation", routes: "ROUTES" },
 	);
-	if (source === null || locals === null) {
+	if (operations === null) {
 		manual.push({
 			path: contract,
-			reason: `${contract} does not import @sdxc/json-schema, defineOperation and a default export the operations can use`,
+			reason: `${contract} does not import defineOperation and a default export the operations can use`,
 			instructions: `At the end of ${contract}:
 ${code}`,
 		});
 	} else {
 		await write(
 			contract,
-			`${source.trimEnd()}
+			`${operations.source.trimEnd()}
 
 ${code}
 `,
@@ -644,15 +645,34 @@ ${code}
 
 /**
  * The names `source` imports `@sdxc/json-schema`'s namespace, `defineOperation` and its own
- * default export under, or `null` when it lacks one of them.
+ * default export under, with `source` importing the namespace as `s` when it lacked it, or
+ * `null` when it lacks `defineOperation` or the default export.
  */
-function operationLocals(source: string): OperationLocals | null {
-	let s = /import \* as (\w+) from "@sdxc\/json-schema";/.exec(source)?.[1];
+function operationLocals(
+	filename: string,
+	source: string,
+): { source: string; locals: OperationLocals } | null {
 	let imported = /import \{([^}]*)\} from "@sdxc\/openapi";/.exec(source)?.[1] ?? "";
 	let defineOperation = /\bdefineOperation(?:\s+as\s+(\w+))?\b/.exec(imported);
 	let routes = /export default (\w+);/.exec(source)?.[1];
-	if (s === undefined || defineOperation === null || routes === undefined) return null;
-	return { s, defineOperation: defineOperation[1] ?? "defineOperation", routes };
+	if (defineOperation === null || routes === undefined) return null;
+	let schema = ensureImport(
+		filename,
+		source,
+		{ kind: "namespace" },
+		(specifier) => specifier === "@sdxc/json-schema",
+		"@sdxc/json-schema",
+		"s",
+	);
+	if (isFailure(schema)) return null;
+	return {
+		source: schema.data.source,
+		locals: {
+			s: schema.data.local,
+			defineOperation: defineOperation[1] ?? "defineOperation",
+			routes,
+		},
+	};
 }
 
 /**

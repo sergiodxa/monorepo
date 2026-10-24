@@ -4,14 +4,17 @@
  * request read the same schemas.
  */
 
-import * as s from "@sdxc/json-schema";
+import HEALTH_REPORT from "@sdxc/health/schema";
 import { defineOperation } from "@sdxc/openapi";
 import { get, post, route } from "remix/routes";
 
-/** The JSON endpoints under `/api`, and the MCP endpoint an agent connects to. */
+/**
+ * The health check at `/health`, the path monitors look for first, the JSON endpoints under
+ * `/api`, and the MCP endpoint an agent connects to.
+ */
 const ROUTES = route({
+	health: get("/health"),
 	api: {
-		health: get("/api/health"),
 		openapi: get("/api/openapi.json"),
 		notFound: "/api/*path",
 	},
@@ -20,10 +23,17 @@ const ROUTES = route({
 
 export default ROUTES;
 
-/** GET /api/health, the check a monitor or load balancer polls. */
-export const HEALTH = defineOperation("health", ROUTES.api.health, {
-	summary: "Check the service",
+/** GET /health, the check a monitor or load balancer polls, answered as `application/health+json`. */
+export const HEALTH = defineOperation("health", ROUTES.health, {
+	summary: "Check the service and every dependency it reads",
 	responses: {
-		200: { description: "The service is up", body: s.object({ status: s.literal("ok") }) },
+		200: {
+			description: "Every critical dependency answers: the report's status is `pass` or `warn`",
+			body: { "application/health+json": HEALTH_REPORT },
+		},
+		503: {
+			description: "A critical dependency fails: the report's status is `fail`",
+			body: { "application/health+json": HEALTH_REPORT },
+		},
 	},
 });

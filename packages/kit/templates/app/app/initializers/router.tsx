@@ -101,8 +101,8 @@ export function createWebRouter() {
 	);
 
 	router.map(
-		apiRoutes.api.health,
-		lazy(() => import("~/app/http/controllers/api/health")),
+		apiRoutes.health,
+		lazy(() => import("~/app/http/controllers/health")),
 	);
 	router.map(
 		apiRoutes.api.openapi,

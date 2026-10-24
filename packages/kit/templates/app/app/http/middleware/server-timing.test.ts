@@ -8,7 +8,7 @@ import { createWebRouter } from "~/app/initializers/router";
 
 describe("serverTiming", () => {
 	test("reports how long the request took", async () => {
-		let response = await createWebRouter().fetch("https://example.com/api/health");
+		let response = await createWebRouter().fetch("https://example.com/health");
 
 		expect(response.headers.get("server-timing")).toMatch(/^app(;dur=[\d.]+)?$/);
 	});

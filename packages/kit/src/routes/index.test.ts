@@ -171,7 +171,7 @@ describe("listRoutes", () => {
 			"GET /robots.txt robots -> app/http/controllers/robots.ts []",
 			"GET /sitemap.xml sitemap -> app/http/controllers/sitemap.ts []",
 			"ANY /*path notFound -> app/http/controllers/not-found.tsx [page]",
-			"GET /api/health api.health -> app/http/controllers/api/health.tsx [api]",
+			"GET /health health -> app/http/controllers/health.ts [api]",
 			"GET /api/openapi.json api.openapi -> app/http/controllers/api/openapi.tsx [api]",
 			"ANY /api/*path api.notFound -> app/http/controllers/api/not-found.tsx [api]",
 			"POST /mcp mcp -> app/http/controllers/mcp.tsx [api]",

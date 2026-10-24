@@ -23,7 +23,7 @@ async function record(request: Request) {
 describe("router", () => {
 	test("continues the caller's W3C trace", async () => {
 		let written = await record(
-			new Request("https://example.com/api/health", {
+			new Request("https://example.com/health", {
 				headers: { traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01" },
 			}),
 		);
