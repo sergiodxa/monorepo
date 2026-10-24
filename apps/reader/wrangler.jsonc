@@ -13,6 +13,10 @@
 	"placement": { "mode": "smart" },
 
 	"observability": { "enabled": true },
+
+	// The deployed version's id, which `/health` reports as its `releaseId` so a report says
+	// which deploy answered it.
+	"version_metadata": { "binding": "CF_VERSION_METADATA" },
 	"assets": { "directory": "./build/client" },
 
 	// A custom domain rather than a route on an existing zone: sessions are cookies

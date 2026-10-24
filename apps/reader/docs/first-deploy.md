@@ -107,6 +107,8 @@ Every later deploy is this one command.
 
 ## 6. Check it works
 
+- `https://reader.sergiodxa.com/health` answers `200` with `"status": "pass"`; a `503` names the
+  failing binding or service in its `checks`. Point the uptime monitor at it.
 - `https://reader.sergiodxa.com` answers, and signing in returns to the reading view.
 - Following a feed adds it, and its posts appear.
 - In settings, turning on browser notifications and pressing the button shows the browser's

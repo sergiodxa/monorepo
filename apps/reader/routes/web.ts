@@ -306,4 +306,10 @@ export default route({
 	 * shape a form route already describes.
 	 */
 	websub: form("/websub/:feedId/:token"),
+
+	/**
+	 * The dependency report an uptime monitor polls. It answers without a session, since the
+	 * monitor signs in as nobody, and names each dependency rather than any reader's data.
+	 */
+	health: get("/health"),
 });

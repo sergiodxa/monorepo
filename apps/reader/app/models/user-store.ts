@@ -1127,6 +1127,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Answers once the object is constructed and its SQLite answers a query, so a health
+	 * probe proves the class, its migrations and its storage without touching a reader's rows.
+	 */
+	ping(): void {
+		this.ctx.storage.sql.exec("SELECT 1");
+	}
+
+	/**
 	 * Creates the reader's row if this is their first sign-in, and arms the refresh
 	 * schedule. Idempotent, because it runs on every completed sign-in rather than once:
 	 * there is no user table and no sign-up step, so a first login is what creates a

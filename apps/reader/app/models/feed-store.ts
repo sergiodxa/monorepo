@@ -240,6 +240,14 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Answers once the object is constructed and its SQLite answers a query, so a health
+	 * probe proves the class, its migrations and its storage without touching a feed's rows.
+	 */
+	ping(): void {
+		this.ctx.storage.sql.exec("SELECT 1");
+	}
+
+	/**
 	 * Records a subscriber, fetching the feed if this object has never fetched one, and
 	 * answers with what that reader needs to start reading: the feed's own description of
 	 * itself, the head it has reached, and its newest page of items.

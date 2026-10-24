@@ -46,6 +46,14 @@ function catalog(): CatalogModels {
 }
 
 /**
+ * Runs a query that reads no table through the connection every catalog call uses, so a
+ * health probe proves the binding and the adapter answer without reading a row.
+ */
+export async function pingCatalog(): Promise<void> {
+	await connect().exec("SELECT 1");
+}
+
+/**
  * Exchanges a canonical feed URL for the id that names its Durable Object, minting one
  * for a URL nobody has followed yet and returning the existing id for one somebody has.
  *

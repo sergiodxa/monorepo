@@ -391,6 +391,10 @@ export function createWebRouter(options: WebRouterOptions) {
 		routes.unsubscribe,
 		lazy(() => import("~/app/http/controllers/unsubscribe")),
 	);
+	router.map(
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
+	);
 
 	return router;
 }
