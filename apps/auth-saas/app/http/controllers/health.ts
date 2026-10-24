@@ -1,27 +1,18 @@
 /**
- * `GET /health` — a liveness/health-check endpoint used by uptime monitors and
- * load balancers to confirm the worker is running and able to serve requests.
+ * `GET /health` on the platform host: the dependency report uptime monitors and load
+ * balancers read, as `application/health+json`, `503` once a critical dependency fails.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
+import { health } from "~/app/initializers/health";
 import routes from "~/routes/web";
 
 /**
- * Health check endpoint. Always returns `200 OK` with the current status and a
- * timestamp, signalling the service is up.
- *
- * @returns A JSON `200` response `{ status: "ok", timestamp }`.
- * @example
- * router.map(routes.health, health);
+ * Probes every dependency in parallel and answers with their report: `200` while each passes
+ * or only Polar fails, `503` when a critical one fails.
  */
-export default createAction(routes.health, async () => {
-	return ok({
-		status: "ok",
-		timestamp: new Date().toISOString(),
-	});
-});
+export default createAction(routes.health, (ctx) => health.respond(ctx));

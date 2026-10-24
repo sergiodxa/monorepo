@@ -746,6 +746,16 @@ export default class TenantObject extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
+	 * Answers the platform's health check once this object's schema is in place and its
+	 * SQLite storage takes a query. Reads nothing and writes nothing, so pinging the
+	 * instance named `healthcheck` never provisions a tenant there.
+	 */
+	async ping(): Promise<void> {
+		await this.#migrated;
+		this.ctx.storage.sql.exec("SELECT 1");
+	}
+
+	/**
 	 * Destroys everything this object holds, for the control plane's purge job. Nothing
 	 * calls this yet; the job that will is out of scope here.
 	 */
