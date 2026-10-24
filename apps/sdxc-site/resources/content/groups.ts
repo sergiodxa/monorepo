@@ -147,6 +147,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"cron",
 			"backoff",
 			"logger",
+			"health",
 			"trace-context",
 			"rate-limit",
 			"flags",
