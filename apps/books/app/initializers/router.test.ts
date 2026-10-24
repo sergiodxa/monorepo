@@ -28,7 +28,7 @@ beforeEach(() => {
 
 describe("request tracing", () => {
 	test("stamps a new trace on the request's log when the caller sends none", async () => {
-		let response = await fetchApp("/healthcheck");
+		let response = await fetchApp("/sample");
 
 		expect(response.status).toBe(200);
 		expect(records).toHaveLength(1);
@@ -41,7 +41,7 @@ describe("request tracing", () => {
 	});
 
 	test("continues the caller's traceparent", async () => {
-		await fetchApp("/healthcheck", { headers: { traceparent: `00-${TRACE_ID}-${PARENT_ID}-01` } });
+		await fetchApp("/sample", { headers: { traceparent: `00-${TRACE_ID}-${PARENT_ID}-01` } });
 
 		expect(records[0]).toMatchObject({
 			trace_id: TRACE_ID,

@@ -76,19 +76,19 @@ visitor's browser.
 
 ## Routes
 
-| Route                 | Methods | Purpose                                                     |
-| --------------------- | ------- | ----------------------------------------------------------- |
-| `/`                   | GET     | Landing page with the early-access subscribe form           |
-| `/release`            | GET     | Sales page with live prices, packages, FAQ                  |
-| `/sample`             | GET     | The sample-chapter email form                               |
-| `/sample`             | POST    | Subscribes, then renders the sample chapter                 |
-| `/sample/download`    | GET     | The chapter's EPUB for a signed link; `/sample` otherwise   |
-| `/upgrade`            | GET     | The upgrade email form                                      |
-| `/upgrade`            | POST    | Resolves the customer and redirects to the upgrade checkout |
-| `/api/subscribe`      | POST    | Subscribes a visitor and redirects to `/release`            |
-| `/api/checkout/:type` | GET     | Starts a Polar checkout and redirects to it; 404s otherwise |
-| `/webhooks/polar`     | POST    | Verifies and handles `order.paid`                           |
-| `/healthcheck`        | GET     | Plain-text `OK`                                             |
+| Route                 | Methods | Purpose                                                                           |
+| --------------------- | ------- | --------------------------------------------------------------------------------- |
+| `/`                   | GET     | Landing page with the early-access subscribe form                                 |
+| `/release`            | GET     | Sales page with live prices, packages, FAQ                                        |
+| `/sample`             | GET     | The sample-chapter email form                                                     |
+| `/sample`             | POST    | Subscribes, then renders the sample chapter                                       |
+| `/sample/download`    | GET     | The chapter's EPUB for a signed link; `/sample` otherwise                         |
+| `/upgrade`            | GET     | The upgrade email form                                                            |
+| `/upgrade`            | POST    | Resolves the customer and redirects to the upgrade checkout                       |
+| `/api/subscribe`      | POST    | Subscribes a visitor and redirects to `/release`                                  |
+| `/api/checkout/:type` | GET     | Starts a Polar checkout and redirects to it; 404s otherwise                       |
+| `/webhooks/polar`     | POST    | Verifies and handles `order.paid`                                                 |
+| `/health`             | GET     | `application/health+json` report on Polar and Buttondown; 503 when either is down |
 
 ## Scripts
 

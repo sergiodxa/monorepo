@@ -14,7 +14,7 @@ import { form, get, post, route } from "remix/routes";
 export default route({
 	home: get("/"),
 	release: get("/release"),
-	healthcheck: get("/healthcheck"),
+	health: get("/health"),
 
 	/** GET renders the email form; POST unlocks and renders the sample chapter. */
 	sample: form("/sample"),

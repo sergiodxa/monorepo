@@ -36,6 +36,7 @@ export default defineConfig({
 		 * `COOKIE_SECRET` signs the attribution cookie, so a visitor cannot forge the
 		 * campaign a subscriber or a checkout is credited to. `SAMPLE_LINK_SECRET` signs the
 		 * hour-long link to the sample chapter's EPUB, so the file stays behind the email gate.
+		 * `CF_VERSION_METADATA` stamps the deployed version on every `/health` report.
 		 */
 		env: {
 			BUTTONDOWN_API_KEY: bindings.secret(),
@@ -43,6 +44,7 @@ export default defineConfig({
 			POLAR_WEBHOOK_SECRET: bindings.secret(),
 			COOKIE_SECRET: bindings.secret(),
 			SAMPLE_LINK_SECRET: bindings.secret(),
+			CF_VERSION_METADATA: bindings.versionMetadata(),
 		},
 	},
 });

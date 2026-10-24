@@ -114,8 +114,8 @@ export function createWebRouter(provider: Billing = polar, list: Newsletter = bu
 		lazy(() => import("~/app/http/controllers/release")),
 	);
 	router.map(
-		routes.healthcheck,
-		lazy(() => import("~/app/http/controllers/healthcheck")),
+		routes.health,
+		lazy(() => import("~/app/http/controllers/health")),
 	);
 	router.map(
 		routes.sample.index,

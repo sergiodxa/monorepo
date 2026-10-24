@@ -25,7 +25,7 @@ const PRODUCTS = {
 /**
  * Reads a required secret, naming the variable when it is empty, so a missing
  * credential is diagnosable before it reaches Polar as an opaque 401. Both
- * secrets are read lazily, so an isolate still boots and answers `/healthcheck`.
+ * secrets are read lazily, so an isolate still boots and answers `/health`.
  *
  * @param name - The environment variable to read.
  * @returns The secret's value.
