@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for the branch state {@link "./treeKeys"} keeps in step against a real
  * document: a source tree is mounted with the mixin applied, and each

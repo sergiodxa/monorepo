@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./frame-refresh"} against a real frame runtime: the frame reloads on its
  * schedule and on its event, one reload at a time, rests while the page is hidden, and stops

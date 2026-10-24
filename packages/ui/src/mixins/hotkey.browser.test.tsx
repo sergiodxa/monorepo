@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./hotkey"} against a real document, on a host the client inserts and
  * on one an island adopts from server HTML, so a page whose shortcut sits inside a

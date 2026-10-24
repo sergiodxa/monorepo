@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./calendar-keys"} against a real document: a month grid
  * of `data-date` cells is mounted with the mixin applied, then driven by the

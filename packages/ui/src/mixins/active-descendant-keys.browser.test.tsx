@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./active-descendant-keys"}: arrows choose among the options the host
  * controls while focus stays put, Enter follows the chosen one, or the only fresh one, and a
@@ -107,12 +105,17 @@ describe(activeDescendantKeys.name, () => {
 	});
 
 	test("Enter follows a sole option only while its results are not busy", () => {
+		let click = vi.fn((event: Event) => event.preventDefault());
 		let fresh = mount(["/a"]);
+		mounted?.$('a[href="/a"]')?.addEventListener("click", click);
 		expect(press(fresh, "Enter")).toBe(true);
+		expect(click).toHaveBeenCalledOnce();
 		mounted?.cleanup();
 
 		let stale = mount(["/a"], true);
+		mounted?.$('a[href="/a"]')?.addEventListener("click", click);
 		expect(press(stale, "Enter")).toBe(false);
+		expect(click).toHaveBeenCalledOnce();
 	});
 });
 
@@ -179,7 +182,7 @@ describe("prefetching", () => {
 	});
 
 	test("skips another origin and the page already showing", () => {
-		let box = mount(["https://elsewhere.com/x", location.pathname]);
+		let box = mount(["https://elsewhere.com/x", `${location.pathname}${location.search}`]);
 
 		prefetchOption(box, 0, "document");
 		prefetchOption(box, 1, "frame");

@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./grid-list-keys"} against a real document: a grid of
  * keyed rows, one of them holding an action cell, is mounted with the mixin

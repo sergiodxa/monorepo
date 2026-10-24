@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./live-frame"} against a real frame runtime: typing reloads the frame
  * once it pauses, a reload request skips the pause, and only the newest value settles.

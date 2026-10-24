@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./keymap"} against a real document: bindings are put on the document,
  * by the function and by the mixin, and driven by the keystrokes a browser sends from

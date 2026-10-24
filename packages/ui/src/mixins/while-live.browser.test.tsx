@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./while-live"} against a real document: a probe mixin and a probe island
  * count the change events they hear from the target they follow, across mounting,

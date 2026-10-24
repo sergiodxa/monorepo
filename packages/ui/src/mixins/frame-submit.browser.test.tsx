@@ -1,5 +1,3 @@
-// @vitest-environment happy-dom
-
 /**
  * Tests for {@link "./frame-submit"} against a real frame runtime: a submission posts through
  * the frame in one request, honors its submitter, reports its states, and returns the frame
