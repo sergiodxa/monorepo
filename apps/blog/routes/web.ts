@@ -128,4 +128,6 @@ export default route({
 	jsonFeed,
 
 	cms: route("/cms", cms),
+	/** Where browsers report Content Security Policy violations, named by `Reporting-Endpoints`. */
+	cspReports: post("/reports/csp"),
 });

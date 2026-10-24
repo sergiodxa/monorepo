@@ -1,7 +1,7 @@
 /**
- * The blog's response security headers. The Content-Security-Policy is sent Report-Only
- * until the origins article images and embeds load from are audited, and it carries no
- * nonce, because the edge cache replays a stored page to every visitor byte for byte.
+ * The blog's response security headers. The Content-Security-Policy is sent Report-Only,
+ * reporting to `/reports/csp`, until the origins article images and embeds load from are
+ * audited; the import map joins `script-src` by hash, since a cached page carries no nonce.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,7 +26,9 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 		formAction: ["self", "https://auth.sergiodxa.com"],
 		baseUri: ["none"],
 		objectSrc: ["none"],
+		reportTo: "csp",
 	},
+	reportingEndpoints: { csp: "/reports/csp" },
 	strictTransportSecurity: { maxAge: 31536000 },
 	referrerPolicy: "strict-origin-when-cross-origin",
 	crossOriginOpenerPolicy: "same-origin",

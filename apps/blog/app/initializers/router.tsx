@@ -46,6 +46,7 @@ import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import githubWebhook from "~/app/http/middleware/github-webhook";
+import importMapHash from "~/app/http/middleware/import-map-hash";
 import mcpRateLimit from "~/app/http/middleware/mcp-rate-limit";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
@@ -89,6 +90,7 @@ const MACHINE_PATHS = new Set<string>([
 	routes.webmention.href(),
 	routes.activityPub.inbox.href(),
 	routes.sponsorsWebhook.href(),
+	routes.cspReports.href(),
 ]);
 
 /**
@@ -250,6 +252,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 				stylesheets: "resources/layouts/document.tsx",
 				script: "bootstrap/browser.ts",
 			}),
+			htmlOnly(importMapHash()),
 			render({ assets: assetResolver }),
 			viewRenderer(),
 		],
@@ -508,6 +511,10 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	router.map(
 		routes.cms.webmentions,
 		lazy(() => import("~/app/http/controllers/cms/webmentions"), CMS_GUARDS),
+	);
+	router.map(
+		routes.cspReports,
+		lazy(() => import("~/app/http/controllers/csp-reports")),
 	);
 
 	return router;
