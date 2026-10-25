@@ -166,7 +166,7 @@ describe("tokens and agents", () => {
 		let internet = module("algorithms");
 
 		for (let count = 0; count < 30; count++) {
-			expect(["ES256", "RS256", "EdDSA"]).toContain(internet.jwtAlgorithm());
+			expect(["ES256", "RS256", "Ed25519"]).toContain(internet.jwtAlgorithm());
 		}
 	});
 
