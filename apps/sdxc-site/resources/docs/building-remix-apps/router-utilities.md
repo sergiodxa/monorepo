@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 7
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to redirect to one canonical host and path with the trailing-slash and no-www middleware"
     - "How to end a request from any depth by throwing a `Response`"
@@ -150,10 +150,10 @@ make every caller check, or end the request itself. The router only reads the va
 returns, so a thrown `Response` escapes as a rejected promise and becomes a `500`.
 `catchResponse()` catches it and answers with it, which makes the second way work:
 
-```typescript {% title="app/http/middleware/require-user.ts" %}
+```typescript {% title="app/services/require-user.ts" %}
 import { redirect } from "@sdxc/http/response";
 
-import { currentUser } from "~/app/http/session";
+import { currentUser } from "~/app/services/current-user";
 import routes from "~/routes/web";
 
 export async function requireUser() {
@@ -170,7 +170,7 @@ Every call site gets a user, with no branch of its own:
 ```tsx {% title="app/http/controllers/billing.tsx" %}
 import { createAction } from "remix/router";
 
-import { requireUser } from "~/app/http/middleware/require-user";
+import { requireUser } from "~/app/services/require-user";
 import { Invoices } from "~/app/models/invoices";
 import { BillingPage } from "~/resources/views/billing";
 import routes from "~/routes/web";
@@ -184,17 +184,16 @@ export default createAction(routes.billing, async (ctx) => {
 
 `currentUser` is your own lookup of the session's user, reading the request through Remix's
 `asyncContext()` middleware so it needs no argument. `catchResponse()` returns the thrown
-response untouched, and anything that is not a `Response` is thrown again as it was, so a real
-bug still reaches the runtime with its stack: this is not an error boundary.
+response untouched and rethrows anything else as it was, so a real bug still reaches the
+runtime with its stack.
 
 <warning>
 A throw unwinds the chain, so a middleware between the throw and the catch never resumes
 after its own `next()`, and whatever it meant to add to the response is lost. Put
 `catchResponse()` below every middleware that reads or decorates the response, such as the
-session middleware that commits the `Set-Cookie`.
+session middleware that commits the `Set-Cookie`, as the router in
+[Import each route on first use](#import-each-route-on-first-use) does.
 </warning>
-
-The next section shows it in place.
 
 A redirect thrown from the action unwinds only as far as the catch:
 
