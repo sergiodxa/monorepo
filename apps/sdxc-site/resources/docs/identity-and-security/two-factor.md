@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 6
 order: 8
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to enroll an authenticator app and confirm its first TOTP code"
     - "How to ask for a code after the password and spend each code once"
@@ -291,8 +291,8 @@ export async function spendRecoveryCode(db: Database, userId: string, code: stri
 ```
 
 Each code is 10 random bytes, 80 bits, which no guessing budget behind a rate limit gets near.
-They use `Base32` over `randomBytes` rather than `randomToken`, whose base64url suits tokens a
-browser carries: a person types these, and base32 has one case and no `0` or `1`. Shown
+They are encoded with `Base32` because a person types them, and base32 has one case and no `0`
+or `1`. Shown
 as `ABCD-EFGH-JKLM-NPQR`, a code is folded back before hashing, so hyphens, spaces and case
 never matter. A plain `sha256` is enough, as for the reset tokens in the Web Crypto guide,
 because the codes carry their own entropy.
@@ -369,8 +369,8 @@ export default createAction(routes.twoFactor.confirm, async (ctx) => {
 
 ## Ask for the code after the password
 
-The password step no longer signs the user in when they have a factor. It holds the sign-in in
-the session for a few minutes and sends the browser to the code page:
+For a user with a confirmed factor, the password step holds the sign-in in the session for a
+few minutes and sends the browser to the code page:
 
 ```typescript {% title="app/services/auth/pending-sign-in.ts" %}
 import type { RequestContext } from "remix/router";
@@ -402,8 +402,8 @@ export function completeSignIn(ctx: RequestContext, userId: string) {
 `sessionOf` reads the session Remix's session middleware put on the context. In your password
 action, once the password checks out, look the factor up: when it is confirmed, call
 `holdSignIn(ctx, user.id)` and redirect to the code page; otherwise call `completeSignIn`
-directly. The pending entry is not a signed-in session, since nothing reads `userId` from it,
-and it expires, so a password alone never gets further than the code page.
+directly. The pending entry lives under its own key and expires, and the app reads only
+`userId` as signed in, so a password alone reaches the code page and stops there.
 
 The code page accepts a current code or a recovery code:
 
@@ -466,8 +466,8 @@ user, as in [Protect forms from bots and abuse](/docs/identity-and-security/prot
 
 ## Turn two-factor off
 
-Turning the factor off should take the same proof as signing in with it, so a session left
-open on a shared computer is not enough to remove it:
+Turning the factor off takes the same proof as signing in with it, so only someone holding the
+app or a recovery code can remove it, whoever is sitting at an open session:
 
 ```typescript {% title="app/services/two-factor/disable.ts" %}
 import type { Database } from "remix/data-table";
