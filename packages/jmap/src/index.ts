@@ -130,4 +130,3 @@ export { JMAP } from "./jmap.js";
 export { parsePush, readPushEvents } from "./push.js";
 export { ResultReference, resolveReference } from "./reference.js";
 export { BatchResponse } from "./response.js";
-export { expand } from "./uri-template.js";

@@ -1280,6 +1280,7 @@
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uri-template": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },

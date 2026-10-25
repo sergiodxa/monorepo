@@ -189,7 +189,8 @@ The call's response, or its `error`. A call the server left unanswered fails as 
 ### `JMAPRequestError`
 
 `code` is `problem` (an HTTP error with problem details in `problem`), `http`, `network` or
-`invalid-response`. `status` is the HTTP status; `type` is the JMAP problem type without its URN
+`invalid-response` (also a Session URL template RFC 6570 rejects, with the
+[`@sdxc/uri-template`](https://www.npmjs.com/package/@sdxc/uri-template) error as `cause`). `status` is the HTTP status; `type` is the JMAP problem type without its URN
 prefix (`unknownCapability`, `notJSON`, `notRequest`, `limit`) and `limit` the limit a `limit`
 problem names.
 
@@ -210,10 +211,6 @@ Reads a push service's JSON body.
 ### `readPushEvents(stream)` and `readEventStream(stream)`
 
 Read a `text/event-stream` body as JMAP `state` and `ping` events, or as raw server-sent events.
-
-### `expand(template: string, variables: Record<string, string>): string`
-
-RFC 6570 level 1 expansion, as the Session's URL templates use.
 
 ### `CAPABILITIES`
 

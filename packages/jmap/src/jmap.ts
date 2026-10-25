@@ -9,11 +9,13 @@
 
 import type { Problem } from "@sdxc/problem";
 import type { Result } from "@sdxc/result";
+import type { Variables } from "@sdxc/uri-template";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { APIClient } from "@sdxc/api-client";
 import { parse as parseProblem } from "@sdxc/problem";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
+import { expand } from "@sdxc/uri-template";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 
@@ -27,7 +29,6 @@ import { JMAPRequestError } from "./error.js";
 import { readPushEvents } from "./push.js";
 import { BatchResponse, RESPONSE_SCHEMA } from "./response.js";
 import { SESSION_SCHEMA } from "./session.js";
-import { expand } from "./uri-template.js";
 
 /** The structural check an upload's answer passes. */
 const UPLOAD_SCHEMA = s.object({
@@ -164,7 +165,9 @@ export class JMAP extends APIClient {
 	): Promise<Result<UploadedBlob, JMAPRequestError>> {
 		let session = await this.session();
 		if (isFailure(session)) return session;
-		let response = await this.#send(expand(session.data.uploadUrl, { accountId }), {
+		let url = expandUrl(session.data.uploadUrl, { accountId }, "uploadUrl");
+		if (isFailure(url)) return url;
+		let response = await this.#send(url.data, {
 			method: "POST",
 			headers: { Accept: "application/json", "Content-Type": type },
 			body,
@@ -182,13 +185,18 @@ export class JMAP extends APIClient {
 	async download(options: DownloadOptions): Promise<Result<Response, JMAPRequestError>> {
 		let session = await this.session();
 		if (isFailure(session)) return session;
-		let url = expand(session.data.downloadUrl, {
-			accountId: options.accountId,
-			blobId: options.blobId,
-			name: options.name,
-			type: options.type,
-		});
-		return await this.#send(url, { method: "GET" });
+		let url = expandUrl(
+			session.data.downloadUrl,
+			{
+				accountId: options.accountId,
+				blobId: options.blobId,
+				name: options.name,
+				type: options.type,
+			},
+			"downloadUrl",
+		);
+		if (isFailure(url)) return url;
+		return await this.#send(url.data, { method: "GET" });
 	}
 
 	/**
@@ -202,14 +210,23 @@ export class JMAP extends APIClient {
 	): Promise<Result<AsyncGenerator<PushEvent, void, undefined>, JMAPRequestError>> {
 		let session = await this.session();
 		if (isFailure(session)) return session;
-		let url = expand(session.data.eventSourceUrl, {
-			types: options.types === undefined ? "*" : options.types.join(","),
-			closeafter: options.closeAfter ?? "no",
-			ping: String(options.ping ?? 300),
-		});
+		let url = expandUrl(
+			session.data.eventSourceUrl,
+			{
+				types: options.types === undefined ? "*" : options.types.join(","),
+				closeafter: options.closeAfter ?? "no",
+				ping: String(options.ping ?? 300),
+			},
+			"eventSourceUrl",
+		);
+		if (isFailure(url)) return url;
 		let headers = new Headers({ Accept: "text/event-stream" });
 		if (options.lastEventId !== undefined) headers.set("Last-Event-ID", options.lastEventId);
-		let response = await this.#send(url, { method: "GET", headers, signal: options.signal });
+		let response = await this.#send(url.data, {
+			method: "GET",
+			headers,
+			signal: options.signal,
+		});
 		if (isFailure(response)) return response;
 		if (response.data.body === null) {
 			return failure(new JMAPRequestError("invalid-response", "The event source sent no body."));
@@ -300,4 +317,26 @@ async function readJson<Output>(
 		);
 	}
 	return success(checked.data);
+}
+
+/**
+ * Expands one of the Session's URL templates. The template is the server's, so a malformed
+ * one fails as an `invalid-response` whose `cause` is the `UriTemplateError` naming the offset.
+ *
+ * @param template - The Session's template.
+ * @param variables - The values by name.
+ * @param member - The Session member the template came from, for the error message.
+ */
+function expandUrl(
+	template: string,
+	variables: Variables,
+	member: string,
+): Result<string, JMAPRequestError> {
+	let url = expand(template, variables);
+	if (isSuccess(url)) return url;
+	return failure(
+		new JMAPRequestError("invalid-response", `The Session's ${member} is not a URI Template.`, {
+			cause: url.error,
+		}),
+	);
 }

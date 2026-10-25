@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isFailure, isSuccess } from "@sdxc/result";
+import { UriTemplateError } from "@sdxc/uri-template";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -360,6 +361,15 @@ describe("blobs", () => {
 		});
 
 		expect(isFailure(result) && [result.error.code, result.error.status]).toEqual(["problem", 404]);
+	});
+
+	test("fails with invalid-response when the Session's template is malformed", async () => {
+		serveSession({ ...SESSION, uploadUrl: "https://jmap.example.com/upload/{accountId/" });
+
+		let result = await client().upload("A13824", "hello", "text/plain");
+
+		expect(isFailure(result) && result.error.code).toBe("invalid-response");
+		expect(isFailure(result) && result.error.cause).toBeInstanceOf(UriTemplateError);
 	});
 });
 
