@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 5
 order: 4
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to write a client class that attaches credentials once"
     - "How to validate every response and read it one way"
@@ -217,9 +217,9 @@ the first attempt: a key minted per attempt makes each retry a new request, and 
 timeout creates the book twice.
 </warning>
 
-For a client
-that should protect every write without asking, `applyIdempotencyKey(request)` in `before`
-sets a fresh key on each `POST` or `PATCH` that has none.
+For a client that should protect every write without asking, call
+`applyIdempotencyKey(request)` in `before`: it sets a fresh key on each `POST` or `PATCH` that
+has none and returns a `Result`, failing only when a key cannot be sent as a header.
 
 ## Branch on the problem
 
