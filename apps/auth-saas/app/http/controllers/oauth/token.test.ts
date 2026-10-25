@@ -201,7 +201,14 @@ describe("authorization_code grant", () => {
 		expect(body.scope).toBe("openid offline_access");
 	});
 
-	test("a client_id presented both in Basic and the form body is invalid_request", async () => {
+	/**
+	 * Exchanges a fresh code with `Basic` credentials and extra form fields.
+	 *
+	 * @param extra - Form fields beside the grant's own.
+	 */
+	async function exchangeWithBasic(
+		extra: (clientId: string, secret: string) => Record<string, string>,
+	) {
 		let { client, secret } = await createTestClient();
 		let { subjectId, sessionId } = await createTestSubjectAndSession();
 		let { code, codeVerifier } = await createTestCode({
@@ -210,22 +217,41 @@ describe("authorization_code grant", () => {
 			sessionId,
 		});
 
-		let response = await buildRouter().fetch(
+		return await buildRouter().fetch(
 			tokenRequest(
 				{
 					grant_type: "authorization_code",
 					code,
 					code_verifier: codeVerifier,
 					redirect_uri: REDIRECT_URI,
-					client_id: client.id,
+					...extra(client.id, secret ?? ""),
 				},
 				{ Authorization: `Basic ${Base64.encode(`${client.id}:${secret}`)}` },
 			),
 		);
+	}
+
+	test("accepts a body client_id naming the client Basic authenticated", async () => {
+		let response = await exchangeWithBasic((clientId) => ({ client_id: clientId }));
+
+		expect(response.status).toBe(200);
+	});
+
+	test("refuses a body client_id naming another client than Basic", async () => {
+		let response = await exchangeWithBasic(() => ({ client_id: "someone-else" }));
 
 		expect(response.status).toBe(400);
-		let body = (await response.json()) as Record<string, unknown>;
-		expect(body.error).toBe("invalid_request");
+		expect(((await response.json()) as Record<string, unknown>).error).toBe("invalid_request");
+	});
+
+	test("refuses a client secret sent both in Basic and the form body", async () => {
+		let response = await exchangeWithBasic((clientId, secret) => ({
+			client_id: clientId,
+			client_secret: secret,
+		}));
+
+		expect(response.status).toBe(400);
+		expect(((await response.json()) as Record<string, unknown>).error).toBe("invalid_request");
 	});
 
 	test("a wrong client secret is invalid_client at 401 with a Basic challenge", async () => {

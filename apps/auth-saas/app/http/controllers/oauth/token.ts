@@ -55,14 +55,15 @@ function stringFields(form: FormData, name: string): string[] {
 /**
  * Resolves which of the token endpoint's three credential shapes a request
  * presented: `Basic` in `Authorization`, `client_secret` in the form body, or a
- * form-only `client_id` with no secret at all.
+ * form-only `client_id` with no secret at all. A body `client_id` beside `Basic` must
+ * name the same client, and a secret in both places is refused.
  */
 export function resolveClientAuth(request: Request, form: FormData): ClientAuthResult {
 	let authorization = request.headers.get("Authorization");
 	let formClientId = stringField(form, "client_id");
 
 	if (authorization?.startsWith("Basic ")) {
-		if (formClientId !== null) {
+		if (stringField(form, "client_secret") !== null) {
 			return {
 				ok: false,
 				status: 400,
@@ -79,10 +80,21 @@ export function resolveClientAuth(request: Request, form: FormData): ClientAuthR
 		let separator = credentials.indexOf(":");
 		if (separator === -1) return INVALID_BASIC_HEADER;
 
+		let clientId = decodeURIComponent(credentials.slice(0, separator));
+		if (formClientId !== null && formClientId !== clientId) {
+			return {
+				ok: false,
+				status: 400,
+				error: "invalid_request",
+				description:
+					"The client_id in the request body names another client than the Authorization header.",
+			};
+		}
+
 		return {
 			ok: true,
 			auth: {
-				clientId: decodeURIComponent(credentials.slice(0, separator)),
+				clientId,
 				clientSecret: decodeURIComponent(credentials.slice(separator + 1)),
 				authScheme: "basic",
 			},
