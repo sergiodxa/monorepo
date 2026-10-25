@@ -2007,6 +2007,7 @@
         "@sdxc/passkey": "workspace:*",
         "@sdxc/password-policy": "workspace:*",
         "@sdxc/png": "workspace:*",
+        "@sdxc/privacy-pass": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/qr": "workspace:*",
         "@sdxc/random": "workspace:*",
