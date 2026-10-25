@@ -78,7 +78,7 @@ interface FrameTransitionState {
  * mixin instance reacting to the same Frame's `reloadStart` reuses the one
  * transition already opened for it instead of opening a second.
  */
-const frameTransitions = new WeakMap<FrameHandle, FrameTransitionState>();
+const FRAME_TRANSITIONS = new WeakMap<FrameHandle, FrameTransitionState>();
 
 /**
  * Opens (or reuses) the native transition wrapping `frame`'s current reload,
@@ -88,7 +88,7 @@ const frameTransitions = new WeakMap<FrameHandle, FrameTransitionState>();
  * @param frame Frame whose reload this transition wraps.
  */
 function ensureFrameTransition(frame: FrameHandle): FrameTransitionState {
-	let existing = frameTransitions.get(frame);
+	let existing = FRAME_TRANSITIONS.get(frame);
 	if (existing) return existing;
 
 	let state: FrameTransitionState = { transition: null, completed: false };
@@ -104,7 +104,7 @@ function ensureFrameTransition(frame: FrameHandle): FrameTransitionState {
 		);
 	}
 
-	frameTransitions.set(frame, state);
+	FRAME_TRANSITIONS.set(frame, state);
 	return state;
 }
 
@@ -116,12 +116,12 @@ function ensureFrameTransition(frame: FrameHandle): FrameTransitionState {
  * @param frame Frame whose reload just finished.
  */
 function settleFrameTransition(frame: FrameHandle): void {
-	let state = frameTransitions.get(frame);
+	let state = FRAME_TRANSITIONS.get(frame);
 	if (!state) return;
 
 	state.completed = true;
 	state.resolveUpdate?.();
-	frameTransitions.delete(frame);
+	FRAME_TRANSITIONS.delete(frame);
 }
 
 /**
