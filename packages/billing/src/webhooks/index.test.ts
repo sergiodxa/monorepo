@@ -7,11 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Middleware, RouterContext } from "remix/router";
+
 import { Log } from "@sdxc/logger";
-import { unwrap } from "@sdxc/result";
+import { failure, success, unwrap } from "@sdxc/result";
 import { sign } from "@sdxc/webhooks";
-import { createRouter, RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { createContextKey, createRouter, RequestContext } from "remix/router";
+import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { Order, Subscription } from "../core/types.js";
 
@@ -59,6 +61,22 @@ async function buy(billing: MemoryBilling): Promise<{ order: Order; subscription
 		order: await unwrap(billing.orders.find(checkout.orderId ?? "")),
 		subscription: await unwrap(billing.subscriptions.find(checkout.subscriptionId ?? "")),
 	};
+}
+
+/** The tenant a middleware publishes, standing in for a service such as `ctx.db`. */
+const TENANT = createContextKey<string>();
+
+/** Publishes the tenant as `ctx.tenant`, the way an app publishes its services. */
+function tenant(): Middleware<{ key: typeof TENANT; value: string; property: "tenant" }> {
+	return async (context, next) => {
+		context.set(TENANT, "acme", { property: "tenant" });
+		return next();
+	};
+}
+
+/** A router whose middleware publishes `ctx.tenant`, so its context type carries it. */
+function tenantRouter() {
+	return createRouter({ middleware: [tenant()] });
 }
 
 /** Builds the context the endpoint answers, carrying the delivery as received. */
@@ -413,5 +431,100 @@ describe("BillingWebhook", () => {
 
 		expect(response.status).toBe(200);
 		expect(paid).toEqual([order.id]);
+	});
+
+	test("reports a returned Failure like a thrown error and leaves the delivery unprocessed", async () => {
+		let billing = new MemoryBilling({ catalog: CATALOG });
+		let { order } = await buy(billing);
+		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
+
+		let store = new MemoryWebhookStore();
+
+		let endpoint = new BillingWebhook(
+			billing,
+			{
+				async "order.paid"() {
+					return failure(new Error("grant failed"));
+				},
+			},
+			{ store },
+		);
+
+		let { response, record } = await recorded(() => endpoint.handler(context(delivery.request)));
+
+		expect(response.status).toBe(200);
+		expect(noteNames(record)).toEqual(["billing.webhook.handler_failed"]);
+		expect((record.notes as Log.Note[])[0]?.error).toBe("grant failed");
+		expect((await store.find(delivery.event.id))?.processed).toBe(false);
+	});
+
+	test("asks for another delivery when a returned Failure is retryable", async () => {
+		let billing = new MemoryBilling({ catalog: CATALOG });
+		let { order } = await buy(billing);
+		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
+
+		let endpoint = new BillingWebhook(billing, {
+			async "order.paid"() {
+				return failure(
+					new BillingError("platform is down", {
+						code: "rate_limited",
+						connection: billing.connection,
+					}),
+				);
+			},
+		});
+
+		expect((await endpoint.handler(context(delivery.request))).status).toBe(503);
+	});
+
+	test("settles a delivery whose handler returns a Success", async () => {
+		let billing = new MemoryBilling({ catalog: CATALOG });
+		let { order } = await buy(billing);
+		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
+
+		let store = new MemoryWebhookStore();
+
+		let endpoint = new BillingWebhook(
+			billing,
+			{
+				async "order.paid"() {
+					return success(null);
+				},
+			},
+			{ store },
+		);
+
+		expect((await endpoint.handler(context(delivery.request))).status).toBe(200);
+		expect((await store.find(delivery.event.id))?.processed).toBe(true);
+	});
+
+	test("hands every handler the router's own context, services included", async () => {
+		let billing = new MemoryBilling({ catalog: CATALOG });
+		let { order } = await buy(billing);
+		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
+
+		let router = tenantRouter();
+		let tenants: string[] = [];
+
+		let endpoint = new BillingWebhook<RouterContext<typeof router>>(billing, {
+			async "order.paid"(_event, ctx) {
+				expectTypeOf(ctx).toEqualTypeOf<RouterContext<typeof router>>();
+				expectTypeOf(ctx.tenant).toEqualTypeOf<string>();
+				tenants.push(ctx.tenant);
+			},
+		});
+
+		router.post("/webhooks/billing", (ctx) => endpoint.handler(ctx));
+
+		let response = await router.fetch(
+			new Request("https://example.com/webhooks/billing", {
+				method: "POST",
+				headers: delivery.headers,
+				body: delivery.body,
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(tenants).toEqual(["acme"]);
 	});
 });

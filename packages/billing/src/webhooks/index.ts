@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { RequestContext, RequestHandler } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
@@ -27,6 +28,10 @@ type PerType<Event> = Event extends { type: infer Type extends string }
 		: never
 	: never;
 
+/** Any router's request context, whatever params and entries its middleware built. */
+// oxlint-disable-next-line typescript/no-explicit-any -- matches every route's params and entries
+type AnyRequestContext = RequestContext<any, any>;
+
 /** Every delivery name a handler can be keyed by. */
 export type BillingEventType = BillingEvent["type"];
 
@@ -40,27 +45,48 @@ export type BillingEventOf<Type extends BillingEventType> = Extract<
 >;
 
 /**
- * What an app does about one kind of delivery. Throwing reports the failure,
- * which the endpoint records and turns into a retry when the error is retryable.
+ * What a handler settles with: nothing, or a `Result` whose `Failure` reports
+ * the error the endpoint turns into a retry when the error is retryable.
  */
-export interface BillingWebhookHandler<Type extends BillingEventType> {
-	(event: BillingEventOf<Type>, context: RequestContext): void | Promise<void>;
+export type BillingWebhookOutcome = void | Result<unknown, Error>;
+
+/**
+ * What an app does about one kind of delivery. A returned `Failure` reports the
+ * failure, and a thrown error is reported the same way, so the delivery is left
+ * unprocessed and retried when the error is retryable.
+ *
+ * @template Type - The delivery name the handler is keyed by.
+ * @template Context - The request context the endpoint is called with.
+ */
+export interface BillingWebhookHandler<
+	Type extends BillingEventType,
+	Context extends AnyRequestContext = RequestContext,
+> {
+	(
+		event: BillingEventOf<Type>,
+		context: Context,
+	): BillingWebhookOutcome | Promise<BillingWebhookOutcome>;
 }
 
 /**
  * Handlers keyed by delivery name, derived from the event union so a misspelled
  * key is a type error and every handler sees a narrowed event. A name with no
  * handler is still acknowledged.
+ *
+ * @template Context - The request context every handler receives.
  */
-export type BillingWebhookHandlers = {
-	[Type in BillingEventType]?: BillingWebhookHandler<Type>;
+export type BillingWebhookHandlers<Context extends AnyRequestContext = RequestContext> = {
+	[Type in BillingEventType]?: BillingWebhookHandler<Type, Context>;
 };
 
 /**
  * The dispatch signature a name has already narrowed, so one lookup serves
  * every arm instead of a branch per delivery name.
  */
-type BillingEventDispatch = (event: BillingEvent, context: RequestContext) => void | Promise<void>;
+type BillingEventDispatch<Context> = (
+	event: BillingEvent,
+	context: Context,
+) => BillingWebhookOutcome | Promise<BillingWebhookOutcome>;
 
 /** One delivery as the store holds it, which is the row an audit reads. */
 export interface WebhookDelivery {
@@ -141,6 +167,25 @@ function retryableFailure(error: unknown): boolean {
 }
 
 /**
+ * Runs a handler and reduces both ways it can fail, a returned `Failure` and a
+ * thrown error, to the one error the retry policy judges.
+ *
+ * @returns The failure to report, or `null` when the handler completed.
+ */
+async function settleHandler<Context>(
+	handler: BillingEventDispatch<Context>,
+	event: BillingEvent,
+	context: Context,
+): Promise<{ error: unknown } | null> {
+	try {
+		let outcome = await handler(event, context);
+		return outcome !== undefined && isFailure(outcome) ? { error: outcome.error } : null;
+	} catch (error) {
+		return { error };
+	}
+}
+
+/**
  * Keeps deliveries for the life of the process, which is what a test drives a
  * redelivery against without standing up a table.
  *
@@ -192,22 +237,23 @@ export class MemoryWebhookStore implements WebhookStore {
  * everything it can account for, because an error response is how a platform
  * decides an endpoint is broken and stops calling it.
  *
+ * @template Context - The router's request context, which every handler receives as is.
  * @example
- * export default new BillingWebhook(polar, {
- * 	async "order.paid"(event) { await grantAccess(event.order); },
+ * export default new BillingWebhook<AppContext>(polar, {
+ * 	async "order.paid"(event, ctx) { return ctx.db.grantAccess(event.order); },
  * });
  */
-export class BillingWebhook {
+export class BillingWebhook<Context extends AnyRequestContext = RequestContext> {
 	/**
 	 * Answers one delivery: verifies it, records it with the verdict, skips a
 	 * replay that already ran, and dispatches the normalized event. Bound to the
 	 * instance, so `router.map(route, endpoint)` mounts it directly.
 	 */
-	readonly handler: RequestHandler;
+	readonly handler: RequestHandler<Context>;
 
 	#provider: Billing;
 
-	#handlers: BillingWebhookHandlers;
+	#handlers: BillingWebhookHandlers<Context>;
 
 	#store: WebhookStore | null;
 
@@ -223,7 +269,7 @@ export class BillingWebhook {
 	 */
 	constructor(
 		provider: Billing,
-		handlers: BillingWebhookHandlers,
+		handlers: BillingWebhookHandlers<Context>,
 		options: BillingWebhookOptions = {},
 	) {
 		this.#provider = provider;
@@ -240,7 +286,7 @@ export class BillingWebhook {
 	 * log gets the delivery, the provider, and the verdict as fields, so a query
 	 * finds every replay or forged delivery a connection received.
 	 */
-	async #respond(context: RequestContext): Promise<Response> {
+	async #respond(context: Context): Promise<Response> {
 		let log = currentLog();
 		let rawBody = await context.request.text();
 
@@ -302,13 +348,9 @@ export class BillingWebhook {
 	 * platform will redeliver fails the log, since the request answers `503`;
 	 * one acknowledged with `200` degrades it, since the request itself succeeded.
 	 */
-	async #dispatch(
-		event: BillingEvent,
-		key: string | null,
-		context: RequestContext,
-	): Promise<Response> {
+	async #dispatch(event: BillingEvent, key: string | null, context: Context): Promise<Response> {
 		let log = currentLog();
-		let handler = this.#handlers[event.type] as BillingEventDispatch | undefined;
+		let handler = this.#handlers[event.type] as BillingEventDispatch<Context> | undefined;
 
 		log?.set({ "billing.webhook": { event: event.type, handled: handler !== undefined } });
 
@@ -318,17 +360,17 @@ export class BillingWebhook {
 			return new Response(null, { status: OK });
 		}
 
-		try {
-			await handler(event, context);
-		} catch (error) {
-			if (this.#retry(error, event)) {
-				log?.fail(error, { "billing.webhook": { retried: true } });
+		let failure = await settleHandler(handler, event, context);
+
+		if (failure !== null) {
+			if (this.#retry(failure.error, event)) {
+				log?.fail(failure.error, { "billing.webhook": { retried: true } });
 				return new Response(null, { status: RETRY_LATER });
 			}
 
 			log?.warn("billing.webhook.handler_failed", {
 				event: event.type,
-				error: error instanceof Error ? error.message : String(error),
+				error: failure.error instanceof Error ? failure.error.message : String(failure.error),
 			});
 
 			return new Response(null, { status: OK });

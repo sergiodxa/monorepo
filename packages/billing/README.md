@@ -222,14 +222,16 @@ let major = amount / 10 ** minorUnitDigits(currency); // ¥5,000 stays 5000
 
 ### `BillingWebhook`
 
-`new BillingWebhook(provider, handlers, options?)` builds the endpoint; the instance mounts as a
-route action, and `endpoint.handler` is its bound `RequestHandler`. `handlers` maps an event type
-to `(event, context) => void | Promise<void>`, typed per event. With `options.store`, a delivery
+`new BillingWebhook<Context>(provider, handlers, options?)` builds the endpoint; the instance mounts
+as a route action, and `endpoint.handler` is its bound `RequestHandler<Context>`. `handlers` maps
+an event type to `(event, context) => void | Result`, typed per event, with `context` typed as the
+`Context` you pass (your router's `RouterContext`, so `ctx.db` and other published services are
+typed; it defaults to `RequestContext`). With `options.store`, a delivery
 already processed answers `200` without running anything, and every delivery is recorded with its
 `valid` verdict before it is trusted.
 
-An unverified delivery answers `401`. Everything else answers `200`, except a handler throwing an
-error `options.retry(error, event)` accepts, which answers `503` so the platform redelivers;
+An unverified delivery answers `401`. Everything else answers `200`, except a handler returning a
+`Failure` (or throwing) whose error `options.retry(error, event)` accepts, which answers `503` so the platform redelivers;
 `retry` defaults to a `BillingError` marked `retryable`. Only a delivery whose handler completed
 (or that had no handler) is marked processed.
 
@@ -391,8 +393,8 @@ undeclared one is absent.
 ## Pattern: Keeping An Entitlement Projection In Sync
 
 Each handler re-reads the customer's snapshot instead of applying the payload: deliveries arrive
-out of order and get replayed, so the event is a hint and the snapshot is the state. Throwing a
-retryable error answers `503`, and the platform delivers again.
+out of order and get replayed, so the event is a hint and the snapshot is the state. Returning a
+`Failure` with a retryable error answers `503`, and the platform delivers again.
 
 ```typescript
 import { BillingWebhook } from "@sdxc/billing";
@@ -400,10 +402,10 @@ import { isFailure } from "@sdxc/result";
 
 import { billing } from "./billing.js";
 
-async function sync(customerId: string | null): Promise<void> {
+async function sync(customerId: string | null) {
 	if (customerId === null) return;
 	let state = await billing.entitlements.of({ id: customerId });
-	if (isFailure(state)) throw state.error;
+	if (isFailure(state)) return state;
 	await writeProjection(customerId, state.data);
 }
 
