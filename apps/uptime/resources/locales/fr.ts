@@ -3534,6 +3534,65 @@ export default {
 				},
 			},
 
+			/** Email-authentication findings for the monitored domain, one sentence per finding. */
+			emailAuth: {
+				title: "Authentification des e-mails",
+				description:
+					"Comment les destinataires distinguent les e-mails authentiques de ce domaine des contrefaçons, d'après ses enregistrements DMARC, SPF, MTA-STS et TLS-RPT.",
+				empty: "Aucun problème trouvé.",
+
+				severity: {
+					critical: "Critique",
+					warning: "Avertissement",
+					notice: "Remarque",
+				},
+
+				findings: {
+					dmarcMissing:
+						"{$domain} ne publie aucune politique DMARC : les destinataires n'ont aucune consigne pour les e-mails qui échouent à l'authentification, et n'importe qui peut envoyer au nom de ce domaine.",
+					dmarcMultiple:
+						"{$domain} publie plusieurs enregistrements DMARC, que les destinataires ignorent tous. N'en gardez qu'un.",
+					dmarcPolicyNone:
+						"La politique DMARC de {$domain} est p=none, qui ne fait que surveiller. Passez à p=quarantine ou p=reject quand vos rapports montrent que les e-mails légitimes passent.",
+					dmarcTesting:
+						"La politique DMARC de {$domain} définit t=y : les destinataires appliquent un niveau de moins que la politique publiée. Retirez t=y une fois les tests terminés.",
+					dmarcNoReports:
+						"La politique DMARC de {$domain} n'a pas d'adresse rua : aucun destinataire n'envoie de rapports agrégés sur les e-mails utilisant ce domaine.",
+					dmarcInvalidTags:
+						"La politique DMARC de {$domain} contient des valeurs que les destinataires ignorent : {$tags}.",
+					spfMissing:
+						"{$domain} ne publie aucun enregistrement SPF : les destinataires ne peuvent pas vérifier quels serveurs peuvent envoyer ses e-mails.",
+					spfMultiple:
+						"{$domain} publie plusieurs enregistrements SPF, ce qui fait échouer chaque vérification SPF avec une erreur permanente. Fusionnez-les en un seul.",
+					spfInvalid:
+						"L'enregistrement SPF de {$domain} contient une erreur de syntaxe, ce qui fait échouer chaque vérification SPF avec une erreur permanente.",
+					spfTooManyLookups:
+						"L'enregistrement SPF de {$domain} nécessite {$count} requêtes DNS. Les destinataires s'arrêtent à 10 et font échouer la vérification : supprimez ou aplatissez des include.",
+					spfBrokenInclude:
+						"L'enregistrement SPF de {$domain} inclut {$target}, qui n'a pas d'enregistrement SPF utilisable : les vérifications qui l'atteignent échouent avec une erreur permanente.",
+					spfPermissiveAll:
+						"L'enregistrement SPF de {$domain} se termine par +all, ce qui autorise n'importe quel serveur d'internet à envoyer au nom de ce domaine.",
+					spfPtr:
+						"L'enregistrement SPF de {$domain} utilise le mécanisme ptr, lent et ignoré par de nombreux destinataires.",
+					mtaStsMissing:
+						"{$domain} ne publie aucune politique MTA-STS : les expéditeurs n'utilisent TLS que s'il est proposé et ne vérifient jamais le certificat de votre serveur de messagerie.",
+					mtaStsInvalid:
+						"L'enregistrement MTA-STS de {$domain} est invalide ou en double : les expéditeurs ignorent la politique.",
+					mtaStsTesting:
+						"La politique MTA-STS de {$domain} est en mode test : les expéditeurs signalent les échecs TLS mais livrent quand même sur une connexion non vérifiée.",
+					mtaStsPolicyUnreachable:
+						"Le fichier de politique MTA-STS à {$url} n'a pas pu être récupéré : les expéditeurs considèrent que le domaine n'a pas de politique.",
+					mtaStsMxMismatch:
+						"Le serveur de messagerie {$host} ne figure pas dans la politique MTA-STS de {$domain} : les expéditeurs qui appliquent la politique ne lui livreront pas de courrier.",
+					tlsRptMissing:
+						"{$domain} ne publie aucun enregistrement TLS-RPT : les expéditeurs ne vous signalent pas les échecs de livraison TLS.",
+					tlsRptInvalid:
+						"L'enregistrement TLS-RPT de {$domain} est invalide ou en double : les expéditeurs n'envoient aucun rapport.",
+					lookupFailed:
+						"Les enregistrements {$record} n'ont pas pu être consultés. Ils seront vérifiés à nouveau lors de la prochaine exécution.",
+				},
+			},
+
 			stats: {
 				totalChecks: {
 					label: "Total des vérifications",

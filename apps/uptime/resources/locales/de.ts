@@ -3533,6 +3533,65 @@ export default {
 				},
 			},
 
+			/** Email-authentication findings for the monitored domain, one sentence per finding. */
+			emailAuth: {
+				title: "E-Mail-Authentifizierung",
+				description:
+					"Wie Empfänger echte E-Mails dieser Domain von Fälschungen unterscheiden, gelesen aus ihren DMARC-, SPF-, MTA-STS- und TLS-RPT-Einträgen.",
+				empty: "Keine Probleme gefunden.",
+
+				severity: {
+					critical: "Kritisch",
+					warning: "Warnung",
+					notice: "Hinweis",
+				},
+
+				findings: {
+					dmarcMissing:
+						"{$domain} veröffentlicht keine DMARC-Richtlinie. Empfänger haben daher keine Anweisung für E-Mails, die die Authentifizierung nicht bestehen, und jeder kann im Namen dieser Domain senden.",
+					dmarcMultiple:
+						"{$domain} veröffentlicht mehr als einen DMARC-Eintrag, daher ignorieren Empfänger alle. Behalte genau einen.",
+					dmarcPolicyNone:
+						"Die DMARC-Richtlinie von {$domain} ist p=none und überwacht nur. Wechsle zu p=quarantine oder p=reject, sobald deine Berichte zeigen, dass legitime E-Mails bestehen.",
+					dmarcTesting:
+						"Die DMARC-Richtlinie von {$domain} setzt t=y, daher wenden Empfänger eine Stufe weniger als die veröffentlichte Richtlinie an. Entferne t=y nach Abschluss der Tests.",
+					dmarcNoReports:
+						"Die DMARC-Richtlinie von {$domain} hat keine rua-Adresse, daher sendet kein Empfänger Sammelberichte über E-Mails mit dieser Domain.",
+					dmarcInvalidTags:
+						"Die DMARC-Richtlinie von {$domain} enthält Werte, die Empfänger ignorieren: {$tags}.",
+					spfMissing:
+						"{$domain} veröffentlicht keinen SPF-Eintrag, daher können Empfänger nicht prüfen, welche Server ihre E-Mails senden dürfen.",
+					spfMultiple:
+						"{$domain} veröffentlicht mehr als einen SPF-Eintrag, wodurch jede SPF-Prüfung mit einem dauerhaften Fehler scheitert. Führe sie zu einem zusammen.",
+					spfInvalid:
+						"Der SPF-Eintrag von {$domain} hat einen Syntaxfehler, wodurch jede SPF-Prüfung mit einem dauerhaften Fehler scheitert.",
+					spfTooManyLookups:
+						"Der SPF-Eintrag von {$domain} benötigt {$count} DNS-Abfragen. Empfänger hören bei 10 auf und lassen die Prüfung scheitern, entferne oder vereinfache also includes.",
+					spfBrokenInclude:
+						"Der SPF-Eintrag von {$domain} bindet {$target} ein, das keinen gültigen SPF-Eintrag hat, daher scheitern Prüfungen, die ihn erreichen, mit einem dauerhaften Fehler.",
+					spfPermissiveAll:
+						"Der SPF-Eintrag von {$domain} endet auf +all und erlaubt damit jedem Server im Internet, im Namen dieser Domain zu senden.",
+					spfPtr:
+						"Der SPF-Eintrag von {$domain} verwendet den ptr-Mechanismus, der langsam ist und von vielen Empfängern übersprungen wird.",
+					mtaStsMissing:
+						"{$domain} veröffentlicht keine MTA-STS-Richtlinie, daher nutzen Absender TLS nur, wenn es angeboten wird, und prüfen das Zertifikat deines Mailservers nie.",
+					mtaStsInvalid:
+						"Der MTA-STS-Eintrag von {$domain} ist ungültig oder doppelt, daher ignorieren Absender die Richtlinie.",
+					mtaStsTesting:
+						"Die MTA-STS-Richtlinie für {$domain} ist im Testmodus: Absender melden TLS-Fehler, stellen aber trotzdem über eine ungeprüfte Verbindung zu.",
+					mtaStsPolicyUnreachable:
+						"Die MTA-STS-Richtliniendatei unter {$url} konnte nicht abgerufen werden, daher behandeln Absender die Domain, als hätte sie keine Richtlinie.",
+					mtaStsMxMismatch:
+						"Der Mailserver {$host} steht nicht in der MTA-STS-Richtlinie für {$domain}, daher stellen Absender, die die Richtlinie durchsetzen, nicht an ihn zu.",
+					tlsRptMissing:
+						"{$domain} veröffentlicht keinen TLS-RPT-Eintrag, daher melden Absender dir keine TLS-Zustellfehler.",
+					tlsRptInvalid:
+						"Der TLS-RPT-Eintrag von {$domain} ist ungültig oder doppelt, daher senden Absender keine Berichte.",
+					lookupFailed:
+						"Die {$record}-Einträge konnten nicht abgefragt werden. Sie werden beim nächsten Durchlauf erneut geprüft.",
+				},
+			},
+
 			stats: {
 				totalChecks: {
 					label: "Gesamtprüfungen",

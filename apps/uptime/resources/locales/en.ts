@@ -3547,6 +3547,64 @@ export default {
 				},
 			},
 
+			/** Email-authentication findings for the monitored domain, one sentence per finding. */
+			emailAuth: {
+				title: "Email authentication",
+				description:
+					"How receivers tell genuine mail from this domain apart from forgeries, read from its DMARC, SPF, MTA-STS and TLS-RPT records.",
+				empty: "No problems found.",
+
+				severity: {
+					critical: "Critical",
+					warning: "Warning",
+					notice: "Notice",
+				},
+
+				findings: {
+					dmarcMissing:
+						"{$domain} publishes no DMARC policy, so receivers have no instruction for mail that fails authentication and anyone can send as this domain.",
+					dmarcMultiple:
+						"{$domain} publishes more than one DMARC record, so receivers ignore all of them. Keep exactly one.",
+					dmarcPolicyNone:
+						"The DMARC policy at {$domain} is p=none, which only monitors. Move to p=quarantine or p=reject once your reports show legitimate mail passing.",
+					dmarcTesting:
+						"The DMARC policy at {$domain} sets t=y, so receivers apply one level less than the published policy. Remove t=y when testing is over.",
+					dmarcNoReports:
+						"The DMARC policy at {$domain} has no rua address, so no receiver sends aggregate reports about mail using this domain.",
+					dmarcInvalidTags: "The DMARC policy at {$domain} has values receivers ignore: {$tags}.",
+					spfMissing:
+						"{$domain} publishes no SPF record, so receivers cannot check which servers may send its mail.",
+					spfMultiple:
+						"{$domain} publishes more than one SPF record, which makes every SPF check fail with a permanent error. Merge them into one.",
+					spfInvalid:
+						"The SPF record at {$domain} has a syntax error, which makes every SPF check fail with a permanent error.",
+					spfTooManyLookups:
+						"The SPF record at {$domain} needs {$count} DNS lookups. Receivers stop at 10 and fail the check, so remove or flatten includes.",
+					spfBrokenInclude:
+						"The SPF record at {$domain} includes {$target}, which has no usable SPF record, so checks that reach it fail with a permanent error.",
+					spfPermissiveAll:
+						"The SPF record at {$domain} ends in +all, which authorizes every server on the internet to send as this domain.",
+					spfPtr:
+						"The SPF record at {$domain} uses the ptr mechanism, which is slow and which many receivers skip.",
+					mtaStsMissing:
+						"{$domain} publishes no MTA-STS policy, so senders use TLS only when it is offered and never verify your mail server's certificate.",
+					mtaStsInvalid:
+						"The MTA-STS record at {$domain} is invalid or duplicated, so senders ignore the policy.",
+					mtaStsTesting:
+						"The MTA-STS policy for {$domain} is in testing mode: senders report TLS failures but still deliver over an unverified connection.",
+					mtaStsPolicyUnreachable:
+						"The MTA-STS policy file at {$url} could not be fetched, so senders treat the domain as having no policy.",
+					mtaStsMxMismatch:
+						"The mail server {$host} is not listed in the MTA-STS policy for {$domain}, so senders that enforce the policy will not deliver to it.",
+					tlsRptMissing:
+						"{$domain} publishes no TLS-RPT record, so senders do not report TLS delivery failures to you.",
+					tlsRptInvalid:
+						"The TLS-RPT record at {$domain} is invalid or duplicated, so senders send no reports.",
+					lookupFailed:
+						"The {$record} records could not be looked up. They are checked again on the next run.",
+				},
+			},
+
 			stats: {
 				totalChecks: {
 					label: "Total Checks",

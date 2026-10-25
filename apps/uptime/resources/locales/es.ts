@@ -3517,6 +3517,65 @@ export default {
 				},
 			},
 
+			/** Email-authentication findings for the monitored domain, one sentence per finding. */
+			emailAuth: {
+				title: "Autenticación de correo",
+				description:
+					"Cómo los receptores distinguen el correo legítimo de este dominio de las falsificaciones, según sus registros DMARC, SPF, MTA-STS y TLS-RPT.",
+				empty: "No se encontraron problemas.",
+
+				severity: {
+					critical: "Crítico",
+					warning: "Advertencia",
+					notice: "Aviso",
+				},
+
+				findings: {
+					dmarcMissing:
+						"{$domain} no publica una política DMARC, así que los receptores no tienen instrucciones para el correo que falla la autenticación y cualquiera puede enviar como este dominio.",
+					dmarcMultiple:
+						"{$domain} publica más de un registro DMARC, así que los receptores los ignoran todos. Deja solo uno.",
+					dmarcPolicyNone:
+						"La política DMARC de {$domain} es p=none, que solo monitorea. Pasa a p=quarantine o p=reject cuando tus informes muestren que el correo legítimo pasa.",
+					dmarcTesting:
+						"La política DMARC de {$domain} define t=y, así que los receptores aplican un nivel menos que la política publicada. Quita t=y al terminar las pruebas.",
+					dmarcNoReports:
+						"La política DMARC de {$domain} no tiene dirección rua, así que ningún receptor envía informes agregados sobre el correo que usa este dominio.",
+					dmarcInvalidTags:
+						"La política DMARC de {$domain} tiene valores que los receptores ignoran: {$tags}.",
+					spfMissing:
+						"{$domain} no publica un registro SPF, así que los receptores no pueden comprobar qué servidores pueden enviar su correo.",
+					spfMultiple:
+						"{$domain} publica más de un registro SPF, lo que hace fallar toda comprobación SPF con un error permanente. Únelos en uno solo.",
+					spfInvalid:
+						"El registro SPF de {$domain} tiene un error de sintaxis, lo que hace fallar toda comprobación SPF con un error permanente.",
+					spfTooManyLookups:
+						"El registro SPF de {$domain} necesita {$count} consultas DNS. Los receptores se detienen en 10 y fallan la comprobación, así que elimina o aplana los include.",
+					spfBrokenInclude:
+						"El registro SPF de {$domain} incluye {$target}, que no tiene un registro SPF válido, así que las comprobaciones que llegan a él fallan con un error permanente.",
+					spfPermissiveAll:
+						"El registro SPF de {$domain} termina en +all, lo que autoriza a cualquier servidor de internet a enviar como este dominio.",
+					spfPtr:
+						"El registro SPF de {$domain} usa el mecanismo ptr, que es lento y que muchos receptores omiten.",
+					mtaStsMissing:
+						"{$domain} no publica una política MTA-STS, así que los remitentes usan TLS solo cuando se ofrece y nunca verifican el certificado de tu servidor de correo.",
+					mtaStsInvalid:
+						"El registro MTA-STS de {$domain} no es válido o está duplicado, así que los remitentes ignoran la política.",
+					mtaStsTesting:
+						"La política MTA-STS de {$domain} está en modo de prueba: los remitentes informan los fallos de TLS pero entregan igual por una conexión sin verificar.",
+					mtaStsPolicyUnreachable:
+						"No se pudo obtener el archivo de política MTA-STS en {$url}, así que los remitentes tratan el dominio como si no tuviera política.",
+					mtaStsMxMismatch:
+						"El servidor de correo {$host} no figura en la política MTA-STS de {$domain}, así que los remitentes que aplican la política no le entregarán correo.",
+					tlsRptMissing:
+						"{$domain} no publica un registro TLS-RPT, así que los remitentes no te informan de los fallos de entrega por TLS.",
+					tlsRptInvalid:
+						"El registro TLS-RPT de {$domain} no es válido o está duplicado, así que los remitentes no envían informes.",
+					lookupFailed:
+						"No se pudieron consultar los registros {$record}. Se volverán a comprobar en la próxima ejecución.",
+				},
+			},
+
 			stats: {
 				totalChecks: {
 					label: "Verificaciones totales",

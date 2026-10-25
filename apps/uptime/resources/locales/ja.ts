@@ -3463,6 +3463,64 @@ export default {
 				},
 			},
 
+			/** Email-authentication findings for the monitored domain, one sentence per finding. */
+			emailAuth: {
+				title: "メール認証",
+				description:
+					"DMARC・SPF・MTA-STS・TLS-RPT レコードから、受信者がこのドメインの正規のメールを偽装メールと見分けられるかを確認します。",
+				empty: "問題は見つかりませんでした。",
+
+				severity: {
+					critical: "重大",
+					warning: "警告",
+					notice: "お知らせ",
+				},
+
+				findings: {
+					dmarcMissing:
+						"{$domain} は DMARC ポリシーを公開していません。認証に失敗したメールへの指示がないため、誰でもこのドメインを名乗って送信できます。",
+					dmarcMultiple:
+						"{$domain} は複数の DMARC レコードを公開しているため、受信者はすべてを無視します。1 つだけにしてください。",
+					dmarcPolicyNone:
+						"{$domain} の DMARC ポリシーは p=none で、監視のみを行います。正規のメールが通過していることをレポートで確認したら、p=quarantine または p=reject に変更してください。",
+					dmarcTesting:
+						"{$domain} の DMARC ポリシーは t=y を指定しているため、受信者は公開ポリシーより 1 段階弱い処理を適用します。テストが終わったら t=y を削除してください。",
+					dmarcNoReports:
+						"{$domain} の DMARC ポリシーには rua アドレスがないため、このドメインを使うメールについての集計レポートはどの受信者からも届きません。",
+					dmarcInvalidTags:
+						"{$domain} の DMARC ポリシーには受信者が無視する値があります: {$tags}。",
+					spfMissing:
+						"{$domain} は SPF レコードを公開していないため、受信者はどのサーバーがメールを送信できるかを確認できません。",
+					spfMultiple:
+						"{$domain} は複数の SPF レコードを公開しているため、すべての SPF チェックが恒久的エラーで失敗します。1 つにまとめてください。",
+					spfInvalid:
+						"{$domain} の SPF レコードに構文エラーがあり、すべての SPF チェックが恒久的エラーで失敗します。",
+					spfTooManyLookups:
+						"{$domain} の SPF レコードには {$count} 回の DNS 参照が必要です。受信者は 10 回で打ち切ってチェックを失敗させるため、include を削除するか展開してください。",
+					spfBrokenInclude:
+						"{$domain} の SPF レコードが含める {$target} には有効な SPF レコードがないため、そこに到達したチェックは恒久的エラーで失敗します。",
+					spfPermissiveAll:
+						"{$domain} の SPF レコードは +all で終わっており、インターネット上のあらゆるサーバーにこのドメインとしての送信を許可しています。",
+					spfPtr:
+						"{$domain} の SPF レコードは ptr メカニズムを使用しています。これは低速で、多くの受信者が無視します。",
+					mtaStsMissing:
+						"{$domain} は MTA-STS ポリシーを公開していないため、送信者は TLS が提示されたときだけ使用し、メールサーバーの証明書を検証しません。",
+					mtaStsInvalid:
+						"{$domain} の MTA-STS レコードが無効または重複しているため、送信者はポリシーを無視します。",
+					mtaStsTesting:
+						"{$domain} の MTA-STS ポリシーはテストモードです。送信者は TLS の失敗を報告しますが、検証されていない接続でも配信します。",
+					mtaStsPolicyUnreachable:
+						"{$url} の MTA-STS ポリシーファイルを取得できなかったため、送信者はこのドメインにポリシーがないものとして扱います。",
+					mtaStsMxMismatch:
+						"メールサーバー {$host} は {$domain} の MTA-STS ポリシーに記載されていないため、ポリシーを適用する送信者はこのサーバーに配信しません。",
+					tlsRptMissing:
+						"{$domain} は TLS-RPT レコードを公開していないため、送信者から TLS 配信エラーの報告が届きません。",
+					tlsRptInvalid:
+						"{$domain} の TLS-RPT レコードが無効または重複しているため、送信者はレポートを送りません。",
+					lookupFailed: "{$record} レコードを参照できませんでした。次回の実行時に再度確認します。",
+				},
+			},
+
 			stats: {
 				totalChecks: {
 					label: "総チェック数",

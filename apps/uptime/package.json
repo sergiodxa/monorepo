@@ -30,6 +30,7 @@
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/doh": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
+		"@sdxc/email-auth": "workspace:*",
 		"@sdxc/file-storage-r2": "workspace:*",
 		"@sdxc/flags": "workspace:*",
 		"@sdxc/flags-engine": "workspace:*",
