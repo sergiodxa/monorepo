@@ -18,6 +18,7 @@ import { Location } from "@sdxc/location";
 import { tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure, wrap } from "@sdxc/result";
 
+import type { DPoP } from "./dpop.js";
 import type { Issuer } from "./issuer.js";
 
 import { AccessToken } from "./access-token.js";
@@ -323,6 +324,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 	#userInfo: RelyingParty.UserInfoMode;
 	#authorizationParams: Record<string, string>;
 	#tokenParams: Record<string, string>;
+	#dpop: DPoP | null;
 	#mapProfile: (claims: JWT.Payload, tokens: RelyingParty.GrantedTokens) => profile;
 	#subject: ((claims: JWT.Payload) => string) | null;
 	#mfa: string[];
@@ -354,6 +356,7 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		this.#userInfo = options.userInfo ?? "never";
 		this.#authorizationParams = options.authorizationParams ?? {};
 		this.#tokenParams = options.tokenParams ?? {};
+		this.#dpop = options.dpop ?? null;
 		this.#mapProfile =
 			options.mapProfile ?? ((claims) => defaultProfile(claims) as RelyingParty.Profile & profile);
 		this.#subject = options.subject ?? null;
@@ -933,7 +936,10 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 
 		this.#authenticate(headers, body);
 
-		let response = await fetch(endpoint, { method: "POST", headers, body });
+		let response =
+			this.#dpop === null
+				? await fetch(endpoint, { method: "POST", headers, body })
+				: await this.#dpop.fetch(endpoint, { method: "POST", headers, body });
 
 		let mediaType = nonJsonMediaType(response);
 
@@ -1088,9 +1094,15 @@ export class RelyingParty<profile = RelyingParty.Profile> implements AuthSession
 		}
 
 		let endpoint = await this.#issuer.userInfoEndpoint();
-		let response = await fetch(endpoint, {
-			headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" },
-		});
+		let response =
+			this.#dpop === null
+				? await fetch(endpoint, {
+						headers: { authorization: `Bearer ${accessToken}`, accept: "application/json" },
+					})
+				: await this.#dpop.fetch(endpoint, {
+						accessToken,
+						headers: { accept: "application/json" },
+					});
 
 		let mediaType = nonJsonMediaType(response);
 
@@ -1246,6 +1258,12 @@ export namespace RelyingParty {
 		authorizationParams?: Record<string, string>;
 		/** Extra token parameters, sent on every grant this client requests. */
 		tokenParams?: Record<string, string>;
+		/**
+		 * The key this client's tokens are bound to (RFC 9449): every code exchange and
+		 * refresh carries a proof it signs, and the userinfo call presents the token through
+		 * it. Store its `serialized` form so a refresh still proves the same key.
+		 */
+		dpop?: DPoP;
 		/**
 		 * Builds the profile carried on the `Grant`.
 		 *

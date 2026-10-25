@@ -21,6 +21,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite
 
 import { AuthError, AuthErrorCode } from "./auth-error.js";
 import { AuthSession } from "./auth-session.js";
+import { DPoP } from "./dpop.js";
 import { IdToken } from "./id-token.js";
 import { Issuer } from "./issuer.js";
 import { RelyingParty } from "./relying-party.js";
@@ -625,6 +626,36 @@ describe("reserved parameters", () => {
 });
 
 describe("callback", () => {
+	test("proves its DPoP key at the token endpoint and at userinfo", async () => {
+		let dpop = await DPoP.generate();
+		let agent = createAgent();
+		let rp = createRelyingParty({ dpop, userInfo: "always" });
+		let params = await startLogin(agent, rp);
+
+		let tokenProof: string | null = null;
+		server.use(
+			http.post(TOKEN_ENDPOINT, async ({ request: incoming }) => {
+				tokenProof = incoming.headers.get("dpop");
+				return tokenResponse({ nonce: params.get("nonce") });
+			}),
+		);
+		let userinfo: Headers | null = null;
+		server.use(
+			http.get(USER_INFO_ENDPOINT, ({ request: incoming }) => {
+				userinfo = incoming.headers;
+				return HttpResponse.json({ sub: "user-1" });
+			}),
+		);
+
+		await agent.run(callbackPath({ code: "code-1", state: params.get("state") ?? "" }), (ctx) =>
+			rp.callback(ctx),
+		);
+
+		expect(tokenProof).toEqual(expect.any(String));
+		expect((userinfo as Headers | null)?.get("authorization")).toMatch(/^DPoP /);
+		expect((userinfo as Headers | null)?.get("dpop")).toEqual(expect.any(String));
+	});
+
 	test("completes a login and signs the request in", async () => {
 		let agent = createAgent();
 		let rp = createRelyingParty();

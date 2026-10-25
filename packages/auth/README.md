@@ -286,7 +286,7 @@ The scopes a refusal's Bearer challenges ask for.
 (`dpop.proof(method, url, { accessToken? })`) and remembers each server's `DPoP-Nonce`.
 `dpop.fetch(url, { accessToken, ...init })` sends the proof, presents the token as
 `Authorization: DPoP`, and retries once on `use_dpop_nonce`. Pass it as `dpop` to
-`ServiceClient` to bind its tokens. On the server, `verifyProof(request, { replay,
+`ServiceClient` or `RelyingParty` to bind their tokens. On the server, `verifyProof(request, { replay,
 accessToken? })` checks `htm`, `htu`, `iat`, `ath` and a single use of `jti` through your
 `ReplayStore`, and answers the proof's key thumbprint; `ResourceServer`'s `dpop` option does
 this for `DPoP`-scheme requests and holds the token's `cnf.jkt` to it, and
