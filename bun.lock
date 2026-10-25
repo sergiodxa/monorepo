@@ -1241,6 +1241,7 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/json-canonical": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -1998,6 +1999,7 @@
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/catch-response-middleware": "workspace:*",
+        "@sdxc/cbor": "workspace:*",
         "@sdxc/cli": "workspace:*",
         "@sdxc/cloudflare-pricing": "workspace:*",
         "@sdxc/codemod": "workspace:*",
@@ -2086,6 +2088,7 @@
         "@sdxc/saml": "workspace:*",
         "@sdxc/sample": "workspace:*",
         "@sdxc/scim": "workspace:*",
+        "@sdxc/scitt": "workspace:*",
         "@sdxc/search": "workspace:*",
         "@sdxc/security-headers": "workspace:*",
         "@sdxc/semver": "workspace:*",
