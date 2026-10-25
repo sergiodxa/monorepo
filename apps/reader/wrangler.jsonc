@@ -95,6 +95,12 @@
 	// arbitrary recipients, which is why the channel stays dark until it is.
 	"send_email": [{ "name": "EMAIL" }],
 
+	// Background jobs: a feed's history walk after its first subscription.
+	"queues": {
+		"consumers": [{ "queue": "reader-jobs", "max_batch_size": 1, "max_retries": 5 }],
+		"producers": [{ "binding": "QUEUE", "queue": "reader-jobs" }],
+	},
+
 	// The feed catalog: one row per canonical feed the system has ever created. It
 	// assigns feed identity, and it is the only place the list of feeds exists, because
 	// a Durable Object namespace is reachable one name at a time and enumerable by

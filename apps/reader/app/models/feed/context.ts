@@ -13,12 +13,14 @@ import { withContext } from "@sdxc/data-model";
 
 import type { Feed } from "~/app/models/feed/feed";
 import type { Items } from "~/app/models/feed/items";
+import type { Pages } from "~/app/models/feed/pages";
 import type { Subscribers } from "~/app/models/feed/subscribers";
 
 /** The entries of the feed's registry, each resolved only when a model reads it. */
 export interface FeedModelEntries {
 	feed: typeof Feed;
 	items: typeof Items;
+	pages: typeof Pages;
 	subscribers: typeof Subscribers;
 }
 

@@ -1,20 +1,25 @@
 /**
- * Cloudflare Worker entry point. Its `fetch` handler reads the session secret and KV
- * binding off the environment, builds the web router and forwards the request to it; its
- * `scheduled` handler runs the daily billing reconciliation; and it re-exports both Durable
+ * Cloudflare Worker entry point. `fetch` builds the web router and forwards the request to
+ * it, `scheduled` runs the daily billing reconciliation, and `queue` runs background jobs
+ * through the dispatcher. It also re-exports both Durable Object classes.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import { logger } from "~/app/initializers/logger";
 import { createWebRouter } from "~/app/initializers/router";
 import { reconcileBilling } from "~/app/services/billing-sync";
 
 export { FeedDO } from "~/app/models/feed-store";
 export { UserDO } from "~/app/models/user-store";
+
+/** The queue entrypoint, bound to the dispatcher every job runs through. */
+const handlers = cloudflare.worker(dispatcher);
 
 /**
  * Whether the request arrived on a host that serves HTTPS, which decides the session
@@ -50,5 +55,10 @@ export default {
 		context.waitUntil(
 			logger.open("cron", { cron: { expression: event.cron } }).run(() => reconcileBilling()),
 		);
+	},
+
+	/** Runs each delivered message as the job it names, such as a feed's history walk. */
+	async queue(batch: MessageBatch) {
+		await handlers.queue(batch);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;

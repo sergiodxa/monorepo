@@ -15,7 +15,7 @@ import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v7";
-import { and, getTableColumns, getTableName, gt, lt, lte } from "remix/data-table";
+import { and, getTableColumns, getTableName, gt, isNull, lt, lte } from "remix/data-table";
 
 import type { InsertItem, SelectFeed } from "~/database/feed-schema";
 
@@ -103,12 +103,28 @@ export interface HubAdvert {
 	topic: string | null;
 }
 
+/** The RFC 5005 relation a history walk follows from one document to the next. */
+export type HistoryRel = "prev-archive" | "next";
+
+/**
+ * Where a walk back through a feed's history starts: the subscription document's
+ * `prev-archive` for an archived feed, or its `next` for a paged one.
+ */
+export interface HistoryStart {
+	url: string;
+	rel: HistoryRel;
+}
+
 export type PollOutcome =
 	| {
 			status: "ok";
 			inserted: number;
 			edited: number;
+			/** Items a complete feed stopped listing, each now a tombstone at a fresh revision. */
+			removed: number;
 			head: number;
+			/** Where the document's older entries are, or `null` when it points at none. */
+			history: HistoryStart | null;
 			/** The hub the document just served advertises, absent when it advertises none. */
 			hub: HubAdvert | null;
 	  }
@@ -140,6 +156,18 @@ interface ItemEdit {
 interface Classification {
 	inserts: InsertItem[];
 	edits: ItemEdit[];
+}
+
+/** One item a complete feed stopped listing, addressed by its id, and how its row changes. */
+interface ItemRemoval {
+	id: string;
+	changes: InsertItem;
+}
+
+/** A stored entry's digest, and whether it is a tombstone a complete feed left behind. */
+interface StoredDigest {
+	hash: string;
+	removed: boolean;
 }
 
 /**
@@ -197,19 +225,33 @@ export async function pollFeed(
 
 		let hub = hubAdvertOf(retrieved, feed.feed_url);
 		let known = await storedDigests(db);
-		let { inserts, edits } = await classify(db, retrieved.feed.items, known, feed.head, now);
+
+		/**
+		 * Read again after the fetch, because a history walk may have stored a page while the
+		 * request was in flight, and a tick it took must never be issued twice.
+		 */
+		let base = (await db.find(feedTable, { id: FEED_ROW_ID }))?.head ?? feed.head;
+		let { inserts, edits } = await classify(db, retrieved.feed.items, known, base, now);
+
+		let removals = retrieved.feed.complete
+			? await removalsFrom(db, retrieved.feed.items, base + inserts.length + edits.length, now)
+			: [];
 
 		/**
 		 * The head moves by one tick per thing decided, and each tick is used exactly once:
-		 * an insert takes one and writes it to both `sequence` and `revision`, an edit takes
-		 * one and writes it to `revision` alone.
+		 * an insert takes one and writes it to both `sequence` and `revision`, an edit or a
+		 * removal takes one and writes it to `revision` alone.
 		 */
-		let head = feed.head + inserts.length + edits.length;
+		let head = base + inserts.length + edits.length + removals.length;
 
 		await insertItems(db, inserts);
 
 		for (let edit of edits) {
 			await db.updateMany(items, edit.changes, { where: { guid: edit.guid }, touch: false });
+		}
+
+		for (let removal of removals) {
+			await db.updateMany(items, removal.changes, { where: { id: removal.id }, touch: false });
 		}
 
 		await db.update(
@@ -229,7 +271,15 @@ export async function pollFeed(
 			},
 		);
 
-		return { status: "ok", inserted: inserts.length, edited: edits.length, head, hub };
+		return {
+			status: "ok",
+			inserted: inserts.length,
+			edited: edits.length,
+			removed: removals.length,
+			head,
+			hub,
+			history: historyStartOf(retrieved.feed),
+		};
 	} catch (error) {
 		/**
 		 * An unexpected throw is reported as a feed that could not be reached: the caller's
@@ -302,10 +352,97 @@ export async function pruneItems(db: Database, keep: number, head: number): Prom
 export async function measurePostsPerDay(db: Database, now: number): Promise<number> {
 	let since = now - RATE_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 	let published = await db.count(items, {
-		where: and(gt("published_at", since), lte("published_at", now)),
+		where: and(gt("published_at", since), lte("published_at", now), isNull("removed_at")),
 	});
 
 	return published / RATE_WINDOW_DAYS;
+}
+
+/**
+ * Stores one page of a feed's history: every entry whose guid is not stored yet, each at
+ * a fresh tick, and nothing else. An entry already held came from a document at least as
+ * recent, which RFC 5005 §4 says wins, so an archive never edits or revives an item.
+ *
+ * @param db - The feed's database.
+ * @param entries - The entries of one archive or page document, in document order.
+ * @param now - Epoch milliseconds the entries are first seen at.
+ * @returns How many items were stored and the head the feed reached.
+ * @example let stored = await storeHistory(db, archive.items, Date.now());
+ */
+export async function storeHistory(
+	db: Database,
+	entries: readonly Feed.Item[],
+	now: number,
+): Promise<{ inserted: number; head: number }> {
+	let feed = await db.find(feedTable, { id: FEED_ROW_ID });
+	if (feed === null) return { inserted: 0, head: 0 };
+
+	let inserts: InsertItem[] = [];
+	let seen = new Set<string>();
+	let tick = feed.head;
+
+	for (let entry of entries) {
+		if (seen.has(entry.guid)) continue;
+		seen.add(entry.guid);
+
+		if ((await storedDigestOf(db, entry.guid)) !== undefined) continue;
+
+		let displayable = displayableOf(entry);
+		tick += 1;
+		inserts.push(insertRowOf(entry, displayable, await digest(displayable), tick, now));
+	}
+
+	if (inserts.length === 0) return { inserted: 0, head: feed.head };
+
+	await insertItems(db, inserts);
+	await db.update(
+		feedTable,
+		{ id: FEED_ROW_ID },
+		{ head: tick, posts_per_day: await measurePostsPerDay(db, now), updated_at: now },
+	);
+
+	return { inserted: inserts.length, head: tick };
+}
+
+/**
+ * Where the document's older entries are. A complete feed already holds every entry, so it
+ * has no history to walk; an archived feed is walked by `prev-archive`, a paged one by `next`.
+ *
+ * @param document - The subscription document just retrieved.
+ */
+export function historyStartOf(document: Feed): HistoryStart | null {
+	if (document.complete) return null;
+
+	let { prevArchive, next } = document.paging;
+	if (prevArchive !== undefined) return { url: prevArchive, rel: "prev-archive" };
+	if (next !== undefined) return { url: next, rel: "next" };
+	return null;
+}
+
+/**
+ * The stored items a complete document no longer lists, each handed the next tick. RFC
+ * 5005 §2 makes a complete document the whole feed, so an entry missing from it has left
+ * the feed; its row stays as a tombstone that subscribers drop their copy for.
+ */
+async function removalsFrom(
+	db: Database,
+	entries: readonly Feed.Item[],
+	head: number,
+	now: number,
+): Promise<ItemRemoval[]> {
+	let listed = new Set(entries.map((entry) => entry.guid));
+	let stored = await db.query(items).select("id", "guid").where(isNull("removed_at")).all();
+	let removals: ItemRemoval[] = [];
+	let tick = head;
+
+	for (let row of stored) {
+		if (listed.has(row.guid)) continue;
+
+		tick += 1;
+		removals.push({ id: row.id, changes: { removed_at: now, revision: tick, updated_at: now } });
+	}
+
+	return removals;
 }
 
 /**
@@ -355,8 +492,13 @@ function describe(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }
 
-/** Sorts a failed retrieval into the category `last_status` records. */
-function classifyFailure(
+/**
+ * Sorts a failed retrieval into the category `last_status` records. A history walk sorts
+ * its own failures the same way, so a refused archive and an unreachable one read alike.
+ *
+ * @param error - What `Feed.fetch` failed with.
+ */
+export function classifyFailure(
 	error: Error,
 ): Extract<PollOutcome, { status: "http_error" | "network_error" | "parse_error" }> {
 	if (!(error instanceof FeedFetchError)) {
@@ -399,15 +541,17 @@ async function recordFailure(
  * into inserts, no-ops and edits in memory, so an unchanged poll compares rows without
  * touching one.
  */
-async function storedDigests(db: Database): Promise<Map<string, string>> {
+async function storedDigests(db: Database): Promise<Map<string, StoredDigest>> {
 	let rows = await db
 		.query(items)
-		.select("guid", "content_hash")
+		.select("guid", "content_hash", "removed_at")
 		.orderBy("revision", "desc")
 		.limit(DIGEST_PREFETCH)
 		.all();
 
-	return new Map(rows.map((row) => [row.guid, row.content_hash]));
+	return new Map(
+		rows.map((row) => [row.guid, { hash: row.content_hash, removed: row.removed_at !== null }]),
+	);
 }
 
 /**
@@ -415,9 +559,16 @@ async function storedDigests(db: Database): Promise<Map<string, string>> {
  * seek on `UNIQUE (guid)`, and at most as many of them as the document carries entries,
  * which is what keeps an old entry re-served by a publisher recognized as stored rather
  */
-async function storedDigestOf(db: Database, guid: string): Promise<string | undefined> {
-	let [stored] = await db.query(items).select("content_hash").where({ guid }).limit(1).all();
-	return stored?.content_hash;
+async function storedDigestOf(db: Database, guid: string): Promise<StoredDigest | undefined> {
+	let [stored] = await db
+		.query(items)
+		.select("content_hash", "removed_at")
+		.where({ guid })
+		.limit(1)
+		.all();
+
+	if (stored === undefined) return undefined;
+	return { hash: stored.content_hash, removed: stored.removed_at !== null };
 }
 
 /**
@@ -453,7 +604,7 @@ async function insertItems(db: Database, rows: readonly InsertItem[]): Promise<v
 async function classify(
 	db: Database,
 	entries: Feed.Item[],
-	known: Map<string, string>,
+	known: Map<string, StoredDigest>,
 	head: number,
 	now: number,
 ): Promise<Classification> {
@@ -468,23 +619,12 @@ async function classify(
 
 		if (stored === undefined) {
 			tick += 1;
-
-			inserts.push({
-				id: TypeID.fromUUID("item", generateUUID()).toString(),
-				guid: entry.guid,
-				sequence: tick,
-				revision: tick,
-				...displayable,
-				published_at: publishedAt(entry, now),
-				content_hash: hash,
-				created_at: now,
-				updated_at: now,
-			});
-
+			inserts.push(insertRowOf(entry, displayable, hash, tick, now));
 			continue;
 		}
 
-		if (stored === hash) continue;
+		/** A tombstone listed again is the entry returning to the feed, so it is revived. */
+		if (stored.hash === hash && !stored.removed) continue;
 
 		tick += 1;
 
@@ -495,11 +635,41 @@ async function classify(
 		 */
 		edits.push({
 			guid: entry.guid,
-			changes: { ...displayable, revision: tick, content_hash: hash, updated_at: now },
+			changes: {
+				...displayable,
+				revision: tick,
+				content_hash: hash,
+				removed_at: null,
+				updated_at: now,
+			},
 		});
 	}
 
 	return { inserts, edits };
+}
+
+/**
+ * The row a newly discovered entry is stored as, at `tick` in both orders. Every path that
+ * inserts an item builds it here, so a polled entry and an archived one are stored alike.
+ */
+function insertRowOf(
+	entry: Feed.Item,
+	displayable: Displayable,
+	hash: string,
+	tick: number,
+	now: number,
+): InsertItem {
+	return {
+		id: TypeID.fromUUID("item", generateUUID()).toString(),
+		guid: entry.guid,
+		sequence: tick,
+		revision: tick,
+		...displayable,
+		published_at: publishedAt(entry, now),
+		content_hash: hash,
+		created_at: now,
+		updated_at: now,
+	};
 }
 
 /**

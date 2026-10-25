@@ -7,7 +7,7 @@ Run every command from `apps/reader`.
 
 ## 1. Create the Cloudflare resources
 
-`wrangler.jsonc` names four resources by id. Two of those ids are placeholders, and wrangler
+`wrangler.jsonc` names these resources. Two of their ids are placeholders, and wrangler
 refuses to deploy against an id the account does not own.
 
 | Resource                | Command                                                                                                           | Then                                                                         |
@@ -16,6 +16,7 @@ refuses to deploy against an id the account does not own.
 | D1 `reader-catalog`     | `bunx wrangler d1 create reader-catalog`                                                                          | Paste the id into `database_id`                                              |
 | Unsubscribe signing key | `bunx wrangler secrets-store secret create <store_id> --name READER_UNSUBSCRIBE_SECRET --scopes workers --remote` | Keep the `store_id` in `secrets_store_secrets` if it is this account's store |
 | Rate limiter            | None                                                                                                              | Confirm `namespace_id` `2001` is unused by another Worker on the account     |
+| Queue `reader-jobs`     | `bunx wrangler queues create reader-jobs`                                                                         | Nothing; the binding names it                                                |
 
 The two Durable Object classes, `UserDO` and `FeedDO` in `app/models/`, are created by the
 deploy itself from the `migrations` block. Each object migrates its own SQLite the first time it boots, so the

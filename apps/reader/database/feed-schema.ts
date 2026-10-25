@@ -314,6 +314,12 @@ export const items = table({
 		enclosure_url: c.text().nullable(),
 		enclosure_type: c.text().nullable(),
 		enclosure_length: c.integer().nullable(),
+		/**
+		 * When a complete feed stopped listing the entry, or `null` while it is part of the
+		 * feed. A removed row stays as a tombstone so subscribers walking the revisions drop
+		 * their copy, and leaves the newest page a new subscriber is handed.
+		 */
+		removed_at: c.integer().nullable(),
 		created_at: c.integer(),
 		updated_at: c.integer(),
 	},
@@ -328,8 +334,25 @@ export const subscribers = table({
 	},
 });
 
+/**
+ * The archive and page documents a history walk has stored, by address, with what makes
+ * the next request for each conditional and the link the walk followed from it.
+ */
+export const pages = table({
+	name: "pages",
+	primaryKey: ["url"],
+	columns: {
+		url: c.text(),
+		etag: c.text().nullable(),
+		last_modified: c.text().nullable(),
+		next_url: c.text().nullable(),
+		fetched_at: c.integer(),
+	},
+});
+
 export type SelectFeed = TableRow<typeof feed>;
 export type InsertFeed = InsertRow<typeof feed>;
 export type SelectItem = TableRow<typeof items>;
 export type InsertItem = InsertRow<typeof items>;
 export type SelectSubscriber = TableRow<typeof subscribers>;
+export type SelectPage = TableRow<typeof pages>;

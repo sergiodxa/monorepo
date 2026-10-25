@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Feed } from "@sdxc/feed";
 import type { Log } from "@sdxc/logger";
 import type { Subscriber } from "@sdxc/websub/subscriber";
 import type { DatabaseDriver } from "remix/data-table";
@@ -19,11 +20,13 @@ import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
 
 import type { FeedModels } from "~/app/models/feed";
-import type { HubAdvert } from "~/app/services/refresh";
+import type { HistoryStart, HubAdvert } from "~/app/services/refresh";
 import type { FeedStatus, SelectFeed, SelectItem } from "~/database/feed-schema";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import { features, flagsFor } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
+import jobs from "~/app/jobs";
 import { feedModels } from "~/app/models/feed";
 import { forgetHead, publishHead } from "~/app/models/feed-head";
 import {
@@ -33,7 +36,7 @@ import {
 	reviveFeed,
 	stampActivity,
 } from "~/app/models/registry";
-import { FEED_ROW_ID, pollFeed, pruneItems } from "~/app/services/refresh";
+import { FEED_ROW_ID, pollFeed, pruneItems, storeHistory } from "~/app/services/refresh";
 import { FEED_MIGRATIONS, FEED_JOURNAL } from "~/database/feed-migrations";
 import {
 	FEED_RETENTION,
@@ -120,6 +123,28 @@ export namespace FeedStore {
 		 * read.
 		 */
 		enclosure: Enclosure | null;
+		/**
+		 * Whether a complete feed stopped listing the item, which tells a subscriber to drop
+		 * their copy. A removed item reaches them at a fresh revision, like an edit.
+		 */
+		removed: boolean;
+	}
+
+	/**
+	 * One document of the feed's history as a walk stored it: the validators its next
+	 * request sends, and the link the walk followed from it, `null` where its history ends.
+	 */
+	export interface HistoryPage {
+		url: string;
+		etag: string | null;
+		lastModified: string | null;
+		nextUrl: string | null;
+	}
+
+	/** What storing one history document did. */
+	export interface HistoryStored {
+		inserted: number;
+		head: number;
 	}
 
 	/** What the last poll recorded, for the page that shows one feed. */
@@ -177,7 +202,14 @@ export namespace FeedStore {
 	}
 
 	export type RefreshResult =
-		| { ok: true; status: "ok"; inserted: number; edited: number; head: number }
+		| {
+				ok: true;
+				status: "ok";
+				inserted: number;
+				edited: number;
+				removed: number;
+				head: number;
+		  }
 		| { ok: true; status: "not_modified"; head: number }
 		| { ok: false; status: FeedStatus; message: string };
 
@@ -387,6 +419,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			durationMs: Date.now() - now,
 			inserted: outcome.status === "ok" ? outcome.inserted : 0,
 			edited: outcome.status === "ok" ? outcome.edited : 0,
+			removed: outcome.status === "ok" ? outcome.removed : 0,
 			head: outcome.status === "ok" ? outcome.head : feed.head,
 			postsPerDay: polled?.posts_per_day ?? null,
 			intervalMs: await this.#pollInterval(feed.posts_per_day, polled),
@@ -414,7 +447,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 * nothing outside its own row — which is what keeps a publication one write whatever
 		 * the subscriber count, and nothing at all for a feed that has not published.
 		 */
-		if (outcome.inserted > 0 || outcome.edited > 0) {
+		if (outcome.inserted > 0 || outcome.edited > 0 || outcome.removed > 0) {
 			await publishHead(this.#feedId(), outcome.head);
 			await stampActivity(this.#feedId());
 
@@ -430,8 +463,65 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			status: "ok",
 			inserted: outcome.inserted,
 			edited: outcome.edited,
+			removed: outcome.removed,
 			head: outcome.head,
 		};
+	}
+
+	/**
+	 * What a history walk stored for the document at `url`, or `null` for one it has not,
+	 * which is what makes the walk's next request for it conditional.
+	 *
+	 * @param url - The archive or page document's address.
+	 */
+	async historyPage(url: string): Promise<FeedStore.HistoryPage | null> {
+		let page = await this.#models.pages.at(url);
+		if (page === null) return null;
+
+		return {
+			url: page.url,
+			etag: page.etag,
+			lastModified: page.last_modified,
+			nextUrl: page.next_url,
+		};
+	}
+
+	/**
+	 * Stores one document of the feed's history: the entries it holds that this object has
+	 * not seen, and the page's own record. New items reach subscribers through the head, the
+	 * same way a poll's do, carrying the dates they were published under.
+	 *
+	 * @param page - The document, its validators and the link followed from it.
+	 * @param entries - The entries it holds, already cut to the walk's budget.
+	 */
+	async storeHistory(
+		page: FeedStore.HistoryPage,
+		entries: Feed.Item[],
+	): Promise<FeedStore.HistoryStored> {
+		let now = Date.now();
+		let stored = await storeHistory(this.#db, entries, now);
+
+		await this.#models.pages.record({
+			url: page.url,
+			etag: page.etag,
+			last_modified: page.lastModified,
+			next_url: page.nextUrl,
+			fetched_at: now,
+		});
+
+		if (stored.inserted > 0) {
+			await pruneItems(this.#db, FEED_RETENTION, stored.head);
+			await publishHead(this.#feedId(), stored.head);
+		}
+
+		this.#record("job", {
+			event: "feed.history.stored",
+			url: page.url,
+			inserted: stored.inserted,
+			head: stored.head,
+		});
+
+		return stored;
 	}
 
 	/** The head this feed has reached, which is the truth the published hint approximates. */
@@ -567,6 +657,14 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		if (outcome.status === "ok") await this.#reconcileHub(created, outcome.hub, now);
 
 		/**
+		 * Its history is walked once, behind the subscription, so a reader joins in one fetch
+		 * and the older entries arrive through the head as the walk stores them.
+		 */
+		if (outcome.status === "ok" && outcome.history !== null) {
+			await this.#enqueueHistory(outcome.history);
+		}
+
+		/**
 		 * The catalog row was named after the address it was minted from, since nothing had
 		 * read the feed yet. This object has now, so it says what the publisher calls it.
 		 */
@@ -587,6 +685,21 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		});
 
 		return { ok: true, feed };
+	}
+
+	/**
+	 * Asks for the walk of this feed's history. A queue that refuses costs the reader the
+	 * history and nothing else, so the failure is recorded rather than failing the follow.
+	 */
+	async #enqueueHistory(start: HistoryStart): Promise<void> {
+		try {
+			await dispatcher.enqueue(jobs.feeds.backfill, { feedId: this.#feedId(), ...start });
+		} catch (error) {
+			logger
+				.open("job", { event: "feed.history.enqueue_failed", url: start.url })
+				.fail(error)
+				.emit();
+		}
 	}
 
 	/** Clears everything this feed holds, in every store that holds anything for it. */
@@ -1190,6 +1303,7 @@ function itemOf(row: SelectItem): FeedStore.Item {
 		author: row.author,
 		publishedAt: row.published_at,
 		revision: row.revision,
+		removed: row.removed_at !== null,
 		enclosure:
 			row.enclosure_url === null
 				? null

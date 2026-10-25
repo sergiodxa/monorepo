@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { gt } from "remix/data-table";
+import { gt, isNull } from "remix/data-table";
 
 import type { SelectItem } from "~/database/feed-schema";
 
@@ -31,9 +31,17 @@ export const Items = createModel(items, {
 			return this.after(cursor).orderBy("revision", "asc").limit(limit).all();
 		},
 
-		/** The `limit` most recently published items, ties broken by id so a page is stable. */
+		/**
+		 * The `limit` most recently published items still in the feed, ties broken by id so a
+		 * page is stable. A tombstone is left out, since a new subscriber has no copy to drop.
+		 */
 		newest(limit: number): Promise<SelectItem[]> {
-			return this.query().orderBy("published_at", "desc").orderBy("id", "desc").limit(limit).all();
+			return this.query()
+				.where(isNull("removed_at"))
+				.orderBy("published_at", "desc")
+				.orderBy("id", "desc")
+				.limit(limit)
+				.all();
 		},
 	},
 });

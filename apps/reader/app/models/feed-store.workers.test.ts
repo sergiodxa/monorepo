@@ -258,7 +258,14 @@ describe("polling", () => {
 		source.publish([{ guid: "g2" }, { guid: "g1" }]);
 		let outcome = await env.FEED.getByName(feedId).refresh("manual");
 
-		expect(outcome).toEqual({ ok: true, status: "ok", inserted: 1, edited: 0, head: 2 });
+		expect(outcome).toEqual({
+			ok: true,
+			status: "ok",
+			inserted: 1,
+			edited: 0,
+			removed: 0,
+			head: 2,
+		});
 		expect(await env.KV.get(headKey(feedId))).toBe("2");
 		expect(await catalogRow(feedId)).toMatchObject({ last_active_at: expect.any(Number) });
 	});
@@ -275,7 +282,14 @@ describe("polling", () => {
 
 		let outcome = await env.FEED.getByName(feedId).refresh("manual");
 
-		expect(outcome).toEqual({ ok: true, status: "ok", inserted: 0, edited: 0, head: 1 });
+		expect(outcome).toEqual({
+			ok: true,
+			status: "ok",
+			inserted: 0,
+			edited: 0,
+			removed: 0,
+			head: 1,
+		});
 		expect(source.fetches()).toBe(2);
 		expect(await env.KV.get(headKey(feedId))).toBeNull();
 		// The stamp moves only when a poll actually stored something, which is what makes
@@ -329,6 +343,7 @@ describe("polling", () => {
 			status: "ok",
 			inserted: 1,
 			edited: 0,
+			removed: 0,
 			head: 2,
 		});
 		expect(source.fetches()).toBe(failed + 1);
@@ -506,6 +521,48 @@ describe("synchronizing a subscriber", () => {
 		expect(page.items.map((item) => item.summary)).toEqual(["The typo, fixed"]);
 		expect(page.items.map((item) => item.id)).toEqual([stored?.id]);
 		expect(page.head).toBe(2);
+	});
+});
+
+describe("storing a feed's history", () => {
+	test("stores an archive page over RPC and hands its entries to subscribers above their cursor", async () => {
+		let url = feedUrl();
+		origin(url, [{ guid: "g1" }]);
+		let feedId = await registerFeed(url, "Example");
+		let feed = env.FEED.getByName(feedId);
+		await feed.subscribe(reader(), url);
+
+		let archiveUrl = url.replace("feed.xml", "2003/11/index.xml");
+		let stored = await feed.storeHistory(
+			{ url: archiveUrl, etag: '"november"', lastModified: null, nextUrl: null },
+			[
+				{ guid: "g1", title: "Already held" },
+				{ guid: "old", title: "From the archive", publishedAt: new Date("2003-11-24T12:00:00Z") },
+			],
+		);
+
+		expect(stored).toEqual({ inserted: 1, head: 2 });
+		expect(await feed.historyPage(archiveUrl)).toEqual({
+			url: archiveUrl,
+			etag: '"november"',
+			lastModified: null,
+			nextUrl: null,
+		});
+
+		let page = await feed.getItemsAfter(1);
+		expect(page.items.map((item) => [item.title, item.publishedAt, item.removed])).toEqual([
+			["From the archive", Date.parse("2003-11-24T12:00:00Z"), false],
+		]);
+		expect(page.head).toBe(2);
+	});
+
+	test("answers nothing for a document no walk stored", async () => {
+		let url = feedUrl();
+		origin(url, [{ guid: "g1" }]);
+		let feedId = await registerFeed(url, "Example");
+		await env.FEED.getByName(feedId).subscribe(reader(), url);
+
+		expect(await env.FEED.getByName(feedId).historyPage(`${url}?page=2`)).toBeNull();
 	});
 });
 

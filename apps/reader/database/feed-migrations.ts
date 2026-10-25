@@ -13,6 +13,7 @@ import m0001 from "./feed-migrations/0001-init.sql?raw";
 import m0002 from "./feed-migrations/0002-websub.sql?raw";
 import m0003 from "./feed-migrations/0003-enclosures.sql?raw";
 import m0004 from "./feed-migrations/0004-websub-lease-and-leaving.sql?raw";
+import m0005 from "./feed-migrations/0005-feed-history.sql?raw";
 
 /** The journal table these are recorded in, which is this object's alone. */
 export const FEED_JOURNAL = "feed_migrations";
@@ -23,4 +24,5 @@ export const FEED_MIGRATIONS: Migration[] = [
 	{ id: "0002-websub", sql: m0002 },
 	{ id: "0003-enclosures", sql: m0003 },
 	{ id: "0004-websub-lease-and-leaving", sql: m0004 },
+	{ id: "0005-feed-history", sql: m0005 },
 ];

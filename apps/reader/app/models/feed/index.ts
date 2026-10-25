@@ -13,12 +13,14 @@ import { createModels } from "@sdxc/data-model";
 
 import { Feed } from "~/app/models/feed/feed";
 import { Items } from "~/app/models/feed/items";
+import { Pages } from "~/app/models/feed/pages";
 import { Subscribers } from "~/app/models/feed/subscribers";
 
 /** Every model over a feed's database, bound by the object as `this.#models`. */
 export const feedModels = createModels({
 	feed: Feed,
 	items: Items,
+	pages: Pages,
 	subscribers: Subscribers,
 });
 

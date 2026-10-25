@@ -3635,7 +3635,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Decides a feed's items and writes the ones this reader keeps, while they are still in
-	 * memory and before any of them is a row.
+	 * memory and before any of them is a row. An item a complete feed removed drops the
+	 * reader's copy instead, unless they saved it.
 	 *
 	 * @param folderId - The folder the subscription is filed in as this run holds it, which the copies are written into so an item arriving twice lands where its feed is now.
 	 * @param run - The rules this run evaluates and the tally they are counted into, or `null` for a path that takes no rules.
@@ -3648,9 +3649,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		folderId: string | null = null,
 		run: RuleRun | null = null,
 	): Promise<Materialized> {
+		await this.#dropRemoved(incoming.filter((item) => item.removed).map((item) => item.id));
+
+		let present = incoming.filter((item) => !item.removed);
 		let window = VELOCITY_WINDOW_MS[velocity];
-		let fresh = incoming.filter((item) => window === null || item.publishedAt >= now - window);
-		let skipped = incoming.length - fresh.length;
+		let fresh = present.filter((item) => window === null || item.publishedAt >= now - window);
+		let skipped = present.length - fresh.length;
 
 		if (fresh.length === 0) return { written: 0, skipped, ruled: 0 };
 
@@ -3734,6 +3738,28 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		for (let chunk of chunked([...incoming], insertChunkSize())) {
 			await this.#db.exec(...upsertItems(subscriptionId, chunk, now, folderId, marks));
+		}
+	}
+
+	/**
+	 * Deletes this reader's copies of items their feed removed, keeping a saved one: saving
+	 * is the one answer that outlives every rule here, a publisher's included.
+	 *
+	 * @param itemIds - The canonical ids of the removed items, which are their copies' ids.
+	 */
+	async #dropRemoved(itemIds: readonly string[]): Promise<void> {
+		for (let batch of chunked([...itemIds], IDS_PER_LOOKUP)) {
+			let doomed = await this.#db
+				.query(feedItems)
+				.where(and(inList("id", batch), isNull("saved_at")))
+				.select("id")
+				.all();
+
+			if (doomed.length === 0) continue;
+
+			let ids = doomed.map((row) => row.id);
+			await this.#forgetTags(ids);
+			await this.#db.deleteMany(feedItems, { where: inList("id", ids) });
 		}
 	}
 

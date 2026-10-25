@@ -42,6 +42,7 @@ and type check in one pass) and `bun run test`.
 | Durable Object | `FEED`             | One object per canonical feed: the fetching and its items      |
 | D1             | `PLATFORM_DB`      | The feed catalog, and what the payment platform last said      |
 | Rate limiter   | `MCP_RATE_LIMITER` | The burst budget in front of the agent endpoint                |
+| Queue          | `QUEUE`            | Background jobs: a newly followed feed's history walk          |
 
 Each `USER` object is addressed by the reader's OIDC subject and keeps its own SQLite,
 migrated at boot. Fetching belongs to the feed rather than to any one follower: each `FEED`
@@ -72,6 +73,10 @@ to exist before the first deploy.
   with `-` or `NOT` to leave out the posts holding it. `OR`, `AND` and `NOT` are operators in
   capitals; quote them to search for the word
 - Follow a feed by its own address or by the address of a site that advertises one
+- A feed's older posts on following it, when it publishes archives or pages (RFC 5005): up to
+  ten archive or page documents and 500 posts, fetched behind the follow
+- A post a complete feed (RFC 5005 `fh:complete`) stops listing leaves your list too, unless
+  you saved it
 - Unfollow a feed, which takes its posts with it
 - The article behind a post's link, fetched when you open that post and read in place,
   with the publisher named and the original a click away — on the paid plan

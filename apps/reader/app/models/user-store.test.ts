@@ -1352,6 +1352,40 @@ describe("saved posts, the one answer that outlives every rule", () => {
 	});
 });
 
+describe("a complete feed, which lists every post it has (RFC 5005)", () => {
+	/** `rss(entries)` declared complete with `fh:complete`, as RFC 5005 Appendix B does. */
+	function completeRss(entries: Entry[]): string {
+		return rss(entries, FEED_URL)
+			.replace(
+				'<rss version="2.0">',
+				'<rss version="2.0" xmlns:fh="http://purl.org/syndication/history/1.0">',
+			)
+			.replace("<channel>", "<channel><fh:complete/>");
+	}
+
+	test("drops the copy of a post it stops listing, and keeps a saved one", async () => {
+		let { user, state } = await createReader();
+		let first = entryAt("a", "First", 3 * DAY_MS);
+		let second = entryAt("b", "Second", 2 * DAY_MS);
+		let third = entryAt("c", "Third", DAY_MS);
+		let feed = await follow(user, FEED_URL, [first, second, third]);
+
+		let page = await user.feedTimeline(feed.id);
+		if (!page.ok) throw new Error(page.reason);
+		let idOf = (title: string) => page.items.find((item) => item.title === title)?.id ?? "";
+
+		await user.saveItem(idOf("First"));
+
+		server.use(http.get(FEED_URL, () => HttpResponse.xml(completeRss([third]))));
+		let refreshed = await (await feedObject(feed.feedId)).refresh("manual");
+		expect(refreshed).toMatchObject({ ok: true, removed: 2 });
+
+		await user.synchronize();
+
+		expect(storedItems(state, feed.id)).toEqual([idOf("First"), idOf("Third")]);
+	});
+});
+
 /** The folder one post is filed in, read straight off the row. */
 function storedFolder(state: DurableObjectStateMock, itemId: string): string | null {
 	let [row] = state.storage.sql
