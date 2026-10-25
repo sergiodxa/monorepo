@@ -94,7 +94,7 @@ export function managementRateLimit(
 			let answer = managementProblem("rateLimited", {
 				detail: "This tenant's request budget is spent for this window.",
 			});
-			return tooManyRequests(decision.data, adapter.window, answer.body, {
+			return tooManyRequests(decision.data, adapter, answer.body, {
 				headers: answer.headers,
 			});
 		}

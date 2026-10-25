@@ -93,7 +93,7 @@ describe("managementRateLimit", () => {
 
 		expect(response.status).toBe(429);
 		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
-		expect(response.headers.get("RateLimit")).toContain("limit=60");
+		expect(response.headers.get("RateLimit-Policy")).toContain(";q=60;");
 		expect(response.headers.has("Retry-After")).toBe(true);
 
 		let body = (await response.json()) as Record<string, unknown>;
@@ -107,7 +107,7 @@ describe("managementRateLimit", () => {
 			new Request("https://api.example.com/probe", { method: "POST" }),
 		);
 
-		expect(response.headers.get("RateLimit")).toContain("limit=20");
+		expect(response.headers.get("RateLimit-Policy")).toContain(";q=20;");
 	});
 
 	test("reads the tenant's own plan tier", async () => {
@@ -116,7 +116,7 @@ describe("managementRateLimit", () => {
 
 		let response = await router.fetch(new Request("https://api.example.com/probe"));
 
-		expect(response.headers.get("RateLimit")).toContain("limit=1800");
+		expect(response.headers.get("RateLimit-Policy")).toContain(";q=1800;");
 	});
 
 	test("falls back to the free tier for an unresolvable tenant", async () => {
@@ -124,7 +124,7 @@ describe("managementRateLimit", () => {
 
 		let response = await router.fetch(new Request("https://api.example.com/probe"));
 
-		expect(response.headers.get("RateLimit")).toContain("limit=60");
+		expect(response.headers.get("RateLimit-Policy")).toContain(";q=60;");
 	});
 
 	test("lets the request through when the limiter binding cannot answer", async () => {

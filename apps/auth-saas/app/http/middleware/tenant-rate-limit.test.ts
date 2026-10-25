@@ -131,7 +131,7 @@ describe("interactiveCredentialRateLimit", () => {
 
 		expect(response.status).toBe(429);
 		expect(response.headers.get("Content-Type")).toContain("text/html");
-		expect(response.headers.get("RateLimit-Policy")).toBe("10;w=10");
+		expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=10;w=10');
 		expect(await response.text()).toContain("Too many attempts");
 	});
 
@@ -289,7 +289,7 @@ describe("mailSendingRateLimit", () => {
 			formRequest("https://example.com/reset", { identifier: "jane@example.com" }),
 		);
 
-		expect(response.headers.get("RateLimit-Policy")).toBe("5;w=3600");
+		expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=5;w=3600');
 	});
 
 	test("fails closed when the KV namespace cannot answer", async () => {
@@ -327,7 +327,7 @@ describe("tokenRateLimit", () => {
 		let response = await router.fetch(request);
 
 		expect(response.status).toBe(429);
-		expect(response.headers.get("RateLimit-Policy")).toBe("60;w=10");
+		expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=60;w=10');
 	});
 
 	test("falls back to the connecting address when no client authenticates", async () => {
@@ -382,7 +382,7 @@ describe("authorizationRateLimit", () => {
 		let response = await router.fetch(getRequest("https://example.com/authorize"));
 
 		expect(response.status).toBe(429);
-		expect(response.headers.get("RateLimit-Policy")).toBe("30;w=10");
+		expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=30;w=10');
 	});
 });
 
@@ -425,7 +425,7 @@ describe("protocolRateLimit", () => {
 		let response = await router.fetch(getRequest("https://example.com/userinfo"));
 
 		expect(response.status).toBe(429);
-		expect(response.headers.get("RateLimit-Policy")).toBe("120;w=10");
+		expect(response.headers.get("RateLimit-Policy")).toBe('"default";q=120;w=10');
 	});
 });
 
