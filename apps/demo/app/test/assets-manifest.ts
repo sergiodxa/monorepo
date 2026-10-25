@@ -15,7 +15,7 @@ export const CLIENT_ENTRY_HREF = "/assets/browser.js";
 /** The one stylesheet the document links, as a build combines the three it imports. */
 export const STYLESHEET_HREF = "/assets/index.css";
 
-const manifest: BuildAssetsManifest = {
+const MANIFEST: BuildAssetsManifest = {
 	mode: "build",
 	entries: { "bootstrap/browser.ts": CLIENT_ENTRY_HREF },
 	assets: {},
@@ -35,4 +35,4 @@ const manifest: BuildAssetsManifest = {
 	},
 };
 
-export default manifest;
+export default MANIFEST;
