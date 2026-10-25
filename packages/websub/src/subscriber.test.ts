@@ -337,10 +337,10 @@ describe("answering a verification", () => {
 	});
 });
 
-describe(verifyDelivery, () => {
-	/** The feed a hub distributes in the tests below. */
-	const BODY = `<?xml version="1.0"?><rss version="2.0"><channel><title>Blog</title></channel></rss>`;
+/** The feed a hub distributes in the tests below. */
+const BODY = `<?xml version="1.0"?><rss version="2.0"><channel><title>Blog</title></channel></rss>`;
 
+describe(verifyDelivery, () => {
 	test.each(["sha1", "sha256", "sha384", "sha512"] as const)(
 		"accepts a body signed with %s (§8)",
 		async (algorithm) => {
@@ -512,13 +512,13 @@ describe(verifyDelivery, () => {
 	});
 });
 
+/** The instant every lease in the renewal tests is granted at. */
+const VERIFIED_AT = Date.UTC(2026, 8, 24);
+
+/** One hour, in milliseconds. */
+const HOUR = 3_600_000;
+
 describe(renewalAt, () => {
-	/** The instant every lease in this block is granted at. */
-	const VERIFIED_AT = Date.UTC(2026, 8, 24);
-
-	/** One hour, in milliseconds. */
-	const HOUR = 3_600_000;
-
 	test("renews once the default share of a long lease has elapsed", () => {
 		let leaseSeconds = 10 * 24 * 3_600;
 		expect(renewalAt({ verifiedAt: VERIFIED_AT, leaseSeconds })).toBe(
