@@ -197,6 +197,31 @@ export class ProtectedResource {
 	}
 
 	/**
+	 * The user authentication a refusal's RFC 9470 step-up challenge asks for, so a client
+	 * re-authorizes the person with it as `acr_values` and `max_age`.
+	 *
+	 * @param response - The refusal.
+	 * @returns The first `insufficient_user_authentication` challenge's classes and age in
+	 *   seconds; `null` for a response carrying none.
+	 * @example
+	 * let stepUp = ProtectedResource.requiredAuthentication(response);
+	 * if (stepUp) return rp.authorize(ctx, { acrValues: stepUp.acrValues, maxAge: stepUp.maxAge ?? undefined });
+	 */
+	static requiredAuthentication(
+		response: Response,
+	): ProtectedResource.RequiredAuthentication | null {
+		let challenges = parseChallenges(response.headers.get("www-authenticate") ?? "");
+		if (isFailure(challenges)) return null;
+
+		let stepUp = challenges.data.find(
+			(challenge) => challenge.error === "insufficient_user_authentication",
+		);
+		if (stepUp === undefined) return null;
+
+		return { acrValues: stepUp.acrValues, maxAge: stepUp.maxAge };
+	}
+
+	/**
 	 * Fetches and checks one metadata document.
 	 *
 	 * @param url - Where the document is served.
@@ -278,6 +303,14 @@ export class ProtectedResource {
 }
 
 export namespace ProtectedResource {
+	/** The user authentication a step-up challenge asks a fresh login to reach. */
+	export interface RequiredAuthentication {
+		/** The authentication context classes accepted, in order of preference. */
+		acrValues: string[];
+		/** How many seconds old the authentication may be, `null` when any age will do. */
+		maxAge: number | null;
+	}
+
 	/** How a resource's metadata is fetched and checked. */
 	export interface DiscoverOptions {
 		/**

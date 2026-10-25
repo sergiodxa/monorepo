@@ -9,6 +9,7 @@
 
 import type { ProtectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 
+import { toSeconds } from "@sdxc/duration";
 import { define, metadataUrl } from "@sdxc/well-known/oauth-protected-resource";
 
 import type { BearerChallenge } from "./bearer-challenge.js";
@@ -182,15 +183,44 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 	 * @example
 	 * api.challenge({ error: "insufficient_scope", scope: ["reports:write"] });
 	 */
-	challenge(
-		refusal: Pick<Partial<BearerChallenge>, "error" | "errorDescription" | "scope"> = {},
-	): string {
+	challenge(refusal: ResourceServer.Refusal = {}): string {
 		return stringify({
 			realm: this.#realm,
 			scope: refusal.scope,
 			error: refusal.error,
 			errorDescription: refusal.errorDescription,
+			acrValues: refusal.acrValues,
+			maxAge: refusal.maxAge,
 			resourceMetadata: this.#resource === null ? null : metadataUrl(this.#resource),
+		});
+	}
+
+	/**
+	 * The RFC 9470 §3 step-up challenge for a token whose user authentication falls short
+	 * of a route's requirement, naming the classes and age a fresh login must reach, so
+	 * the client re-authorizes with them as `acr_values` and `max_age`.
+	 *
+	 * @param token - The token the request presented, already verified.
+	 * @param requirement - The classes accepted and how old the authentication may be.
+	 * @param now - The instant `maxAge` is measured back from.
+	 * @returns The `WWW-Authenticate` value for a `401`, or `null` when the token meets it.
+	 * @example
+	 * let challenge = api.authenticationChallenge(token, { acrValues: ["mfa"], maxAge: 300 });
+	 * if (challenge) return new Response(null, { status: 401, headers: { "WWW-Authenticate": challenge } });
+	 */
+	authenticationChallenge(
+		token: AccessToken,
+		requirement: AccessToken.AuthenticationRequirement,
+		now: Date = new Date(),
+	): string | null {
+		if (token.meets(requirement, now)) return null;
+
+		let { maxAge } = requirement;
+		return this.challenge({
+			error: "insufficient_user_authentication",
+			errorDescription: "A different authentication level is required.",
+			acrValues: requirement.acrValues,
+			maxAge: typeof maxAge === "string" ? toSeconds(maxAge) : maxAge,
 		});
 	}
 
@@ -306,6 +336,11 @@ export class ResourceServer<Configured extends ResourceServer.Options = Resource
 				description.expiresAt === null
 					? undefined
 					: Math.floor(description.expiresAt.getTime() / MS_PER_SECOND),
+			acr: description.acr ?? undefined,
+			auth_time:
+				description.authTime == null
+					? undefined
+					: Math.floor(description.authTime.getTime() / MS_PER_SECOND),
 		});
 	}
 }
@@ -327,6 +362,12 @@ export namespace ResourceServer {
 	export type IfBound<Configured, Value> = Configured extends { resource: URL | string }
 		? Value
 		: Value | null;
+
+	/** Why a request was refused, in the parameters its `WWW-Authenticate` challenge carries. */
+	export type Refusal = Pick<
+		Partial<BearerChallenge>,
+		"error" | "errorDescription" | "scope" | "acrValues" | "maxAge"
+	>;
 
 	/** The members an RFC 9728 document publishes beside `resource`. */
 	export type PublishedMetadata = Omit<Partial<ProtectedResourceMetadata>, "resource">;
@@ -409,6 +450,10 @@ export namespace ResourceServer {
 		issuer: string | null;
 		/** When the token stops being honored. */
 		expiresAt: Date | null;
+		/** The authentication context class the user signed in at, for a step-up check. */
+		acr?: string | null;
+		/** When the user last actively authenticated, for a step-up check. */
+		authTime?: Date | null;
 	}
 
 	/** The RFC 7662 call a credential carrying no claims is resolved through. */

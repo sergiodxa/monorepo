@@ -19,6 +19,8 @@ const EMPTY = {
 	error: null,
 	errorDescription: null,
 	errorUri: null,
+	acrValues: [],
+	maxAge: null,
 	resourceMetadata: null,
 	extensions: {},
 };
@@ -52,15 +54,17 @@ describe("stringify", () => {
 	test("orders parameters as the RFCs list them, extensions last", () => {
 		expect(
 			stringify({
-				extensions: { max_age: "300" },
+				extensions: { algs: "ES256" },
 				resourceMetadata: new URL(METADATA),
+				maxAge: 300,
+				acrValues: ["mfa"],
 				errorUri: new URL("https://docs.example.com/errors"),
 				scope: ["read", "write"],
 				error: "insufficient_scope",
 				realm: "api",
 			}),
 		).toBe(
-			`Bearer realm="api", scope="read write", error="insufficient_scope", error_uri="https://docs.example.com/errors", resource_metadata="${METADATA}", max_age="300"`,
+			`Bearer realm="api", scope="read write", error="insufficient_scope", error_uri="https://docs.example.com/errors", acr_values="mfa", max_age="300", resource_metadata="${METADATA}", algs="ES256"`,
 		);
 	});
 
@@ -166,15 +170,16 @@ describe("parse", () => {
 
 	test("keeps unknown parameters and unregistered values under their own names", () => {
 		let [challenge] = unwrap(
-			parse(`Bearer error="use_dpop_nonce", error_uri="/errors", max_age="300"`),
+			parse(`Bearer error="use_dpop_nonce", error_uri="/errors", max_age="soon"`),
 		);
 
 		expect(challenge?.error).toBeNull();
 		expect(challenge?.errorUri).toBeNull();
+		expect(challenge?.maxAge).toBeNull();
 		expect(challenge?.extensions).toEqual({
 			error: "use_dpop_nonce",
 			error_uri: "/errors",
-			max_age: "300",
+			max_age: "soon",
 		});
 	});
 
@@ -186,11 +191,35 @@ describe("parse", () => {
 			error: "insufficient_scope" as const,
 			errorDescription: "needs write",
 			errorUri: new URL("https://docs.example.com/errors"),
+			acrValues: ["mfa", "pwd"],
+			maxAge: 300,
 			resourceMetadata: new URL(METADATA),
-			extensions: { max_age: "300" },
+			extensions: { algs: "ES256" },
 		};
 
 		expect(unwrap(parse(stringify(written)))).toEqual([written]);
+	});
+
+	test("reads RFC 9470 §3's step-up challenge", () => {
+		let [challenge] = unwrap(
+			parse(
+				`Bearer error="insufficient_user_authentication", error_description="A different authentication level is required", acr_values="myACR"`,
+			),
+		);
+
+		expect(challenge).toEqual({
+			...EMPTY,
+			error: "insufficient_user_authentication",
+			errorDescription: "A different authentication level is required",
+			acrValues: ["myACR"],
+		});
+	});
+
+	test("reads a step-up challenge's max_age as seconds", () => {
+		let [challenge] = unwrap(parse(`Bearer error="insufficient_user_authentication", max_age="5"`));
+
+		expect(challenge?.maxAge).toBe(5);
+		expect(challenge?.extensions).toEqual({});
 	});
 
 	test.each([

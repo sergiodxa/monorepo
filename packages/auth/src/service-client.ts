@@ -88,6 +88,8 @@ const INTROSPECTION_SCHEMA = s.object({
 	sub: s.optional(s.string()),
 	aud: s.optional(s.union([s.string(), s.array(s.string())])),
 	iss: s.optional(s.string()),
+	acr: s.optional(s.string()),
+	auth_time: s.optional(s.number()),
 });
 
 /**
@@ -275,6 +277,8 @@ export class ServiceClient {
 			issuer: description.iss ?? null,
 			issuedAt: toDate(description.iat),
 			expiresAt: toDate(description.exp),
+			acr: description.acr ?? null,
+			authTime: toDate(description.auth_time),
 		};
 	}
 
@@ -682,5 +686,11 @@ export namespace ServiceClient {
 
 		/** When the issuer stops honoring the token, from `exp`. */
 		expiresAt: Date | null;
+
+		/** The authentication context class the user signed in at, from `acr` (RFC 9470 §6.2). */
+		acr: string | null;
+
+		/** When the user last actively authenticated, from `auth_time` (RFC 9470 §6.2). */
+		authTime: Date | null;
 	}
 }

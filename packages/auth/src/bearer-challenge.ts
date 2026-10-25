@@ -1,7 +1,7 @@
 /**
  * The `WWW-Authenticate` challenge a bearer-token API answers a refusal with: RFC 6750 §3
- * parameters plus RFC 9728 §5.1's `resource_metadata`, written with RFC 9110 quoting and
- * read back out of a header that may list several schemes.
+ * parameters, RFC 9470's step-up `acr_values` and `max_age`, and RFC 9728's
+ * `resource_metadata`, written with RFC 9110 quoting and read from a multi-scheme header.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,8 +11,12 @@ import type { Result } from "@sdxc/result";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
-/** The error codes RFC 6750 §3.1 registers. */
-export type BearerError = "invalid_request" | "invalid_token" | "insufficient_scope";
+/** The error codes RFC 6750 §3.1 registers, plus RFC 9470 §3's step-up refusal. */
+export type BearerError =
+	| "invalid_request"
+	| "invalid_token"
+	| "insufficient_scope"
+	| "insufficient_user_authentication";
 
 /** One `Bearer` challenge, with its registered parameters typed and the rest kept by name. */
 export interface BearerChallenge {
@@ -22,12 +26,19 @@ export interface BearerChallenge {
 	error: BearerError | null;
 	errorDescription: string | null;
 	errorUri: URL | null;
+	/**
+	 * The authentication context classes a step-up asks for (RFC 9470 §3), in order of
+	 * preference, from the space-separated `acr_values` parameter.
+	 */
+	acrValues: string[];
+	/** How many seconds old the user's authentication may be (RFC 9470 §3). */
+	maxAge: number | null;
 	/** Where the resource's RFC 9728 metadata is served. */
 	resourceMetadata: URL | null;
 	/**
-	 * Every other auth-param by lowercased name, `max_age` for instance. A registered
-	 * parameter whose value fits no typed field (an unregistered `error` code, a relative
-	 * `error_uri`) stays here under its own name, so reading a header loses nothing.
+	 * Every other auth-param by lowercased name. A registered parameter whose value fits
+	 * no typed field (an unregistered `error` code, a relative `error_uri`, a `max_age`
+	 * that is no whole number) stays here under its own name, so reading loses nothing.
 	 */
 	extensions: Record<string, string>;
 }
@@ -51,8 +62,16 @@ export class ChallengeParseError extends Error {
 /** The scheme name RFC 6750 §3 registers, compared case-insensitively. */
 const BEARER = "bearer";
 
-/** The RFC 6750 §3.1 codes, which a parsed `error` is held to. */
-const BEARER_ERRORS: readonly string[] = ["invalid_request", "invalid_token", "insufficient_scope"];
+/** The registered codes, which a parsed `error` is held to. */
+const BEARER_ERRORS: readonly string[] = [
+	"invalid_request",
+	"invalid_token",
+	"insufficient_scope",
+	"insufficient_user_authentication",
+];
+
+/** A `max_age` RFC 9470 §3 can mean: a non-negative whole number of seconds. */
+const SECONDS = /^\d+$/;
 
 /** An RFC 9110 §5.6.2 token at the start of the input. */
 const TOKEN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+/;
@@ -278,6 +297,8 @@ function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, Ch
 		error: null,
 		errorDescription: null,
 		errorUri: null,
+		acrValues: [],
+		maxAge: null,
 		resourceMetadata: null,
 		extensions: {},
 	};
@@ -291,6 +312,8 @@ function toBearer(raw: RawChallenge, offset: number): Result<BearerChallenge, Ch
 
 		if (name === "realm") challenge.realm = value;
 		else if (name === "scope") challenge.scope = value.split(" ").filter(Boolean);
+		else if (name === "acr_values") challenge.acrValues = value.split(" ").filter(Boolean);
+		else if (name === "max_age" && SECONDS.test(value)) challenge.maxAge = Number(value);
 		else if (name === "error_description") challenge.errorDescription = value;
 		else if (name === "error" && BEARER_ERRORS.includes(value)) {
 			challenge.error = value as BearerError;
@@ -316,14 +339,16 @@ function quote(value: string): string {
 
 /**
  * Writes one `Bearer` challenge. Parameters appear in RFC order (`realm`, `scope`,
- * `error`, `error_description`, `error_uri`, `resource_metadata`) with extensions after
- * them, every value quoted; a challenge with no parameters is the bare scheme.
+ * `error`, `error_description`, `error_uri`, `acr_values`, `max_age`, `resource_metadata`)
+ * with extensions after them, every value quoted; no parameters is the bare scheme.
  *
  * @param challenge - The parameters to send; absent, `null` and empty ones are left out.
  * @example
  * stringify({ error: "invalid_token", resourceMetadata: api.metadataUrl });
  * @example
  * stringify({ error: "insufficient_scope", scope: ["reports:write"] });
+ * @example
+ * stringify({ error: "insufficient_user_authentication", acrValues: ["mfa"], maxAge: 300 });
  */
 export function stringify(challenge: Partial<BearerChallenge>): string {
 	let params: [string, string | null | undefined][] = [
@@ -332,6 +357,8 @@ export function stringify(challenge: Partial<BearerChallenge>): string {
 		["error", challenge.error],
 		["error_description", challenge.errorDescription],
 		["error_uri", challenge.errorUri?.href],
+		["acr_values", challenge.acrValues?.length ? challenge.acrValues.join(" ") : null],
+		["max_age", challenge.maxAge == null ? null : String(challenge.maxAge)],
 		["resource_metadata", challenge.resourceMetadata?.href],
 		...Object.entries(challenge.extensions ?? {}),
 	];

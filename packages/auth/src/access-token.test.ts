@@ -176,3 +176,61 @@ describe("verify", () => {
 		expect(verified.has("monitors:write")).toBe(true);
 	});
 });
+
+describe("step-up claims", () => {
+	test("reads acr and auth_time", () => {
+		let token = new AccessToken({ acr: "mfa", auth_time: 1_700_000_000 });
+
+		expect(token.acr).toBe("mfa");
+		expect(token.authTime).toEqual(new Date(1_700_000_000_000));
+	});
+
+	test("reads absent claims as null", () => {
+		let token = new AccessToken({});
+
+		expect(token.acr).toBeNull();
+		expect(token.authTime).toBeNull();
+	});
+});
+
+describe("meets", () => {
+	let now = new Date(1_700_000_600_000);
+
+	test("accepts a token whose acr is one of the accepted values", () => {
+		let token = new AccessToken({ acr: "mfa" });
+		expect(token.meets({ acrValues: ["phr", "mfa"] }, now)).toBe(true);
+	});
+
+	test("refuses a token with another acr", () => {
+		let token = new AccessToken({ acr: "pwd" });
+		expect(token.meets({ acrValues: ["mfa"] }, now)).toBe(false);
+	});
+
+	test("refuses a token carrying no acr when classes are required", () => {
+		expect(new AccessToken({}).meets({ acrValues: ["mfa"] }, now)).toBe(false);
+	});
+
+	test("accepts an authentication within max_age, counted in seconds", () => {
+		let token = new AccessToken({ auth_time: 1_700_000_300 });
+		expect(token.meets({ maxAge: 300 }, now)).toBe(true);
+	});
+
+	test("refuses an authentication older than max_age", () => {
+		let token = new AccessToken({ auth_time: 1_700_000_299 });
+		expect(token.meets({ maxAge: 300 }, now)).toBe(false);
+	});
+
+	test("reads a duration string as max_age", () => {
+		let token = new AccessToken({ auth_time: 1_700_000_000 });
+		expect(token.meets({ maxAge: "10 minutes" }, now)).toBe(true);
+		expect(token.meets({ maxAge: "5 minutes" }, now)).toBe(false);
+	});
+
+	test("refuses a token carrying no auth_time when max_age is required", () => {
+		expect(new AccessToken({ acr: "mfa" }).meets({ maxAge: 300 }, now)).toBe(false);
+	});
+
+	test("accepts any token for an empty requirement", () => {
+		expect(new AccessToken({}).meets({}, now)).toBe(true);
+	});
+});

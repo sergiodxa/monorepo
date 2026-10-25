@@ -7,7 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DurationString } from "@sdxc/duration";
+
+import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
+
+/** Milliseconds in a second, the factor between `auth_time` and a `Date`. */
+const MS_PER_SECOND = 1000;
 
 /**
  * A JWT access token, per RFC 9068. `audience` reads either shape of `aud`: the client
@@ -87,5 +93,56 @@ export class AccessToken extends JWT {
 	 */
 	has(scope: string): boolean {
 		return this.scopes.includes(scope);
+	}
+
+	/** The authentication context class the user was signed in at (RFC 9068 §2.2.1). */
+	get acr(): string | null {
+		if (this.parser.has("acr")) return this.parser.string("acr");
+		return null;
+	}
+
+	/** When the user last actively authenticated (RFC 9068 §2.2.1). */
+	get authTime(): Date | null {
+		if (!this.parser.has("auth_time")) return null;
+		return new Date(this.parser.number("auth_time") * MS_PER_SECOND);
+	}
+
+	/**
+	 * Whether the user's authentication behind this token meets a route's requirement,
+	 * the check RFC 9470 §3 answers `insufficient_user_authentication` for. A token missing
+	 * the claim a requirement reads fails that requirement.
+	 *
+	 * @param requirement - The classes accepted and how old the authentication may be.
+	 * @param now - The instant `maxAge` is measured back from.
+	 * @example
+	 * if (!token.meets({ acrValues: ["mfa"], maxAge: "15 minutes" })) return stepUp();
+	 */
+	meets(requirement: AccessToken.AuthenticationRequirement, now: Date = new Date()): boolean {
+		let { acrValues = [], maxAge } = requirement;
+
+		if (acrValues.length > 0) {
+			let acr = this.acr;
+			if (acr === null || !acrValues.includes(acr)) return false;
+		}
+
+		if (maxAge === undefined) return true;
+
+		let authTime = this.authTime;
+		if (authTime === null) return false;
+		let seconds = typeof maxAge === "string" ? toSeconds(maxAge) : maxAge;
+		return now.getTime() - authTime.getTime() <= seconds * MS_PER_SECOND;
+	}
+}
+
+export namespace AccessToken {
+	/** The user authentication a route requires before it acts, per RFC 9470 §3. */
+	export interface AuthenticationRequirement {
+		/** The `acr` values accepted, in order of preference; empty accepts any. */
+		acrValues?: string[];
+		/**
+		 * How long ago the user may have authenticated, in seconds or as a duration
+		 * string; absent accepts any age.
+		 */
+		maxAge?: number | DurationString;
 	}
 }

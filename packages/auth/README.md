@@ -250,8 +250,11 @@ token's `aud` must name the resource.
 - `verifyRequest(request)`: the `AccessToken`, `null` when no bearer token was sent; throws
   `invalid_token` for a rejected one
 - `verifyAccessToken(credential)`: the same checks over a token in hand
-- `challenge({ error?, errorDescription?, scope? }?)`: the `WWW-Authenticate` value, with
-  `realm` and `resource_metadata` when configured
+- `challenge({ error?, errorDescription?, scope?, acrValues?, maxAge? }?)`: the
+  `WWW-Authenticate` value, with `realm` and `resource_metadata` when configured
+- `authenticationChallenge(token, { acrValues?, maxAge? })`: RFC 9470's
+  `insufficient_user_authentication` challenge for a token whose `acr` or `auth_time` falls
+  short, `null` when it meets the requirement
 - `metadata()`: the RFC 9728 document, `null` without a `resource`
 - `resource`, `metadataUrl`, `issuer`
 
@@ -270,6 +273,11 @@ when there is none.
 #### `ProtectedResource.requiredScopes(response): string[]`
 
 The scopes a refusal's Bearer challenges ask for.
+
+#### `ProtectedResource.requiredAuthentication(response)`
+
+The `{ acrValues, maxAge }` an RFC 9470 step-up challenge asks for, to pass to
+`rp.authorize`; `null` when the refusal asks for none.
 
 #### `resource.issuer(authorizationServer?, options?)`
 
@@ -356,7 +364,7 @@ The RFC 8176 `amr` values by name, such as `AUTHENTICATION_METHODS.Mfa === "mfa"
 #### `AccessToken`
 
 An RFC 9068 `JWT` with `scopes`, `clientId`, `issuedToService` (`sub` equals `client_id`),
-and `has(scope)`. `AccessToken.tryDecode(raw)` answers `null` for an opaque token instead of
+`acr`, `authTime`, `has(scope)`, and `meets({ acrValues?, maxAge? })`. `AccessToken.tryDecode(raw)` answers `null` for an opaque token instead of
 throwing.
 
 ### `@sdxc/auth/auth-error`

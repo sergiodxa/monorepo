@@ -713,6 +713,8 @@ describe("introspect", () => {
 			expiresAt: new Date(1_700_000_600_000),
 			issuedAt: new Date(1_700_000_000_000),
 			username: "reporter",
+			acr: null,
+			authTime: null,
 		});
 		expect(new URLSearchParams(introspections[0]!.body).get("token")).toBe("opaque-token");
 	});
@@ -738,7 +740,22 @@ describe("introspect", () => {
 			expiresAt: null,
 			issuedAt: null,
 			username: null,
+			acr: null,
+			authTime: null,
 		});
+	});
+
+	test("reads the step-up claims RFC 9470 §6.2 describes", async () => {
+		server.use(
+			http.post(INTROSPECTION_ENDPOINT, () =>
+				HttpResponse.json({ active: true, acr: "mfa", auth_time: 1_700_000_000 }),
+			),
+		);
+
+		let introspection = await clientFor().introspect("opaque-token");
+
+		expect(introspection.acr).toBe("mfa");
+		expect(introspection.authTime).toEqual(new Date(1_700_000_000_000));
 	});
 
 	test("reads a single-valued `aud` as a one-element list", async () => {

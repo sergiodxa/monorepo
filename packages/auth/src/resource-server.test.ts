@@ -99,6 +99,8 @@ const INTROSPECTOR: ResourceServer.Introspector = {
 			aud?: string | string[];
 			iss?: string;
 			exp?: number;
+			acr?: string;
+			auth_time?: number;
 		};
 
 		return {
@@ -109,6 +111,8 @@ const INTROSPECTOR: ResourceServer.Introspector = {
 			audience: list(body.aud),
 			issuer: body.iss ?? null,
 			expiresAt: body.exp === undefined ? null : new Date(body.exp * MS_PER_SECOND),
+			acr: body.acr ?? null,
+			authTime: body.auth_time === undefined ? null : new Date(body.auth_time * MS_PER_SECOND),
 		};
 	},
 };
@@ -368,6 +372,27 @@ describe("introspection", () => {
 		expect(token?.clientId).toBe(CLIENT_ID);
 		expect(token?.has("monitors:read")).toBe(true);
 		expect(introspections).toEqual(["opaque-token"]);
+	});
+
+	test("carries the step-up claims the issuer describes", async () => {
+		server.use(
+			http.post(INTROSPECTION_URL, () =>
+				HttpResponse.json({
+					active: true,
+					sub: "person-1",
+					aud: RESOURCE,
+					acr: "mfa",
+					auth_time: 1_700_000_000,
+				}),
+			),
+		);
+
+		let api = resourceServer({ audience: RESOURCE, introspection: INTROSPECTOR });
+
+		let token = await api.verifyRequest(request("Bearer opaque-token"));
+
+		expect(token?.acr).toBe("mfa");
+		expect(token?.authTime).toEqual(new Date(1_700_000_000_000));
 	});
 
 	test("names an opaque token the issuer reports inactive", async () => {
@@ -746,6 +771,37 @@ describe("challenge", () => {
 			}),
 		).toBe(
 			`Bearer scope="monitors:write", error="insufficient_scope", error_description="Needs write access", resource_metadata="https://api.test/.well-known/oauth-protected-resource"`,
+		);
+	});
+});
+
+describe("authenticationChallenge", () => {
+	let now = new Date(1_700_000_600_000);
+
+	test("answers null for a token that meets the requirement", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: RESOURCE });
+		let token = new AccessToken({ acr: "mfa", auth_time: 1_700_000_500 });
+
+		expect(api.authenticationChallenge(token, { acrValues: ["mfa"], maxAge: 300 }, now)).toBe(null);
+	});
+
+	test("challenges a token at another class with RFC 9470's step-up error", () => {
+		let api = new ResourceServer(new Issuer(ISSUER), { resource: RESOURCE });
+		let token = new AccessToken({ acr: "pwd", auth_time: 1_700_000_500 });
+
+		expect(api.authenticationChallenge(token, { acrValues: ["mfa"] }, now)).toBe(
+			`Bearer error="insufficient_user_authentication", error_description="A different authentication level is required.", acr_values="mfa", resource_metadata="https://api.test/.well-known/oauth-protected-resource"`,
+		);
+	});
+
+	test("names the max_age in seconds for an authentication too old", () => {
+		let api = resourceServer();
+		let token = new AccessToken({ acr: "mfa", auth_time: 1_700_000_000 });
+
+		expect(
+			api.authenticationChallenge(token, { acrValues: ["mfa"], maxAge: "5 minutes" }, now),
+		).toBe(
+			`Bearer error="insufficient_user_authentication", error_description="A different authentication level is required.", acr_values="mfa", max_age="300"`,
 		);
 	});
 });

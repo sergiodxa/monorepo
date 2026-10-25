@@ -302,6 +302,27 @@ describe("requiredScopes", () => {
 	});
 });
 
+describe("requiredAuthentication", () => {
+	test("reads the classes and age an RFC 9470 step-up challenge asks for", () => {
+		let response = refusal(
+			`DPoP algs="ES256", Bearer error="insufficient_user_authentication", acr_values="mfa phr", max_age="300"`,
+		);
+
+		expect(ProtectedResource.requiredAuthentication(response)).toEqual({
+			acrValues: ["mfa", "phr"],
+			maxAge: 300,
+		});
+	});
+
+	test("answers null for a refusal that asks for no step-up", () => {
+		expect(
+			ProtectedResource.requiredAuthentication(refusal(`Bearer error="invalid_token"`)),
+		).toBeNull();
+		expect(ProtectedResource.requiredAuthentication(refusal())).toBeNull();
+		expect(ProtectedResource.requiredAuthentication(refusal(`Bearer realm="x`))).toBeNull();
+	});
+});
+
 describe("issuer", () => {
 	/**
 	 * A resource listing the given authorization servers, built from metadata the app
