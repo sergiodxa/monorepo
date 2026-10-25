@@ -1958,6 +1958,7 @@
         "@sdxc/ip": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/json-feed": "workspace:*",
+        "@sdxc/json-patch": "workspace:*",
         "@sdxc/json-pointer": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/jsonc": "workspace:*",
