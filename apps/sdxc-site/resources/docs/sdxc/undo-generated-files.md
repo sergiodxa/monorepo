@@ -5,7 +5,7 @@ section:
     title: The sdxc command
     order: 2
 order: 2.5
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to remove a controller, job, tool, command, email or model and everything make wired for it"
     - "What sdxc destroy leaves for you, and why"
@@ -13,7 +13,7 @@ outcomes:
 ---
 
 `sdxc destroy <kind> <name>` takes out what `sdxc make <kind> <name>` put in: the file, its test,
-the mapping in its initializer and the declaration that mapping names. A `make` followed by a
+its pairing `.spec`, the mapping in its initializer and the declaration that mapping names. A `make` followed by a
 `destroy` gives you back every declaration and initializer it edited, as it was.
 
 ```bash
@@ -24,24 +24,25 @@ sdxc destroy controller about
 Removes:
   app/http/controllers/about.tsx
   app/http/controllers/about.test.tsx
+  spec/about.spec
 Edits:
   routes/web.ts
   app/http/controllers/sitemap.ts
   app/initializers/router.tsx
-Remove 2 files and edit 3? › No
+Remove 3 files and edit 3? › No
 ```
 
 ## What it removes
 
-| Kind           | Files                                | Edits                                                                            |
-| -------------- | ------------------------------------ | -------------------------------------------------------------------------------- |
-| `controller`   | the controller and its test          | the route in its contract, its sitemap decision, its `router.map(…)`             |
-| `job`          | the job and its test                 | its declaration in `app/jobs/index.ts`, its `dispatcher.map(…)`, its trigger     |
-| `mcp`          | the tool, or `--resource` a resource | its declaration, its `mcp.tools.map(…)` or `mcp.resources.map(…)`                |
-| `command`      | the command and its test             | its declaration in `app/commands/index.ts`, its `cli.map(…)`                     |
-| `email`        | the template and its test            | its declaration in `app/emails/index.ts`, its `mail.map(…)` in the mail registry |
-| `model`        | the model, its test and its factory  | its entry in `app/models/index.ts`                                               |
-| any other kind | the file and its test                | none                                                                             |
+| Kind           | Files                                                   | Edits                                                                            |
+| -------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `controller`   | the controller, its test and spec                       | the route in its contract, its sitemap decision, its `router.map(…)`             |
+| `job`          | the job and its test                                    | its declaration in `app/jobs/index.ts`, its `dispatcher.map(…)`, its trigger     |
+| `mcp`          | the tool, its test and spec, or `--resource` a resource | its declaration, its `mcp.tools.map(…)` or `mcp.resources.map(…)`                |
+| `command`      | the command, its test and spec                          | its declaration in `app/commands/index.ts`, its `cli.map(…)`                     |
+| `email`        | the template and its test                               | its declaration in `app/emails/index.ts`, its `mail.map(…)` in the mail registry |
+| `model`        | the model, its test and its factory                     | its entry in `app/models/index.ts`                                               |
+| any other kind | the file and its test                                   | none                                                                             |
 
 `destroy` finds the mapping by the import that loads the file, and reads the declaration from
 the mapping itself, `jobs.trials.expire` in `dispatcher.map(jobs.trials.expire, …)`. A group the
@@ -52,7 +53,8 @@ A scheduled job's trigger leaves `cloudflare.config.ts` with it once no other jo
 same schedule, so the Worker stops waking for a job it no longer has. A cron in `wrangler.jsonc`
 is listed for you to remove.
 
-Every make kind but `migration` and `policy` is accepted. A file that does not exist stops the
+The kinds are `controller`, `middleware`, `validator`, `job`, `model`, `factory`, `service`,
+`initializer`, `email`, `mcp` and `command`. A file that does not exist stops the
 command before it edits anything:
 
 ```text
