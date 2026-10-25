@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { isSuccess, wrap } from "@sdxc/result";
+import { isFailure, isSuccess, wrap } from "@sdxc/result";
 
 /** A package manager, with how a project installs, runs an installed binary and runs a script. */
 export interface PackageManager {
@@ -70,6 +70,30 @@ export async function packageManager(sources: PackageManagerSources): Promise<Pa
 	let locked = LOCK_FILES.find(([file]) => file === lockFile);
 	if (locked !== undefined) return PACKAGE_MANAGERS[locked[1]];
 	return PACKAGE_MANAGERS[known(sources.userAgent?.split("/")[0]) ?? "npm"];
+}
+
+/**
+ * The package manager of the project at `root`: its `package.json` `packageManager` field, then
+ * the nearest lock file at or above it. Every command that prints an install reads it here, so
+ * they agree on the same project.
+ */
+export async function projectPackageManager(root: string): Promise<PackageManager> {
+	return packageManager({
+		declared: await declaredPackageManager(root),
+		findLockFile: lockFileAtOrAbove(root),
+	});
+}
+
+/** The `packageManager` field of the `package.json` at `root`, when it holds a string. */
+async function declaredPackageManager(root: string): Promise<string | undefined> {
+	let text = await wrap(() => readFile(join(root, "package.json"), "utf8"));
+	if (isFailure(text)) return undefined;
+	let manifest = wrap(() => JSON.parse(text.data) as unknown);
+	if (isFailure(manifest) || typeof manifest.data !== "object" || manifest.data === null) {
+		return undefined;
+	}
+	let declared: unknown = Reflect.get(manifest.data, "packageManager");
+	return typeof declared === "string" ? declared : undefined;
 }
 
 /**

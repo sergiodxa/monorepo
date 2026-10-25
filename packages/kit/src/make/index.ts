@@ -24,7 +24,7 @@ import type { Field } from "../scaffold/fields.js";
 import { missingDependencies } from "../dependencies.js";
 import { unifiedDiff } from "../diff.js";
 import { formatFiles } from "../format.js";
-import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
+import { projectPackageManager } from "../package-manager.js";
 import {
 	columnSource,
 	factorySource,
@@ -32,7 +32,6 @@ import {
 	pluralize,
 	resolveReferences,
 } from "../scaffold/fields.js";
-import { readManifest } from "../upgrade/project.js";
 
 import type { Declared } from "./declare.js";
 import type { MakeRequest, PlannedFile } from "./generate.js";
@@ -356,11 +355,7 @@ export async function makeUnformatted(
 		if (edit !== dependencies.data) ctx.stdout(`Edited ${edit.path}\n`);
 	}
 	if (dependencies.data !== null) {
-		let read = await readManifest(root);
-		let manager = await packageManager({
-			declared: isFailure(read) ? undefined : read.data.manifest.packageManager,
-			findLockFile: lockFileAtOrAbove(root),
-		});
+		let manager = await projectPackageManager(root);
 		let added = dependencies.data.added.map(({ name, version }) => `${name}@${version}`);
 		ctx.stdout(`Added ${added.join(", ")} to package.json; run ${manager.install.join(" ")}\n`);
 	}

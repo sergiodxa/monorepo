@@ -13,7 +13,12 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
 
-import { lockFileAtOrAbove, packageManager, scriptCommand } from "./package-manager.js";
+import {
+	lockFileAtOrAbove,
+	packageManager,
+	projectPackageManager,
+	scriptCommand,
+} from "./package-manager.js";
 
 /** Fixture directories created by the current test, removed after it. */
 const DIRECTORIES: string[] = [];
@@ -83,5 +88,21 @@ describe("packageManager", () => {
 
 		expect(scriptCommand(npm, "dev")).toBe("npm run dev");
 		expect(scriptCommand(bun, "dev")).toBe("bun dev");
+	});
+});
+
+describe("projectPackageManager", () => {
+	test("reads package.json's packageManager before any lock file", async () => {
+		let root = await mkdtemp(join(tmpdir(), "sdxc-project-manager-"));
+		DIRECTORIES.push(root);
+		await writeFile(join(root, "package.json"), JSON.stringify({ packageManager: "bun@1.3.0" }));
+		let declared = await projectPackageManager(root);
+
+		await writeFile(join(root, "package.json"), "{}");
+		await writeFile(join(root, "pnpm-lock.yaml"), "");
+		let locked = await projectPackageManager(root);
+
+		expect(declared.install).toEqual(["bun", "install"]);
+		expect(locked.name).toBe("pnpm");
 	});
 });

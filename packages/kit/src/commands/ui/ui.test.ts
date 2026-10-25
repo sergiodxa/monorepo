@@ -167,6 +167,21 @@ describe("sdxc ui add", () => {
 		});
 	});
 
+	test("names the install of the package manager package.json declares, with no lock file", async () => {
+		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
+		let root = await project({
+			"package.json": JSON.stringify({
+				packageManager: "bun@1.3.0",
+				dependencies: { "@sdxc/ui": "2026.10.12" },
+			}),
+		});
+
+		let result = await invoke(["add", "button"], root, sdxc);
+
+		expect(result.code).toBe(0);
+		expect(result.stdout).toContain("Added @sdxc/u@2026.10.1 to package.json; run bun install\n");
+	});
+
 	test("copies a component, records it, and points every import of it at the copy", async () => {
 		let sdxc = await kitPackage("2026.10.14", [BUTTON, DIALOG, TABS]);
 		let root = await project();

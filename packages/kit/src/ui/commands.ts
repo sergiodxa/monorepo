@@ -32,7 +32,7 @@ import {
 	uiEntry,
 	writeLock,
 } from "../lock.js";
-import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
+import { projectPackageManager } from "../package-manager.js";
 
 import type { CopiedComponent } from "./imports.js";
 import type { CopyLayout } from "./layout.js";
@@ -451,10 +451,7 @@ async function listImportedPackages(root: string, plan: Plan): Promise<Result<vo
 	if (isFailure(edit)) return edit;
 	if (edit.data === null) return success(undefined);
 	plan.files.set(edit.data.path, { before: edit.data.before, after: edit.data.after });
-	let manager = await packageManager({
-		declared: undefined,
-		findLockFile: lockFileAtOrAbove(root),
-	});
+	let manager = await projectPackageManager(root);
 	let added = edit.data.added.map(({ name, version }) => `${name}@${version}`).join(", ");
 	plan.report.push(`Added ${added} to package.json; run ${manager.install.join(" ")}`);
 	return success(undefined);

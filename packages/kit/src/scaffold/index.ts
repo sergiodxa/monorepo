@@ -31,8 +31,7 @@ import { SCAFFOLD_PIECES } from "../make/kinds.js";
 import { chainFolder, nextMigrationFile } from "../make/migrations.js";
 import { parseName } from "../make/names.js";
 import { loadStub, renderStub } from "../make/stubs.js";
-import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
-import { readManifest } from "../upgrade/project.js";
+import { projectPackageManager } from "../package-manager.js";
 
 import type { OperationLocals, Resource } from "./render.js";
 
@@ -195,11 +194,7 @@ export async function scaffold(
 		if (edit !== dependencies.data) ctx.stdout(`Edited ${edit.path}\n`);
 	}
 	if (dependencies.data !== null) {
-		let read = await readManifest(root);
-		let manager = await packageManager({
-			declared: isFailure(read) ? undefined : read.data.manifest.packageManager,
-			findLockFile: lockFileAtOrAbove(root),
-		});
+		let manager = await projectPackageManager(root);
 		let added = dependencies.data.added.map(({ name, version }) => `${name}@${version}`);
 		ctx.stdout(`Added ${added.join(", ")} to package.json; run ${manager.install.join(" ")}\n`);
 	}

@@ -18,8 +18,7 @@ import { failure, isFailure, success, wrap } from "@sdxc/result";
 
 import type { Project } from "../middleware.js";
 
-import { lockFileAtOrAbove, packageManager } from "../package-manager.js";
-import { readManifest } from "../upgrade/project.js";
+import { projectPackageManager } from "../package-manager.js";
 
 import type { Name } from "./names.js";
 import type { MigrationSource, SchemaChange } from "./schema-diff.js";
@@ -178,11 +177,7 @@ function isTableShape(value: unknown): value is TableShape {
 
 /** `bun` for a project on Bun and `node` otherwise, as `sdxc run` decides. */
 async function projectRuntime(root: string): Promise<"bun" | "node"> {
-	let manifest = await readManifest(root);
-	let manager = await packageManager({
-		declared: isFailure(manifest) ? undefined : manifest.data.manifest.packageManager,
-		findLockFile: lockFileAtOrAbove(root),
-	});
+	let manager = await projectPackageManager(root);
 	return manager.name === "bun" ? "bun" : "node";
 }
 
