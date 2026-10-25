@@ -2,20 +2,19 @@
 title: License
 description: Every package in the collection is published under the MIT license, on the same terms, and each one carries its own copy of it.
 section:
-    title: License
+    title: Releases
     order: 10
-order: 1
-lastUpdated: 2026-10-19
+order: 4
+lastUpdated: 2026-10-25
 outcomes:
     - "What the MIT license lets you do with each package"
     - "Why every `@sdxc` package carries the same terms"
     - "Where each package ships its own `LICENSE.md`"
 ---
 
-Every package published under the `@sdxc` scope is MIT licensed. The terms are the same for all
-of them, so the answer is the same whether you take one package or the set, and each package
-ships its own `LICENSE.md` beside its source — what you install carries its license with it.
-This page states what the license lets you do and where to read its full text.
+Every package published under the `@sdxc` scope is MIT licensed, on the same terms whether you
+take one package or the set, and each package ships its own `LICENSE.md`, so what you install
+carries its license with it.
 
 ## What the license grants
 

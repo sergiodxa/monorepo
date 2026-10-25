@@ -117,5 +117,5 @@ test("names the line a broken document fails on", async () => {
   it without writing `isFailure` on every line.
 - [Subpath exports](/docs/conventions/subpath-exports) — why some of these imports have a
   second segment.
-- [Build an app](/docs/getting-started/build-an-app) — the same packages inside a project the
-  `sdxc` command starts.
+- [Use the packages outside Remix](/docs/getting-started/outside-remix) — packages with no
+  framework at all, served from a Worker and from Bun.

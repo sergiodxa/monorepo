@@ -16,8 +16,7 @@ Releases here are dated rather than semantic. A version is the UTC date it was p
 written `YYYY.M.D` with the month and day as plain integers, so a release published on 4
 September 2026 is `2026.9.4`. At most one release goes out per day, and it publishes only the
 packages that changed since the previous one, together with their dependents, all carrying that
-day's number. This page covers what that number tells you, how to write it into a manifest, and
-where to read what changed before you move to a newer release.
+day's number.
 
 ## The number says when
 
@@ -27,44 +26,24 @@ remove an export.
 
 ## Depend on one exact date
 
-Write the version you built and tested against, exactly as it was published. Packages that did
-not change in a release keep their earlier date, so each one is pinned at its newest version on
-or before the release you take:
-
-```json {% title="package.json" %}
-{
-	"dependencies": {
-		"@sdxc/markdown": "2026.10.24",
-		"@sdxc/result": "2026.10.13",
-		"remix": "3.1.0"
-	}
-}
-```
-
-An exact pin keeps the upgrade yours to schedule: move it when you are ready to read what
+Write the version you built and tested against, exactly as it was published, such as
+`"@sdxc/markdown": "2026.10.24"`. An exact pin keeps the upgrade yours to schedule: move it when you are ready to read what
 changed and take it. [Install and pin](/docs/getting-started/install-and-pin) covers keeping
 every package at one release.
 
 ## Why a range is the wrong tool
 
-A caret or tilde range reads the date as major, minor and patch. `^2026.10.24` therefore accepts
-`2026.12.31` — every later release in the same year — over a scheme where the number carries no
-compatibility meaning for that acceptance to rest on. A range is asking for a promise the
-version was never making; the date you pin is the one you trust.
+A caret or tilde range reads the date as major, minor and patch, so `^2026.10.24` accepts
+`2026.12.31` and every other later release that year, breaking changes included. The date you
+pin is the one you trust.
 
 ## Read what changed
 
 Each day's release is published as one set of notes, grouped by package, and the
-[Changelog](/docs/releases/changelog) shows every release. An entry is one change, headed by a
-sentence that says what changed for you, such as "Add ES512 signing keys", and followed by its
-release note: a new feature says how to use it with a short example, a fix states the behavior
-before and after and whether you need to act, and a breaking change lists every migration step
-with the code before and after. Breaking changes lead each package's section, marked
-**Breaking:**.
-
-The same notes are what [`sdxc upgrade`](/docs/sdxc/upgrade) reads when it moves your pins to a
-newer date, so the prompt it hands an AI agent carries every change between the release you
-have and the one you take.
+[Changelog](/docs/releases/changelog) shows every release. An entry is one change: a sentence
+that says what changed for you, then a note on how to use it, whether you need to act, or, for a
+breaking change marked **Breaking:**, every migration step. [`sdxc upgrade`](/docs/sdxc/upgrade)
+reads the same notes when it moves your pins and hands them to an AI agent.
 
 ## Where to go next
 
@@ -72,5 +51,5 @@ have and the one you take.
   project at one release.
 - [Upgrade](/docs/sdxc/upgrade) — move your pins to a newer date with a prompt that lists what
   changed.
-- [Check a project](/docs/sdxc/check-a-project) — catch a package pinned behind the project's
-  release.
+- [Breaking changes](/docs/releases/breaking-changes) — find and apply every migration between
+  the release you pin and the one you take.
