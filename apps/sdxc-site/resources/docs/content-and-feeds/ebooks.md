@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 8
 order: 20
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to turn a markdown post into an EPUB with `@sdxc/epub`"
     - "How to read a build failure when epubcheck would reject the book"
@@ -106,7 +106,9 @@ the same chapter, because the `id` it names is in the body. A heading that alrea
 publication or the first rule the input breaks:
 
 ```typescript {% title="app/services/books/post-epub.ts" %}
-import type { Markdown } from "@sdxc/markdown";
+import type { EpubError } from "@sdxc/epub";
+import type { Markdown, MarkdownWalkError } from "@sdxc/markdown";
+import type { Result } from "@sdxc/result";
 
 import { EPUB } from "@sdxc/epub";
 import { isFailure } from "@sdxc/result";
@@ -124,7 +126,9 @@ export interface PostBook {
 	document: Markdown.Document;
 }
 
-export function postEpub(post: PostBook) {
+export function postEpub(
+	post: PostBook,
+): Result<EPUB, EpubError | MarkdownWalkError> {
 	let chapter = chapterBody(post.document, post.permalink);
 	if (isFailure(chapter)) return chapter;
 
@@ -197,7 +201,7 @@ The action reads the post, builds the book and streams it. `attachment()` writes
 
 ```typescript {% title="app/http/controllers/posts/epub.ts" %}
 import { attachment } from "@sdxc/http/response";
-import { notFound } from "@sdxc/http/response/html";
+import { internalServerError, notFound } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -224,9 +228,7 @@ export default createAction(routes.posts.epub, async (ctx) => {
 	});
 	if (isFailure(built)) {
 		ctx.log.fail(built.error, { slug, format: "epub" });
-		return new Response("This post could not be made into an ebook.", {
-			status: 500,
-		});
+		return internalServerError("This post could not be made into an ebook.");
 	}
 
 	return new Response(built.data.stream(), {
@@ -241,8 +243,8 @@ export default createAction(routes.posts.epub, async (ctx) => {
 These posts carry no edit date, so `publishedAt` stands in for `updatedAt`; a post that records
 when it last changed passes that instead. `stream()` writes `mimetype` first, as the format
 requires, with every entry stored uncompressed. The whole book is already in memory, so the
-response never waits on a source. `bytes()` answers the same file as one `Uint8Array` in a `Result`, for
-storing it or attaching it to an email.
+response never waits on a source. `bytes()` answers the same file as one `Uint8Array` in a
+`Result`, for storing it or attaching it to an email.
 
 The book changes only when the post does, so it caches the way the post's page does.
 
