@@ -12,8 +12,8 @@ import { describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/test/router";
 
-/** The guide whose prose draws a package's source tree. */
-const GUIDE = "/docs/conventions/subpath-exports";
+/** The guide whose prose draws an app's folder layout. */
+const GUIDE = "/docs/getting-started/how-it-fits-together";
 
 describe("the files tag", () => {
 	test("draws every folder and file the guide writes", async () => {
@@ -21,9 +21,9 @@ describe("the files tag", () => {
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(body).toContain("packages/cache/src");
+		expect(body).toContain("links");
 
-		for (let name of ["adapters", "lib", "testing", "worker-kv.ts", "conformance.ts", "index.ts"]) {
+		for (let name of ["bootstrap", "worker.ts", "app", "controllers", "initializers", "database"]) {
 			expect(body).toContain(`>${name}</span>`);
 		}
 	});
@@ -32,7 +32,7 @@ describe("the files tag", () => {
 		let body = await (await fetchApp(GUIDE)).text();
 
 		expect(body).not.toContain("&lt;folder");
-		expect(body).not.toContain('<folder name="adapters">');
+		expect(body).not.toContain('<folder name="bootstrap">');
 		expect(body).toContain("<ul");
 	});
 });
