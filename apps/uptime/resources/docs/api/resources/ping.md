@@ -5,7 +5,7 @@ section:
   title: API Resources
   order: 5
 order: 13
-lastUpdated: 2026-08-01
+lastUpdated: 2026-10-24
 ---
 
 The ping endpoint runs a single probe against a target you describe in the request and returns the result. No monitor is created, no check history is stored, and no alerts are sent. Use it when the target is not worth monitoring continuously — a preview deployment that lives for the length of a build, a freshly provisioned subdomain, a smoke test in a release pipeline.
@@ -143,7 +143,7 @@ Resolve a DNS record once and optionally compare it against an expected value.
 | `recordType`    | string | No       | Record type (default: `A`)                                                                |
 | `expectedValue` | string | No       | Value the record must resolve to (up to 1000 characters); comma-separated for multi-value |
 
-Valid record types are `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, and `CAA`.
+Valid record types are `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `CAA`, `TLSA`, `DS`, and `SVCB`.
 
 Without `expectedValue` there is nothing to compare against, so a successful resolution is always `ok` and the `changed` status cannot occur.
 

@@ -48,7 +48,6 @@ const KNOWN_UNTRACKED_TYPES = new Set([
 	"CERT",
 	"DNAME",
 	"DNSKEY",
-	"DS",
 	"HINFO",
 	"HTTPS",
 	"IPSECKEY",
@@ -67,8 +66,6 @@ const KNOWN_UNTRACKED_TYPES = new Set([
 	"SPF",
 	"SRV",
 	"SSHFP",
-	"SVCB",
-	"TLSA",
 	"URI",
 ]);
 

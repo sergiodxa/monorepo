@@ -13,7 +13,7 @@ A DNS monitor verifies that a **domain**'s records still resolve to what they re
 - Enabled or disabled state
 - Which of the discovered records are watched, per record
 
-There is no record type to pick and no expected value to type. Every check queries all six supported types at every name the monitor tracks:
+There is no record type to pick and no expected value to type. Every check queries all ten supported types at every name the monitor tracks, one query each:
 
 - `A`
 - `AAAA`
@@ -21,6 +21,10 @@ There is no record type to pick and no expected value to type. Every check queri
 - `MX`
 - `TXT`
 - `NS`
+- `CAA`
+- `TLSA`
+- `DS`
+- `SVCB`
 
 ## How It Works
 
@@ -34,7 +38,7 @@ An API-created monitor skips step 3 and watches everything the resolver answered
 
 ## Record Identity and Normalization
 
-A record's identity is `(name, type, value)`. Values are normalized once, at write time, so a value that arrives from a zone file and the same value from the resolver are one record: IPv6 is lowercased and compressed, host names are lowercased and un-dotted, MX carries its preference, and TXT character-strings are joined with quotes removed and are otherwise byte-exact.
+A record's identity is `(name, type, value)`. Values are normalized once, at write time, so a value that arrives from a zone file and the same value from the resolver are one record: IPv6 is lowercased and compressed, host names are lowercased and un-dotted, MX carries its preference, TXT character-strings are joined with quotes removed and are otherwise byte-exact, CAA, TLSA and DS are printed in canonical presentation form with hex lowercased, and SVCB is printed canonically with its target un-dotted like any other name. A resolver answering in the RFC 3597 generic form (`\# <length> <hex>`) folds to the same value.
 
 Because DNS gives an individual record no identity of its own, editing one value inside a set holding several reads as one `missing` plus one `new`. `changed` is reserved for the one case the diff can attribute without guessing: a name and type holding exactly one watched record, answering with exactly one differing value.
 
@@ -53,7 +57,7 @@ Per monitor:
 
 - A query that does not answer applies **no diff** for that name and type. A resolver having a bad minute must never read as the zone disappearing.
 - `NXDOMAIN` and an empty answer both mean "no records of this type here", and are not errors.
-- A CNAME at a name suppresses A/AAAA tracking at that name: the addresses returned belong to the alias target.
+- A CNAME at a name suppresses A, AAAA, CAA, TLSA, DS and SVCB tracking at that name: what the resolver returns through the alias belongs to the alias target.
 - The zone file is parsed at submit and discarded. Lines the parser cannot use are reported with their line number and a reason, never silently dropped.
 
 ## Scheduling Rules
@@ -78,7 +82,7 @@ Per monitor:
 
 - Default interval is `86400` seconds.
 - DNS monitors are enabled by default, and discovered records are watched by default at review; records discovered by a later check are not.
-- A monitor tracks at most `100` names, because one check sweeps every tracked name against a bounded per-invocation query budget.
+- A monitor tracks at most `60` names, because one check sweeps every tracked name — ten queries each — against a per-invocation budget of `600` queries.
 - The product uses a team-level limit of `20` DNS monitors.
 - A check costs one ping, however many queries the sweep made — the resolver is free to us, so it is free to the customer.
 

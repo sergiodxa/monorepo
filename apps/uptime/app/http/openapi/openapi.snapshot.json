@@ -10351,7 +10351,10 @@
                           "MX",
                           "TXT",
                           "NS",
-                          "CAA"
+                          "CAA",
+                          "TLSA",
+                          "DS",
+                          "SVCB"
                         ],
                         "default": "A"
                       },
@@ -11688,7 +11691,10 @@
               "MX",
               "TXT",
               "NS",
-              "CAA"
+              "CAA",
+              "TLSA",
+              "DS",
+              "SVCB"
             ]
           },
           "value": {

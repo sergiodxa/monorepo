@@ -409,7 +409,7 @@ export const dnsMonitorRecords = table({
 		dns_monitor_id: c.text(),
 		/** Absolute owner name, lowercased, no trailing dot. The apex is `domain` itself. */
 		name: c.text(),
-		record_type: c.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS"]),
+		record_type: c.enum(["A", "AAAA", "CNAME", "MX", "TXT", "NS", "CAA", "TLSA", "DS", "SVCB"]),
 		/** Normalized RDATA, per-type folding applied at write time. Part of the identity. */
 		value: c.text(),
 		/** How this row first entered the table. */

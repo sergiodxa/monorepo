@@ -3641,7 +3641,7 @@ export default {
 					generateDirective: "Expands into many names at once",
 					unsupportedDirective: "Not a directive we read",
 					nonInternetClass: "Not an internet-class record",
-					unsupportedType: "Not one of the seven record types we watch",
+					unsupportedType: "Not one of the ten record types we watch",
 					outOfZone: "Belongs to a different domain",
 					malformed: "We could not read this as a record",
 				},

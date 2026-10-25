@@ -563,7 +563,12 @@ describe("checkDns query budget", () => {
 		let monitors = [];
 		for (let index = 0; index < 4; index++) {
 			let monitor = await seedMonitor(db, { domain: `d${index}.example.com` });
-			await seedNames(db, monitor.id, 40, `d${index}.example.com`);
+			await seedNames(
+				db,
+				monitor.id,
+				Math.floor(MAX_NAMES_PER_CHECK * 0.45),
+				`d${index}.example.com`,
+			);
 			monitors.push(monitor);
 		}
 

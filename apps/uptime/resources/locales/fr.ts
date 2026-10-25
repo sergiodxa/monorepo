@@ -3629,7 +3629,7 @@ export default {
 					generateDirective: "Se développe en de nombreux noms d'un coup",
 					unsupportedDirective: "Ce n'est pas une directive que nous lisons",
 					nonInternetClass: "Ce n'est pas un enregistrement de classe internet",
-					unsupportedType: "Ce n'est pas l'un des sept types d'enregistrement que nous surveillons",
+					unsupportedType: "Ce n'est pas l'un des dix types d'enregistrement que nous surveillons",
 					outOfZone: "Appartient à un autre domaine",
 					malformed: "Nous n'avons pas pu lire ceci comme un enregistrement",
 				},

@@ -300,7 +300,7 @@ describe("POST /api/v1/dns-monitors", () => {
 
 	/**
 	 * ADR-026 §13: an API create has no reviewer, so everything discovered is imported already
-	 * watched — the seven queries below cover every supported record type for the one name. The
+	 * watched — the ten queries below cover every supported record type for the one name. The
 	 * review-gated default lives only in the review screen.
 	 */
 	test("imports every discovered record already watched, since no review step exists", async () => {
@@ -322,7 +322,7 @@ describe("POST /api/v1/dns-monitors", () => {
 		};
 
 		expect(body.data.discovery).toMatchObject({ names: 1, recordsImported: 1, queriesFailed: 0 });
-		expect(queries).toBe(7);
+		expect(queries).toBe(10);
 
 		let records = await db.findMany(dnsMonitorRecords, {
 			where: { dns_monitor_id: TypeID.fromString(body.data.dnsMonitor.id, "dns").toUUID() },
@@ -426,7 +426,7 @@ describe("POST /api/v1/dns-monitors", () => {
 
 	/**
 	 * The floor moved to 900 for both channels at once: 60 was legal here until now, and a
-	 * seven-type sweep at a minute is some 300,000 queries a month from one monitor.
+	 * ten-type sweep at a minute is some 430,000 queries a month from one monitor.
 	 */
 	test("rejects the 60-second interval the old API allowed, and accepts the 900-second floor", async () => {
 		stubResolver();

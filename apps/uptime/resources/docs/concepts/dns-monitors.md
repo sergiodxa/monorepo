@@ -5,10 +5,10 @@ section:
   title: Concepts
   order: 2
 order: 3
-lastUpdated: 2026-10-07
+lastUpdated: 2026-10-24
 ---
 
-A DNS monitor watches a **domain**, not a single record. One monitor covers your domain's apex — plus every name a zone file you paste declares — and on each check it queries seven record types at each of those names.
+A DNS monitor watches a **domain**, not a single record. One monitor covers your domain's apex — plus every name a zone file you paste declares — and on each check it queries ten record types at each of those names.
 
 What the monitor expects is the set of records it discovered, held one row per `(name, type, value)`. Nothing is transcribed into an expected-value box, and nothing is compared as one joined blob, so a record appearing beside the ones you already have is reported as an addition rather than hidden inside a string that changed.
 
@@ -25,7 +25,7 @@ These limits come from DNS itself, and they shape everything below. They are sta
 - **We cannot list your DNS records.** There is no query that answers "what records exist for this domain": `ANY` queries are answered `NOTIMP`, and zone transfer is disabled on every public nameserver worth the name. A zone file you paste is the only channel through which the _names_ in your zone can reach us.
 - **Without a zone file, a monitor covers one name — your domain itself.** A record at `staging.example.com` or `_dmarc.example.com` is invisible to us unless that name was in a zone file you pasted.
 - **The zone file is a snapshot.** It is read once, parsed, and never stored. Names added to your zone afterwards are not tracked until you paste again.
-- **Seven record types**, listed below. `SOA`, `SRV`, `PTR`, `DS`, `DNSKEY`, `HTTPS` and `SVCB` are not checked.
+- **Ten record types**, listed below. `SOA`, `SRV`, `PTR`, `DNSKEY`, `HTTPS` and the rest are not checked.
 - **We resolve through one recursive resolver.** We do not query each of your authoritative nameservers, so we do not detect disagreement between them and we do not detect regional differences.
 - **Detection latency is floored by your record's TTL, not by your check interval.** A recursive resolver serves a cached answer, so a 15-minute check against a 24-hour TTL does not find out fifteen minutes after a change.
 - **We do not report DNSSEC validation state.**
@@ -34,7 +34,7 @@ Additions _inside_ a tracked name are detected, because a DNS query returns the 
 
 ## Supported Record Types
 
-Every check queries all seven types at every tracked name.
+Every check queries all ten types at every tracked name.
 
 ### A Records
 
@@ -60,7 +60,7 @@ CNAME (Canonical Name) records create an alias from one domain name to another. 
 blog.example.com.  CNAME  example.netlify.app.
 ```
 
-A CNAME at a name suppresses A, AAAA and CAA tracking at that name. The addresses and issuance policy a resolver returns for an aliased name belong to the alias _target_, not to your zone, and tracking them would alert you every time an unrelated third party rotated an address or changed its certificate authority.
+A CNAME at a name suppresses A, AAAA, CAA, TLSA, DS and SVCB tracking at that name. The addresses, issuance policy, keys and service bindings a resolver returns for an aliased name belong to the alias _target_, not to your zone, and tracking them would alert you every time an unrelated third party rotated an address or changed its certificate authority.
 
 ### MX Records
 
@@ -96,6 +96,30 @@ example.com.  CAA  0 issue "letsencrypt.org"
 
 **A Cloudflare-hosted zone lists Cloudflare's own CAA records at the first review.** Cloudflare publishes CAA records for the certificate authorities its edge certificates use, and its zone export leaves them out. The review screen shows them beside the ones your export declares, so you choose at import whether each one alerts.
 
+### TLSA Records
+
+TLSA records publish DANE certificate associations: which certificate or public key a TLS client should expect at a service, such as `_25._tcp.mail.example.com` for SMTP. A TLSA record changing without a matching certificate rollover breaks every client that validates it. Each record is stored as usage, selector, matching type and the association data in lowercase hex.
+
+```
+_443._tcp.www.example.com.  TLSA  3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6
+```
+
+### DS Records
+
+DS (Delegation Signer) records live in the parent zone and anchor your domain's DNSSEC chain of trust to your signing key. A DS record changing or disappearing at your apex means the delegation's trust anchor moved — a key rollover you started, or one you did not. Each record is stored as key tag, algorithm, digest type and the digest in lowercase hex.
+
+```
+example.com.  DS  60485 5 1 2bb183af5f22588179a53b0a98631fad1a292118
+```
+
+### SVCB Records
+
+SVCB (Service Binding) records tell clients where and how to reach a service — its target host, priority, and parameters such as the ALPN protocols and address hints. Each record is stored in its canonical form, with the target name lowercased and without its trailing dot and the parameters in key order.
+
+```
+_8443._foo.api.example.com.  SVCB  16 foo.example.org. mandatory=alpn,ipv4hint alpn="h2,h3-19" ipv4hint=192.0.2.1
+```
+
 ## Configuration Options
 
 ### Domain
@@ -106,9 +130,9 @@ The domain the monitor covers. Every check queries this name, and it is the orig
 
 Optional, and the only way to cover names other than the domain itself. Paste a BIND-format zone file — the export button in your DNS provider's dashboard produces one — and every name it declares is added to the set the monitor sweeps.
 
-The parser reads standard RFC 1035 zone-file syntax: `<owner> [<ttl>] [IN] <TYPE> <rdata>` records, `;` comments, absolute and relative names, `@` for the apex, `$ORIGIN` and `$TTL` directives, records spread over several lines with parentheses, lines that start with whitespace to reuse the previous record's name, and quoted TXT character-strings and CAA values. A TXT value is read as DNS reads it: unquoted words are separate character-strings joined with nothing between them, so write `"v=spf1 -all"` in quotes to keep its space.
+The parser reads standard RFC 1035 zone-file syntax: `<owner> [<ttl>] [IN] <TYPE> <rdata>` records, `;` comments, absolute and relative names, `@` for the apex, `$ORIGIN` and `$TTL` directives, records spread over several lines with parentheses, lines that start with whitespace to reuse the previous record's name, and quoted TXT character-strings, CAA values and SVCB parameters. A TXT value is read as DNS reads it: unquoted words are separate character-strings joined with nothing between them, so write `"v=spf1 -all"` in quotes to keep its space.
 
-**An entry the parser cannot use is never silently dropped.** `$INCLUDE` and `$GENERATE` directives, classes other than `IN`, record types outside the seven above, and names outside the monitor's domain are all reported back on the review screen with their line number and a reason. An import that decides what you monitor is the worst possible place for a silent drop.
+**An entry the parser cannot use is never silently dropped.** `$INCLUDE` and `$GENERATE` directives, classes other than `IN`, record types outside the ten above, and names outside the monitor's domain are all reported back on the review screen with their line number and a reason. An import that decides what you monitor is the worst possible place for a silent drop.
 
 The pasted text is **never stored**. It is parsed on submit; the records and the import date are kept, and the text is discarded. Re-importing later means pasting again.
 

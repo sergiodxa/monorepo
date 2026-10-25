@@ -13,7 +13,18 @@ import { isSuccess } from "@sdxc/result";
 import { formatRecordData, parseRecordData } from "@sdxc/zone-file";
 
 /** The record types tracked by a domain monitor, and the only ones normalized here. */
-export const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "CAA"] as const;
+export const DNS_RECORD_TYPES = [
+	"A",
+	"AAAA",
+	"CNAME",
+	"MX",
+	"TXT",
+	"NS",
+	"CAA",
+	"TLSA",
+	"DS",
+	"SVCB",
+] as const;
 
 /** One tracked record type. */
 export type DnsRecordType = (typeof DNS_RECORD_TYPES)[number];
@@ -47,9 +58,21 @@ function readTxtText(data: string): string | null {
 }
 
 /**
+ * SVCB in its printed form with the target name folded like every other stored name — no
+ * trailing dot — so `16 foo.example.org` reads alongside an MX's `10 mail.example.org`.
+ * The root target (`.`, "this owner name") keeps its dot, as {@link normalizeDnsName} does.
+ */
+function storedSvcbValue(record: ZoneFile.RecordData<"SVCB">): string {
+	let printed = formatRecordData(record);
+	let head = formatRecordData({ ...record, params: {} });
+	let target = head.slice(head.indexOf(" ") + 1);
+	return `${record.priority} ${normalizeDnsName(target)}${printed.slice(head.length)}`;
+}
+
+/**
  * The value stored for a record's typed data, whether a zone file or a resolver supplied it:
- * MX as `preference host`, TXT joined, CAA printed as `flags tag "value"`. The codec has
- * already canonicalized AAAA and folded the names.
+ * MX as `preference host`, TXT joined, CAA, TLSA and DS printed canonically (hex lowercased),
+ * SVCB printed with its target folded. The codec has already canonicalized AAAA and the names.
  */
 export function storedRecordValue(record: ZoneFile.RecordData<DnsRecordType>): string {
 	switch (record.type) {
@@ -65,7 +88,11 @@ export function storedRecordValue(record: ZoneFile.RecordData<DnsRecordType>): s
 		case "TXT":
 			return record.text;
 		case "CAA":
+		case "TLSA":
+		case "DS":
 			return formatRecordData(record);
+		case "SVCB":
+			return storedSvcbValue(record);
 	}
 }
 
@@ -127,5 +154,34 @@ export function normalizeDnsRecordValue(type: DnsRecordType, data: string): stri
 
 		case "CAA":
 			return value;
+
+		case "TLSA":
+		case "DS":
+			return foldHexRecordValue(value);
+
+		case "SVCB":
+			return foldSvcbValue(value);
 	}
+}
+
+/**
+ * Folds TLSA or DS data that did not parse: three leading fields kept as written, then the
+ * hex payload joined and lowercased, since presentation form may split it with whitespace
+ * and either case is the same bytes. Data without four fields is only lowercased.
+ */
+function foldHexRecordValue(value: string): string {
+	let match = /^(\S+)\s+(\S+)\s+(\S+)\s+([\s\S]+)$/.exec(value);
+	if (match === null) return value.toLowerCase();
+	let [, first, second, third, payload = ""] = match;
+	return `${first} ${second} ${third} ${payload.replace(/\s+/g, "").toLowerCase()}`;
+}
+
+/**
+ * Folds SVCB data that did not parse: the target name folded like any stored name and the
+ * parameters kept as written, since parameter values are case-sensitive text.
+ */
+function foldSvcbValue(value: string): string {
+	let [priority = "", target, ...params] = value.split(/\s+/);
+	if (target === undefined) return value;
+	return [priority, normalizeDnsName(target), ...params].join(" ");
 }

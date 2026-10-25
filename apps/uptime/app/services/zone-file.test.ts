@@ -145,6 +145,45 @@ describe("parseZoneFile", () => {
 		});
 	});
 
+	describe("DANE, DNSSEC delegation and service binding records", () => {
+		test("tracks the reconstructed export's apex DS record", () => {
+			let imported = parse(RECONSTRUCTED_FIXTURE);
+			expect(reasonForLineContaining(imported, "IN\tDS")).toBeUndefined();
+			expect(imported.records).toContainEqual(
+				expect.objectContaining({
+					name: "sergiodxa.com",
+					type: "DS",
+					value: "2371 13 2 3e8f9a1c0b6d5e4f2a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b",
+				}),
+			);
+		});
+
+		test.each([
+			[
+				"_443._tcp.www\t1\tIN\tTLSA\t3 1 1 0C72AC70B745AC19998811B131D662C9AC69DBDBE7CB23E5B514B56664C5D3D6",
+				"_443._tcp.www.sergiodxa.com",
+				"TLSA",
+				"3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6",
+			],
+			[
+				"@\t1\tIN\tDS\t60485 5 1 2BB183AF5F22588179A53B0A98631FAD1A292118",
+				"sergiodxa.com",
+				"DS",
+				"60485 5 1 2bb183af5f22588179a53b0a98631fad1a292118",
+			],
+			[
+				"_8443._foo.api\t1\tIN\tSVCB\t16 foo.example.org. alpn=h2,h3-19 mandatory=ipv4hint,alpn ipv4hint=192.0.2.1",
+				"_8443._foo.api.sergiodxa.com",
+				"SVCB",
+				'16 foo.example.org mandatory=alpn,ipv4hint alpn="h2,h3-19" ipv4hint=192.0.2.1',
+			],
+		] as const)("tracks %j in its stored form", (input, name, type, value) => {
+			let imported = parse(input);
+			expect(imported.rejected).toEqual([]);
+			expect(imported.records).toEqual([{ line: 1, name, type, value }]);
+		});
+	});
+
 	describe("owner resolution", () => {
 		test("resolves `@` to the apex", () => {
 			let imported = parse('@\t1\tIN\tTXT\t"v=spf1 ~all"');
@@ -352,7 +391,6 @@ describe("parseZoneFile", () => {
 			["CH\tTXT", "nonInternetClass"],
 			["IN\tSRV", "unsupportedType"],
 			["IN\tPTR", "unsupportedType"],
-			["IN\tDS", "unsupportedType"],
 			["IN\tHTTPS", "unsupportedType"],
 			["www.example.com.", "outOfZone"],
 			["this line is not a resource record", "malformed"],
@@ -423,8 +461,8 @@ describe("parseZoneFile", () => {
 			let directives = 3;
 			let continuations = 6;
 
-			expect(imported.records).toHaveLength(50);
-			expect(imported.rejected).toHaveLength(10);
+			expect(imported.records).toHaveLength(51);
+			expect(imported.rejected).toHaveLength(9);
 			expect(imported.duplicates).toHaveLength(0);
 			expect(imported.records.length + imported.rejected.length + directives + continuations).toBe(
 				meaningful.length,

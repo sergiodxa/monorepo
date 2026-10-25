@@ -3557,7 +3557,7 @@ export default {
 					generateDirective: "一度に多数の名前へ展開されます",
 					unsupportedDirective: "読み取り対象のディレクティブではありません",
 					nonInternetClass: "インターネットクラスのレコードではありません",
-					unsupportedType: "監視対象の 7 種類のレコードタイプに含まれません",
+					unsupportedType: "監視対象の 10 種類のレコードタイプに含まれません",
 					outOfZone: "別のドメインに属しています",
 					malformed: "レコードとして読み取れませんでした",
 				},

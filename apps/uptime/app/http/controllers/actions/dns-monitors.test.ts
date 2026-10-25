@@ -660,7 +660,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 		expect(checked?.registration_checked_at).not.toBeNull();
 	});
 
-	/** One name, every supported record type: seven DoH queries per domain. */
+	/** One name, every supported record type: ten DoH queries per domain. */
 	test("sweeps every tracked name, records the result, and redirects to the monitor", async () => {
 		stubResolver();
 		let { db } = createTestDatabase();
@@ -690,7 +690,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
 		expect(stored?.records_checked).toBe(1);
 		expect(stored?.queries_failed).toBe(0);
-		expect(queries).toBe(7);
+		expect(queries).toBe(10);
 	});
 
 	/**
@@ -765,7 +765,7 @@ describe("POST /actions/:team/check-dns-monitor", () => {
 		expect(checked?.last_status).toBe("error");
 
 		let [stored] = await db.findMany(dnsMonitorResults, { where: { dns_monitor_id: monitor.id } });
-		expect(stored?.queries_failed).toBe(7);
+		expect(stored?.queries_failed).toBe(10);
 		expect(stored?.records_missing).toBe(0);
 
 		let untouched = await db.findOne(dnsMonitorRecords, { where: { id: record.id } });
@@ -843,7 +843,7 @@ describe("POST /actions/:team/check-dns-monitor billing", () => {
 		 * the sweep bills as a flat unit regardless of query count. The history
 		 * row's id keys the event, keeping it distinct from the scheduled sweep's.
 		 */
-		expect(queries).toBe(7);
+		expect(queries).toBe(10);
 		expect(await ingestedEvents()).toEqual([
 			{
 				name: "ping",

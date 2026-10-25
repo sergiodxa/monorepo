@@ -3611,7 +3611,7 @@ export default {
 					generateDirective: "Se expande en muchos nombres a la vez",
 					unsupportedDirective: "No es una directiva que leamos",
 					nonInternetClass: "No es un registro de la clase internet",
-					unsupportedType: "No es ninguno de los siete tipos de registro que vigilamos",
+					unsupportedType: "No es ninguno de los diez tipos de registro que vigilamos",
 					outOfZone: "Pertenece a otro dominio",
 					malformed: "No pudimos leer esto como un registro",
 				},

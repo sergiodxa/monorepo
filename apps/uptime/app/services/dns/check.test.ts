@@ -188,6 +188,85 @@ describe("queryDnsRecords", () => {
 		expect(outcome.suppressedByCname).toBe(false);
 	});
 
+	/**
+	 * RFC example records, each answered in presentation form and in the RFC 3597 generic form
+	 * a resolver may use for a type it does not print; both must store one value, or a record
+	 * imported from a zone file reads as removed-and-re-added on the first check.
+	 */
+	test.each([
+		[
+			"TLSA",
+			52,
+			"3 1 1 0C72AC70B745AC19998811B131D662C9AC69DBDBE7CB23E5B514B56664C5D3D6",
+			"3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6",
+		],
+		[
+			"TLSA",
+			52,
+			"\\# 35 03 01 01 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6",
+			"3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6",
+		],
+		[
+			"DS",
+			43,
+			"60485 5 1 2BB183AF5F22588179A53B0A98631FAD1A292118",
+			"60485 5 1 2bb183af5f22588179a53b0a98631fad1a292118",
+		],
+		[
+			"DS",
+			43,
+			"\\# 24 ec45 05 01 2bb183af5f22588179a53b0a98631fad1a292118",
+			"60485 5 1 2bb183af5f22588179a53b0a98631fad1a292118",
+		],
+		[
+			"SVCB",
+			64,
+			"16 foo.example.org. alpn=h2,h3-19 mandatory=ipv4hint,alpn ipv4hint=192.0.2.1",
+			'16 foo.example.org mandatory=alpn,ipv4hint alpn="h2,h3-19" ipv4hint=192.0.2.1',
+		],
+		[
+			"SVCB",
+			64,
+			"\\# 48 0010 03666f6f076578616d706c65036f726700 00000004 00010004 000100090268320568332d3139 00040004c0000201",
+			'16 foo.example.org mandatory=alpn,ipv4hint alpn="h2,h3-19" ipv4hint=192.0.2.1',
+		],
+	] as const)(
+		"stores a %s answered as %j in its canonical form",
+		async (type, code, data, stored) => {
+			respondWith({
+				Status: 0,
+				Answer: [{ name: "_443._tcp.sergiodxa.com", type: code, TTL: 300, data }],
+			});
+
+			let outcome = await queryDnsRecords("_443._tcp.sergiodxa.com", type);
+
+			expect(outcome.values).toEqual([stored]);
+			expect(outcome.suppressedByCname).toBe(false);
+		},
+	);
+
+	test.each([
+		["TLSA", 52, "3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6"],
+		["DS", 43, "60485 5 1 2bb183af5f22588179a53b0a98631fad1a292118"],
+		["SVCB", 64, "1 . alpn=h2"],
+	] as const)(
+		"suppresses %s reached through a CNAME, which is the target's data",
+		async (type, code, data) => {
+			respondWith({
+				Status: 0,
+				Answer: [
+					{ name: "_443._tcp.www.sergiodxa.com", type: 5, TTL: 300, data: "dane.example.net." },
+					{ name: "dane.example.net", type: code, TTL: 300, data },
+				],
+			});
+
+			let outcome = await queryDnsRecords("_443._tcp.www.sergiodxa.com", type);
+
+			expect(outcome.values).toEqual([]);
+			expect(outcome.suppressedByCname).toBe(true);
+		},
+	);
+
 	test("still tracks the CNAME itself, which is the record that lives at the name", async () => {
 		respondWith({
 			Status: 0,
@@ -283,7 +362,18 @@ describe("sweepDnsName", () => {
 
 		let sweep = await sweepDnsName("sergiodxa.com");
 
-		expect(requested.sort()).toEqual(["A", "AAAA", "CAA", "CNAME", "MX", "NS", "TXT"]);
+		expect(requested.sort()).toEqual([
+			"A",
+			"AAAA",
+			"CAA",
+			"CNAME",
+			"DS",
+			"MX",
+			"NS",
+			"SVCB",
+			"TLSA",
+			"TXT",
+		]);
 		expect(sweep.outcomes).toHaveLength(QUERIES_PER_NAME);
 		expect(sweep.queriesFailed).toBe(0);
 	});

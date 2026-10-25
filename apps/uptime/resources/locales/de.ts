@@ -3627,7 +3627,7 @@ export default {
 					generateDirective: "Erzeugt auf einmal viele Namen",
 					unsupportedDirective: "Keine Direktive, die wir lesen",
 					nonInternetClass: "Kein Eintrag der Klasse Internet",
-					unsupportedType: "Keiner der sieben Eintragstypen, die wir überwachen",
+					unsupportedType: "Keiner der zehn Eintragstypen, die wir überwachen",
 					outOfZone: "Gehört zu einer anderen Domain",
 					malformed: "Wir konnten dies nicht als Eintrag lesen",
 				},

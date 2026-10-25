@@ -30,6 +30,20 @@ export type DnsCheckStatus = "ok" | "changed" | "error";
  */
 export const QUERIES_PER_NAME = DNS_RECORD_TYPES.length;
 
+/**
+ * Types whose answer, reached through a CNAME, is the alias target's data — a hosting
+ * provider's addresses, issuance policy, DANE keys, delegation or service binding — and so
+ * is never tracked at the aliased name, where the provider changing it would alert.
+ */
+const CNAME_FOLLOWING_TYPES: ReadonlySet<DnsRecordType> = new Set<DnsRecordType>([
+	"A",
+	"AAAA",
+	"CAA",
+	"TLSA",
+	"DS",
+	"SVCB",
+]);
+
 export interface DnsCheckResult {
 	status: DnsCheckStatus;
 	resolvedValue: string | null;
@@ -54,9 +68,9 @@ export interface DnsQueryOutcome {
 	 */
 	errorMessage: string | null;
 	/**
-	 * Whether A/AAAA/CAA answers were dropped because the same response carried a CNAME. A CAA
-	 * answer reached that way is the target's policy, a hosting provider's to change. The answer
-	 * itself is the trigger, so a CDN-proxied name keeps its edge addresses, since those answers carry no CNAME.
+	 * Whether answers of a {@link CNAME_FOLLOWING_TYPES} type were dropped because the same
+	 * response carried a CNAME. The answer itself is the trigger, so a CDN-proxied name keeps
+	 * its edge addresses, since those answers carry no CNAME.
 	 */
 	suppressedByCname: boolean;
 }
@@ -99,7 +113,7 @@ export async function queryDnsRecords(
 		};
 	}
 
-	let followsCname = recordType === "A" || recordType === "AAAA" || recordType === "CAA";
+	let followsCname = CNAME_FOLLOWING_TYPES.has(recordType);
 	let suppressedByCname = followsCname && answer.data.chain.length > 0;
 
 	return {

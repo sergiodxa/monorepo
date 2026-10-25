@@ -833,15 +833,15 @@ export const features: Record<string, MarketingContent.Page> = {
 		slug: "dns",
 		metaTitle: "DNS Monitoring | Uptime",
 		metaDescription:
-			"Monitor a domain for unexpected DNS changes. One monitor covers seven record types — A, AAAA, CNAME, MX, TXT, NS and CAA — to catch hijacking attempts.",
+			"Monitor a domain for unexpected DNS changes. One monitor covers ten record types — A, AAAA, CNAME, MX, TXT, NS, CAA, TLSA, DS and SVCB — to catch hijacking attempts.",
 		badge: "DNS Monitors",
 		title: "Catch DNS changes",
 		highlight: "before they cause an outage",
 		description:
-			"One monitor watches a whole domain, across every record type it checks — A, AAAA, CNAME, MX, TXT, NS and CAA — so hijacking and misconfiguration surface as findings rather than outages.",
+			"One monitor watches a whole domain, across every record type it checks — A, AAAA, CNAME, MX, TXT, NS, CAA, TLSA, DS and SVCB — so hijacking and misconfiguration surface as findings rather than outages.",
 		highlights: ["A/AAAA/CNAME/MX/TXT/NS", "Change detection", "One monitor per domain"],
 		trustIndicators: [
-			{ icon: "layers", value: "6", label: "Record types" },
+			{ icon: "layers", value: "10", label: "Record types" },
 			{ icon: "globe", value: "1", label: "Monitor per domain" },
 			{ icon: "refresh-cw", value: "15m", label: "Minimum interval" },
 			{ icon: "shield-check", value: "Hijack", label: "Detection" },
@@ -856,7 +856,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				title: "Every record type in one monitor",
 				description:
-					"One monitor checks A, AAAA, CNAME, MX, TXT, NS and CAA records at every name it tracks.",
+					"One monitor checks A, AAAA, CNAME, MX, TXT, NS, CAA, TLSA, DS and SVCB records at every name it tracks.",
 				icon: "database",
 			},
 			{
@@ -892,7 +892,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				question: "Which record types can I monitor?",
 				answer:
-					"Seven: A, AAAA, CNAME, MX, TXT, NS and CAA. SOA, SRV and the rest aren't checked yet.",
+					"Ten: A, AAAA, CNAME, MX, TXT, NS, CAA, TLSA, DS and SVCB. SOA, SRV, HTTPS and the rest aren't checked yet.",
 			},
 			{
 				question: "Does one monitor cover my subdomains?",

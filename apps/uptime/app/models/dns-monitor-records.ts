@@ -52,7 +52,7 @@ const IMPORT_BATCH_SIZE = Math.floor(BOUND_PARAMETER_LIMIT / IMPORT_COLUMNS.leng
  */
 const ID_BATCH_SIZE = BOUND_PARAMETER_LIMIT - 8;
 
-/** The six record types v1 sweeps, taken from the column so the two can never disagree. */
+/** The record types a sweep stores, taken from the column so the two can never disagree. */
 export type DnsRecordType = SelectDnsMonitorRecord["record_type"];
 
 /** How a row first entered the table: a resolver answer, or a pasted zone file. */
