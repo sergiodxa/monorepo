@@ -59,6 +59,7 @@ import { queue, transport } from "~/app/initializers/mail-transport";
 import { jobQueue } from "~/app/initializers/queue";
 import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
 import abilities from "~/app/policies/abilities";
+import { apiCatalogEntry } from "~/config/api-catalog";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
 import {
@@ -174,12 +175,13 @@ export function createWebRouter(options: WebRouterOptions) {
 			 */
 			getClientIP(),
 			/**
-			 * Answers `/.well-known/security.txt` and the Web Bot Auth key directory before
-			 * anything that reads a session or the database, since neither needs a cookie.
+			 * Answers `/.well-known/security.txt`, the Web Bot Auth key directory and the API
+			 * catalog before anything that reads a session or the database, since none needs a cookie.
 			 */
 			wellKnown({
 				"security.txt": securityTxtEntry,
 				"http-message-signatures-directory": signaturesDirectory,
+				"api-catalog": apiCatalogEntry,
 			}),
 			/**
 			 * Publishes `ctx.db` on every surface. The session, the auth guard and every
