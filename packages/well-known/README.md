@@ -188,6 +188,12 @@ requires `authorizationEndpoint`, `jwksUri`, `subjectTypesSupported` and
 - `jwks` is the descriptor. Serving through it publishes each key's public half and leaves
   symmetric keys out, so private keys can go in directly.
 
+### `@sdxc/well-known/client-id-metadata-document` (OAuth Client ID Metadata Document, draft 02)
+
+The RFC 7591 metadata a client serves at the `https` URL it uses as `client_id`: `parse(text, { clientId })`
+applies the draft's `client_id`, credential and redirect URI rules, `define` and `stringify` write
+one, and `respond(clientIdMetadataDocument, document)` serves it.
+
 ### `@sdxc/well-known/http-message-signatures-directory` (Web Bot Auth)
 
 The key directory a signing bot publishes, served as `MEDIA_TYPE`

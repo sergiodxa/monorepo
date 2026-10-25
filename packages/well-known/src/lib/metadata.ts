@@ -1,7 +1,7 @@
 /**
  * The field-mapping engine behind the OAuth metadata documents (RFC 8414, OpenID
- * Connect Discovery, RFC 9728): one table maps each camelCase field to its registered
- * member name and kind, and drives reading, writing and defaults from that one place.
+ * Connect Discovery, RFC 9728, RFC 7591 client metadata): one table maps each camelCase
+ * field to its member name and kind, and drives reading, writing and defaults from it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,14 +15,23 @@ import { WellKnownParseError } from "../parse-error.js";
 
 import type { JsonObject } from "./json.js";
 
-import { pointer, readExtensions, readJsonObject } from "./json.js";
+import { isObject, pointer, readExtensions, readJsonObject } from "./json.js";
 
 /**
  * How a member's JSON value maps to its field: `text` is a string, `url` one absolute
- * URL, `urls` and `strings` lists, `boolean` a flag, and `localized` a human-readable
- * string with `#`-tagged language variants (RFC 9728 §2.1).
+ * URL, `urls` and `strings` lists, `tokens` a space-delimited string read as a list (RFC
+ * 7591 `scope`), `object` a JSON object kept as decoded, `boolean` a flag, and `localized`
+ * a human-readable string with `#`-tagged language variants (RFC 9728 §2.1).
  */
-export type FieldKind = "text" | "url" | "urls" | "strings" | "boolean" | "localized";
+export type FieldKind =
+	| "text"
+	| "url"
+	| "urls"
+	| "strings"
+	| "tokens"
+	| "object"
+	| "boolean"
+	| "localized";
 
 /** One row of the mapping table. */
 export interface Field {
@@ -31,8 +40,8 @@ export interface Field {
 	kind: FieldKind;
 	/** A missing member fails the parse instead of taking the default. */
 	required?: boolean;
-	/** The value an absent boolean member means, which `stringify` leaves unwritten. */
-	default?: boolean;
+	/** The value an absent boolean or `strings` member means, which `stringify` leaves unwritten. */
+	default?: boolean | readonly string[];
 	/** The only values a `strings` member may list. */
 	values?: readonly string[];
 }
@@ -53,9 +62,23 @@ interface Localized {
  * @param field - The row to default.
  */
 function defaultOf(field: Field): unknown {
-	if (field.kind === "urls" || field.kind === "strings") return [];
+	if (field.kind === "urls" || field.kind === "strings" || field.kind === "tokens")
+		return Array.isArray(field.default) ? [...field.default] : [];
 	if (field.kind === "boolean") return field.default ?? false;
 	return null;
+}
+
+/**
+ * Whether a list holds exactly a field's default list, in order, so the writer leaves a
+ * member out only when reading it back gives the same value.
+ *
+ * @param value - The field's list.
+ * @param field - The row it belongs to.
+ */
+function isDefaultList(value: unknown[], field: Field): boolean {
+	if (!Array.isArray(field.default)) return false;
+	let list: readonly unknown[] = field.default;
+	return value.length === list.length && value.every((entry, index) => entry === list[index]);
 }
 
 /**
@@ -123,6 +146,16 @@ function readField(body: JsonObject, field: Field, issues: WellKnownParseError.I
 		case "url": {
 			if (isUrl(value)) return new URL(value);
 			issues.push({ at, message: `"${field.wire}" is not an absolute URL.` });
+			return null;
+		}
+		case "tokens": {
+			if (typeof value === "string") return value.split(" ").filter(Boolean);
+			issues.push({ at, message: `"${field.wire}" is not a space-delimited string.` });
+			return [];
+		}
+		case "object": {
+			if (isObject(value)) return value;
+			issues.push({ at, message: `"${field.wire}" is not a JSON object.` });
 			return null;
 		}
 		case "boolean": {
@@ -218,8 +251,15 @@ export interface ReadOptions<Extensions extends object> {
 	format: string;
 	table: FieldTable;
 	extensions?: StandardSchemaV1<unknown, Extensions>;
-	/** Checks the read fields against what the caller expected, adding issues on a mismatch. */
-	check?: (fields: Record<string, unknown>, issues: WellKnownParseError.Issue[]) => void;
+	/**
+	 * Checks the read fields against what the caller expected, adding issues on a mismatch;
+	 * `body` is the decoded document, for a rule about a member outside the table.
+	 */
+	check?: (
+		fields: Record<string, unknown>,
+		issues: WellKnownParseError.Issue[],
+		body: JsonObject,
+	) => void;
 }
 
 /**
@@ -244,7 +284,7 @@ export function readMetadata<Extensions extends object>(
 	for (let [name, field] of Object.entries(options.table))
 		fields[name] = readField(body, field, issues);
 
-	if (issues.length === 0) options.check?.(fields, issues);
+	if (issues.length === 0) options.check?.(fields, issues, body);
 
 	let members: JsonObject = {};
 	for (let [member, value] of Object.entries(body)) {
@@ -281,7 +321,12 @@ export function writeMetadata(document: object, table: FieldTable): string {
 		let value = fields[name];
 		if (value === null || value === undefined) continue;
 		if (Array.isArray(value)) {
-			if (value.length === 0 && !field.required) continue;
+			if (isDefaultList(value, field)) continue;
+			if (value.length === 0 && !field.required && !Array.isArray(field.default)) continue;
+			if (field.kind === "tokens") {
+				output[field.wire] = value.join(" ");
+				continue;
+			}
 			output[field.wire] = value.map((entry) => (entry instanceof URL ? entry.href : entry));
 			continue;
 		}
