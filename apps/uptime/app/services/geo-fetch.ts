@@ -14,6 +14,8 @@ import { TimingCollector } from "@sdxc/server-timing";
 import { Decimal, getField, setField, Token } from "@sdxc/structured-fields";
 import { DurableObject } from "cloudflare:workers";
 
+import { signProbe } from "~/app/initializers/web-bot-auth";
+
 /**
  * The name this object signs its `Proxy-Status` member with, so the reader picks its own
  * verdict out of the list even when the target sent a `Proxy-Status` of its own.
@@ -171,6 +173,8 @@ async function forward(request: Request, timings: TimingCollector): Promise<Resp
 		probeRequest = new Request(request);
 		probeRequest.headers.delete(NO_REDIRECT_HEADER);
 	}
+	/** Signed here, at send time, so the signature's lifetime starts when the probe leaves. */
+	probeRequest = await signProbe(probeRequest);
 
 	try {
 		/**

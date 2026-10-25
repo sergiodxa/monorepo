@@ -90,6 +90,10 @@ Monitors run from multiple geographic regions to give you a global view of your 
 
 Running checks from multiple regions helps identify regional outages and latency issues that affect specific geographic areas.
 
+### Recognizing Uptime's Checks
+
+Every HTTP check is signed with [Web Bot Auth](https://datatracker.ietf.org/doc/draft-ietf-webbotauth-httpsig-protocol/), so a firewall or bot-management rule can let checks through by verifying the signature instead of matching IP ranges. Each request carries `Signature-Agent: sig1="https://uptime.sergiodxa.com"`, and the public keys are published at `https://uptime.sergiodxa.com/.well-known/http-message-signatures-directory`.
+
 ## SSL Certificate Monitoring
 
 For HTTPS endpoints, Uptime automatically monitors your SSL certificate status.

@@ -95,5 +95,13 @@ and a Cloudflare dry run with `sdxc run deploy --dry-run` from this app.
 sdxc deploy   # from apps/uptime: build, apply pending migrations, then wrangler deploy
 ```
 
+HTTP probes are signed with Web Bot Auth using the `WEB_BOT_AUTH_KEY` Worker secret, an Ed25519
+private JWK; without it they go out unsigned and `/.well-known/http-message-signatures-directory`
+answers 404. Generate and set it without printing the key:
+
+```sh
+bun -e 'let { privateKey } = await crypto.subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]); console.log(JSON.stringify(await crypto.subtle.exportKey("jwk", privateKey)))' | bunx wrangler secret put WEB_BOT_AUTH_KEY
+```
+
 Read `docs/adr/uptime/AUTONOMOUS-SESSION-DECISIONS.md` before production work;
 it records judgment calls and critical bugs found during the port.

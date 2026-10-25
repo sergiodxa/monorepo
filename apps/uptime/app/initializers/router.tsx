@@ -57,6 +57,7 @@ import { logger } from "~/app/initializers/logger";
 import { mail as emailRegistry } from "~/app/initializers/mail";
 import { queue, transport } from "~/app/initializers/mail-transport";
 import { jobQueue } from "~/app/initializers/queue";
+import { signaturesDirectory } from "~/app/initializers/web-bot-auth";
 import abilities from "~/app/policies/abilities";
 import { SECURITY_POLICY } from "~/config/security-policy";
 import { securityTxtEntry } from "~/config/security-txt";
@@ -173,10 +174,13 @@ export function createWebRouter(options: WebRouterOptions) {
 			 */
 			getClientIP(),
 			/**
-			 * Answers `/.well-known/security.txt` before anything that reads a session or the
-			 * database, since the file is static and a researcher's probe carries no cookie.
+			 * Answers `/.well-known/security.txt` and the Web Bot Auth key directory before
+			 * anything that reads a session or the database, since neither needs a cookie.
 			 */
-			wellKnown({ "security.txt": securityTxtEntry }),
+			wellKnown({
+				"security.txt": securityTxtEntry,
+				"http-message-signatures-directory": signaturesDirectory,
+			}),
 			/**
 			 * Publishes `ctx.db` on every surface. The session, the auth guard and every
 			 * controller below read from it, so it leads the chain that reaches storage.

@@ -40,6 +40,7 @@
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/honeypot": "workspace:*",
 		"@sdxc/http": "workspace:*",
+		"@sdxc/http-signatures": "workspace:*",
 		"@sdxc/i18n": "workspace:*",
 		"@sdxc/icalendar": "workspace:*",
 		"@sdxc/icons": "workspace:*",

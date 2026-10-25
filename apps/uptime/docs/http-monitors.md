@@ -67,6 +67,7 @@ Newly created monitors are intended to start checking right away rather than wai
 
 - A degraded response is different from downtime. The service is reachable, but slower than the configured threshold.
 - The same endpoint can participate in alerting, status pages, analytics, and SSL expiry tracking.
+- Every probe is signed with Web Bot Auth, naming `https://uptime.sergiodxa.com` as the agent, so a site can allowlist checks by verifying the signature against the key directory the app publishes at `/.well-known/http-message-signatures-directory`.
 - Some product surfaces emphasize the difference between degraded and down more clearly than others, so the reimplementation should define that presentation consistently.
 
 ## Reimplementation Guidance
