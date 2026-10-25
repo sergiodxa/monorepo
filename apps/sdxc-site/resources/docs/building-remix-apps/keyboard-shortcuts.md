@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 4
 order: 11
-lastUpdated: 2026-10-19
+lastUpdated: 2026-10-25
 outcomes:
     - "How to bind page-wide keys with `keymap()` from one combo definition"
     - "How to print each hint in the reader's own key caps and list it in a shortcuts panel"
@@ -96,14 +96,17 @@ import { clientEntry } from "remix/component";
 
 import { INBOX_SHORTCUTS } from "~/resources/views/inbox/shortcuts";
 
-export type InboxMessage = {
+export interface InboxMessage {
 	id: string;
 	subject: string;
 	href: string;
 	archiveHref: string;
-};
+}
 
-export type InboxProps = { messages: InboxMessage[]; apple: boolean };
+export interface InboxProps {
+	messages: InboxMessage[];
+	apple: boolean;
+}
 
 export const Inbox = clientEntry(
 	"/resources/components/inbox.tsx#Inbox",
