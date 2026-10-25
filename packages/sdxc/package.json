@@ -286,6 +286,7 @@
 		"./password-policy/length": "./src/password-policy/length.ts",
 		"./png": "./src/png.ts",
 		"./privacy-pass": "./src/privacy-pass.ts",
+		"./privacy-pass/testing": "./src/privacy-pass/testing.ts",
 		"./problem": "./src/problem.ts",
 		"./qr": "./src/qr.ts",
 		"./qr/ui": "./src/qr/ui.ts",
