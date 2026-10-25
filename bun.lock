@@ -1240,6 +1240,7 @@
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/json-canonical": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/result": "workspace:*",

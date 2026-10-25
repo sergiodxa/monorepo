@@ -111,8 +111,11 @@ printable ASCII.
 
 #### `fingerprint(request: Request): Promise<string>`
 
-SHA-256 (hex) over the method, the path with its query, the content type's essence and the body
-bytes. It reads the body, so pass `request.clone()`.
+SHA-256 (hex) over the method, the path with its query, the content type's essence and the body.
+An `application/json` or `+json` body counts in its RFC 8785 canonical form, through
+[`@sdxc/json-canonical`](https://www.npmjs.com/package/@sdxc/json-canonical), so reordered keys
+and whitespace match; any other body, or one with a 16-digit number, counts byte for byte. It
+reads the body, so pass `request.clone()`.
 
 #### `IdempotencyStore`
 
@@ -263,24 +266,14 @@ when keys expire.
 
 ## Pattern: Tuning What Is Compared And Stored
 
-A client must resend the same bytes: the same JSON with its keys reordered fingerprints
-differently and gets `422`. Normalize the body before hashing to accept that, and store every
-answer from a handler that commits its write before it can fail.
+A JSON body is compared in canonical form, so a retry may reorder its keys. Narrow the comparison
+to the members that matter, and store every answer from a handler that commits its write before
+it can fail.
 
 ```typescript
 import { fingerprint } from "@sdxc/idempotency";
 import { MemoryStore } from "@sdxc/idempotency/memory";
 import { idempotency } from "@sdxc/idempotency/middleware";
-
-function sortKeys(value: unknown): unknown {
-	if (Array.isArray(value)) return value.map(sortKeys);
-	if (value === null || typeof value !== "object") return value;
-	return Object.fromEntries(
-		Object.entries(value)
-			.sort(([a], [b]) => a.localeCompare(b))
-			.map(([key, item]) => [key, sortKeys(item)]),
-	);
-}
 
 let idempotent = idempotency({
 	store: new MemoryStore(),
@@ -288,8 +281,15 @@ let idempotent = idempotency({
 	ttl: "24 hours",
 	lease: "5 minutes", // the handler can run that long
 	async fingerprint(request) {
-		let body = JSON.stringify(sortKeys(await request.json()));
-		return fingerprint(new Request(request.url, { method: request.method, body }));
+		let { amount, currency } = await request.json();
+		let body = JSON.stringify({ amount, currency }); // a changed note is not a conflict
+		return fingerprint(
+			new Request(request.url, {
+				method: request.method,
+				body,
+				headers: { "Content-Type": "application/json" },
+			}),
+		);
 	},
 	shouldStore: () => true, // the write commits first, so even a 5xx is final
 	maxBodyBytes: 256 * 1024,
