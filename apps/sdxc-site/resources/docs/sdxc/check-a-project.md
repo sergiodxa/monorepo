@@ -95,12 +95,12 @@ They run in this order:
 | `jsdoc`           | warn: a `//` or `/*` comment that is not a tooling directive, a description longer than three prose lines, a `@description` tag, or a multi-line `@param` / `@returns` / `@throws` | rewrite as JSDoc within the limits                 |
 | `complexity`      | warn: a function's cyclomatic complexity exceeds `doctor.complexity.max` (default 4)                                                                                               | split the function, or raise the max               |
 | `module-size`     | warn: a module's code lines exceed `doctor.moduleSize.maxLines` (default 200)                                                                                                      | split the module, or raise the limit               |
-| `dependencies`    | warn: an import cycle, or an import from an inner layer to an outer one (models must not import http, and so on)                                                                   | `sdxc diagram` shows the graph                     |
-| `fan-out`         | warn: a module imports more distinct project modules than `doctor.fanOut.max` (default 15)                                                                                         | split the module, or raise the max                 |
-| `orphans`         | warn: a non-entry module nothing in the project imports                                                                                                                            | delete it, or wire it from an entry                |
+| `dependencies`    | warn: a static import cycle, or a static import from an inner layer to an outer one (models must not import http, and so on)                                                       | `sdxc diagram` shows the graph                     |
+| `fan-out`         | warn: a module statically imports more distinct project modules than `doctor.fanOut.max` (default 15)                                                                              | split the module, or raise the max                 |
+| `orphans`         | warn: a non-entry module that no module or test imports and no root config file names                                                                                              | delete it, or wire it from an entry                |
 | `feature-scatter` | warn: a feature folder already in two layers is missing from another layer that hosts multi-layer features                                                                         | add the folder, or drop the unused layer copy      |
 | `duplication`     | warn: the same block of `doctor.duplication.minLines` (default 8) code lines appears in more than one module                                                                       | extract a shared helper, or raise the min          |
-| `result-throws`   | warn: app source uses `throw`                                                                                                                                                      | return `failure(...)` from `@sdxc/result`          |
+| `result-throws`   | warn: app source outside `bootstrap/` uses `throw`                                                                                                                                 | return `failure(...)` from `@sdxc/result`          |
 | `test-ratio`      | warn: `tests / code` from `sdxc stats` is below `doctor.testRatio.min` (default 0.3)                                                                                               | add tests, or lower the min                        |
 | `crap`            | warn: a function's CRAP score exceeds `doctor.crap.max` (default 12); skip when the coverage file is missing                                                                       | lower complexity, raise coverage, or raise the max |
 | `mutation`        | warn: surviving mutants exceed `doctor.mutation.maxSurvived` (default 0); skip when the report file is missing                                                                     | kill survivors, or raise the max                   |
@@ -136,9 +136,16 @@ count toward the description budget.
 `duplication`, `result-throws`, `test-ratio`, `crap` and `mutation` cover project-level metrics
 oxlint does not. Each check that takes a threshold reads its own keys under `doctor` in
 [configuration](/docs/sdxc/configuration#doctor). `dependencies` applies Clean Architecture's
-dependency rule to the app-layout layers: outer kinds (routes, resources, http, jobs) may
-import inner ones (services, policies, models); the reverse warns, and so does any import
-cycle. `fan-out` and `orphans` read the same import graph. `crap` combines complexity with
+dependency rule to the app-layout layers: outer kinds (http, jobs, commands) may import views
+in `resources/`, views may import inner ones (initializers, services, policies, models), and
+the reverse warns, and so does any import cycle. Route contracts and the declarations in
+`app/{jobs,commands,emails}/index.ts` and `app/mcp/{tools,resources}/index.ts` are data any
+layer reads, and an initializer may import the middleware its router lists. A `lazy()`
+mapping, or any dynamic `import()`, loads after startup, so it closes no cycle, breaches no
+layer and adds nothing to `fan-out`. `orphans` reads the same import graph, plus the imports of
+test files and the paths a root config file such as `vite.config.ts` names. `bootstrap/` holds
+the entry points the runtime calls, whose callbacks report a failure by throwing, so
+`result-throws` leaves it out. `crap` combines complexity with
 Istanbul coverage (default `coverage/coverage-final.json`) using
 `CRAP = CC² × (1 − coverage)³ + CC`; without that file the check skips. `mutation` skips the
 same way when its report file is missing.

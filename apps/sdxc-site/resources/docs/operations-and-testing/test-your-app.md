@@ -73,7 +73,7 @@ case that encoded the old rule fails; rewrite it to say what the app does now, a
 The template and the scaffold put what every test needs in `app/test/`, so a test reads like
 the code it checks:
 
-- **`app/test/database.ts`**, which the first `sdxc scaffold` writes, has `migrate()`, which
+- **`app/test/database.ts`** has `migrate()`, which
   applies every migration in `database/migrations/` to the in-memory `DB` binding, and
   `factories()`, which writes rows through your own models. Call `migrate` once per file in
   `beforeAll`; each file starts with an empty database.

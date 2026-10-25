@@ -42,7 +42,7 @@ For `sdxc scaffold post`:
 | `app/policies/post.test.ts`                    | who may read, create, update and delete a post                   |
 | `resources/views/posts/form.tsx`               | the form the new and edit pages share                            |
 | `app/http/controllers/posts/*.tsx`             | `index`, `new`, `show`, `edit` and `destroy`                     |
-| `app/test/database.ts`                         | the in-memory database the tests use, when the project lacks one |
+| `app/test/database.ts`                         | the in-memory database the tests use, when an older app lacks it |
 | `spec/posts.spec`                              | the pairing spec, one case per way in the scaffold wrote         |
 
 Every table also gets `id`, `created_at` and `updated_at`, so a field may not use those names:
@@ -225,8 +225,8 @@ drive the pages through the router, the tools through `/mcp` and the commands th
 command line. Each write is tested as a member, signed in with `signIn()` from
 `app/test/session.ts`, and refused to a guest; `app/policies/post.test.ts` decides every ability
 for both. `--no-test` skips them for one run, and `make.tests: false` skips them
-everywhere. With `--mcp`, the tool tests call `/mcp` through `app/test/mcp.ts`, which the
-scaffold writes when the project lacks it.
+everywhere. With `--mcp`, the tool tests call `/mcp` through `app/test/mcp.ts`, which
+every app from `sdxc create` has.
 
 `spec/posts.spec` checks the running app from the outside: the index page loads in a browser,
 and with `--mcp` and `--command`, `list_posts` answers over `/mcp` and `posts list` exits `0`.

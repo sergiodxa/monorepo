@@ -252,7 +252,7 @@ It answers `application/openapi+json; version=3.1.1` by default and
 `application/json` or `application/yaml` to a client that asks for those. Each carries a
 strong `ETag` and `Cache-Control: public, max-age=300`, so a client revalidates with a `304`. A build failure answers `500` with a
 problem document. An app from `sdxc create` serves `/api/openapi.json` this way already, from a
-`createApiDocument(origin)` that names the origin the request reached as the server.
+`createApiDocument()` that names `SITE_URL` from `config/constants.ts` as the server.
 
 ## Keep it honest in tests
 
